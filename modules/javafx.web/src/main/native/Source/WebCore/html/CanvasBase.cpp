@@ -30,7 +30,6 @@
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "Element.h"
 #include "GraphicsClient.h"
 #include "GraphicsContext.h"
@@ -41,6 +40,7 @@
 #include "IntRect.h"
 #include "NoiseInjectionPolicy.h"
 #include "RenderElementInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ScriptTrackingPrivacyCategory.h"
 #include "StyleCanvasImage.h"
 #include "WebCoreOpaqueRoot.h"
@@ -67,6 +67,8 @@ static std::optional<uint64_t> canvasNoiseHashSaltIfNeeded(ScriptExecutionContex
     return { };
 }
 
+CanvasDisplayBufferObserver::~CanvasDisplayBufferObserver() = default;
+
 CanvasBase::CanvasBase(IntSize size, ScriptExecutionContext& context)
     : m_size { size }
     , m_canvasNoiseHashSalt { canvasNoiseHashSaltIfNeeded(context) }
@@ -90,7 +92,7 @@ ImageBuffer* CanvasBase::buffer() const
 
 RefPtr<ImageBuffer> CanvasBase::makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
 {
-    if (auto* context = renderingContext()) {
+    if (RefPtr context = renderingContext()) {
         RefPtr buffer = context->surfaceBufferToImageBuffer(CanvasRenderingContext::SurfaceBuffer::DrawingBuffer);
         if (m_canvasNoiseHashSalt && shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes)
             m_canvasNoiseInjection.postProcessDirtyCanvasBuffer(buffer.get(), *m_canvasNoiseHashSalt, context->is2d() ? CanvasNoiseInjectionPostProcessArea::DirtyRect : CanvasNoiseInjectionPostProcessArea::FullBuffer);
@@ -157,8 +159,8 @@ bool CanvasBase::hasObserver(CanvasObserver& observer) const
 
 void CanvasBase::notifyObserversCanvasChanged(const FloatRect& rect)
 {
-    for (auto& observer : m_observers)
-        observer.canvasChanged(*this, rect);
+    for (CheckedRef observer : m_observers)
+        observer->canvasChanged(*this, rect);
 }
 
 void CanvasBase::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
@@ -180,16 +182,16 @@ void CanvasBase::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostPr
 
 void CanvasBase::notifyObserversCanvasResized()
 {
-    for (auto& observer : m_observers)
-        observer.canvasResized(*this);
+    for (CheckedRef observer : m_observers)
+        observer->canvasResized(*this);
 }
 
 void CanvasBase::notifyObserversCanvasDestroyed()
 {
     ASSERT(!m_didNotifyObserversCanvasDestroyed);
 
-    for (auto& observer : std::exchange(m_observers, WeakHashSet<CanvasObserver>()))
-        observer.canvasDestroyed(*this);
+    for (CheckedRef observer : std::exchange(m_observers, WeakHashSet<CanvasObserver>()))
+        observer->canvasDestroyed(*this);
 
 #if ASSERT_ENABLED
     m_didNotifyObserversCanvasDestroyed = true;
@@ -208,22 +210,22 @@ void CanvasBase::removeDisplayBufferObserver(CanvasDisplayBufferObserver& observ
 
 void CanvasBase::notifyObserversCanvasDisplayBufferPrepared()
 {
-    for (auto& observer : m_displayBufferObservers)
-        observer.canvasDisplayBufferPrepared(*this);
+    for (Ref observer : m_displayBufferObservers)
+        observer->canvasDisplayBufferPrepared(*this);
 }
 
 HashSet<Element*> CanvasBase::cssCanvasClients() const
 {
     HashSet<Element*> cssCanvasClients;
-    for (auto& observer : m_observers) {
-        auto* image = dynamicDowncast<StyleCanvasImage>(observer);
+    for (CheckedRef observer : m_observers) {
+        RefPtr image = dynamicDowncast<StyleCanvasImage>(observer.get());
         if (!image)
             continue;
 
         for (auto entry : image->clients()) {
-            auto& client = entry.key;
-            if (auto element = client.element())
-                cssCanvasClients.add(element);
+            CheckedRef client = entry.key;
+            if (RefPtr element = client->element())
+                cssCanvasClients.add(element.get());
         }
     }
     return cssCanvasClients;
@@ -231,7 +233,7 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
 
 bool CanvasBase::hasActiveInspectorCanvasCallTracer() const
 {
-    auto* context = renderingContext();
+    RefPtr context = renderingContext();
     return context && context->hasActiveInspectorCanvasCallTracer();
 }
 
@@ -242,14 +244,14 @@ void CanvasBase::setSize(const IntSize& size)
 
     m_size = size;
 
-    if (auto* context = renderingContext())
+    if (RefPtr context = renderingContext())
         InspectorInstrumentation::didChangeCanvasSize(*context);
 }
 
 RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) const
 {
         m_contextStateSaver = nullptr;
-    RefPtr returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
+    RefPtr returnBuffer = std::exchange(m_imageBuffer, WTF::move(buffer));
 
     IntSize oldSize = m_size;
     size_t oldMemoryCost = m_imageBufferMemoryCost.load(std::memory_order_relaxed);
@@ -269,7 +271,7 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
             scriptExecutionContext->vm().heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), newMemoryCost);
         }
     }
-    if (auto* context = renderingContext()) {
+    if (RefPtr context = renderingContext()) {
         if (oldSize != m_size)
             InspectorInstrumentation::didChangeCanvasSize(*context);
         if (oldMemoryCost != newMemoryCost)
@@ -314,7 +316,7 @@ RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer() const
         return nullptr;
     }
 
-    auto* context = renderingContext();
+    RefPtr context = renderingContext();
     bool willReadFrequently = context ? context->willReadFrequently() : false;
 
     RenderingMode renderingMode;
@@ -324,7 +326,7 @@ RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer() const
         renderingMode = !willReadFrequently && shouldAccelerate(area) ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
 
     auto colorSpace = context ? context->colorSpace() : DestinationColorSpace::SRGB();
-    auto pixelFormat = context ? context->pixelFormat() : ImageBufferPixelFormat::BGRA8;
+    auto pixelFormat = context ? context->pixelFormat() : PixelFormat::BGRA8;
 
     return ImageBuffer::create(size(), renderingMode, RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, scriptExecutionContext->graphicsClient());
 }
@@ -344,24 +346,24 @@ void CanvasBase::recordLastFillText(const String& text)
 
 void CanvasBase::addCanvasNeedingPreparationForDisplayOrFlush()
 {
-    auto* context = renderingContext();
+    RefPtr context = renderingContext();
     if (!context)
         return;
     if (context->isInPreparationForDisplayOrFlush())
         return;
-    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()))
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext()))
         document->addCanvasNeedingPreparationForDisplayOrFlush(*context);
     // FIXME: WorkerGlobalContext does not have prepare phase yet.
 }
 
 void CanvasBase::removeCanvasNeedingPreparationForDisplayOrFlush()
 {
-    auto* context = renderingContext();
+    RefPtr context = renderingContext();
     if (!context)
         return;
     if (!context->isInPreparationForDisplayOrFlush())
         return;
-    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()))
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext()))
         document->removeCanvasNeedingPreparationForDisplayOrFlush(*context);
     // FIXME: WorkerGlobalContext does not have prepare phase yet.
 }
@@ -380,7 +382,7 @@ RefPtr<ImageBuffer> CanvasBase::createImageForNoiseInjection() const
         return { };
 
     auto seed = static_cast<unsigned>(context->noiseInjectionHashSalt().value_or(0));
-    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return { };
 
@@ -408,6 +410,16 @@ void CanvasBase::resetGraphicsContextState() const
 WebCoreOpaqueRoot root(CanvasBase* canvas)
 {
     return WebCoreOpaqueRoot { canvas };
+}
+
+RefPtr<ScriptExecutionContext> CanvasBase::protectedCanvasBaseScriptExecutionContext() const
+{
+    return canvasBaseScriptExecutionContext();
+}
+
+RefPtr<ScriptExecutionContext> CanvasBase::protectedScriptExecutionContext() const
+{
+    return scriptExecutionContext();
 }
 
 } // namespace WebCore

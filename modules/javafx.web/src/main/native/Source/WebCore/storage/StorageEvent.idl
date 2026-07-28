@@ -47,7 +47,9 @@
     // undefined initStorageEventNS(DOMString namespaceURI, DOMString typeArg, boolean canBubbleArg, boolean cancelableArg, DOMString keyArg, DOMString oldValueArg, DOMString newValueArg, USVString urlArg, Storage? storageAreaArg);
 };
 
-dictionary StorageEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary StorageEventInit : EventInit {
     DOMString? key = null;
     DOMString? oldValue = null;
     DOMString? newValue = null;

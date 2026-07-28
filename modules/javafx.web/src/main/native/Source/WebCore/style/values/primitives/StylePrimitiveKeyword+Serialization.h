@@ -25,15 +25,23 @@
 #pragma once
 
 #include "CSSPrimitiveValueMappings.h"
+#include "StylePrimitiveKeyword+ValueRepresentationNeeded.h"
 #include "StyleValueTypes.h"
 
 namespace WebCore {
 namespace Style {
 
-template<typename T> requires std::is_enum_v<T> struct Serialize<T> {
+template<EnumWithoutValueRepresentation T> struct Serialize<T> {
     void operator()(StringBuilder& builder, const CSS::SerializationContext&, const RenderStyle&, T value)
     {
         builder.append(nameLiteralForSerialization(toCSSValueID(value)));
+    }
+};
+
+template<EnumWithValueRepresentation T> struct Serialize<T> {
+    void operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const T& value)
+    {
+        return valueRepresentation(value, [&](const auto& alternative) { serializationForCSS(builder, context, style, alternative); });
     }
 };
 

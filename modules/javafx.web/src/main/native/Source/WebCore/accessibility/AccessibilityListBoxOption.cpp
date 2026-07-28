@@ -29,8 +29,9 @@
 #include "config.h"
 #include "AccessibilityListBoxOption.h"
 
-#include "AXObjectCache.h"
-#include "AccessibilityListBox.h"
+#include "AXLoggerBase.h"
+#include "AXObjectCacheInlines.h"
+#include "AccessibilityObjectInlines.h"
 #include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
@@ -88,7 +89,7 @@ LayoutRect AccessibilityListBoxOption::elementRect() const
     if (!listBoxParentNode)
         return { };
 
-    auto* listBoxRenderer = dynamicDowncast<RenderListBox>(listBoxParentNode->renderer());
+    CheckedPtr listBoxRenderer = dynamicDowncast<RenderListBox>(listBoxParentNode->renderer());
     if (!listBoxRenderer)
         return { };
 
@@ -146,7 +147,7 @@ String AccessibilityListBoxOption::stringValue() const
 
 Element* AccessibilityListBoxOption::actionElement() const
 {
-    ASSERT(is<HTMLElement>(m_node.get()));
+    AX_ASSERT(is<HTMLElement>(m_node.get()));
     return dynamicDowncast<Element>(m_node.get());
 }
 
@@ -156,7 +157,7 @@ AccessibilityObject* AccessibilityListBoxOption::parentObject() const
     if (!parentNode)
         return nullptr;
 
-    auto* cache = m_node->document().axObjectCache();
+    CheckedPtr cache = m_node->document().axObjectCache();
     return cache ? cache->getOrCreate(*parentNode) : nullptr;
 }
 

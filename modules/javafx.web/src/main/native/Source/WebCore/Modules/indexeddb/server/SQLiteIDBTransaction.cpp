@@ -189,8 +189,7 @@ SQLiteIDBCursor* SQLiteIDBTransaction::maybeOpenCursor(const IDBCursorInfo& info
 
 void SQLiteIDBTransaction::closeCursor(SQLiteIDBCursor& cursor)
 {
-    auto backingStoreTake = m_backingStoreCursors.take(&cursor);
-    if (backingStoreTake) {
+    if (auto backingStoreTake = m_backingStoreCursors.take(&cursor)) {
         ASSERT(!m_cursors.contains(cursor.identifier()));
         return;
     }
@@ -206,11 +205,12 @@ void SQLiteIDBTransaction::notifyCursorsOfChanges(IDBObjectStoreIdentifier objec
     ASSERT(!isReadOnly());
 
     for (auto& i : m_cursors) {
-        if (i.value->objectStoreID() == objectStoreID)
-            i.value->objectStoreRecordsChanged();
+        CheckedRef cursor = *i.value;
+        if (cursor->objectStoreID() == objectStoreID)
+            cursor->objectStoreRecordsChanged();
     }
 
-    for (auto* cursor : m_backingStoreCursors) {
+    for (CheckedPtr cursor : m_backingStoreCursors) {
         if (cursor->objectStoreID() == objectStoreID)
             cursor->objectStoreRecordsChanged();
     }

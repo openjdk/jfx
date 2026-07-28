@@ -43,8 +43,8 @@ namespace WebCore {
 
 static bool populateFontFaceWithArrayBuffer(CSSFontFace& fontFace, Ref<JSC::ArrayBufferView>&& arrayBufferView)
 {
-    auto source = makeUnique<CSSFontFaceSource>(fontFace, WTFMove(arrayBufferView));
-    fontFace.adoptSource(WTFMove(source));
+    auto source = makeUniqueWithoutRefCountedCheck<CSSFontFaceSource>(fontFace, WTF::move(arrayBufferView));
+    fontFace.adoptSource(WTF::move(source));
     return false;
 }
 
@@ -94,8 +94,8 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
                 return { };
 
             unsigned byteLength = arrayBuffer->byteLength();
-            auto arrayBufferView = JSC::Uint8Array::create(WTFMove(arrayBuffer), 0, byteLength);
-            dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), WTFMove(arrayBufferView));
+            auto arrayBufferView = JSC::Uint8Array::create(WTF::move(arrayBuffer), 0, byteLength);
+            dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), WTF::move(arrayBufferView));
             return { };
         }
     );

@@ -52,10 +52,15 @@ private:
     void isLoggedIn(Ref<DeferredPromise>&&);
 
     static NavigatorLoginStatus* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorLoginStatus"_s; }
+    bool isNavigatorLoginStatus() const final { return true; }
     bool hasSameOrigin() const;
 
     const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorLoginStatus)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorLoginStatus(); }
+SPECIALIZE_TYPE_TRAITS_END()

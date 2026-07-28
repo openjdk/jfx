@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "WebGPUComputePipeline.h"
-#include "WebGPUDeviceLostInfo.h"
-#include "WebGPUError.h"
-#include "WebGPUErrorFilter.h"
-#include "WebGPURenderPipeline.h"
-#include "WebGPUSupportedFeatures.h"
-#include "WebGPUSupportedLimits.h"
+#include <WebCore/WebGPUComputePipeline.h>
+#include <WebCore/WebGPUDeviceLostInfo.h>
+#include <WebCore/WebGPUError.h>
+#include <WebCore/WebGPUErrorFilter.h>
+#include <WebCore/WebGPURenderPipeline.h>
+#include <WebCore/WebGPUSupportedFeatures.h>
+#include <WebCore/WebGPUSupportedLimits.h>
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
@@ -94,7 +95,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -142,12 +143,13 @@ public:
     virtual void pauseAllErrorReporting(bool pause) = 0;
 
     virtual bool isRemoteDeviceProxy() const { return false; }
+    virtual bool isDeviceImpl() const { return false; }
     virtual Ref<BindGroupLayout> emptyBindGroupLayout() const = 0;
 
 protected:
     Device(Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits)
-        : m_features(WTFMove(features))
-        , m_limits(WTFMove(limits))
+        : m_features(WTF::move(features))
+        , m_limits(WTF::move(limits))
     {
     }
 

@@ -40,10 +40,11 @@ SVGViewSpec::SVGViewSpec(SVGElement& contextElement)
     , m_contextElement(contextElement)
     , m_transform(SVGTransformList::create(&contextElement, SVGPropertyAccess::ReadOnly))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::transformAttr, &SVGViewSpec::m_transform>();
-    });
+    }
 }
 
 RefPtr<SVGElement> SVGViewSpec::viewTarget() const
@@ -94,7 +95,7 @@ bool SVGViewSpec::parseViewSpec(StringView string)
                     auto viewBox = SVGFitToViewBox::parseViewBox(buffer, false);
                     if (!viewBox)
                         return false;
-                    setViewBox(WTFMove(*viewBox));
+                    setViewBox(WTF::move(*viewBox));
                     if (!skipExactly(buffer, ')'))
                         return false;
                 } else if (skipCharactersExactly(buffer, std::span { viewTargetSpec<CharacterType> })) {

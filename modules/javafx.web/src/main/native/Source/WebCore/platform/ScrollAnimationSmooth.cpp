@@ -42,6 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollAnimationSmooth);
 
 static const float animationSpeed { 1000.0f };
 static const Seconds maxAnimationDuration { 200_ms };
+
 ScrollAnimationSmooth::ScrollAnimationSmooth(ScrollAnimationClient& client)
     : ScrollAnimation(Type::Smooth, client)
     , m_timingFunction(CubicBezierTimingFunction::create())

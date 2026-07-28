@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DeviceMotionEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionEvent);
 
 DeviceMotionEvent::~DeviceMotionEvent() = default;
 
@@ -133,7 +133,7 @@ void DeviceMotionEvent::initDeviceMotionEvent(const AtomString& type, bool bubbl
         return;
 
     initEvent(type, bubbles, cancelable);
-    m_deviceMotionData = DeviceMotionData::create(convert(WTFMove(acceleration)), convert(WTFMove(accelerationIncludingGravity)), convert(WTFMove(rotationRate)), interval);
+    m_deviceMotionData = DeviceMotionData::create(convert(WTF::move(acceleration)), convert(WTF::move(accelerationIncludingGravity)), convert(WTF::move(rotationRate)), interval);
 }
 
 #if ENABLE(DEVICE_ORIENTATION)
@@ -149,7 +149,7 @@ void DeviceMotionEvent::requestPermission(Document& document, PermissionPromise&
         return promise.resolve(PermissionState::Denied);
     }
 
-    document.deviceOrientationAndMotionAccessController().shouldAllowAccess(document, [promise = WTFMove(promise)](auto permissionState) mutable {
+    document.checkedDeviceOrientationAndMotionAccessController()->shouldAllowAccess(document, [promise = WTF::move(promise)](auto permissionState) mutable {
         if (permissionState == PermissionState::Prompt)
             return promise.reject(Exception { ExceptionCode::NotAllowedError, "Requesting device motion access requires a user gesture to prompt"_s });
         promise.resolve(permissionState);

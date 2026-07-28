@@ -27,6 +27,7 @@
 [
     Conditional=WEBXR,
     EnabledBySetting=WebXREnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRSessionInit {
     sequence<any> requiredFeatures;
     sequence<any> optionalFeatures;

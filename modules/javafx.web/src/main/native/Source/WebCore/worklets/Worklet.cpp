@@ -27,11 +27,11 @@
 #include "Worklet.h"
 
 #include "ContentSecurityPolicy.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "JSDOMPromiseDeferred.h"
-#include "Page.h"
 #include "ScriptSourceCode.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "WorkerRunLoop.h"
 #include "WorkletGlobalScope.h"
@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worklet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Worklet);
 
 Worklet::Worklet(Document& document)
     : ActiveDOMObject(&document)
@@ -82,15 +82,15 @@ void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options,
     if (m_proxies.isEmpty())
         m_proxies.appendVector(createGlobalScopes());
 
-    auto pendingTasks = WorkletPendingTasks::create(*this, WTFMove(promise), m_proxies.size());
+    auto pendingTasks = WorkletPendingTasks::create(*this, WTF::move(promise), m_proxies.size());
     m_pendingTasksSet.add(pendingTasks.copyRef());
 
     for (auto& proxy : m_proxies) {
         proxy->postTaskForModeToWorkletGlobalScope([pendingTasks = pendingTasks.copyRef(), moduleURL = moduleURL.isolatedCopy(), credentials = options.credentials, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext& context) mutable {
-            downcast<WorkletGlobalScope>(context).fetchAndInvokeScript(moduleURL, credentials, [pendingTasks = WTFMove(pendingTasks), pendingActivity = WTFMove(pendingActivity)](std::optional<Exception>&& exception) mutable {
-                callOnMainThread([pendingTasks = WTFMove(pendingTasks), exception = crossThreadCopy(WTFMove(exception)), pendingActivity = WTFMove(pendingActivity)]() mutable {
+            downcast<WorkletGlobalScope>(context).fetchAndInvokeScript(moduleURL, credentials, [pendingTasks = WTF::move(pendingTasks), pendingActivity = WTF::move(pendingActivity)](std::optional<Exception>&& exception) mutable {
+                callOnMainThread([pendingTasks = WTF::move(pendingTasks), exception = crossThreadCopy(WTF::move(exception)), pendingActivity = WTF::move(pendingActivity)]() mutable {
                     if (exception)
-                        pendingTasks->abort(WTFMove(*exception));
+                        pendingTasks->abort(WTF::move(*exception));
                     else
                         pendingTasks->decrementCounter();
                 });

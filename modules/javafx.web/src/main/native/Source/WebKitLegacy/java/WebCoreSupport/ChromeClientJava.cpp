@@ -316,7 +316,7 @@ void ChromeClientJava::takeFocus(FocusDirection direction)
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::focusedElementChanged(Element*)
+void ChromeClientJava::focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement)
 {
     notImplemented();
 }
@@ -589,7 +589,7 @@ bool ChromeClientJava::runBeforeUnloadConfirmPanel(String&& message, LocalFrame&
     return result;
 }
 
-void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const String& message,
+void ChromeClientJava::addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message,
     unsigned lineNumber, unsigned, const String& sourceID)
 {
     using namespace ChromeClientJavaInternal;
@@ -665,11 +665,6 @@ void ChromeClientJava::exceededDatabaseQuota(LocalFrame&, const String&, Databas
 void ChromeClientJava::reachedMaxAppCacheSize(int64_t)
 {
     // FIXME: Free some space.
-    notImplemented();
-}
-
-void ChromeClientJava::reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t)
-{
     notImplemented();
 }
 

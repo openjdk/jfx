@@ -27,7 +27,8 @@
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCRtpSendParameters : RTCRtpParameters {
     required DOMString transactionId;
     required sequence<RTCRtpEncodingParameters> encodings;

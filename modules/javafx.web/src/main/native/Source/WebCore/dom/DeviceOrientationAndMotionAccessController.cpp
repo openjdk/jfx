@@ -32,6 +32,8 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
@@ -77,19 +79,23 @@ void DeviceOrientationAndMotionAccessController::shouldAllowAccess(const Documen
         return callback(accessState);
 
     bool mayPrompt = UserGestureIndicator::processingUserGesture(&document);
-    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(document.protectedFrame().releaseNonNull(), mayPrompt, [this, weakThis = WeakPtr { *this }, securityOrigin = Ref { document.securityOrigin() }, callback = WTFMove(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
-        if (!weakThis)
+    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(document.protectedFrame().releaseNonNull(), mayPrompt, [weakThis = WeakPtr { *this }, securityOrigin = Ref { document.securityOrigin() }, callback = WTF::move(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
+        {
+            CheckedPtr checkedThis = weakThis.get();
+            if (!checkedThis)
             return;
 
-        m_accessStatePerOrigin.set(securityOrigin->data(), permissionState);
+            checkedThis->m_accessStatePerOrigin.set(securityOrigin->data(), permissionState);
+        }
         callback(permissionState);
-        if (!weakThis)
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
         if (permissionState != DeviceOrientationOrMotionPermissionState::Granted)
             return;
 
-        for (RefPtr<Frame> frame = m_topDocument->frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
+        for (RefPtr<Frame> frame = checkedThis->m_topDocument->frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
             RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
             if (!localFrame)
                 continue;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2025 Igalia S.L. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +27,17 @@
 #include "config.h"
 #include "CloseWatcher.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "CloseWatcherManager.h"
-#include "DocumentInlines.h"
+#include "DocumentWindow.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "KeyboardEvent.h"
 #include "LocalDOMWindow.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -80,7 +83,13 @@ Ref<CloseWatcher> CloseWatcher::establish(Document& document)
 
 CloseWatcher::CloseWatcher(Document& document)
     : ActiveDOMObject(document)
-{ }
+{
+}
+
+ScriptExecutionContext* CloseWatcher::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
 
 void CloseWatcher::requestClose()
 {

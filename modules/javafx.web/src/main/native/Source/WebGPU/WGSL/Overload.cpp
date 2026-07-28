@@ -49,13 +49,13 @@ inline void logLn(Arguments&&... arguments)
 }
 
 AbstractPointer::AbstractPointer(AbstractValue addressSpace, AbstractType element)
-    : AbstractPointer(addressSpace, WTFMove(element), WTF::enumToUnderlyingType(defaultAccessModeForAddressSpace(static_cast<AddressSpace>(std::get<unsigned>(addressSpace)))))
+    : AbstractPointer(addressSpace, WTF::move(element), WTF::enumToUnderlyingType(defaultAccessModeForAddressSpace(static_cast<AddressSpace>(std::get<unsigned>(addressSpace)))))
 {
 }
 
 AbstractPointer::AbstractPointer(AbstractValue addressSpace, AbstractType element, AbstractValue accessMode)
     : addressSpace(addressSpace)
-    , element(WTFMove(element))
+    , element(WTF::move(element))
     , accessMode(accessMode)
 {
 }
@@ -145,7 +145,7 @@ std::optional<SelectedOverload> OverloadResolver::resolve()
     logLn("selected overload: ", *selectedCandidate->candidate);
     logLn("materialized result type: ", *selectedCandidate->result);
 
-    return { { WTFMove(selectedCandidate->parameters), selectedCandidate->result } };
+    return { { WTF::move(selectedCandidate->parameters), selectedCandidate->result } };
 }
 
 const Type* OverloadResolver::materialize(const AbstractType& abstractType) const
@@ -300,7 +300,7 @@ std::optional<ViableOverload> OverloadResolver::considerCandidate(const Overload
     }
 
 
-    return { WTFMove(viableOverload) };
+    return { WTF::move(viableOverload) };
 }
 
 ConversionRank OverloadResolver::calculateRank(const AbstractType& parameter, const Type* argumentType)

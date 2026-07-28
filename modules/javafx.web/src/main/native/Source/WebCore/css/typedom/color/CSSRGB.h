@@ -35,7 +35,7 @@ using CSSColorRGBComp = Variant<double, RefPtr<CSSNumericValue>, String, RefPtr<
 using RectifiedCSSColorRGBComp = Variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
 
 class CSSRGB final : public CSSOMColorValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSRGB);
+    WTF_MAKE_TZONE_ALLOCATED(CSSRGB);
 public:
     static ExceptionOr<Ref<CSSRGB>> create(CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorPercent&&);
 
@@ -53,6 +53,8 @@ public:
 private:
     CSSRGB(RectifiedCSSColorRGBComp&&, RectifiedCSSColorRGBComp&&, RectifiedCSSColorRGBComp&&, RectifiedCSSColorPercent&&);
 
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSColorRGB; }
+
     RectifiedCSSColorRGBComp m_red;
     RectifiedCSSColorRGBComp m_green;
     RectifiedCSSColorRGBComp m_blue;
@@ -60,3 +62,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSRGB)
+    static bool isType(const WebCore::CSSStyleValue& value) { return value.styleValueType() == WebCore::CSSStyleValueType::CSSColorRGB; }
+SPECIALIZE_TYPE_TRAITS_END()

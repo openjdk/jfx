@@ -3,9 +3,11 @@ if (ENABLE_MALLOC_HEAP_BREAKDOWN AND NOT APPLE)
 endif ()
 
 set(WTF_PUBLIC_HEADERS
+    AbstractCanMakeCheckedPtr.h
     AbstractRefCounted.h
     AbstractRefCountedAndCanMakeWeakPtr.h
     AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h
+    AllocSpanMixin.h
     ASCIICType.h
     AccessibleAddress.h
     AggregateLogger.h
@@ -81,6 +83,7 @@ set(WTF_PUBLIC_HEADERS
     DoublyLinkedList.h
     EmbeddedFixedVector.h
     EnumClassOperatorOverloads.h
+    EnumSet.h
     EnumTraits.h
     EnumeratedArray.h
     Expected.h
@@ -133,14 +136,15 @@ set(WTF_PUBLIC_HEADERS
     IndexSparseSet.h
     IndexedContainerIterator.h
     InlineASM.h
+    InlineWeakPtr.h
+    InlineWeakRef.h
     Insertion.h
     InstanceCounted.h
     Int128.h
     InterferenceGraph.h
-    IsoMalloc.h
-    IsoMallocInlines.h
+    IntervalSet.h
+    IsIncreasing.h
     IterationStatus.h
-    IteratorAdaptors.h
     IteratorRange.h
     JSONValues.h
     JSValueMalloc.h
@@ -181,12 +185,13 @@ set(WTF_PUBLIC_HEADERS
     Markable.h
     MathExtras.h
     MediaTime.h
+    MemoryDump.h
     MemoryFootprint.h
     MemoryPressureHandler.h
     MessageQueue.h
     MetaAllocator.h
     MetaAllocatorHandle.h
-    Mmap.h
+    MmapSpan.h
     MonotonicTime.h
     NakedPtr.h
     NativePromise.h
@@ -205,6 +210,7 @@ set(WTF_PUBLIC_HEADERS
     ObjCRuntimeExtras.h
     ObjectIdentifier.h
     Observer.h
+    OptionCountedSet.h
     OptionSet.h
     OptionalOrReference.h
     OptionSetHash.h
@@ -242,11 +248,13 @@ set(WTF_PUBLIC_HEADERS
     PrintStream.h
     PriorityQueue.h
     ProcessID.h
+    ProcessMemoryStatus.h
     ProcessPrivilege.h
     PtrTag.h
     RAMSize.h
     RandomDevice.h
     Range.h
+    RangeAdaptors.h
     RangeSet.h
     RawHex.h
     RawPointer.h
@@ -257,10 +265,12 @@ set(WTF_PUBLIC_HEADERS
     RecursiveLockAdapter.h
     RedBlackTree.h
     Ref.h
+    RefCountable.h
+    RefCountDebugger.h
     RefCounted.h
     RefCountedAndCanMakeWeakPtr.h
     RefCountedFixedVector.h
-    RefCountedLeakCounter.h
+    RefCountedWithInlineWeakPtr.h
     RefCounter.h
     RefPtr.h
     RefTrackerMixin.h
@@ -297,6 +307,8 @@ set(WTF_PUBLIC_HEADERS
     SingleThreadIntegralWrapper.h
     SinglyLinkedList.h
     SinglyLinkedListWithTail.h
+    UniquelyOwned.h
+    UniquelyOwnedPtr.h
     SixCharacterHash.h
     SmallMap.h
     SmallSet.h
@@ -323,7 +335,6 @@ set(WTF_PUBLIC_HEADERS
     StdUnorderedSet.h
     Stopwatch.h
     StreamBuffer.h
-    StringExtras.h
     StringHashDumpContext.h
     StringPrintStream.h
     StructDump.h
@@ -379,7 +390,6 @@ set(WTF_PUBLIC_HEADERS
     VariantList.h
     VariantListOperations.h
     Vector.h
-    VectorHash.h
     VectorTraits.h
     WTFConfig.h
     WTFProcess.h
@@ -459,6 +469,7 @@ set(WTF_PUBLIC_HEADERS
     text/AtomStringTable.h
     text/Base64.h
     text/CString.h
+    text/CStringView.h
     text/CharacterProperties.h
     text/CodePointIterator.h
     text/ConversionMode.h
@@ -466,7 +477,7 @@ set(WTF_PUBLIC_HEADERS
     text/ExternalStringImpl.h
     text/FastCharacterComparison.h
     text/IntegerToStringConversion.h
-    text/LChar.h
+    text/Latin1Character.h
     text/LineEnding.h
     text/MakeString.h
     text/NullTextBreakIterator.h
@@ -525,6 +536,7 @@ set(WTF_SOURCES
     CPUTime.cpp
     ClockType.cpp
     CodePtr.cpp
+    CompactPtr.cpp
     CompilationThread.cpp
     ConcurrentBuffer.cpp
     ConcurrentPtrHashSet.cpp
@@ -583,8 +595,7 @@ set(WTF_SOURCES
     RAMSize.cpp
     RandomDevice.cpp
     ReadWriteLock.cpp
-    RefCounted.cpp
-    RefCountedLeakCounter.cpp
+    RefCountDebugger.cpp
     RefTrackerMixin.cpp
     RunLoop.cpp
     RuntimeApplicationChecks.cpp
@@ -649,6 +660,7 @@ set(WTF_SOURCES
     text/AtomStringTable.cpp
     text/Base64.cpp
     text/CString.cpp
+    text/CStringView.cpp
     text/ExternalStringImpl.cpp
     text/LineEnding.cpp
     text/StringBuffer.cpp
@@ -707,6 +719,9 @@ elseif (APPLE)
         cocoa/TypeCastsCocoa.h
         cocoa/VectorCocoa.h
 
+        darwin/DispatchExtras.h
+        darwin/DispatchOSObject.h
+        darwin/NetworkOSObject.h
         darwin/OSLogPrintStream.h
         darwin/WeakLinking.h
         darwin/XPCExtras.h
@@ -784,14 +799,7 @@ set(WTF_INTERFACE_DEPENDENCIES WTF_CopyHeaders)
 
 WEBKIT_FRAMEWORK_DECLARE(WTF)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
-
-if (PORT STREQUAL GTK OR PORT STREQUAL WPE)
-    WEBKIT_ADD_TARGET_CXX_FLAGS(WTF
-        -Wunsafe-buffer-usage
-        -Wunsafe-buffer-usage-in-libc-call
-        -fsafe-buffer-usage-suggestions
-    )
-endif ()
+WEBKIT_ADD_TARGET_UNSAFE_BUFFER_WARNINGS(WTF)
 
 WEBKIT_COPY_FILES(WTF_CopyHeaders
     DESTINATION ${WTF_FRAMEWORK_HEADERS_DIR}/wtf
@@ -810,6 +818,9 @@ else ()
     set_source_files_properties(
         SIMDUTF.cpp
         text/Base64.cpp
+        text/StringImpl.cpp
+        unicode/UTF8Conversion.cpp
+        text/StringCommon.cpp
         PROPERTIES COMPILE_FLAGS "-Wno-error=undef -Wno-undef")
 endif ()
 

@@ -45,7 +45,7 @@ using ImageBitmapCanvas = Variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
 class ImageBitmapRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageBitmapRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(ImageBitmapRenderingContext);
 public:
     static std::unique_ptr<ImageBitmapRenderingContext> create(CanvasBase&, ImageBitmapRenderingContextSettings&&);
 

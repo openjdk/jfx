@@ -23,6 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://webaudio.github.io/web-speech-api/#speechrecognitionevent
 [
     EnabledBySetting=SpeechRecognitionEnabled,
     SecureContext,
@@ -30,10 +31,13 @@
 ] interface SpeechRecognitionEvent : Event {
     constructor([AtomString] DOMString type, SpeechRecognitionEventInit eventInitDict);
     readonly attribute unsigned long resultIndex;
-    readonly attribute SpeechRecognitionResultList results;
+    // FIXME: `results` should not be nullable.
+    readonly attribute SpeechRecognitionResultList? results;
 };
 
-dictionary SpeechRecognitionEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary SpeechRecognitionEventInit : EventInit {
     unsigned long resultIndex = 0;
     required SpeechRecognitionResultList results;
 };

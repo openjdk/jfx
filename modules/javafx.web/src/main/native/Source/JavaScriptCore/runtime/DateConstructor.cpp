@@ -68,45 +68,6 @@ void DateConstructor::finishCreation(VM& vm, DatePrototype* datePrototype)
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, datePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 }
 
-static inline double toIntegerOrInfinity(double d)
-{
-        return trunc(std::isnan(d) ? 0.0 : d + 0.0);
-}
-
-// https://tc39.es/ecma262/#sec-makedate
-static inline double makeDate(double day, double time)
-{
-#if COMPILER(CLANG)
-    #pragma STDC FP_CONTRACT OFF
-#endif
-    return (day * msPerDay) + time;
-}
-
-// https://tc39.es/ecma262/#sec-maketime
-static inline double makeTime(double hour, double min, double sec, double ms)
-{
-#if COMPILER(CLANG)
-    #pragma STDC FP_CONTRACT OFF
-#endif
-    return (((hour * msPerHour) + min * msPerMinute) + sec * msPerSecond) + ms;
-}
-
-// https://tc39.es/ecma262/#sec-makeday
-static inline double makeDay(double year, double month, double date)
-{
-        double additionalYears = std::floor(month / 12);
-        double ym = year + additionalYears;
-        if (!std::isfinite(ym))
-            return PNaN;
-        double mm = month - additionalYears * 12;
-        int32_t yearInt32 = toInt32(ym);
-        int32_t monthInt32 = toInt32(mm);
-        if (yearInt32 != ym || monthInt32 != mm)
-            return PNaN;
-        double days = dateToDaysFrom1970(yearInt32, monthInt32, 1);
-        return days + date - 1;
-}
-
 static double millisecondsFromComponents(JSGlobalObject* globalObject, const ArgList& args, TimeType timeType)
 {
     VM& vm = globalObject->vm();
@@ -116,23 +77,23 @@ static double millisecondsFromComponents(JSGlobalObject* globalObject, const Arg
     double doubleArguments[7] {
         0, 0, 1, 0, 0, 0, 0
     };
+    bool hasNonFinite = false;
     unsigned numberOfUsedArguments = std::max(std::min<unsigned>(7U, args.size()), 1U);
     for (unsigned i = 0; i < numberOfUsedArguments; ++i) {
         doubleArguments[i] = args.at(i).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, 0);
+
+        hasNonFinite |= !std::isfinite(doubleArguments[i]);
+        doubleArguments[i] = std::trunc(doubleArguments[i] + 0.0);
     }
-    for (unsigned i = 0; i < numberOfUsedArguments; ++i) {
-        if (!std::isfinite(doubleArguments[i]))
+
+    if (hasNonFinite)
             return PNaN;
-        doubleArguments[i] = toIntegerOrInfinity(doubleArguments[i]);
-    }
 
     if (0 <= doubleArguments[0] && doubleArguments[0] <= 99)
         doubleArguments[0] += 1900;
 
     double time = makeDate(makeDay(doubleArguments[0], doubleArguments[1], doubleArguments[2]), makeTime(doubleArguments[3], doubleArguments[4], doubleArguments[5], doubleArguments[6]));
-    if (!std::isfinite(time))
-        return PNaN;
     return timeClip(vm.dateCache.localTimeToMS(time, timeType));
 }
 
@@ -192,7 +153,7 @@ JSC_DEFINE_HOST_FUNCTION(callDate, (JSGlobalObject* globalObject, CallFrame*))
     VM& vm = globalObject->vm();
     GregorianDateTime ts;
     vm.dateCache.msToGregorianDateTime(WallTime::now().secondsSinceEpoch().milliseconds(), TimeType::LocalTime, ts);
-    return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false, vm.dateCache)));
+    return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormat::DateAndTime, false, vm.dateCache)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateParse, (JSGlobalObject* globalObject, CallFrame* callFrame))

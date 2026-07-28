@@ -33,13 +33,14 @@
 
 #include "Editing.h"
 #include "HTMLSpanElement.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 
 namespace WebCore {
 
 ReplaceNodeWithSpanCommand::ReplaceNodeWithSpanCommand(Ref<HTMLElement>&& element)
     : SimpleEditCommand(element->document())
-    , m_elementToReplace(WTFMove(element))
+    , m_elementToReplace(WTF::move(element))
 {
 }
 
@@ -64,7 +65,7 @@ void ReplaceNodeWithSpanCommand::doApply()
     if (!m_elementToReplace->isConnected())
         return;
     if (!m_spanElement)
-        m_spanElement = HTMLSpanElement::create(m_elementToReplace->document());
+        m_spanElement = HTMLSpanElement::create(m_elementToReplace->protectedDocument());
     swapInNodePreservingAttributesAndChildren(protectedSpanElement().releaseNonNull(), m_elementToReplace);
 }
 

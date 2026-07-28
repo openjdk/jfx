@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "JSGenericTypedArrayViewPrototype.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/JSGenericTypedArrayViewPrototype.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 
-#include "JSTypedArrays.h"
+#include <JavaScriptCore/JSTypedArrays.h>
 
 namespace JSC {
 

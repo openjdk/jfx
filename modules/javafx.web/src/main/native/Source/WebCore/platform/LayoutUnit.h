@@ -126,7 +126,7 @@ public:
 
     LayoutUnit& operator++()
     {
-        m_value += kFixedPointDenominator;
+        m_value = saturatedSum<int>(m_value, kFixedPointDenominator);
         return *this;
     }
 

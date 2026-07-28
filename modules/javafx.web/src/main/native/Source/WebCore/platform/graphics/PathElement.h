@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FloatPoint.h"
+#include <WebCore/FloatPoint.h>
 #include <wtf/Function.h>
 
 namespace WebCore {

@@ -32,6 +32,7 @@
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
+#include "VisibilityChangeClient.h"
 #include "WebXRFrame.h"
 #include "WebXRInputSourceArray.h"
 #include "WebXRRenderState.h"
@@ -53,11 +54,17 @@ class XRFrameRequestCallback;
 class WebCoreOpaqueRoot;
 class WebXRSystem;
 class WebXRView;
-class WebXRViewerSpace;
+class WebXRReferenceSpace;
+struct XRCanvasConfiguration;
 struct XRRenderStateInit;
 
-class WebXRSession final : public RefCounted<WebXRSession>, public EventTarget, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRSession);
+#if ENABLE(WEBXR_HIT_TEST)
+struct XRHitTestOptionsInit;
+struct XRTransientInputHitTestOptionsInit;
+#endif
+
+class WebXRSession final : public RefCounted<WebXRSession>, public EventTarget, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient, VisibilityChangeClient {
+    WTF_MAKE_TZONE_ALLOCATED(WebXRSession);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -107,12 +114,21 @@ public:
 
     const Vector<PlatformXR::Device::ViewData>& views() const { return m_views; }
     const PlatformXR::FrameData& frameData() const { return m_frameData; }
-    const WebXRViewerSpace& viewerReferenceSpace() const { return m_viewerReferenceSpace; }
+    const WebXRReferenceSpace& viewerReferenceSpace() const { return m_viewerReferenceSpace; }
     bool posesCanBeReported(const Document&) const;
 
 #if ENABLE(WEBXR_HANDS)
     bool isHandTrackingEnabled() const;
 #endif
+
+#if ENABLE(WEBXR_HIT_TEST)
+    using RequestHitTestSourcePromise = DOMPromiseDeferred<IDLInterface<WebXRHitTestSource>>;
+    void requestHitTestSource(const XRHitTestOptionsInit&, RequestHitTestSourcePromise&&);
+    using RequestHitTestSourceForTransientInputPromise = DOMPromiseDeferred<IDLInterface<WebXRTransientInputHitTestSource>>;
+    void requestHitTestSourceForTransientInput(const XRTransientInputHitTestOptionsInit&, RequestHitTestSourceForTransientInputPromise&&);
+#endif
+
+    void initializeTrackingAndRendering(std::optional<XRCanvasConfiguration>&&);
 
 private:
     WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
@@ -130,6 +146,9 @@ private:
     void sessionDidEnd() final;
     void updateSessionVisibilityState(PlatformXR::VisibilityState) final;
 
+    // VisibilityChangeClient
+    void visibilityStateChanged() final;
+
     enum class InitiatedBySystem : bool { No, Yes };
     void shutdown(InitiatedBySystem);
     void didCompleteShutdown();
@@ -142,7 +161,6 @@ private:
     void applyPendingRenderState();
     void minimalUpdateRendering();
 
-    XREnvironmentBlendMode m_environmentBlendMode { XREnvironmentBlendMode::Opaque };
     XRInteractionMode m_interactionMode { XRInteractionMode::WorldSpace };
     XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
     const UniqueRef<WebXRInputSourceArray> m_inputSources;
@@ -156,7 +174,7 @@ private:
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
-    const Ref<WebXRViewerSpace> m_viewerReferenceSpace;
+    const Ref<WebXRReferenceSpace> m_viewerReferenceSpace;
     MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };
@@ -181,5 +199,7 @@ private:
 WebCoreOpaqueRoot root(WebXRSession*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebXRSession)
 
 #endif // ENABLE(WEBXR)

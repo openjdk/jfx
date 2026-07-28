@@ -71,7 +71,7 @@ void InspectorClientJava::inspectedPageDestroyed()
 {
 }
 
-Inspector::FrontendChannel* InspectorClientJava::openLocalFrontend(InspectorController*)
+Inspector::FrontendChannel* InspectorClientJava::openLocalFrontend(PageInspectorController*)
 {
     //FIXME: need to be realized!
     notImplemented();

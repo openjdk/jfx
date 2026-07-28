@@ -26,17 +26,6 @@
 #pragma once
 
 #include "JSContextRef.h"
-#include <wtf/ExportMacros.h>
-
-// MARK: JavaScriptCore
 
 extern "C" JS_EXPORT void JSSynchronousGarbageCollectForDebugging(JSContextRef);
 extern "C" JS_EXPORT void JSSynchronousEdenCollectForDebugging(JSContextRef);
-
-// MARK: WTF
-
-namespace WTF {
-// Can be removed when https://commits.webkit.org/256555@main is sufficiently
-// old that all supported versions of Safari have the change.
-WTF_EXPORT_PRIVATE unsigned weakRandomUint32();
-}

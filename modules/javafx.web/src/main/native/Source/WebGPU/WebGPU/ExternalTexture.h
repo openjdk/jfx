@@ -25,6 +25,7 @@
 
 #pragma once
 
+#import "BindableResource.h"
 #import "Device.h"
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -41,7 +42,7 @@ namespace WebGPU {
 
 class CommandEncoder;
 
-class ExternalTexture : public RefCountedAndCanMakeWeakPtr<ExternalTexture>, public WGPUExternalTextureImpl {
+class ExternalTexture : public RefCountedAndCanMakeWeakPtr<ExternalTexture>, public WGPUExternalTextureImpl, public TrackedResource {
     WTF_MAKE_TZONE_ALLOCATED(ExternalTexture);
 public:
     static Ref<ExternalTexture> create(CVPixelBufferRef pixelBuffer, WGPUColorSpace colorSpace, Device& device)
@@ -80,7 +81,6 @@ private:
     bool m_destroyed { false };
     id<MTLTexture> m_texture0 { nil };
     id<MTLTexture> m_texture1 { nil };
-    mutable Vector<uint64_t> m_commandEncoders;
 };
 
 } // namespace WebGPU

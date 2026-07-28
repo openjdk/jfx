@@ -27,6 +27,7 @@
 #include "Lexer.h"
 
 #include "ConstantValue.h"
+#include "Token.h"
 #include <charconv>
 #include <wtf/FastFloat.h>
 #include <wtf/SortedArrayMap.h>
@@ -63,17 +64,41 @@ static unsigned isIdentifierContinue(char16_t character, std::span<const char16_
     return 0;
 }
 
-static unsigned isIdentifierStart(LChar character, std::span<const LChar>)
+static unsigned isIdentifierStart(Latin1Character character, std::span<const Latin1Character>)
 {
     return isASCIIAlpha(character) || character == '_';
 }
 
-static unsigned isIdentifierContinue(LChar character, std::span<const LChar>)
+static unsigned isIdentifierContinue(Latin1Character character, std::span<const Latin1Character>)
 {
     return isASCIIAlphanumeric(character) || character == '_';
 }
 
-template <typename T>
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeToken(TokenType type)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength() };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeFloatToken(TokenType type, double floatValue)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength(), floatValue };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeIntegerToken(TokenType type, int64_t integerValue)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength(), integerValue };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeIdentifierToken(String&& identifier)
+{
+    return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTF::move(identifier) };
+}
+
+template<typename T>
 Vector<Token> Lexer<T>::lex()
 {
     Vector<Token> tokens;
@@ -300,7 +325,7 @@ Token Lexer<T>::nextToken()
 
             String view(StringImpl::createWithoutCopying(startOfToken.subspan(0, currentTokenLength())));
 
-            static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
+            static constexpr SortedArrayMap keywords { std::to_array<std::pair<ComparableASCIILiteral, TokenType>>({
                 { "_"_s, TokenType::Underbar },
 
 #define MAPPING_ENTRY(lexeme, name)\
@@ -308,11 +333,10 @@ Token Lexer<T>::nextToken()
 FOREACH_KEYWORD(MAPPING_ENTRY)
 #undef MAPPING_ENTRY
 
-            };
-            static constexpr SortedArrayMap keywords { keywordMappings };
+            }) };
 
             // https://www.w3.org/TR/WGSL/#reserved-words
-            static constexpr ComparableASCIILiteral reservedWords[] {
+            static constexpr SortedArraySet reservedWordSet { std::to_array<ComparableASCIILiteral>({
                 "NULL"_s,
                 "Self"_s,
                 "abstract"_s,
@@ -458,8 +482,7 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
                 "with"_s,
                 "writeonly"_s,
                 "yield"_s,
-            };
-            static constexpr SortedArraySet reservedWordSet { reservedWords };
+            }) };
 
             auto tokenType = keywords.get(view);
             if (tokenType != TokenType::Invalid)
@@ -473,7 +496,7 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
                 return makeToken(TokenType::Invalid);
 
 
-            return makeIdentifierToken(WTFMove(view));
+            return makeIdentifierToken(WTF::move(view));
         }
         break;
     }
@@ -1036,7 +1059,7 @@ Token Lexer<T>::lexNumber()
     return convert(*maybeResult);
 }
 
-template class Lexer<LChar>;
+template class Lexer<Latin1Character>;
 template class Lexer<char16_t>;
 
 }

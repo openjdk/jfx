@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,15 @@
 #include "config.h"
 #include "JSDOMPromiseDeferred.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventLoop.h"
+#include "JSDOMConvertAny.h"
+#include "JSDOMConvertBufferSource.h"
+#include "JSDOMConvertInterface.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
+#include "JSExecState.h"
 #include "LocalDOMWindow.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -69,7 +74,7 @@ void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveM
     if (activeDOMObjectsAreSuspended() || !ScriptDisallowedScope::isScriptAllowedInMainThread()) {
         JSC::Strong<JSC::Unknown, ShouldStrongDestructorGrabLock::Yes> strongResolution(lexicalGlobalObject.vm(), resolution);
         ASSERT(!activeDOMObjectsAreSuspended() || scriptExecutionContext()->eventLoop().isSuspended());
-        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, mode, strongResolution = WTFMove(strongResolution)]() mutable {
+        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, mode, strongResolution = WTF::move(strongResolution)]() mutable {
             if (shouldIgnoreRequestToFulfill())
                 return;
 
@@ -84,13 +89,23 @@ void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveM
     // https://bugs.webkit.org/show_bug.cgi?id=203402
     switch (mode) {
     case ResolveMode::Resolve:
+        {
+            auto& data = threadGlobalDataSingleton();
+            bool shouldSetCurrentState = !data.currentState();
+            if (shouldSetCurrentState)
+                data.setCurrentState(&lexicalGlobalObject);
+
         deferred()->resolve(&lexicalGlobalObject, resolution);
+
+            if (shouldSetCurrentState)
+                data.setCurrentState(nullptr);
+        }
         break;
     case ResolveMode::Reject:
-        deferred()->reject(&lexicalGlobalObject, resolution);
+        deferred()->reject(vm, &lexicalGlobalObject, resolution);
         break;
     case ResolveMode::RejectAsHandled:
-        deferred()->rejectAsHandled(&lexicalGlobalObject, resolution);
+        deferred()->rejectAsHandled(vm, &lexicalGlobalObject, resolution);
         break;
     }
 
@@ -98,14 +113,14 @@ void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveM
         clear();
 }
 
-void DeferredPromise::whenSettled(Function<void()>&& callback)
+void DeferredPromise::whenSettledWithResult(Function<void(JSDOMGlobalObject*, bool, JSC::JSValue)>&& callback)
 {
     if (shouldIgnoreRequestToFulfill())
         return;
 
     if (activeDOMObjectsAreSuspended()) {
-        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, callback = WTFMove(callback)]() mutable {
-            whenSettled(WTFMove(callback));
+        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, callback = WTF::move(callback)]() mutable {
+            whenSettledWithResult(WTF::move(callback));
         });
         return;
     }
@@ -115,7 +130,7 @@ void DeferredPromise::whenSettled(Function<void()>&& callback)
         auto& vm = globalObject->vm();
         JSC::JSLockHolder locker(vm);
         auto scope = DECLARE_CATCH_SCOPE(vm);
-        DOMPromise::whenPromiseIsSettled(globalObject, deferred(), WTFMove(callback));
+        DOMPromise::whenPromiseIsSettled(globalObject, deferred(), WTF::move(callback));
         DEFERRED_PROMISE_HANDLE_AND_RETURN_IF_EXCEPTION(scope, globalObject);
     }
 }
@@ -175,7 +190,7 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
     }
 
     if (exceptionObject.isEmpty()) {
-        exceptionObject = createDOMException(lexicalGlobalObject, WTFMove(exception));
+        exceptionObject = createDOMException(lexicalGlobalObject, WTF::move(exception));
         if (scope.exception()) [[unlikely]] {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
@@ -239,24 +254,12 @@ void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, J
 JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const String& errorMessage, RejectedPromiseWithTypeErrorCause cause)
 {
     auto& globalObject = lexicalGlobalObject;
-    auto& vm = lexicalGlobalObject.vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto promiseConstructor = globalObject.promiseConstructor();
-    auto rejectFunction = promiseConstructor->get(&lexicalGlobalObject, vm.propertyNames->builtinNames().rejectPrivateName());
-    RETURN_IF_EXCEPTION(scope, { });
-    auto* rejectionValue = static_cast<ErrorInstance*>(createTypeError(&lexicalGlobalObject, errorMessage));
+    auto* rejectionValue = jsCast<ErrorInstance*>(createTypeError(&lexicalGlobalObject, errorMessage));
     if (cause == RejectedPromiseWithTypeErrorCause::NativeGetter)
         rejectionValue->setNativeGetterTypeError();
 
-    auto callData = JSC::getCallData(rejectFunction);
-    ASSERT(callData.type != CallData::Type::None);
-
-    MarkedArgumentBuffer arguments;
-    arguments.append(rejectionValue);
-    ASSERT(!arguments.hasOverflowed());
-
-    RELEASE_AND_RETURN(scope, JSValue::encode(call(&lexicalGlobalObject, rejectFunction, callData, promiseConstructor, arguments)));
+    return JSValue::encode(JSPromise::rejectedPromise(&globalObject, rejectionValue));
 }
 
 static inline JSC::JSValue parseAsJSON(JSC::JSGlobalObject* lexicalGlobalObject, const String& data)
@@ -286,7 +289,7 @@ void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, ArrayBuffer* 
 
 void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
 {
-    fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data).get());
+    fulfillPromiseWithArrayBuffer(WTF::move(promise), ArrayBuffer::tryCreate(data).get());
 }
 
 void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&& promise, Uint8Array* bytes)
@@ -301,7 +304,7 @@ void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&& promise, Uint8Array* by
 
 void fulfillPromiseWithUint8ArrayFromSpan(Ref<DeferredPromise>&& promise, std::span<const uint8_t> data)
 {
-    fulfillPromiseWithUint8Array(WTFMove(promise), Uint8Array::tryCreate(data).get());
+    fulfillPromiseWithUint8Array(WTF::move(promise), Uint8Array::tryCreate(data).get());
 }
 
 bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)
@@ -309,9 +312,9 @@ bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDO
     auto* exception = scope.exception();
     VM& vm = scope.vm();
 
-    auto& scriptExecutionContext = *lexicalGlobalObject.scriptExecutionContext();
-    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
-        auto* scriptController = globalScope->script();
+    CheckedRef scriptExecutionContext = *lexicalGlobalObject.scriptExecutionContext();
+    if (CheckedPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
+        CheckedPtr scriptController = globalScope->script();
         bool terminatorCausedException = vm.isTerminationException(exception);
         if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution())) {
             scriptController->forbidExecution();
@@ -340,7 +343,7 @@ std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(JSDOMGl
     JSC::JSLockHolder lock(globalObject.vm());
     RefPtr deferredPromise = DeferredPromise::create(globalObject);
     Ref domPromise = DOMPromise::create(globalObject, *JSC::jsCast<JSC::JSPromise*>(deferredPromise->promise()));
-    return { WTFMove(domPromise), deferredPromise.releaseNonNull() };
+    return { WTF::move(domPromise), deferredPromise.releaseNonNull() };
 }
 
 } // namespace WebCore

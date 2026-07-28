@@ -27,7 +27,7 @@
  */
 
 #include "config.h"
-#include "FileHandle.h"
+#include <wtf/FileHandle.h>
 
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -182,11 +182,11 @@ std::optional<MappedFileData> FileHandle::map(MappedFileMode mapMode, FileOpenMo
 #endif
     }
 
-    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), platformHandle());
+    auto fileData = MmapSpan<uint8_t>::mmap(nullptr, size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), platformHandle());
     if (!fileData)
         return { };
 
-    return MappedFileData { WTFMove(fileData) };
+    return MappedFileData { WTF::move(fileData) };
 }
 #endif // HAVE(MMAP)
 

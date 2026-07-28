@@ -25,14 +25,14 @@
 
 #pragma once
 
-#include "StylePrimitiveNumeric.h"
+#include <WebCore/StylePrimitiveNumeric.h>
 
 namespace WebCore {
 namespace Style {
 
 // <'-webkit-border-horizontal-spacing'/'-webkit-border-vertical-spacing'> = <length [0,∞]>
 // NOTE: There is no standard associated with this property.
-using WebkitBorderSpacing = Length<CSS::Nonnegative>;
+using WebkitBorderSpacing = Length<CSS::NonnegativeUnzoomed>;
 
 } // namespace Style
 } // namespace WebCore

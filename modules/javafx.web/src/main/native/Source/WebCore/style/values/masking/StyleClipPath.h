@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "StylePathOperationWrappers.h"
-#include "StyleValueTypes.h"
+#include <WebCore/StylePathOperationWrappers.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -38,14 +38,14 @@ struct OffsetPath;
 // <'clip-path'> = none | <url> | [ <basic-shape> || <geometry-box> ]
 struct ClipPath {
     ClipPath(CSS::Keyword::None) : operation { nullptr } { }
-    ClipPath(ReferencePath&& reference) : operation { WTFMove(reference.operation) } { }
+    ClipPath(ReferencePath&& reference) : operation { WTF::move(reference.operation) } { }
     ClipPath(const ReferencePath& reference) : operation { reference.operation } { }
-    ClipPath(BasicShapePath&& basicShape) : operation { WTFMove(basicShape.operation) } { }
+    ClipPath(BasicShapePath&& basicShape) : operation { WTF::move(basicShape.operation) } { }
     ClipPath(const BasicShapePath& basicShape) : operation { basicShape.operation } { }
-    ClipPath(BoxPath&& box) : operation { WTFMove(box.operation) } { }
+    ClipPath(BoxPath&& box) : operation { WTF::move(box.operation) } { }
     ClipPath(const BoxPath& box) : operation { box.operation } { }
 
-    explicit ClipPath(RefPtr<PathOperation>&& operation) : operation { WTFMove(operation) } { RELEASE_ASSERT(isValid(operation)); }
+    explicit ClipPath(RefPtr<PathOperation>&& operation) : operation { WTF::move(operation) } { RELEASE_ASSERT(isValid(operation)); }
     explicit ClipPath(const RefPtr<PathOperation>& operation) : operation { operation } { RELEASE_ASSERT(isValid(operation)); }
 
     bool isNone() const { return !operation; }

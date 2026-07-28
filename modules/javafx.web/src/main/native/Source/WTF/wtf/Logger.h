@@ -44,28 +44,29 @@ namespace WTF {
 
 template<typename T>
 struct LogArgument {
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, bool>, String> toString(bool argument) { return argument ? "true"_s : "false"_s; }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, int>, String> toString(int argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned>, String> toString(unsigned argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned long>, String> toString(unsigned long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, long>, String> toString(long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned long long>, String> toString(unsigned long long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, long long>, String> toString(long long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned short>, String> toString(unsigned short argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, short>, String> toString(short argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_enum_v<U>, String> toString(U argument) { return String::number(static_cast<typename std::underlying_type<U>::type>(argument)); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, float>, String> toString(float argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, double>, String> toString(double argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, AtomString>, String> toString(const AtomString& argument) { return argument.string(); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, String>, String> toString(String argument) { return argument; }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringBuilder*>, String> toString(StringBuilder* argument) { return argument->toString(); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringView>, String> toString(const StringView& argument) { return argument.toString(); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, const char*>, String> toString(const char* argument) { return String::fromLatin1(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, ASCIILiteral>, String> toString(ASCIILiteral argument) { return argument; }
+    template<typename U = T> requires (std::same_as<U, bool>) static String toString(bool argument) { return argument ? "true"_s : "false"_s; }
+    template<typename U = T> requires (std::same_as<U, int>) static String toString(int argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned>) static String toString(unsigned argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned long>) static String toString(unsigned long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, long>) static String toString(long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned long long>) static String toString(unsigned long long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, long long>) static String toString(long long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned short>) static String toString(unsigned short argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, short>) static String toString(short argument) { return String::number(argument); }
+    template<typename U = T> requires (std::is_enum_v<U>) static String toString(U argument) { return String::number(static_cast<typename std::underlying_type<U>::type>(argument)); }
+    template<typename U = T> requires (std::same_as<U, float>) static String toString(float argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, double>) static String toString(double argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, AtomString>) static String toString(const AtomString& argument) { return argument.string(); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, String>) static String toString(String argument) { return argument; }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, StringBuilder*>) static String toString(StringBuilder* argument) { return argument->toString(); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, StringView>) static String toString(const StringView& argument) { return argument.toString(); }
+    template<typename U = T> requires (std::same_as<U, const char*>) static String toString(const char* argument) { return String::fromLatin1(argument); }
+    template<typename U = T> requires (std::same_as<U, ASCIILiteral>) static String toString(ASCIILiteral argument) { return argument; }
+    template<typename U = T> requires (std::same_as<U, std::span<const char8_t>>) static String toString(std::span<const char8_t> argument) { return argument; }
 #ifdef __OBJC__
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSError, std::remove_pointer_t<U>>, String> toString(NSError *argument) { return String(argument.localizedDescription); }
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSObject, std::remove_pointer_t<U>>, String> toString(NSObject *argument) { return String(argument.description); }
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSProxy, std::remove_pointer_t<U>>, String> toString(NSProxy *argument) { return String(argument.description); }
+    template<typename U = T> requires (std::is_base_of_v<NSError, std::remove_pointer_t<U>>) static String toString(NSError *argument) { return String(argument.localizedDescription); }
+    template<typename U = T> requires (std::is_base_of_v<NSObject, std::remove_pointer_t<U>>) static String toString(NSObject *argument) { return String(argument.description); }
+    template<typename U = T> requires (std::is_base_of_v<NSProxy, std::remove_pointer_t<U>>) static String toString(NSProxy *argument) { return String(argument.description); }
 #endif
     template<size_t length> static String toString(const char (&argument)[length]) { return String::fromLatin1(argument); }
 };
@@ -287,6 +288,15 @@ public:
         return true;
     }
 
+    template<typename... Arguments>
+    inline void toObservers(WTFLogChannel& channel, WTFLogLevel level, const Arguments&... arguments) const
+    {
+        if (!willLog(channel, level, arguments...))
+            return;
+
+        sendMessageToObservers(channel, level, arguments...);
+    }
+
     bool enabled() const { return m_enabled; }
     void setEnabled(const void* owner, bool enabled)
     {
@@ -342,11 +352,14 @@ public:
         });
     }
 
+    bool hasEnabledInspector() const { return m_hasEnabledInspector; }
+    void setHasEnabledInspector(bool hasEnabledInspector) { m_hasEnabledInspector = hasEnabledInspector; }
+
 private:
     friend class AggregateLogger;
     friend class NativePromiseBase;
 
-    Logger(const void* owner)
+    explicit Logger(const void* owner)
         : m_owner { owner }
     {
     }
@@ -368,6 +381,12 @@ private:
         fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s\n", channel.name, logMessage.utf8().data());
 #endif
 
+        sendMessageToObservers(channel, level, arguments...);
+    }
+
+    template<typename... Argument>
+    static inline void sendMessageToObservers(WTFLogChannel& channel, WTFLogLevel level, const Argument&... arguments)
+    {
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
             return;
 
@@ -401,15 +420,7 @@ private:
         fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s FILE=%s:%d %s\n", channel.name, logMessage.utf8().data(), file, line, function);
 #endif
 
-        if (channel.state == WTFLogChannelState::Off || level > channel.level)
-            return;
-
-        if (!observerLock().tryLock())
-            return;
-
-        Locker locker { AdoptLock, observerLock() };
-        for (Observer& observer : observers())
-            observer.didLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
+        sendMessageToObservers(channel, level, arguments...);
     }
 
     WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<Observer>>& observers() WTF_REQUIRES_LOCK(observerLock());
@@ -427,6 +438,7 @@ private:
     }
 
     bool m_enabled { true };
+    bool m_hasEnabledInspector { false };
     const void* m_owner;
 };
 

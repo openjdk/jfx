@@ -25,6 +25,8 @@
 
 // https://wicg.github.io/contact-api/
 
-dictionary ContactsSelectOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ContactsSelectOptions {
     boolean multiple = false;
 };

@@ -42,7 +42,7 @@ class WebLockRegistry;
 struct ClientOrigin;
 struct WebLockManagerSnapshot;
 
-class WebLockManager : public RefCountedAndCanMakeWeakPtr<WebLockManager>, public ActiveDOMObject {
+class WebLockManager : public RefCounted<WebLockManager>, public ActiveDOMObject {
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -79,7 +79,7 @@ private:
     class MainThreadBridge;
     const RefPtr<MainThreadBridge> m_mainThreadBridge;
 
-    HashMap<WebLockIdentifier, RefPtr<DeferredPromise>> m_releasePromises;
+    HashMap<WebLockIdentifier, Ref<DeferredPromise>> m_releasePromises;
 
     struct LockRequest;
     HashMap<WebLockIdentifier, LockRequest> m_pendingRequests;

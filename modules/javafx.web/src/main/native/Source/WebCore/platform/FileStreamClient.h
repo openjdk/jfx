@@ -28,12 +28,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FileStreamClient_h
-#define FileStreamClient_h
+#pragma once
+
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
-class FileStreamClient {
+class FileStreamClient : public AbstractRefCountedAndCanMakeWeakPtr<FileStreamClient> {
 public:
     virtual void didOpen(bool) { } // false signals failure.
     virtual void didGetSize(long long) { } // -1 signals failure.
@@ -46,5 +47,3 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif // FileStreamClient_h

@@ -26,13 +26,15 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(YARR_JIT)
 
-#include "MacroAssemblerCodeRef.h"
-#include "MatchResult.h"
-#include "VM.h"
-#include "Yarr.h"
-#include "YarrPattern.h"
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/MatchResult.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/Yarr.h>
+#include <JavaScriptCore/YarrPattern.h>
 #include <wtf/Atomics.h>
 #include <wtf/BitSet.h>
 #include <wtf/FixedVector.h>
@@ -217,7 +219,7 @@ public:
 
     void saveMaps(Vector<UniqueRef<BoyerMooreBitmap::Map>>&& maps)
     {
-        m_maps.appendVector(WTFMove(maps));
+        m_maps.appendVector(WTF::move(maps));
     }
 
     void clearMaps()
@@ -276,9 +278,9 @@ class YarrCodeBlock final : public YarrBoyerMooreData {
     WTF_MAKE_NONCOPYABLE(YarrCodeBlock);
 
 public:
-    using YarrJITCode8 = UGPRPair SYSV_ABI (*)(const LChar* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCode8 = UGPRPair SYSV_ABI (*)(const Latin1Character* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
     using YarrJITCode16 = UGPRPair SYSV_ABI (*)(const char16_t* input, UCPURegister start, UCPURegister length, int* output, MatchingContextHolder*) YARR_CALL;
-    using YarrJITCodeMatchOnly8 = UGPRPair SYSV_ABI (*)(const LChar* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
+    using YarrJITCodeMatchOnly8 = UGPRPair SYSV_ABI (*)(const Latin1Character* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
     using YarrJITCodeMatchOnly16 = UGPRPair SYSV_ABI (*)(const char16_t* input, UCPURegister start, UCPURegister length, void*, MatchingContextHolder*) YARR_CALL;
 
     YarrCodeBlock(RegExp* regExp)
@@ -293,12 +295,12 @@ public:
     void set8BitCode(MacroAssemblerCodeRef<Yarr8BitPtrTag> ref, Vector<UniqueRef<BoyerMooreBitmap::Map>> maps)
     {
         m_ref8 = ref;
-        saveMaps(WTFMove(maps));
+        saveMaps(WTF::move(maps));
     }
     void set16BitCode(MacroAssemblerCodeRef<Yarr16BitPtrTag> ref, Vector<UniqueRef<BoyerMooreBitmap::Map>> maps)
     {
         m_ref16 = ref;
-        saveMaps(WTFMove(maps));
+        saveMaps(WTF::move(maps));
     }
 
     bool has8BitCodeMatchOnly() { return m_matchOnly8.size(); }
@@ -306,18 +308,13 @@ public:
     void set8BitCodeMatchOnly(MacroAssemblerCodeRef<YarrMatchOnly8BitPtrTag> matchOnly, Vector<UniqueRef<BoyerMooreBitmap::Map>> maps)
     {
         m_matchOnly8 = matchOnly;
-        saveMaps(WTFMove(maps));
+        saveMaps(WTF::move(maps));
     }
     void set16BitCodeMatchOnly(MacroAssemblerCodeRef<YarrMatchOnly16BitPtrTag> matchOnly, Vector<UniqueRef<BoyerMooreBitmap::Map>> maps)
     {
         m_matchOnly16 = matchOnly;
-        saveMaps(WTFMove(maps));
+        saveMaps(WTF::move(maps));
     }
-
-    bool usesPatternContextBuffer() { return m_usesPatternContextBuffer; }
-#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
-    void setUsesPatternContextBuffer() { m_usesPatternContextBuffer = true; }
-#endif
 
     void set8BitInlineStats(unsigned insnCount, unsigned stackSize, bool canInline, bool needsT2)
     {
@@ -332,7 +329,7 @@ public:
     InlineStats& get8BitInlineStats() { return m_matchOnly8Stats; }
     InlineStats& get16BitInlineStats() { return  m_matchOnly16Stats; }
 
-    MatchResult execute(std::span<const LChar> input, unsigned start, int* output, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const Latin1Character> input, unsigned start, int* output, MatchingContextHolder* matchingContext)
     {
         ASSERT(has8BitCode());
 #if CPU(ARM64E)
@@ -352,7 +349,7 @@ public:
         return MatchResult(untagCFunctionPtr<YarrJITCode16, Yarr16BitPtrTag>(m_ref16.code().taggedPtr())(input.data(), start, input.size(), output, matchingContext));
     }
 
-    MatchResult execute(std::span<const LChar> input, unsigned start, MatchingContextHolder* matchingContext)
+    MatchResult execute(std::span<const Latin1Character> input, unsigned start, MatchingContextHolder* matchingContext)
     {
         ASSERT(has8BitCodeMatchOnly());
 #if CPU(ARM64E)
@@ -432,7 +429,6 @@ private:
     InlineStats m_matchOnly16Stats;
     RegExp* m_regExp { nullptr };
 
-    bool m_usesPatternContextBuffer { false };
     std::optional<JITFailureReason> m_failureReason;
 };
 

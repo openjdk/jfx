@@ -26,8 +26,9 @@
 #include "config.h"
 #include "AccessibilityMenuListOption.h"
 
-#include "AXObjectCache.h"
+#include "AXObjectCacheInlines.h"
 #include "AccessibilityMenuListPopup.h"
+#include "AccessibilityObjectInlines.h"
 #include "Document.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
@@ -110,12 +111,12 @@ LayoutRect AccessibilityMenuListOption::elementRect() const
 {
     RefPtr parent = parentObject();
     // Our parent should've been set to be a menu-list popup before this method is called.
-    ASSERT(parent && parent->isMenuListPopup());
+    AX_ASSERT(parent && parent->isMenuListPopup());
     if (!parent)
         return boundingBoxRect();
 
     RefPtr grandparent = parent->parentObject();
-    ASSERT(!grandparent || grandparent->isMenuList());
+    AX_ASSERT(!grandparent || grandparent->isMenuList());
 
     return grandparent ? grandparent->elementRect() : boundingBoxRect();
 }

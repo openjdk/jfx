@@ -62,9 +62,9 @@ public:
         m_function.setFromAndByValues(targetElement, from, by);
     }
 
-    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) override
+    void setToAtEndOfDurationValue(SVGElement& targetElement, const String& toAtEndOfDuration) override
     {
-        m_function.setToAtEndOfDurationValue(toAtEndOfDuration);
+        m_function.setToAtEndOfDurationValue(targetElement, toAtEndOfDuration);
     }
 
     void start(SVGElement&) override

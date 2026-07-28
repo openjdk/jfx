@@ -34,7 +34,11 @@
 #include "CSSStyleSheetObservableArray.h"
 #include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "FocusController.h"
+#include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLImageElement.h"
@@ -89,7 +93,7 @@ TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document, RefPtr<CustomEl
     : m_rootNode(shadowRoot)
     , m_documentScope(document)
     , m_parentTreeScope(&document)
-    , m_customElementRegistry(WTFMove(registry))
+    , m_customElementRegistry(WTF::move(registry))
 {
     shadowRoot.setTreeScope(*this);
 }
@@ -147,7 +151,7 @@ void TreeScope::setParentTreeScope(TreeScope& newParentScope)
 
 void TreeScope::setCustomElementRegistry(RefPtr<CustomElementRegistry>&& registry)
 {
-    m_customElementRegistry = WTFMove(registry);
+    m_customElementRegistry = WTF::move(registry);
 }
 
 RefPtr<Element> TreeScope::getElementById(const AtomString& elementId) const
@@ -437,12 +441,12 @@ RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY, HitT
         node = retargetToScope(*node);
     }
 
-    return static_pointer_cast<Element>(WTFMove(node));
+    return uncheckedDowncast<Element>(WTF::move(node));
 }
 
-Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY, HitTestSource source)
+Vector<Ref<Element>> TreeScope::elementsFromPoint(double clientX, double clientY, HitTestSource source)
 {
-    Vector<RefPtr<Element>> elements;
+    Vector<Ref<Element>> elements;
 
     Ref document = documentScope();
     if (!document->hasLivingRenderTree())
@@ -486,14 +490,14 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
         if (node == lastNode)
             continue;
 
-        elements.append(static_pointer_cast<Element>(node));
+        elements.append(uncheckedDowncast<Element>(*node));
         lastNode = node;
     }
 
     if (auto* rootDocument = dynamicDowncast<Document>(m_rootNode.get())) {
-        if (Element* rootElement = rootDocument->documentElement()) {
-            if (elements.isEmpty() || elements.last() != rootElement)
-                elements.append(rootElement);
+        if (auto* rootElement = rootDocument->documentElement()) {
+            if (elements.isEmpty() || elements.last().ptr() != rootElement)
+                elements.append(*rootElement);
         }
     }
 
@@ -633,7 +637,7 @@ ExceptionOr<void> TreeScope::setAdoptedStyleSheets(Vector<Ref<CSSStyleSheet>>&& 
 {
     if (!m_adoptedStyleSheets && sheets.isEmpty())
         return { };
-    return ensureAdoptedStyleSheets().setSheets(WTFMove(sheets));
+    return ensureAdoptedStyleSheets().setSheets(WTF::move(sheets));
 }
 
 SVGResourcesMap& TreeScope::svgResourcesMap() const
@@ -652,12 +656,15 @@ void TreeScope::addSVGResource(const AtomString& id, LegacyRenderSVGResourceCont
     svgResourcesMap().legacyResources.set(id, &resource);
 }
 
-void TreeScope::removeSVGResource(const AtomString& id)
+void TreeScope::removeSVGResource(const AtomString& id, LegacyRenderSVGResourceContainer& resource)
 {
     if (id.isEmpty())
         return;
 
-    svgResourcesMap().legacyResources.remove(id);
+    auto& resources = svgResourcesMap().legacyResources;
+    auto it = resources.find(id);
+    if (it != resources.end() && it->value == &resource)
+        resources.remove(it);
 }
 
 LegacyRenderSVGResourceContainer* TreeScope::lookupLegacySVGResoureById(const AtomString& id) const
@@ -666,7 +673,7 @@ LegacyRenderSVGResourceContainer* TreeScope::lookupLegacySVGResoureById(const At
         return nullptr;
 
     if (auto resource = svgResourcesMap().legacyResources.get(id))
-        return resource.get();
+        return resource;
 
     return nullptr;
 }
@@ -694,7 +701,9 @@ bool TreeScope::isElementWithPendingSVGResources(SVGElement& element) const
 {
     // This algorithm takes time proportional to the number of pending resources and need not.
     // If performance becomes an issue we can keep a counted set of elements and answer the question efficiently.
-    return std::ranges::any_of(svgResourcesMap().pendingResources.values(), std::bind(&WeakSVGElementSet::contains<SVGElement>, std::placeholders::_1, std::ref(element)));
+    return std::ranges::any_of(svgResourcesMap().pendingResources.values(), [&] (const WeakSVGElementSet& set) {
+        return set.contains(element);
+    });
 }
 
 bool TreeScope::isPendingSVGResource(SVGElement& element, const AtomString& id) const
@@ -763,7 +772,7 @@ void TreeScope::markPendingSVGResourcesForRemoval(const AtomString& id)
 
     auto existing = svgResourcesMap().pendingResources.take(id);
     if (!existing.isEmptyIgnoringNullReferences())
-        svgResourcesMap().pendingResourcesForRemoval.add(id, WTFMove(existing));
+        svgResourcesMap().pendingResourcesForRemoval.add(id, WTF::move(existing));
 }
 
 RefPtr<SVGElement> TreeScope::takeElementFromPendingSVGResourcesForRemovalMap(const AtomString& id)

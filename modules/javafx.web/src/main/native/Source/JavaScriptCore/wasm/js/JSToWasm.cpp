@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,6 +89,13 @@ static void marshallJSResult(CCallHelpers& jit, const FunctionSignature& signatu
             jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
             jit.setupArguments<decltype(operationConvertToBigInt)>(GPRInfo::wasmContextInstancePointer, inputJSR);
             jit.callOperation<OperationPtrTag>(operationConvertToBigInt);
+#if USE(JSVALUE64)
+            using ResultType = typename FunctionTraits<decltype(operationConvertToBigInt)>::ResultType;
+            exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<ResultType>()));
+#else
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfVM()), GPRInfo::nonPreservedNonReturnGPR);
+            exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::Address(GPRInfo::nonPreservedNonReturnGPR, VM::exceptionOffset())));
+#endif
         } else
             boxNativeCalleeResult(jit, signature.returnType(0), wasmFrameConvention.results[0].location, JSRInfo::returnValueJSR);
     } else {
@@ -199,6 +206,13 @@ static void marshallJSResult(CCallHelpers& jit, const FunctionSignature& signatu
                 jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
                 jit.setupArguments<decltype(operationConvertToBigInt)>(GPRInfo::wasmContextInstancePointer, valueJSR);
                 jit.callOperation<OperationPtrTag>(operationConvertToBigInt);
+#if USE(JSVALUE64)
+                using ResultType = typename FunctionTraits<decltype(operationConvertToBigInt)>::ResultType;
+                exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<ResultType>()));
+#else
+                jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfVM()), GPRInfo::nonPreservedNonReturnGPR);
+                exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::Address(GPRInfo::nonPreservedNonReturnGPR, VM::exceptionOffset())));
+#endif
                 jit.storeValue(JSRInfo::returnValueJSR, address);
             }
         }
@@ -212,8 +226,9 @@ static void marshallJSResult(CCallHelpers& jit, const FunctionSignature& signatu
         jit.setupArguments<decltype(operationAllocateResultsArray)>(GPRInfo::wasmContextInstancePointer, CCallHelpers::TrustedImmPtr(&signature), indexingType, savedResultsGPR);
         JIT_COMMENT(jit, "operationAllocateResultsArray");
         jit.callOperation<OperationPtrTag>(operationAllocateResultsArray);
-        static_assert(CCallHelpers::operationExceptionRegister<operationAllocateResultsArray>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
-        exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<operationAllocateResultsArray>()));
+        using ResultType = typename FunctionTraits<decltype(operationAllocateResultsArray)>::ResultType;
+        static_assert(CCallHelpers::operationExceptionRegister<ResultType>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
+        exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<ResultType>()));
         if constexpr (!!maxFrameExtentForSlowPathCall)
             jit.addPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
 
@@ -227,20 +242,20 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         // JIT version of js_to_wasm_wrapper_entry
-        // If you change this, make sure to modify WebAssembly.asm:op(js_to_wasm_wrapper_entry)
+        // If you change this, make sure to modify InPlaceInterpreter.asm:op(js_to_wasm_wrapper_entry)
         CCallHelpers jit;
 
         CCallHelpers::JumpList exceptionChecks;
         CCallHelpers::JumpList stackOverflow;
         CCallHelpers::JumpList buildEntryFrameThrew;
 
-        auto calleeSaves = Wasm::JSEntrypointCallee::calleeSaveRegistersImpl();
+        auto calleeSaves = Wasm::JSToWasmCallee::calleeSaveRegistersImpl();
         jit.emitFunctionPrologue();
-        jit.subPtr(CCallHelpers::TrustedImmPtr(Wasm::JSEntrypointCallee::SpillStackSpaceAligned), CCallHelpers::stackPointerRegister);
+        jit.subPtr(CCallHelpers::TrustedImmPtr(Wasm::JSToWasmCallee::SpillStackSpaceAligned), CCallHelpers::stackPointerRegister);
         jit.emitSaveCalleeSavesFor(calleeSaves);
 
         jit.loadPtr(CCallHelpers::addressFor(CallFrameSlot::callee), GPRInfo::regWS0);
-        jit.loadPtr(CCallHelpers::Address(GPRInfo::regWS0, WebAssemblyFunction::offsetOfInstance()), GPRInfo::wasmContextInstancePointer);
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::regWS0, WebAssemblyFunction::offsetOfTargetInstance()), GPRInfo::wasmContextInstancePointer);
 
         // Now, the current frame is fully set up for exceptions.
         // Allocate stack space
@@ -267,6 +282,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
         jit.push(GPRInfo::regWS1);
         jit.push(GPRInfo::regWS1);
         jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS0, WebAssemblyFunction::offsetOfBoxedJSToWasmCallee()), CCallHelpers::addressFor(CallFrameSlot::callee));
+        jit.store32(CCallHelpers::TrustedImm32(JSValue::NativeCalleeTag), CCallHelpers::addressFor(CallFrameSlot::callee).withOffset(TagOffset));
 #endif
 
         // Prepare frame
@@ -278,13 +294,16 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
         jit.storePtr(GPRInfo::wasmBaseMemoryPointer, CCallHelpers::addressFor(CallFrameSlot::callee));
 #else
         jit.transferPtr(CCallHelpers::Address(CCallHelpers::stackPointerRegister, 0), CCallHelpers::addressFor(CallFrameSlot::callee));
-        jit.addPtr(CCallHelpers::TrustedImm32(2 * 8), CCallHelpers::stackPointerRegister);
+        jit.addPtr(CCallHelpers::TrustedImm32(2 * sizeof(void*)), CCallHelpers::stackPointerRegister);
 #endif
 
-        static_assert(CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildFrame>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
-        JIT_COMMENT(jit, "Exception check: ", CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildFrame>());
-        buildEntryFrameThrew.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildFrame>()));
+        {
+            using ResultType = typename FunctionTraits<decltype(operationJSToWasmEntryWrapperBuildFrame)>::ResultType;
+            static_assert(CCallHelpers::operationExceptionRegister<ResultType>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
+            JIT_COMMENT(jit, "Exception check: ", CCallHelpers::operationExceptionRegister<ResultType>());
+            buildEntryFrameThrew.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<ResultType>()));
         jit.move(GPRInfo::returnValueGPR, GPRInfo::regWS0);
+        }
 
         // Memory
 #if USE(JSVALUE64)
@@ -339,7 +358,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
 #endif
 
         // Pop argument space values
-        jit.addPtr(CCallHelpers::TrustedImmPtr(Wasm::JSEntrypointCallee::RegisterStackSpaceAligned), CCallHelpers::stackPointerRegister);
+        jit.addPtr(CCallHelpers::TrustedImmPtr(Wasm::JSToWasmCallee::RegisterStackSpaceAligned), CCallHelpers::stackPointerRegister);
 
 #if ASSERT_ENABLED
         for (int32_t i = 0; i < 30; ++i)
@@ -363,10 +382,10 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
         // Store the new callee Callee[cfr]
         JIT_COMMENT(jit, "Set the callee's interpreter Wasm::Callee");
 #if USE(JSVALUE64)
-        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedWasmCallee()), CCallHelpers::calleeFrameSlot(CallFrameSlot::callee));
+        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedCallee()), CCallHelpers::calleeFrameSlot(CallFrameSlot::callee));
 #else
-        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedWasmCallee() + PayloadOffset), CCallHelpers::calleeFramePayloadSlot(CallFrameSlot::callee));
-        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedWasmCallee() + TagOffset), CCallHelpers::calleeFrameTagSlot(CallFrameSlot::callee));
+        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedCallee() + PayloadOffset), CCallHelpers::calleeFramePayloadSlot(CallFrameSlot::callee));
+        jit.transferPtr(CCallHelpers::Address(GPRInfo::regWS1, WebAssemblyFunction::offsetOfBoxedCallee() + TagOffset), CCallHelpers::calleeFrameTagSlot(CallFrameSlot::callee));
 #endif
 
         jit.call(GPRInfo::regWS0, WasmEntryPtrTag);
@@ -377,13 +396,13 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
         jit.loadPtr(CCallHelpers::addressFor(CallFrameSlot::callee), GPRInfo::regWS0);
         jit.unboxNativeCallee(GPRInfo::regWS0, GPRInfo::regWS0);
 
-        jit.load32(CCallHelpers::Address(GPRInfo::regWS0, JSEntrypointCallee::offsetOfFrameSize()), GPRInfo::regWS1);
-        jit.addPtr(CCallHelpers::TrustedImmPtr(JSEntrypointCallee::SpillStackSpaceAligned), GPRInfo::regWS1);
-#if CPU(ARM_THUMB2)
+        jit.load32(CCallHelpers::Address(GPRInfo::regWS0, JSToWasmCallee::offsetOfFrameSize()), GPRInfo::regWS1);
+        jit.addPtr(CCallHelpers::TrustedImmPtr(JSToWasmCallee::SpillStackSpaceAligned), GPRInfo::regWS1);
+#if CPU(ARM64)
+        jit.subPtr(GPRInfo::callFrameRegister, GPRInfo::regWS1, CCallHelpers::stackPointerRegister);
+#else
         jit.subPtr(GPRInfo::callFrameRegister, GPRInfo::regWS1, GPRInfo::regWS1);
         jit.move(GPRInfo::regWS1, CCallHelpers::stackPointerRegister);
-#else
-        jit.subPtr(GPRInfo::callFrameRegister, GPRInfo::regWS1, CCallHelpers::stackPointerRegister);
 #endif
 
         // Save return registers
@@ -433,20 +452,24 @@ MacroAssemblerCodeRef<JITThunkPtrTag> createJSToWasmJITShared()
 #endif
 
         // Prepare frame
+        {
         jit.setupArguments<decltype(operationJSToWasmEntryWrapperBuildReturnFrame)>(CCallHelpers::stackPointerRegister, GPRInfo::callFrameRegister);
         jit.callOperation<OperationPtrTag>(operationJSToWasmEntryWrapperBuildReturnFrame);
+            using ResultType = typename FunctionTraits<decltype(operationJSToWasmEntryWrapperBuildReturnFrame)>::ResultType;
 #if USE(JSVALUE64)
-        static_assert(CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildReturnFrame>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
-        JIT_COMMENT(jit, "Exception check: ", CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildReturnFrame>());
-        exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildReturnFrame>()));
+            static_assert(CCallHelpers::operationExceptionRegister<ResultType>() != InvalidGPRReg, "We don't have a VM readily available so we rely on exception being returned");
+            JIT_COMMENT(jit, "Exception check: ", CCallHelpers::operationExceptionRegister<ResultType>());
+            exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::operationExceptionRegister<ResultType>()));
 #else
-        static_assert(CCallHelpers::operationExceptionRegister<operationJSToWasmEntryWrapperBuildReturnFrame>() == InvalidGPRReg);
+            static_assert(CCallHelpers::operationExceptionRegister<ResultType>() == InvalidGPRReg);
         jit.loadPtr(CCallHelpers::addressFor(CallFrameSlot::codeBlock), GPRInfo::regWA2);
         jit.loadPtr(CCallHelpers::Address(GPRInfo::regWA2, JSWebAssemblyInstance::offsetOfVM()), GPRInfo::regWA2);
         exceptionChecks.append(jit.branchTestPtr(CCallHelpers::NonZero, CCallHelpers::Address(GPRInfo::regWA2, VM::exceptionOffset())));
 #endif
+        }
+
         jit.emitRestoreCalleeSavesFor(calleeSaves);
-        jit.addPtr(CCallHelpers::TrustedImmPtr(Wasm::JSEntrypointCallee::SpillStackSpaceAligned), CCallHelpers::stackPointerRegister);
+        jit.addPtr(CCallHelpers::TrustedImmPtr(Wasm::JSToWasmCallee::SpillStackSpaceAligned), CCallHelpers::stackPointerRegister);
         jit.emitFunctionEpilogue();
         jit.ret();
 
@@ -508,7 +531,7 @@ static size_t trampolineReservedStackSize()
 
 static RegisterAtOffsetList usedCalleeSaveRegisters(const Wasm::FunctionSignature& signature)
 {
-    // Pessimistically save callee saves in BoundsChecking mode since the LLInt always bounds checks
+    // Pessimistically save callee saves in BoundsChecking mode since the IPInt always bounds checks
     RegisterSetBuilder calleeSaves = RegisterSetBuilder::wasmPinnedRegisters();
     // FIXME: Is it really worth considering functions that have void() signature? Are those actually common?
     if (signature.argumentCount() || !signature.returnsVoid()) {
@@ -522,8 +545,8 @@ static RegisterAtOffsetList usedCalleeSaveRegisters(const Wasm::FunctionSignatur
 CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 {
     if (m_jsToWasmICCallee) [[likely]] {
-        ASSERT(m_jsToWasmICCallee->jsEntrypoint());
-        return m_jsToWasmICCallee->jsEntrypoint();
+        ASSERT(m_jsToWasmICCallee->jsToWasm());
+        return m_jsToWasmICCallee->jsToWasm();
     }
 
     if (Options::forceICFailure() || !Options::useJIT())
@@ -532,7 +555,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
     Locker locker(m_jitCodeLock);
     // Someone else could have been creating the code when we checked before and blocked us before getting here.
     if (m_jsToWasmICCallee)
-        return m_jsToWasmICCallee->jsEntrypoint();
+        return m_jsToWasmICCallee->jsToWasm();
 
     CCallHelpers jit;
 
@@ -575,8 +598,8 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
     CCallHelpers::JumpList slowPath;
 
     jit.loadPtr(CCallHelpers::addressFor(CallFrameSlot::callee), GPRInfo::wasmContextInstancePointer);
-    static_assert(WebAssemblyFunction::offsetOfInstance() + sizeof(WriteBarrier<JSWebAssemblyInstance>) == WebAssemblyFunction::offsetOfBoxedWasmCallee());
-    jit.loadPairPtr(GPRInfo::wasmContextInstancePointer, MacroAssembler::TrustedImm32(WebAssemblyFunction::offsetOfInstance()), GPRInfo::wasmContextInstancePointer, scratchJSR.payloadGPR());
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, WebAssemblyFunction::offsetOfBoxedCallee()), scratchJSR.payloadGPR());
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, WebAssemblyFunction::offsetOfTargetInstance()), GPRInfo::wasmContextInstancePointer);
     if (totalFrameSize >= trampolineReservedStackSize()) {
         JIT_COMMENT(jit, "stack overflow check");
         jit.loadPtr(MacroAssembler::Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfSoftStackLimit()), stackLimitGPR);
@@ -586,7 +609,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
         slowPath.append(jit.branchPtr(CCallHelpers::LessThanOrEqual, MacroAssembler::stackPointerRegister, stackLimitGPR));
     }
     // Don't store the Wasm::Callee until after our stack check.
-    jit.storeWasmCalleeCallee(scratchJSR.payloadGPR());
+    jit.storeWasmCalleeToCalleeCallFrame(scratchJSR.payloadGPR());
 
     // Ensure:
     // argCountPlusThis - 1 >= argumentCount()
@@ -673,7 +696,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
                 slowPath.append(jit.branchIfNotCell(scratchJSR));
 
                 jit.emitLoadStructure(scratchJSR.payloadGPR(), scratchJSR.payloadGPR());
-                jit.loadCompactPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Structure::classInfoOffset()), scratchJSR.payloadGPR());
+                jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Structure::classInfoOffset()), scratchJSR.payloadGPR());
 
                 static_assert(std::is_final<WebAssemblyFunction>::value, "We do not check for subtypes below");
                 static_assert(std::is_final<WebAssemblyWrapperFunction>::value, "We do not check for subtypes below");
@@ -683,9 +706,10 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 
                 isWasmFunction.link(&jit);
                 if (Wasm::isRefWithTypeIndex(type)) {
+                    auto targetRTT = TypeInformation::getCanonicalRTT(type.index);
                     jit.loadPtr(jsParam, scratchJSR.payloadGPR());
-                    jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), WebAssemblyFunctionBase::offsetOfSignatureIndex()), scratchJSR.payloadGPR());
-                    slowPath.append(jit.branchPtr(CCallHelpers::NotEqual, scratchJSR.payloadGPR(), CCallHelpers::TrustedImmPtr(type.index)));
+                    jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), WebAssemblyFunctionBase::offsetOfRTT()), scratchJSR.payloadGPR());
+                    slowPath.append(jit.branchPtr(CCallHelpers::NotEqual, scratchJSR.payloadGPR(), CCallHelpers::TrustedImmPtr(targetRTT.ptr())));
         }
 
                 if (type.isNullable())
@@ -826,11 +850,11 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
         return nullptr;
 
     auto code = FINALIZE_WASM_CODE(linkBuffer, JSEntryPtrTag, nullptr, "JS->Wasm IC %s", WTF::toCString(*this).data());
-    jsToWasmICCallee->setEntrypoint(WTFMove(code));
+    jsToWasmICCallee->setEntrypoint(WTF::move(code));
     WTF::storeStoreFence();
-    m_jsToWasmICCallee = WTFMove(jsToWasmICCallee);
+    m_jsToWasmICCallee = WTF::move(jsToWasmICCallee);
 
-    return m_jsToWasmICCallee->jsEntrypoint();
+    return m_jsToWasmICCallee->jsToWasm();
 }
 
 } } // namespace JSC::Wasm

@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XMLHttpRequestUpload);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XMLHttpRequestUpload);
 
 XMLHttpRequestUpload::XMLHttpRequestUpload(XMLHttpRequest& request)
     : m_request(request)
@@ -66,6 +66,13 @@ void XMLHttpRequestUpload::dispatchProgressEvent(const AtomString& type, unsigne
 
     // https://xhr.spec.whatwg.org/#firing-events-using-the-progressevent-interface
     dispatchEvent(XMLHttpRequestProgressEvent::create(type, !!total, loaded, total));
+}
+
+ScriptExecutionContext* XMLHttpRequestUpload::scriptExecutionContext() const
+{
+    if (RefPtr request = m_request.ptr())
+        return request->scriptExecutionContext();
+    return nullptr;
 }
 
 WebCoreOpaqueRoot root(XMLHttpRequestUpload* upload)

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineIteratorBoxLegacyPath.h"
-#include "InlineIteratorBoxModernPath.h"
+#include <WebCore/InlineIteratorBoxLegacyPath.h>
+#include <WebCore/InlineIteratorBoxModernPath.h>
 
 namespace WebCore {
 
@@ -58,6 +58,8 @@ public:
     bool isInlineBox() const;
     bool isRootInlineBox() const;
     bool isLineBreak() const;
+    bool isBlockLevelBox() const;
+    bool isAtomicInlineBox() const;
 
     FloatRect visualRect() const;
     FloatRect visualRectIgnoringBlockDirection() const;
@@ -147,8 +149,10 @@ public:
 
     BoxIterator& traverseLineRightwardOnLine();
     BoxIterator& traverseLineRightwardOnLineSkippingChildren();
+    BoxIterator& traverseLineLeftwardOnLine();
 
     BoxIterator& operator++() { return traverseLineRightwardOnLine(); }
+    BoxIterator& operator--() { return traverseLineLeftwardOnLine(); }
 
     bool atEnd() const;
 
@@ -199,7 +203,7 @@ LeafBoxIterator boxFor(const LayoutIntegration::InlineContent&, size_t boxIndex)
 // -----------------------------------------------
 
 inline Box::Box(PathVariant&& path)
-    : m_pathVariant(WTFMove(path))
+    : m_pathVariant(WTF::move(path))
 {
 }
 
@@ -235,6 +239,20 @@ inline bool Box::isLineBreak() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) {
         return path.isLineBreak();
+    });
+}
+
+inline bool Box::isBlockLevelBox() const
+{
+    return WTF::switchOn(m_pathVariant, [](auto& path) {
+        return path.isBlockLevelBox();
+    });
+}
+
+inline bool Box::isAtomicInlineBox() const
+{
+    return WTF::switchOn(m_pathVariant, [](auto& path) {
+        return path.isAtomicInlineBox();
     });
 }
 

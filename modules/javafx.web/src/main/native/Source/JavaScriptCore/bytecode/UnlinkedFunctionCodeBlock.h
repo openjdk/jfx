@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "UnlinkedCodeBlock.h"
+#include <JavaScriptCore/UnlinkedCodeBlock.h>
 
 namespace JSC {
 

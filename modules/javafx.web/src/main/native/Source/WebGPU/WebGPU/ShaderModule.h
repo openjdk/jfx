@@ -26,6 +26,7 @@
 #pragma once
 
 #import "ASTInterpolateAttribute.h"
+#import "CallGraph.h"
 #import "WGSL.h"
 #import <variant>
 #import <wtf/FastMalloc.h>
@@ -58,11 +59,11 @@ class ShaderModule : public WGPUShaderModuleImpl, public RefCounted<ShaderModule
 public:
     static Ref<ShaderModule> create(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
     {
-        return adoptRef(*new ShaderModule(WTFMove(checkResult), WTFMove(pipelineLayoutHints), WTFMove(entryPointInformation), library, device));
+        return adoptRef(*new ShaderModule(WTF::move(checkResult), WTF::move(pipelineLayoutHints), WTF::move(entryPointInformation), library, device));
     }
     static Ref<ShaderModule> createInvalid(Device& device, CheckResult&& checkResult = std::monostate { })
     {
-        return adoptRef(*new ShaderModule(device, WTFMove(checkResult)));
+        return adoptRef(*new ShaderModule(device, WTF::move(checkResult)));
     }
 
     ~ShaderModule();
@@ -118,7 +119,7 @@ private:
     FragmentInputs parseFragmentInputs(const WGSL::AST::Function&);
     void populateOutputState(const String&, WGSL::Builtin);
 
-    ShaderModule::FragmentOutputs parseFragmentReturnType(const WGSL::Type&, const String&);
+    ShaderModule::FragmentOutputs parseFragmentReturnType(const WGSL::Type&, const WGSL::CallGraph::EntryPoint&);
 
     const Ref<Device> m_device;
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250441 - this needs to be populated from the compiler

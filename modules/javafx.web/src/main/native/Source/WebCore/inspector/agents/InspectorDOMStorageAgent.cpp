@@ -34,7 +34,7 @@
 #include "DOMException.h"
 #include "Database.h"
 #include "Document.h"
-#include "InspectorPageAgent.h"
+#include "InspectorResourceUtilities.h"
 #include "InstrumentingAgents.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
@@ -74,25 +74,27 @@ void InspectorDOMStorageAgent::didCreateFrontendAndBackend()
 
 void InspectorDOMStorageAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    disable();
+    std::ignore = disable();
 }
 
 Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::enable()
 {
-    if (m_instrumentingAgents.enabledDOMStorageAgent() == this)
+    Ref agents = m_instrumentingAgents.get();
+    if (agents->enabledDOMStorageAgent() == this)
         return makeUnexpected("DOMStorage domain already enabled"_s);
 
-    m_instrumentingAgents.setEnabledDOMStorageAgent(this);
+    agents->setEnabledDOMStorageAgent(this);
 
     return { };
 }
 
 Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::disable()
 {
-    if (m_instrumentingAgents.enabledDOMStorageAgent() != this)
+    Ref agents = m_instrumentingAgents.get();
+    if (agents->enabledDOMStorageAgent() != this)
         return makeUnexpected("DOMStorage domain already disabled"_s);
 
-    m_instrumentingAgents.setEnabledDOMStorageAgent(nullptr);
+    agents->setEnabledDOMStorageAgent(nullptr);
 
     return { };
 }
@@ -102,7 +104,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOMSto
     Inspector::Protocol::ErrorString errorString;
 
     LocalFrame* frame;
-    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTFMove(storageId), frame);
+    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTF::move(storageId), frame);
     if (!storageArea)
         return makeUnexpected(errorString);
 
@@ -114,7 +116,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOMSto
         auto entry = JSON::ArrayOf<String>::create();
         entry->addItem(key);
         entry->addItem(value);
-        storageItems->addItem(WTFMove(entry));
+        storageItems->addItem(WTF::move(entry));
     }
     return storageItems;
 }
@@ -124,7 +126,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::setDOMStorage
     Inspector::Protocol::ErrorString errorString;
 
     LocalFrame* frame;
-    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTFMove(storageId), frame);
+    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTF::move(storageId), frame);
     if (!storageArea)
         return makeUnexpected(errorString);
 
@@ -141,7 +143,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::removeDOMStor
     Inspector::Protocol::ErrorString errorString;
 
     LocalFrame* frame;
-    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTFMove(storageId), frame);
+    RefPtr<StorageArea> storageArea = findStorageArea(errorString, WTF::move(storageId), frame);
     if (!storageArea)
         return makeUnexpected(errorString);
 
@@ -155,7 +157,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::clearDOMStora
     Inspector::Protocol::ErrorString errorString;
 
     LocalFrame* frame;
-    auto storageArea = findStorageArea(errorString, WTFMove(storageId), frame);
+    auto storageArea = findStorageArea(errorString, WTF::move(storageId), frame);
     if (!storageArea)
         return makeUnexpected(errorString);
 
@@ -166,11 +168,11 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::clearDOMStora
 
 String InspectorDOMStorageAgent::storageId(Storage& storage)
 {
-    auto* document = storage.frame()->document();
+    RefPtr document = storage.frame()->document();
     ASSERT(document);
-    auto* window = document->window();
+    RefPtr window = document->window();
     ASSERT(window);
-    Ref<SecurityOrigin> securityOrigin = document->securityOrigin();
+    Ref securityOrigin = document->securityOrigin();
     bool isLocalStorage = window->optionalLocalStorage() == &storage;
     return InspectorDOMStorageAgent::storageId(securityOrigin, isLocalStorage)->toJSONString();
 }
@@ -188,13 +190,13 @@ void InspectorDOMStorageAgent::didDispatchDOMStorageEvent(const String& key, con
     auto id = InspectorDOMStorageAgent::storageId(securityOrigin, storageType == StorageType::Local);
 
     if (key.isNull())
-        m_frontendDispatcher->domStorageItemsCleared(WTFMove(id));
+        m_frontendDispatcher->domStorageItemsCleared(WTF::move(id));
     else if (newValue.isNull())
-        m_frontendDispatcher->domStorageItemRemoved(WTFMove(id), key);
+        m_frontendDispatcher->domStorageItemRemoved(WTF::move(id), key);
     else if (oldValue.isNull())
-        m_frontendDispatcher->domStorageItemAdded(WTFMove(id), key, newValue);
+        m_frontendDispatcher->domStorageItemAdded(WTF::move(id), key, newValue);
     else
-        m_frontendDispatcher->domStorageItemUpdated(WTFMove(id), key, oldValue, newValue);
+        m_frontendDispatcher->domStorageItemUpdated(WTF::move(id), key, oldValue, newValue);
 }
 
 RefPtr<StorageArea> InspectorDOMStorageAgent::findStorageArea(Inspector::Protocol::ErrorString& errorString, Ref<JSON::Object>&& storageId, LocalFrame*& targetFrame)
@@ -211,13 +213,13 @@ RefPtr<StorageArea> InspectorDOMStorageAgent::findStorageArea(Inspector::Protoco
         return nullptr;
     }
 
-    targetFrame = InspectorPageAgent::findFrameWithSecurityOrigin(m_inspectedPage, securityOrigin);
+    targetFrame = ResourceUtilities::findFrameWithSecurityOrigin(m_inspectedPage, securityOrigin);
     if (!targetFrame) {
         errorString = "Missing frame for given securityOrigin"_s;
         return nullptr;
     }
 
-    auto& document = *targetFrame->document();
+    Ref document = *targetFrame->document();
     if (!*isLocalStorage)
         return m_inspectedPage->storageNamespaceProvider().sessionStorageArea(document);
     return m_inspectedPage->storageNamespaceProvider().localStorageArea(document);

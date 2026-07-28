@@ -29,22 +29,20 @@
 
 #include "pas_segregated_page.h"
 
-#include <math.h>
 #include "pas_commit_span.h"
 #include "pas_debug_spectrum.h"
 #include "pas_deferred_decommit_log.h"
 #include "pas_epoch.h"
 #include "pas_free_granules.h"
-#include "pas_full_alloc_bits_inlines.h"
 #include "pas_get_page_base_and_kind_for_small_other_in_fast_megapage.h"
 #include "pas_heap_lock.h"
 #include "pas_log.h"
-#include "pas_page_malloc.h"
 #include "pas_page_sharing_pool.h"
 #include "pas_range.h"
 #include "pas_segregated_page_inlines.h"
+#include "pas_segregated_shared_page_directory.h"
 #include "pas_segregated_size_directory.h"
-#include "pas_utility_heap_config.h"
+#include "pas_zero_memory.h"
 
 double pas_segregated_page_extra_wasteage_handicap_for_config_variant[
     PAS_NUM_SEGREGATED_PAGE_CONFIG_VARIANTS] = {

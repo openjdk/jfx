@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +28,7 @@
 #include "DummyModelPlayer.h"
 
 #include "Model.h"
+#include "ModelPlayerGraphicsLayerConfiguration.h"
 #include "ResourceError.h"
 
 namespace WebCore {
@@ -38,9 +40,7 @@ Ref<DummyModelPlayer> DummyModelPlayer::create(ModelPlayerClient& client)
 
 DummyModelPlayer::DummyModelPlayer(ModelPlayerClient& client)
     : m_client { client }
-#if ENABLE(MODEL_PROCESS)
     , m_id(ModelPlayerIdentifier::generate())
-#endif
 {
 }
 
@@ -48,18 +48,12 @@ DummyModelPlayer::~DummyModelPlayer() = default;
 
 void DummyModelPlayer::load(Model& model, LayoutSize)
 {
-    if (m_client)
-        m_client->didFailLoading(*this, ResourceError { errorDomainWebKitInternal, 0, model.url(), "Trying to load model via DummyModelPlayer"_s });
+    if (RefPtr client = m_client.get())
+        client->didFailLoading(*this, ResourceError { errorDomainWebKitInternal, 0, model.url(), "Trying to load model via DummyModelPlayer"_s });
 }
 
-PlatformLayer* DummyModelPlayer::layer()
+void DummyModelPlayer::configureGraphicsLayer(GraphicsLayer&, ModelPlayerGraphicsLayerConfiguration&&)
 {
-    return nullptr;
-}
-
-std::optional<LayerHostingContextIdentifier> DummyModelPlayer::layerHostingContextIdentifier()
-{
-    return std::nullopt;
 }
 
 void DummyModelPlayer::sizeDidChange(LayoutSize)
@@ -130,11 +124,13 @@ void DummyModelPlayer::setIsMuted(bool, CompletionHandler<void(bool success)>&&)
 {
 }
 
-#if PLATFORM(COCOA)
-Vector<RetainPtr<id>> DummyModelPlayer::accessibilityChildren()
+#if ENABLE(MODEL_ELEMENT_ACCESSIBILITY)
+
+ModelPlayerAccessibilityChildren DummyModelPlayer::accessibilityChildren()
 {
     return { };
 }
+
 #endif
 
-}
+} // namespace WebCore

@@ -27,12 +27,12 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "Event.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "MediaControllerInterface.h"
-#include "Timer.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/Event.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MediaControllerInterface.h>
+#include <WebCore/Timer.h>
 #include <wtf/Vector.h>
 
 namespace PAL {
@@ -48,10 +48,15 @@ class MediaController final
     , public MediaControllerInterface
     , public ContextDestructionObserver
     , public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaController);
+    WTF_MAKE_TZONE_ALLOCATED(MediaController);
 public:
     static Ref<MediaController> create(ScriptExecutionContext&);
     virtual ~MediaController();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     Ref<TimeRanges> buffered() const final;
     Ref<TimeRanges> seekable() const final;
@@ -79,9 +84,6 @@ public:
     void setMuted(bool) final;
 
     const AtomString& playbackState() const;
-
-    using RefCounted::ref;
-    using RefCounted::deref;
 
 private:
     explicit MediaController(ScriptExecutionContext&);
@@ -159,5 +161,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaController)
 
 #endif

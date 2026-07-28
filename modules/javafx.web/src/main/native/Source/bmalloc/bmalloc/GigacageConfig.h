@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Algorithm.h"
 #include "GigacageKind.h"
 #include <bit>
@@ -98,8 +100,8 @@ struct Config {
     size_t allocSizes[static_cast<size_t>(NumberOfKinds)];
 };
 
-// The first 4 slots are reserved for the use of the ExecutableAllocator.
-constexpr size_t startSlotOfGigacageConfig = 4;
+// The first 6 slots are reserved for use by system allocators
+constexpr size_t startSlotOfGigacageConfig = 6;
 constexpr size_t startOffsetOfGigacageConfig = startSlotOfGigacageConfig * sizeof(WebConfig::Slot);
 
 constexpr size_t reservedSlotsForGigacageConfig = 16;
@@ -113,3 +115,5 @@ static_assert(bmalloc::roundUpToMultipleOf<alignmentOfGigacageConfig>(startOffse
 #define g_gigacageConfig (*std::bit_cast<Gigacage::Config*>(&WebConfig::g_config[Gigacage::startSlotOfGigacageConfig]))
 
 } // namespace Gigacage
+
+#endif // __cplusplus

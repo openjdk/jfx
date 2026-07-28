@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CPU.h"
-#include "JITOperationValidation.h"
-#include "OperationResult.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/OperationResult.h>
 #include <climits>
 #include <cmath>
 #include <optional>
@@ -319,7 +319,7 @@ ALWAYS_INLINE double jsMaxDouble(double lhs, double rhs)
     // Intentionally using fmax, not fmaxnm since fmax is aligned to JS Math.max semantics.
     // fmaxnm returns non-NaN number when either lhs or rhs is NaN. But Math.max returns NaN.
     double result;
-    asm (
+    __asm__(
         "fmax %d[result], %d[lhs], %d[rhs]"
         : [result] "=w"(result)
         : [lhs] "w"(lhs), [rhs] "w"(rhs)
@@ -337,7 +337,7 @@ ALWAYS_INLINE double jsMinDouble(double lhs, double rhs)
     // Intentionally using fmin, not fminnm since fmin is aligned to JS Math.min semantics.
     // fminnm returns non-NaN number when either lhs or rhs is NaN. But Math.min returns NaN.
     double result;
-    asm (
+    __asm__(
         "fmin %d[result], %d[lhs], %d[rhs]"
         : [result] "=w"(result)
         : [lhs] "w"(lhs), [rhs] "w"(rhs)

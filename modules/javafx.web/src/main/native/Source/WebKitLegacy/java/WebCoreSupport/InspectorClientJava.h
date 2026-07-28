@@ -41,7 +41,7 @@ public:
 
     void inspectedPageDestroyed() override;
 
-    Inspector::FrontendChannel* openLocalFrontend(InspectorController*) override;
+    Inspector::FrontendChannel* openLocalFrontend(PageInspectorController*) override;
     void bringFrontendToFront() override;
 
     void highlight() override;

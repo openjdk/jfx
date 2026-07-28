@@ -54,6 +54,8 @@ public:
     virtual Ref<RTCRtpTransformBackend> rtcRtpTransformBackend() = 0;
     virtual void setMediaStreamIds(const FixedVector<String>&) = 0;
     virtual std::unique_ptr<RTCDtlsTransportBackend> dtlsTransportBackend() = 0;
+
+    virtual bool isLibWebRTCRtpSenderBackend() const { return false; }
 };
 
 } // namespace WebCore

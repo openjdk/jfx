@@ -44,8 +44,9 @@
 
 #pragma once
 
-#include "RenderLayer.h"
-#include "ScrollableArea.h"
+#include <WebCore/RenderLayer.h>
+#include <WebCore/ScrollableArea.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -64,6 +65,7 @@ public:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     RenderLayer& layer() { return m_layer; }
 
@@ -122,6 +124,7 @@ public:
     Color scrollbarTrackColorStyle() const final;
     Style::ScrollbarGutter scrollbarGutterStyle() const final;
     ScrollbarWidth scrollbarWidthStyle() const final;
+    std::optional<ScrollbarColor> scrollbarColorStyle() const final;
 
     bool requiresScrollPositionReconciliation() const { return m_requiresScrollPositionReconciliation; }
     void setRequiresScrollPositionReconciliation(bool requiresReconciliation = true) { m_requiresScrollPositionReconciliation = requiresReconciliation; }
@@ -139,8 +142,8 @@ public:
     bool hitTestResizerInFragments(const LayerFragments&, const HitTestLocation&, LayoutPoint& pointInFragment) const;
 
     void paintOverflowControls(GraphicsContext&, OptionSet<PaintBehavior>, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
-    void paintScrollCorner(GraphicsContext&, const IntPoint&, const IntRect& damageRect);
-    void paintResizer(GraphicsContext&, const LayoutPoint&, const LayoutRect& damageRect);
+    void paintScrollCorner(GraphicsContext&, const IntPoint&, const IntRect& scrollCornerRect, const IntRect& damageRect);
+    void paintResizer(GraphicsContext&, const LayoutPoint&, const IntRect& resizerRect, const LayoutRect& damageRect);
     void paintOverlayScrollbars(GraphicsContext&, const LayoutRect& damageRect, OptionSet<PaintBehavior>, RenderObject* subtreePaintRoot = nullptr);
 
     void updateScrollInfoAfterLayout();
@@ -237,11 +240,6 @@ public:
     bool positionOverflowControls(const IntSize&);
 
     void updateAllScrollbarRelatedStyle();
-
-    LayoutUnit overflowTop() const;
-    LayoutUnit overflowBottom() const;
-    LayoutUnit overflowLeft() const;
-    LayoutUnit overflowRight() const;
 
     RenderLayer::OverflowControlRects overflowControlsRects() const;
 

@@ -45,6 +45,7 @@
 
 namespace WebCore {
 
+class Element;
 class Event;
 class FloatQuad;
 class RenderObject;
@@ -78,6 +79,9 @@ enum class TimelineRecordType {
     FireAnimationFrame,
 
     ObserverCallback,
+
+    FirstContentfulPaint,
+    LargestContentfulPaint,
 
     Screenshot,
 };
@@ -116,6 +120,8 @@ public:
     void didEvaluateScript();
     void didTimeStamp(const String& message);
     void didPerformanceMark(const String& label, std::optional<MonotonicTime>);
+    void didEnqueueFirstContentfulPaint();
+    void didEnqueueLargestContentfulPaint(Element*, unsigned area);
     void didRequestAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
     void willFireAnimationFrame(int callbackId);
@@ -150,9 +156,9 @@ protected:
 
     struct TimelineRecordEntry {
         TimelineRecordEntry(Ref<JSON::Object>&& record, Ref<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
-            : record(WTFMove(record))
-            , data(WTFMove(data))
-            , children(WTFMove(children))
+            : record(WTF::move(record))
+            , data(WTF::move(data))
+            , children(WTF::move(children))
             , type(type)
         {
         }

@@ -41,10 +41,12 @@
 #include "JSDOMPromiseDeferred.h"
 #include "OffscreenCanvas.h"
 #include "PixelBuffer.h"
+#include "SVGImage.h"
 #include "SecurityOrigin.h"
 #include "VideoFrame.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebGPUDevice.h"
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/MallocSpan.h>
 
 #if PLATFORM(COCOA)
@@ -57,7 +59,7 @@
 namespace WebCore {
 
 GPUQueue::GPUQueue(Ref<WebGPU::Queue>&& backing, WebGPU::Device& device)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
     , m_device(&device)
 {
 }
@@ -69,7 +71,7 @@ String GPUQueue::label() const
 
 void GPUQueue::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 void GPUQueue::submit(Vector<Ref<GPUCommandBuffer>>&& commandBuffers)
@@ -77,17 +79,19 @@ void GPUQueue::submit(Vector<Ref<GPUCommandBuffer>>&& commandBuffers)
     auto result = WTF::map(commandBuffers, [](auto& commandBuffer) -> Ref<WebGPU::CommandBuffer> {
             return commandBuffer->backing();
     });
-    m_backing->submit(WTFMove(result));
+    m_backing->submit(WTF::move(result));
 
     if (RefPtr device = m_device.get()) {
-        for (Ref commandBuffer : commandBuffers)
+        for (Ref commandBuffer : commandBuffers) {
+            commandBuffer->setOverrideLabel(commandBuffer->label());
             commandBuffer->setBacking(device->invalidCommandEncoder(), device->invalidCommandBuffer());
+    }
     }
 }
 
 void GPUQueue::onSubmittedWorkDone(OnSubmittedWorkDonePromise&& promise)
 {
-    m_backing->onSubmittedWorkDone([promise = WTFMove(promise)]() mutable {
+    m_backing->onSubmittedWorkDone([promise = WTF::move(promise)]() mutable {
         promise.resolve(nullptr);
     });
 }
@@ -160,10 +164,10 @@ static size_t requiredBytesInCopy(const GPUImageCopyTexture& destination, const 
     if (!texture)
         return 0;
 
-    auto aspectSpecificFormat = WebCore::GPUTexture::aspectSpecificFormat(texture->format(), destination.aspect);
-    uint32_t blockWidth = WebCore::GPUTexture::texelBlockWidth(aspectSpecificFormat);
-    uint32_t blockHeight = WebCore::GPUTexture::texelBlockHeight(aspectSpecificFormat);
-    uint32_t blockSize = WebCore::GPUTexture::texelBlockSize(aspectSpecificFormat);
+    auto aspectSpecificFormat = GPUTexture::aspectSpecificFormat(texture->format(), destination.aspect);
+    uint32_t blockWidth = GPUTexture::texelBlockWidth(aspectSpecificFormat);
+    uint32_t blockHeight = GPUTexture::texelBlockHeight(aspectSpecificFormat);
+    uint32_t blockSize = GPUTexture::texelBlockSize(aspectSpecificFormat);
 
     auto copyExtentWidth = width(copyExtent);
     auto widthInBlocks = copyExtentWidth / blockWidth;
@@ -247,6 +251,7 @@ void GPUQueue::writeTexture(
     m_backing->writeTexture(destination.convertToBacking(), span.subspan(initialOffset, requiredBytes), imageDataLayout.convertToBacking(), convertToBacking(size));
 }
 
+#if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
 static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
 {
     switch (textureFormat) {
@@ -254,6 +259,8 @@ static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
     case GPUTextureFormat::R8snorm:
     case GPUTextureFormat::R8uint:
     case GPUTextureFormat::R8sint:
+    case GPUTextureFormat::R16unorm:
+    case GPUTextureFormat::R16snorm:
     case GPUTextureFormat::R16uint:
     case GPUTextureFormat::R16sint:
     case GPUTextureFormat::R16float:
@@ -264,6 +271,8 @@ static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
     case GPUTextureFormat::R32uint:
     case GPUTextureFormat::R32sint:
     case GPUTextureFormat::R32float:
+    case GPUTextureFormat::Rg16unorm:
+    case GPUTextureFormat::Rg16snorm:
     case GPUTextureFormat::Rg16uint:
     case GPUTextureFormat::Rg16sint:
     case GPUTextureFormat::Rg16float:
@@ -285,6 +294,8 @@ static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
     case GPUTextureFormat::Rg32uint:
     case GPUTextureFormat::Rg32sint:
     case GPUTextureFormat::Rg32float:
+    case GPUTextureFormat::Rgba16unorm:
+    case GPUTextureFormat::Rgba16snorm:
     case GPUTextureFormat::Rgba16uint:
     case GPUTextureFormat::Rgba16sint:
     case GPUTextureFormat::Rgba16float:
@@ -354,9 +365,10 @@ static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
 
     return PixelFormat::RGBA8;
 }
+#endif
 
 using ImageDataCallback = Function<void(std::span<const uint8_t>, size_t, size_t)>;
-static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer, const auto& destination, bool& needsPremultipliedAlpha, NOESCAPE const ImageDataCallback& callback)
+static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer, bool& needsPremultipliedAlpha, NOESCAPE const ImageDataCallback& callback)
 {
     UNUSED_PARAM(needsPremultipliedAlpha);
     if (!imageBuffer)
@@ -366,7 +378,7 @@ static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer,
     if (!size.width() || !size.height())
         return callback({ }, 0, 0);
 
-    auto pixelBuffer = imageBuffer->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, toPixelFormat(destination.texture->format()), DestinationColorSpace::SRGB() }, { { }, size });
+    auto pixelBuffer = imageBuffer->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() }, { { }, size });
     if (!pixelBuffer)
         return callback({ }, 0, 0);
 
@@ -374,7 +386,30 @@ static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer,
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
-static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, NOESCAPE const ImageDataCallback& callback)
+static void clampDimension(WebGPU::Extent3D& extent3D, size_t dimension, WebGPU::IntegerCoordinate minValue)
+{
+    return WTF::switchOn(extent3D, [&](Vector<WebGPU::IntegerCoordinate>& vector) {
+        if (dimension < vector.size())
+            vector[dimension] = std::min<WebGPU::IntegerCoordinate>(minValue, vector[dimension]);
+    }, [&](WebGPU::Extent3DDict& extent3D) {
+        switch (dimension) {
+        case 0:
+            extent3D.width = std::min<WebGPU::IntegerCoordinate>(minValue, extent3D.width);
+            break;
+        case 1:
+            extent3D.height = std::min<WebGPU::IntegerCoordinate>(minValue, extent3D.height);
+            break;
+        case 2:
+            extent3D.depthOrArrayLayers = std::min<WebGPU::IntegerCoordinate>(minValue, extent3D.depthOrArrayLayers);
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            break;
+        }
+    });
+}
+
+static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, WebGPU::Extent3D& backingCopySize, NOESCAPE const ImageDataCallback& callback)
 {
     if (!videoFrame.get())
         return callback({ }, 0, 0);
@@ -395,6 +430,9 @@ static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<Vid
     if (!width || !height)
         return callback({ }, 0, 0);
 
+    clampDimension(backingCopySize, 0, width);
+    clampDimension(backingCopySize, 1, height);
+
     auto sizeInBytes = height * CGImageGetBytesPerRow(platformImage.get());
     auto byteSpan = span(pixelDataCfData.get());
     vImage_Buffer bgra {
@@ -410,16 +448,37 @@ static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<Vid
 }
 #endif
 
-static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, NOESCAPE const ImageDataCallback& callback)
+#if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
+static void clipTo8bitsPerChannel(std::span<const uint8_t> data, size_t bitsPerComponent, Vector<uint8_t>& byteSpanBacking)
+{
+    RELEASE_ASSERT(bitsPerComponent != 8);
+
+    if (bitsPerComponent == 16) {
+        byteSpanBacking.resize(data.size() / 2);
+        auto uint16Span = unsafeMakeSpan(static_cast<const uint16_t*>(static_cast<const void*>(data.data())), byteSpanBacking.size());
+        for (size_t i = 0; i < uint16Span.size(); ++i)
+            byteSpanBacking[i] = std::min<uint8_t>(255, uint16Span[i]);
+    } else if (bitsPerComponent == 32) {
+        byteSpanBacking.resize(data.size() / 4);
+        auto uint32Span = unsafeMakeSpan(static_cast<const uint32_t*>(static_cast<const void*>(data.data())), byteSpanBacking.size());
+        for (size_t i = 0; i < uint32Span.size(); ++i)
+            byteSpanBacking[i] = std::min<uint8_t>(255, uint32Span[i]);
+    }
+}
+#endif
+
+static void imageBytesForSource(WebGPU::Queue& backing, const GPUImageCopyExternalImage& sourceDescriptor, const GPUImageCopyTextureTagged& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, WebGPU::Extent3D& backingCopySize, NOESCAPE const ImageDataCallback& callback)
 {
     UNUSED_PARAM(needsYFlip);
     UNUSED_PARAM(needsPremultipliedAlpha);
     UNUSED_PARAM(backing);
+    UNUSED_PARAM(backingCopySize);
+    UNUSED_PARAM(destination);
 
     const auto& source = sourceDescriptor.source;
     using ResultType = void;
     return WTF::switchOn(source, [&](const RefPtr<ImageBitmap>& imageBitmap) -> ResultType {
-        return getImageBytesFromImageBuffer(imageBitmap->buffer(), destination, needsPremultipliedAlpha, callback);
+        return getImageBytesFromImageBuffer(imageBitmap->buffer(), needsPremultipliedAlpha, callback);
 #if ENABLE(VIDEO) && ENABLE(WEB_CODECS)
     }, [&](const RefPtr<ImageData> imageData) -> ResultType {
         if (!imageData)
@@ -433,9 +492,19 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
         if (!cachedImage)
             return callback({ }, 0, 0);
         RefPtr image = dynamicDowncast<BitmapImage>(cachedImage->image());
-        if (!image)
-            return callback({ }, 0, 0);
-        RefPtr nativeImage = image->nativeImage();
+        RefPtr<NativeImage> nativeImage;
+        bool isSVG = false;
+        if (image)
+            nativeImage = image->nativeImage();
+        else {
+            RefPtr svgImage = dynamicDowncast<SVGImage>(cachedImage->image());
+            RefPtr texturePtr = destination.texture.get();
+            if (texturePtr) {
+                nativeImage = svgImage->nativeImage(FloatSize(texturePtr->width(), texturePtr->height()));
+                isSVG = true;
+            }
+        }
+
         if (!nativeImage)
             return callback({ }, 0, 0);
         RetainPtr platformImage = nativeImage->platformImage();
@@ -445,57 +514,111 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
                         if (!pixelDataCfData)
             return callback({ }, 0, 0);
 
-                        auto width = CGImageGetWidth(platformImage.get());
-                        auto height = CGImageGetHeight(platformImage.get());
-        if (!width || !height)
+        auto rawWidth = CGImageGetWidth(platformImage.get());
+        auto rawHeight = CGImageGetHeight(platformImage.get());
+        auto orientedWidth = isSVG ? rawWidth : imageElement->width();
+        auto orientedHeight = isSVG ? rawHeight : imageElement->height();
+
+        if (!orientedWidth || !orientedHeight || !rawWidth || !rawHeight)
             return callback({ }, 0, 0);
 
-                        auto sizeInBytes = height * CGImageGetBytesPerRow(platformImage.get());
+        auto sizeInBytes = rawHeight * CGImageGetBytesPerRow(platformImage.get());
+        auto bitsPerComponent = CGImageGetBitsPerComponent(platformImage.get());
         auto byteSpan = span(pixelDataCfData.get());
-                        auto requiredSize = width * height * 4;
+        Vector<uint8_t> byteSpanBacking;
+        if (bitsPerComponent != 8) {
+            clipTo8bitsPerChannel(byteSpan, bitsPerComponent, byteSpanBacking);
+            byteSpan = byteSpanBacking.span();
+            sizeInBytes = byteSpan.size();
+        }
+
+        auto requiredSize = orientedWidth * orientedHeight * 4;
         auto alphaInfo = CGImageGetAlphaInfo(platformImage.get());
         bool channelLayoutIsRGB = false;
         bool isBGRA = toPixelFormat(destination.texture->format()) == PixelFormat::BGRA8;
+        bool hasAlpha = false;
+        static constexpr std::array channelsSVG1 { 0, 1, 2, 3 };
+        static constexpr std::array channelsSVG2 { 2, 1, 0, 3 };
         static constexpr std::array channelsRGBX { 0, 1, 2, 3 };
         static constexpr std::array channelsBGRX { 2, 1, 0, 3 };
         static constexpr std::array channelsXRGB { 3, 0, 1, 2 };
         static constexpr std::array channelsXBGR { 3, 2, 1, 0 };
         auto& channels = [&] -> const std::array<int, 4>& {
+            if (isSVG)
+                return isBGRA ? channelsSVG1 : channelsSVG2;
+
         switch (alphaInfo) {
-        case kCGImageAlphaNone:               /* For example, RGB. */
         case kCGImageAlphaPremultipliedLast:  /* For example, premultiplied RGBA */
         case kCGImageAlphaLast:               /* For example, non-premultiplied RGBA */
-        case kCGImageAlphaNoneSkipLast:       /* For example, RGBX. */
+                hasAlpha = true;
+                [[fallthrough]];
+            case kCGImageAlphaNone:               /* For example, RGB. */
+            case kCGImageAlphaNoneSkipLast: {     /* For example, RGBX. */
             channelLayoutIsRGB = true;
                 return isBGRA ? channelsBGRX : channelsRGBX;
+            }
         case kCGImageAlphaPremultipliedFirst: /* For example, premultiplied ARGB */
         case kCGImageAlphaFirst:              /* For example, non-premultiplied ARGB */
-        case kCGImageAlphaNoneSkipFirst:      /* For example, XRGB. */
         case kCGImageAlphaOnly:                /* No color data, alpha data only */
+                hasAlpha = true;
+                [[fallthrough]];
+            case kCGImageAlphaNoneSkipFirst: {      /* For example, XRGB. */
                 return isBGRA ? channelsXBGR : channelsXRGB;
         }
+            }
         }();
 
-        if (sizeInBytes == requiredSize && channelLayoutIsRGB)
-            return callback(byteSpan.first(sizeInBytes), width, height);
+        auto orientation = RefPtr { imageElement->image() }->orientation().orientation();
+        if (sizeInBytes == requiredSize && channelLayoutIsRGB && orientation == ImageOrientation::Orientation::OriginTopLeft)
+            return callback(byteSpan.first(sizeInBytes), rawWidth, rawHeight);
 
-                        auto bytesPerRow = CGImageGetBytesPerRow(platformImage.get());
+        auto bytesPerRow = CGImageGetBytesPerRow(platformImage.get()) / (bitsPerComponent / 8);
                         Vector<uint8_t> tempBuffer(requiredSize, 255);
-                        auto bytesPerPixel = sizeInBytes / (width * height);
-        auto bytesToCopy = std::min<size_t>(4, bytesPerPixel);
+        auto bytesPerPixel = sizeInBytes / (rawWidth * rawHeight);
         bool flipY = sourceDescriptor.flipY;
         needsYFlip = false;
         int direction = flipY ? -1 : 1;
-        for (size_t y = 0, y0 = flipY ? (height - 1) : 0; y < height; ++y, y0 += direction) {
-                            for (size_t x = 0; x < width; ++x) {
-                // FIXME: These pixel values are probably incorrect after only copying 4 if bytesPerPixel is not 4.
-                for (size_t c = 0; c < bytesToCopy; ++c) {
-                    // FIXME: These pixel values are probably incorrect after only copying 4 if bytesPerPixel is not 4.
-                    tempBuffer[y * (width * 4) + x * 4 + channels[c]] = byteSpan[y * bytesPerRow + x * bytesPerPixel + c];
+        auto maxChannelIndex = bytesPerPixel - 1;
+        auto alphaIndex = 0;
+        if (hasAlpha && maxChannelIndex > 0) {
+            --maxChannelIndex;
+            alphaIndex = 1;
+        }
+
+        auto mapDestinationToSource = [&orientation, &rawWidth, &rawHeight](size_t x, size_t y) -> std::pair<size_t, size_t> {
+            switch (orientation) {
+            case ImageOrientation::Orientation::OriginTopRight:
+                return { rawWidth - 1 - x, y };
+            case ImageOrientation::Orientation::OriginBottomRight:
+                return { rawWidth - 1 - x, rawHeight - 1 - y };
+            case ImageOrientation::Orientation::OriginBottomLeft:
+                return { x, rawHeight - 1 - y };
+            case ImageOrientation::Orientation::OriginLeftTop:
+                return { y, x };
+            case ImageOrientation::Orientation::OriginRightTop:
+                return { y, rawHeight - 1 - x };
+            case ImageOrientation::Orientation::OriginRightBottom:
+                return { rawWidth - 1 - y, rawHeight - 1 - x };
+            case ImageOrientation::Orientation::OriginLeftBottom:
+                return { rawWidth - 1 - y, x };
+            default:
+                return { x, y };
+            }
+        };
+
+        for (size_t y = 0, y0 = flipY ? (orientedHeight - 1) : 0; y < orientedHeight; ++y, y0 += direction) {
+            for (size_t x = 0; x < orientedWidth; ++x) {
+                auto [sourceX, sourceY] = mapDestinationToSource(x, y);
+
+                for (size_t c = 0; c < 4; ++c) {
+                    if (channels[c] == 3 && bytesPerPixel < 4)
+                        tempBuffer[y0 * (orientedWidth * 4) + x * 4 + channels[c]] = hasAlpha ? byteSpan[sourceY * bytesPerRow + sourceX * bytesPerPixel + alphaIndex] : 255;
+                    else
+                        tempBuffer[y0 * (orientedWidth * 4) + x * 4 + channels[c]] = byteSpan[sourceY * bytesPerRow + sourceX * bytesPerPixel + std::min<size_t>(maxChannelIndex, c)];
                 }
             }
         }
-        callback(tempBuffer.span(), width, height);
+        callback(tempBuffer.span(), orientedWidth, orientedHeight);
 #else
         UNUSED_PARAM(needsYFlip);
         UNUSED_PARAM(imageElement);
@@ -504,25 +627,25 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
     }, [&](const RefPtr<HTMLVideoElement> videoElement) -> ResultType {
 #if PLATFORM(COCOA)
         if (RefPtr player = videoElement ? videoElement->player() : nullptr; player && player->isVideoPlayer())
-            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), callback);
+            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), backingCopySize, callback);
 #else
         UNUSED_PARAM(videoElement);
 #endif
         return callback({ }, 0, 0);
     }, [&](const RefPtr<WebCodecsVideoFrame> webCodecsFrame) -> ResultType {
 #if PLATFORM(COCOA)
-        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), callback);
+        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), backingCopySize, callback);
 #else
         UNUSED_PARAM(webCodecsFrame);
         return callback({ }, 0, 0);
 #endif
 #endif
     }, [&](const RefPtr<HTMLCanvasElement>& canvasElement) -> ResultType {
-        return getImageBytesFromImageBuffer(canvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, callback);
+        return getImageBytesFromImageBuffer(canvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), needsPremultipliedAlpha, callback);
     }
 #if ENABLE(OFFSCREEN_CANVAS)
     , [&](const RefPtr<OffscreenCanvas>& offscreenCanvasElement) -> ResultType {
-        return getImageBytesFromImageBuffer(offscreenCanvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, callback);
+        return getImageBytesFromImageBuffer(offscreenCanvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), needsPremultipliedAlpha, callback);
     }
 #endif
     );
@@ -599,13 +722,16 @@ static GPUIntegerCoordinate dimension(const GPUOrigin2D& origin, size_t dimensio
 static bool isStateValid(const auto& source, const std::optional<GPUOrigin2D>& origin, const GPUExtent3D& copySize, ExceptionCode& errorCode)
 {
     using ResultType = bool;
-    auto horizontalDimension = (origin ? dimension(*origin, 0) : 0) + dimension(copySize, 0);
-    auto verticalDimension = (origin ? dimension(*origin, 1) : 0) + dimension(copySize, 1);
+    auto checkedHorizontalDimension = checkedSum<uint32_t>((origin ? dimension(*origin, 0) : 0), dimension(copySize, 0));
+    auto checkedVerticalDimension = checkedSum<uint32_t>((origin ? dimension(*origin, 1) : 0), dimension(copySize, 1));
     auto depthDimension = dimension(copySize, 2);
-    if (depthDimension > 1) {
+    if (depthDimension > 1 || checkedHorizontalDimension.hasOverflowed() || checkedVerticalDimension.hasOverflowed()) {
         errorCode = ExceptionCode::OperationError;
         return false;
     }
+
+    uint32_t horizontalDimension = checkedHorizontalDimension.value();
+    uint32_t verticalDimension = checkedVerticalDimension.value();
 
     return WTF::switchOn(source, [&](const RefPtr<ImageBitmap>& imageBitmap) -> ResultType {
         if (!imageBitmap->buffer()) {
@@ -828,9 +954,7 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
     }
 
     case GPUTextureFormat::Rgba8unorm:
-    case GPUTextureFormat::Rgba8unormSRGB:
-    case GPUTextureFormat::Bgra8unorm:
-    case GPUTextureFormat::Bgra8unormSRGB: {
+    case GPUTextureFormat::Rgba8unormSRGB: {
         if (flipY || premultiplyAlpha || sourceX || sourceY) {
             auto data = MallocSpan<uint8_t>::malloc(sizeInBytes);
             memcpySpan(data.mutableSpan(), rgbaBytes);
@@ -838,6 +962,18 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
             return data;
         }
         return { };
+    }
+    case GPUTextureFormat::Bgra8unorm:
+    case GPUTextureFormat::Bgra8unormSRGB: {
+        auto data = MallocSpan<uint8_t>::malloc(sizeInBytes);
+        for (size_t i = 0; i < sizeInBytes; i += 4) {
+            data[i] = rgbaBytes[i + 2];
+            data[i + 1] = rgbaBytes[i + 1];
+            data[i + 2] = rgbaBytes[i];
+            data[i + 3] = rgbaBytes[i + 3];
+        }
+        flipAndPremultiply(data, flipY, premultiplyAlpha, 255);
+        return data;
     }
     case GPUTextureFormat::Rgb10a2unorm: {
         auto data = MallocSpan<uint32_t>::malloc(sizeInBytes);
@@ -897,6 +1033,8 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
     case GPUTextureFormat::R8snorm:
     case GPUTextureFormat::R8uint:
     case GPUTextureFormat::R8sint:
+    case GPUTextureFormat::R16unorm:
+    case GPUTextureFormat::R16snorm:
     case GPUTextureFormat::R16uint:
     case GPUTextureFormat::R16sint:
     case GPUTextureFormat::Rg8snorm:
@@ -904,6 +1042,8 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
     case GPUTextureFormat::Rg8sint:
     case GPUTextureFormat::R32uint:
     case GPUTextureFormat::R32sint:
+    case GPUTextureFormat::Rg16unorm:
+    case GPUTextureFormat::Rg16snorm:
     case GPUTextureFormat::Rg16uint:
     case GPUTextureFormat::Rg16sint:
     case GPUTextureFormat::Rgba32uint:
@@ -916,6 +1056,8 @@ static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgba
     case GPUTextureFormat::Rg11b10ufloat:
     case GPUTextureFormat::Rg32uint:
     case GPUTextureFormat::Rg32sint:
+    case GPUTextureFormat::Rgba16unorm:
+    case GPUTextureFormat::Rgba16snorm:
     case GPUTextureFormat::Rgba16uint:
     case GPUTextureFormat::Rgba16sint:
     case GPUTextureFormat::Stencil8:
@@ -1004,7 +1146,8 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
     bool callbackScopeIsSafe { true };
     bool needsYFlip = source.flipY;
     bool needsPremultipliedAlpha = destination.premultipliedAlpha;
-    imageBytesForSource(m_backing.get(), source, destination, needsYFlip, needsPremultipliedAlpha, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
+    auto backingCopySize = convertToBacking(copySize);
+    imageBytesForSource(m_backing.get(), source, destination, needsYFlip, needsPremultipliedAlpha, backingCopySize, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
         RELEASE_ASSERT(callbackScopeIsSafe);
         auto destinationTexture = destination.texture;
         auto sizeInBytes = imageBytes.size();
@@ -1043,7 +1186,7 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
         if (!supportedFormat || !(destinationTexture->usage() & GPUTextureUsage::RENDER_ATTACHMENT))
             copyDestination.mipLevel = INT_MAX;
 
-        m_backing->writeTexture(copyDestination, newImageBytes ? newImageBytes.span() : imageBytes, dataLayout.convertToBacking(), convertToBacking(copySize));
+        m_backing->writeTexture(copyDestination, newImageBytes ? newImageBytes.span() : imageBytes, dataLayout.convertToBacking(), backingCopySize);
     });
     callbackScopeIsSafe = false;
 

@@ -32,6 +32,8 @@ namespace WebCore {
 
 namespace Style {
 enum class GridTrackSizingDirection : bool;
+class GridTrackBreadth;
+struct GridTrackFitContentLength;
 }
 
 class GridSpan;
@@ -78,6 +80,21 @@ bool isSubgridReversedDirection(const RenderGrid&, Style::GridTrackSizingDirecti
 ExtraMarginsFromSubgrids extraMarginForSubgridAncestors(Style::GridTrackSizingDirection, const RenderBox& gridItem);
 
 unsigned alignmentContextForBaselineAlignment(const GridSpan&, const ItemPosition& alignment);
+
+bool hasAutoMarginsInColumnAxis(const RenderBox&, WritingMode parentWritingMode);
+bool hasAutoMarginsInRowAxis(const RenderBox&, WritingMode parentWritingMode);
+
+bool hasStretchableSizeInColumnAxis(const RenderBox&, const RenderGrid& gridContainer);
+bool hasStretchableSizeInRowAxis(const RenderBox&, const RenderGrid& gridContainer);
+
+LayoutUnit availableAlignmentSpaceForGridItemBeforeStretching(const RenderGrid&, LayoutUnit gridAreaBreadthForGridItem, const RenderBox&, Style::GridTrackSizingDirection);
+
+void updateAutoMarginsIfNeeded(RenderBox&, WritingMode);
+void updateAutoMarginsInRowAxisIfNeeded(RenderBox&, WritingMode);
+void updateAutoMarginsInColumnAxisIfNeeded(RenderBox&, WritingMode);
+
+bool isRelativeGridTrackBreadthAsAuto(const Style::GridTrackFitContentLength&, std::optional<LayoutUnit> availableSpace);
+bool isRelativeGridTrackBreadthAsAuto(const Style::GridTrackBreadth&, std::optional<LayoutUnit> availableSpace);
 
 } // namespace GridLayoutFunctions
 

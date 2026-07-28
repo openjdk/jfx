@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "IntRect.h"
+#include <WebCore/IntRect.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-#include "CocoaView.h"
+#include <WebCore/CocoaView.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakObjCPtr.h>
 #endif
@@ -46,9 +47,7 @@ OBJC_CLASS WebValidationBubbleViewController;
 
 #if PLATFORM(COCOA)
 using PlatformView = CocoaView;
-#elif PLATFORM(GTK)
-using PlatformView = GtkWidget;
-#else
+#elif !PLATFORM(GTK)
 using PlatformView = void;
 #endif
 
@@ -61,19 +60,16 @@ public:
     };
 
 #if PLATFORM(GTK)
-    using ShouldNotifyFocusEventsCallback = Function<void(PlatformView*, bool shouldNotifyFocusEvents)>;
-    static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
-    {
-        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings, WTFMove(callback)));
-    }
+    // ValidationBubbleGtk is inherited from ValidationBubble.
+    virtual ~ValidationBubble() = default;
 #else
     static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings)
     {
-        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings));
+        return adoptRef(*new ValidationBubble(view, WTF::move(message), settings));
     }
-#endif
 
     WEBCORE_EXPORT ~ValidationBubble();
+#endif
 
     const String& message() const { return m_message; }
     double fontSize() const { return m_fontSize; }
@@ -81,21 +77,20 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void setAnchorRect(const IntRect& anchorRect, UIViewController* presentingViewController = nullptr);
     WEBCORE_EXPORT void show();
+#elif PLATFORM(GTK)
+    WEBCORE_EXPORT virtual void showRelativeTo(const IntRect&) = 0;
 #else
     WEBCORE_EXPORT void showRelativeTo(const IntRect& anchorRect);
 #endif
 
-private:
-#if PLATFORM(GTK)
-    WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
-    void invalidate();
-#else
+protected:
+#if !PLATFORM(GTK)
     WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&);
 #endif
 
 #if PLATFORM(COCOA)
     WeakObjCPtr<PlatformView> m_view;
-#else
+#elif !PLATFORM(GTK)
     PlatformView* m_view;
 #endif
     String m_message;
@@ -108,9 +103,6 @@ private:
     RetainPtr<WebValidationBubbleDelegate> m_popoverDelegate;
     WeakObjCPtr<UIViewController> m_presentingViewController;
     bool m_startingToPresentViewController { false };
-#elif PLATFORM(GTK)
-    GtkWidget* m_popover { nullptr };
-    ShouldNotifyFocusEventsCallback m_shouldNotifyFocusEventsCallback { nullptr };
 #endif
 };
 

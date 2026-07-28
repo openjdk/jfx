@@ -889,21 +889,44 @@ const Type* shaderTypeForTexelFormat(TexelFormat format, const TypeStore& types)
 {
     switch (format) {
     case TexelFormat::BGRA8unorm:
+    case TexelFormat::R8snorm:
+    case TexelFormat::R8unorm:
+    case TexelFormat::RG8snorm:
+    case TexelFormat::RG8unorm:
     case TexelFormat::RGBA8unorm:
     case TexelFormat::RGBA8snorm:
+    case TexelFormat::RG16unorm:
+    case TexelFormat::RG16snorm:
+    case TexelFormat::RGBA16unorm:
+    case TexelFormat::RGBA16snorm:
+    case TexelFormat::R16unorm:
+    case TexelFormat::R16snorm:
+    case TexelFormat::R16float:
+    case TexelFormat::RGB10A2unorm:
     case TexelFormat::RGBA16float:
     case TexelFormat::R32float:
     case TexelFormat::RG32float:
     case TexelFormat::RGBA32float:
+    case TexelFormat::RG16float:
+    case TexelFormat::RG11B10ufloat:
         return types.f32Type();
     case TexelFormat::RGBA8uint:
+    case TexelFormat::RGB10A2uint:
     case TexelFormat::RGBA16uint:
+    case TexelFormat::R16uint:
+    case TexelFormat::R8uint:
+    case TexelFormat::RG8uint:
+    case TexelFormat::RG16uint:
     case TexelFormat::R32uint:
     case TexelFormat::RG32uint:
     case TexelFormat::RGBA32uint:
         return types.u32Type();
     case TexelFormat::RGBA8sint:
     case TexelFormat::RGBA16sint:
+    case TexelFormat::R16sint:
+    case TexelFormat::R8sint:
+    case TexelFormat::RG8sint:
+    case TexelFormat::RG16sint:
     case TexelFormat::R32sint:
     case TexelFormat::RG32sint:
     case TexelFormat::RGBA32sint:

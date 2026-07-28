@@ -39,31 +39,34 @@
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemFileEntry.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "StringCallback.h"
 #include <wtf/FileSystem.h>
 
 namespace WebCore {
 
-Ref<DataTransferItem> DataTransferItem::create(WeakPtr<DataTransferItemList>&& list, const String& type)
+Ref<DataTransferItem> DataTransferItem::create(WeakPtr<DataTransferItemList>&& list, const String& type, Kind kind)
 {
-    return adoptRef(*new DataTransferItem(WTFMove(list), type));
+    return adoptRef(*new DataTransferItem(WTF::move(list), type, kind));
 }
 
 Ref<DataTransferItem> DataTransferItem::create(WeakPtr<DataTransferItemList>&& list, const String& type, Ref<File>&& file)
 {
-    return adoptRef(*new DataTransferItem(WTFMove(list), type, WTFMove(file)));
+    return adoptRef(*new DataTransferItem(WTF::move(list), type, WTF::move(file)));
 }
 
-DataTransferItem::DataTransferItem(WeakPtr<DataTransferItemList>&& list, const String& type)
-    : m_list(WTFMove(list))
+DataTransferItem::DataTransferItem(WeakPtr<DataTransferItemList>&& list, const String& type, Kind kind)
+    : m_list(WTF::move(list))
     , m_type(type)
+    , m_kind(kind)
 {
 }
 
 DataTransferItem::DataTransferItem(WeakPtr<DataTransferItemList>&& list, const String& type, Ref<File>&& file)
-    : m_list(WTFMove(list))
+    : m_list(WTF::move(list))
     , m_type(type)
-    , m_file(WTFMove(file))
+    , m_kind(Kind::File)
+    , m_file(WTF::move(file))
 {
 }
 
@@ -74,9 +77,21 @@ void DataTransferItem::clearListAndPutIntoDisabledMode()
     m_list.clear();
 }
 
+bool DataTransferItem::isFile() const
+{
+    return m_kind == Kind::File;
+}
+
 String DataTransferItem::kind() const
 {
-    return m_file ? "file"_s : "string"_s;
+    switch (m_kind) {
+    case Kind::String:
+        return "string"_s;
+    case Kind::File:
+        return "file"_s;
+    }
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 String DataTransferItem::type() const

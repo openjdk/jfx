@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GraphicsTypesGL.h"
+#include <WebCore/GraphicsTypesGL.h>
 #include <type_traits>
 #include <wtf/Vector.h>
 

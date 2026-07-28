@@ -27,7 +27,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "CachedResource.h"
+#include <WebCore/CachedResource.h>
 #include <wtf/OptionSet.h>
 #include <wtf/URL.h>
 
@@ -102,6 +102,7 @@ std::optional<OptionSet<LoadContext>> readLoadContext(StringView);
 std::optional<RequestMethod> readRequestMethod(StringView);
 
 ASCIILiteral resourceTypeToString(OptionSet<ResourceType>);
+ASCIILiteral resourceTypeToStringForMatchedRule(OptionSet<ResourceType>);
 
 struct ResourceLoadInfo {
     URL resourceURL;
@@ -114,7 +115,7 @@ struct ResourceLoadInfo {
     bool isThirdParty() const;
     ResourceFlags getResourceFlags() const;
     ResourceLoadInfo isolatedCopy() const & { return { resourceURL.isolatedCopy(), mainDocumentURL.isolatedCopy(), frameURL.isolatedCopy(), type, mainFrameContext, requestMethod }; }
-    ResourceLoadInfo isolatedCopy() && { return { WTFMove(resourceURL).isolatedCopy(), WTFMove(mainDocumentURL).isolatedCopy(), WTFMove(frameURL).isolatedCopy(), type, mainFrameContext, requestMethod }; }
+    ResourceLoadInfo isolatedCopy() && { return { WTF::move(resourceURL).isolatedCopy(), WTF::move(mainDocumentURL).isolatedCopy(), WTF::move(frameURL).isolatedCopy(), type, mainFrameContext, requestMethod }; }
 };
 
 } // namespace WebCore::ContentExtensions

@@ -29,11 +29,10 @@
 #pragma once
 
 #include "FetchBodyOwner.h"
-#include "FetchHeaders.h"
-#include "HTTPStatusCodes.h"
-#include "ReadableStreamSink.h"
-#include "ResourceResponse.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <WebCore/FetchHeaders.h>
+#include <WebCore/HTTPStatusCodes.h>
+#include <WebCore/ResourceResponse.h>
 #include <span>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -88,7 +87,7 @@ public:
 
     const FetchHeaders& headers() const { return m_headers; }
     FetchHeaders& headers() { return m_headers; }
-    ExceptionOr<Ref<FetchResponse>> clone();
+    ExceptionOr<Ref<FetchResponse>> clone(JSDOMGlobalObject&);
 
     void consumeBodyAsStream() final;
     void feedStream() final;
@@ -168,8 +167,8 @@ private:
         bool hasLoader() const { return !!m_loader; }
 
         RefPtr<FragmentedSharedBuffer> startStreaming();
-        NotificationCallback takeNotificationCallback() { return WTFMove(m_responseCallback); }
-        ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTFMove(m_consumeDataCallback); }
+        NotificationCallback takeNotificationCallback() { return WTF::move(m_responseCallback); }
+        ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTF::move(m_consumeDataCallback); }
 
     private:
         Loader(FetchResponse&, NotificationCallback&&);

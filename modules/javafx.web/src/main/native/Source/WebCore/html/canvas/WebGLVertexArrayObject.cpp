@@ -36,7 +36,7 @@ namespace WebCore {
 
 RefPtr<WebGLVertexArrayObject> WebGLVertexArrayObject::create(WebGLRenderingContextBase& context, Type type)
 {
-    auto object = context.protectedGraphicsContextGL()->createVertexArray();
+    auto object = context.graphicsContextGL()->createVertexArray();
     if (!object)
         return nullptr;
     return adoptRef(*new WebGLVertexArrayObject { context, object, type });

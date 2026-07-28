@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "TypeSet.h"
+#include <JavaScriptCore/TypeSet.h>
 
 namespace JSC {
 

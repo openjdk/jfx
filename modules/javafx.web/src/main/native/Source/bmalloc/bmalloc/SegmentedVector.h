@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Vector.h"
 #include "bmalloc.h"
 
@@ -48,8 +50,6 @@ public:
     using difference_type = ptrdiff_t;
     using pointer = T*;
     using reference = T&;
-
-    ~SegmentedVectorIterator() { }
 
     T& operator*() const { return m_vector.at(m_index); }
     T* operator->() const { return &m_vector.at(m_index); }
@@ -153,7 +153,7 @@ public:
     T takeLast()
     {
         BASSERT(!isEmpty());
-        T result = WTFMove(last());
+        T result = std::move(last());
         --m_size;
         return result;
     }
@@ -266,3 +266,5 @@ private:
 };
 
 } // namespace bmalloc
+
+#endif // __cplusplus

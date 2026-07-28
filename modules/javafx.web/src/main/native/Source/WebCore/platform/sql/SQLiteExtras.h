@@ -27,6 +27,7 @@
 
 #include <span>
 #include <sqlite3.h>
+#include <wtf/Platform.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -75,9 +76,8 @@ inline std::span<const T> sqliteColumnBlob(sqlite3_stmt* statement, int index)
     if (!blob)
         return { };
     auto blobSize = sqlite3_column_bytes(statement, index); // NOLINT
-    if (blobSize < 0)
+    if (blobSize < 0 || (blobSize % sizeof(T)))
         return { };
-    ASSERT(!(blobSize % sizeof(T)));
     return unsafeMakeSpan(blob, blobSize / sizeof(T));
 }
 

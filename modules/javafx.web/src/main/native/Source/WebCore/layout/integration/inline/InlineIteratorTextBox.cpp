@@ -31,7 +31,7 @@
 #include "InlineIteratorTextBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderCombineText.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGInlineTextBox.h"
 
 namespace WebCore {
@@ -51,7 +51,7 @@ const FontCascade& TextBox::fontCascade() const
 }
 
 TextBoxIterator::TextBoxIterator(Box::PathVariant&& pathVariant)
-    : LeafBoxIterator(WTFMove(pathVariant))
+    : LeafBoxIterator(WTF::move(pathVariant))
 {
 }
 

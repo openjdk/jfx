@@ -32,13 +32,15 @@
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/ScriptProfilingScope.h>
+#include <JavaScriptCore/VMEntryScopeInlines.h>
 #include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
 void JSExecState::didLeaveScriptContext(JSC::JSGlobalObject* lexicalGlobalObject)
 {
-    auto context = executionContext(lexicalGlobalObject);
+    RefPtr context = executionContext(lexicalGlobalObject);
     if (!context)
         return;
     context->eventLoop().performMicrotaskCheckpoint();
@@ -56,8 +58,19 @@ JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobalObje
 
 void JSExecState::runTask(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
 {
+    JSC::VM& vm = globalObject->vm();
     JSExecState currentState(globalObject);
-    MicrotaskQueue::runJSMicrotask(globalObject, globalObject->vm(), task);
+    JSC::VMEntryScope entryScope(vm, globalObject);
+    MicrotaskQueue::runJSMicrotask(globalObject, vm, task);
+}
+
+void JSExecState::runTaskWithDebugger(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
+{
+    JSC::VM& vm = globalObject->vm();
+    JSExecState currentState(globalObject);
+    JSC::VMEntryScope entryScope(vm, globalObject);
+    JSC::ScriptProfilingScope profilingScope(globalObject, JSC::ProfilingReason::Microtask);
+    MicrotaskQueue::runJSMicrotaskWithDebugger(globalObject, vm, task);
 }
 
 ScriptExecutionContext* executionContext(JSC::JSGlobalObject* globalObject)

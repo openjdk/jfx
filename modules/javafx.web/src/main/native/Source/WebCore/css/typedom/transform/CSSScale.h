@@ -36,7 +36,7 @@ class Document;
 template<typename> class ExceptionOr;
 
 class CSSScale : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSScale);
+    WTF_MAKE_TZONE_ALLOCATED(CSSScale);
 public:
     static ExceptionOr<Ref<CSSScale>> create(CSSNumberish x, CSSNumberish y, std::optional<CSSNumberish>&& z);
     static ExceptionOr<Ref<CSSScale>> create(Ref<const CSSFunctionValue>, Document&);
@@ -52,7 +52,7 @@ public:
     void setY(CSSNumberish);
     void setZ(CSSNumberish);
 
-    CSSTransformType getType() const final { return CSSTransformType::Scale; }
+    CSSTransformType transformType() const final { return CSSTransformType::Scale; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -67,5 +67,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSScale)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Scale; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::Scale; }
 SPECIALIZE_TYPE_TRAITS_END()

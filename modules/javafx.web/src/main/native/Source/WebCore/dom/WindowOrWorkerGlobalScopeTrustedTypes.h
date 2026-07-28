@@ -41,7 +41,6 @@ template<typename> class ExceptionOr;
 
 class WindowOrWorkerGlobalScopeTrustedTypes {
 public:
-    static ASCIILiteral workerGlobalSupplementName();
     static TrustedTypePolicyFactory* trustedTypes(DOMWindow&);
     static TrustedTypePolicyFactory* trustedTypes(WorkerGlobalScope&);
 };
@@ -57,12 +56,17 @@ public:
 
     void prepareForDestruction();
 
-    static ASCIILiteral supplementName() { return WindowOrWorkerGlobalScopeTrustedTypes::workerGlobalSupplementName(); }
+    static ASCIILiteral supplementName() { return "WorkerGlobalScopeTrustedTypes"_s; }
 
 private:
+    bool isWorkerGlobalScopeTrustedTypes() const final { return true; }
+
     WeakPtr<WorkerGlobalScope, WeakPtrImplWithEventTargetData> m_scope;
     mutable RefPtr<TrustedTypePolicyFactory> m_trustedTypes;
 };
 
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerGlobalScopeTrustedTypes)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isWorkerGlobalScopeTrustedTypes(); }
+SPECIALIZE_TYPE_TRAITS_END()

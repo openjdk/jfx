@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "DecodingOptions.h"
-#include "GraphicsTypes.h"
-#include "ImageOrientation.h"
-#include "ImageTypes.h"
-#include "PlatformDynamicRangeLimit.h"
+#include <WebCore/DecodingOptions.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/ImageTypes.h>
+#include <WebCore/PlatformDynamicRangeLimit.h>
 #include <initializer_list>
 #include <wtf/Forward.h>
 

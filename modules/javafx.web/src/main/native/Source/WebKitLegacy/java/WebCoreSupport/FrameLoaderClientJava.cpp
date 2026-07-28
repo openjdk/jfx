@@ -51,6 +51,8 @@
 #include <WebCore/Settings.h>
 #include <WebCore/WindowFeatures.h>
 #include <WebCore/HistoryController.h>
+#include "DocumentPage.h"
+#include "FrameDestructionObserverInlines.h"
 
 #include "com_sun_webkit_LoadListenerClient.h"
 
@@ -346,10 +348,10 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage(InitializingIframe i
 
 WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(WebCore::ResourceRequest&& request, SubstituteData&& substituteData)
 {
-    return DocumentLoader::create(WTFMove(request), WTFMove(substituteData));
+    return DocumentLoader::create(WTF::move(request), WTF::move(substituteData));
 }
 
-void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& function)
+void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, URL&& requestURL, String&& method, CompletionHandler<void()>&& function)
 {
     // FIXME: This is surely too simple
     if (!frame() || !function) {
@@ -439,7 +441,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
                                                                     std::optional<NavigationIdentifier> navigationID,  // Use a name for the optional identifier
                                                                     std::optional<HitTestResult>&& hitTestResult,  // Match argument names
                                                                     bool hasOpener,
-                                                                    WebCore::IsPerformingHTTPFallback,
+                                                                    NavigationUpgradeToHTTPSBehavior,
                                                                     SandboxFlags sandboxFlags,
                                                                     PolicyDecisionMode decisionMode,
                                                                     FramePolicyFunction&& policyFunction)
@@ -510,7 +512,8 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
 
     SandboxFlags sandboxFlags = ownerElement.sandboxFlags();
     Ref<FrameTreeSyncData> frameTreeSyncData = FrameTreeSyncData::create();
-    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, ownerElement,WTFMove(frameTreeSyncData));
+    auto policy = ownerElement.referrerPolicy();
+    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, policy, ownerElement,WTF::move(frameTreeSyncData));
 
     static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
 
@@ -584,7 +587,7 @@ bool FrameLoaderClientJava::hasWebView() const
     return true;
 }
 
-void FrameLoaderClientJava::assignIdentifierToInitialRequest(ResourceLoaderIdentifier, WebCore::IsMainResourceLoad, DocumentLoader*, const ResourceRequest&)
+void FrameLoaderClientJava::assignIdentifierToInitialRequest(ResourceLoaderIdentifier, DocumentLoader*, const ResourceRequest&)
 {
     notImplemented();
 }
@@ -664,7 +667,7 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, ResourceL
     }
 }
 
-void FrameLoaderClientJava::dispatchDidFailLoading(DocumentLoader* dl, WebCore::IsMainResourceLoad, ResourceLoaderIdentifier identifier, const ResourceError& error)
+void FrameLoaderClientJava::dispatchDidFailLoading(DocumentLoader* dl, ResourceLoaderIdentifier identifier, const ResourceError& error)
 {
     Frame* f = dl->frame();
     if (!f) {
@@ -783,7 +786,7 @@ void FrameLoaderClientJava::dispatchDidLoadMainResource(DocumentLoader* l)
                   progress);
 }
 
-void FrameLoaderClientJava::dispatchDidFinishLoading(DocumentLoader* l, WebCore::IsMainResourceLoad, ResourceLoaderIdentifier identifier)
+void FrameLoaderClientJava::dispatchDidFinishLoading(DocumentLoader* l, ResourceLoaderIdentifier identifier)
 {
     postResourceLoadEvent(frame(),
                           com_sun_webkit_LoadListenerClient_RESOURCE_FINISHED,
@@ -864,15 +867,6 @@ RefPtr<HistoryItem> FrameLoaderClientJava::createHistoryItemTree(bool clipAtTarg
     return localFrame->loader().history().createItemTree(*localFrame, clipAtTarget, itemID);
 }
 
-void FrameLoaderClientJava::didDisplayInsecureContent()
-{
-    notImplemented();
-}
-
-void FrameLoaderClientJava::didRunInsecureContent(SecurityOrigin&)
-{
-    notImplemented();
-}
 
 void FrameLoaderClientJava::makeRepresentation(DocumentLoader*)
 {
@@ -1125,7 +1119,7 @@ void FrameLoaderClientJava::updateSandboxFlags(SandboxFlags)
 {
     notImplemented();
 }
-void FrameLoaderClientJava::updateOpener(const Frame&)
+void FrameLoaderClientJava::updateOpener(std::optional<FrameIdentifier> idf)
 {
     notImplemented();
 }
@@ -1133,6 +1127,10 @@ void FrameLoaderClientJava::updateOpener(const Frame&)
 bool FrameLoaderClientJava::supportsAsyncShouldGoToHistoryItem() const
 {
      return false;
+}
+
+void FrameLoaderClientJava::setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize)
+{
 }
 
 }

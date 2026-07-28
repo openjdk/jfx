@@ -213,6 +213,12 @@
 #define ALWAYS_INLINE_LAMBDA
 #endif
 
+/* COLD */
+
+#if !defined(COLD)
+#define COLD __attribute((__cold__))
+#endif
+
 /* WTF_EXTERN_C_{BEGIN, END} */
 
 #ifdef __cplusplus
@@ -222,6 +228,13 @@
 #define WTF_EXTERN_C_BEGIN
 #define WTF_EXTERN_C_END
 #endif
+
+/* CONCURRENT_SAFE */
+
+/* This is only used to annotate some functions as documentation that they are safe to call from any threads without additional
+ * synchronization. It also documents that these functions should not be altered in a way that breaks its concurrency promise.
+ * There isn't currently any compiler constructs that corresponds to this. */
+#define CONCURRENT_SAFE
 
 /* FALLTHROUGH */
 
@@ -330,7 +343,11 @@
 /* WK_UNUSED_INSTANCE_VARIABLE */
 
 #if !defined(WK_UNUSED_INSTANCE_VARIABLE)
+#if COMPILER_HAS_ATTRIBUTE(suppress)
+#define WK_UNUSED_INSTANCE_VARIABLE [[clang::suppress]] __attribute__((unused))
+#else
 #define WK_UNUSED_INSTANCE_VARIABLE __attribute__((unused))
+#endif
 #endif
 
 /* UNUSED_FUNCTION */
@@ -402,12 +419,6 @@
 
 #if !defined(UNUSED_VARIADIC_PARAMS)
 #define UNUSED_VARIADIC_PARAMS __attribute__((unused))
-#endif
-
-/* WARN_UNUSED_RETURN */
-
-#if !defined(WARN_UNUSED_RETURN)
-#define WARN_UNUSED_RETURN __attribute__((__warn_unused_result__))
 #endif
 
 /* DEBUGGER_ANNOTATION_MARKER */
@@ -552,10 +563,16 @@
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedLocalVarsChecker")
 #define SUPPRESS_UNRETAINED_ARG \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedCallArgsChecker")
+#define SUPPRESS_UNRETAINED_MEMBER \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.NoUnretainedMemberChecker")
+#define SUPPRESS_RETAINPTR_CTOR_ADOPT \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.RetainPtrCtorAdoptChecker")
 #else
 #define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE
 #define SUPPRESS_UNRETAINED_LOCAL
 #define SUPPRESS_UNRETAINED_ARG
+#define SUPPRESS_UNRETAINED_MEMBER
+#define SUPPRESS_RETAINPTR_CTOR_ADOPT
 #endif
 
 // To suppress webkit.RefCntblBaseVirtualDtor, use NoVirtualDestructorBase instead.
@@ -660,16 +677,30 @@
     ALLOW_COMMA_BEGIN \
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN \
     ALLOW_UNUSED_PARAMETERS_BEGIN \
+    IGNORE_WARNINGS_BEGIN("attributes") \
     IGNORE_WARNINGS_BEGIN("cast-align") \
     IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 
 #define WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END \
     IGNORE_CLANG_WARNINGS_END \
     IGNORE_WARNINGS_END \
+    IGNORE_WARNINGS_END \
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
     ALLOW_COMMA_END \
     ALLOW_DEPRECATED_DECLARATIONS_END \
     ALLOW_UNUSED_PARAMETERS_END
+
+/* NULLABLE etc. */
+
+#if COMPILER(CLANG)
+#define WTF_NULL_UNSPECIFIED _Null_unspecified
+#define WTF_NULLABLE _Nullable
+#define WTF_NONNULL _Nonnull
+#else
+#define WTF_NULL_UNSPECIFIED
+#define WTF_NULLABLE
+#define WTF_NONNULL
+#endif
 
 // Used to indicate that a class member has a specialized implementation in Swift. See
 // "SwiftCXXThunk.h".

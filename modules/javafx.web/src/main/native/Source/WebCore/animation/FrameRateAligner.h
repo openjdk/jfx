@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "AnimationMalloc.h"
-#include "ReducedResolutionSeconds.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/AnimationMalloc.h>
+#include <WebCore/ReducedResolutionSeconds.h>
 #include <wtf/HashMap.h>
 #include <wtf/Seconds.h>
 

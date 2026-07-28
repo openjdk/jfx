@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include "YarrErrorCode.h"
-#include "YarrFlags.h"
-#include "YarrUnicodeProperties.h"
+#include <JavaScriptCore/YarrErrorCode.h>
+#include <JavaScriptCore/YarrFlags.h>
+#include <JavaScriptCore/YarrUnicodeProperties.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
@@ -86,6 +86,7 @@ struct CharacterClass {
     WTF_MAKE_TZONE_ALLOCATED(CharacterClass);
 public:
     using Table = const char*;
+    static constexpr unsigned tableSize = 65536;
 
     // All CharacterClass instances have to have the full set of matches and ranges,
     // they may have an optional m_table for faster lookups (which must match the
@@ -796,7 +797,7 @@ private:
 };
 
     void indentForNestingLevel(PrintStream&, unsigned);
-    void dumpUChar32(PrintStream&, char32_t);
+    void dumpChar32(PrintStream&, char32_t);
     void dumpCharacterClass(PrintStream&, YarrPattern*, CharacterClass*);
 
     struct BackTrackInfoPatternCharacter {

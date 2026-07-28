@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "CSSRatio.h"
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/CSSRatio.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace Style {

@@ -39,3 +39,4 @@ FontRenderOptions& FontRenderOptions::singleton()
 } // namespace WebCore
 
 #endif // USE(CAIRO) || USE(SKIA)
+

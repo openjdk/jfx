@@ -25,6 +25,7 @@
 
 [
     Conditional=APPLE_PAY,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayDetailsUpdateBase {
     required ApplePayLineItem newTotal;
     sequence<ApplePayLineItem> newLineItems;

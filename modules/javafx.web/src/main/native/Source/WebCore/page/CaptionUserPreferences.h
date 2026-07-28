@@ -27,9 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "AudioTrack.h"
-#include "TextTrack.h"
-#include "Timer.h"
+#include <WebCore/AudioTrack.h>
+#include <WebCore/TextTrack.h>
+#include <WebCore/Timer.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -64,8 +64,9 @@ public:
     virtual CaptionDisplayMode captionDisplayMode() const;
     virtual void setCaptionDisplayMode(CaptionDisplayMode);
 
-    virtual int textTrackSelectionScore(TextTrack*, HTMLMediaElement*) const;
-    virtual int textTrackLanguageSelectionScore(TextTrack*, const Vector<String>&) const;
+    virtual int textTrackSelectionScore(TextTrack&, CaptionDisplayMode, AudioTrack* enabledAudioTrack = nullptr) const;
+    virtual int textTrackSelectionScore(TextTrack&, HTMLMediaElement&) const;
+    virtual int textTrackLanguageSelectionScore(TextTrack&, const Vector<String>&) const;
 
     virtual bool userPrefersCaptions() const;
     virtual void setUserPrefersCaptions(bool);
@@ -93,13 +94,13 @@ public:
     virtual void setPreferredAudioCharacteristic(const String&);
     virtual Vector<String> preferredAudioCharacteristics() const;
 
-    virtual String displayNameForTrack(TextTrack*) const;
-    MediaSelectionOption mediaSelectionOptionForTrack(TextTrack*) const;
-    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>);
+    virtual String displayNameForTrack(const TextTrack&) const;
+    MediaSelectionOption mediaSelectionOptionForTrack(const TextTrack&) const;
+    virtual Vector<Ref<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>);
 
-    virtual String displayNameForTrack(AudioTrack*) const;
-    MediaSelectionOption mediaSelectionOptionForTrack(AudioTrack*) const;
-    virtual Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList*);
+    virtual String displayNameForTrack(const AudioTrack&) const;
+    MediaSelectionOption mediaSelectionOptionForTrack(const AudioTrack&) const;
+    virtual Vector<Ref<AudioTrack>> sortedTrackListForMenu(AudioTrackList*);
 
     void setPrimaryAudioTrackLanguageOverride(const String& language) { m_primaryAudioTrackLanguageOverride = language;  }
     String primaryAudioTrackLanguageOverride() const;
@@ -108,6 +109,8 @@ public:
 
     friend class CaptionUserPreferencesTestingModeToken;
     WEBCORE_EXPORT UniqueRef<CaptionUserPreferencesTestingModeToken> createTestingModeToken();
+
+    virtual String captionPreviewTitle() const;
 
     PageGroup& pageGroup() const;
 
@@ -129,7 +132,7 @@ private:
 
     void timerFired();
     void notify();
-    Page* currentPage() const;
+    RefPtr<Page> currentPage() const;
 
     WeakRef<PageGroup> m_pageGroup;
     mutable CaptionDisplayMode m_displayMode;
@@ -146,7 +149,7 @@ private:
 class CaptionUserPreferencesTestingModeToken {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(CaptionUserPreferencesTestingModeToken, WEBCORE_EXPORT);
 public:
-    CaptionUserPreferencesTestingModeToken(CaptionUserPreferences& parent)
+    explicit CaptionUserPreferencesTestingModeToken(CaptionUserPreferences& parent)
         : m_parent(parent)
     {
         parent.incrementTestingModeCount();

@@ -28,27 +28,28 @@
 
 #include "CommonVM.h"
 #include "CustomElementReactionQueue.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "HTMLSlotElement.h"
 #include "IdleCallbackController.h"
 #include "Microtasks.h"
 #include "MutationObserver.h"
 #include "OpportunisticTaskScheduler.h"
-#include "Page.h"
 #include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
 #include "ThreadTimers.h"
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-static MemoryCompactRobinHoodHashMap<String, WindowEventLoop*>& windowEventLoopMap()
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WindowEventLoop);
+
+static MemoryCompactRobinHoodHashMap<String, CheckedPtr<WindowEventLoop>>& windowEventLoopMap()
 {
     RELEASE_ASSERT(isMainThread());
-    static NeverDestroyed<MemoryCompactRobinHoodHashMap<String, WindowEventLoop*>> map;
+    static NeverDestroyed<MemoryCompactRobinHoodHashMap<String, CheckedPtr<WindowEventLoop>>> map;
     return map.get();
 }
 
@@ -93,7 +94,7 @@ inline WindowEventLoop::WindowEventLoop(const String& agentClusterKey)
     : m_agentClusterKey(agentClusterKey)
     , m_timer(*this, &WindowEventLoop::didReachTimeToRun)
     , m_idleTimer(*this, &WindowEventLoop::didFireIdleTimer)
-    , m_perpetualTaskGroupForSimilarOriginWindowAgents(*this)
+    , m_perpetualTaskGroupForSimilarOriginWindowAgents(makeUniqueRef<EventLoopTaskGroup>(*this))
 {
 }
 
@@ -167,9 +168,7 @@ void WindowEventLoop::opportunisticallyRunIdleCallbacks(std::optional<MonotonicT
         RefPtr document = dynamicDowncast<Document>(context);
         if (!document || !document->hasPendingIdleCallback())
             return;
-        auto* idleCallbackController = document->idleCallbackController();
-        if (!idleCallbackController)
-            return;
+        if (CheckedPtr idleCallbackController = document->idleCallbackController())
         idleCallbackController->startIdlePeriod();
     });
 
@@ -246,7 +245,7 @@ void WindowEventLoop::queueMutationObserverCompoundMicrotask()
     if (m_mutationObserverCompoundMicrotaskQueuedFlag)
         return;
     m_mutationObserverCompoundMicrotaskQueuedFlag = true;
-    m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([weakThis = WeakPtr { *this }] {
+    m_perpetualTaskGroupForSimilarOriginWindowAgents->queueMicrotask([weakThis = WeakPtr { *this }] {
         // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -267,7 +266,7 @@ CustomElementQueue& WindowEventLoop::backupElementQueue()
 {
     if (!m_processingBackupElementQueue) {
         m_processingBackupElementQueue = true;
-        m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([weakThis = WeakPtr { *this }] {
+        m_perpetualTaskGroupForSimilarOriginWindowAgents->queueMicrotask([weakThis = WeakPtr { *this }] {
             // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
@@ -285,15 +284,13 @@ CustomElementQueue& WindowEventLoop::backupElementQueue()
 
 void WindowEventLoop::breakToAllowRenderingUpdate()
 {
-#if PLATFORM(MAC)
-    // On Mac rendering updates happen in a runloop observer.
+    // On Mac/Gtk/WPE rendering updates happen in a runloop observer.
     // Avoid running timers and doing other work (like processing asyncronous IPC) until it is completed.
 
     // FIXME: Also bail out from the task loop in EventLoop::run().
-    threadGlobalData().threadTimers().breakFireLoopForRenderingUpdate();
+    threadGlobalDataSingleton().threadTimers().breakFireLoopForRenderingUpdate();
 
     RunLoop::mainSingleton().suspendFunctionDispatchForCurrentCycle();
-#endif
 }
 
 } // namespace WebCore

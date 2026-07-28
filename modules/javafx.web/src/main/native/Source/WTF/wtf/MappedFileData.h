@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include <cstdint>
 #include <span>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 
 #if HAVE(MMAP)
 #include <wtf/MallocSpan.h>
-#include <wtf/Mmap.h>
+#include <wtf/MmapSpan.h>
 #endif
 
 #if OS(WINDOWS)
@@ -56,9 +58,9 @@ public:
     MappedFileData& operator=(MappedFileData&&) = default;
 
 #if HAVE(MMAP)
-    explicit MappedFileData(MallocSpan<uint8_t, Mmap>&&);
+    explicit MappedFileData(MmapSpan<uint8_t>&&);
 
-    std::span<uint8_t> leakHandle() WARN_UNUSED_RETURN { return m_fileData.leakSpan(); }
+    [[nodiscard]] std::span<uint8_t> leakHandle() { return m_fileData.leakSpan(); }
     explicit operator bool() const { return !!m_fileData; }
     size_t size() const { return m_fileData.span().size(); }
     std::span<const uint8_t> span() const LIFETIME_BOUND { return m_fileData.span(); }
@@ -69,13 +71,13 @@ public:
     const Win32Handle& fileMapping() const { return m_fileMapping; }
     explicit operator bool() const { return !!m_fileData.data(); }
     size_t size() const { return m_fileData.size(); }
-    std::span<const uint8_t> span() const { return m_fileData; }
-    std::span<uint8_t> mutableSpan() { return m_fileData; }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_fileData; }
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return m_fileData; }
 #endif
 
 private:
 #if HAVE(MMAP)
-    MallocSpan<uint8_t, Mmap> m_fileData;
+    MmapSpan<uint8_t> m_fileData;
 #elif OS(WINDOWS)
     std::span<uint8_t> m_fileData;
     Win32Handle m_fileMapping;

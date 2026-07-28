@@ -49,7 +49,7 @@
 
 #pragma once
 
-#include "CachedCall.h"
+#include "CachedCallInlines.h"
 #include "Error.h"
 #include "InterpreterInlines.h"
 #include "JSArrayBufferViewInlines.h"
@@ -208,22 +208,7 @@ static ALWAYS_INLINE void typedArrayViewForEachImpl(JSGlobalObject* globalObject
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (!thisObject->isResizableNonShared()) [[likely]] {
-        // Including GrowableShared. The key invariant here is that we can access element via array[index] if we check isDetached.
-        auto* array = thisObject->typedVector();
-
-        auto loopBody = [&](size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
-            JSValue element = jsUndefined();
-            auto nativeValue = ViewClass::Adaptor::toNativeFromUndefined();
-            if (!thisObject->isDetached()) [[likely]] {
-                nativeValue = array[index];
-                element = ViewClass::Adaptor::toJSValue(globalObject, nativeValue);
-                RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
-            }
-
-            return functor(element, index, nativeValue);
-        };
-
+    auto forEachLoop = [&](auto&& loopBody) ALWAYS_INLINE_LAMBDA {
         if constexpr (direction == ForEachDirection::Forward) {
             for (size_t index = 0; index < length; ++index) {
                 auto status = loopBody(index);
@@ -240,37 +225,45 @@ static ALWAYS_INLINE void typedArrayViewForEachImpl(JSGlobalObject* globalObject
                     return;
             }
         }
-        return;
-    }
+    };
 
-    auto loopBody = [&](size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+    if (!thisObject->isResizableNonShared()) [[likely]] {
+        // Fixed-length TypedArrays backed by non-shared ArrayBuffers cannot shrink and go out of
+        // bounds, and only need to check for detachment.
+        //
+        // But they may have their vectors move:
+        // - Non-wasteful TypedArrays that don't have a backing ArrayBuffer yet can transition to
+        //   being wasteful, and having an ArrayBuffer and change backing stores.
+        // - BoundsChecking Wasm memories can reallocate.
+        const bool hasStableVector = thisObject->hasArrayBuffer() && !thisObject->possiblySharedBuffer()->isWasmMemory();
+        auto* array = hasStableVector ? thisObject->typedVector() : nullptr;
+
+        forEachLoop([&](size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
+        JSValue element = jsUndefined();
+        auto nativeValue = ViewClass::Adaptor::toNativeFromUndefined();
+            if (!thisObject->isDetached()) [[likely]] {
+                nativeValue = (hasStableVector ? array : thisObject->typedVector())[index];
+            element = ViewClass::Adaptor::toJSValue(globalObject, nativeValue);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
+        }
+
+        return functor(element, index, nativeValue);
+        });
+
+                return;
+        }
+
+    forEachLoop([&](size_t index) ALWAYS_INLINE_LAMBDA -> IterationStatus {
         JSValue element = jsUndefined();
         auto nativeValue = ViewClass::Adaptor::toNativeFromUndefined();
         if (!thisObject->isDetached() && thisObject->inBounds(index)) [[likely]] {
             nativeValue = thisObject->typedVector()[index];
             element = ViewClass::Adaptor::toJSValue(globalObject, nativeValue);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, { });
-        }
+    }
 
         return functor(element, index, nativeValue);
-    };
-
-    if constexpr (direction == ForEachDirection::Forward) {
-        for (size_t index = 0; index < length; ++index) {
-            auto status = loopBody(index);
-            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
-            if (IterationStatus::Done == status)
-                return;
-        }
-    } else {
-        size_t index = length;
-        while (index--) {
-            auto status = loopBody(index);
-            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());
-            if (IterationStatus::Done == status)
-                return;
-        }
-    }
+    });
 }
 
 template<typename ViewClass>
@@ -455,7 +448,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncIncludes(VM& vm, JSGl
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         auto lengthValue = integerIndexedObjectLength(thisObject, getter);
         if (!lengthValue) [[unlikely]]
-        return JSValue::encode(jsBoolean(valueToFind.isUndefined()));
+            return JSValue::encode(jsBoolean(index < length && valueToFind.isUndefined()));
 
         updatedLength = lengthValue.value();
     }
@@ -465,7 +458,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncIncludes(VM& vm, JSGl
     if (!targetOption) {
         // Even though our TypedArray's length is updated, we iterate up to `length`.
         // So, if `updatedLength` is smaller than `length`, we will see undefined after that.
-        return JSValue::encode(jsBoolean(valueToFind.isUndefined() && length > updatedLength));
+        return JSValue::encode(jsBoolean(index < length && updatedLength < length && valueToFind.isUndefined()));
     }
 
     scope.assertNoExceptionExceptTermination();
@@ -774,7 +767,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncForEach(VM& vm, JSGlo
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.forEach callback must be a function"_s);
 
@@ -834,7 +827,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncMap(VM& vm, JSGlobalO
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.map callback must be a function"_s);
 
@@ -941,7 +934,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFilter(VM& vm, JSGlob
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.filter callback must be a function"_s);
 
@@ -1034,7 +1027,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFind(VM& vm, JSGlobal
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.find callback must be a function"_s);
 
@@ -1107,7 +1100,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindIndex(VM& vm, JSG
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findIndex callback must be a function"_s);
 
@@ -1180,7 +1173,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLast(VM& vm, JSGl
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findLast callback must be a function"_s);
 
@@ -1253,7 +1246,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncFindLastIndex(VM& vm,
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.findLastIndex callback must be a function"_s);
 
@@ -1326,7 +1319,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncEvery(VM& vm, JSGloba
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.every callback must be a function"_s);
 
@@ -1399,7 +1392,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSome(VM& vm, JSGlobal
     size_t length = thisObject->length();
 
     JSValue functorValue = callFrame->argument(0);
-    auto callData = JSC::getCallData(functorValue);
+    auto callData = JSC::getCallDataInline(functorValue);
     if (callData.type == CallData::Type::None) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "TypedArray.prototype.some callback must be a function"_s);
 
@@ -1486,19 +1479,19 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToReversed(VM& vm, JS
     validateTypedArray(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    size_t length = thisObject->length();
+    // Snapshot the span at this time, as SABs may grow (but never shrink) in parallel.
+    auto originalSpan = const_cast<const ViewClass*>(thisObject)->typedSpan();
+    size_t length = originalSpan.size();
 
     bool isResizableOrGrowableShared = false;
     Structure* structure = globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType, isResizableOrGrowableShared);
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
-    ASSERT(from.size() == length);
     auto to = result->typedSpan();
     ASSERT(to.size() == length);
 
-    WTF::copyElements(to, from);
+    WTF::copyElements(to, originalSpan);
     std::ranges::reverse(to);
 
     return JSValue::encode(result);
@@ -1523,13 +1516,13 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
         return JSValue::encode(thisObject);
     }
 
-    auto callData = JSC::getCallData(comparatorValue);
-
-    size_t length = thisObject->length();
-    if (length < 2)
-        return JSValue::encode(thisObject);
+    auto callData = JSC::getCallDataInline(comparatorValue);
 
     auto originalSpan = thisObject->typedSpan();
+    size_t length = originalSpan.size();
+
+    if (length < 2)
+        return JSValue::encode(thisObject);
 
     Vector<typename ViewClass::ElementType, 256> vector;
     auto totalSize = CheckedSize { length } * 2U;
@@ -1592,8 +1585,10 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
     if (thisObject->isDetached()) [[unlikely]]
         return JSValue::encode(thisObject);
 
+    // The comparator may trigger FastTypedArray -> WastefulTypedArray transition via .buffer access,
+    // which relocates the backing store. Do not reuse originalSpan here.
     size_t copyLength = std::min<size_t>(thisObject->length(), result.size());
-    WTF::copyElements(originalSpan, spanConstCast<const typename ViewClass::ElementType>(result.first(copyLength)));
+    WTF::copyElements(thisObject->typedSpan().first(copyLength), spanConstCast<const typename ViewClass::ElementType>(result.first(copyLength)));
 
     return JSValue::encode(thisObject);
 }
@@ -1630,18 +1625,18 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToSorted(VM& vm, JSGl
     validateTypedArray(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    size_t length = thisObject->length();
+    // Snapshot the span at this time, as SABs may grow (but never shrink) in parallel.
+    auto originalSpan = const_cast<const ViewClass*>(thisObject)->typedSpan();
+    size_t length = originalSpan.size();
 
     bool isResizableOrGrowableShared = false;
     Structure* structure = globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType, isResizableOrGrowableShared);
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
-    ASSERT(from.size() == length);
     auto to = result->typedSpan();
 
-    WTF::copyElements(to, from);
+    WTF::copyElements(to, originalSpan);
 
     RELEASE_AND_RETURN(scope, genericTypedArrayViewProtoFuncSortImpl(vm, globalObject, result, comparatorValue));
 }
@@ -1843,6 +1838,7 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSubarray(VM& vm, JSGl
     ViewClass* thisObject = jsCast<ViewClass*>(callFrame->thisValue());
 
     size_t thisLength = thisObject->length();
+    size_t srcByteOffset = thisObject->byteOffsetRaw();
 
     JSValue start = callFrame->argument(0);
     if (!start.isInt32()) [[unlikely]] {
@@ -1881,12 +1877,12 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSubarray(VM& vm, JSGl
         return { };
     }
 
-    size_t newByteOffset = thisObject->byteOffsetRaw() + begin * ViewClass::elementSize;
+    size_t newByteOffset = srcByteOffset + begin * ViewClass::elementSize;
 
     scope.release();
     return JSValue::encode(speciesConstruct(globalObject, thisObject, [&]() {
         Structure* structure = globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType, arrayBuffer->isResizableOrGrowableShared());
-        return ViewClass::create(globalObject, structure, WTFMove(arrayBuffer), newByteOffset, count);
+        return ViewClass::create(globalObject, structure, WTF::move(arrayBuffer), newByteOffset, count);
     }, [&](MarkedArgumentBuffer& args) {
         args.append(vm.m_typedArrayController->toJS(globalObject, thisObject->globalObject(), arrayBuffer.get()));
         args.append(jsNumber(newByteOffset));
@@ -1955,12 +1951,13 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncWith(VM& vm, JSGlobal
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, thisLength);
     RETURN_IF_EXCEPTION(scope, { });
 
-    size_t updatedLength = thisObject->length();
-    if (thisLength != updatedLength) [[unlikely]] {
+    // Snapshot the span at this time, as SABs may grow (but never shrink) in parallel.
+    auto maybeUpdatedSpan = const_cast<const ViewClass*>(thisObject)->typedSpan();
+    if (thisLength != maybeUpdatedSpan.size()) [[unlikely]] {
         // If TypedArray is shrunk, remaining part will be filled with NativeValue(undefined).
         // But BigInt64Array / BigUint64Array throws a TypeError since undefined cannot be converted to BigInt.
         if constexpr (ViewClass::Adaptor::isBigInt) {
-            if (thisLength > updatedLength) [[unlikely]]
+            if (thisLength > maybeUpdatedSpan.size()) [[unlikely]]
                 return throwVMTypeError(globalObject, scope, "Cannot convert undefined to BigInt"_s);
         }
 
@@ -1975,10 +1972,8 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncWith(VM& vm, JSGlobal
             result->setIndexQuicklyToNativeValue(index, fromValue);
         }
     } else {
-        auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
-        ASSERT(from.size() == thisLength);
         auto to = result->typedSpan();
-        WTF::copyElements(to, from);
+        WTF::copyElements(to, maybeUpdatedSpan);
         to[replaceIndex] = nativeValue;
     }
 

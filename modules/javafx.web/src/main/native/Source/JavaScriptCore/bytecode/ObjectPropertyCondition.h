@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "PropertyCondition.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/PropertyCondition.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -211,6 +211,8 @@ public:
         return !m_object && m_condition.isHashTableDeletedValue();
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // Two conditions are compatible if they are identical or if they speak of different uids or
     // different objects. If false is returned, you have to decide how to resolve the conflict -
     // for example if there is a Presence and an Equivalence then in some cases you'll want the
@@ -302,22 +304,10 @@ private:
     PropertyCondition m_condition;
 };
 
-struct ObjectPropertyConditionHash {
-    static unsigned hash(const ObjectPropertyCondition& key) { return key.hash(); }
-    static bool equal(
-        const ObjectPropertyCondition& a, const ObjectPropertyCondition& b)
-    {
-        return a == b;
-    }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ObjectPropertyCondition> : JSC::ObjectPropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ObjectPropertyCondition> : SimpleClassHashTraits<JSC::ObjectPropertyCondition> { };

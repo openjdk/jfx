@@ -27,12 +27,12 @@
 
 #if ENABLE(FULLSCREEN_API)
 
-#include "DocumentInlines.h"
-#include "GCReachableRef.h"
-#include "HTMLMediaElement.h"
-#include "HTMLMediaElementEnums.h"
-#include "LayoutRect.h"
-#include "Page.h"
+#include <WebCore/Document.h>
+#include <WebCore/FullscreenOptions.h>
+#include <WebCore/GCReachableRef.h>
+#include <WebCore/HTMLMediaElementEnums.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/Page.h>
 #include <wtf/Deque.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -45,13 +45,12 @@ class DocumentFullscreen final : public CanMakeWeakPtr<DocumentFullscreen> {
     WTF_MAKE_TZONE_ALLOCATED(DocumentFullscreen);
 public:
     DocumentFullscreen(Document&);
-    ~DocumentFullscreen() = default;
 
     void ref() const { m_document->ref(); }
     void deref() const { m_document->deref(); }
 
     // Document+Fullscreen.idl methods.
-    static void exitFullscreen(Document&, RefPtr<DeferredPromise>&&);
+    static void exitFullscreen(Document&, Ref<DeferredPromise>&&);
     static bool fullscreenEnabled(Document&);
     static bool webkitFullscreenEnabled(Document& document) { return document.protectedFullscreen()->enabledByPermissionsPolicy(); }
     static Element* webkitFullscreenElement(Document& document) { return document.ancestorElementInThisScope(document.protectedFullscreen()->protectedFullscreenElement().get()); };
@@ -64,7 +63,6 @@ public:
     Document& document() { return m_document.get(); }
     const Document& document() const { return m_document.get(); }
     Ref<Document> protectedDocument() const { return m_document.get(); }
-    Page* page() const { return document().page(); }
     LocalFrame* frame() const;
     Element* documentElement() const { return document().documentElement(); }
     bool isSimpleFullscreenDocument() const;
@@ -80,6 +78,10 @@ public:
     // Legacy Mozilla API.
     bool isFullscreen() const { return fullscreenElement(); }
     bool isFullscreenKeyboardInputAllowed() const { return fullscreenElement() && m_areKeysEnabledInFullscreen; }
+
+    // Fullscreen Keyboard Lock
+    void setKeyboardLockMode(FullscreenOptions::KeyboardLock mode) { m_keyboardLockMode = mode; }
+    bool isBrowserKeyboardLockEnabled() const { return m_keyboardLockMode == FullscreenOptions::KeyboardLock::Browser; }
 
     enum FullscreenCheckType {
         EnforceIFrameAllowFullscreenRequirement,
@@ -117,6 +119,7 @@ private:
     WTFLogChannel& logChannel() const;
 #endif
 
+    Page* page() const;
     Document* mainFrameDocument() { return protectedDocument()->mainFrameDocument(); }
 
     RefPtr<Element> fullscreenOrPendingElement() const { return m_fullscreenElement ? m_fullscreenElement : m_pendingFullscreenElement; }
@@ -138,25 +141,14 @@ private:
     bool m_isAnimatingFullscreen { false };
     bool m_pendingExitFullscreen { false };
 
+    // Fullscreen Keyboard Lock
+    FullscreenOptions::KeyboardLock m_keyboardLockMode { FullscreenOptions::KeyboardLock::None };
+
 #if !RELEASE_LOG_DISABLED
     const uint64_t m_logIdentifier;
 #endif
 
-    class CompletionHandlerScope final {
-    public:
-        CompletionHandlerScope(CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
-            : m_completionHandler(WTFMove(completionHandler)) { }
-        CompletionHandlerScope(CompletionHandlerScope&&) = default;
-        CompletionHandlerScope& operator=(CompletionHandlerScope&&) = default;
-        ~CompletionHandlerScope()
-        {
-            if (m_completionHandler)
-                m_completionHandler({ });
-        }
-        CompletionHandler<void(ExceptionOr<void>)> release() { return WTFMove(m_completionHandler); }
-    private:
-        CompletionHandler<void(ExceptionOr<void>)> m_completionHandler;
-    };
+    class CompletionHandlerScope;
 };
 
 }

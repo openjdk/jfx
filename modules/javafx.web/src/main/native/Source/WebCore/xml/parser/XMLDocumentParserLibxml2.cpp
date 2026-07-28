@@ -30,15 +30,18 @@
 
 #include "CDATASection.h"
 #include "Comment.h"
-#include "CachedResourceLoader.h"
 #include "CommonAtomStrings.h"
 #include "CustomElementReactionQueue.h"
 #include "CustomElementRegistry.h"
 #include "Document.h"
+#include "DocumentEventLoop.h"
 #include "DocumentFragment.h"
 #include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentSecurityOrigin.h"
 #include "DocumentType.h"
 #include "EventLoop.h"
+#include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLEntityParser.h"
@@ -49,9 +52,10 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "PendingScript.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
@@ -66,8 +70,8 @@
 #include "ThrowOnDynamicMarkupInsertionCountIncrementer.h"
 #include "TransformSource.h"
 #include "UserScriptTypes.h"
-#include "XMLNSNames.h"
 #include "XMLDocumentParserScope.h"
+#include "XMLNSNames.h"
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
 #include <limits>
@@ -115,33 +119,26 @@ static inline bool shouldRenderInXMLTreeViewerMode(Document& document)
 // infinite recusion.
 
 #if HAVE(TYPE_AWARE_MALLOC)
-static void* xmlMallocHelper(size_t size, malloc_type_id_t typeID)
-{
-    return malloc_type_malloc(size, typeID);
-}
+using XMLMalloc = WTF::SystemMalloc;
 #else
 static void* xmlMallocHelper(size_t size)
 {
     return xmlMalloc(size);
 }
-#endif
 
 static void xmlFreeHelper(void* p)
 {
-#if HAVE(TYPE_AWARE_MALLOC)
-    free(p);
-#else
     xmlFree(p);
-#endif
 }
 
 struct XMLMalloc {
-    static void* malloc(size_t size) WTF_TYPE_AWARE_MALLOC_FUNCTION(xmlMallocHelper, 1)
+    static void* malloc(size_t size)
     {
         return xmlMallocHelper(size);
     }
     static void free(void* p) { xmlFreeHelper(p); }
 };
+#endif
 
 static std::span<xmlChar> unsafeSpanIncludingNullTerminator(xmlChar* string)
 {
@@ -182,7 +179,7 @@ public:
             callback->attributes[i * 5 + 4] = unsafeSpanIncludingNullTerminator(callback->attributes[i * 5 + 3]).subspan(len).data();
         }
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendEndElementNSCallback()
@@ -197,7 +194,7 @@ public:
         callback->s = MallocSpan<xmlChar, XMLMalloc>::malloc(s.size());
         memcpySpan(callback->s.mutableSpan(), s);
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendProcessingInstructionCallback(const xmlChar* target, const xmlChar* data)
@@ -207,7 +204,7 @@ public:
         callback->target = xmlStrdup(target);
         callback->data = xmlStrdup(data);
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendCDATABlockCallback(std::span<const xmlChar> s)
@@ -216,7 +213,7 @@ public:
         callback->s = MallocSpan<xmlChar, XMLMalloc>::malloc(s.size());
         memcpySpan(callback->s.mutableSpan(), s);
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendCommentCallback(const xmlChar* s)
@@ -225,7 +222,7 @@ public:
 
         callback->s = xmlStrdup(s);
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendInternalSubsetCallback(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID)
@@ -236,7 +233,7 @@ public:
         callback->externalID = xmlStrdup(externalID);
         callback->systemID = xmlStrdup(systemID);
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void appendErrorCallback(XMLErrors::Type type, const xmlChar* message, OrdinalNumber lineNumber, OrdinalNumber columnNumber)
@@ -248,7 +245,7 @@ public:
         callback->lineNumber = lineNumber;
         callback->columnNumber = columnNumber;
 
-        m_callbacks.append(WTFMove(callback));
+        m_callbacks.append(WTF::move(callback));
     }
 
     void callAndRemoveFirstCallback(XMLDocumentParser* parser)
@@ -403,7 +400,7 @@ class OffsetBuffer {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(OffsetBuffer);
 public:
     OffsetBuffer(Vector<uint8_t>&& buffer)
-        : m_buffer(WTFMove(buffer))
+        : m_buffer(WTF::move(buffer))
     {
     }
 
@@ -490,7 +487,7 @@ static bool shouldAllowExternalLoad(const URL& url)
     RefPtr currentCachedResourceLoader = XMLDocumentParserScope::currentCachedResourceLoader().get();
     if (!currentCachedResourceLoader || !currentCachedResourceLoader->document())
         return false;
-    if (!currentCachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton())) {
+    if (!currentCachedResourceLoader->protectedDocument()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton())) {
         currentCachedResourceLoader->printAccessDeniedMessage(url);
         return false;
     }
@@ -509,7 +506,7 @@ static void* openFunc(const char* uri)
 
     RefPtr document = cachedResourceLoader->document();
     // Same logic as Document::completeURL(). Keep them in sync.
-    auto* encoding = (document && document->decoder()) ? document->decoder()->encodingForURLParsing() : nullptr;
+    auto* encoding = (document && document->decoder()) ? document->protectedDecoder()->encodingForURLParsing() : nullptr;
     URL url(document ? document->fallbackBaseURL() : URL(), String::fromLatin1(uri), encoding);
 
     if (!shouldAllowExternalLoad(url))
@@ -530,13 +527,13 @@ static void* openFunc(const char* uri)
             cachedResourceLoader->frame()->loader().loadResourceSynchronously(URL { url }, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
 
             if (response.url().isEmpty()) {
-                if (RefPtr page = document ? document->page() : nullptr)
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because cross-origin loads are not allowed."_s));
+                if (RefPtr frame = document ? document->frame() : nullptr)
+                    frame->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because cross-origin loads are not allowed."_s));
                 return &globalDescriptor;
             }
             if (!externalEntityMimeTypeAllowed(response)) {
-                if (RefPtr page = document ? document->page() : nullptr)
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because only XML MIME types are allowed."_s));
+                if (RefPtr frame = document ? document->frame() : nullptr)
+                    frame->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because only XML MIME types are allowed."_s));
                 return &globalDescriptor;
             }
         }
@@ -636,13 +633,16 @@ RefPtr<XMLParserContext> XMLParserContext::createMemoryParser(xmlSAXHandlerPtr h
     // FIXME: Why is XML_PARSE_NODICT needed? This is different from what createStringParser does.
     xmlCtxtUseOptions(parser, XML_PARSE_NODICT | XML_PARSE_NOENT | XML_PARSE_HUGE);
 
-    // Internal initialization
+#if LIBXML_VERSION < 21300
+    // Internal initialization required before libxml2 2.13.
+    // Fixed with https://gitlab.gnome.org/GNOME/libxml2/-/commit/8c5848bd
     parser->sax2 = 1;
     parser->instate = XML_PARSER_CONTENT; // We are parsing a CONTENT
     parser->depth = 0;
-    parser->str_xml = xmlDictLookup(parser->dict, byteCast<xmlChar>(const_cast<char*>("xml")), 3);
-    parser->str_xmlns = xmlDictLookup(parser->dict, byteCast<xmlChar>(const_cast<char*>("xmlns")), 5);
-    parser->str_xml_ns = xmlDictLookup(parser->dict, XML_XML_NAMESPACE, 36);
+    SUPPRESS_FORWARD_DECL_ARG parser->str_xml = xmlDictLookup(parser->dict, byteCast<xmlChar>(const_cast<char*>("xml")), 3);
+    SUPPRESS_FORWARD_DECL_ARG parser->str_xmlns = xmlDictLookup(parser->dict, byteCast<xmlChar>(const_cast<char*>("xmlns")), 5);
+    SUPPRESS_FORWARD_DECL_ARG parser->str_xml_ns = xmlDictLookup(parser->dict, XML_XML_NAMESPACE, 36);
+#endif
     parser->_private = userData;
 
     return adoptRef(*new XMLParserContext(parser));
@@ -670,7 +670,7 @@ XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, HashMap<AtomStr
     , m_currentNode(&fragment)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
     , m_parsingFragment(true)
-    , m_prefixToNamespaceMap(WTFMove(prefixToNamespaceMap))
+    , m_prefixToNamespaceMap(WTF::move(prefixToNamespaceMap))
     , m_defaultNamespaceURI(defaultNamespaceURI)
 {
     fragment.ref();
@@ -690,8 +690,8 @@ XMLDocumentParser::~XMLDocumentParser()
     ASSERT(!m_currentNode);
 
     // FIXME: m_pendingScript handling should be moved into XMLDocumentParser.cpp!
-    if (m_pendingScript)
-        m_pendingScript->clearClient();
+    if (RefPtr pendingScript = m_pendingScript)
+        pendingScript->clearClient();
 }
 
 void XMLDocumentParser::doWrite(const String& parseString)
@@ -709,7 +709,7 @@ void XMLDocumentParser::doWrite(const String& parseString)
         // keep this alive until this function is done.
         Ref<XMLDocumentParser> protectedThis(*this);
 
-        XMLDocumentParserScope scope(&document()->cachedResourceLoader());
+        XMLDocumentParserScope scope(&protectedDocument()->cachedResourceLoader());
 
         // FIXME: Can we parse 8-bit strings directly as Latin-1 instead of upconverting to UTF-16?
         switchToUTF16(context->context());
@@ -755,7 +755,7 @@ struct _xmlSAX2Namespace {
 };
 typedef struct _xmlSAX2Namespace xmlSAX2Namespace;
 
-static inline bool handleNamespaceAttributes(Vector<Attribute>& prefixedAttributes, const xmlChar** libxmlNamespaces, int numNamespaces)
+static inline bool handleNamespaceAttributes(Vector<Attribute>& prefixedAttributes, const xmlChar** libxmlNamespaces, int numNamespaces, bool& shouldUseNullCustomElementRegistry)
 {
     auto namespaces = unsafeMakeSpan(reinterpret_cast<xmlSAX2Namespace*>(libxmlNamespaces), numNamespaces);
     for (auto& xmlNamespace : namespaces) {
@@ -768,7 +768,11 @@ static inline bool handleNamespaceAttributes(Vector<Attribute>& prefixedAttribut
         if (result.hasException())
             return false;
 
-        prefixedAttributes.append(Attribute(result.releaseReturnValue(), namespaceURI));
+        QualifiedName attributeName = result.releaseReturnValue();
+        if (attributeName == HTMLNames::customelementregistryAttr)
+            shouldUseNullCustomElementRegistry = true;
+
+        prefixedAttributes.append(Attribute(attributeName, namespaceURI));
     }
     return true;
 }
@@ -782,7 +786,7 @@ struct _xmlSAX2Attributes {
 };
 typedef struct _xmlSAX2Attributes xmlSAX2Attributes;
 
-static inline bool handleElementAttributes(Vector<Attribute>& prefixedAttributes, const xmlChar** libxmlAttributes, int numAttributes)
+static inline bool handleElementAttributes(Vector<Attribute>& prefixedAttributes, const xmlChar** libxmlAttributes, int numAttributes, bool& shouldUseNullCustomElementRegistry)
 {
     auto attributes = unsafeMakeSpan(reinterpret_cast<xmlSAX2Attributes*>(libxmlAttributes), numAttributes);
     for (auto& attribute : attributes) {
@@ -796,7 +800,11 @@ static inline bool handleElementAttributes(Vector<Attribute>& prefixedAttributes
         if (result.hasException())
             return false;
 
-        prefixedAttributes.append(Attribute(result.releaseReturnValue(), attrValue));
+        QualifiedName attributeName = result.releaseReturnValue();
+        if (attributeName == HTMLNames::customelementregistryAttr)
+            shouldUseNullCustomElementRegistry = true;
+
+        prefixedAttributes.append(Attribute(attributeName, attrValue));
     }
     return true;
 }
@@ -817,11 +825,13 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     AtomString localName = toAtomString(xmlLocalName);
     AtomString uri = toAtomString(xmlURI);
     AtomString prefix = toAtomString(xmlPrefix);
+    RefPtr currentNode = *m_currentNode;
+    RefPtr document = currentNode->document();
 
     if (m_parsingFragment && uri.isNull()) {
         if (!prefix.isNull())
             uri = m_prefixToNamespaceMap.get(prefix);
-        else if (is<SVGElement>(m_currentNode.get()) || localName == SVGNames::svgTag->localName())
+        else if (is<SVGElement>(currentNode.get()) || localName == SVGNames::svgTag->localName())
             uri = SVGNames::svgNamespaceURI;
         else
             uri = m_defaultNamespaceURI;
@@ -834,7 +844,7 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 
     bool willConstructCustomElement = false;
     if (!m_parsingFragment) {
-        if (RefPtr window = m_currentNode->document().window()) {
+        if (RefPtr window = document->window()) {
             if (RefPtr registry = window->customElementRegistry(); registry) [[unlikely]]
                 willConstructCustomElement = registry->findInterface(qName);
         }
@@ -842,23 +852,27 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 
     std::optional<ThrowOnDynamicMarkupInsertionCountIncrementer> markupInsertionCountIncrementer;
     std::optional<CustomElementReactionStack> customElementReactionStack;
+
     if (willConstructCustomElement) [[unlikely]] {
-        markupInsertionCountIncrementer.emplace(m_currentNode->document());
-        m_currentNode->document().eventLoop().performMicrotaskCheckpoint();
-        customElementReactionStack.emplace(m_currentNode->document().globalObject());
+        markupInsertionCountIncrementer.emplace(*document);
+        document->checkedEventLoop()->performMicrotaskCheckpoint();
+        customElementReactionStack.emplace(document->globalObject());
     }
 
-    auto newElement = m_currentNode->document().createElement(qName, true,
-        CustomElementRegistry::registryForNodeOrTreeScope(*m_currentNode, m_currentNode->treeScope()));
-
     Vector<Attribute> prefixedAttributes;
-    if (!handleNamespaceAttributes(prefixedAttributes, libxmlNamespaces, numNamespaces)) {
+    bool shouldUseNullCustomElementRegistry = false;
+    bool handledAttributes = handleNamespaceAttributes(prefixedAttributes, libxmlNamespaces, numNamespaces, shouldUseNullCustomElementRegistry);
+    bool success = handledAttributes ? handleElementAttributes(prefixedAttributes, libxmlAttributes, numAttributes, shouldUseNullCustomElementRegistry) : false;
+
+    RefPtr registry = shouldUseNullCustomElementRegistry ? nullptr : CustomElementRegistry::registryForNodeOrTreeScope(*currentNode, currentNode->protectedTreeScope());
+    auto newElement = document->createElement(qName, true, registry.get());
+
+    if (!handledAttributes) {
         setAttributes(newElement.ptr(), prefixedAttributes, parserContentPolicy());
         stopParsing();
         return;
     }
 
-    bool success = handleElementAttributes(prefixedAttributes, libxmlAttributes, numAttributes);
     setAttributes(newElement.ptr(), prefixedAttributes, parserContentPolicy());
     if (!success) {
         stopParsing();
@@ -875,17 +889,17 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (isScriptElement(newElement.get()))
         m_scriptStartPosition = textPosition();
 
-    m_currentNode->parserAppendChild(newElement);
+    currentNode->parserAppendChild(newElement);
     if (!m_currentNode) // Synchronous DOM events may have removed the current node.
         return;
 
     if (RefPtr templateElement = dynamicDowncast<HTMLTemplateElement>(newElement))
-        pushCurrentNode(&templateElement->content());
+        pushCurrentNode(&templateElement->protectedContent().get());
     else
         pushCurrentNode(newElement.ptr());
 
-    if (!m_parsingFragment && isFirstElement && document()->frame())
-        document()->frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
+    if (!m_parsingFragment && isFirstElement && document->frame())
+        document->protectedFrame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 }
 
 void XMLDocumentParser::endElementNs()
@@ -946,8 +960,8 @@ void XMLDocumentParser::endElementNs()
             else
                 scriptElement->registerImportMap(ScriptSourceCode(scriptElement->scriptContent(), scriptElement->sourceTaintedOrigin(), URL(document()->url()), m_scriptStartPosition, JSC::SourceProviderSourceType::ImportMap));
         } else if (scriptElement->willBeParserExecuted() && scriptElement->loadableScript()) {
-            m_pendingScript = PendingScript::create(*scriptElement, *scriptElement->loadableScript());
-            m_pendingScript->setClient(*this);
+            m_pendingScript = PendingScript::create(*scriptElement, *scriptElement->protectedLoadableScript());
+            RefPtr { m_pendingScript }->setClient(*this);
 
             // m_pendingScript will be nullptr if script was already loaded and setClient() executed it.
             if (m_pendingScript)
@@ -1012,14 +1026,14 @@ void XMLDocumentParser::processingInstruction(const xmlChar* target, const xmlCh
     if (!updateLeafTextNode())
         return;
 
-    auto result = m_currentNode->document().createProcessingInstruction(toString(target), toString(data));
+    auto result = m_currentNode->protectedDocument()->createProcessingInstruction(toString(target), toString(data));
     if (result.hasException())
         return;
     auto pi = result.releaseReturnValue();
 
     pi->setCreatedByParser(true);
 
-    m_currentNode->parserAppendChild(pi);
+    RefPtr { *m_currentNode }->parserAppendChild(pi);
 
     pi->setCreatedByParser(false);
 
@@ -1046,7 +1060,7 @@ void XMLDocumentParser::cdataBlock(std::span<const xmlChar> s)
     if (!updateLeafTextNode())
         return;
 
-    m_currentNode->parserAppendChild(CDATASection::create(m_currentNode->document(), toString(s)));
+    RefPtr { *m_currentNode }->parserAppendChild(CDATASection::create(m_currentNode->protectedDocument(), toString(s)));
 }
 
 void XMLDocumentParser::comment(const xmlChar* s)
@@ -1062,7 +1076,7 @@ void XMLDocumentParser::comment(const xmlChar* s)
     if (!updateLeafTextNode())
         return;
 
-    m_currentNode->parserAppendChild(Comment::create(m_currentNode->document(), toString(s)));
+    RefPtr { *m_currentNode }->parserAppendChild(Comment::create(m_currentNode->protectedDocument(), toString(s)));
 }
 
 enum StandaloneInfo {
@@ -1081,9 +1095,9 @@ void XMLDocumentParser::startDocument(const xmlChar* version, const xmlChar* enc
     }
 
     if (version)
-        document()->setXMLVersion(toString(version));
+        protectedDocument()->setXMLVersion(toString(version));
     if (standalone != StandaloneUnspecified)
-        document()->setXMLStandalone(standaloneInfo == StandaloneYes);
+        protectedDocument()->setXMLStandalone(standaloneInfo == StandaloneYes);
     if (encoding)
         document()->setXMLEncoding(toString(encoding));
     document()->setHasXMLDeclaration(true);
@@ -1104,8 +1118,8 @@ void XMLDocumentParser::internalSubset(const xmlChar* name, const xmlChar* exter
         return;
     }
 
-    if (document())
-        document()->parserAppendChild(DocumentType::create(*document(), toString(name), toString(externalID), toString(systemID)));
+    if (RefPtr document = this->document())
+        document->parserAppendChild(DocumentType::create(*document, toString(name), toString(externalID), toString(systemID)));
 }
 
 static inline XMLDocumentParser* getParser(void* closure)
@@ -1114,34 +1128,39 @@ static inline XMLDocumentParser* getParser(void* closure)
     return static_cast<XMLDocumentParser*>(ctxt->_private);
 }
 
+static inline RefPtr<XMLDocumentParser> protectedParser(void* closure)
+{
+    return getParser(closure);
+}
+
 static void startElementNsHandler(void* closure, const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri, int numNamespaces, const xmlChar** namespaces, int numAttributes, int numDefaulted, const xmlChar** libxmlAttributes)
 {
-    getParser(closure)->startElementNs(localname, prefix, uri, numNamespaces, namespaces, numAttributes, numDefaulted, libxmlAttributes);
+    protectedParser(closure)->startElementNs(localname, prefix, uri, numNamespaces, namespaces, numAttributes, numDefaulted, libxmlAttributes);
 }
 
 static void endElementNsHandler(void* closure, const xmlChar*, const xmlChar*, const xmlChar*)
 {
-    getParser(closure)->endElementNs();
+    protectedParser(closure)->endElementNs();
 }
 
 static void charactersHandler(void* closure, const xmlChar* s, int len)
 {
-    getParser(closure)->characters(unsafeMakeSpan(s, len));
+    protectedParser(closure)->characters(unsafeMakeSpan(s, len));
 }
 
 static void processingInstructionHandler(void* closure, const xmlChar* target, const xmlChar* data)
 {
-    getParser(closure)->processingInstruction(target, data);
+    protectedParser(closure)->processingInstruction(target, data);
 }
 
 static void cdataBlockHandler(void* closure, const xmlChar* s, int len)
 {
-    getParser(closure)->cdataBlock(unsafeMakeSpan(s, len));
+    protectedParser(closure)->cdataBlock(unsafeMakeSpan(s, len));
 }
 
 static void commentHandler(void* closure, const xmlChar* comment)
 {
-    getParser(closure)->comment(comment);
+    protectedParser(closure)->comment(comment);
 }
 
 WTF_ATTRIBUTE_PRINTF(2, 3)
@@ -1149,7 +1168,7 @@ static void warningHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::Type::Warning, message, args);
+    protectedParser(closure)->error(XMLErrors::Type::Warning, message, args);
     va_end(args);
 }
 
@@ -1158,7 +1177,7 @@ static void fatalErrorHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::Type::Fatal, message, args);
+    protectedParser(closure)->error(XMLErrors::Type::Fatal, message, args);
     va_end(args);
 }
 
@@ -1167,7 +1186,7 @@ static void normalErrorHandler(void* closure, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    getParser(closure)->error(XMLErrors::Type::NonFatal, message, args);
+    protectedParser(closure)->error(XMLErrors::Type::NonFatal, message, args);
     va_end(args);
 }
 
@@ -1274,19 +1293,19 @@ static void startDocumentHandler(void* closure)
 {
     xmlParserCtxt* ctxt = static_cast<xmlParserCtxt*>(closure);
     switchToUTF16(ctxt);
-    getParser(closure)->startDocument(ctxt->version, ctxt->encoding, ctxt->standalone);
+    protectedParser(closure)->startDocument(ctxt->version, ctxt->encoding, ctxt->standalone);
     xmlSAX2StartDocument(closure);
 }
 
 static void endDocumentHandler(void* closure)
 {
-    getParser(closure)->endDocument();
+    protectedParser(closure)->endDocument();
     xmlSAX2EndDocument(closure);
 }
 
 static void internalSubsetHandler(void* closure, const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID)
 {
-    getParser(closure)->internalSubset(name, externalID, systemID);
+    protectedParser(closure)->internalSubset(name, externalID, systemID);
     xmlSAX2InternalSubset(closure, name, externalID, systemID);
 }
 
@@ -1356,7 +1375,7 @@ void XMLDocumentParser::doEnd()
         if (m_context) {
             // Tell libxml we're done.
             {
-                XMLDocumentParserScope scope(&document()->cachedResourceLoader());
+                XMLDocumentParserScope scope(&protectedDocument()->cachedResourceLoader());
                 xmlParseChunk(context(), nullptr, 0, 1);
             }
 
@@ -1368,23 +1387,24 @@ void XMLDocumentParser::doEnd()
     if (isDetached())
         return;
 
-    bool xmlViewerMode = !m_sawError && !m_sawCSS && !m_sawXSLTransform && shouldRenderInXMLTreeViewerMode(*document());
+    RefPtr document = this->document();
+    bool xmlViewerMode = !m_sawError && !m_sawCSS && !m_sawXSLTransform && shouldRenderInXMLTreeViewerMode(*document);
     if (xmlViewerMode) {
-        XMLTreeViewer xmlTreeViewer(*document());
+        XMLTreeViewer xmlTreeViewer(*document);
         xmlTreeViewer.transformDocumentToTreeView();
     } else if (m_sawXSLTransform) {
-        xmlDocPtr doc = xmlDocPtrForString(document()->cachedResourceLoader(), m_originalSourceForTransform.toString(), document()->url().string());
-        document()->setTransformSource(makeUnique<TransformSource>(doc));
+        xmlDocPtr doc = xmlDocPtrForString(document->protectedCachedResourceLoader(), m_originalSourceForTransform.toString(), document->url().string());
+        document->setTransformSource(makeUnique<TransformSource>(doc));
 
-        document()->setParsing(false); // Make the document think it's done, so it will apply XSL stylesheets.
-        document()->applyPendingXSLTransformsNowIfScheduled();
+        document->setParsing(false); // Make the document think it's done, so it will apply XSL stylesheets.
+        document->applyPendingXSLTransformsNowIfScheduled();
 
         // styleResolverChanged() call can detach the parser and null out its document.
         // In that case, we just bail out.
         if (isDetached())
             return;
 
-        document()->setParsing(true);
+        document->setParsing(true);
         DocumentParser::stopParsing();
     }
 #endif
@@ -1408,7 +1428,7 @@ xmlDocPtr xmlDocPtrForString(CachedResourceLoader& cachedResourceLoader, const S
 
     const bool is8Bit = source.is8Bit();
     auto characters = is8Bit ? byteCast<char>(source.span8()) : spanReinterpretCast<const char>(source.span16());
-    size_t sizeInBytes = source.length() * (is8Bit ? sizeof(LChar) : sizeof(char16_t));
+    size_t sizeInBytes = source.length() * (is8Bit ? sizeof(Latin1Character) : sizeof(char16_t));
     const char* encoding = is8Bit ? "iso-8859-1" : nativeEndianUTF16Encoding();
 
     if (sizeInBytes > std::numeric_limits<int>::max())
@@ -1484,10 +1504,11 @@ bool XMLDocumentParser::appendFragmentSource(const String& chunk)
         return false;
 
     initializeParserContext(chunkAsUTF8);
-    XMLDocumentParserScope scope(&document()->cachedResourceLoader());
+    XMLDocumentParserScope scope(&protectedDocument()->cachedResourceLoader());
     xmlParseContent(context());
     endDocument(); // Close any open text nodes.
 
+#if LIBXML_VERSION < 21400
     // FIXME: If this code is actually needed, it should probably move to finish()
     // XMLDocumentParserQt has a similar check (m_stream.error() == QXmlStreamReader::PrematureEndOfDocumentError) in doEnd().
     // Check if all the chunk has been processed.
@@ -1498,6 +1519,7 @@ bool XMLDocumentParser::appendFragmentSource(const String& chunk)
         ASSERT(m_sawError || (bytesProcessed >= 0 && !chunkAsUTF8.span()[bytesProcessed]));
         return false;
     }
+#endif
 
     // No error if the chunk is well formed or it is not but we have no error.
     return context()->wellFormed || !xmlCtxtGetLastError(context());

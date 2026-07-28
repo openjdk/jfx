@@ -83,7 +83,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         if (character < doNotEscape.size() && doNotEscape.get(character)) {
             // 4-c-i. Let S be a String containing only the code unit C.
             // 4-c-ii. Let R be a new String value computed by concatenating the previous value of R and S.
-            builder.append(static_cast<LChar>(character));
+            builder.append(static_cast<Latin1Character>(character));
             continue;
         }
 
@@ -117,7 +117,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         }
 
         // 4-d-iv. Let Octets be the array of octets resulting by applying the UTF-8 transformation to V, and let L be the array size.
-        LChar utf8OctetsBuffer[U8_MAX_LENGTH];
+        Latin1Character utf8OctetsBuffer[U8_MAX_LENGTH];
         unsigned utf8Length = 0;
         // We can use U8_APPEND_UNSAFE here since codePoint is either
         // 1. non surrogate one, correct code point.
@@ -210,7 +210,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
                     u = Lexer<char16_t>::convertUnicode(p[2], p[3], p[4], p[5]);
                 }
             }
-            if (charLen && (u >= 128 || !doNotUnescape.get(static_cast<LChar>(u)))) {
+            if (charLen && (u >= 128 || !doNotUnescape.get(static_cast<Latin1Character>(u)))) {
                 builder.append(u);
                 k += charLen;
                 continue;
@@ -505,7 +505,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
 
     JSValue parsedValue;
     if (programSource.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, nullptr);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, nullptr);
         parsedValue = preparser.tryEval();
     } else {
         LiteralParser<char16_t, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, nullptr);
@@ -629,7 +629,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFr
             for (auto character : view.span16()) {
                 if (character >= doNotEscape.size())
                     builder.append("%u"_s, hex(static_cast<uint8_t>(character >> 8), 2), hex(static_cast<uint8_t>(character), 2));
-                else if (doNotEscape.get(static_cast<LChar>(character)))
+                else if (doNotEscape.get(static_cast<Latin1Character>(character)))
                     builder.append(character);
                 else
                     builder.append('%', hex(character, 2));
@@ -660,7 +660,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
 
         if (view.is8Bit()) {
             auto characters = view.span8();
-            LChar convertedLChar;
+            Latin1Character converted;
             while (k < length) {
                 auto c = characters.subspan(k);
                 if (c[0] == '%' && k <= length - 6 && c[1] == 'u') {
@@ -670,8 +670,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
                         continue;
                     }
                 } else if (c[0] == '%' && k <= length - 3 && isASCIIHexDigit(c[1]) && isASCIIHexDigit(c[2])) {
-                    convertedLChar = LChar(Lexer<LChar>::convertHex(c[1], c[2]));
-                    c = span(convertedLChar);
+                    converted = Latin1Character(Lexer<Latin1Character>::convertHex(c[1], c[2]));
+                    c = span(converted);
                     k += 2;
                 }
                 builder.append(c.front());
@@ -682,16 +682,16 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
 
             while (k < length) {
                 auto c = characters.subspan(k);
-                char16_t convertedUChar;
+                char16_t converted;
                 if (c[0] == '%' && k <= length - 6 && c[1] == 'u') {
                     if (isASCIIHexDigit(c[2]) && isASCIIHexDigit(c[3]) && isASCIIHexDigit(c[4]) && isASCIIHexDigit(c[5])) {
-                        convertedUChar = Lexer<char16_t>::convertUnicode(c[2], c[3], c[4], c[5]);
-                        c = span(convertedUChar);
+                        converted = Lexer<char16_t>::convertUnicode(c[2], c[3], c[4], c[5]);
+                        c = span(converted);
                         k += 5;
                     }
                 } else if (c[0] == '%' && k <= length - 3 && isASCIIHexDigit(c[1]) && isASCIIHexDigit(c[2])) {
-                    convertedUChar = char16_t(Lexer<char16_t>::convertHex(c[1], c[2]));
-                    c = span(convertedUChar);
+                    converted = char16_t(Lexer<char16_t>::convertHex(c[1], c[2]));
+                    c = span(converted);
                     k += 2;
                 }
                 ++k;
@@ -784,41 +784,6 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow, (JSGlobalObject* g
 
     JSObject* object = asObject(callFrame->thisValue());
     object->setPrototypeDirect(vm, value);
-
-    return JSValue::encode(jsUndefined());
-}
-
-JSC_DEFINE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSPromise* promise = jsCast<JSPromise*>(callFrame->argument(0));
-
-    // InternalPromises should not be exposed to user scripts.
-    if (jsDynamicCast<JSInternalPromise*>(promise))
-        return JSValue::encode(jsUndefined());
-
-    JSValue operationValue = callFrame->argument(1);
-
-    ASSERT(operationValue.isNumber());
-    auto operation = static_cast<JSPromiseRejectionOperation>(operationValue.toUInt32(globalObject));
-    ASSERT(operation == JSPromiseRejectionOperation::Reject || operation == JSPromiseRejectionOperation::Handle);
-    scope.assertNoException();
-
-    if (globalObject->globalObjectMethodTable()->promiseRejectionTracker)
-        globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, promise, operation);
-    else {
-        switch (operation) {
-        case JSPromiseRejectionOperation::Reject:
-            vm.promiseRejected(promise);
-            break;
-        case JSPromiseRejectionOperation::Handle:
-            // do nothing
-            break;
-        }
-    }
-    RETURN_IF_EXCEPTION(scope, { });
 
     return JSValue::encode(jsUndefined());
 }
@@ -972,7 +937,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         return JSValue::encode(target);
     }
 
-        PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
         source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1059,7 +1024,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
         return JSValue::encode(target);
     }
 
-    PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 

@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "RenderBoxModelObject.h"
-#include "RenderLineBoxList.h"
+#include <WebCore/RenderBoxModelObject.h>
+#include <WebCore/RenderLineBoxList.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -31,7 +32,7 @@ class Position;
 class RenderFragmentContainer;
 
 class RenderInline : public RenderBoxModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderInline);
+    WTF_MAKE_TZONE_ALLOCATED(RenderInline);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderInline);
 public:
     RenderInline(Type, Element&, RenderStyle&&);
@@ -81,11 +82,9 @@ public:
 
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
-    void paintOutline(PaintInfo&, const LayoutPoint&) const;
+    void collectLineBoxRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset) const;
 
     bool mayAffectLayout() const;
-
     bool requiresLayer() const override;
 
     LayoutPoint firstInlineBoxTopLeft() const;
@@ -93,8 +92,8 @@ public:
 protected:
     void willBeDestroyed() override;
 
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void updateFromStyle() override;
 
@@ -131,7 +130,7 @@ protected:
     const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
 private:
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
 
     LayoutRect frameRectForStickyPositioning() const final { return linesBoundingBox(); }
 
@@ -142,8 +141,6 @@ private:
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) const final;
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) final;
-
-    inline bool willChangeCreatesStackingContext() const;
 
     // All of the line boxes created for this svg inline.
     RenderLineBoxList m_legacyLineBoxes;

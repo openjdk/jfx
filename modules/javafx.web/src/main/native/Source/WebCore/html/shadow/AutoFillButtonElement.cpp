@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AutoFillButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AutoFillButtonElement);
 
 using namespace HTMLNames;
 

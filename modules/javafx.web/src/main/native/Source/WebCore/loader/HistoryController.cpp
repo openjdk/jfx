@@ -30,12 +30,16 @@
 
 #include "config.h"
 #include "HistoryController.h"
+#include "LocalFrameInlines.h"
 
 #include "BackForwardCache.h"
 #include "BackForwardController.h"
 #include "CachedPage.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
+#include "DocumentWindow.h"
 #include "FrameLoader.h"
 #include "FrameLoaderStateMachine.h"
 #include "FrameTree.h"
@@ -50,6 +54,7 @@
 #include "ProcessSwapDisposition.h"
 #include "ScrollingCoordinator.h"
 #include "SerializedScriptValue.h"
+#include "Settings.h"
 #include "SharedStringHash.h"
 #include "ShouldTreatAsContinuingLoad.h"
 #include "VisitedLinkStore.h"
@@ -259,7 +264,7 @@ void HistoryController::restoreDocumentState()
     case FrameLoadType::ReloadFromOrigin:
     case FrameLoadType::ReloadExpiredOnly:
     case FrameLoadType::Same:
-    case FrameLoadType::Replace:
+    case FrameLoadType::MultipartReplace:
         // Not restoring the document state.
         return;
     case FrameLoadType::Back:
@@ -267,6 +272,7 @@ void HistoryController::restoreDocumentState()
     case FrameLoadType::IndexedBackForward:
     case FrameLoadType::RedirectWithLockedBackForwardList:
     case FrameLoadType::Standard:
+    case FrameLoadType::NavigationAPIReplace:
         break;
     }
 
@@ -369,7 +375,7 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType frameLoa
         protectedThis->recursiveGoToItem(targetItem, currentItem.get(), frameLoadType, shouldTreatAsContinuingLoad);
     };
 
-    goToItemShared(targetItem, WTFMove(finishGoToItem), processSwapDisposition);
+    goToItemShared(targetItem, WTF::move(finishGoToItem), processSwapDisposition);
 }
 
 struct HistoryController::FrameToNavigate {
@@ -436,7 +442,7 @@ void HistoryController::goToItemForNavigationAPI(HistoryItem& targetItem, FrameL
         }
     };
 
-    goToItemShared(targetItem, WTFMove(finishGoToItem));
+    goToItemShared(targetItem, WTF::move(finishGoToItem));
 }
 
 void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandler<void(ShouldGoToHistoryItem)>&& completionHandler, ProcessSwapDisposition processSwapDisposition)
@@ -458,7 +464,7 @@ void HistoryController::goToItemShared(HistoryItem& targetItem, CompletionHandle
         return;
     }
 
-    frame->loader().protectedClient()->shouldGoToHistoryItemAsync(targetItem, WTFMove(completionHandler));
+    frame->loader().protectedClient()->shouldGoToHistoryItemAsync(targetItem, WTF::move(completionHandler));
 }
 
 void HistoryController::clearPolicyItem()
@@ -519,9 +525,9 @@ void HistoryController::updateForBackForwardNavigation()
     updateCurrentItem();
 }
 
-void HistoryController::updateForReload()
+void HistoryController::updateForReloadOrReplace()
 {
-    LOG(History, "HistoryController %p updateForReload: Updating History for reload in frame %p (main frame %d) %s", this, m_frame.ptr(), m_frame->isMainFrame(), m_frame->loader().documentLoader() ? m_frame->loader().documentLoader()->url().string().utf8().data() : "");
+    LOG(History, "HistoryController %p updateForReloadOrReplace: Updating History for reload or replace in frame %p (main frame %d) %s", this, m_frame.ptr(), m_frame->isMainFrame(), m_frame->loader().documentLoader() ? m_frame->loader().documentLoader()->url().string().utf8().data() : "");
 
     if (RefPtr currentItem = m_currentItem) {
         BackForwardCache::singleton().remove(*currentItem);
@@ -609,7 +615,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
             if (RefPtr parentCurrentItem = parentFrame->loader().history().currentItem()) {
                 Ref item = createItem(page->historyItemClient(), parentCurrentItem->itemID());
                 parentCurrentItem->setChildItem(item.copyRef());
-                page->checkedBackForward()->setChildItem(parentCurrentItem->frameItemID(), WTFMove(item));
+                page->checkedBackForward()->setChildItem(parentCurrentItem->frameItemID(), WTF::move(item));
             }
     }
     }
@@ -651,7 +657,7 @@ void HistoryController::updateForCommit()
 
     FrameLoadType type = frameLoader->loadType();
     if (isBackForwardLoadType(type)
-        || isReplaceLoadTypeWithProvisionalItem(type)
+        || isMultipartReplaceLoadTypeWithProvisionalItem(type)
         || (isReloadTypeWithProvisionalItem(type) && !frameLoader->provisionalDocumentLoader()->unreachableURL().isEmpty())) {
         // Once committed, we want to use current item for saving DocState, and
         // the provisional item for restoring state.
@@ -678,11 +684,11 @@ void HistoryController::updateForCommit()
     }
 }
 
-bool HistoryController::isReplaceLoadTypeWithProvisionalItem(FrameLoadType type)
+bool HistoryController::isMultipartReplaceLoadTypeWithProvisionalItem(FrameLoadType type)
 {
-    // Going back to an error page in a subframe can trigger a FrameLoadType::Replace
+    // Going back to an error page in a subframe can trigger a FrameLoadType::MultipartReplace
     // while m_provisionalItem is set, so we need to commit it.
-    return type == FrameLoadType::Replace && m_provisionalItem;
+    return type == FrameLoadType::MultipartReplace && m_provisionalItem;
 }
 
 bool HistoryController::isReloadTypeWithProvisionalItem(FrameLoadType type)
@@ -761,11 +767,6 @@ void HistoryController::recursiveUpdateForSameDocumentNavigation()
     if (!m_provisionalItem)
         return;
 
-    // The provisional item may represent a different pending navigation.
-    // Don't commit it if it isn't a same document navigation.
-    if (m_currentItem && !protectedCurrentItem()->shouldDoSameDocumentNavigationTo(*protectedProvisionalItem()))
-        return;
-
     // Commit the provisional item.
     if (RefPtr provisionalItem = m_provisionalItem) {
         setCurrentItem(provisionalItem.releaseNonNull());
@@ -790,7 +791,7 @@ void HistoryController::updateForFrameLoadCompleted()
 void HistoryController::setCurrentItem(Ref<HistoryItem>&& item)
 {
     m_frameLoadComplete = false;
-    m_previousItem = std::exchange(m_currentItem, WTFMove(item));
+    m_previousItem = std::exchange(m_currentItem, WTF::move(item));
 }
 
 void HistoryController::setCurrentItemTitle(const StringWithDirection& title)
@@ -821,7 +822,7 @@ void HistoryController::clearPreviousItem()
 
 void HistoryController::setProvisionalItem(RefPtr<HistoryItem>&& item)
 {
-    m_provisionalItem = WTFMove(item);
+    m_provisionalItem = WTF::move(item);
 }
 
 void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader> documentLoader)
@@ -857,7 +858,7 @@ void HistoryController::initializeItem(HistoryItem& item, RefPtr<DocumentLoader>
     item.setTarget(m_frame->tree().uniqueName());
     item.setFrameID(m_frame->frameID());
     // FIXME: Should store the title direction as well.
-    item.setTitle(WTFMove(title.string));
+    item.setTitle(WTF::move(title.string));
     item.setOriginalURLString(originalURL.string());
 
     if (!unreachableURL.isEmpty() || documentLoader->response().httpStatusCode() >= 400)
@@ -1005,7 +1006,7 @@ void HistoryController::updateBackForwardListClippedAtTarget(bool doClip)
     //WebKitLegacy needs full frame tree history.
     Ref rootFrame = m_frame->rootFrame();
     Ref<HistoryItem> rootItem = rootFrame->loader().history().createItemTree(page->historyItemClient(), m_frame, doClip, BackForwardItemIdentifier::generate());
-    page->checkedBackForward()->addItem(WTFMove(rootItem));
+    page->checkedBackForward()->addItem(WTF::move(rootItem));
 #else
     // No need to call createHistoryItemTree() for m_frame.
     // The full HistoryItem tree is already created from rootFrame.
@@ -1075,13 +1076,13 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
     // Override data in the current item (created by createItemTree) to reflect
     // the pushState() arguments.
     currentItem = m_currentItem;
-    currentItem->setStateObject(WTFMove(stateObject));
+    currentItem->setStateObject(WTF::move(stateObject));
     currentItem->setURLString(urlString);
     currentItem->setShouldRestoreScrollPosition(shouldRestoreScrollPosition);
 
     LOG(History, "HistoryController %p pushState: Adding top item %p, setting url of current item %p to %s, scrollRestoration is %s", this, topItem.ptr(), m_currentItem.get(), urlString.ascii().data(), topItem->shouldRestoreScrollPosition() ? "auto" : "manual");
 
-    page->checkedBackForward()->addItem(WTFMove(topItem));
+    page->checkedBackForward()->addItem(WTF::move(topItem));
 
     if (!canRecordHistoryForFrame(frame))
         return;
@@ -1093,20 +1094,29 @@ void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, c
         document->protectedWindow()->protectedNavigation()->updateForNavigation(*currentItem, NavigationNavigationType::Push);
 }
 
+void HistoryController::updateBackForwardListForReplaceState(RefPtr<SerializedScriptValue>&& stateObject, const String& urlString)
+{
+    RefPtr currentItem = m_currentItem;
+    if (!currentItem)
+        return;
+
+    LOG(History, "HistoryController %p updateBackForwardListForReplaceState: Setting url of current item %p to %s scrollRestoration %s", this, currentItem.get(), urlString.ascii().data(), currentItem->shouldRestoreScrollPosition() ? "auto" : "manual");
+
+    if (!urlString.isEmpty())
+        currentItem->setURLString(urlString);
+    currentItem->setStateObject(WTF::move(stateObject));
+    currentItem->setFormData(nullptr);
+    currentItem->setFormContentType(String());
+    currentItem->notifyChanged();
+}
+
 void HistoryController::replaceState(RefPtr<SerializedScriptValue>&& stateObject, const String& urlString)
 {
     RefPtr currentItem = m_currentItem;
     if (!currentItem)
         return;
 
-    LOG(History, "HistoryController %p replaceState: Setting url of current item %p to %s scrollRestoration %s", this, currentItem.get(), urlString.ascii().data(), currentItem->shouldRestoreScrollPosition() ? "auto" : "manual");
-
-    if (!urlString.isEmpty())
-        currentItem->setURLString(urlString);
-    currentItem->setStateObject(WTFMove(stateObject));
-    currentItem->setFormData(nullptr);
-    currentItem->setFormContentType(String());
-    currentItem->notifyChanged();
+    updateBackForwardListForReplaceState(WTF::move(stateObject), urlString);
 
     Ref frame = m_frame.get();
     RefPtr page = frame->page();
@@ -1130,9 +1140,9 @@ void HistoryController::replaceCurrentItem(RefPtr<HistoryItem>&& item)
 
     m_previousItem = nullptr;
     if (m_provisionalItem)
-        m_provisionalItem = WTFMove(item);
+        m_provisionalItem = WTF::move(item);
     else
-        m_currentItem = WTFMove(item);
+        m_currentItem = WTF::move(item);
 }
 
 RefPtr<HistoryItem> HistoryController::protectedCurrentItem() const

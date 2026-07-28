@@ -23,7 +23,8 @@
  */
 
 [
-    Conditional=WEB_AUDIO
+    Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary DelayOptions : AudioNodeOptions {
     double maxDelayTime = 1;
     double delayTime = 0;

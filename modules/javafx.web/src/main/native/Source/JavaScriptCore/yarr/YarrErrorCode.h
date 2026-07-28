@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/Forward.h>
 
 namespace JSC {
@@ -76,6 +77,8 @@ enum class ErrorCode : uint8_t {
     NegatedClassSetMayContainStrings,
     InvalidClassSetCharacter,
     InvalidRegularExpressionModifier,
+    TooManyCaptures,
+    FrameTooLarge,
 
     // The following are NOT hard errors.
     TooManyDisjunctions, // we ran out stack compiling.

@@ -34,13 +34,9 @@ WebDatabaseProvider& WebDatabaseProvider::singleton()
     return databaseProvider;
 }
 
-WebDatabaseProvider::WebDatabaseProvider()
-{
-}
+WebDatabaseProvider::WebDatabaseProvider() = default;
 
-WebDatabaseProvider::~WebDatabaseProvider()
-{
-}
+WebDatabaseProvider::~WebDatabaseProvider() = default;
 
 WebCore::IDBClient::IDBConnectionToServer& WebDatabaseProvider::idbConnectionToServerForSession(PAL::SessionID sessionID)
 {

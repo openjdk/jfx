@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoPage.h"
@@ -46,7 +50,7 @@ enum class EligibilityKind {
 
 template<typename Config>
 struct EligibilityResult {
-    EligibilityResult() { }
+    EligibilityResult() = default;
 
     EligibilityResult(EligibilityKind);
     EligibilityResult(IsoPage<Config>*);
@@ -59,3 +63,5 @@ struct EligibilityResult {
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

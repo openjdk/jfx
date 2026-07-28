@@ -126,7 +126,7 @@ RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode ren
 ImageBuffer::ImageBuffer(Parameters parameters, const ImageBufferBackend::Info& backendInfo, const WebCore::ImageBufferCreationContext&, std::unique_ptr<ImageBufferBackend>&& backend, RenderingResourceIdentifier renderingResourceIdentifier)
     : m_parameters(parameters)
     , m_backendInfo(backendInfo)
-    , m_backend(WTFMove(backend))
+    , m_backend(WTF::move(backend))
     , m_renderingResourceIdentifier(renderingResourceIdentifier)
 {
 }
@@ -157,7 +157,7 @@ bool ImageBuffer::sizeNeedsClamping(const FloatSize& size)
 RefPtr<ImageBuffer> SerializedImageBuffer::sinkIntoImageBuffer(std::unique_ptr<SerializedImageBuffer> buffer, GraphicsClient* graphicsClient)
 {
     if (graphicsClient)
-        return graphicsClient->sinkIntoImageBuffer(WTFMove(buffer));
+        return graphicsClient->sinkIntoImageBuffer(WTF::move(buffer));
     return buffer->sinkIntoImageBuffer();
 }
 
@@ -185,6 +185,11 @@ public:
         return m_buffer->memoryCost();
     }
 
+    std::unique_ptr<SerializedImageBuffer> clone() const final
+    {
+        return makeUnique<DefaultSerializedImageBuffer>(m_buffer.get());
+    }
+
 private:
     RefPtr<ImageBuffer> m_buffer;
 };
@@ -199,7 +204,7 @@ std::unique_ptr<SerializedImageBuffer> ImageBuffer::sinkIntoSerializedImageBuffe
 std::unique_ptr<SerializedImageBuffer> ImageBuffer::sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&& image)
 {
     ASSERT(image->hasOneRef());
-    RefPtr<ImageBuffer> move = WTFMove(image);
+    RefPtr<ImageBuffer> move = WTF::move(image);
     return move->sinkIntoSerializedImageBuffer();
 }
 
@@ -255,7 +260,7 @@ static RefPtr<ImageBuffer> copyImageBuffer(Ref<ImageBuffer> source, PreserveReso
     if (!copyBuffer)
         return nullptr;
     if (source->hasOneRef())
-        copyBuffer->context().drawConsumingImageBuffer(WTFMove(source), FloatRect { { }, copySize }, FloatRect { 0, 0, -1, -1 }, { CompositeOperator::Copy });
+        copyBuffer->context().drawConsumingImageBuffer(WTF::move(source), FloatRect { { }, copySize }, FloatRect { 0, 0, -1, -1 }, { CompositeOperator::Copy });
     else
         copyBuffer->context().drawImageBuffer(source, FloatPoint { }, { CompositeOperator::Copy });
     return copyBuffer;
@@ -265,26 +270,26 @@ static RefPtr<NativeImage> copyImageBufferToNativeImage(Ref<ImageBuffer> source,
 {
     if (source->resolutionScale() == 1 || preserveResolution == PreserveResolution::Yes) {
         if (source->hasOneRef())
-            return ImageBuffer::sinkIntoNativeImage(WTFMove(source));
+            return ImageBuffer::sinkIntoNativeImage(WTF::move(source));
         if (copyBehavior == CopyBackingStore)
             return source->copyNativeImage();
         return source->createNativeImageReference();
     }
-    auto copyBuffer = copyImageBuffer(WTFMove(source), preserveResolution);
+    auto copyBuffer = copyImageBuffer(WTF::move(source), preserveResolution);
     if (!copyBuffer)
         return nullptr;
-    return ImageBuffer::sinkIntoNativeImage(WTFMove(copyBuffer));
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(copyBuffer));
 }
 
 static RefPtr<NativeImage> copyImageBufferToOpaqueNativeImage(Ref<ImageBuffer> source, PreserveResolution preserveResolution)
 {
     // Composite this ImageBuffer on top of opaque black, because JPEG does not have an alpha channel.
-    auto copyBuffer = copyImageBuffer(WTFMove(source), preserveResolution);
+    auto copyBuffer = copyImageBuffer(WTF::move(source), preserveResolution);
     if (!copyBuffer)
         return { };
     // We composite the copy on top of black by drawing black under the copy.
     copyBuffer->context().fillRect({ { }, copyBuffer->logicalSize() }, Color::black, CompositeOperator::DestinationOver);
-    return ImageBuffer::sinkIntoNativeImage(WTFMove(copyBuffer));
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(copyBuffer));
 }
 
 RefPtr<ImageBuffer> ImageBuffer::clone() const
@@ -328,7 +333,7 @@ void ImageBuffer::setBackend(std::unique_ptr<ImageBufferBackend>&& backend)
     if (m_backend.get() == backend.get())
         return;
 
-    m_backend = WTFMove(backend);
+    m_backend = WTF::move(backend);
     ++m_backendGeneration;
 }
 
@@ -398,8 +403,6 @@ RefPtr<NativeImage> ImageBuffer::filteredNativeImage(Filter& filter, Function<vo
 
     if (filter.filterRenderingModes().contains(FilterRenderingMode::GraphicsContext)) {
         targetSwitcher = makeUnique<TransparencyLayerContextSwitcher>(context(), FloatRect { { }, logicalSize() }, &filter);
-        if (!targetSwitcher)
-            return nullptr;
         targetSwitcher->beginDrawSourceImage(context());
     }
 
@@ -479,19 +482,16 @@ void ImageBuffer::transformToColorSpace(const DestinationColorSpace& newColorSpa
 String ImageBuffer::toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution preserveResolution) const
 {
     return toDataURL(Ref { const_cast<ImageBuffer&>(*this) }, mimeType, quality, preserveResolution);
-
 }
 
 Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double> quality, PreserveResolution preserveResolution) const
 {
-
    return toData(Ref { const_cast<ImageBuffer&>(*this) }, mimeType, quality, preserveResolution);
-
 }
 
 String ImageBuffer::toDataURL(Ref<ImageBuffer> source, const String& mimeType, std::optional<double> quality, PreserveResolution preserveResolution)
 {
-    auto encodedData = toData(WTFMove(source), mimeType, quality, preserveResolution);
+    auto encodedData = toData(WTF::move(source), mimeType, quality, preserveResolution);
     if (encodedData.isEmpty())
         return "data:,"_s;
     return makeString("data:"_s, mimeType, ";base64,"_s, base64Encoded(encodedData));

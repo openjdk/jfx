@@ -36,12 +36,13 @@
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include "SVGVisitedRendererTracking.h"
+#include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGContainer);
 
 static bool shouldSuspendRepaintForChildren(const LegacyRenderSVGContainer& container)
 {
@@ -63,7 +64,7 @@ static bool shouldSuspendRepaintForChildren(const LegacyRenderSVGContainer& cont
 }
 
 LegacyRenderSVGContainer::LegacyRenderSVGContainer(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
-    : LegacyRenderSVGModelObject(type, element, WTFMove(style), svgFlags | SVGModelObjectFlag::IsContainer | SVGModelObjectFlag::UsesBoundaryCaching)
+    : LegacyRenderSVGModelObject(type, element, WTF::move(style), svgFlags | SVGModelObjectFlag::IsContainer | SVGModelObjectFlag::UsesBoundaryCaching)
 {
 }
 
@@ -168,7 +169,7 @@ void LegacyRenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
     // outline rect into parent coords before drawing.
     // FIXME: This means our focus ring won't share our rotation like it should.
     // We should instead disable our clip during PaintPhase::Outline
-    if (paintInfo.phase == PaintPhase::SelfOutline && style().outlineWidth() && style().usedVisibility() == Visibility::Visible) {
+    if (paintInfo.phase == PaintPhase::SelfOutline && style().usedOutlineWidth() && style().usedVisibility() == Visibility::Visible) {
         IntRect paintRectInParent = enclosingIntRect(localToParentTransform().mapRect(repaintRect));
         paintOutline(paintInfo, paintRectInParent);
     }
@@ -218,6 +219,11 @@ FloatRect LegacyRenderSVGContainer::repaintRectInLocalCoordinates(RepaintRectCal
         m_accurateRepaintBoundingBox = boundingBoxes.repaintBoundingBox;
     }
     return *m_accurateRepaintBoundingBox;
+}
+
+FloatRect LegacyRenderSVGContainer::decoratedBoundingBox() const
+{
+    return SVGRenderSupport::computeContainerDecoratedBoundingBox(*this);
 }
 
 bool LegacyRenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)

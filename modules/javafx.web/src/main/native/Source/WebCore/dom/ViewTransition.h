@@ -30,6 +30,7 @@
 #include "Element.h"
 #include "EventLoop.h"
 #include "ImageBuffer.h"
+#include "LayoutRect.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"
 #include "ViewTransitionUpdateCallback.h"
@@ -172,13 +173,15 @@ public:
 class ViewTransition : public RefCounted<ViewTransition>, public VisibilityChangeClient, public ActiveDOMObject {
     WTF_MAKE_TZONE_ALLOCATED(ViewTransition);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<ViewTransition> createSamePage(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     static RefPtr<ViewTransition> resolveInboundCrossDocumentViewTransition(Document&, std::unique_ptr<ViewTransitionParams>);
     static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&);
     ~ViewTransition();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(VisibilityChangeClient);
 
     void skipTransition();
     void skipViewTransition(ExceptionOr<JSC::JSValue>&&);

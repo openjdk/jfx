@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "RegisterState.h"
+#include <JavaScriptCore/RegisterState.h>
 #include <wtf/Lock.h>
 #include <wtf/ScopedLambda.h>
 #include <wtf/TZoneMalloc.h>
@@ -49,7 +49,7 @@ public:
     void gatherConservativeRoots(ConservativeRoots&, JITStubRoutineSet&, CodeBlockSet&, CurrentThreadState*, Thread*);
 
     // Only needs to be called by clients that can use the same heap from multiple threads.
-    bool addCurrentThread() { return m_threadGroup->addCurrentThread() == ThreadGroupAddResult::NewlyAdded; }
+    bool addCurrentThread() { return Ref { m_threadGroup }->addCurrentThread() == ThreadGroupAddResult::NewlyAdded; }
 
     WordLock& getLock() { return m_threadGroup->getLock(); }
     const ListHashSet<Ref<Thread>>& threads(const AbstractLocker& locker) const { return m_threadGroup->threads(locker); }
@@ -60,7 +60,7 @@ private:
     void tryCopyOtherThreadStack(const ThreadSuspendLocker&, Thread&, void*, size_t capacity, size_t*);
     bool tryCopyOtherThreadStacks(const AbstractLocker&, void*, size_t capacity, size_t*, Thread&);
 
-    std::shared_ptr<ThreadGroup> m_threadGroup;
+    Ref<ThreadGroup> m_threadGroup;
 };
 
 #define DECLARE_AND_COMPUTE_CURRENT_THREAD_STATE(stateName) \

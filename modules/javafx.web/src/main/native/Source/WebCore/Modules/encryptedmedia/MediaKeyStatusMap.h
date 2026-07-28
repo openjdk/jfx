@@ -31,6 +31,7 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "BufferSource.h"
+#include "CDMKeyID.h"
 #include "MediaKeyStatus.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/RefCounted.h>

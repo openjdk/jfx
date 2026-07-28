@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "WebGPUCommandBuffer.h"
-#include "WebGPUExtent3D.h"
-#include "WebGPUImageCopyExternalImage.h"
-#include "WebGPUImageCopyTexture.h"
-#include "WebGPUImageCopyTextureTagged.h"
-#include "WebGPUImageDataLayout.h"
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUCommandBuffer.h>
+#include <WebCore/WebGPUExtent3D.h>
+#include <WebCore/WebGPUImageCopyExternalImage.h>
+#include <WebCore/WebGPUImageCopyTexture.h>
+#include <WebCore/WebGPUImageCopyTextureTagged.h>
+#include <WebCore/WebGPUImageDataLayout.h>
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -59,7 +59,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -99,6 +99,9 @@ public:
         const Extent3D& copySize) = 0;
 
     virtual RefPtr<WebCore::NativeImage> getNativeImage(WebCore::VideoFrame&) = 0;
+    virtual bool isRemoteQueueProxy() const { return false; }
+    virtual bool isQueueImpl() const { return false; }
+
 protected:
     Queue() = default;
 

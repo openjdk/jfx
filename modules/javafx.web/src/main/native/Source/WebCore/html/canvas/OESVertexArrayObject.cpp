@@ -34,27 +34,26 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESVertexArrayObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESVertexArrayObject);
 
 OESVertexArrayObject::OESVertexArrayObject(WebGLRenderingContext& context)
     : WebGLExtension(context, WebGLExtensionName::OESVertexArrayObject)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_vertex_array_object"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_vertex_array_object);
 }
 
 OESVertexArrayObject::~OESVertexArrayObject() = default;
 
-
 bool OESVertexArrayObject::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_vertex_array_object"_s);
+    return context.supportsExtension(GCGLExtension::OES_vertex_array_object);
 }
 
 RefPtr<WebGLVertexArrayObjectOES> OESVertexArrayObject::createVertexArrayOES()
 {
     if (isContextLost())
         return nullptr;
-    return WebGLVertexArrayObjectOES::createUser(protectedContext().get());
+    return WebGLVertexArrayObjectOES::createUser(context().get());
 }
 
 void OESVertexArrayObject::deleteVertexArrayOES(WebGLVertexArrayObjectOES* arrayObject)
@@ -79,7 +78,7 @@ void OESVertexArrayObject::deleteVertexArrayOES(WebGLVertexArrayObjectOES* array
     if (!arrayObject->isDefaultObject() && arrayObject == context->m_boundVertexArrayObject)
         context->setBoundVertexArrayObject(locker, nullptr);
 
-    arrayObject->deleteObject(locker, context->protectedGraphicsContextGL().get());
+    arrayObject->deleteObject(locker, context->graphicsContextGL().get());
 }
 
 GCGLboolean OESVertexArrayObject::isVertexArrayOES(WebGLVertexArrayObjectOES* arrayObject)
@@ -89,7 +88,7 @@ GCGLboolean OESVertexArrayObject::isVertexArrayOES(WebGLVertexArrayObjectOES* ar
     Ref context = this->context();
     if (!context->validateIsWebGLObject(arrayObject))
         return false;
-    return context->protectedGraphicsContextGL()->isVertexArray(arrayObject->object());
+    return context->graphicsContextGL()->isVertexArray(arrayObject->object());
 }
 
 void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayObject)

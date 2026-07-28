@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "MacroAssembler.h"
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 #include <wtf/PrintStream.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

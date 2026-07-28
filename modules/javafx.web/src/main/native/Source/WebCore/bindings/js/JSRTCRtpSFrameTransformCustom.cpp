@@ -30,7 +30,7 @@
 
 #include "JSCryptoKey.h"
 #include "JSDOMPromiseDeferred.h"
-#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSBigIntInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -71,7 +71,7 @@ JSValue JSRTCRtpSFrameTransform::setEncryptionKey(JSGlobalObject& lexicalGlobalO
     RETURN_IF_EXCEPTION(throwScope, jsUndefined());
     throwScope.release();
 
-    wrapped().setEncryptionKey(*keyConversionResult.releaseReturnValue(), keyID, WTFMove(promise));
+    wrapped().setEncryptionKey(keyConversionResult.releaseReturnValue(), keyID, WTF::move(promise));
     return jsUndefined();
 }
 

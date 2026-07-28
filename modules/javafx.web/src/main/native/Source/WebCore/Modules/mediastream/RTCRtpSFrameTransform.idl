@@ -34,7 +34,9 @@ enum RTCRtpSFrameTransformCompatibilityMode {
     "VP8"
 };
 
-dictionary RTCRtpSFrameTransformOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCRtpSFrameTransformOptions {
     RTCRtpSFrameTransformRole role = "encrypt";
     unsigned long authenticationSize = 10;
     RTCRtpSFrameTransformCompatibilityMode compatibilityMode = "none";

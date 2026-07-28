@@ -22,14 +22,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://webaudio.github.io/web-audio-api/#dom-audioprocessingevent-audioprocessingevent
 [
     Conditional=WEB_AUDIO,
     EnabledBySetting=WebAudioEnabled,
-    JSGenerateToJSObject,
     Exposed=Window
 ] interface AudioProcessingEvent : Event {
     [EnabledBySetting=WebAudioEnabled] constructor ([AtomString] DOMString type, AudioProcessingEventInit eventInitDict);
     readonly attribute double playbackTime;
-    readonly attribute AudioBuffer inputBuffer;
-    readonly attribute AudioBuffer outputBuffer; 
+    // FIXME: `inputBuffer` should not be nullable.
+    readonly attribute AudioBuffer? inputBuffer;
+    // FIXME: `outputBuffer` should not be nullable.
+    readonly attribute AudioBuffer? outputBuffer;
 };

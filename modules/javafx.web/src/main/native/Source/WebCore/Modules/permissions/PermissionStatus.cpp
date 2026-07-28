@@ -29,13 +29,14 @@
 #include "ClientOrigin.h"
 #include "ContextDestructionObserverInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
 #include "MainThreadPermissionObserver.h"
 #include "PermissionController.h"
 #include "PermissionState.h"
 #include "Permissions.h"
+#include "RegistrableDomain.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
@@ -48,7 +49,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PermissionStatus);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PermissionStatus);
 
 static HashMap<MainThreadPermissionObserverIdentifier, std::unique_ptr<MainThreadPermissionObserver>>& allMainThreadPermissionObservers()
 {
@@ -58,7 +59,7 @@ static HashMap<MainThreadPermissionObserverIdentifier, std::unique_ptr<MainThrea
 
 Ref<PermissionStatus> PermissionStatus::create(ScriptExecutionContext& context, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page)
 {
-    auto status = adoptRef(*new PermissionStatus(context, state, descriptor, source, WTFMove(page)));
+    auto status = adoptRef(*new PermissionStatus(context, state, descriptor, source, WTF::move(page)));
     status->suspendIfNeeded();
     return status;
 }
@@ -71,11 +72,11 @@ PermissionStatus::PermissionStatus(ScriptExecutionContext& context, PermissionSt
 {
     RefPtr origin = context.securityOrigin();
     auto originData = origin ? origin->data() : SecurityOriginData { };
-    ClientOrigin clientOrigin { context.topOrigin().data(), WTFMove(originData) };
+    ClientOrigin clientOrigin { context.topOrigin().data(), WTF::move(originData) };
 
-    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }, contextIdentifier = context.identifier(), state = m_state, descriptor = m_descriptor, source, page = WTFMove(page), origin = WTFMove(clientOrigin).isolatedCopy(), identifier = m_mainThreadPermissionObserverIdentifier]() mutable {
-        auto mainThreadPermissionObserver = makeUnique<MainThreadPermissionObserver>(WTFMove(weakThis), contextIdentifier, state, descriptor, source, WTFMove(page), WTFMove(origin));
-        allMainThreadPermissionObservers().add(identifier, WTFMove(mainThreadPermissionObserver));
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }, contextIdentifier = context.identifier(), state = m_state, descriptor = m_descriptor, source, page = WTF::move(page), origin = WTF::move(clientOrigin).isolatedCopy(), identifier = m_mainThreadPermissionObserverIdentifier]() mutable {
+        auto mainThreadPermissionObserver = makeUnique<MainThreadPermissionObserver>(WTF::move(weakThis), contextIdentifier, state, descriptor, source, WTF::move(page), WTF::move(origin));
+        allMainThreadPermissionObservers().add(identifier, WTF::move(mainThreadPermissionObserver));
     });
 }
 
@@ -121,7 +122,19 @@ ScriptExecutionContext* PermissionStatus::scriptExecutionContext() const
 
 void PermissionStatus::eventListenersDidChange()
 {
-    m_hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
+    RefPtr context = scriptExecutionContext();
+    if (!context)
+        return;
+
+    bool hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
+    if (hasChangeEventListener != m_hasChangeEventListener) {
+        auto changeListenerAction = hasChangeEventListener ? &MainThreadPermissionObserver::addChangeListener : &MainThreadPermissionObserver::removeChangeListener;
+        callOnMainThread([identifier = m_mainThreadPermissionObserverIdentifier, topFrameDomain = RegistrableDomain { context->topOrigin().data() }.isolatedCopy(), subFrameDomain = RegistrableDomain { context->url() }.isolatedCopy(), changeListenerAction] {
+            if (CheckedPtr mainThreadPermissionObserver = allMainThreadPermissionObservers().get(identifier))
+                (mainThreadPermissionObserver.get()->*changeListenerAction)(topFrameDomain, subFrameDomain);
+        });
+    }
+    m_hasChangeEventListener = hasChangeEventListener;
 }
 
 } // namespace WebCore

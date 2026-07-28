@@ -85,7 +85,11 @@ RefPtr<RQRef> createEmptyPath()
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    ImageBufferFormat format {
+        PixelFormat::BGRA8,
+        UseLosslessCompression::No
+    };
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), format);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -111,7 +115,7 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
 
 Ref<PathJava> PathJava::create(RefPtr<RQRef>&& platformPath, RefPtr<PathStream>&& elementsStream)
 {
-    return adoptRef(*new PathJava(WTFMove(platformPath), WTFMove(elementsStream)));
+    return adoptRef(*new PathJava(WTF::move(platformPath), WTF::move(elementsStream)));
 }
 
 PathJava::PathJava()
@@ -121,8 +125,8 @@ PathJava::PathJava()
 }
 
 PathJava::PathJava(RefPtr<RQRef>&& platformPath, RefPtr<PathStream>&& elementsStream)
-    : m_platformPath(WTFMove(platformPath))
-    , m_elementsStream(WTFMove(elementsStream))
+    : m_platformPath(WTF::move(platformPath))
+    , m_elementsStream(WTF::move(elementsStream))
 {
     ASSERT(m_platformPath);
 }
@@ -133,7 +137,7 @@ Ref<PathImpl> PathJava::copy() const
 
     auto elementsStream = m_elementsStream ? RefPtr<PathImpl> { m_elementsStream->copy() } : nullptr;
 
-    return PathJava::create(WTFMove(platformPathCopy), downcast<PathStream>(WTFMove(elementsStream)));
+    return PathJava::create(WTF::move(platformPathCopy), downcast<PathStream>(WTF::move(elementsStream)));
 }
 
 PlatformPathPtr PathJava::platformPath() const
@@ -153,7 +157,7 @@ bool PathJava::definitelyEqual(const PathImpl& otherImpl) const
 }
 void PathJava::add(PathContinuousRoundedRect continuousRoundedRect)
 {
-    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, CornerRadii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
 }
 
 void PathJava::add(PathMoveTo moveto)

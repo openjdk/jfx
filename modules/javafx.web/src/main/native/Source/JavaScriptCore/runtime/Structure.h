@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,23 +25,23 @@
 
 #pragma once
 
-#include "ClassInfo.h"
-#include "Concurrency.h"
-#include "ConcurrentJSLock.h"
-#include "DeletePropertySlot.h"
-#include "IndexingType.h"
-#include "JSCJSValue.h"
-#include "JSCast.h"
-#include "JSType.h"
-#include "JSTypeInfo.h"
-#include "PropertyName.h"
-#include "PropertyNameArray.h"
-#include "PropertyOffset.h"
-#include "PutPropertySlot.h"
-#include "StructureRareData.h"
-#include "StructureTransitionTable.h"
-#include "TypeInfoBlob.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/ClassInfo.h>
+#include <JavaScriptCore/Concurrency.h>
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/DeletePropertySlot.h>
+#include <JavaScriptCore/IndexingType.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSType.h>
+#include <JavaScriptCore/JSTypeInfo.h>
+#include <JavaScriptCore/PropertyName.h>
+#include <JavaScriptCore/PropertyNameArray.h>
+#include <JavaScriptCore/PropertyOffset.h>
+#include <JavaScriptCore/PutPropertySlot.h>
+#include <JavaScriptCore/StructureRareData.h>
+#include <JavaScriptCore/StructureTransitionTable.h>
+#include <JavaScriptCore/TypeInfoBlob.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <wtf/Atomics.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactPtr.h>
@@ -59,8 +59,8 @@ namespace JSC {
 class DeferGC;
 class DeferredStructureTransitionWatchpointFire;
 class LLIntOffsetsExtractor;
+class PropertyNameArrayBuilder;
 class PropertyNameArray;
-class PropertyNameArrayData;
 class PropertyTable;
 class StructureChain;
 class StructureShape;
@@ -205,9 +205,6 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
     static constexpr uint8_t numberOfLowerTierPreciseCells = 0;
 
-#if ENABLE(STRUCTURE_ID_WITH_SHIFT)
-    static constexpr size_t atomSize = 32;
-#endif
     static_assert(JSCell::atomSize >= MarkedBlock::atomSize);
 
     static constexpr int s_maxTransitionLength = 64;
@@ -255,7 +252,7 @@ private:
 public:
     StructureID id() const { return StructureID::encode(this); }
 
-    int32_t typeInfoBlob() const { return m_blob.blob(); }
+    uint32_t typeInfoBlob() const { return m_blob.blob(); }
 
     bool isProxy() const
     {
@@ -396,7 +393,7 @@ public:
     // Type accessors.
     TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
-    const ClassInfo* classInfoForCells() const { return m_classInfo.get(); }
+    const ClassInfo* classInfoForCells() const { return m_classInfo; }
     CellState typeInfoDefaultCellState() const { return m_blob.defaultCellState(); }
 protected:
     // You probably want typeInfo().type()
@@ -697,12 +694,12 @@ public:
     bool canCachePropertyNameEnumerator(VM&) const;
     bool canAccessPropertiesQuicklyForEnumeration() const;
 
-    JSImmutableButterfly* cachedPropertyNames(CachedPropertyNamesKind) const;
-    JSImmutableButterfly* cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind) const;
-    void setCachedPropertyNames(VM&, CachedPropertyNamesKind, JSImmutableButterfly*);
+    JSCellButterfly* cachedPropertyNames(CachedPropertyNamesKind) const;
+    JSCellButterfly* cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind) const;
+    void setCachedPropertyNames(VM&, CachedPropertyNamesKind, JSCellButterfly*);
     bool canCacheOwnPropertyNames() const;
 
-    void getPropertyNamesFromStructure(VM&, PropertyNameArray&, DontEnumPropertiesMode);
+    void getPropertyNamesFromStructure(VM&, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     JSValue cachedSpecialProperty(CachedSpecialPropertyKey key)
     {
@@ -896,6 +893,7 @@ public:
     DEFINE_BITFIELD(bool, hasReadOnlyOrGetterSetterPropertiesExcludingProto, HasReadOnlyOrGetterSetterPropertiesExcludingProto, 1, 4);
     DEFINE_BITFIELD(bool, isQuickPropertyAccessAllowedForEnumeration, IsQuickPropertyAccessAllowedForEnumeration, 1, 5);
     DEFINE_BITFIELD(bool, hasNonEnumerableProperties, HasNonEnumerableProperties, 1, 6);
+    DEFINE_BITFIELD(bool, hasSpecialProperties, HasSpecialProperties, 1, 7);
     DEFINE_BITFIELD(TransitionKind, transitionKind, TransitionKind, 5, 13);
     DEFINE_BITFIELD(bool, isWatchingReplacement, IsWatchingReplacement, 1, 18); // This flag can be fliped on the main thread at any timing.
     DEFINE_BITFIELD(bool, mayBePrototype, MayBePrototype, 1, 19);
@@ -928,6 +926,7 @@ public:
             s_didPreventExtensionsBits
             | s_isQuickPropertyAccessAllowedForEnumerationBits
             | s_hasNonEnumerablePropertiesBits
+            | s_hasSpecialPropertiesBits
             | s_hasAnyKindOfGetterSetterPropertiesBits
             | s_hasReadOnlyOrGetterSetterPropertiesExcludingProtoBits
             | s_hasUnderscoreProtoPropertyExcludingOriginalProtoBits
@@ -1090,7 +1089,7 @@ private:
 
     CompactRefPtr<UniquedStringImpl> m_transitionPropertyName;
 
-    CompactPtr<const ClassInfo> m_classInfo;
+    const ClassInfo* m_classInfo;
 
     StructureTransitionTable m_transitionTable;
 

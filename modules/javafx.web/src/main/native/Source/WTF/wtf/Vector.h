@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <initializer_list>
 #include <limits>
 #include <optional>
@@ -37,7 +38,9 @@
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/NotFound.h>
+#include <wtf/RangeAdaptors.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/SwiftBridging.h>
 #include <wtf/ValueCheck.h>
 #include <wtf/VectorTraits.h>
 
@@ -50,205 +53,24 @@ class LLIntOffsetsExtractor;
 }
 
 namespace WTF {
-
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Vector);
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VectorBuffer);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Vector, WTF_EXPORT_PRIVATE);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(VectorBuffer, WTF_EXPORT_PRIVATE);
 
 enum class NulloptBehavior : bool { Ignore, Abort };
-
-template <bool needsDestruction, typename T>
-struct VectorDestructor;
-
-template<typename T>
-struct VectorDestructor<false, T>
-{
-    static void destruct(T*, T*) { }
-};
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 template<typename T>
-struct VectorDestructor<true, T>
-{
-    static void destruct(T* begin, T* end)
+struct VectorCopier {
+    template<typename U, std::size_t Extent>
+    static void uninitializedCopy(std::span<const U, Extent> src, std::span<T> dst)
     {
-        for (T* cur = begin; cur != end; ++cur)
-            cur->~T();
-    }
-};
-
-template <bool needsInitialization, bool canInitializeWithMemset, typename T>
-struct VectorInitializer;
-
-template<bool canInitializeWithMemset, typename T>
-struct VectorInitializer<false, canInitializeWithMemset, T>
-{
-    static void initializeIfNonPOD(T*, T*) { }
-
-    static void initialize(T* begin, T* end)
-    {
-        VectorInitializer<true, canInitializeWithMemset, T>::initialize(begin, end);
-    }
-};
-
-template<typename T>
-struct VectorInitializer<true, false, T>
-{
-    static void initializeIfNonPOD(T* begin, T* end)
-    {
-        for (T* cur = begin; cur != end; ++cur)
-            new (NotNull, cur) T();
-    }
-
-    static void initialize(T* begin, T* end)
-    {
-        initializeIfNonPOD(begin, end);
-    }
-
-    template<typename... Args>
-    static void initializeWithArgs(T* begin, T* end, Args&&... args)
-    {
-        for (T *cur = begin; cur != end; ++cur)
-            new (NotNull, cur) T(args...);
-    }
-};
-
-template<typename T>
-struct VectorInitializer<true, true, T>
-{
-    static void initializeIfNonPOD(T* begin, T* end)
-    {
-        memset(static_cast<void*>(begin), 0, reinterpret_cast<char*>(end) - reinterpret_cast<char*>(begin));
-    }
-
-    static void initialize(T* begin, T* end)
-    {
-        initializeIfNonPOD(begin, end);
-    }
-};
-
-template <bool canMoveWithMemcpy, typename T>
-struct VectorMover;
-
-template<typename T>
-struct VectorMover<false, T>
-{
-    static void move(T* src, T* srcEnd, T* dst)
-    {
-        while (src != srcEnd) {
-            new (NotNull, dst) T(WTFMove(*src));
-            src->~T();
-            ++dst;
-            ++src;
-        }
-    }
-    static void moveOverlapping(T* src, T* srcEnd, T* dst)
-    {
-        if (src > dst)
-            move(src, srcEnd, dst);
+        if constexpr (std::is_trivial_v<T> && std::same_as<T, U>)
+            memcpySpan(dst, src);
         else {
-            T* dstEnd = dst + (srcEnd - src);
-            while (src != srcEnd) {
-                --srcEnd;
-                --dstEnd;
-                new (NotNull, dstEnd) T(WTFMove(*srcEnd));
-                srcEnd->~T();
-            }
+            for (size_t i = 0; i < src.size(); ++i)
+                new (NotNull, &dst[i]) T(src[i]);
         }
-    }
-};
-
-template<typename T>
-struct VectorMover<true, T>
-{
-    static void move(const T* src, const T* srcEnd, T* dst)
-    {
-        memcpy(static_cast<void*>(dst), static_cast<void*>(const_cast<T*>(src)), reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
-    }
-    static void moveOverlapping(const T* src, const T* srcEnd, T* dst)
-    {
-        memmove(static_cast<void*>(dst), static_cast<void*>(const_cast<T*>(src)), reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
-    }
-};
-
-template <bool canCopyWithMemcpy, typename T>
-struct VectorCopier;
-
-template<typename T>
-struct VectorCopier<false, T>
-{
-    template<typename U>
-    static void uninitializedCopy(const T* src, const T* srcEnd, U* dst)
-    {
-        while (src != srcEnd) {
-            new (NotNull, dst) U(*src);
-            ++dst;
-            ++src;
-        }
-    }
-};
-
-template<typename T>
-struct VectorCopier<true, T>
-{
-    static void uninitializedCopy(const T* src, const T* srcEnd, std::remove_const_t<T>* dst)
-    {
-        memcpy(static_cast<void*>(dst), static_cast<void*>(const_cast<std::remove_const_t<T>*>(src)), reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
-    }
-    template<typename U>
-    static void uninitializedCopy(const T* src, const T* srcEnd, U* dst)
-    {
-        static_assert(!std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, "We should be using the faster overload for this, which uses memcpy()");
-        VectorCopier<false, T>::uninitializedCopy(src, srcEnd, dst);
-    }
-};
-
-template <bool canFillWithMemset, typename T>
-struct VectorFiller;
-
-template<typename T>
-struct VectorFiller<false, T>
-{
-    static void uninitializedFill(T* dst, T* dstEnd, const T& val)
-    {
-        while (dst != dstEnd) {
-            new (NotNull, dst) T(val);
-            ++dst;
-        }
-    }
-};
-
-template<typename T>
-struct VectorFiller<true, T>
-{
-    static void uninitializedFill(T* dst, T* dstEnd, const T& val)
-    {
-        static_assert(sizeof(T) == 1, "Size of type T should be equal to one!");
-        memset(dst, val, dstEnd - dst);
-    }
-};
-
-template<bool canCompareWithMemcmp, typename T>
-struct VectorComparer;
-
-template<typename T>
-struct VectorComparer<false, T>
-{
-    static bool compare(const T* a, const T* b, size_t size)
-    {
-        for (size_t i = 0; i < size; ++i)
-            if (!(a[i] == b[i]))
-                return false;
-        return true;
-    }
-};
-
-template<typename T>
-struct VectorComparer<true, T>
-{
-    static bool compare(const T* a, const T* b, size_t size)
-    {
-        return memcmp(a, b, sizeof(T) * size) == 0;
     }
 };
 
@@ -257,68 +79,121 @@ struct VectorTypeOperations
 {
     static void destruct(T* begin, T* end)
     {
-        VectorDestructor<!std::is_trivially_destructible<T>::value, T>::destruct(begin, end);
+        if constexpr (!std::is_trivially_destructible_v<T>) {
+            for (T* current = begin; current != end; ++current)
+                current->~T();
+        }
     }
 
     static void destruct(std::span<T> span)
     {
-        VectorDestructor<!std::is_trivially_destructible<T>::value, T>::destruct(std::to_address(span.begin()), std::to_address(span.end()));
+        destruct(std::to_address(span.begin()), std::to_address(span.end()));
     }
 
     static void initializeIfNonPOD(T* begin, T* end)
     {
-        VectorInitializer<VectorTraits<T>::needsInitialization, VectorTraits<T>::canInitializeWithMemset, T>::initializeIfNonPOD(begin, end);
+        if constexpr (VectorTraits<T>::needsInitialization)
+            initialize(begin, end);
     }
 
     static void initialize(T* begin, T* end)
     {
-        VectorInitializer<VectorTraits<T>::needsInitialization, VectorTraits<T>::canInitializeWithMemset, T>::initialize(begin, end);
+        if constexpr (VectorTraits<T>::canInitializeWithMemset)
+            memset(static_cast<void*>(begin), 0, reinterpret_cast<char*>(end) - reinterpret_cast<char*>(begin));
+        else {
+            for (T* current = begin; current != end; ++current)
+                new (NotNull, current) T();
+        }
     }
 
-    template<typename ... Args>
+    template<typename... Args>
     static void initializeWithArgs(T* begin, T* end, Args&&... args)
     {
-        VectorInitializer<VectorTraits<T>::needsInitialization, VectorTraits<T>::canInitializeWithMemset, T>::initializeWithArgs(begin, end, std::forward<Args>(args)...);
+        static_assert(VectorTraits<T>::needsInitialization);
+        static_assert(!VectorTraits<T>::canInitializeWithMemset);
+
+        for (T *current = begin; current != end; ++current)
+            new (NotNull, current) T(args...);
     }
 
     static void move(T* src, T* srcEnd, T* dst)
     {
-        VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::move(src, srcEnd, dst);
+        if constexpr (VectorTraits<T>::canMoveWithMemcpy)
+            memcpy(static_cast<void*>(dst), static_cast<void*>(const_cast<T*>(src)), reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
+        else {
+        while (src != srcEnd) {
+                new (NotNull, dst) T(WTF::move(*src));
+            src->~T();
+            ++dst;
+            ++src;
+        }
+    }
     }
 
     static void move(std::span<T> src, std::span<T> dst)
     {
-        VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::move(std::to_address(src.begin()), std::to_address(src.end()), std::to_address(dst.begin()));
+        move(std::to_address(src.begin()), std::to_address(src.end()), std::to_address(dst.begin()));
     }
 
     static void moveOverlapping(T* src, T* srcEnd, T* dst)
     {
-        VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::moveOverlapping(src, srcEnd, dst);
+        if constexpr (VectorTraits<T>::canMoveWithMemcpy)
+            memmove(static_cast<void*>(dst), static_cast<void*>(const_cast<T*>(src)), reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
+        else {
+        if (src > dst)
+            move(src, srcEnd, dst);
+        else {
+            T* dstEnd = dst + (srcEnd - src);
+            while (src != srcEnd) {
+                --srcEnd;
+                --dstEnd;
+                    new (NotNull, dstEnd) T(WTF::move(*srcEnd));
+                srcEnd->~T();
+            }
+        }
+    }
     }
 
     static void moveOverlapping(std::span<T> src, std::span<T> dst)
     {
-        VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::moveOverlapping(std::to_address(src.begin()), std::to_address(src.end()), std::to_address(dst.begin()));
-    }
+        moveOverlapping(std::to_address(src.begin()), std::to_address(src.end()), std::to_address(dst.begin()));
+        }
 
-    static void uninitializedCopy(const T* src, const T* srcEnd, T* dst)
+    template<std::size_t Extent>
+    static void uninitializedCopy(std::span<const T, Extent> src, std::span<T> dst)
     {
-        VectorCopier<VectorTraits<T>::canCopyWithMemcpy, T>::uninitializedCopy(src, srcEnd, dst);
+        if constexpr (VectorTraits<T>::canCopyWithMemcpy)
+            memcpySpan(asMutableByteSpan(dst), asByteSpan(src));
+        else {
+            for (size_t i = 0; i < src.size(); ++i)
+                new (NotNull, &dst[i]) T(src[i]);
     }
-
-    static void uninitializedCopy(std::span<const T> src, std::span<T> dst)
-    {
-        VectorCopier<VectorTraits<T>::canCopyWithMemcpy, T>::uninitializedCopy(std::to_address(src.begin()), std::to_address(src.end()), std::to_address(dst.begin()));
     }
 
     static void uninitializedFill(T* dst, T* dstEnd, const T& val)
     {
-        VectorFiller<VectorTraits<T>::canFillWithMemset, T>::uninitializedFill(dst, dstEnd, val);
+        if constexpr (VectorTraits<T>::canFillWithMemset) {
+            static_assert(sizeof(T) == 1);
+            memset(dst, val, dstEnd - dst);
+        } else {
+        while (dst != dstEnd) {
+            new (NotNull, dst) T(val);
+            ++dst;
+        }
+    }
     }
 
     static bool compare(const T* a, const T* b, size_t size)
     {
-        return VectorComparer<VectorTraits<T>::canCompareWithMemcmp, T>::compare(a, b, size);
+        if constexpr (VectorTraits<T>::canCompareWithMemcmp)
+            return !memcmp(a, b, sizeof(T) * size);
+        else {
+            for (size_t i = 0; i < size; ++i) {
+            if (!(a[i] == b[i]))
+                return false;
+    }
+            return true;
+    }
     }
 };
 
@@ -718,6 +593,20 @@ public:
     {
     }
 
+    template<typename Range>
+        requires std::ranges::input_range<Range> && std::convertible_to<std::ranges::range_value_t<Range>, T>
+    explicit Vector(FromRange, Range&& range)
+    {
+        if constexpr (std::ranges::sized_range<Range>)
+            reserveInitialCapacity(std::ranges::size(range));
+        for (auto&& item : range) {
+            if constexpr (std::is_rvalue_reference_v<Range&&>)
+                append(WTF::move(item));
+            else
+                append(item);
+        }
+    }
+
     // Unlike in std::vector, this constructor does not initialize POD types.
     explicit Vector(size_t size)
         : Base(size, size)
@@ -759,7 +648,7 @@ public:
 
             for (size_t i = 0; i < size; ++i) {
                 if (auto item = valueGenerator(i))
-                    unsafeAppendWithoutCapacityCheck(WTFMove(*item));
+                unsafeAppendWithoutCapacityCheck(WTF::move(*item));
             else if (nulloptBehavior == NulloptBehavior::Abort)
                 break;
             }
@@ -768,7 +657,7 @@ public:
 
     template<typename U, size_t Extent>
     Vector(std::array<U, Extent> array)
-        : Vector(std::span { array }) { }
+        : Vector(std::span<const U, Extent> { array }) { }
 
     template<typename U, size_t Extent> Vector(std::span<U, Extent> span)
         : Base(span.size(), span.size())
@@ -776,7 +665,7 @@ public:
         asanSetInitialBufferSizeTo(span.size());
 
         if (begin())
-            VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(span.data(), span.data() + span.size(), begin());
+            VectorCopier<T>::uninitializedCopy(spanConstCast<const U>(span), mutableSpan());
     }
 
     Vector(std::initializer_list<T> initializerList)
@@ -880,7 +769,7 @@ public:
 
     T takeLast()
     {
-        T result = WTFMove(last());
+        T result = WTF::move(last());
         removeLast();
         return result;
     }
@@ -891,6 +780,14 @@ public:
     size_t findIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
     size_t reverseFind(const auto&) const;
     size_t reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
+
+    // Overloads for smart pointer element types that take raw pointer parameters.
+    template<SmartPtr U = T, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+    bool contains(V*) const;
+    template<SmartPtr U = T, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+    size_t find(V*) const;
+    template<SmartPtr U = T, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+    size_t reverseFind(V*) const;
 
     bool appendIfNotContains(const auto&);
 
@@ -937,6 +834,8 @@ public:
     void removeAt(size_t position);
     void removeAt(size_t position, size_t length);
     bool removeFirst(const auto&);
+    template<SmartPtr U = T, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+    bool removeFirst(V*);
     bool removeFirstMatching(NOESCAPE const Invocable<bool(T&)> auto&, size_t startIndex = 0);
     bool removeLast(const auto&);
     bool removeLastMatching(NOESCAPE const Invocable<bool(T&)> auto&);
@@ -988,6 +887,7 @@ public:
     Vector<std::invoke_result_t<MapFunction, const T&>> map(NOESCAPE const MapFunction&) const;
 
     bool isHashTableDeletedValue() const { return m_size == std::numeric_limits<decltype(m_size)>::max(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
 private:
     void unsafeAppendWithoutCapacityCheck(value_type&& value) { unsafeAppendWithoutCapacityCheck<value_type>(std::forward<value_type>(value)); }
@@ -1053,7 +953,7 @@ private:
 #if ASAN_ENABLED
     using Base::endOfBuffer;
 #endif
-};
+} SWIFT_ESCAPABLE_IF(T);
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Vector& other)
@@ -1062,7 +962,7 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Ve
     asanSetInitialBufferSizeTo(other.size());
 
     if (begin())
-        TypeOperations::uninitializedCopy(other.begin(), other.end(), begin());
+        TypeOperations::uninitializedCopy(other.span(), mutableSpan());
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1073,7 +973,7 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::Vector(const Ve
     asanSetInitialBufferSizeTo(other.size());
 
     if (begin())
-        TypeOperations::uninitializedCopy(other.begin(), other.end(), begin());
+        TypeOperations::uninitializedCopy(other.span(), mutableSpan());
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1093,8 +993,8 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>& Vector<T, inlin
     asanBufferSizeWillChangeTo(other.size());
 
     std::copy_n(other.begin(), size(), begin());
-    TypeOperations::uninitializedCopy(other.begin() + size(), other.end(), end());
-    m_size = other.size();
+    auto oldSize = std::exchange(m_size, other.size());
+    TypeOperations::uninitializedCopy(other.span().subspan(oldSize), mutableSpan().subspan(oldSize));
 
     return *this;
 }
@@ -1121,8 +1021,8 @@ Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>& Vector<T, inlin
     asanBufferSizeWillChangeTo(other.size());
 
     std::copy_n(other.begin(), size(), begin());
-    TypeOperations::uninitializedCopy(other.begin() + size(), other.end(), end());
-    m_size = other.size();
+    auto oldSize = std::exchange(m_size, other.size());
+    TypeOperations::uninitializedCopy(other.span().subspan(oldSize), mutableSpan().subspan(oldSize));
 
     return *this;
 }
@@ -1217,6 +1117,40 @@ bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::appendIfNo
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<SmartPtr U, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::contains(V* ptr) const
+{
+    return find(ptr) != notFound;
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<SmartPtr U, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::find(V* ptr) const
+{
+    return findIf([&](auto& item) {
+        return GetPtrHelper<U>::getPtr(item) == ptr;
+    });
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<SmartPtr U, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+size_t Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::reverseFind(V* ptr) const
+{
+    return reverseFindIf([&](auto& item) {
+        return GetPtrHelper<U>::getPtr(item) == ptr;
+    });
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+template<SmartPtr U, typename V> requires std::same_as<U, T> && std::derived_from<V, typename GetPtrHelper<U>::UnderlyingType>
+bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::removeFirst(V* ptr)
+{
+    return removeFirstMatching([&](auto& item) {
+        return GetPtrHelper<U>::getPtr(item) == ptr;
+    });
+}
+
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::fill(const T& val, size_t newSize)
 {
     if (size() > newSize)
@@ -1229,7 +1163,7 @@ void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::fill(const
 
     asanBufferSizeWillChangeTo(newSize);
 
-    std::fill(begin(), end(), val);
+    std::ranges::fill(*this, val);
     TypeOperations::uninitializedFill(end(), begin() + newSize, val);
     m_size = newSize;
 }
@@ -1341,7 +1275,7 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
 template<FailureAction failureAction>
 bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::growImpl(size_t size)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(size >= m_size);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(size >= m_size);
     if (size > capacity()) {
         bool success = expandCapacity<failureAction>(size);
         if constexpr (failureAction == FailureAction::Report) {
@@ -1517,9 +1451,8 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
             return false;
     }
     asanBufferSizeWillChangeTo(newSize);
-    T* dest = end();
-    VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(dataPtr, std::addressof(dataPtr[dataSize]), dest);
-    m_size = newSize;
+    auto oldSize = std::exchange(m_size, newSize);
+    VectorCopier<T>::uninitializedCopy(unsafeMakeSpan(dataPtr, dataSize), mutableSpan().subspan(oldSize));
     return true;
 }
 
@@ -1534,9 +1467,8 @@ ALWAYS_INLINE bool Vector<T, inlineCapacity, OverflowHandler, minCapacity, Mallo
 
     size_t newSize = m_size + dataSize;
     asanBufferSizeWillChangeTo(newSize);
-    T* dest = end();
-    VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(data, std::addressof(data[dataSize]), dest);
-    m_size = newSize;
+    auto oldSize = std::exchange(m_size, newSize);
+    VectorCopier<T>::uninitializedCopy(unsafeMakeSpan(data, dataSize), mutableSpan().subspan(oldSize));
     return true;
 }
 
@@ -1640,7 +1572,7 @@ inline void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::app
     if (newSize > capacity())
         expandCapacity<FailureAction::Crash>(newSize);
     for (auto& item : val)
-        unsafeAppendWithoutCapacityCheck(WTFMove(item));
+        unsafeAppendWithoutCapacityCheck(WTF::move(item));
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1655,10 +1587,10 @@ void Vector<T, inlineCapacity, OverflowHandler, minCapacity, Malloc>::insertSpan
     if (newSize < m_size)
         CRASH();
     asanBufferSizeWillChangeTo(newSize);
-    T* spot = mutableSpan().subspan(position).data();
-    TypeOperations::moveOverlapping(spot, end(), spot + data.size());
-    VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(std::to_address(data.begin()), std::to_address(data.end()), spot);
-    m_size = newSize;
+    auto oldSize = std::exchange(m_size, newSize);
+    auto spot = mutableSpan().subspan(position);
+    TypeOperations::moveOverlapping(spot.data(), spot.data() + oldSize - position, spot.data() + data.size());
+    VectorCopier<T>::uninitializedCopy(spanConstCast<const U>(data), spot);
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
@@ -1961,7 +1893,7 @@ template<typename T>
 struct CompactMapTraits<std::optional<T>> {
     using ItemType = T;
     static bool hasValue(const std::optional<T>& returnValue) { return !!returnValue; }
-    static ItemType extractValue(std::optional<T>&& returnValue) { return WTFMove(*returnValue); }
+    static ItemType extractValue(std::optional<T>&& returnValue) { return WTF::move(*returnValue); }
 };
 
 template<typename T>
@@ -1972,10 +1904,17 @@ struct CompactMapTraits<RefPtr<T>> {
 };
 
 template<typename T>
+struct CompactMapTraits<CheckedPtr<T>> {
+    using ItemType = CheckedRef<T>;
+    static bool hasValue(const CheckedPtr<T>& returnValue) { return !!returnValue; }
+    static ItemType extractValue(CheckedPtr<T>&& returnValue) { return returnValue.releaseNonNull(); }
+};
+
+template<typename T>
 struct CompactMapTraits<RetainPtr<T>> {
     using ItemType = RetainPtr<T>;
     static bool hasValue(const RetainPtr<T>& returnValue) { return !!returnValue; }
-    static ItemType extractValue(RetainPtr<T>&& returnValue) { return WTFMove(returnValue); }
+    static ItemType extractValue(RetainPtr<T>&& returnValue) { return WTF::move(returnValue); }
 };
 
 template<typename MapFunction, typename DestinationVectorType, typename SourceType, typename Enable = void>
@@ -1988,23 +1927,24 @@ struct CompactMapper {
         for (auto&& item : source) {
             auto itemResult = mapFunction(item);
             if (CompactMapTraits<ResultItemType>::hasValue(itemResult))
-                result.append(CompactMapTraits<ResultItemType>::extractValue(WTFMove(itemResult)));
+                result.append(CompactMapTraits<ResultItemType>::extractValue(WTF::move(itemResult)));
         }
         result.shrinkToFit();
     }
 };
 
 template<typename MapFunction, typename DestinationVectorType, typename SourceType>
-struct CompactMapper<MapFunction, DestinationVectorType, SourceType, typename std::enable_if<std::is_rvalue_reference<SourceType&&>::value>::type> {
+    requires (std::is_rvalue_reference_v<SourceType&&>)
+struct CompactMapper<MapFunction, DestinationVectorType, SourceType> {
     using SourceItemType = typename CollectionInspector<SourceType>::SourceItemType;
     using ResultItemType = typename std::invoke_result<MapFunction, SourceItemType&&>::type;
 
     static void compactMap(DestinationVectorType& result, SourceType&& source, NOESCAPE const MapFunction& mapFunction)
     {
         for (auto&& item : source) {
-            auto itemResult = mapFunction(WTFMove(item));
+            auto itemResult = mapFunction(WTF::move(item));
             if (CompactMapTraits<ResultItemType>::hasValue(itemResult))
-                result.unsafeAppendWithoutCapacityCheck(CompactMapTraits<ResultItemType>::extractValue(WTFMove(itemResult)));
+                result.unsafeAppendWithoutCapacityCheck(CompactMapTraits<ResultItemType>::extractValue(WTF::move(itemResult)));
         }
         result.shrinkToFit();
     }
@@ -2053,7 +1993,8 @@ struct FlatMapper {
     }
 };
 
-template<typename MapFunction, typename SourceType> requires std::is_rvalue_reference<SourceType&&>::value
+template<typename MapFunction, typename SourceType>
+    requires (std::is_rvalue_reference_v<SourceType&&>)
 struct FlatMapper<MapFunction, SourceType> {
     using SourceItemType = typename CollectionInspector<SourceType>::SourceItemType;
     using DestinationItemType = typename CollectionInspector<typename std::invoke_result<MapFunction, SourceItemType&&>::type>::SourceItemType;
@@ -2062,7 +2003,7 @@ struct FlatMapper<MapFunction, SourceType> {
     {
         Vector<DestinationItemType> result;
         for (auto&& item : source)
-            result.appendVector(mapFunction(WTFMove(item)));
+            result.appendVector(mapFunction(WTF::move(item)));
         result.shrinkToFit();
         return result;
     }
@@ -2078,8 +2019,7 @@ template<typename DestinationVector, typename Collection>
 inline auto copyToVectorSpecialization(const Collection& collection) -> DestinationVector
 {
     DestinationVector result;
-    // FIXME: Use std::size when available on all compilers.
-    result.reserveInitialCapacity(collection.size());
+    result.reserveInitialCapacity(std::size(collection));
     for (auto&& item : collection)
         result.unsafeAppendWithoutCapacityCheck(item);
     return result;

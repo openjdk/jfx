@@ -20,11 +20,13 @@
 #pragma once
 
 #include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderLayer.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
+#include "Settings.h"
 #include <wtf/CheckedPtr.h>
 
 namespace WebCore {
@@ -36,7 +38,7 @@ inline bool RenderLayer::hasPerspective() const { return renderer().style().hasP
 inline bool RenderLayer::isTransparent() const { return renderer().isTransparent() || renderer().hasMask(); }
 inline bool RenderLayer::overlapBoundsIncludeChildren() const { return hasFilter() && renderer().style().filter().hasFilterThatMovesPixels(); }
 inline bool RenderLayer::preserves3D() const { return renderer().style().preserves3D(); }
-inline int RenderLayer::zIndex() const { return renderer().style().usedZIndex(); }
+inline int RenderLayer::zIndex() const { return renderer().style().usedZIndex().tryValue().value_or(0).value; }
 inline Page& RenderLayer::page() const { return renderer().page(); }
 inline Ref<Page> RenderLayer::protectedPage() const { return renderer().page(); }
 
@@ -45,11 +47,16 @@ inline bool RenderLayer::hasAppleVisualEffect() const { return renderer().hasApp
 inline bool RenderLayer::hasAppleVisualEffectRequiringBackdropFilter() const { return renderer().hasAppleVisualEffectRequiringBackdropFilter(); }
 #endif
 
+inline bool RenderLayer::isViewportConstrained() const
+{
+    return renderer().isFixedPositioned() || renderer().isStickilyPositioned();
+}
+
 inline bool RenderLayer::isTransformed() const
 {
     // If the scroll offset is present, a transform is applied on top of existing
     // transforms from the renderer.
-    return renderer().isTransformed() || m_snapshottedScrollOffsetForAnchorPositioning;
+    return renderer().isTransformed() || m_anchorScrollAdjustment;
 }
 
 inline bool RenderLayer::hasBlendMode() const { return renderer().hasBlendMode(); } // FIXME: Why ask the renderer this given we have m_blendMode?

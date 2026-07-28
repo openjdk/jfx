@@ -204,6 +204,7 @@ inline CapabilityLevel canCompile(Node* node)
     case TailCallForwardVarargsInlinedCaller:
     case ConstructForwardVarargs:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
     case CallCustomAccessorGetter:
     case CallCustomAccessorSetter:
     case VarargsLength:
@@ -463,7 +464,7 @@ inline CapabilityLevel canCompile(Node* node)
     case MultiGetByVal:
     case MultiPutByVal:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic:
     case PutByValDirect:
     case PutByValWithThis:
@@ -493,6 +494,12 @@ inline CapabilityLevel canCompile(Node* node)
     case DateGetInt32OrNaN:
     case DateGetTime:
     case DateSetTime:
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
         // These are OK.
         break;
 
@@ -560,6 +567,7 @@ CapabilityLevel canCompile(Graph& graph)
                 case KnownBooleanUse:
                 case CellUse:
                 case KnownCellUse:
+                case KnownStorageUse:
                 case CellOrOtherUse:
                 case ObjectUse:
                 case ArrayUse:

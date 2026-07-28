@@ -25,11 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
-#include "ScrollingStateScrollingNode.h"
-#include "ScrollingStateTree.h"
-#include "ScrollingTree.h"
+#include <WebCore/ScrollingStateScrollingNode.h>
+#include <WebCore/ScrollingStateTree.h>
+#include <WebCore/ScrollingTree.h>
 #include <wtf/Condition.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
@@ -113,7 +114,7 @@ private:
     void scheduleDelayedRenderingUpdateDetectionTimer(Seconds) WTF_REQUIRES_LOCK(m_treeLock);
     void delayedRenderingUpdateDetectionTimerFired();
 
-    void hasNodeWithAnimatedScrollChanged(bool) final;
+    void hasNodeWithAnimatedScrollChanged(bool) override;
 
     bool isScrollingSynchronizedWithMainThread() final WTF_REQUIRES_LOCK(m_treeLock);
 

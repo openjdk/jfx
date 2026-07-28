@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,18 @@
 
 #include "stdbool.h"
 
+#if defined(PAS_BMALLOC) && PAS_BMALLOC
+#if defined(__has_include)
+#if __has_include(<WebKitAdditions/pas_mte_additions.h>)
+// FIXME: Properly support using WKA in modules.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#include <WebKitAdditions/pas_mte_additions.h>
+#pragma clang diagnostic pop
+#endif // __has_include(<WebKitAdditions/pas_mte_additions.h>) && !PAS_ENABLE_TESTING
+#endif // defined(__has_include)
+#endif // defined(PAS_BMALLOC) && PAS_BMALLOC
+
 #define PAS_LOG_NONE (0)
 #define PAS_LOG_HEAP_INFRASTRUCTURE (1 << 0)
 #define PAS_LOG_BOOTSTRAP_HEAPS (1 << 1)
@@ -43,7 +55,11 @@
 #define PAS_LOG_LEVEL (PAS_LOG_NONE)
 #define PAS_SHOULD_LOG(level) (PAS_LOG_LEVEL & level)
 
+#if PAS_CPU(ADDRESS64)
 #define LIBPAS_ENABLED 1
+#else
+#define LIBPAS_ENABLED 0
+#endif
 
 #if defined(PAS_BMALLOC)
 #include "BPlatform.h"
@@ -60,10 +76,22 @@
 #endif
 #define PAS_ENABLE_TESTING __PAS_ENABLE_TESTING
 
+#ifndef PAS_ENABLE_STATS
+#define PAS_ENABLE_STATS 0
+#endif
+
 #define PAS_ARM64 __PAS_ARM64
 #define PAS_ARM32 __PAS_ARM32
 
 #define PAS_ARM __PAS_ARM
+
+#ifndef PAS_ENABLE_MTE
+#if defined(PAS_BMALLOC)
+#define PAS_ENABLE_MTE (PAS_USE_APPLE_INTERNAL_SDK && __PAS_ARM64E)
+#else /* !defined(PAS_BMALLOC) */
+#define PAS_ENABLE_MTE 0
+#endif /* defined(PAS_BMALLOC) */
+#endif /* PAS_ENABLE_MTE */
 
 #define PAS_RISCV __PAS_RISCV
 

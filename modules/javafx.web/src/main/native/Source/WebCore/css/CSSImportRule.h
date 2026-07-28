@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CSSRule.h"
+#include <WebCore/CSSRule.h>
 
 namespace WebCore {
 
@@ -55,7 +55,7 @@ private:
     String cssText() const final;
     String cssText(const CSS::SerializationContext&) const final;
     void reattach(StyleRuleBase&) final;
-    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&) final;
+    void getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>&) final;
 
     String cssTextInternal(const String& urlString) const;
     const MQ::MediaQueryList& mediaQueries() const;

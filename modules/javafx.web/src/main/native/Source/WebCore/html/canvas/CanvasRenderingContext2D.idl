@@ -32,7 +32,6 @@ enum RenderingMode {
 
 [
     CustomIsReachable,
-    JSGenerateToJSObject,
     JSCustomMarkFunction,
     CallTracer=InspectorCanvasCallTracer,
     Exposed=Window

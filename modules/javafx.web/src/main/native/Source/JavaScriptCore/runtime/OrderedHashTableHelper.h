@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "HashMapHelper.h"
-#include "JSImmutableButterfly.h"
-#include "JSObject.h"
+#include <JavaScriptCore/HashMapHelper.h>
+#include <JavaScriptCore/JSCellButterfly.h>
+#include <JavaScriptCore/JSObject.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -103,12 +103,12 @@ class OrderedHashTable;
 // - DeletedEntries: An array of the previously deleted entries used for updating iterator's index.
 // - ClearedTableSentinel: The sentinel to indicate whether the obsolete table is retired due to a clearance.
 //
-// Note that all elements in the JSImmutableButterfly are in JSValue type. However, only the key and value in the DataTable are real JSValues.
+// Note that all elements in the JSCellButterfly are in JSValue type. However, only the key and value in the DataTable are real JSValues.
 // The others are used as unsigned integers wrapped by JSValue.
 template<typename Traits>
 class OrderedHashTableHelper {
 public:
-    using Storage = JSImmutableButterfly;
+    using Storage = JSCellButterfly;
     using Helper = OrderedHashTableHelper<Traits>;
     using HashTable = OrderedHashTable<Traits>;
     using TableSize = uint32_t;
@@ -120,7 +120,6 @@ public:
     static constexpr uint8_t EntrySize = Traits::EntrySize;
     static constexpr uint8_t ChainOffset = Traits::EntrySize - 1;
 
-    static constexpr uint8_t LoadFactor = 1;
     static constexpr uint8_t InitialCapacity = 8;
     static constexpr TableSize LargeCapacity = 2 << 15;
 
@@ -165,7 +164,7 @@ public:
     ALWAYS_INLINE static constexpr void incrementDeletedEntryCount(Storage& storage) { OrderedHashTableTraits::increment(slot(storage, deletedEntryCountIndex())); }
 
     /* -------------------------------- Hash table -------------------------------- */
-    ALWAYS_INLINE static constexpr TableSize bucketCount(TableSize capacity) { return capacity / LoadFactor; }
+    ALWAYS_INLINE static constexpr TableSize bucketCount(TableSize capacity) { return capacity; }
 
     ALWAYS_INLINE static constexpr TableIndex hashTableStartIndex() { return iterationEntryIndex() + 1; }
     ALWAYS_INLINE static constexpr TableIndex hashTableEndIndex(TableSize capacity) { return hashTableStartIndex() + bucketCount(capacity) - 1; }
@@ -176,7 +175,7 @@ public:
     /* -------------------------------- Data table -------------------------------- */
     ALWAYS_INLINE static constexpr TableSize dataTableSize(TableSize capacity) { return capacity * EntrySize; }
 
-    ALWAYS_INLINE static constexpr TableIndex dataTableStartIndex(TableSize capacity) { return hashTableEndIndex(capacity) + 1; }
+    ALWAYS_INLINE static constexpr TableIndex dataTableStartIndex(TableSize capacity) { return hashTableStartIndex() + bucketCount(capacity); }
     ALWAYS_INLINE static constexpr TableIndex dataTableEndIndex(TableSize capacity) { return dataTableStartIndex(capacity) + dataTableSize(capacity) - 1; }
     ALWAYS_INLINE static constexpr TableIndex entryDataStartIndex(TableIndex dataTableStartIndex, Entry entry) { return dataTableStartIndex + entry * EntrySize; }
 
@@ -194,7 +193,7 @@ public:
     ALWAYS_INLINE static constexpr TableSize tableSize(TableSize capacity)
     {
         TableSize result = 4 /* AliveEntryCount, DeletedEntryCount, Capacity, and IterationEntry */
-            + capacity / LoadFactor /* BucketCount */
+            + capacity /* BucketCount */
             + capacity * EntrySize; /* DataTableSize */
         ASSERT(result == tableSizeSlow(capacity));
         return result;
@@ -206,7 +205,7 @@ public:
     ALWAYS_INLINE static constexpr Storage* nextTable(Storage& storage)
     {
         JSValue* value = slot(storage, aliveEntryCountIndex());
-        if (value->isCell()) {
+        if (!value->isInt32()) {
             ASSERT(jsDynamicCast<Storage*>(*value));
             return jsCast<Storage*>(*value);
         }
@@ -223,7 +222,8 @@ public:
 
     ALWAYS_INLINE static Storage* tryCreate(VM& vm, int length)
     {
-        return Storage::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
+        // FIXME: Why is this CopyOnWrite? We definitely modify it...
+        return Storage::tryCreate(vm, vm.cellButterflyStructure(CopyOnWriteArrayWithContiguous), length);
     }
     ALWAYS_INLINE static Storage* tryCreate(JSGlobalObject* globalObject, TableSize aliveEntryCount = 0, TableSize deletedEntryCount = 0, TableSize capacity = InitialCapacity)
     {
@@ -262,26 +262,25 @@ public:
 
         TableSize baseCapacity = capacity(base);
         TableSize baseAliveEntryCount = aliveEntryCount(base);
-        TableSize baseUsedCapacity = usedCapacity(base);
         ASSERT(!isObsolete(base));
         ASSERT_UNUSED(baseAliveEntryCount, newCapacity >= std::max(static_cast<TableSize>(InitialCapacity), baseAliveEntryCount));
-        ASSERT_UNUSED(baseCapacity, baseUsedCapacity <= baseCapacity);
+        ASSERT_UNUSED(baseCapacity, usedCapacity(base) <= baseCapacity);
 
         Storage* copy = tryCreate(globalObject, baseAliveEntryCount, 0, newCapacity);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        TableIndex baseEntryKeyIndex = dataTableStartIndex(baseCapacity) - EntrySize;
+        TableIndex baseEntryKeyIndex = dataTableStartIndex(baseCapacity);
         TableIndex baseDeletedEntriesIndex = deletedEntriesStartIndex();
 
         Storage& copyRef = *copy;
-        TableIndex newEntryKeyIndex = dataTableStartIndex(newCapacity) - EntrySize;
+        TableIndex newEntryKeyIndex = dataTableStartIndex(newCapacity);
         TableIndex newHashTableStartIndex = hashTableStartIndex();
         TableIndex newBucketCount = bucketCount(newCapacity);
 
-        for (Entry baseEntry = 0; baseEntry < baseUsedCapacity; ++baseEntry) {
-            baseEntryKeyIndex += EntrySize;
+        for (Entry baseEntry = 0;; ++baseEntry, baseEntryKeyIndex += EntrySize) {
             JSValue baseKey = get(base, baseEntryKeyIndex);
-            ASSERT(!baseKey.isEmpty());
+            if (!baseKey)
+                break;
 
             // Step 1: Copy DataTable only for the alive entries.
             if (isDeleted(vm, baseKey)) {
@@ -291,7 +290,6 @@ public:
             }
 
             // Step 2: Copy the key and value from the base table to the new table.
-            newEntryKeyIndex += EntrySize;
             setKeyOrValueData(vm, copyRef, newEntryKeyIndex, baseKey);
             if constexpr (Traits::hasValueData) {
                 JSValue baseValue = get(base, baseEntryKeyIndex + 1);
@@ -304,6 +302,7 @@ public:
             RETURN_IF_EXCEPTION(scope, nullptr);
             TableIndex newBucketIndex = bucketIndex(newHashTableStartIndex, newBucketCount, hash);
             addToChain(copyRef, newBucketIndex, newEntryKeyIndex);
+            newEntryKeyIndex += EntrySize;
         }
 
         return copy;
@@ -575,11 +574,14 @@ public:
 
         ASSERT(!isObsolete(candidate));
         TableSize capacity = Helper::capacity(candidate);
-        TableSize usedCapacity = Helper::usedCapacity(candidate);
-        TableIndex entryKeyIndex = entryDataStartIndex(dataTableStartIndex(capacity), from) - EntrySize;
-        for (Entry entry = from; entry < usedCapacity; ++entry) {
-            entryKeyIndex += EntrySize;
+        TableIndex entryKeyIndex = entryDataStartIndex(dataTableStartIndex(capacity), from);
+        if (from >= capacity) [[unlikely]]
+            return { };
+        for (Entry entry = from;; ++entry, entryKeyIndex += EntrySize) {
             JSValue key = get(candidate, entryKeyIndex);
+            if (!key)
+                return { };
+
             if (isDeleted(vm, key))
                 continue;
 
@@ -588,7 +590,6 @@ public:
                 value = get(candidate, entryKeyIndex + 1);
             return { &candidate, entry, key, value };
         }
-        return { };
     }
 
     ALWAYS_INLINE static JSValue getKey(Storage& storage, Entry entry)

@@ -27,20 +27,21 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLVideoElement.h"
-#include "RenderMedia.h"
+#include <WebCore/RenderMedia.h>
 
 namespace WebCore {
 
+class HTMLVideoElement;
+
 class RenderVideo final : public RenderMedia {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderVideo);
+    WTF_MAKE_TZONE_ALLOCATED(RenderVideo);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderVideo);
 public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
 
     WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
-    Ref<HTMLVideoElement> protectedVideoElement() const;
+    WEBCORE_EXPORT Ref<HTMLVideoElement> protectedVideoElement() const;
 
     IntRect videoBox() const;
     WEBCORE_EXPORT IntRect videoBoxInRootView() const;
@@ -78,7 +79,7 @@ private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
     void layout() final;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
 
     void visibleInViewportStateChanged() final;
 
@@ -92,11 +93,6 @@ private:
 
     LayoutSize m_cachedImageSize;
 };
-
-inline RenderVideo* HTMLVideoElement::renderer() const
-{
-    return downcast<RenderVideo>(HTMLMediaElement::renderer());
-}
 
 } // namespace WebCore
 

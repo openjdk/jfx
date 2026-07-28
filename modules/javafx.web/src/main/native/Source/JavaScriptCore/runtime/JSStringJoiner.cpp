@@ -39,7 +39,7 @@ JSStringJoiner::~JSStringJoiner() = default;
 template<typename CharacterType>
 static inline void appendStringToData(std::span<CharacterType>& data, StringView string)
 {
-    if constexpr (std::is_same_v<CharacterType, LChar>) {
+    if constexpr (std::is_same_v<CharacterType, Latin1Character>) {
         ASSERT(string.is8Bit());
         string.getCharacters8(data);
     } else
@@ -57,7 +57,7 @@ static inline void appendStringToData(std::span<OutputCharacterType>& data, std:
 template<typename CharacterType>
 static inline void appendStringToData(std::span<CharacterType>& data, int32_t value)
 {
-    if constexpr (std::is_same_v<CharacterType, LChar>) {
+    if constexpr (std::is_same_v<CharacterType, Latin1Character>) {
         auto result = std::to_chars(std::bit_cast<char*>(data.data()), std::bit_cast<char*>(data.data() + data.size()), value);
         ASSERT(result.ec != std::errc::value_too_large);
         skip(data, result.ptr - std::bit_cast<char*>(data.data()));
@@ -72,12 +72,12 @@ template<typename CharacterType>
 static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::span<CharacterType>& data, char16_t separatorCharacter, StringView string, unsigned count)
 {
 #if OS(DARWIN)
-    if constexpr (std::is_same_v<CharacterType, LChar>) {
+    if constexpr (std::is_same_v<CharacterType, Latin1Character>) {
         ASSERT(string.is8Bit());
         if (count > 4) {
             switch (string.length() + 1) {
             case 16: {
-                alignas(16) LChar pattern[16];
+                alignas(16) Latin1Character pattern[16];
                 pattern[0] = separatorCharacter;
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 16;
@@ -86,7 +86,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
                 return;
             }
             case 8: {
-                alignas(8) LChar pattern[8];
+                alignas(8) Latin1Character pattern[8];
                 pattern[0] = separatorCharacter;
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 8;
@@ -95,7 +95,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
                 return;
             }
             case 4: {
-                alignas(4) LChar pattern[4];
+                alignas(4) Latin1Character pattern[4];
                 pattern[0] = separatorCharacter;
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 4;
@@ -280,7 +280,7 @@ JSString* JSStringJoiner::joinImpl(JSGlobalObject* globalObject)
 
     String result;
     if (m_isAll8Bit)
-        result = joinStrings<LChar>(m_strings, m_separator.span8(), length);
+        result = joinStrings<Latin1Character>(m_strings, m_separator.span8(), length);
     else {
         if (m_separator.is8Bit())
             result = joinStrings<char16_t>(m_strings, m_separator.span8(), length);
@@ -293,7 +293,7 @@ JSString* JSStringJoiner::joinImpl(JSGlobalObject* globalObject)
         return { };
     }
 
-    return jsString(vm, WTFMove(result));
+    return jsString(vm, WTF::move(result));
 }
 
 JSString* JSOnlyStringsAndInt32sJoiner::joinImpl(JSGlobalObject* globalObject, const WriteBarrier<Unknown>* data, unsigned length)
@@ -314,7 +314,7 @@ JSString* JSOnlyStringsAndInt32sJoiner::joinImpl(JSGlobalObject* globalObject, c
 
     String result;
     if (m_isAll8Bit)
-        result = joinStrings<LChar>(globalObject, data, length, m_separator.span8(), totalLength);
+        result = joinStrings<Latin1Character>(globalObject, data, length, m_separator.span8(), totalLength);
     else {
         if (m_separator.is8Bit())
             result = joinStrings<char16_t>(globalObject, data, length, m_separator.span8(), totalLength);
@@ -324,7 +324,7 @@ JSString* JSOnlyStringsAndInt32sJoiner::joinImpl(JSGlobalObject* globalObject, c
 
     RETURN_IF_EXCEPTION(scope, { });
 
-    return jsString(vm, WTFMove(result));
+    return jsString(vm, WTF::move(result));
 }
 
 } // namespace JSC

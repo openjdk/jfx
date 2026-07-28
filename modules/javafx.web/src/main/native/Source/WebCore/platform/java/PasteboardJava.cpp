@@ -35,6 +35,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "markup.h"
 #include "Pasteboard.h"
 #include "RenderImage.h"

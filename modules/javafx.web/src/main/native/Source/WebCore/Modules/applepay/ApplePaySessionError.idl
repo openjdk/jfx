@@ -26,6 +26,7 @@
 [
     Conditional=APPLE_PAY,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePaySessionError {
     DOMString code; // FIXME: use an enum instead
     record<DOMString, DOMString> info;

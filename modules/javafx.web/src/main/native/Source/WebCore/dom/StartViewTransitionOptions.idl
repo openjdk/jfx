@@ -23,7 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary StartViewTransitionOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary StartViewTransitionOptions {
     ViewTransitionUpdateCallback? update = null;
-    [EnabledBySetting=ViewTransitionTypesEnabled] sequence<[AtomString] DOMString>? types = null;
+    sequence<[AtomString] DOMString>? types = null;
 };

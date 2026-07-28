@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "OrderedHashTableHelper.h"
+#include <JavaScriptCore/OrderedHashTableHelper.h>
 
 namespace JSC {
 
@@ -36,7 +36,7 @@ class OrderedHashTable : public JSNonFinalObject {
 public:
     using HashTable = OrderedHashTable<Traits>;
     using Helper = OrderedHashTableHelper<Traits>;
-    using Storage = JSImmutableButterfly;
+    using Storage = JSCellButterfly;
     using TableIndex = typename Helper::TableIndex;
 
     DECLARE_VISIT_CHILDREN;
@@ -46,7 +46,7 @@ public:
     {
     }
 
-    static ptrdiff_t offsetOfButterfly() { return OBJECT_OFFSETOF(OrderedHashTable, m_storage); }
+    static ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(OrderedHashTable, m_storage); }
 
     void finishCreation(VM& vm) { Base::finishCreation(vm); }
     void finishCreation(JSGlobalObject* globalObject, VM& vm, HashTable* base)
@@ -137,10 +137,14 @@ public:
         m_storage.set(vm, this, storage);
     }
 
-    ALWAYS_INLINE JSCell* storage(JSGlobalObject* globalObject)
+    ALWAYS_INLINE JSCell* tryGetStorage(JSGlobalObject* globalObject)
     {
         materializeIfNeeded(globalObject);
-        ASSERT(m_storage);
+        return m_storage.get();
+    }
+
+    ALWAYS_INLINE JSCell* storage()
+    {
         return m_storage.get();
     }
 

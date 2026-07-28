@@ -42,6 +42,9 @@ public:
     void deref() { m_performance->deref(); }
 
     void initializeMapLike(DOMMapAdapter&);
+    // Trait that causes the wrapper's backing map to be initialized again before every access:
+    using shouldAlwaysInitializeMapLikeMarker = void;
+
     void add(EventType);
 
 private:

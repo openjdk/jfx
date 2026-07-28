@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Antonio Gomes <tonikitoo@webkit.org>
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * All rights reserved.
  *
@@ -30,20 +31,23 @@
 #include "SpatialNavigation.h"
 
 #include "ContainerNodeInlines.h"
+#include "DocumentView.h"
+#include "FrameInlines.h"
 #include "FrameTree.h"
 #include "HTMLAreaElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
 #include "HTMLSelectElement.h"
 #include "IntRect.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "NodeInlines.h"
 #include "Page.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "Settings.h"
 
 namespace WebCore {
@@ -521,9 +525,9 @@ LayoutRect nodeRectInAbsoluteCoordinates(const ContainerNode& containerNode, boo
     // the rect of the focused element.
     if (ignoreBorder) {
             auto& style = renderer->style();
-            rect.move(Style::evaluate(style.borderLeftWidth()), Style::evaluate(style.borderTopWidth()));
-            rect.setWidth(rect.width() - Style::evaluate(style.borderLeftWidth()) - Style::evaluate(style.borderRightWidth()));
-            rect.setHeight(rect.height() - Style::evaluate(style.borderTopWidth()) - Style::evaluate(style.borderBottomWidth()));
+            rect.move(Style::evaluate<LayoutUnit>(style.usedBorderLeftWidth(), Style::ZoomNeeded { }), Style::evaluate<LayoutUnit>(style.usedBorderTopWidth(), Style::ZoomNeeded { }));
+            rect.setWidth(rect.width() - Style::evaluate<LayoutUnit>(style.usedBorderLeftWidth(), Style::ZoomNeeded { }) - Style::evaluate<LayoutUnit>(style.usedBorderRightWidth(), Style::ZoomNeeded { }));
+            rect.setHeight(rect.height() - Style::evaluate<LayoutUnit>(style.usedBorderTopWidth(), Style::ZoomNeeded { }) - Style::evaluate<LayoutUnit>(style.usedBorderBottomWidth(), Style::ZoomNeeded { }));
     }
     return rect;
     }

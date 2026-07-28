@@ -1251,7 +1251,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_importNodeImpl(JNIE
    return JavaReturn<Node>(env, WTF::getPtr(
        raiseOnDOMError(env,
            IMPL->importNode(*static_cast<Node*>(jlong_to_ptr(importedNode)),
-                            std::variant<bool, ImportNodeOptions>(static_cast<bool>(deep))))));
+                            Variant<bool, ImportNodeOptions>(static_cast<bool>(deep))))));
 }
 
 

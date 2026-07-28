@@ -100,7 +100,7 @@ RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer
             (jobject) sharedBuffer));
     WTF::CheckAndClearException(env);
     FontPlatformData::CreationData creationData = { buffer, WTF::String::fromUTF8("") };
-    return data ? adoptRef(new FontCustomPlatformData(data, WTFMove(creationData))) : nullptr;
+    return data ? adoptRef(new FontCustomPlatformData(data, WTF::move(creationData))) : nullptr;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

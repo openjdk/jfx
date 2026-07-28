@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(FTL_JIT)
 
 #include "FTLAbbreviatedTypes.h"
@@ -64,8 +66,6 @@ public:
     const unsigned rangeKind { 0 };
     const unsigned profKind { 0 };
     const LValue branchWeights { nullptr };
-
-    const ValueRange nonNegativeInt32;
 };
 
 } } // namespace JSC::FTL

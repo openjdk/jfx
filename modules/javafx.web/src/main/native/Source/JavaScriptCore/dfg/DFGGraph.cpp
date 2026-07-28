@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "ArrayPrototype.h"
+#include "CacheableIdentifierInlines.h"
 #include "CodeBlock.h"
 #include "CodeBlockWithJITType.h"
 #include "DFGBackwardsCFG.h"
@@ -51,6 +52,7 @@
 #include "JSLexicalEnvironment.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "OperandsInlines.h"
+#include "ProfilerSupport.h"
 #include "SlotVisitorInlines.h"
 #include "Snippet.h"
 #include "StackAlignment.h"
@@ -94,9 +96,20 @@ Graph::Graph(VM& vm, Plan& plan)
     registerStructure(vm.structureStructure.get());
     this->stringStructure = registerStructure(vm.stringStructure.get());
     this->symbolStructure = registerStructure(vm.symbolStructure.get());
+
+    if (Options::dumpIonGraph()) {
+        m_ionGraphFunction = JSON::Object::create();
+        auto passes = JSON::Array::create();
+        m_ionGraphPasses = passes.get();
+        m_ionGraphFunction->setString("name"_s, m_codeBlock->inferredNameWithHash());
+        m_ionGraphFunction->setArray("passes"_s, WTF::move(passes));
+    }
 }
 
-Graph::~Graph() = default;
+Graph::~Graph()
+{
+    dumpAndReleaseIonGraph();
+}
 
 ASCIILiteral Graph::opName(NodeType op)
 {
@@ -168,11 +181,8 @@ void Graph::printNodeWhiteSpace(PrintStream& out, Node* node)
     printWhiteSpace(out, amountOfNodeWhiteSpace(node));
 }
 
-void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContext* context)
+void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContext* context, bool inIonGraph)
 {
-    Prefix myPrefix(prefixStr);
-    Prefix& prefix = prefixStr ? myPrefix : m_prefix;
-
     NodeType op = node->op();
 
     unsigned refCount = node->refCount();
@@ -180,6 +190,21 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (mustGenerate)
         --refCount;
 
+    CommaPrinter comma;
+    if (inIonGraph) {
+        out.print(opName(op), "("_s);
+        DFG_NODE_DO_TO_CHILDREN(*this, node, [&](Node*, Edge edge) {
+            out.print(comma);
+            if (!edge.isProved())
+                out.print("Check:");
+            out.print(edge.useKind(), ":");
+            if (DFG::doesKill(edge.killStatusUnchecked()))
+                out.print("Kill:");
+            out.print(opName(edge->op()), "#"_s, edge->index());
+        });
+    } else {
+        Prefix myPrefix(prefixStr);
+        Prefix& prefix = prefixStr ? myPrefix : m_prefix;
     out.print(prefix);
     printNodeWhiteSpace(out, node);
 
@@ -207,23 +232,12 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     else
         out.print("-"_s);
     out.print(">\t"_s, opName(op), "("_s);
-    CommaPrinter comma;
-    if (node->flags() & NodeHasVarArgs) {
-        for (unsigned childIdx = node->firstChild(); childIdx < node->firstChild() + node->numChildren(); childIdx++) {
-            if (!m_varArgChildren[childIdx])
-                continue;
-            out.print(comma, m_varArgChildren[childIdx]);
-        }
-    } else {
-        if (!!node->child1() || !!node->child2() || !!node->child3())
-            out.print(comma, node->child1());
-        if (!!node->child2() || !!node->child3())
-            out.print(comma, node->child2());
-        if (!!node->child3())
-            out.print(comma, node->child3());
+        DFG_NODE_DO_TO_CHILDREN(*this, node, [&](Node*, Edge edge) {
+            out.print(comma, edge);
+        });
     }
 
-    if (toCString(NodeFlagsDump(node->flags())) != "<empty>")
+    if (toCString(NodeFlagsDump(node->flags())) != "<empty>"_s)
         out.print(comma, NodeFlagsDump(node->flags()));
     if (node->prediction())
         out.print(comma, SpeculationDump(node->prediction()));
@@ -428,9 +442,12 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (clobbersExitState(*this, node))
         out.print(comma, "ClobbersExit"_s);
     if (node->origin.isSet()) {
-        out.print(comma, node->origin.semantic.bytecodeIndex());
-        if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet())
-            out.print(comma, "exit: "_s, node->origin.forExit);
+        out.print(comma);
+        node->origin.semantic.bytecodeIndex().dump(out, inIonGraph);
+        if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet()) {
+            out.print(comma, "exit: "_s);
+            node->origin.forExit.dump(out, inIonGraph);
+        }
     }
     out.print(comma, node->origin.exitOK ? "ExitValid"_s : "ExitInvalid"_s);
     if (node->origin.wasHoisted)
@@ -442,6 +459,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     else if (node->hasHeapPrediction())
         out.print("  predicting "_s, SpeculationDump(node->getHeapPrediction()));
 
+    if (!inIonGraph)
     out.print("\n"_s);
 }
 
@@ -517,7 +535,7 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
             Vector<BlockIndex> sortedBlockList;
             for (unsigned i = 0; i < loop->size(); ++i)
                 sortedBlockList.append(unboxLoopNode(loop->at(i))->index);
-            std::sort(sortedBlockList.begin(), sortedBlockList.end());
+            std::ranges::sort(sortedBlockList);
             for (unsigned i = 0; i < sortedBlockList.size(); ++i)
                 out.print(" #", sortedBlockList[i]);
             out.print("\n");
@@ -546,7 +564,7 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
                 continue;
 
             out.print(" D@", phiNode->index(), "<", phiNode->operand(), ",", phiNode->refCount());
-            if (toCString(NodeFlagsDump(phiNode->flags())) != "<empty>")
+            if (toCString(NodeFlagsDump(phiNode->flags())) != "<empty>"_s)
                 out.print(", ", NodeFlagsDump(phiNode->flags()));
             out.print(">->(");
             if (phiNode->child1()) {
@@ -1166,7 +1184,7 @@ FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
 
     std::unique_ptr<FullBytecodeLiveness> liveness = codeBlock->livenessAnalysis().computeFullLiveness(codeBlock);
     FullBytecodeLiveness& result = *liveness;
-    m_bytecodeLiveness.add(codeBlock, WTFMove(liveness));
+    m_bytecodeLiveness.add(codeBlock, WTF::move(liveness));
     return result;
 }
 
@@ -1289,7 +1307,7 @@ unsigned Graph::stackPointerOffset()
 unsigned Graph::requiredRegisterCountForExit()
 {
     unsigned count = JIT::frameRegisterCountFor(m_profiledBlock);
-    for (InlineCallFrameSet::iterator iter = m_plan.inlineCallFrames()->begin(); !!iter; ++iter) {
+    for (InlineCallFrameSet::iterator iter = m_plan.inlineCallFrames().unsafeGet()->begin(); !!iter; ++iter) {
         InlineCallFrame* inlineCallFrame = *iter;
         CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
         unsigned requiredCount = VirtualRegister(inlineCallFrame->stackOffset).toLocal() + 1 + JIT::frameRegisterCountFor(codeBlock);
@@ -1526,6 +1544,50 @@ JSValue Graph::tryGetConstantSetter(Node* getterSetter)
     return cell->setterConcurrently();
 }
 
+ObjectPropertyConditionSet Graph::tryEnsureAbsence(JSGlobalObject* globalObject, const StructureSet& structureSet, CacheableIdentifier identifier)
+{
+    if (structureSet.isEmpty())
+        return ObjectPropertyConditionSet::invalid();
+
+    Structure* headStructure = structureSet.onlyStructure();
+    if (!headStructure)
+        return ObjectPropertyConditionSet::invalid();
+
+    auto isAbsenceCacheable = [&](Structure* structure) {
+        if (structure->typeInfo().overridesGetOwnPropertySlot())
+            return false;
+        if (!structure->propertyAccessesAreCacheable())
+            return false;
+        if (!structure->propertyAccessesAreCacheableForAbsence())
+            return false;
+        unsigned attributes;
+        if (isValidOffset(structure->getConcurrently(identifier.uid(), attributes)))
+            return false;
+        if (structure->hasPolyProto())
+            return false;
+        return true;
+    };
+
+    // generateConditionsForPropertyMissConcurrently only walks the prototype chain, so validate
+    // headStructure first.
+    if (!isAbsenceCacheable(headStructure))
+        return ObjectPropertyConditionSet::invalid();
+
+    auto result = generateConditionsForPropertyMissConcurrently(globalObject->vm(), globalObject, headStructure, identifier.uid());
+    if (!result.isValid())
+        return result;
+
+    for (auto& condition : result) {
+        auto* object = condition.object();
+        if (!object)
+            return ObjectPropertyConditionSet::invalid();
+
+        if (!isAbsenceCacheable(object->structure()))
+            return ObjectPropertyConditionSet::invalid();
+    }
+    return result;
+}
+
 void Graph::registerFrozenValues()
 {
     ConcurrentJSLocker locker(m_codeBlock->m_lock);
@@ -1679,6 +1741,7 @@ static void logDFGAssertionFailure(
     const char* assertion)
 {
     startCrashing();
+    graph.dumpAndReleaseIonGraph();
     WTF::dataFile().atomically([&](auto&) {
         dataLogLn("DFG ASSERTION FAILED: ", assertion);
         dataLogLn(file, "(", line, ") : ", function);
@@ -1861,16 +1924,16 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
     return { };
 }
 
-bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue)
+bool Graph::getPrototypeProperty(JSObject* prototype, Structure* prototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue)
 {
     if (m_plan.isUnlinked())
         return false;
 
-    PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid);
+    PropertyOffset offset = prototypeStructure->getConcurrently(uid);
     if (!isValidOffset(offset))
         return false;
 
-    JSValue value = tryGetConstantProperty(regExpPrototype, regExpPrototypeStructure, offset);
+    JSValue value = tryGetConstantProperty(prototype, prototypeStructure, offset);
     if (!value)
         return false;
 
@@ -2066,6 +2129,102 @@ void Prefix::dump(PrintStream& out) const
     }
     if (prefixStr)
         out.printf("%s", prefixStr);
+}
+
+void Graph::dumpAndReleaseIonGraph()
+{
+    if (m_ionGraphFunction) [[unlikely]]
+        ProfilerSupport::dumpIonGraphFunction(m_codeBlock->inferredNameWithHash(), m_ionGraphFunction.releaseNonNull());
+}
+
+void Graph::appendIonGraphPass(const String& passName)
+{
+    if (m_form == LoadStore) // This is even not setting up predecessors. It is not meaningful to have a graph at this point yet.
+        return;
+
+    auto pass = JSON::Object::create();
+    pass->setString("name"_s, makeString("DFG: "_s, passName));
+    {
+        auto ionGraph = JSON::Object::create();
+        auto ionBlocks = JSON::Array::create();
+        ionGraph->setArray("blocks"_s, ionBlocks);
+
+        DumpContext context;
+        context.graph = this;
+
+        for (auto* block : blocksInNaturalOrder()) {
+            if (!block)
+                continue;
+
+            auto ionBlock = JSON::Object::create();
+            auto attributes = JSON::Array::create();
+            auto predecessors = JSON::Array::create();
+            auto successors = JSON::Array::create();
+            auto instructions = JSON::Array::create();
+
+            if (block->isOSRTarget)
+                attributes->pushString("osr"_s);
+
+            if (block->isCatchEntrypoint)
+                attributes->pushString("catch"_s);
+
+            for (size_t i = 0; i < block->size(); ++i) {
+                auto instruction = JSON::Object::create();
+                auto inputs = JSON::Array::create();
+                auto* node = block->at(i);
+
+                DFG_NODE_DO_TO_CHILDREN(*this, node, [&](Node*, Edge edge) {
+                    inputs->pushInteger(edge->index());
+                });
+
+                StringPrintStream stream;
+                dump(stream, nullptr, node, &context, /* inIonGraph */ true);
+                if (node->numSuccessors()) {
+                    CommaPrinter comma(", "_s, " -> "_s);
+                    for (unsigned i = 0; i < node->numSuccessors(); ++i) {
+                        auto* block = node->successor(i);
+                        if (!block)
+                            continue;
+                        stream.print(comma, "block "_s, block->index);
+                    }
+                }
+
+                instruction->setInteger("ptr"_s, node->index() + 1);
+                instruction->setInteger("id"_s, node->index());
+                instruction->setString("opcode"_s, stream.toString());
+                instruction->setArray("attributes"_s, JSON::Array::create());
+                instruction->setArray("inputs"_s, WTF::move(inputs));
+                instruction->setArray("uses"_s, JSON::Array::create());
+                instruction->setArray("memInputs"_s, JSON::Array::create());
+                instruction->setString("type"_s, ""_s);
+
+                instructions->pushObject(WTF::move(instruction));
+            }
+
+            for (auto* predecessor : block->predecessors)
+                predecessors->pushInteger(predecessor->index);
+
+            for (auto* successor : block->successors())
+                successors->pushInteger(successor->index);
+
+            ionBlock->setInteger("ptr"_s, block->index + 1);
+            ionBlock->setInteger("id"_s, block->index);
+            ionBlock->setInteger("loopDepth"_s, 0);
+            ionBlock->setArray("attributes"_s, WTF::move(attributes));
+            ionBlock->setArray("predecessors"_s, WTF::move(predecessors));
+            ionBlock->setArray("successors"_s, WTF::move(successors));
+            ionBlock->setArray("instructions"_s, WTF::move(instructions));
+            ionBlocks->pushObject(ionBlock);
+        }
+
+        pass->setObject("mir"_s, WTF::move(ionGraph)); // MIR stands for SpiderMonkey's middle-level IR.
+    }
+    {
+        auto ionGraph = JSON::Object::create();
+        ionGraph->setArray("blocks"_s, JSON::Array::create());
+        pass->setObject("lir"_s, WTF::move(ionGraph)); // LIR stands for SpiderMonkey's low-level IR.
+    }
+    m_ionGraphPasses->pushObject(pass);
 }
 
 } } // namespace JSC::DFG

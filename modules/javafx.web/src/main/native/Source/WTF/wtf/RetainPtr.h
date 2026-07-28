@@ -57,10 +57,6 @@
 #define NS_RETURNS_RETAINED
 #endif
 
-#ifndef __OBJC__
-typedef struct objc_object *id;
-#endif
-
 // Because ARC enablement is a compile-time choice, and we compile this header
 // both ways, we need a separate copy of our code when ARC is enabled.
 #if __has_feature(objc_arc)
@@ -77,9 +73,9 @@ template<typename T> class RetainPtr;
 template<typename T> constexpr bool IsNSType = std::is_convertible_v<T, id>;
 template<typename T> using RetainPtrType = std::conditional_t<IsNSType<T> && !std::is_same_v<T, id>, std::remove_pointer_t<T>, T>;
 
-template<typename T> constexpr RetainPtr<RetainPtrType<T>> adoptCF(T CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+template<typename T> [[nodiscard]] constexpr RetainPtr<RetainPtrType<T>> adoptCF(T CF_RELEASES_ARGUMENT);
 
-template<typename T> constexpr RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+template<typename T> [[nodiscard]] constexpr RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT);
 
 template<typename T> class RetainPtr {
 public:
@@ -112,24 +108,26 @@ public:
     void clear();
 
     template<typename U = StorageType>
-    std::enable_if_t<IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() NS_RETURNS_RETAINED WARN_UNUSED_RETURN {
+    [[nodiscard]] std::enable_if_t<IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() NS_RETURNS_RETAINED {
         return std::exchange(m_ptr, nullptr);
     }
 
     template<typename U = StorageType>
-    std::enable_if_t<!IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() CF_RETURNS_RETAINED WARN_UNUSED_RETURN {
+    [[nodiscard]] std::enable_if_t<!IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() CF_RETURNS_RETAINED {
         return std::exchange(m_ptr, nullptr);
     }
 
     PtrType autorelease();
+    PtrType getAutoreleased();
 
 #ifdef __OBJC__
     id bridgingAutorelease();
 #endif
 
-    constexpr PtrType get() const { return m_ptr; }
-    constexpr PtrType operator->() const { return m_ptr; }
-    constexpr explicit operator PtrType() const { return m_ptr; }
+    constexpr PtrType get() const LIFETIME_BOUND { return m_ptr; }
+    constexpr PtrType unsafeGet() const { return m_ptr; } // FIXME: Replace with get() then remove.
+    constexpr PtrType operator->() const LIFETIME_BOUND { return m_ptr; }
+    constexpr explicit operator PtrType() const LIFETIME_BOUND { return m_ptr; }
     constexpr explicit operator bool() const { return m_ptr; }
 
     constexpr bool operator!() const { return !m_ptr; }
@@ -144,9 +142,9 @@ public:
 
     void swap(RetainPtr&);
 
-    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptCF(U CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptCF(U CF_RELEASES_ARGUMENT);
 
-    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptNS(U NS_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptNS(U NS_RELEASES_ARGUMENT);
 
 private:
     enum AdoptTag { Adopt };
@@ -185,7 +183,7 @@ private:
 template<typename T> RetainPtr(T) -> RetainPtr<RetainPtrType<T>>;
 
 // Helper function for creating a RetainPtr using template argument deduction.
-template<typename T> RetainPtr<RetainPtrType<T>> retainPtr(T) WARN_UNUSED_RETURN;
+template<typename T> [[nodiscard]] RetainPtr<RetainPtrType<T>> retainPtr(T);
 
 template<typename T> inline RetainPtr<T>::~RetainPtr()
 {
@@ -197,14 +195,14 @@ template<typename T> inline RetainPtr<T>::RetainPtr(PtrType ptr)
     : m_ptr(ptr)
 {
     if (m_ptr)
-        retainFoundationPtr(m_ptr);
+        SUPPRESS_UNRETAINED_ARG retainFoundationPtr(m_ptr);
 }
 
 template<typename T> inline RetainPtr<T>::RetainPtr(const RetainPtr& o)
     : m_ptr(o.m_ptr)
 {
     if (m_ptr)
-        retainFoundationPtr(m_ptr);
+        SUPPRESS_UNRETAINED_ARG retainFoundationPtr(m_ptr);
 }
 
 template<typename T> template<typename U> inline RetainPtr<T>::RetainPtr(const RetainPtr<U>& o)
@@ -224,6 +222,12 @@ template<typename T> inline auto RetainPtr<T>::autorelease() -> PtrType
     if (ptr)
         autoreleaseFoundationPtr(ptr);
     return ptr;
+}
+
+template<typename T> inline auto RetainPtr<T>::getAutoreleased() -> PtrType
+{
+    RetainPtr copy { *this };
+    return copy.autorelease();
 }
 
 #ifdef __OBJC__
@@ -265,14 +269,14 @@ template<typename T> template<typename U> inline RetainPtr<T>& RetainPtr<T>::ope
 
 template<typename T> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr&& o)
 {
-    RetainPtr ptr = WTFMove(o);
+    RetainPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
 
 template<typename T> template<typename U> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr<U>&& o)
 {
-    RetainPtr ptr = WTFMove(o);
+    RetainPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
@@ -320,6 +324,12 @@ template<typename T> struct IsSmartPtr<RetainPtr<T>> {
 };
 
 template<typename P> struct HashTraits<RetainPtr<P>> : SimpleClassHashTraits<RetainPtr<P>> {
+    static RetainPtr<P>::PtrType emptyValue() { return nullptr; }
+    static bool isEmptyValue(const RetainPtr<P>& value) { return !value; }
+
+    using PeekType = RetainPtr<P>::PtrType;
+    static PeekType peek(const RetainPtr<P>& value) { return value.get(); }
+    static PeekType peek(P* value) { return value; }
 };
 
 template<typename P> struct DefaultHash<RetainPtr<P>> : PtrHash<RetainPtr<P>> { };

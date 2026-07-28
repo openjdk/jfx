@@ -27,7 +27,7 @@
 #include "StyleChange.h"
 
 #include "RenderStyleConstants.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -61,7 +61,7 @@ OptionSet<Change> determineChanges(const RenderStyle& s1, const RenderStyle& s2)
     auto needsRendererUpdate = [&] {
         if (s1.display() != s2.display())
             return true;
-        if (s1.hasPseudoStyle(PseudoId::FirstLetter) != s2.hasPseudoStyle(PseudoId::FirstLetter))
+        if (s1.hasPseudoStyle(PseudoElementType::FirstLetter) != s2.hasPseudoStyle(PseudoElementType::FirstLetter))
             return true;
         if (columnSpanNeedsNewRenderer())
             return true;

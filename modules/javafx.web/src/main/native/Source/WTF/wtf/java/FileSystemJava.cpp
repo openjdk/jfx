@@ -31,6 +31,7 @@
 #include <optional>
 #include <wtf/java/JavaEnv.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 #if OS(WINDOWS)
     #include <windows.h>
@@ -50,8 +51,8 @@ static inline bool isHandleValid(PlatformFileHandle handle)
 }
 
 #if HAVE(MMAP)
-MappedFileData::MappedFileData(MallocSpan<uint8_t, Mmap>&& fileData)
-    : m_fileData(WTFMove(fileData))
+MappedFileData::MappedFileData(MmapSpan<uint8_t>&& fileData)
+    : m_fileData(WTF::move(fileData))
 { }
 
 MappedFileData::~MappedFileData() = default;
@@ -59,7 +60,7 @@ MappedFileData::~MappedFileData() = default;
 #elif OS(WINDOWS)
 MappedFileData::MappedFileData(std::span<uint8_t> fileData, Win32Handle&& fileMapping)
     : m_fileData(fileData)
-    , m_fileMapping(WTFMove(fileMapping))
+    , m_fileMapping(WTF::move(fileMapping))
 {
 }
 
@@ -493,11 +494,12 @@ bool deleteEmptyDirectory(String const &)
     return false;
 }
 
-std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix, const String& temporaryDirectory)
 {
     fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
-        UNUSED_PARAM(prefix);
-        UNUSED_PARAM(suffix);
+    UNUSED_PARAM(prefix);
+    UNUSED_PARAM(suffix);
+    UNUSED_PARAM(temporaryDirectory);
     return { String(), FileHandle() };
 }
 
@@ -620,6 +622,15 @@ int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
 {
       fprintf(stderr, "readFromFile(PlatformFileHandle, std::span<uint8_t> data) NOT IMPLEMENTED\n");
       return 0;
+}
+
+FileHandle createDumpFile(StringView filename, StringView extension, StringView path)
+{
+    if (path.isEmpty()) {
+        auto [p, handle] = openTemporaryFile(filename, extension);
+        return WTF::move(handle);
+    }
+    return openFile(makeString(path, pathSeparator, filename, extension), FileOpenMode::Truncate);
 }
 
 } // namespace FileSystemImpl

@@ -34,25 +34,39 @@ namespace WebCore {
 
 class LocalDOMWindow;
 
-class WebInjectedScriptManager final : public Inspector::InjectedScriptManager {
+// FIXME <https://webkit.org/b/302124>: Make the base class InjectedScriptManager ref-counted instead.
+class WebInjectedScriptManager final : public Inspector::InjectedScriptManager, public RefCounted<WebInjectedScriptManager> {
     WTF_MAKE_NONCOPYABLE(WebInjectedScriptManager);
     WTF_MAKE_TZONE_ALLOCATED(WebInjectedScriptManager);
 public:
-    WebInjectedScriptManager(Inspector::InspectorEnvironment&, Ref<Inspector::InjectedScriptHost>&&);
-    ~WebInjectedScriptManager() override = default;
+    static Ref<WebInjectedScriptManager> create(Inspector::InspectorEnvironment&, Ref<Inspector::InjectedScriptHost>&&);
 
-    const RefPtr<CommandLineAPIHost>& commandLineAPIHost() const { return m_commandLineAPIHost; }
+    ~WebInjectedScriptManager() final;
 
-    void connect() override;
-    void disconnect() override;
-    void discardInjectedScripts() override;
+    CommandLineAPIHost* commandLineAPIHost() const { return m_commandLineAPIHost.get(); }
+
+    void addClient();
+    void removeClient();
+
+    void connect() final;
+    void disconnect() final;
+    void discardInjectedScripts() final;
 
     void discardInjectedScriptsFor(LocalDOMWindow&);
 
 private:
-    void didCreateInjectedScript(const Inspector::InjectedScript&) override;
+    bool isWebInjectedScriptManager() const final { return true; }
+
+    WebInjectedScriptManager(Inspector::InspectorEnvironment&, Ref<Inspector::InjectedScriptHost>&&);
+
+    void didCreateInjectedScript(const Inspector::InjectedScript&) final;
 
     RefPtr<CommandLineAPIHost> m_commandLineAPIHost;
+    int m_clientCount { 0 };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebInjectedScriptManager) \
+    static bool isType(const Inspector::InjectedScriptManager& manager) { return manager.isWebInjectedScriptManager(); } \
+SPECIALIZE_TYPE_TRAITS_END()

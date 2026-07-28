@@ -25,24 +25,28 @@
 
 #pragma once
 
-#include "FontSizeAdjust.h"
-#include "Settings.h"
-
 namespace WebCore {
 
 class Document;
-class RenderStyle;
 class FontMetrics;
 struct FontSizeAdjust;
+struct SettingsValues;
 
 namespace Style {
 
+class ComputedStyle;
+
 enum class MinimumFontSizeRule : uint8_t { None, Absolute, AbsoluteAndRelative };
 
+struct ComputedFontSize {
+    float size { 0.0f };
+    float usedZoomFactor { 1.0f };
+};
+
 float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, float zoomFactor, MinimumFontSizeRule, const SettingsValues&);
-float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, bool useSVGZoomRules, const RenderStyle*, const Document&);
+ComputedFontSize computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, bool useSVGZoomRules, const ComputedStyle&, const Document&);
 float computedFontSizeFromSpecifiedSizeForSVGInlineText(float specifiedSize, bool isAbsoluteSize, float zoomFactor, const Document&);
-float adjustedFontSize(float size, const FontSizeAdjust&, const FontMetrics&);
+float adjustedFontSize(float size, const WebCore::FontSizeAdjust&, const FontMetrics&);
 
 // Given a CSS keyword id in the range (CSSValueXxSmall to CSSValueXxxLarge), this function will return
 // the correct font size scaled relative to the user's default (medium).
@@ -52,5 +56,5 @@ float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, con
 // Given a font size in pixel, this function will return legacy font size between 1 and 7.
 int legacyFontSizeForPixelSize(int pixelFontSize, bool shouldUseFixedDefaultSize, const Document&);
 
-}
-}
+} // namespace Style
+} // namespace WebCore

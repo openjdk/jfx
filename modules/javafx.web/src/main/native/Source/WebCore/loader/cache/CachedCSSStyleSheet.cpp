@@ -44,7 +44,7 @@
 namespace WebCore {
 
 CachedCSSStyleSheet::CachedCSSStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
-    : CachedResource(WTFMove(request), Type::CSSStyleSheet, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), Type::CSSStyleSheet, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create(cssContentTypeAtom(), request.charset()))
 {
 }
@@ -115,7 +115,7 @@ void CachedCSSStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
         setEncodedSize(data->size());
         // Decode the data to find out the encoding and keep the sheet text around during checkNotify()
         m_decodedSheetText = protectedDecoder()->decodeAndFlush(contiguousData->span());
-        m_data = WTFMove(contiguousData);
+        m_data = WTF::move(contiguousData);
     } else {
         m_data = nullptr;
         setEncodedSize(0);
@@ -137,8 +137,8 @@ void CachedCSSStyleSheet::checkNotify(const NetworkLoadMetrics&, LoadWillContinu
         return;
 
     CachedResourceClientWalker<CachedStyleSheetClient> walker(*this);
-    while (CachedStyleSheetClient* c = walker.next())
-        c->setCSSStyleSheet(m_resourceRequest.url().string(), response().url(), protectedDecoder()->encoding().name(), this);
+    while (RefPtr client = walker.next())
+        client->setCSSStyleSheet(m_resourceRequest.url().string(), response().url(), protectedDecoder()->encoding().name(), this);
 }
 
 String CachedCSSStyleSheet::responseMIMEType() const

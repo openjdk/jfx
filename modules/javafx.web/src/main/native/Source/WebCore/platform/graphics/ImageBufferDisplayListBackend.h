@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "DisplayListRecorderImpl.h"
-#include "ImageBufferBackend.h"
+#include <WebCore/DisplayListRecorderImpl.h>
+#include <WebCore/ImageBufferBackend.h>
 
 namespace WebCore {
 
 class ImageBufferDisplayListBackend : public ImageBufferBackend {
 public:
     WEBCORE_EXPORT static std::unique_ptr<ImageBufferDisplayListBackend> create(const Parameters&, const ImageBufferCreationContext&);
-    WEBCORE_EXPORT static std::unique_ptr<ImageBufferDisplayListBackend> create(const FloatSize&, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, RenderingPurpose, ControlFactory&);
+    WEBCORE_EXPORT static std::unique_ptr<ImageBufferDisplayListBackend> create(const FloatSize&, float resolutionScale, const DestinationColorSpace&, PixelFormat, RenderingPurpose, ControlFactory&);
 
     static size_t calculateMemoryCost(const Parameters&) { return 0; }
 

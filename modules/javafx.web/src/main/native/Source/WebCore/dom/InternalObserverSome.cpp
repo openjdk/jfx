@@ -28,6 +28,7 @@
 
 #include "AbortSignal.h"
 #include "CallbackResult.h"
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Observable.h"
@@ -44,7 +45,7 @@ class InternalObserverSome final : public InternalObserver {
 public:
     static Ref<InternalObserverSome> create(ScriptExecutionContext& context, Ref<PredicateCallback>&& callback, Ref<AbortSignal>&& signal, Ref<DeferredPromise>&& promise)
     {
-        Ref internalObserver = adoptRef(*new InternalObserverSome(context, WTFMove(callback), WTFMove(signal), WTFMove(promise)));
+        Ref internalObserver = adoptRef(*new InternalObserverSome(context, WTF::move(callback), WTF::move(signal), WTF::move(promise)));
         internalObserver->suspendIfNeeded();
         return internalObserver;
     }
@@ -109,9 +110,9 @@ private:
 
     InternalObserverSome(ScriptExecutionContext& context, Ref<PredicateCallback>&& callback, Ref<AbortSignal>&& signal, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
-        , m_callback(WTFMove(callback))
-        , m_signal(WTFMove(signal))
-        , m_promise(WTFMove(promise))
+        , m_callback(WTF::move(callback))
+        , m_signal(WTF::move(signal))
+        , m_promise(WTF::move(promise))
     {
     }
 
@@ -137,9 +138,9 @@ void createInternalObserverOperatorSome(ScriptExecutionContext& context, Observa
         promise->reject<IDLAny>(reason);
     });
 
-    Ref observer = InternalObserverSome::create(context, WTFMove(callback), WTFMove(signal), WTFMove(promise));
+    Ref observer = InternalObserverSome::create(context, WTF::move(callback), WTF::move(signal), WTF::move(promise));
 
-    observable.subscribeInternal(context, WTFMove(observer), SubscribeOptions { .signal = WTFMove(dependentSignal) });
+    observable.subscribeInternal(context, WTF::move(observer), SubscribeOptions { .signal = WTF::move(dependentSignal) });
 }
 
 } // namespace WebCore

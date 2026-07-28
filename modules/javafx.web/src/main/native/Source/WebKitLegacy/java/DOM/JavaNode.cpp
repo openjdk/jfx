@@ -40,6 +40,7 @@
 #include <WebCore/JSExecState.h>
 #include <WebCore/SVGTests.h>
 #include <JavaScriptCore/APICast.h>
+#include "AddEventListenerOptionsInlines.h"
 
 #include <WebCore/DOMException.h>
 #include "com_sun_webkit_dom_JSObject.h"

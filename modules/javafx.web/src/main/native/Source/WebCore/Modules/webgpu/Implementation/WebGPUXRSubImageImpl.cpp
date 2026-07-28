@@ -228,6 +228,18 @@ static TextureFormat fromBacking(WGPUTextureFormat textureFormat)
         return TextureFormat::Astc12x12UnormSRGB;
     case static_cast<WGPUTextureFormat>(WGPUTextureFormat_Depth32FloatStencil8):
         return TextureFormat::Depth32floatStencil8;
+    case WGPUTextureFormat_R16Unorm:
+        return TextureFormat::R16unorm;
+    case WGPUTextureFormat_R16Snorm:
+        return TextureFormat::R16snorm;
+    case WGPUTextureFormat_RG16Unorm:
+        return TextureFormat::Rg16unorm;
+    case WGPUTextureFormat_RG16Snorm:
+        return TextureFormat::Rg16snorm;
+    case WGPUTextureFormat_RGBA16Unorm:
+        return TextureFormat::Rgba16snorm;
+    case WGPUTextureFormat_RGBA16Snorm:
+        return TextureFormat::Rgba16snorm;
     case WGPUTextureFormat_Undefined:
     case WGPUTextureFormat_Force32:
         return TextureFormat::R8unorm;

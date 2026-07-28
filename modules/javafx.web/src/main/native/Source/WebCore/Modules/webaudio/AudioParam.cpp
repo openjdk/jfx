@@ -39,8 +39,11 @@
 #include <algorithm>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioParam);
 
 static void replaceNaNValues(std::span<float> values, float defaultValue)
 {
@@ -230,7 +233,7 @@ ExceptionOr<AudioParam&> AudioParam::setValueCurveAtTime(Vector<float>&& curve, 
         return Exception { ExceptionCode::RangeError, "duration must be a strictly positive value"_s };
 
     startTime = std::max(startTime, context()->currentTime());
-    auto result = m_timeline.setValueCurveAtTime(WTFMove(curve), Seconds { startTime }, Seconds { duration });
+    auto result = m_timeline.setValueCurveAtTime(WTF::move(curve), Seconds { startTime }, Seconds { duration });
     if (result.hasException())
         return result.releaseException();
     return *this;

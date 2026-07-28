@@ -48,6 +48,7 @@ public:
 
     //utatodo: callback to Java
     bool currentFrameKnownToBeOpaque() const override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
+    bool currentFrameIsComplete() const override { return false; }
 
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override { return m_image->size(); }
 

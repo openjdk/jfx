@@ -46,7 +46,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBBackingStore);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBServer);
 
 IDBServer::IDBServer(const String& databaseDirectoryPath, SpaceRequester&& spaceRequester, Lock& lock)
-    : m_spaceRequester(WTFMove(spaceRequester))
+    : m_spaceRequester(WTF::move(spaceRequester))
     , m_lock(lock)
 {
     ASSERT(!isMainThread());
@@ -68,7 +68,7 @@ void IDBServer::registerConnection(IDBConnectionToClient& connection)
 {
     ASSERT(!isMainThread());
     ASSERT(!m_connectionMap.contains(connection.identifier()));
-    m_connectionMap.set(connection.identifier(), &connection);
+    m_connectionMap.set(connection.identifier(), connection);
 }
 
 void IDBServer::unregisterConnection(IDBConnectionToClient& connection)
@@ -142,7 +142,7 @@ void IDBServer::openDatabase(const IDBOpenRequestData& requestData)
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto& uniqueIDBDatabase = getOrCreateUniqueIDBDatabase(requestData.databaseIdentifier());
+    CheckedRef uniqueIDBDatabase = getOrCreateUniqueIDBDatabase(requestData.databaseIdentifier());
 
     auto connectionIdentifier = requestData.requestIdentifier().connectionIdentifier();
     if (!connectionIdentifier)
@@ -155,7 +155,7 @@ void IDBServer::openDatabase(const IDBOpenRequestData& requestData)
         return;
     }
 
-    uniqueIDBDatabase.openDatabaseConnection(*connection, requestData);
+    uniqueIDBDatabase->openDatabaseConnection(*connection, requestData);
 }
 
 void IDBServer::deleteDatabase(const IDBOpenRequestData& requestData)
@@ -175,13 +175,18 @@ void IDBServer::deleteDatabase(const IDBOpenRequestData& requestData)
         return;
     }
 
-    auto* database = m_uniqueIDBDatabaseMap.get(requestData.databaseIdentifier());
+    IDBDatabaseIdentifier databaseIdentifier;
+    {
+        CheckedPtr database = m_uniqueIDBDatabaseMap.get(requestData.databaseIdentifier());
     if (!database)
         database = &getOrCreateUniqueIDBDatabase(requestData.databaseIdentifier());
 
     database->handleDelete(*connection, requestData);
-    if (database->tryClose())
-        m_uniqueIDBDatabaseMap.remove(database->identifier());
+        if (!database->tryClose())
+            return;
+        databaseIdentifier = database->identifier();
+    }
+    m_uniqueIDBDatabaseMap.remove(databaseIdentifier);
 }
 
 void IDBServer::abortTransaction(const IDBResourceIdentifier& transactionIdentifier)
@@ -200,7 +205,7 @@ void IDBServer::abortTransaction(const IDBResourceIdentifier& transactionIdentif
     transaction->abort();
 }
 
-UniqueIDBDatabaseTransaction* IDBServer::idbTransaction(const IDBRequestData& requestData) const
+RefPtr<UniqueIDBDatabaseTransaction> IDBServer::idbTransaction(const IDBRequestData& requestData) const
 {
     return m_transactions.get(requestData.transactionIdentifier());
 }
@@ -399,14 +404,19 @@ void IDBServer::establishTransaction(IDBDatabaseConnectionIdentifier databaseCon
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto* databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
+    RefPtr databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
     if (!databaseConnection)
         return;
 
-    auto* database = databaseConnection->database();
+    IDBDatabaseIdentifier databaseIdentifier;
+    {
+        CheckedPtr database = databaseConnection->database();
     databaseConnection->establishTransaction(info);
-    if (database->tryClose())
-        m_uniqueIDBDatabaseMap.remove(database->identifier());
+        if (!database->tryClose())
+            return;
+        databaseIdentifier = database->identifier();
+    }
+    m_uniqueIDBDatabaseMap.remove(databaseIdentifier);
 }
 
 void IDBServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier, uint64_t handledRequestResultsCount)
@@ -431,10 +441,7 @@ void IDBServer::didFinishHandlingVersionChangeTransaction(IDBDatabaseConnectionI
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto* connection = m_databaseConnections.get(databaseConnectionIdentifier);
-    if (!connection)
-        return;
-
+    if (RefPtr connection = m_databaseConnections.get(databaseConnectionIdentifier))
     connection->didFinishHandlingVersionChange(transactionIdentifier);
 }
 
@@ -444,7 +451,7 @@ void IDBServer::databaseConnectionPendingClose(IDBDatabaseConnectionIdentifier d
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
+    RefPtr databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
     if (!databaseConnection)
         return;
 
@@ -457,14 +464,19 @@ void IDBServer::databaseConnectionClosed(IDBDatabaseConnectionIdentifier databas
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto* databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
+    RefPtr databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
     if (!databaseConnection)
         return;
 
-    auto* database = databaseConnection->database();
+    IDBDatabaseIdentifier databaseIdentifier;
+    {
+        CheckedPtr database = databaseConnection->database();
     databaseConnection->connectionClosedFromClient();
-    if (database->tryClose())
-        m_uniqueIDBDatabaseMap.remove(database->identifier());
+        if (!database->tryClose())
+            return;
+        databaseIdentifier = database->identifier();
+    }
+    m_uniqueIDBDatabaseMap.remove(databaseIdentifier);
 }
 
 void IDBServer::abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>& transactionIdentifier)
@@ -478,7 +490,7 @@ void IDBServer::abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifier databa
         transaction->abortWithoutCallback();
     }
 
-    auto databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
+    RefPtr databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier);
     if (!databaseConnection)
         return;
 
@@ -491,7 +503,7 @@ void IDBServer::didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier databa
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    if (auto databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier))
+    if (RefPtr databaseConnection = m_databaseConnections.get(databaseConnectionIdentifier))
         databaseConnection->didFireVersionChangeEvent(requestIdentifier, connectionClosed);
 }
 
@@ -507,13 +519,19 @@ void IDBServer::openDBRequestCancelled(const IDBOpenRequestData& requestData)
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    auto* uniqueIDBDatabase = m_uniqueIDBDatabaseMap.get(requestData.databaseIdentifier());
+    IDBDatabaseIdentifier databaseIdentifier;
+    {
+        CheckedPtr uniqueIDBDatabase = m_uniqueIDBDatabaseMap.get(requestData.databaseIdentifier());
     if (!uniqueIDBDatabase)
         return;
 
     uniqueIDBDatabase->openDBRequestCancelled(requestData.requestIdentifier());
-    if (uniqueIDBDatabase->tryClose())
-        m_uniqueIDBDatabaseMap.remove(uniqueIDBDatabase->identifier());
+        if (!uniqueIDBDatabase->tryClose())
+            return;
+
+        databaseIdentifier = uniqueIDBDatabase->identifier();
+    }
+    m_uniqueIDBDatabaseMap.remove(databaseIdentifier);
 }
 
 static void getDatabaseNameAndVersionFromOriginDirectory(const String& directory, HashSet<String>& excludedDatabasePaths, Vector<IDBDatabaseNameAndVersion>& result)
@@ -525,7 +543,7 @@ static void getDatabaseNameAndVersionFromOriginDirectory(const String& directory
             continue;
 
         if (auto nameAndVersion = SQLiteIDBBackingStore::databaseNameAndVersionFromFile(fullDatabasePath))
-            result.append(WTFMove(*nameAndVersion));
+            result.append(WTF::move(*nameAndVersion));
     }
 }
 
@@ -546,7 +564,7 @@ void IDBServer::getAllDatabaseNamesAndVersions(IDBConnectionIdentifier serverCon
             visitedDatabasePaths.add(path);
 
         if (auto nameAndVersion = database->nameAndVersion())
-            result.append(WTFMove(*nameAndVersion));
+            result.append(WTF::move(*nameAndVersion));
     }
 
     auto oldDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, m_databaseDirectoryPath, "v0"_s);
@@ -559,18 +577,18 @@ void IDBServer::getAllDatabaseNamesAndVersions(IDBConnectionIdentifier serverCon
     if (!connection)
         return;
 
-    connection->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(result));
+    connection->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTF::move(result));
 }
 
 static void collectOriginsForVersion(const String& versionPath, HashSet<WebCore::SecurityOriginData>& securityOrigins)
 {
     for (auto& databaseIdentifier : FileSystem::listDirectory(versionPath)) {
         if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier)) {
-            securityOrigins.add(WTFMove(*securityOrigin));
+            securityOrigins.add(WTF::move(*securityOrigin));
 
             for (auto& databaseIdentifier : FileSystem::listDirectory(FileSystem::pathByAppendingComponent(versionPath, databaseIdentifier))) {
                 if (auto securityOrigin = SecurityOriginData::fromDatabaseIdentifier(databaseIdentifier))
-                    securityOrigins.add(WTFMove(*securityOrigin));
+                    securityOrigins.add(WTF::move(*securityOrigin));
             }
         }
     }
@@ -600,7 +618,6 @@ void IDBServer::closeAndDeleteDatabasesModifiedSince(WallTime modificationTime)
     if (modificationTime > WallTime::now())
         return;
 
-    HashSet<UniqueIDBDatabase*> openDatabases;
     for (auto& database : m_uniqueIDBDatabaseMap.values())
         database->immediateClose();
 
@@ -617,7 +634,7 @@ void IDBServer::closeDatabasesForOrigins(const Vector<SecurityOriginData>& targe
     ASSERT(!isMainThread());
     ASSERT(m_lock.isHeld());
 
-    HashSet<UniqueIDBDatabase*> openDatabases;
+    HashSet<CheckedPtr<UniqueIDBDatabase>> openDatabases;
     for (auto& database : m_uniqueIDBDatabaseMap.values()) {
         const auto& databaseOrigin = database->identifier().origin();
         bool filtered = std::ranges::any_of(targetOrigins, [&databaseOrigin, &filter](auto& targetOrigin) {
@@ -778,7 +795,6 @@ uint64_t IDBServer::diskUsage(const String& rootDirectory, const ClientOrigin& o
     auto oldVersionOriginDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, rootDirectory, "v0"_s);
     auto newVersionOriginDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, rootDirectory, "v1"_s);
     return SQLiteIDBBackingStore::databasesSizeForDirectory(oldVersionOriginDirectory) + SQLiteIDBBackingStore::databasesSizeForDirectory(newVersionOriginDirectory);
-
 }
 
 void IDBServer::upgradeFilesIfNecessary()

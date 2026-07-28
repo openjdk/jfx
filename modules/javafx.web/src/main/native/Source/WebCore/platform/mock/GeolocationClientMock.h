@@ -83,19 +83,19 @@ private:
 
     void clearError();
 
-    GeolocationController* m_controller;
+    WeakPtr<GeolocationController> m_controller;
     std::optional<GeolocationPositionData> m_lastPosition;
-    bool m_hasError;
+    bool m_hasError { false };
     String m_errorMessage;
     Timer m_controllerTimer;
     Timer m_permissionTimer;
-    bool m_isActive;
+    bool m_isActive { false };
 
     enum PermissionState {
         PermissionStateUnset,
         PermissionStateAllowed,
         PermissionStateDenied,
-    } m_permissionState;
+    } m_permissionState { PermissionStateUnset };
 
     using GeolocationSet = HashSet<RefPtr<Geolocation>>;
     GeolocationSet m_pendingPermission;

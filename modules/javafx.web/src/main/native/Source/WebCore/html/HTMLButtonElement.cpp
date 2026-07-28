@@ -31,10 +31,13 @@
 #include "DOMFormData.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "RenderButton.h"
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -49,13 +52,13 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLButtonElement);
 
 using namespace HTMLNames;
 
 inline HTMLButtonElement::HTMLButtonElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
-    , m_type(SUBMIT)
+    , m_type(Type::Submit)
     , m_isActivatedSubmit(false)
 {
     ASSERT(hasTagName(buttonTag));
@@ -74,10 +77,9 @@ Ref<HTMLButtonElement> HTMLButtonElement::create(Document& document)
 RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& position)
 {
     // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
-    DisplayType display = style.display();
-    if (display == DisplayType::InlineGrid || display == DisplayType::Grid || display == DisplayType::InlineFlex || display == DisplayType::Flex)
-        return HTMLFormControlElement::createElementRenderer(WTFMove(style), position);
-    return createRenderer<RenderButton>(*this, WTFMove(style));
+    if (style.isDisplayFlexibleOrGridFormattingContextBox())
+        return HTMLFormControlElement::createElementRenderer(WTF::move(style), position);
+    return createRenderer<RenderButton>(*this, WTF::move(style));
 }
 
 int HTMLButtonElement::defaultTabIndex() const
@@ -88,11 +90,11 @@ int HTMLButtonElement::defaultTabIndex() const
 const AtomString& HTMLButtonElement::formControlType() const
 {
     switch (m_type) {
-    case SUBMIT:
+    case Type::Submit:
         return submitAtom();
-    case BUTTON:
+    case Type::Button:
         return HTMLNames::buttonTag->localName();
-    case RESET:
+    case Type::Reset:
         return resetAtom();
     }
 
@@ -219,7 +221,6 @@ void HTMLButtonElement::handleCommand()
     CommandEvent::Init init;
     init.bubbles = false;
     init.cancelable = true;
-    init.composed = true;
     init.source = this;
     init.command = commandRaw.isNull() ? emptyAtom() : commandRaw;
 
@@ -274,19 +275,19 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
             protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
             if (RefPtr currentForm = form()) {
-                if (m_type == SUBMIT)
+                if (m_type == Type::Submit)
                     currentForm->submitIfPossible(&event, this);
 
-                if (m_type == RESET)
+                if (m_type == Type::Reset)
                     currentForm->reset();
             }
 
-            if (m_type == SUBMIT || m_type == RESET) {
+            if (m_type == Type::Submit || m_type == Type::Reset) {
                 event.setDefaultHandled();
                 return;
         }
 
-            if (m_type == BUTTON && !equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::typeAttr), "button"_s))
+            if (m_type == Type::Button && !equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::typeAttr), "button"_s))
                 return;
         }
 
@@ -295,7 +296,7 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
             return;
     }
 
-        handlePopoverTargetAction(event.target());
+        handlePopoverTargetAction(event.protectedTarget().get());
     }
 
     if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
@@ -336,12 +337,13 @@ bool HTMLButtonElement::isSuccessfulSubmitButton() const
 {
     // HTML spec says that buttons must have names to be considered successful.
     // However, other browsers do not impose this constraint.
-    return m_type == SUBMIT;
+    return m_type == Type::Submit;
 }
 
 bool HTMLButtonElement::matchesDefaultPseudoClass() const
 {
-    return isSuccessfulSubmitButton() && form() && form()->defaultButton() == this;
+    RefPtr form = this->form();
+    return isSuccessfulSubmitButton() && form && form->defaultButton() == this;
 }
 
 bool HTMLButtonElement::isActivatedSubmit() const
@@ -356,7 +358,7 @@ void HTMLButtonElement::setActivatedSubmit(bool flag)
 
 bool HTMLButtonElement::appendFormData(DOMFormData& formData)
 {
-    if (m_type != SUBMIT || name().isEmpty() || !m_isActivatedSubmit)
+    if (m_type != Type::Submit || name().isEmpty() || !m_isActivatedSubmit)
         return false;
     formData.append(name(), value());
     return true;
@@ -374,12 +376,12 @@ const AtomString& HTMLButtonElement::value() const
 
 bool HTMLButtonElement::computeWillValidate() const
 {
-    return m_type == SUBMIT && HTMLFormControlElement::computeWillValidate();
+    return m_type == Type::Submit && HTMLFormControlElement::computeWillValidate();
 }
 
 bool HTMLButtonElement::isSubmitButton() const
 {
-    return m_type == SUBMIT;
+    return m_type == Type::Submit;
 }
 
 bool HTMLButtonElement::isExplicitlySetSubmitButton() const
@@ -391,21 +393,21 @@ void HTMLButtonElement::computeType(const AtomString& typeAttrValue)
 {
     auto oldType = m_type;
     if (equalLettersIgnoringASCIICase(typeAttrValue, "reset"_s))
-        m_type = RESET;
+        m_type = Type::Reset;
     else if (equalLettersIgnoringASCIICase(typeAttrValue, "button"_s))
-        m_type = BUTTON;
+        m_type = Type::Button;
     else if (equalLettersIgnoringASCIICase(typeAttrValue, "submit"_s))
-        m_type = SUBMIT;
+        m_type = Type::Submit;
     else if (document().settings().commandAttributesEnabled()) {
         if (hasAttributeWithoutSynchronization(HTMLNames::commandAttr) || hasAttributeWithoutSynchronization(HTMLNames::commandforAttr))
-            m_type = BUTTON;
+            m_type = Type::Button;
         else
-            m_type = SUBMIT;
+            m_type = Type::Submit;
     } else
-        m_type = SUBMIT;
+        m_type = Type::Submit;
     if (oldType != m_type) {
         updateWillValidateAndValidity();
-        if (RefPtr currentForm = form(); currentForm && (oldType == SUBMIT || m_type == SUBMIT))
+        if (RefPtr currentForm = form(); currentForm && (oldType == Type::Submit || m_type == Type::Submit))
             currentForm->resetDefaultButton();
     }
 }

@@ -27,6 +27,7 @@
 #pragma once
 
 #include <wtf/CompactRefPtrTuple.h>
+#include <wtf/Forward.h>
 #include <wtf/Packed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakRef.h>
@@ -35,7 +36,6 @@ namespace WTF {
 
 #define USING_CAN_MAKE_WEAKPTR(BASE) \
     using BASE::weakImpl; \
-    using BASE::weakImplIfExists; \
     using BASE::weakCount; \
     using BASE::WeakValueType; \
     using BASE::WeakPtrImplType;
@@ -50,10 +50,17 @@ public:
     using WeakPtrImplType = WeakPtrImpl;
 
     WeakPtrFactory()
-#if ASSERT_ENABLED
+#if ASSERT_ENABLED && !PLATFORM(JAVA)
         : m_wasConstructedOnMainThread(isMainThread())
 #endif
     {
+    }
+
+    void prepareForUseOnlyOnMainThread()
+    {
+#if ASSERT_ENABLED
+        m_wasConstructedOnMainThread = true;
+#endif
     }
 
     void prepareForUseOnlyOnNonMainThread()
@@ -110,9 +117,6 @@ public:
 #endif
 
 private:
-    template<typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakHashSet;
-    template<typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakListHashSet;
-    template<typename, typename, typename> friend class WeakHashMap;
     template<typename, typename, typename> friend class WeakPtr;
     template<typename, typename> friend class WeakRef;
 
@@ -191,9 +195,6 @@ public:
     void setBitfield(uint16_t value) const { return m_impl.setType(value); }
 
 private:
-    template<typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakHashSet;
-    template<typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakListHashSet;
-    template<typename, typename, typename> friend class WeakHashMap;
     template<typename, typename, typename> friend class WeakPtr;
     template<typename, typename> friend class WeakRef;
 

@@ -29,6 +29,7 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "KeyboardEvent.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -78,7 +79,7 @@ void CloseWatcherManager::escapeKeyHandler(KeyboardEvent& event)
     if (!m_groups.isEmpty() && !event.defaultHandled() && event.isTrusted() && event.key() == "Escape"_s) {
         auto& group = m_groups.last();
         Vector<Ref<CloseWatcher>> groupCopy(group);
-        for (Ref watcher : makeReversedRange(groupCopy)) {
+        for (Ref watcher : groupCopy | std::views::reverse) {
             if (!watcher->requestToClose())
                 break;
         }

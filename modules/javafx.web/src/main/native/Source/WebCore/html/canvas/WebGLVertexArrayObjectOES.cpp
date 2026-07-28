@@ -40,7 +40,7 @@ Ref<WebGLVertexArrayObjectOES> WebGLVertexArrayObjectOES::createDefault(WebGLRen
 
 RefPtr<WebGLVertexArrayObjectOES> WebGLVertexArrayObjectOES::createUser(WebGLRenderingContextBase& context)
 {
-    auto object = context.protectedGraphicsContextGL()->createVertexArray();
+    auto object = context.graphicsContextGL()->createVertexArray();
     if (!object)
         return nullptr;
     return adoptRef(*new WebGLVertexArrayObjectOES { context, object, Type::User });

@@ -261,24 +261,41 @@ void PlatformMediaSession::clientWillBeginAutoplaying()
     setState(State::Autoplaying);
 }
 
-bool PlatformMediaSession::clientWillBeginPlayback()
+void PlatformMediaSession::clientWillBeginPlayback(CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (m_notifyingClient)
-        return true;
+    if (m_notifyingClient) {
+        completionHandler(true);
+        return;
+    }
 
     ALWAYS_LOG(LOGIDENTIFIER, "state = ", m_state);
 
     SetForScope preparingToPlay(m_preparingToPlay, true);
 
-    if (RefPtr manager = sessionManager(); manager && !manager->sessionWillBeginPlayback(*this)) {
-        if (state() == State::Interrupted)
-            m_stateToRestore = State::Playing;
-        return false;
+    RefPtr manager = sessionManager();
+    if (!manager) {
+        completionHandler(false);
+        return;
     }
 
-    m_stateToRestore = State::Playing;
-    setState(State::Playing);
-    return true;
+    manager->sessionWillBeginPlayback(*this, [weakThis = WeakPtr { *this }, completionHandler = WTF::move(completionHandler)](bool canBegin) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis) {
+            completionHandler(false);
+            return;
+        }
+
+        if (!canBegin) {
+            if (protectedThis->state() == State::Interrupted)
+                protectedThis->m_stateToRestore = State::Playing;
+            completionHandler(false);
+            return;
+        }
+
+        protectedThis->m_stateToRestore = State::Playing;
+        protectedThis->setState(State::Playing);
+        completionHandler(true);
+    });
 }
 
 bool PlatformMediaSession::processClientWillPausePlayback(DelayCallingUpdateNowPlaying shouldDelayCallingUpdateNowPlaying)
@@ -409,7 +426,6 @@ void PlatformMediaSession::setActiveNowPlayingSession(bool isActiveNowPlayingSes
         return;
 
     m_isActiveNowPlayingSession = isActiveNowPlayingSession;
-    client().isActiveNowPlayingSessionChanged();
 }
 
 #if !RELEASE_LOG_DISABLED

@@ -30,3 +30,4 @@
 ] partial interface Navigator {
     [EnabledBySetting=GamepadsEnabled] sequence<Gamepad?> getGamepads();
 };
+

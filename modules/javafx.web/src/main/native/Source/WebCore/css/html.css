@@ -101,9 +101,8 @@ hr {
     border-width: 1px;
 }
 
-/* FIXME: webkit.org/b/230083 - Remove `-webkit-` from below.  */
 abbr[title], acronym[title] {
-    -webkit-text-decoration: dotted underline;
+    text-decoration: dotted underline;
 }
 
 /* ::backdrop */
@@ -696,12 +695,10 @@ input::-webkit-list-button {
     flex: none;
     -webkit-user-select: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    inline-size: 11px;
     /* Make it easier to hit the button on iOS */
     padding: 7px;
     margin: -7px;
 #else
-    inline-size: 16px;
     block-size: 100%;
 #endif
 }
@@ -791,12 +788,60 @@ input:-webkit-autofill, input:-webkit-autofill-strong-password, input:-webkit-au
 input:is([type="radio"], [type="checkbox"]) {
     margin: 3px 2px;
     box-sizing: border-box;
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border: initial;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    width: 16px;
+    height: 16px;
+    padding: 0px;
+    /* We want to be as close to background:transparent as possible without actually being transparent */
+    background-color: rgba(255, 255, 255, 0.01);
 #else
     padding: initial;
     background-color: initial;
-    border: initial;
+#endif
+}
+
+input[type="checkbox"] {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-radius: 5px;
+#endif
+}
+
+input[type="radio"] {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-radius: 50%;
+#endif
+}
+
+input[type="checkbox"]:indeterminate {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    background: rgba(0, 0, 0, 0.8);
+#endif
+}
+
+input[type="checkbox"]:indeterminate:disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+    background: rgba(0, 0, 0, 0.8);
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):checked {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-color: rgba(255, 255, 255, 0.0);
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):checked:disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+    background: rgba(0, 0, 0, 0.8);
 #endif
 }
 
@@ -848,7 +893,6 @@ button[type="submit"], button[type="submit"]:active,
 button[type="menu"], button[type="menu"]:active {
     background-color: -apple-system-blue;
     color: white;
-    font-weight: bold;
 }
 
 #endif
@@ -942,49 +986,6 @@ select:disabled {
     opacity: initial;
 }
 
-#endif
-
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-input[type="checkbox"] {
-    border-radius: 5px;
-    width: 16px;
-    height: 16px;
-    padding: 0px;
-    /* We want to be as close to background:transparent as possible without actually being transparent */
-    background-color: rgba(255, 255, 255, 0.01);
-}
-
-input[type="radio"] {
-    appearance: auto;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    padding: 0px;
-    /* We want to be as close to background:transparent as possible without actually being transparent */
-    background-color: rgba(255, 255, 255, 0.01);
-}
-
-input[type="checkbox"]:indeterminate {
-    background: rgba(0, 0, 0, 0.8);
-}
-
-input[type="checkbox"]:indeterminate:disabled {
-    opacity: initial;
-    background: rgba(0, 0, 0, 0.8);
-}
-
-input:is([type="checkbox"], [type="radio"]):checked {
-    border-color: rgba(255, 255, 255, 0.0);
-}
-
-input:is([type="checkbox"], [type="radio"]):disabled {
-    opacity: initial;
-}
-
-input:is([type="checkbox"], [type="radio"]):checked:disabled {
-    opacity: initial;
-    background: rgba(0, 0, 0, 0.8);
-}
 #endif
 
 input[type="color"] {
@@ -1266,18 +1267,18 @@ nobr {
 }
 
 /* Read-only text fields do not show a focus ring but do still receive focus */
-html:focus, body:focus, input[readonly]:focus, embed:focus, iframe:focus, object:focus {
+html:focus-visible, body:focus-visible, input[readonly]:focus, embed:focus-visible, iframe:focus-visible, object:focus-visible {
     outline: none;
 }
 
 #if !defined(WTF_PLATFORM_IOS_FAMILY) || !WTF_PLATFORM_IOS_FAMILY
-input:focus, textarea:focus, select:focus {
+input:focus-visible, textarea:focus-visible, select:focus-visible {
     outline-offset: -2px;
 }
 #endif
 
-input:is([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
-input[type="file"]:focus::file-selector-button {
+input:is([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus-visible,
+input[type="file"]:focus-visible::file-selector-button {
     outline-offset: 0;
 }
 
@@ -1421,4 +1422,12 @@ ins, del {
 }
 :root:lang(zh), [lang|=zh] {
     text-underline-position: left;
+}
+
+:root::spelling-error {
+    text-decoration-line: spelling-error;
+}
+
+:root::grammar-error {
+    text-decoration-line: grammar-error;
 }

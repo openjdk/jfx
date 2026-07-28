@@ -35,7 +35,7 @@ namespace WebCore {
 class MockPaymentContact final : public PaymentContact {
 public:
     explicit MockPaymentContact(ApplePayPaymentContact&& applePayPaymentContact)
-        : m_applePayPaymentContact { WTFMove(applePayPaymentContact) }
+        : m_applePayPaymentContact { WTF::move(applePayPaymentContact) }
     {
     }
 

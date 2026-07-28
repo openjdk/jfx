@@ -31,8 +31,11 @@
 #include "Clipboard.h"
 #include "ClipboardItem.h"
 #include "CommonAtomStrings.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#if PLATFORM(JAVA)
+#include "DocumentPage.h"
+#endif
 #include "ExceptionCode.h"
 #include "FileReaderLoader.h"
 #include "GraphicsContext.h"
@@ -41,6 +44,7 @@
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "PasteboardCustomData.h"
 #include "SharedBuffer.h"
@@ -70,7 +74,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ClipboardItemBindingsDataSource);
 
 ClipboardItemBindingsDataSource::ClipboardItemBindingsDataSource(ClipboardItem& item, Vector<KeyValuePair<String, Ref<DOMPromise>>>&& itemPromises)
     : ClipboardItemDataSource(item)
-    , m_itemPromises(WTFMove(itemPromises))
+    , m_itemPromises(WTF::move(itemPromises))
 {
 }
 
@@ -95,20 +99,19 @@ void ClipboardItemBindingsDataSource::getType(const String& type, Ref<DeferredPr
     }
 
     Ref itemPromise = m_itemPromises[matchIndex].value;
-    itemPromise->whenSettled([itemPromise, promise = WTFMove(promise), type] () mutable {
-        if (itemPromise->status() != DOMPromise::Status::Fulfilled) {
+    itemPromise->whenSettledWithResult([promise = WTF::move(promise), type](auto* globalObject, bool isFulfilled, auto result) mutable {
+        if (!isFulfilled) {
             promise->reject(ExceptionCode::AbortError);
             return;
         }
 
-        auto result = itemPromise->result();
         if (!result) {
             promise->reject(ExceptionCode::TypeError);
             return;
         }
 
         String string;
-        result.getString(itemPromise->globalObject(), string);
+        result.getString(globalObject, string);
         if (!string.isNull()) {
             promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(promise->protectedScriptExecutionContext().get(), string, type));
             return;
@@ -138,7 +141,7 @@ void ClipboardItemBindingsDataSource::collectDataForWriting(Clipboard& destinati
 {
     clearItemTypeLoaders();
     ASSERT(!m_completionHandler);
-    m_completionHandler = WTFMove(completion);
+    m_completionHandler = WTF::move(completion);
     m_writingDestination = destination;
     m_numberOfPendingClipboardTypes = m_itemPromises.size();
     m_itemTypeLoaders = m_itemPromises.map([&](auto& typeAndItem) {
@@ -152,14 +155,13 @@ void ClipboardItemBindingsDataSource::collectDataForWriting(Clipboard& destinati
         auto promise = typeAndItem.value;
         /* hack: gcc 8.4 will segfault if the WeakPtr is instantiated within the lambda captures */
         auto wl = WeakPtr { itemTypeLoader };
-        promise->whenSettled([this, protectedItem = Ref { m_item.get() }, destination = m_writingDestination, promise, type, weakItemTypeLoader = WTFMove(wl)] () mutable {
+        promise->whenSettledWithResult([this, protectedItem = Ref { m_item.get() }, destination = m_writingDestination, type, weakItemTypeLoader = WTF::move(wl)] (auto* globalObject, bool, JSC::JSValue result) mutable {
             if (!weakItemTypeLoader)
                 return;
 
             Ref itemTypeLoader { *weakItemTypeLoader };
             ASSERT_UNUSED(this, notFound != m_itemTypeLoaders.findIf([&] (auto& loader) { return loader.ptr() == itemTypeLoader.ptr(); }));
 
-            auto result = promise->result();
             if (!result) {
                 itemTypeLoader->didFailToResolve();
                 return;
@@ -177,7 +179,7 @@ void ClipboardItemBindingsDataSource::collectDataForWriting(Clipboard& destinati
             }
 
             String text;
-            result.getString(promise->globalObject(), text);
+            result.getString(globalObject, text);
             if (!text.isNull()) {
                 itemTypeLoader->didResolveToString(text);
                 return;
@@ -234,19 +236,19 @@ void ClipboardItemBindingsDataSource::invokeCompletionHandler()
     }
 
     customData.setOrigin(document->originIdentifierForPasteboard());
-    completionHandler(WTFMove(customData));
+    completionHandler(WTF::move(customData));
 }
 
 ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::ClipboardItemTypeLoader(Clipboard& writingDestination, const String& type, CompletionHandler<void()>&& completionHandler)
     : m_type(type)
-    , m_completionHandler(WTFMove(completionHandler))
+    , m_completionHandler(WTF::move(completionHandler))
     , m_writingDestination(writingDestination)
 {
 }
 
 ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::~ClipboardItemTypeLoader()
 {
-    if (CheckedPtr blobLoader = m_blobLoader.get())
+    if (RefPtr blobLoader = m_blobLoader)
         blobLoader->cancel();
 
     ASSERT(!m_completionHandler);
@@ -255,14 +257,14 @@ ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::~ClipboardItemTypeLoad
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFinishLoading()
 {
     ASSERT(m_blobLoader);
-    {
-        CheckedRef blobLoader = *m_blobLoader;
+
+    Ref blobLoader = *m_blobLoader;
         auto stringResult = readTypeForMIMEType(m_type) == FileReaderLoader::ReadAsText ? blobLoader->stringResult() : nullString();
         if (!stringResult.isNull())
             m_data = { stringResult };
         else if (auto arrayBuffer = blobLoader->arrayBufferResult())
             m_data = { SharedBuffer::create(arrayBuffer->span()) };
-    }
+
     m_blobLoader = nullptr;
     invokeCompletionHandler();
 }
@@ -310,7 +312,8 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::sanitizeDataIfNee
         if (markupToSanitize.isEmpty())
             return;
 
-        m_data = { sanitizeMarkup(markupToSanitize) };
+        RefPtr document = documentFromClipboard(RefPtr { m_writingDestination.get() }.get());
+        m_data = { sanitizeMarkup(markupToSanitize, document.get()) };
     }
 
     if (m_type == "image/png"_s) {
@@ -324,8 +327,8 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::sanitizeDataIfNee
             return;
 
         auto bitmapImage = BitmapImage::create();
-        bitmapImage->setData(WTFMove(bufferToSanitize), true);
-        auto imageBuffer = ImageBuffer::create(bitmapImage->size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+        bitmapImage->setData(WTF::move(bufferToSanitize), true);
+        auto imageBuffer = ImageBuffer::create(bitmapImage->size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
         if (!imageBuffer) {
             m_data = { nullString() };
             return;
@@ -338,7 +341,7 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::sanitizeDataIfNee
 
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::invokeCompletionHandler()
 {
-    if (auto completion = WTFMove(m_completionHandler)) {
+    if (auto completion = WTF::move(m_completionHandler)) {
         sanitizeDataIfNeeded();
         completion();
     }
@@ -347,8 +350,9 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::invokeCompletionH
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didResolveToBlob(ScriptExecutionContext& context, Ref<Blob>&& blob)
 {
     ASSERT(!m_blobLoader);
-    m_blobLoader = makeUnique<FileReaderLoader>(readTypeForMIMEType(m_type), this);
-    CheckedRef { *m_blobLoader }->start(&context, WTFMove(blob));
+    Ref blobLoader = FileReaderLoader::create(readTypeForMIMEType(m_type), this);
+    m_blobLoader = blobLoader.copyRef();
+    blobLoader->start(&context, WTF::move(blob));
 }
 
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFailToResolve()

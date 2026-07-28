@@ -1,7 +1,7 @@
 {
     "domain": "Page",
     "description": "Actions and events related to the inspected page belong to the page domain.",
-    "debuggableTypes": ["itml", "page", "web-page"],
+    "debuggableTypes": ["itml", "web-page"],
     "targetTypes": ["itml", "page"],
     "types": [
         {
@@ -143,14 +143,6 @@
             "parameters": [
                 { "name": "ignoreCache", "type": "boolean", "optional": true, "description": "If true, the page is reloaded from its origin without using cached resources." },
                 { "name": "revalidateAllResources", "type": "boolean", "optional": true, "description": "If true, all cached subresources will be revalidated when the main resource loads. Otherwise, only expired cached subresources will be revalidated (the default behavior for most WebKit clients)." }
-            ]
-        },
-        {
-            "name": "navigate",
-            "description": "Navigates current page to the given URL.",
-            "targetTypes": ["page"],
-            "parameters": [
-                { "name": "url", "type": "string", "description": "URL to navigate the page to." }
             ]
         },
         {
@@ -359,37 +351,6 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has been detached." }
-            ]
-        },
-        {
-            "name": "frameStartedLoading",
-            "description": "Fired when frame has started loading.",
-            "parameters": [
-                { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has started loading." }
-            ]
-        },
-        {
-            "name": "frameStoppedLoading",
-            "description": "Fired when frame has stopped loading.",
-            "parameters": [
-                { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has stopped loading." }
-            ]
-        },
-        {
-            "name": "frameScheduledNavigation",
-            "description": "Fired when frame schedules a potential navigation.",
-            "targetTypes": ["page"],
-            "parameters": [
-                { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has scheduled a navigation." },
-                { "name": "delay", "type": "number", "description": "Delay (in seconds) until the navigation is scheduled to begin. The navigation is not guaranteed to start." }
-            ]
-        },
-        {
-            "name": "frameClearedScheduledNavigation",
-            "description": "Fired when frame no longer has a scheduled navigation.",
-            "targetTypes": ["page"],
-            "parameters": [
-                { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has cleared its scheduled navigation." }
             ]
         },
         {

@@ -58,16 +58,18 @@ class SecurityOriginData;
 struct XRSessionInit;
 
 class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRSystem);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRSystem);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;
     using RequestSessionPromise = DOMPromiseDeferred<IDLInterface<WebXRSession>>;
 
     static Ref<WebXRSystem> create(Navigator&);
     ~WebXRSystem();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void isSessionSupported(XRSessionMode, IsSessionSupportedPromise&&);
     void requestSession(Document&, XRSessionMode, const XRSessionInit&, RequestSessionPromise&&);
@@ -88,7 +90,7 @@ public:
 protected:
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::WebXRSystem; }
-    ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const override;
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
@@ -96,7 +98,7 @@ protected:
     void stop() override;
 
 private:
-    WebXRSystem(Navigator&);
+    explicit WebXRSystem(Navigator&);
 
     using FeatureList = PlatformXR::Device::FeatureList;
     using JSFeatureList = Vector<JSC::JSValue>;
@@ -117,10 +119,14 @@ private:
         static Ref<DummyInlineDevice> create(ScriptExecutionContext&);
         virtual ~DummyInlineDevice() = default;
 
+        // ContextDestructionObserver.
+        void ref() const final { PlatformXR::Device::ref(); }
+        void deref() const final { PlatformXR::Device::deref(); }
+
     private:
         DummyInlineDevice(ScriptExecutionContext&);
 
-        void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&) final { }
+        void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&, std::optional<XRCanvasConfiguration>&&) final { }
         void shutDownTrackingAndRendering() final { }
         void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final { }
 
@@ -128,6 +134,12 @@ private:
         Vector<Device::ViewData> views(XRSessionMode) const final;
         std::optional<PlatformXR::LayerHandle> createLayerProjection(uint32_t, uint32_t, bool) final { return std::nullopt; }
         void deleteLayer(PlatformXR::LayerHandle) final { }
+#if ENABLE(WEBXR_HIT_TEST)
+        void requestHitTestSource(const PlatformXR::HitTestOptions&, CompletionHandler<void(WebCore::ExceptionOr<PlatformXR::HitTestSource>)>&&) final { };
+        void deleteHitTestSource(PlatformXR::HitTestSource) final { };
+        void requestTransientInputHitTestSource(const PlatformXR::TransientInputHitTestOptions&, CompletionHandler<void(WebCore::ExceptionOr<PlatformXR::TransientInputHitTestSource>)>&&) final { };
+        void deleteTransientInputHitTestSource(PlatformXR::TransientInputHitTestSource) final { };
+#endif
     };
 
     WeakPtr<Navigator> m_navigator;
@@ -149,5 +161,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebXRSystem)
 
 #endif // ENABLE(WEBXR)

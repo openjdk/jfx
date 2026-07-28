@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2023 Igalia S.L. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +29,7 @@
 
 #include "AbortController.h"
 #include "CommonVM.h"
+#include "DocumentView.h"
 #include "Element.h"
 #include "FrameDestructionObserverInlines.h"
 #include "ExceptionCode.h"
@@ -37,17 +39,17 @@
 #include "LocalFrameView.h"
 #include "Navigation.h"
 #include "NavigationNavigationType.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigateEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigateEvent);
 
-NavigateEvent::NavigateEvent(const AtomString& type, const NavigateEvent::Init& init, EventIsTrusted isTrusted, AbortController* abortController)
+NavigateEvent::NavigateEvent(const AtomString& type, NavigateEvent::Init&& init, EventIsTrusted isTrusted, AbortController* abortController)
     : Event(EventInterfaceType::NavigateEvent, type, init, isTrusted)
     , m_navigationType(init.navigationType)
-    , m_destination(init.destination)
-    , m_signal(init.signal)
+    , m_destination(init.destination.releaseNonNull())
+    , m_signal(init.signal.releaseNonNull())
     , m_formData(init.formData)
     , m_downloadRequest(init.downloadRequest)
     , m_sourceElement(init.sourceElement)
@@ -61,15 +63,15 @@ NavigateEvent::NavigateEvent(const AtomString& type, const NavigateEvent::Init& 
     m_info.setWeakly(init.info);
 }
 
-Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, const NavigateEvent::Init& init, AbortController* abortController)
+Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, NavigateEvent::Init&& init, AbortController* abortController)
 {
-    return adoptRef(*new NavigateEvent(type, init, EventIsTrusted::Yes, abortController));
+    return adoptRef(*new NavigateEvent(type, WTF::move(init), EventIsTrusted::Yes, abortController));
 }
 
-Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, const NavigateEvent::Init& init)
+Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, NavigateEvent::Init&& init)
 {
     // FIXME: AbortController is required but JS bindings need to create it with one.
-    return adoptRef(*new NavigateEvent(type, init, EventIsTrusted::No, nullptr));
+    return adoptRef(*new NavigateEvent(type, WTF::move(init), EventIsTrusted::No, nullptr));
 }
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigateevent-perform-shared-checks
@@ -125,12 +127,34 @@ void NavigateEvent::processScrollBehavior(Document& document)
     ASSERT(m_interceptionState == InterceptionState::Committed);
     m_interceptionState = InterceptionState::Scrolled;
 
-    if (m_navigationType == NavigationNavigationType::Traverse || m_navigationType == NavigationNavigationType::Reload)
+    if (m_navigationType == NavigationNavigationType::Traverse) {
         document.frame()->loader().history().restoreScrollPositionAndViewState();
-    else if (!document.frame()->view()->scrollToFragment(document.url())) {
-        if (!document.url().hasFragmentIdentifier())
-            document.frame()->view()->setScrollPosition({ 0, 0 });
+
+        return;
     }
+
+    if (!document.url().hasFragmentIdentifier()) {
+        if (m_navigationType == NavigationNavigationType::Reload)
+            document.frame()->loader().history().restoreScrollPositionAndViewState();
+        else
+            document.frame()->view()->setScrollPosition({ 0, 0 });
+
+        return;
+    }
+
+    // LocalFrameView::scrollToFragment() will fail only when anchor is not found
+    // if the url has fragment and the fragment is not text fragment.
+    if (!document.findAnchor(document.url().fragmentIdentifier())) {
+        if (m_navigationType == NavigationNavigationType::Reload)
+            document.frame()->loader().history().restoreScrollPositionAndViewState();
+
+        return;
+    }
+
+    if (!document.haveStylesheetsLoaded())
+        document.setGotoAnchorNeededAfterStylesheetsLoad(true);
+    else
+        document.frame()->view()->scrollToFragment(document.url());
 }
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#dom-navigateevent-scroll

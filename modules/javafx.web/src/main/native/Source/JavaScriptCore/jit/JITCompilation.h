@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "MacroAssemblerCodeRef.h"
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 

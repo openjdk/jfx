@@ -44,6 +44,10 @@ namespace WebCore {
 
 class WebGLRenderbuffer;
 class WebGLTexture;
+#if ENABLE(WEBXR)
+class WebGLRenderingContextBase;
+class WebXROpaqueFramebuffer;
+#endif
 
 class WebGLFramebuffer final : public WebGLObject {
 public:
@@ -83,6 +87,9 @@ public:
     // Wrapper for drawBuffersEXT/drawBuffersARB to work around a driver bug.
     void drawBuffers(const Vector<GCGLenum>& bufs);
 
+    // Apply m_filteredDrawBuffers to GL state if pending sync is needed.
+    void applyFilteredDrawBuffers();
+
     GCGLenum getDrawBuffer(GCGLenum);
 
     void addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor&);
@@ -95,6 +102,11 @@ public:
     bool isInitialized() const { return m_hasEverBeenBound; }
 
 private:
+#if ENABLE(WEBXR)
+    friend class WebGLRenderingContextBase;
+    friend class WebXROpaqueFramebuffer;
+#endif
+
     enum class Type : bool {
         Plain,
 #if ENABLE(WEBXR)
@@ -111,20 +123,27 @@ private:
     // Check if the framebuffer is currently bound to the given target.
     bool isBound(GCGLenum target) const;
 
-    // Check if a new drawBuffers call should be issued. This is called when we add or remove an attachment.
-    void drawBuffersIfNecessary(bool force);
+    // Update m_filteredDrawBuffers based on current attachments. Returns true if changed.
+    bool updateFilteredDrawBuffers(bool force);
 
     void setAttachmentInternal(GCGLenum attachment, AttachmentEntry);
     // If a given attachment point for the currently bound framebuffer is not
     // null, remove the attached object.
     void removeAttachmentInternal(const AbstractLocker&, GCGLenum attachment);
 
+#if ENABLE(WEBXR)
+    void setInsideWebXRRAF(bool inside) { m_insideWebXRRAF = inside; }
+    bool isInsideWebXRRAF() const { return m_insideWebXRRAF; }
+#endif
+
     HashMap<GCGLenum, AttachmentEntry> m_attachments;
     bool m_hasEverBeenBound { false };
     Vector<GCGLenum> m_drawBuffers;
     Vector<GCGLenum> m_filteredDrawBuffers;
+    bool m_drawBufferStatePendingSync { false };
 #if ENABLE(WEBXR)
     const bool m_isOpaque;
+    bool m_insideWebXRRAF { false };
 #endif
 };
 

@@ -36,6 +36,9 @@ class JITWorklist;
 class Safepoint;
 
 class JITWorklistThread final : public AutomaticThread {
+    WTF_MAKE_TZONE_ALLOCATED(JITWorklistThread);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(JITWorklistThread);
+
     class WorkScope;
 
     friend class Safepoint;

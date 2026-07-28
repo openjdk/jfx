@@ -65,15 +65,6 @@
 
 #include "GCGLSpan.h"
 
-namespace WebCore {
-class WebGLRenderingContextBase;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::WebGLRenderingContextBase> : std::true_type { };
-}
-
 namespace JSC {
 class AbstractSlotVisitor;
 }
@@ -170,7 +161,7 @@ class VideoFrame;
 template<typename> class ExceptionOr;
 
 class WebGLRenderingContextBase : public GraphicsContextGL::Client, public GPUBasedCanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLRenderingContextBase);
+    WTF_MAKE_TZONE_ALLOCATED(WebGLRenderingContextBase);
 public:
     USING_CAN_MAKE_WEAKPTR(GPUBasedCanvasRenderingContext);
 
@@ -271,7 +262,7 @@ public:
     String getShaderSource(WebGLShader&);
     virtual std::optional<Vector<String>> getSupportedExtensions() = 0;
     virtual WebGLAny getTexParameter(GCGLenum target, GCGLenum pname);
-    WebGLAny getUniform(WebGLProgram&, const WebGLUniformLocation&);
+    WebGLAny getUniform(WebGLProgram&, WebGLUniformLocation&);
     RefPtr<WebGLUniformLocation> getUniformLocation(WebGLProgram&, const String&);
     WebGLAny getVertexAttrib(GCGLuint index, GCGLenum pname);
     long long getVertexAttribOffset(GCGLuint index, GCGLenum pname);
@@ -344,7 +335,7 @@ public:
         using VariantType = Variant<RefPtr<TypedArray>, Vector<DataType>>;
 
         TypedList(VariantType&& variant)
-            : m_variant(WTFMove(variant))
+            : m_variant(WTF::move(variant))
         {
         }
 
@@ -434,8 +425,7 @@ public:
     using SimulatedEventForTesting = GraphicsContextGL::SimulatedEventForTesting;
     WEBCORE_EXPORT void simulateEventForTesting(SimulatedEventForTesting);
 
-    GraphicsContextGL* graphicsContextGL() const { return m_context.get(); }
-    RefPtr<GraphicsContextGL> protectedGraphicsContextGL() const { return m_context; }
+    RefPtr<GraphicsContextGL> graphicsContextGL() const { return m_context; }
 
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 
@@ -461,7 +451,7 @@ public:
 
     // GraphicsContextGL::Client
     void forceContextLost() final;
-    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const String&) final;
+    void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const CString&) final;
 
     void recycleContext();
 
@@ -593,7 +583,6 @@ protected:
     RefPtr<Image> videoFrameToImage(HTMLVideoElement&, ASCIILiteral functionName);
 #endif
 
-    bool enableSupportedExtension(ASCIILiteral extensionNameLiteral);
     void loseExtensions(LostContextMode);
 
     virtual void uncacheDeletedBuffer(const AbstractLocker&, WebGLBuffer*);
@@ -915,6 +904,8 @@ protected:
     // Otherwise, it would return quickly without doing other work.
     bool validateTexFunc(TexImageFunctionID, TexFuncValidationSourceType, GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width,
         GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset);
+
+    bool validateCompressedTexFormat(ASCIILiteral functionName, GCGLenum format);
 
     // Helper function to check input parameters for functions {copy}Tex{Sub}Image.
     // Generates GL error and returns false if parameters are invalid.

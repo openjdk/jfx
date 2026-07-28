@@ -37,18 +37,19 @@
 #include "ContextDestructionObserverInlines.h"
 #include "Logging.h"
 #include "RTCPeerConnection.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpTransceiver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpTransceiver);
 
 RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend)
     : m_direction(RTCRtpTransceiverDirection::Sendrecv)
-    , m_sender(WTFMove(sender))
-    , m_receiver(WTFMove(receiver))
-    , m_backend(WTFMove(backend))
+    , m_sender(WTF::move(sender))
+    , m_receiver(WTF::move(receiver))
+    , m_backend(WTF::move(backend))
 {
 }
 
@@ -144,7 +145,7 @@ bool RTCRtpTransceiver::stopped() const
 
 void RtpTransceiverSet::append(Ref<RTCRtpTransceiver>&& transceiver)
 {
-    m_transceivers.append(WTFMove(transceiver));
+    m_transceivers.append(WTF::move(transceiver));
 }
 
 Vector<std::reference_wrapper<RTCRtpSender>> RtpTransceiverSet::senders() const

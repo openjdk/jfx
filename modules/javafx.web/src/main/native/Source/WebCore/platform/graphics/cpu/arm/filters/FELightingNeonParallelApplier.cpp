@@ -213,7 +213,7 @@ extern "C" {
 void neonDrawLighting(FELightingNeonParallelApplier::ApplyParameters*);
 }
 
-asm ( // NOLINT
+__asm__( // NOLINT
 ".globl " TOSTRING(neonDrawLighting) NL
 TOSTRING(neonDrawLighting) ":" NL
     // Because of the clever register allocation, nothing is stored on the stack

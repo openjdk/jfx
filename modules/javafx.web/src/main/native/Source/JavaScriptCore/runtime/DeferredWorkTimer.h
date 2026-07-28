@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSRunLoopTimer.h"
-#include "WeakInlines.h"
+#include <JavaScriptCore/JSRunLoopTimer.h>
+#include <JavaScriptCore/WeakInlines.h>
 
 #include <wtf/Deque.h>
 #include <wtf/FixedVector.h>
@@ -117,6 +117,10 @@ private:
     UncheckedKeyHashSet<Ref<TicketData>> m_pendingTickets;
 };
 
+// target() reads m_dependencies, which cancelAndClear() can free concurrently.
+// Safe only when: (1) holding m_taskLock, (2) inside a scheduleWorkSoon task lambda
+// (ticket already removed from m_pendingTickets), or (3) GC End phase is prevented from running.
+// Never call from a foreign VM's thread.
 inline JSObject* DeferredWorkTimer::TicketData::target()
 {
     ASSERT(!isCancelled() && isTargetObject());

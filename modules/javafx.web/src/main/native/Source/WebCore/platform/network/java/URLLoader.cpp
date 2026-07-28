@@ -411,7 +411,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
     if (!contentEncodingString.isEmpty()) {
-        response.setTextEncodingName(WTFMove(contentEncodingString));
+        response.setTextEncodingName(WTF::move(contentEncodingString));
     }
 
     if (contentLength > 0) {
@@ -440,7 +440,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
     }
     // set response after protocol check
-    response.setURL(WTFMove(kurl));
+    response.setURL(WTF::move(kurl));
     return response;
 }
 

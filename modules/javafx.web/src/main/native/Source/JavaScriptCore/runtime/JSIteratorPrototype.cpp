@@ -29,7 +29,7 @@
 #include "JSIteratorPrototype.h"
 
 #include "BuiltinNames.h"
-#include "CachedCall.h"
+#include "CachedCallInlines.h"
 #include "InterpreterInlines.h"
 #include "IteratorOperations.h"
 #include "JSCBuiltins.h"
@@ -164,15 +164,12 @@ JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncForEach, (JSGlobalObject* globalObject
 
     JSValue callbackArg = callFrame->argument(0);
     if (!callbackArg.isCallable()) {
-        {
-            auto catchScope = DECLARE_CATCH_SCOPE(vm);
         iteratorClose(globalObject, thisValue);
-            catchScope.clearException();
-        }
+        TRY_CLEAR_EXCEPTION(scope, { });
         return throwVMTypeError(globalObject, scope, "Iterator.prototype.forEach requires the callback argument to be callable."_s);
     }
 
-    auto callData = JSC::getCallData(callbackArg);
+    auto callData = JSC::getCallDataInline(callbackArg);
     ASSERT(callData.type != CallData::Type::None);
 
     uint64_t counter = 0;

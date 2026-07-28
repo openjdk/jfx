@@ -26,11 +26,11 @@
 #include "config.h"
 #include "LazyLoadImageObserver.h"
 
-#include "DocumentInlines.h"
 #include "HTMLImageElement.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include <limits>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -95,7 +95,7 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
         static NeverDestroyed<const String> lazyLoadingScrollMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
         IntersectionObserver::Init options { std::nullopt, { }, lazyLoadingScrollMarginFallback, { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        auto observer = IntersectionObserver::create(document, WTF::move(callback), WTF::move(options));
         if (observer.hasException())
             return nullptr;
         m_observer = observer.returnValue().ptr();

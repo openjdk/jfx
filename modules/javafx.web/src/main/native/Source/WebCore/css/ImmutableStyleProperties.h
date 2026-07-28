@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StyleProperties.h"
+#include <WebCore/StyleProperties.h>
 
 namespace WebCore {
 

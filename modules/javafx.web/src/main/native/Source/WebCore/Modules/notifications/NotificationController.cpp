@@ -54,11 +54,6 @@ NotificationClient* NotificationController::clientFrom(Page& page)
     return &controller->client();
 }
 
-ASCIILiteral NotificationController::supplementName()
-{
-    return "NotificationController"_s;
-}
-
 void provideNotification(Page* page, NotificationClient* client)
 {
     NotificationController::provideTo(page, NotificationController::supplementName(), makeUnique<NotificationController>(client));

@@ -28,9 +28,15 @@
 
 #include "JSArrayBufferView.h"
 #include "JSCellInlines.h"
+#include "JSWebAssemblyInstance.h"
 #include "WaiterListManager.h"
+#include "WeakInlines.h"
 #include <wtf/Gigacage.h>
 #include <wtf/SafeStrerror.h>
+
+#if ENABLE(WEBASSEMBLY)
+#include "WasmMemory.h"
+#endif
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -56,15 +62,15 @@ static bool tryAllocate(VM* vm, const Func& allocate)
     bool success = false;
     for (unsigned i = 0; i < numTries && !success; ++i) {
         switch (allocate()) {
-        case BufferMemoryResult::Success:
+        case BufferMemoryResult::Kind::Success:
             success = true;
             break;
-        case BufferMemoryResult::SuccessAndNotifyMemoryPressure:
+        case BufferMemoryResult::Kind::SuccessAndNotifyMemoryPressure:
             if (vm)
                 vm->heap.collectAsync(CollectionScope::Full);
             success = true;
             break;
-        case BufferMemoryResult::SyncTryToReclaimMemory:
+        case BufferMemoryResult::Kind::SyncTryToReclaimMemory:
             if (i + 1 == numTries)
                 break;
             if (vm)
@@ -143,16 +149,16 @@ void ArrayBufferContents::tryAllocate(size_t numElements, unsigned elementByteSi
 
 void ArrayBufferContents::makeShared()
 {
-    m_shared = SharedArrayBufferContents::create(mutableSpan(), maxByteLength(), m_memoryHandle, WTFMove(m_destructor), SharedArrayBufferContents::Mode::Default);
+    m_shared = SharedArrayBufferContents::create(mutableSpan(), maxByteLength(), m_memoryHandle, WTF::move(m_destructor), SharedArrayBufferContents::Mode::Default);
     m_destructor = nullptr;
 }
 
 SharedArrayBufferContents::~SharedArrayBufferContents()
 {
     WaiterListManager::singleton().unregister(std::bit_cast<uint8_t*>(data()), m_sizeInBytes);
-    if (m_destructor) {
+    if (RefPtr destructor = m_destructor) {
         // FIXME: we shouldn't use getUnsafe here https://bugs.webkit.org/show_bug.cgi?id=197698
-        m_destructor->run(m_data.getUnsafe());
+        destructor->run(m_data.getUnsafe());
     }
 }
 
@@ -165,6 +171,7 @@ void ArrayBufferContents::copyTo(ArrayBufferContents& other)
     memcpy(other.data(), data(), m_sizeInBytes);
     other.m_sizeInBytes = m_sizeInBytes;
     RELEASE_ASSERT(other.m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
+    ASSERT(other.m_maxByteLength <= MAX_ARRAY_BUFFER_SIZE);
 }
 
 void ArrayBufferContents::shareWith(ArrayBufferContents& other)
@@ -179,6 +186,7 @@ void ArrayBufferContents::shareWith(ArrayBufferContents& other)
     other.m_maxByteLength = m_maxByteLength;
     other.m_hasMaxByteLength = m_hasMaxByteLength;
     RELEASE_ASSERT(other.m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
+    ASSERT(other.m_maxByteLength <= MAX_ARRAY_BUFFER_SIZE);
 }
 
 Ref<ArrayBuffer> ArrayBuffer::create(size_t numElements, unsigned elementByteSize)
@@ -204,7 +212,7 @@ Ref<ArrayBuffer> ArrayBuffer::create(std::span<const uint8_t> span)
 
 Ref<ArrayBuffer> ArrayBuffer::create(ArrayBufferContents&& contents)
 {
-    return adoptRef(*new ArrayBuffer(WTFMove(contents)));
+    return adoptRef(*new ArrayBuffer(WTF::move(contents)));
 }
 
 // FIXME: We cannot use this except if the memory comes from the cage.
@@ -228,14 +236,14 @@ Ref<ArrayBuffer> ArrayBuffer::createFromBytes(std::span<const uint8_t> data, Arr
     if (data.data() && !Gigacage::isCaged(Gigacage::Primitive, data.data()))
         Gigacage::disablePrimitiveGigacage();
 
-    ArrayBufferContents contents(data, std::nullopt, WTFMove(destructor));
-    return create(WTFMove(contents));
+    ArrayBufferContents contents(data, std::nullopt, WTF::move(destructor));
+    return create(WTF::move(contents));
 }
 
-Ref<ArrayBuffer> ArrayBuffer::createShared(Ref<SharedArrayBufferContents>&& shared)
+Ref<ArrayBuffer> ArrayBuffer::createShared(Ref<SharedArrayBufferContents>&& shared, bool forceFixedLengthIfWasm)
 {
-    ArrayBufferContents contents(WTFMove(shared));
-    return create(WTFMove(contents));
+    ArrayBufferContents contents(WTF::move(shared), forceFixedLengthIfWasm);
+    return create(WTF::move(contents));
 }
 
 RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(size_t numElements, unsigned elementByteSize, std::optional<size_t> maxByteLength)
@@ -254,7 +262,7 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(std::span<const uint8_t> span)
     contents.tryAllocate(span.size(), 1, ArrayBufferContents::InitializationPolicy::DontInitialize);
     if (!contents.m_data)
         return nullptr;
-    return createInternal(WTFMove(contents), span.data(), span.size());
+    return createInternal(WTF::move(contents), span.data(), span.size());
 }
 
 Ref<ArrayBuffer> ArrayBuffer::createUninitialized(size_t numElements, unsigned elementByteSize)
@@ -277,7 +285,7 @@ Ref<ArrayBuffer> ArrayBuffer::create(size_t numElements, unsigned elementByteSiz
 
 Ref<ArrayBuffer> ArrayBuffer::createInternal(ArrayBufferContents&& contents, const void* source, size_t byteLength)
 {
-    auto buffer = adoptRef(*new ArrayBuffer(WTFMove(contents)));
+    auto buffer = adoptRef(*new ArrayBuffer(WTF::move(contents)));
     if (byteLength) {
         ASSERT(source);
         memcpy(buffer->data(), source, byteLength);
@@ -292,7 +300,7 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(size_t numElements, unsigned elementB
     contents.tryAllocate(numElements, elementByteSize, policy);
     if (!contents.m_data)
         return nullptr;
-    return adoptRef(*new ArrayBuffer(WTFMove(contents)));
+        return adoptRef(*new ArrayBuffer(WTF::move(contents)));
     }
 
     CheckedSize sizeInBytes = numElements;
@@ -309,11 +317,11 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreate(size_t numElements, unsigned elementB
 
     void* memory = handle->memory();
     ArrayBufferContents contents(memory, sizeInBytes.value(), maxByteLength.value(), handle.releaseNonNull());
-    return create(WTFMove(contents));
+    return create(WTF::move(contents));
 }
 
 ArrayBuffer::ArrayBuffer(ArrayBufferContents&& contents)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
 {
 }
 
@@ -365,6 +373,38 @@ void ArrayBuffer::makeWasmMemory()
 {
     m_locked = true;
     m_isWasmMemory = true;
+}
+
+void ArrayBuffer::setAssociatedWasmMemory(Wasm::Memory* memory)
+{
+    // The pointer from a buffer to a memory is only required when the buffer is resizable non-shared,
+    // to direct a grow request to the memory (see ArrayBuffer::resize). In other scenarios
+    // the pointer is not necessary and we should not be setting it to anything but a nullptr.
+    ASSERT(isWasmMemory() && (isResizableNonShared() || !memory));
+#if ENABLE(WEBASSEMBLY)
+    m_associatedWasmMemory = memory;
+#else
+    UNUSED_PARAM(memory);
+#endif
+}
+
+void ArrayBuffer::refreshAfterWasmMemoryGrow(Wasm::Memory* memory)
+{
+    ASSERT(isWasmMemory());
+
+    void* oldData = m_contents.data();
+    m_contents.refreshAfterWasmMemoryGrow(memory);
+    void* newData = m_contents.data();
+    if (newData == oldData)
+        return;
+
+    // JSArrayBufferViews (typed arrays) effectively cache their buffer's data pointer.
+    for (size_t i = numberOfIncomingReferences(); i--;) {
+        JSCell* cell = incomingReferenceAt(i);
+        auto* view = jsDynamicCast<JSArrayBufferView*>(cell);
+        if (view)
+            view->refreshVector(newData);
+    }
 }
 
 void ArrayBuffer::setSharingMode(ArrayBufferSharingMode newSharingMode)
@@ -431,17 +471,22 @@ void ArrayBuffer::notifyDetaching(VM& vm)
     m_detachingWatchpointSet.fireAll(vm, "Array buffer was detached");
 }
 
+// Wasm JS API redefines the abstract operation HostGrowSharedArrayBuffer as follows:
+// https://webassembly.github.io/threads/js-api/index.html#abstract-operation-hostgrowsharedarraybuffer
 Expected<int64_t, GrowFailReason> ArrayBuffer::grow(VM& vm, size_t newByteLength)
 {
     auto shared = m_contents.m_shared;
     if (!shared) [[unlikely]]
         return makeUnexpected(GrowFailReason::GrowSharedUnavailable);
-    auto result = shared->grow(vm, newByteLength);
+    const bool requirePageMultiple = isWasmMemory();
+    auto result = shared->grow(vm, newByteLength, requirePageMultiple);
     if (result && result.value() > 0)
         vm.heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), result.value());
     return result;
 }
 
+// Wasm JS API redefines the abstract operation HostResizeArrayBuffer as follows:
+// https://webassembly.github.io/threads/js-api/index.html#abstract-operation-hostresizearraybuffer
 Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLength)
 {
     auto memoryHandle = m_contents.m_memoryHandle;
@@ -457,6 +502,12 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLeng
             return makeUnexpected(GrowFailReason::InvalidGrowSize);
 
         deltaByteLength = static_cast<int64_t>(newByteLength) - static_cast<int64_t>(m_contents.m_sizeInBytes);
+#if ENABLE(WEBASSEMBLY)
+        if (Options::useWasmMemoryToBufferAPIs()) {
+            if (isWasmMemory() && (deltaByteLength < 0 || deltaByteLength % PageCount::pageSize))
+                return makeUnexpected(GrowFailReason::InvalidGrowSize);
+        }
+#endif
         if (!deltaByteLength)
             return 0;
 
@@ -467,6 +518,18 @@ Expected<int64_t, GrowFailReason> ArrayBuffer::resize(VM& vm, size_t newByteLeng
 
         if (newPageCount != oldPageCount) {
             ASSERT(memoryHandle->maximum() >= newPageCount);
+
+#if ENABLE(WEBASSEMBLY)
+            if (Options::useWasmMemoryToBufferAPIs()) {
+                // If this is currently associated with a Wasm memory, let the memory do the growing.
+                // The memory will call back to our refreshAfterWasmMemoryGrow().
+                RefPtr<Wasm::Memory> memory = m_associatedWasmMemory.get();
+                if (memory) {
+                    std::ignore = memory->grow(vm, PageCount(newPageCount.pageCount() - oldPageCount.pageCount()));
+                    return deltaByteLength;
+                }
+            }
+#endif
             size_t desiredSize = newPageCount.bytes();
             RELEASE_ASSERT(desiredSize <= MAX_ARRAY_BUFFER_SIZE);
 
@@ -527,7 +590,7 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreateShared(VM& vm, size_t numElements, uns
 {
     CheckedSize sizeInBytes = numElements;
     sizeInBytes *= elementByteSize;
-    if (sizeInBytes.hasOverflowed() || sizeInBytes.value() > MAX_ARRAY_BUFFER_SIZE || (sizeInBytes.value() > maxByteLength))
+    if (sizeInBytes.hasOverflowed() || sizeInBytes.value() > maxByteLength || maxByteLength > MAX_ARRAY_BUFFER_SIZE)
         return nullptr;
 
     auto handle = tryAllocateResizableMemory(&vm, sizeInBytes.value(), maxByteLength);
@@ -535,25 +598,37 @@ RefPtr<ArrayBuffer> ArrayBuffer::tryCreateShared(VM& vm, size_t numElements, uns
         return nullptr;
 
     auto* memory = static_cast<uint8_t*>(handle->memory());
-    return createShared(SharedArrayBufferContents::create({ memory, sizeInBytes.value() }, maxByteLength, WTFMove(handle), nullptr, SharedArrayBufferContents::Mode::Default));
+    return createShared(SharedArrayBufferContents::create({ memory, sizeInBytes.value() }, maxByteLength, WTF::move(handle), nullptr, SharedArrayBufferContents::Mode::Default));
 }
 
-Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(VM& vm, size_t newByteLength)
+ArrayBuffer::~ArrayBuffer() { }
+
+Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(VM& vm, size_t newByteLength, bool requirePageMultiple)
 {
     if (!m_hasMaxByteLength)
         return makeUnexpected(GrowFailReason::GrowSharedUnavailable);
     ASSERT(m_memoryHandle);
-    return grow(Locker { m_memoryHandle->lock() }, vm, newByteLength);
+    return grow(Locker { m_memoryHandle->lock() }, vm, newByteLength, requirePageMultiple);
 }
 
-Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(const AbstractLocker&, VM& vm, size_t newByteLength)
+Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(const AbstractLocker& locker, VM& vm, size_t newByteLength, bool requirePageMultiple)
 {
-    // Keep in mind that newByteLength may not be page-size-aligned.
+    // Keep in mind that newByteLength may not be page-size-aligned. If the buffer is a Wasm memory, that is an error.
     size_t sizeInBytes = m_sizeInBytes.load(std::memory_order_seq_cst);
     if (sizeInBytes > newByteLength || m_maxByteLength < newByteLength)
         return makeUnexpected(GrowFailReason::InvalidGrowSize);
 
     int64_t deltaByteLength = newByteLength - sizeInBytes;
+
+#if ENABLE(WEBASSEMBLY)
+    if (Options::useWasmMemoryToBufferAPIs()) {
+        if (requirePageMultiple && deltaByteLength % PageCount::pageSize)
+            return makeUnexpected(GrowFailReason::InvalidGrowSize);
+    }
+#else
+    UNUSED_PARAM(requirePageMultiple);
+#endif
+
     if (!deltaByteLength)
         return 0;
 
@@ -562,13 +637,14 @@ Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(const Abstract
     if (newPageCount.bytes() > MAX_ARRAY_BUFFER_SIZE)
         return makeUnexpected(GrowFailReason::WouldExceedMaximum);
 
+    RefPtr memoryHandle = m_memoryHandle;
     if (newPageCount != oldPageCount) {
-        ASSERT(m_memoryHandle->maximum() >= newPageCount);
+        ASSERT(memoryHandle->maximum() >= newPageCount);
         size_t desiredSize = newPageCount.bytes();
         RELEASE_ASSERT(desiredSize <= MAX_ARRAY_BUFFER_SIZE);
-        RELEASE_ASSERT(desiredSize > m_memoryHandle->size());
+        RELEASE_ASSERT(desiredSize > memoryHandle->size());
 
-        size_t extraBytes = desiredSize - m_memoryHandle->size();
+        size_t extraBytes = desiredSize - memoryHandle->size();
         RELEASE_ASSERT(extraBytes);
         bool allocationSuccess = tryAllocate(&vm,
             [&] () -> BufferMemoryResult::Kind {
@@ -577,22 +653,32 @@ Expected<int64_t, GrowFailReason> SharedArrayBufferContents::grow(const Abstract
         if (!allocationSuccess)
             return makeUnexpected(GrowFailReason::OutOfMemory);
 
-        void* memory = m_memoryHandle->memory();
+        void* memory = memoryHandle->memory();
         RELEASE_ASSERT(memory);
 
         // Signaling memory must have been pre-allocated virtually.
-        uint8_t* startAddress = static_cast<uint8_t*>(memory) + m_memoryHandle->size();
+        uint8_t* startAddress = static_cast<uint8_t*>(memory) + memoryHandle->size();
 
         dataLogLnIf(ArrayBufferInternal::verbose, "Marking memory's ", RawPointer(memory), " as read+write in range [", RawPointer(startAddress), ", ", RawPointer(startAddress + extraBytes), ")");
         constexpr bool readable = true;
         constexpr bool writable = true;
         OSAllocator::protect(startAddress, extraBytes, readable, writable);
-        m_memoryHandle->updateSize(desiredSize);
+        memoryHandle->updateSize(desiredSize);
     }
 
     memset(std::bit_cast<uint8_t*>(data()) + sizeInBytes, 0, newByteLength - sizeInBytes);
 
     updateSize(newByteLength);
+
+    UNUSED_PARAM(locker);
+#if ENABLE(WEBASSEMBLY)
+    // Update cache for instance
+    for (Ref anchor : memoryHandle->anchors(locker)) {
+        Locker locker { anchor->m_lock };
+        if (JSWebAssemblyInstance* instance = anchor->instance())
+            instance->updateCachedMemory();
+    }
+#endif
     return deltaByteLength;
 }
 
@@ -616,6 +702,20 @@ std::optional<ArrayBufferContents> ArrayBufferContents::fromSpan(std::span<const
 
     return ArrayBufferContents { buffer, data.size_bytes(), std::nullopt, ArrayBuffer::primitiveGigacageDestructor() };
 }
+
+void ArrayBufferContents::refreshAfterWasmMemoryGrow(Wasm::Memory* memory)
+{
+#if ENABLE(WEBASSEMBLY)
+    ASSERT(isResizableNonShared());
+    // If the memory is BoundChecking, the memory's handle is replaced with a different one when it grows.
+    m_memoryHandle = memory->handle();
+    m_data = memory->basePointer();
+    m_sizeInBytes = m_memoryHandle->size();
+#else
+    UNUSED_PARAM(memory);
+#endif
+}
+
 
 } // namespace JSC
 

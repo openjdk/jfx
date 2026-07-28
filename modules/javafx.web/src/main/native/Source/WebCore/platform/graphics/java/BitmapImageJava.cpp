@@ -42,7 +42,7 @@ Ref<Image> BitmapImage::createFromName(const char* name)
 {
     Ref<BitmapImage> img(create());
 
-    WC_GETJAVAENV_CHKRET(env, WTFMove(img));
+    WC_GETJAVAENV_CHKRET(env, WTF::move(img));
 
 #if USE(IMAGEIO)
     static jmethodID midLoadFromResource = env->GetMethodID(
@@ -90,9 +90,9 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     WTF::CheckAndClearException(env);
     //From the upper call we got a callback [Java_com_sun_webkit_graphics_WCGraphicsManager_append]
     //that fills the buffer.
-    img->setData(WTFMove(dataBuffer), true);
+    img->setData(WTF::move(dataBuffer), true);
 #endif
-    return WTFMove(img);
+    return WTF::move(img);
 }
 
 

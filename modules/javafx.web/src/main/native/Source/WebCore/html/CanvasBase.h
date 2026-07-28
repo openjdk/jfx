@@ -25,26 +25,16 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
-#include "CanvasNoiseInjection.h"
-#include "FloatRect.h"
-#include "IntSize.h"
-#include "PixelBuffer.h"
-#include "TaskSource.h"
+#include <WebCore/CSSParserContext.h>
+#include <WebCore/CanvasNoiseInjection.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/PixelBuffer.h>
+#include <WebCore/TaskSource.h>
 #include <atomic>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashSet.h>
-#include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
-
-namespace WebCore {
-class CanvasDisplayBufferObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CanvasDisplayBufferObserver> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -65,9 +55,9 @@ class WebCoreOpaqueRoot;
 
 enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
-class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
+class CanvasDisplayBufferObserver : public AbstractRefCountedAndCanMakeWeakPtr<CanvasDisplayBufferObserver> {
 public:
-    virtual ~CanvasDisplayBufferObserver() = default;
+    virtual ~CanvasDisplayBufferObserver();
 
     virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
@@ -101,6 +91,7 @@ public:
 
     virtual SecurityOrigin* securityOrigin() const { return nullptr; }
     ScriptExecutionContext* scriptExecutionContext() const { return canvasBaseScriptExecutionContext();  }
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
     virtual CanvasRenderingContext* renderingContext() const = 0;
 
@@ -155,9 +146,10 @@ protected:
     explicit CanvasBase(IntSize, ScriptExecutionContext&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
+    RefPtr<ScriptExecutionContext> protectedCanvasBaseScriptExecutionContext() const;
     virtual std::unique_ptr<CSSParserContext> createCSSParserContext() const = 0;
 
-    virtual void setSize(const IntSize&);
+    void setSize(const IntSize&);
 
     RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
     String lastFillText() const { return m_lastFillText; }
@@ -202,8 +194,3 @@ inline const CSSParserContext& CanvasBase::cssParserContext() const
 }
 
 } // namespace WebCore
-
-#define SPECIALIZE_TYPE_TRAITS_CANVAS(ToValueTypeName, predicate) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(ToValueTypeName) \
-static bool isType(const WebCore::CanvasBase& canvas) { return canvas.predicate; } \
-SPECIALIZE_TYPE_TRAITS_END()

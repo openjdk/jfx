@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CSSColorValue.h"
-#include "CSSPrimitiveValue.h"
-#include "ColorHash.h"
+#include <WebCore/CSSColorValue.h>
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/ColorHash.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>

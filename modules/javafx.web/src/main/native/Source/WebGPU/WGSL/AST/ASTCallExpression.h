@@ -93,8 +93,8 @@ public:
 private:
     CallExpression(SourceSpan span, Expression::Ref&& target, Expression::List&& arguments)
         : Expression(span)
-        , m_target(WTFMove(target))
-        , m_arguments(WTFMove(arguments))
+        , m_target(WTF::move(target))
+        , m_arguments(WTF::move(arguments))
     { }
 
     // If m_target is a NamedType, it could either be a:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,7 +85,7 @@ namespace JSC {
 
 
 ALWAYS_INLINE ICSlowPathCallFrameTracer::ICSlowPathCallFrameTracer(VM& vm, CallFrame* callFrame, StructureStubInfo* stubInfo)
- #if ASSERT_ENABLED
+#if ASSERT_ENABLED
         : m_vm(vm)
 #endif
 {
@@ -112,11 +112,6 @@ ALWAYS_INLINE JSValue profiledAdd(JSGlobalObject* globalObject, JSValue op1, JSV
     return result;
 }
 
-// FIXME (see rdar://72897291): Work around a Clang bug where __builtin_return_address()
-// sometimes gives us a signed pointer, and sometimes does not.
-#define OUR_RETURN_ADDRESS removeCodePtrTag(__builtin_return_address(0))
-
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationThrowStackOverflowError, void, (CodeBlock* codeBlock))
 {
     // We pass in our own code block, because the callframe hasn't been populated.
@@ -124,7 +119,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationThrowStackOverflowError, void, (CodeB
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    callFrame->convertToStackOverflowFrame(vm, codeBlock);
+    callFrame->convertToZombieFrame(vm, codeBlock);
     throwStackOverflowError(codeBlock->globalObject(), scope);
 }
 
@@ -253,22 +248,18 @@ JSC_DEFINE_JIT_OPERATION(operationThrowRemoteFunctionException, EncodedJSValue, 
 
     // We should only be here when "rethrowing" an exception
     RELEASE_ASSERT(exception);
+    JSValue exceptionValue = exception->value();
 
-    if (vm.isTerminationException(exception)) [[unlikely]] {
+    if (!scope.tryClearException()) [[unlikely]] {
         scope.release();
         OPERATION_RETURN(scope, encodedJSValue());
     }
-
-    JSValue exceptionValue = exception->value();
-    scope.clearException();
 
     String exceptionString = exceptionValue.toWTFString(globalObject);
-    Exception* toStringException = scope.exception();
-    if (toStringException && vm.isTerminationException(toStringException)) [[unlikely]] {
+    if (!scope.tryClearException()) [[unlikely]] {
         scope.release();
         OPERATION_RETURN(scope, encodedJSValue());
     }
-    scope.clearException();
 
     if (exceptionString.length())
         OPERATION_RETURN(scope, throwVMTypeError(globalObject, scope, exceptionString));
@@ -3142,7 +3133,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
         CodeBlock* replacementCodeBlock = codeBlock->newReplacement();
         CompilationResult result = DFG::compile(
             vm, replacementCodeBlock, nullptr, Options::forceUnlinkedDFG() ? JITCompilationMode::UnlinkedDFG : JITCompilationMode::DFG, bytecodeIndex,
-            WTFMove(mustHandleValues), JITToDFGDeferredCompilationCallback::create());
+            WTF::move(mustHandleValues), JITToDFGDeferredCompilationCallback::create());
 
         if (result != CompilationResult::CompilationSuccessful) {
             CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("compilation failed"));
@@ -4524,7 +4515,7 @@ JSC_DEFINE_JIT_OPERATION(operationGetFromScope, EncodedJSValue, (JSGlobalObject*
             // When we can't statically prove we need a TDZ check, we must perform the check on the slow path.
             result = slot.getValue(globalObject, ident);
             if (result == jsTDZValue()) {
-                throwException(globalObject, scope, createTDZError(globalObject));
+                throwException(globalObject, scope, createTDZError(globalObject, ident.string()));
                 return jsUndefined();
             }
         }
@@ -4573,7 +4564,7 @@ JSC_DEFINE_JIT_OPERATION(operationPutToScope, void, (JSGlobalObject* globalObjec
         PropertySlot slot(jsScope, PropertySlot::InternalMethodType::Get);
         JSGlobalLexicalEnvironment::getOwnPropertySlot(jsScope, globalObject, ident, slot);
         if (slot.getValue(globalObject, ident) == jsTDZValue()) {
-            throwException(globalObject, scope, createTDZError(globalObject));
+            throwException(globalObject, scope, createTDZError(globalObject, ident.string()));
             OPERATION_RETURN(scope);
         }
     }
@@ -4684,8 +4675,8 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationLookupExceptionHandlerFromCallerFrame
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
-    ASSERT(callFrame->isPartiallyInitializedFrame());
-    ASSERT(jsCast<ErrorInstance*>(vm.exceptionForInspection()->value().asCell())->isStackOverflowError());
+    ASSERT(callFrame->isZombieFrame());
+    ASSERT(vm.hasPendingTerminationException() || jsCast<ErrorInstance*>(vm.exceptionForInspection()->value().asCell())->isStackOverflowError());
     genericUnwind(vm, callFrame);
     ASSERT(vm.targetMachinePCForThrow);
 }
@@ -5219,15 +5210,15 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationRetrieveAndClearExceptionIfCatchable,
     RELEASE_ASSERT(!!scope.exception());
 
     Exception* exception = scope.exception();
-    if (vm.isTerminationException(exception)) [[unlikely]] {
-        genericUnwind(vm, callFrame);
-        return nullptr;
-    }
 
     // We want to clear the exception here rather than in the catch prologue
     // JIT code because clearing it also entails clearing a bit in an Atomic
     // bit field in VMTraps.
-    scope.clearException();
+    if (!scope.tryClearException()) [[unlikely]] {
+        genericUnwind(vm, callFrame);
+        return nullptr;
+    }
+
     return exception;
 }
 

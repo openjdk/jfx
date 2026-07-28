@@ -27,11 +27,12 @@
 
 #pragma once
 
-#include "DOMPasteAccess.h"
-#include "Frame.h"
-#include "ScrollbarMode.h"
+#include <WebCore/DOMPasteAccess.h>
+#include <WebCore/Frame.h>
+#include <WebCore/ScrollbarMode.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakRef.h>
 
@@ -71,6 +72,8 @@ class EventHandler;
 class FloatPoint;
 class FloatSize;
 class FrameDestructionObserver;
+class FrameConsoleClient;
+class FrameInspectorController;
 class FrameLoader;
 class FrameSelection;
 class HTMLFrameOwnerElement;
@@ -91,17 +94,17 @@ class RenderWidget;
 class ResourceMonitor;
 class ScriptController;
 class SecurityOrigin;
+class UserContentProvider;
 class UserScript;
 class VisiblePosition;
 class Widget;
-
-enum class AdjustViewSize : bool;
 
 #if PLATFORM(IOS_FAMILY)
 class VisibleSelection;
 struct ViewportArguments;
 #endif
 
+enum class ReferrerPolicy : uint8_t;
 enum class SandboxFlag : uint16_t;
 enum class UserScriptInjectionTime : bool;
 enum class WindowProxyProperty : uint8_t;
@@ -128,9 +131,9 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 class LocalFrame final : public Frame {
 public:
     using ClientCreator = CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>;
-    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, Frame* opener, Ref<FrameTreeSyncData>&&);
-    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, HTMLFrameOwnerElement&, Ref<FrameTreeSyncData>&&);
-    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ScrollbarMode, Frame& parent, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ReferrerPolicy, Frame* opener, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ReferrerPolicy, HTMLFrameOwnerElement&, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ReferrerPolicy, ScrollbarMode, Frame& parent, Ref<FrameTreeSyncData>&&);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
@@ -152,8 +155,8 @@ public:
 
     inline Document* document() const; // Defined in LocalFrameInlines.h
     inline RefPtr<Document> protectedDocument() const; // Defined in LocalFrameInlines.h
-    inline LocalFrameView* view() const; // Defined in LocalFrameInlines.h
-    inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
+    inline LocalFrameView* view() const; // Defined in DocumentView.h
+    inline RefPtr<LocalFrameView> protectedView() const; // Defined in DocumentView.h.
     WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
     WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
@@ -173,8 +176,8 @@ public:
     CheckedRef<FrameSelection> checkedSelection() const; // Defined in LocalFrameInlines.h
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
-    CheckedRef<ScriptController> checkedScript();
-    CheckedRef<const ScriptController> checkedScript() const;
+    WEBCORE_EXPORT CheckedRef<ScriptController> checkedScript();
+    WEBCORE_EXPORT CheckedRef<const ScriptController> checkedScript() const;
     void resetScript();
 
     bool isRootFrame() const final { return m_rootFrame.get() == this; }
@@ -182,6 +185,7 @@ public:
     LocalFrame& rootFrame() { return *m_rootFrame; }
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
+    WEBCORE_EXPORT CheckedPtr<RenderView> checkedContentRenderer() const;
 
     bool documentIsBeingReplaced() const { return m_documentIsBeingReplaced; }
 
@@ -199,12 +203,15 @@ public:
 
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
     WEBCORE_EXPORT void injectUserScriptImmediately(DOMWrapperWorld&, const UserScript&);
+    UserContentProvider* userContentProvider();
+    const UserContentProvider* userContentProvider() const;
+    WEBCORE_EXPORT bool hasUserContentProvider(const UserContentProvider&);
 
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
 
     WEBCORE_EXPORT static LocalFrame* frameForWidget(const Widget&);
 
-    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSize);
+    WEBCORE_EXPORT void setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize, NotifyUIProcess = NotifyUIProcess::Yes) final;
     bool shouldUsePrintingLayout() const;
     WEBCORE_EXPORT FloatSize resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize);
 
@@ -331,8 +338,12 @@ public:
     SandboxFlags sandboxFlagsFromSandboxAttributeNotCSP() { return m_sandboxFlags; }
     WEBCORE_EXPORT void updateSandboxFlags(SandboxFlags, NotifyUIProcess) final;
 
+    WEBCORE_EXPORT ReferrerPolicy effectiveReferrerPolicy() const;
+    WEBCORE_EXPORT void updateReferrerPolicy(ReferrerPolicy) final;
+
     ScrollbarMode scrollingMode() const { return m_scrollingMode; }
     WEBCORE_EXPORT void updateScrollingMode() final;
+    WEBCORE_EXPORT void reportMixedContentViolation(bool blocked, const URL& target) const final;
     WEBCORE_EXPORT void setScrollingMode(ScrollbarMode);
     WEBCORE_EXPORT void showMemoryMonitorError();
 
@@ -343,21 +354,29 @@ public:
 
     bool frameCanCreatePaymentSession() const final;
 
+    FrameInspectorController& inspectorController() { return m_inspectorController.get(); }
+    const FrameInspectorController& inspectorController() const { return m_inspectorController.get(); }
+    WEBCORE_EXPORT Ref<FrameInspectorController> protectedInspectorController() const;
+    FrameConsoleClient& console() { return m_consoleClient.get(); }
+    const FrameConsoleClient& console() const { return m_consoleClient.get(); }
+
 protected:
     void frameWasDisconnectedFromOwner() const final;
 
 private:
     friend class NavigationDisabler;
 
-    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
+    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ReferrerPolicy, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
 
     void dropChildren();
 
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
+    void loadFrameRequest(FrameLoadRequest&&, Event*) final;
     void didFinishLoadInAnotherProcess() final;
-    RefPtr<SecurityOrigin> frameDocumentSecurityOrigin() const final;
+    SecurityOrigin* frameDocumentSecurityOrigin() const final;
+    String frameURLProtocol() const final;
 
     FrameView* virtualView() const final;
     void disconnectView() final;
@@ -412,8 +431,12 @@ private:
 
     const WeakPtr<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
+    ReferrerPolicy m_parentFrameOrOpenerReferrerPolicy;
     const UniqueRef<EventHandler> m_eventHandler;
     std::unique_ptr<HashSet<RegistrableDomain>> m_storageAccessExceptionDomains;
+
+    const UniqueRef<FrameInspectorController> m_inspectorController;
+    const UniqueRef<FrameConsoleClient> m_consoleClient;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrame&);

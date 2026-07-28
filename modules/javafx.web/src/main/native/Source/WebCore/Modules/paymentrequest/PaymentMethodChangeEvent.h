@@ -39,7 +39,7 @@ class JSObject;
 namespace WebCore {
 
 class PaymentMethodChangeEvent final : public PaymentRequestUpdateEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentMethodChangeEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PaymentMethodChangeEvent);
 public:
     template<typename... Args> static Ref<PaymentMethodChangeEvent> create(Args&&... args)
     {
@@ -68,5 +68,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT(PaymentMethodChangeEvent)
 
 #endif // ENABLE(PAYMENT_REQUEST)

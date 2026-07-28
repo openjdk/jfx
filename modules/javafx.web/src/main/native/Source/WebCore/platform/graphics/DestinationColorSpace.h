@@ -25,9 +25,13 @@
 
 #pragma once
 
-#include "PlatformColorSpace.h"
+#include <WebCore/PlatformColorSpace.h>
+#include <WebCore/PlatformExportMacros.h>
 #include <optional>
+#include <wtf/Assertions.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -47,7 +51,7 @@ public:
 #endif
 
     explicit DestinationColorSpace(PlatformColorSpace platformColorSpace)
-        : m_platformColorSpace { WTFMove(platformColorSpace) }
+        : m_platformColorSpace { WTF::move(platformColorSpace) }
     {
 #if USE(CG) || USE(SKIA)
         ASSERT(m_platformColorSpace);
@@ -59,6 +63,7 @@ public:
 #else
     PlatformColorSpaceValue platformColorSpace() const { return m_platformColorSpace.get(); }
 #endif
+    PlatformColorSpace protectedPlatformColorSpace() const { return platformColorSpace(); }
 
     PlatformColorSpace serializableColorSpace() const { return m_platformColorSpace; }
 

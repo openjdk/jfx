@@ -26,9 +26,10 @@
 #pragma once
 
 #include "WebSocketIdentifier.h"
-#include <pal/SessionID.h>
+#include <WebCore/WebTransportConnectionInfo.h>
+#include <wtf/NativePromise.h>
+#include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -45,7 +46,14 @@ class WebSocketChannelClient;
 class WebTransportSession;
 class WebTransportSessionClient;
 
-using WebTransportSessionPromise = NativePromise<Ref<WebTransportSession>, void>;
+struct WebTransportOptions;
+
+using WebTransportSessionPromise = NativePromise<WebTransportConnectionInfo, void>;
+
+#if USE(LIBRICE)
+class RiceBackend;
+class RiceBackendClient;
+#endif
 
 class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
 public:
@@ -59,7 +67,7 @@ public:
     virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
 #endif
     virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
-    Ref<WebCore::WebTransportSessionPromise> initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&);
+    std::pair<RefPtr<WebCore::WebTransportSession>, Ref<WebCore::WebTransportSessionPromise>> initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&, const WebCore::WebTransportOptions&);
     virtual ~SocketProvider() { };
 };
 

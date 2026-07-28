@@ -44,8 +44,8 @@ PlatformWheelEvent::PlatformWheelEvent(
         ctrlKey,
         altKey,
         metaKey,
-        WallTime {})
-        , m_granularity(ScrollByPixelWheelEvent)
+        MonotonicTime {})
+        , m_granularity(PlatformWheelEventGranularity::ScrollByPixelWheelEvent)
         , m_position(pos)
         , m_globalPosition(globalPos)
       // For some unknown reason, EventHandler expects deltaX/deltaY < 0 for

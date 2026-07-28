@@ -54,7 +54,7 @@ class WebXRHand;
 class WebXRInputSpace;
 
 class WebXRInputSource : public RefCountedAndCanMakeWeakPtr<WebXRInputSource> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRInputSource);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRInputSource);
 public:
     using InputSource = PlatformXR::FrameData::InputSource;
     using InputSourceButton = PlatformXR::FrameData::InputSourceButton;

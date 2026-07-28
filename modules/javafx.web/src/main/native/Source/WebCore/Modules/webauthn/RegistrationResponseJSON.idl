@@ -27,6 +27,7 @@
     Conditional=WEB_AUTHN,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AuthenticatorAttestationResponseJSON {
     required Base64URLString clientDataJSON;
     required Base64URLString authenticatorData;
@@ -48,6 +49,7 @@
     Conditional=WEB_AUTHN,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RegistrationResponseJSON {
     required Base64URLString id;
     required Base64URLString rawId;

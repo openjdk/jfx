@@ -27,8 +27,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MeteringMode.h"
-#include "RealtimeMediaSourceSettings.h"
+#include <WebCore/MeteringMode.h>
+#include <WebCore/RealtimeMediaSourceSettings.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCounted.h>
@@ -94,24 +94,24 @@ public:
     };
 
     RealtimeMediaSourceCapabilities(LongCapabilityRange width, LongCapabilityRange height, DoubleCapabilityRange aspectRatio, DoubleCapabilityRange frameRate, Vector<VideoFacingMode>&& facingMode, DoubleCapabilityRange volume, LongCapabilityRange sampleRate, LongCapabilityRange sampleSize, EchoCancellation echoCancellation, String&& deviceId, String&& groupId, DoubleCapabilityRange focusDistance, Vector<MeteringMode>&& whiteBalanceModes, DoubleCapabilityRange zoom, bool torch, BackgroundBlur backgroundBlur, bool powerEfficient, RealtimeMediaSourceSupportedConstraints&& supportedConstraints)
-        : m_width(WTFMove(width))
-        , m_height(WTFMove(height))
-        , m_aspectRatio(WTFMove(aspectRatio))
-        , m_frameRate(WTFMove(frameRate))
-        , m_facingMode(WTFMove(facingMode))
-        , m_volume(WTFMove(volume))
-        , m_sampleRate(WTFMove(sampleRate))
-        , m_sampleSize(WTFMove(sampleSize))
-        , m_echoCancellation(WTFMove(echoCancellation))
-        , m_deviceId(WTFMove(deviceId))
-        , m_groupId(WTFMove(groupId))
-        , m_focusDistance(WTFMove(focusDistance))
+        : m_width(WTF::move(width))
+        , m_height(WTF::move(height))
+        , m_aspectRatio(WTF::move(aspectRatio))
+        , m_frameRate(WTF::move(frameRate))
+        , m_facingMode(WTF::move(facingMode))
+        , m_volume(WTF::move(volume))
+        , m_sampleRate(WTF::move(sampleRate))
+        , m_sampleSize(WTF::move(sampleSize))
+        , m_echoCancellation(WTF::move(echoCancellation))
+        , m_deviceId(WTF::move(deviceId))
+        , m_groupId(WTF::move(groupId))
+        , m_focusDistance(WTF::move(focusDistance))
         , m_whiteBalanceModes(whiteBalanceModes)
-        , m_zoom(WTFMove(zoom))
+        , m_zoom(WTF::move(zoom))
         , m_torch(torch)
         , m_backgroundBlur(backgroundBlur)
         , m_powerEfficient(powerEfficient)
-        , m_supportedConstraints(WTFMove(supportedConstraints))
+        , m_supportedConstraints(WTF::move(supportedConstraints))
     {
     }
 
@@ -173,7 +173,7 @@ public:
 
     bool supportsWhiteBalanceMode() const { return m_supportedConstraints.supportsWhiteBalanceMode(); }
     const Vector<MeteringMode>& whiteBalanceModes() const { return m_whiteBalanceModes; }
-    void setWhiteBalanceModes(Vector<MeteringMode>&& modes) { m_whiteBalanceModes = WTFMove(modes); }
+    void setWhiteBalanceModes(Vector<MeteringMode>&& modes) { m_whiteBalanceModes = WTF::move(modes); }
 
     bool supportsZoom() const { return m_supportedConstraints.supportsZoom(); }
     const DoubleCapabilityRange& zoom() const { return m_zoom; }

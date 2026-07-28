@@ -28,10 +28,10 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "AudioSampleFormat.h"
-#include "BufferSource.h"
-#include "ContextDestructionObserver.h"
-#include "WebCodecsAudioInternalData.h"
+#include <WebCore/AudioSampleFormat.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/WebCodecsAudioInternalData.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -55,7 +55,11 @@ public:
 
     static ExceptionOr<Ref<WebCodecsAudioData>> create(ScriptExecutionContext&, Init&&);
     static Ref<WebCodecsAudioData> create(ScriptExecutionContext&, Ref<PlatformRawAudioData>&&);
-    static Ref<WebCodecsAudioData> create(ScriptExecutionContext& context, WebCodecsAudioInternalData&& data) { return adoptRef(*new WebCodecsAudioData(context, WTFMove(data))); }
+    static Ref<WebCodecsAudioData> create(ScriptExecutionContext& context, WebCodecsAudioInternalData&& data) { return adoptRef(*new WebCodecsAudioData(context, WTF::move(data))); }
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     std::optional<AudioSampleFormat> format() const;
     float sampleRate() const;

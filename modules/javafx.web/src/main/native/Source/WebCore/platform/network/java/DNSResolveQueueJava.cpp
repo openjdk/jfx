@@ -29,13 +29,9 @@
 #if PLATFORM(JAVA)
 
 #include "NotImplemented.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
-
-void DNSResolveQueueJava::updateIsUsingProxy()
-{
-    notImplemented();
-}
 
 void DNSResolveQueueJava::platformResolve(const String& /* hostname */)
 {
@@ -48,6 +44,11 @@ void DNSResolveQueueJava::resolve(const String& /* hostname */, uint64_t /* iden
 }
 
 void DNSResolveQueueJava::stopResolve(uint64_t /* identifier */)
+{
+    notImplemented();
+}
+
+void DNSResolveQueueJava::updateIsUsingProxy()
 {
     notImplemented();
 }

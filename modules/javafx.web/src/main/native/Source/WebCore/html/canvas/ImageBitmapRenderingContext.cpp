@@ -35,11 +35,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ImageBitmapRenderingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBitmapRenderingContext);
 
 std::unique_ptr<ImageBitmapRenderingContext> ImageBitmapRenderingContext::create(CanvasBase& canvas, ImageBitmapRenderingContextSettings&& settings)
 {
-    auto renderingContext = std::unique_ptr<ImageBitmapRenderingContext>(new ImageBitmapRenderingContext(canvas, WTFMove(settings)));
+    auto renderingContext = std::unique_ptr<ImageBitmapRenderingContext>(new ImageBitmapRenderingContext(canvas, WTF::move(settings)));
 
     InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
 
@@ -48,7 +48,7 @@ std::unique_ptr<ImageBitmapRenderingContext> ImageBitmapRenderingContext::create
 
 ImageBitmapRenderingContext::ImageBitmapRenderingContext(CanvasBase& canvas, ImageBitmapRenderingContextSettings&& settings)
     : CanvasRenderingContext(canvas, Type::BitmapRenderer)
-    , m_settings(WTFMove(settings))
+    , m_settings(WTF::move(settings))
 {
 }
 
@@ -145,8 +145,8 @@ void ImageBitmapRenderingContext::setBlank()
     // can never be changed? Wouldn't a 1x1 buffer give the same rendering? The
     // only reason I can think of is toDataURL(), but that doesn't seem like
     // a good enough argument to waste memory.
-    auto buffer = ImageBuffer::create(FloatSize(canvasBase().width(), canvasBase().height()), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
-    canvasBase().setImageBufferAndMarkDirty(WTFMove(buffer));
+    auto buffer = ImageBuffer::create(FloatSize(canvasBase().width(), canvasBase().height()), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    canvasBase().setImageBufferAndMarkDirty(WTF::move(buffer));
 }
 
 RefPtr<ImageBuffer> ImageBitmapRenderingContext::transferToImageBuffer()

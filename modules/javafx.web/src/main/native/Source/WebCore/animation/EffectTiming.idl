@@ -25,7 +25,8 @@
 
 [
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary EffectTiming {
     double delay = 0;
     double endDelay = 0;

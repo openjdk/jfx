@@ -35,22 +35,32 @@
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutUnit.h"
 #include "PlacedFloats.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Layout {
 
 static bool hasBorder(const BorderValue& borderValue)
 {
-    if (borderValue.style() == BorderStyle::None || borderValue.style() == BorderStyle::Hidden)
+    if (!borderValue.hasVisibleStyle())
         return false;
-    return !!borderValue.width();
+    return !!borderValue.width;
 }
 
 static bool hasPadding(const Style::PaddingEdge& paddingValue)
 {
-    // FIXME: Check if percent value needs to be resolved.
-    return !paddingValue.isZero();
+    // FIXME: Check if percent/calc value needs to be resolved.
+    return WTF::switchOn(paddingValue,
+        [](const Style::PaddingEdge::Fixed& fixed) {
+            return !fixed.isZero();
+        },
+        [](const Style::PaddingEdge::Percentage& percentage) {
+            return !percentage.isZero();
+        },
+        [](const Style::PaddingEdge::Calc&) {
+            return true;
+        }
+    );
 }
 
 static bool hasBorderBefore(const ElementBox& layoutBox)
@@ -301,8 +311,7 @@ bool BlockMarginCollapse::marginAfterCollapsesWithParentMarginAfter(const Elemen
         return false;
 
     // nor (if the box's min-height is non-zero) with the box's top margin.
-    auto& logicalMinHeight = containingBlock.style().logicalMinHeight();
-    if (!logicalMinHeight.isAuto() && !logicalMinHeight.isZero() && marginAfterCollapsesWithParentMarginBefore(layoutBox))
+    if (!containingBlock.style().logicalMinHeight().isKnownZero() && marginAfterCollapsesWithParentMarginBefore(layoutBox))
         return false;
 
     return true;
@@ -341,7 +350,7 @@ bool BlockMarginCollapse::marginAfterCollapsesWithLastInFlowChildMarginAfter(con
 
     // nor (if the box's min-height is non-zero) with the box's top margin.
     auto& logicalMinHeight = layoutBox.style().logicalMinHeight();
-    if (!logicalMinHeight.isAuto() && !logicalMinHeight.isZero() && (marginAfterCollapsesWithParentMarginBefore(*lastInFlowChild) || hasClearance(*lastInFlowChild)))
+    if (!logicalMinHeight.isAuto() && !logicalMinHeight.isKnownZero() && (marginAfterCollapsesWithParentMarginBefore(*lastInFlowChild) || hasClearance(*lastInFlowChild)))
         return false;
 
     // Margins of inline-block boxes do not collapse.
@@ -384,7 +393,8 @@ bool BlockMarginCollapse::marginsCollapseThrough(const ElementBox& layoutBox) co
         return false;
 
     auto& style = layoutBox.style();
-    if (auto& height = style.height(); !(height.isAuto() || (height.isFixed() && height.isZero())))
+    auto& height = style.height();
+    if (auto fixedHeight = height.tryFixed(); !(height.isAuto() || (fixedHeight && fixedHeight->isZero())))
         return false;
 
     // FIXME: Check for computed 0 height.

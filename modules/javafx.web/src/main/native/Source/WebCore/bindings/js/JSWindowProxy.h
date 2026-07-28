@@ -28,9 +28,9 @@
 
 #pragma once
 
-#include "JSDOMConvertInterface.h"
-#include "WindowProxy.h"
 #include <JavaScriptCore/JSGlobalProxy.h>
+#include <WebCore/JSDOMConvertInterface.h>
+#include <WebCore/WindowProxy.h>
 
 namespace JSC {
 class Debugger;

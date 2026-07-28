@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -97,18 +97,18 @@ template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::
                 horizontalRadii[1] = std::nullopt;
 
                 return CSS::BorderRadius {
-                    .horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTFMove(horizontalRadii)),
-                    .vertical = completeQuadFromArray<CSS::BorderRadius::Axis>(WTFMove(verticalRadii))
+                    .horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTF::move(horizontalRadii)),
+                    .vertical = completeQuadFromArray<CSS::BorderRadius::Axis>(WTF::move(verticalRadii))
                 };
             }
         }
 
-        auto horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTFMove(horizontalRadii));
+        auto horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTF::move(horizontalRadii));
         auto vertical = horizontal; // Copy `horizontal` radii to `vertical`.
 
         return CSS::BorderRadius {
-            .horizontal = WTFMove(horizontal),
-            .vertical = WTFMove(vertical)
+            .horizontal = WTF::move(horizontal),
+            .vertical = WTF::move(vertical)
         };
     }
 
@@ -125,8 +125,8 @@ template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::
         return { };
 
     return CSS::BorderRadius {
-        .horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTFMove(horizontalRadii)),
-        .vertical = completeQuadFromArray<CSS::BorderRadius::Axis>(WTFMove(verticalRadii))
+        .horizontal = completeQuadFromArray<CSS::BorderRadius::Axis>(WTF::move(horizontalRadii)),
+        .vertical = completeQuadFromArray<CSS::BorderRadius::Axis>(WTF::move(verticalRadii))
     };
 }
 
@@ -355,10 +355,10 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
     auto rangeCopy = range;
 
     std::optional<CSS::Color> color;
-    std::optional<CSS::Length<>> x;
-    std::optional<CSS::Length<>> y;
-    std::optional<CSS::Length<CSS::Nonnegative>> blur;
-    std::optional<CSS::Length<>> spread;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> x;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> y;
+    std::optional<CSS::Length<CSS::NonnegativeUnzoomed>> blur;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> spread;
     std::optional<CSS::Keyword::Inset> inset;
 
     for (size_t i = 0; i < 3; i++) {
@@ -385,7 +385,7 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
             // not a valid <shadow>.
             if (color)
                 return { };
-            color = WTFMove(*maybeColor);
+            color = WTF::move(*maybeColor);
             continue;
         }
 
@@ -397,10 +397,10 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
             return { };
         }
 
-        x = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
+        x = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(rangeCopy, state);
         if (!x)
             return { };
-        y = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
+        y = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(rangeCopy, state);
         if (!y)
             return { };
 
@@ -409,13 +409,13 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
         // The explicit check for calc() is unfortunate. This is ensuring that we only fail
         // parsing if there is a length, but it fails the range check.
         if (token.type() == DimensionToken || token.type() == NumberToken || (token.type() == FunctionToken && CSSCalc::isCalcFunction(token.functionId()))) {
-            blur = MetaConsumer<CSS::Length<CSS::Nonnegative>>::consume(rangeCopy, state);
+            blur = MetaConsumer<CSS::Length<CSS::NonnegativeUnzoomed>>::consume(rangeCopy, state);
             if (!blur)
                 return { };
         }
 
         if (blur)
-            spread = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
+            spread = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(rangeCopy, state);
     }
 
     if (!y)
@@ -424,11 +424,11 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
     range = rangeCopy;
 
     return CSS::BoxShadow {
-        .color = WTFMove(color),
-        .location = { WTFMove(*x), WTFMove(*y) },
-        .blur = WTFMove(blur),
-        .spread = WTFMove(spread),
-        .inset = WTFMove(inset),
+        .color = WTF::move(color),
+        .location = { WTF::move(*x), WTF::move(*y) },
+        .blur = WTF::move(blur),
+        .spread = WTF::move(spread),
+        .inset = WTF::move(inset),
         .isWebkitBoxShadow = isWebkitBoxShadow
     };
 }
@@ -443,7 +443,7 @@ static std::optional<CSS::BoxShadowProperty::List> consumeUnresolvedBoxShadowLis
         auto shadow = consumeSingleUnresolvedBoxShadow(rangeCopy, state, isWebkitBoxShadow);
         if (!shadow)
             return { };
-        list.value.append(WTFMove(*shadow));
+        list.value.append(WTF::move(*shadow));
     } while (consumeCommaIncludingWhitespace(rangeCopy));
 
     range = rangeCopy;
@@ -458,7 +458,7 @@ static std::optional<CSS::BoxShadowProperty> consumeUnresolvedBoxShadow(CSSParse
         return CSS::BoxShadowProperty { CSS::Keyword::None { } };
     }
     if (auto boxShadowList = consumeUnresolvedBoxShadowList(range, state, isWebkitBoxShadow))
-        return CSS::BoxShadowProperty { WTFMove(*boxShadowList) };
+        return CSS::BoxShadowProperty { WTF::move(*boxShadowList) };
     return { };
 }
 
@@ -468,14 +468,14 @@ RefPtr<CSSValue> consumeBoxShadow(CSSParserTokenRange& range, CSS::PropertyParse
     // https://drafts.csswg.org/css-backgrounds/#propdef-box-shadow
 
     if (auto property = consumeUnresolvedBoxShadow(range, state, false))
-        return CSSBoxShadowPropertyValue::create({ WTFMove(*property) });
+        return CSSBoxShadowPropertyValue::create({ WTF::move(*property) });
     return nullptr;
 }
 
 RefPtr<CSSValue> consumeWebkitBoxShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (auto property = consumeUnresolvedBoxShadow(range, state, true))
-        return CSSBoxShadowPropertyValue::create({ WTFMove(*property) });
+        return CSSBoxShadowPropertyValue::create({ WTF::move(*property) });
     return nullptr;
 }
 
@@ -505,9 +505,9 @@ RefPtr<CSSValue> consumeWebkitBoxReflect(CSSParserTokenRange& range, CSS::Proper
         auto components = consumeBorderImageComponents(range, state, BorderImageSliceFillDefault::Yes);
         if (!components)
             return nullptr;
-        mask = createBorderImageValue(WTFMove(*components));
+        mask = createBorderImageValue(WTF::move(*components));
     }
-    return CSSReflectValue::create(*direction, offset.releaseNonNull(), WTFMove(mask));
+    return CSSReflectValue::create(*direction, offset.releaseNonNull(), WTF::move(mask));
 }
 
 } // namespace CSSPropertyParserHelpers

@@ -27,7 +27,6 @@
 #include "GraphicsContext.h"
 
 #include "BidiResolver.h"
-#include "DecomposedGlyphs.h"
 #include "DisplayList.h"
 #include "Filter.h"
 #include "FilterImage.h"
@@ -38,7 +37,7 @@
 #include "IntRect.h"
 #include "LayoutRoundedRect.h"
 #include "SystemImage.h"
-#include "TextBoxIterator.h"
+#include "TextRunIterator.h"
 #include "VideoFrame.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -108,6 +107,11 @@ void GraphicsContext::unwindStateStack(unsigned count)
     }
 }
 
+void GraphicsContext::unwindStateStack()
+{
+    unwindStateStack(stackSize());
+}
+
 FloatSize GraphicsContext::platformShadowOffset(const FloatSize& shadowOffset) const
 {
 #if USE(CG)
@@ -175,13 +179,8 @@ void GraphicsContext::drawGlyphs(const Font& font, std::span<const GlyphBufferGl
 
 void GraphicsContext::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
-    // Called by implementations that transform drawGlyphs into drawGlyphsImmediate or drawDecomposedGlyphs.
+    // Called by implementations that transform drawGlyphs into drawGlyphsImmediate, drawImageBuffer, etc calls.
     drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
-}
-
-void GraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
-{
-    FontCascade::drawGlyphs(*this, font, decomposedGlyphs.glyphs(), decomposedGlyphs.advances(), decomposedGlyphs.localAnchor(), decomposedGlyphs.fontSmoothingMode());
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
@@ -191,14 +190,14 @@ void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& 
 
 void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, const FloatPoint& point, FontCascade::CustomFontNotReadyAction customFontNotReadyAction)
 {
-    BidiResolver<TextBoxIterator, BidiCharacterRun> bidiResolver;
+    BidiResolver<TextRunIterator, BidiCharacterRun> bidiResolver;
     bidiResolver.setStatus(BidiStatus(run.direction(), run.directionalOverride()));
-    bidiResolver.setPositionIgnoringNestedIsolates(TextBoxIterator(&run, 0));
+    bidiResolver.setPositionIgnoringNestedIsolates(TextRunIterator(&run, 0));
 
     // FIXME: This ownership should be reversed. We should pass BidiRunList
     // to BidiResolver in createBidiRunsForLine.
     BidiRunList<BidiCharacterRun>& bidiRuns = bidiResolver.runs();
-    bidiResolver.createBidiRunsForLine(TextBoxIterator(&run, run.length()));
+    bidiResolver.createBidiRunsForLine(TextRunIterator(&run, run.length()));
 
     if (!bidiRuns.runCount())
         return;
@@ -318,11 +317,6 @@ RefPtr<ImageBuffer> GraphicsContext::createAlignedImageBuffer(const FloatRect& r
     return createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingModeForCompatibleBuffer(), renderingMethod);
 }
 
-void GraphicsContext::drawNativeImage(NativeImage& image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
-{
-    image.draw(*this, destination, source, options);
-}
-
 void GraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
     systemImage.draw(*this, destinationRect);
@@ -386,7 +380,7 @@ void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& desti
     FloatRect sourceScaled = source;
     sourceScaled.scale(image.resolutionScale());
     if (auto nativeImage = nativeImageForDrawing(image))
-        drawNativeImageInternal(*nativeImage, destination, sourceScaled, options);
+        drawNativeImage(*nativeImage, destination, sourceScaled, options);
 }
 
 void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatPoint& destination, ImagePaintingOptions imagePaintingOptions)
@@ -394,7 +388,7 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     if (!image)
         return;
     auto imageLogicalSize = image->logicalSize();
-    drawConsumingImageBuffer(WTFMove(image), FloatRect(destination, imageLogicalSize), FloatRect({ }, imageLogicalSize), imagePaintingOptions);
+    drawConsumingImageBuffer(WTF::move(image), FloatRect(destination, imageLogicalSize), FloatRect({ }, imageLogicalSize), imagePaintingOptions);
 }
 
 void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, ImagePaintingOptions imagePaintingOptions)
@@ -402,7 +396,7 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     if (!image)
         return;
     auto imageLogicalSize = image->logicalSize();
-    drawConsumingImageBuffer(WTFMove(image), destination, FloatRect({ }, imageLogicalSize), imagePaintingOptions);
+    drawConsumingImageBuffer(WTF::move(image), destination, FloatRect({ }, imageLogicalSize), imagePaintingOptions);
 }
 
 void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
@@ -413,8 +407,8 @@ void GraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer> image, const 
     InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
     FloatRect scaledSource = source;
     scaledSource.scale(image->resolutionScale());
-    if (auto nativeImage = ImageBuffer::sinkIntoNativeImage(WTFMove(image)))
-        drawNativeImageInternal(*nativeImage, destination, scaledSource, options);
+    if (auto nativeImage = ImageBuffer::sinkIntoNativeImage(WTF::move(image)))
+        drawNativeImage(*nativeImage, destination, scaledSource, options);
 }
 
 void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter& filter, FilterResults& results)
@@ -423,7 +417,7 @@ void GraphicsContext::drawFilteredImageBuffer(ImageBuffer* sourceImage, const Fl
     if (!result)
         return;
 
-    RefPtr imageBuffer = result->imageBuffer();
+    RefPtr imageBuffer = filter.filterResultBuffer(*result);
     if (!imageBuffer)
         return;
 
@@ -446,9 +440,16 @@ void GraphicsContext::drawControlPart(ControlPart& part, const FloatRoundedRect&
 }
 
 #if ENABLE(VIDEO)
-void GraphicsContext::drawVideoFrame(VideoFrame& frame, const FloatRect& destination, ImageOrientation orientation, bool shouldDiscardAlpha)
+void GraphicsContext::drawVideoFrame(const VideoFrame& frame, const FloatRect& destination, ImageOrientation orientation, bool shouldDiscardAlpha)
 {
-    frame.draw(*this, destination, orientation, shouldDiscardAlpha);
+    RefPtr image = frame.copyNativeImage();
+    if (!image)
+        return;
+    IntSize size = image->size();
+    if (orientation.usesWidthAsHeight())
+        size = size.transposedSize();
+    auto compositeOperator = !shouldDiscardAlpha && image->hasAlpha() ? CompositeOperator::SourceOver : CompositeOperator::Copy;
+    drawNativeImage(*image, destination, { { }, size }, { compositeOperator, orientation });
 }
 #endif
 
@@ -522,35 +523,6 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const Float
     setFillColor(oldFillColor);
 }
 
-void GraphicsContext::adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle penStyle)
-{
-    // For odd widths, we add in 0.5 to the appropriate x/y so that the float arithmetic
-    // works out.  For example, with a border width of 3, WebKit will pass us (y1+y2)/2, e.g.,
-    // (50+53)/2 = 103/2 = 51 when we want 51.5.  It is always true that an even width gave
-    // us a perfect position, but an odd width gave us a position that is off by exactly 0.5.
-    if (penStyle == StrokeStyle::DottedStroke || penStyle == StrokeStyle::DashedStroke) {
-        if (p1.x() == p2.x()) {
-            p1.setY(p1.y() + strokeWidth);
-            p2.setY(p2.y() - strokeWidth);
-        } else {
-            p1.setX(p1.x() + strokeWidth);
-            p2.setX(p2.x() - strokeWidth);
-        }
-    }
-
-    if (static_cast<int>(strokeWidth) % 2) { //odd
-        if (p1.x() == p2.x()) {
-            // We're a vertical line.  Adjust our x.
-            p1.setX(p1.x() + 0.5f);
-            p2.setX(p2.x() + 0.5f);
-        } else {
-            // We're a horizontal line. Adjust our y.
-            p1.setY(p1.y() + 0.5f);
-            p2.setY(p2.y() + 0.5f);
-        }
-    }
-}
-
 FloatSize GraphicsContext::scaleFactor() const
 {
     AffineTransform transform = getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
@@ -592,8 +564,7 @@ void GraphicsContext::drawLineForText(const FloatRect& rect, bool isPrinting, bo
 
 void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList)
 {
-    Ref controlFactory = ControlFactory::shared();
-    drawDisplayList(displayList, controlFactory);
+    drawDisplayList(displayList, ControlFactory::singleton());
 }
 
 void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList, ControlFactory& controlFactory)

@@ -651,11 +651,11 @@ auto VisiblePosition::localCaretRect() const -> LocalCaretRect
         return { };
 
     auto boxAndOffset = inlineBoxAndOffset();
-    CheckedPtr renderer = boxAndOffset.box ? &boxAndOffset.box->renderer() : node->renderer();
+    CheckedPtr renderer = boxAndOffset.box ? const_cast<RenderObject*>(&boxAndOffset.box->renderer()) : node->renderer();
     if (!renderer)
         return { };
 
-    return { computeLocalCaretRect(*renderer, boxAndOffset), const_cast<RenderObject*>(renderer.get()) };
+    return { computeLocalCaretRect(*renderer, boxAndOffset), WTF::move(renderer) };
 }
 
 IntRect VisiblePosition::absoluteCaretBounds(bool* insideFixed) const
@@ -688,7 +688,7 @@ int VisiblePosition::lineDirectionPointForBlockDirectionNavigation() const
     auto caretPoint = renderer->localToAbsolute(localRect.rect.location());
     CheckedPtr<RenderObject> containingBlock = renderer->containingBlock();
     if (!containingBlock)
-        containingBlock = WTFMove(renderer); // Just use ourselves to determine the writing mode if we have no containing block.
+        containingBlock = WTF::move(renderer); // Just use ourselves to determine the writing mode if we have no containing block.
     return containingBlock->isHorizontalWritingMode() ? caretPoint.x() : caretPoint.y();
 }
 

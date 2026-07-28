@@ -30,6 +30,7 @@
 #include "DataObjectJava.h"
 #include "DocumentFragment.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"

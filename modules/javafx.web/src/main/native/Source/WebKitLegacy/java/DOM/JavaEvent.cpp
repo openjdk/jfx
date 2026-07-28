@@ -54,11 +54,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_dispose(JNIEnv*, jclass
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_EventImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
 {
-    if (IMPL->isWheelEvent())
+    if (is<WheelEvent>(*IMPL))
         return 1;
-    if (IMPL->isMouseEvent())
+    if (is<MouseEvent>(*IMPL))
         return 2;
-    if (IMPL->isKeyboardEvent())
+    if (is<KeyboardEvent>(*IMPL))
         return 3;
     if (IMPL->isUIEvent())
         return 4;

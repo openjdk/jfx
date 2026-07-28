@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "StyleLengthWrapper.h"
+#include <WebCore/StyleLengthWrapper.h>
 
 namespace WebCore {
 
@@ -34,7 +34,7 @@ class FontMetrics;
 
 namespace Style {
 
-struct TextDecorationThicknessLength : LengthWrapperBase<LengthPercentage<>> {
+struct TextDecorationThicknessLength : LengthWrapperBase<LengthPercentage<CSS::AllUnzoomed>> {
     using Base::Base;
 };
 
@@ -52,7 +52,7 @@ struct TextDecorationThickness {
     }
 
     TextDecorationThickness(TextDecorationThicknessLength&& length)
-        : m_value { WTFMove(length) }
+        : m_value { WTF::move(length) }
     {
     }
 
@@ -61,7 +61,6 @@ struct TextDecorationThickness {
     bool isLength() const { return WTF::holdsAlternative<TextDecorationThicknessLength>(m_value); }
 
     float resolve(const RenderStyle&) const;
-    float resolve(float fontSize, const FontMetrics&) const;
 
     template<typename... F> decltype(auto) switchOn(F&&... f) const
     {

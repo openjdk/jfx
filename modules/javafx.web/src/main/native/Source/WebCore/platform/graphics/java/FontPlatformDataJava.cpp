@@ -71,7 +71,7 @@ std::unique_ptr<FontPlatformData> FontPlatformData::create(
     RefPtr<RQRef> wcFont = getJavaFont(
             family,
             fontDescription.computedSize(),
-            isItalic(fontDescription.italic()),
+            isItalic(fontDescription.fontStyleSlope()),
             fontDescription.weight() >= boldWeightValue());
     return !wcFont ? nullptr : std::make_unique<FontPlatformData>(wcFont, fontDescription.computedSize());
 }

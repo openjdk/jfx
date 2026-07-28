@@ -35,7 +35,7 @@ namespace WebCore {
 class MockPayment final : public Payment {
 public:
     explicit MockPayment(ApplePayPayment&& applePayPayment)
-        : m_applePayPayment { WTFMove(applePayPayment) }
+        : m_applePayPayment { WTF::move(applePayPayment) }
     {
     }
 

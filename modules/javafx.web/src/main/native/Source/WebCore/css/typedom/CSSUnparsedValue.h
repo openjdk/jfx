@@ -36,7 +36,7 @@ class CSSParserTokenRange;
 using CSSUnparsedSegment = Variant<String, RefPtr<CSSOMVariableReferenceValue>>;
 
 class CSSUnparsedValue final : public CSSStyleValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSUnparsedValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSUnparsedValue);
 public:
     static Ref<CSSUnparsedValue> create(Vector<CSSUnparsedSegment>&&);
     static Ref<CSSUnparsedValue> create(CSSParserTokenRange);
@@ -50,7 +50,7 @@ public:
     std::optional<CSSUnparsedSegment> item(size_t);
     ExceptionOr<CSSUnparsedSegment> setItem(size_t, CSSUnparsedSegment&&);
 
-    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSUnparsedValue; }
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSUnparsedValue; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -63,5 +63,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSUnparsedValue)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSUnparsedValue; }
+    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.styleValueType() == WebCore::CSSStyleValueType::CSSUnparsedValue; }
 SPECIALIZE_TYPE_TRAITS_END()

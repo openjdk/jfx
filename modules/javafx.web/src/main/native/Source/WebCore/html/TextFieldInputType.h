@@ -47,7 +47,7 @@ class TextControlInnerTextElement;
 // The class represents types of which UI contain text fields.
 // It supports not only the types for BaseTextInputType but also type=number.
 class TextFieldInputType : public InputType, protected SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
-    , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
+    , protected DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
 {
     WTF_MAKE_TZONE_ALLOCATED(TextFieldInputType);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextFieldInputType);
@@ -68,13 +68,13 @@ protected:
     HTMLElement* autoFillButtonElement() const final;
     HTMLElement* dataListButtonElement() const final;
 
-    virtual bool needsContainer() const;
+    virtual bool needsContainer() const { return false; }
     void createShadowSubtree() override;
     void removeShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
     void readOnlyStateChanged() final;
-    bool supportsReadOnly() const final;
+    bool supportsReadOnly() const final { return true; }
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     void handleBlurEvent() final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) override;
@@ -88,11 +88,11 @@ private:
     bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isEmptyValue() const final;
-    void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) final;
+    void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) override;
     void forwardEvent(Event&) final;
     bool shouldSubmitImplicitly(Event&) final;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) override;
-    bool shouldUseInputMethod() const override;
+    bool shouldUseInputMethod() const override { return true; }
     bool shouldRespectListAttribute() override;
     HTMLElement* placeholderElement() const final;
     void updatePlaceholderText() final;
@@ -121,8 +121,9 @@ private:
     void createAutoFillButton(AutoFillButtonType);
 
     void createDataListDropdownIndicator();
-    bool isPresentingAttachedView() const final;
-    bool isFocusingWithDataListDropdown() const final;
+    bool isPresentingAttachedView() const final { return m_popupIsVisible; }
+    void setPopupIsVisible(bool);
+    bool isFocusingWithDataListDropdown() const final { return m_isFocusingWithDataListDropdown; }
     void dataListMayHaveChanged() final;
     void displaySuggestions(DataListSuggestionActivationType);
     void closeSuggestions();
@@ -137,6 +138,7 @@ private:
 
     void dataListButtonElementWasClicked() final;
     bool m_isFocusingWithDataListDropdown { false };
+    bool m_popupIsVisible { false };
     RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
 
     std::pair<String, Vector<DataListSuggestion>> m_cachedSuggestions;

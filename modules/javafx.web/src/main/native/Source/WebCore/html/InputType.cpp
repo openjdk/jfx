@@ -38,7 +38,7 @@
 #include "DateInputType.h"
 #include "DateTimeLocalInputType.h"
 #include "Decimal.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "ElementInlines.h"
 #include "ElementTextDirection.h"
 #include "EmailInputType.h"
@@ -58,7 +58,6 @@
 #include "MonthInputType.h"
 #include "NodeRenderStyle.h"
 #include "NumberInputType.h"
-#include "Page.h"
 #include "PasswordInputType.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RadioInputType.h"
@@ -123,11 +122,12 @@ ALWAYS_INLINE bool isInvalidInputType(const InputType& baseInputType, const Stri
 
 static InputTypeFactoryMap createInputTypeFactoryMap()
 {
-    static const struct InputTypes {
+    struct InputType {
         InputTypeConditionalFunction conditionalFunction;
         InputTypeNameFunction nameFunction;
         InputTypeFactoryFunction factoryFunction;
-    } inputTypes[] = {
+    };
+    static const auto inputTypes = std::to_array<InputType>({
         { nullptr, &InputTypeNames::button, &createInputType<ButtonInputType> },
         { nullptr, &InputTypeNames::checkbox, &createInputType<CheckboxInputType> },
         { &Settings::inputTypeColorEnabled, &InputTypeNames::color, &createInputType<ColorInputType> },
@@ -150,7 +150,7 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
         { &Settings::inputTypeTimeEnabled, &InputTypeNames::time, &createInputType<TimeInputType> },
         { nullptr, &InputTypeNames::url, &createInputType<URLInputType> },
         { &Settings::inputTypeWeekEnabled, &InputTypeNames::week, &createInputType<WeekInputType> },
-    };
+    });
 
     InputTypeFactoryMap map;
     for (auto& inputType : inputTypes)
@@ -599,7 +599,7 @@ RenderPtr<RenderElement> InputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
     // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
-    SUPPRESS_UNCOUNTED_ARG return RenderPtr<RenderElement>(RenderElement::createFor(*protectedElement(), WTFMove(style)));
+    SUPPRESS_UNCOUNTED_ARG return RenderPtr<RenderElement>(RenderElement::createFor(*protectedElement(), WTF::move(style)));
 }
 
 void InputType::blur()
@@ -1176,8 +1176,10 @@ void InputType::createShadowSubtreeIfNeeded()
 bool InputType::hasTouchEventHandler() const
 {
 #if ENABLE(IOS_TOUCH_EVENTS)
-    if (isSwitch())
-        return true;
+    if (isSwitch()) {
+        ASSERT(element());
+        return !protectedElement()->isDisabledFormControl();
+    }
 #else
     if (isRangeControl())
         return true;

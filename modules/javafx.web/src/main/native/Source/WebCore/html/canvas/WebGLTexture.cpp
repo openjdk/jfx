@@ -36,7 +36,7 @@ namespace WebCore {
 
 RefPtr<WebGLTexture> WebGLTexture::create(WebGLRenderingContextBase& context)
 {
-    auto object = context.protectedGraphicsContextGL()->createTexture();
+    auto object = context.graphicsContextGL()->createTexture();
     if (!object)
         return nullptr;
     return adoptRef(*new WebGLTexture { context, object });

@@ -53,14 +53,16 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AsyncFileStream);
 
 struct AsyncFileStream::Internals {
-    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(AsyncFileStream);
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(Internals);
 
     explicit Internals(FileStreamClient&);
 
     FileStream stream;
-    FileStreamClient& client;
+    WeakRef<FileStreamClient> client;
     std::atomic_bool destroyed { false };
 };
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(AsyncFileStream::Internals);
 
 inline AsyncFileStream::Internals::Internals(FileStreamClient& client)
     : client(client)
@@ -95,7 +97,7 @@ static void callOnFileThread(Function<void ()>&& function)
         });
     });
 
-    queue.get().append(makeUnique<Function<void ()>>(WTFMove(function)));
+    queue.get().append(makeUnique<Function<void ()>>(WTF::move(function)));
 }
 
 AsyncFileStream::AsyncFileStream(FileStreamClient& client)
@@ -113,8 +115,8 @@ AsyncFileStream::~AsyncFileStream()
 
     // Call through file thread and back to main thread to make sure deletion happens
     // after all file thread functions and all main thread functions called from them.
-    callOnFileThread([internals = WTFMove(m_internals)]() mutable {
-        callOnMainThread([internals = WTFMove(internals)] {
+    callOnFileThread([internals = WTF::move(m_internals)]() mutable {
+        callOnMainThread([internals = WTF::move(internals)] {
         });
     });
 }
@@ -122,7 +124,7 @@ AsyncFileStream::~AsyncFileStream()
 void AsyncFileStream::perform(Function<Function<void(FileStreamClient&)>(FileStream&)>&& operation)
 {
     auto& internals = *m_internals;
-    callOnFileThread([&internals, operation = WTFMove(operation)] {
+    callOnFileThread([&internals, operation = WTF::move(operation)] {
         // Don't do the operation if stop was already called on the main thread. Note that there is
         // a race here, but since skipping the operation is an optimization it's OK that we can't
         // guarantee exactly which operations are skipped. Note that this is also the only reason
@@ -132,7 +134,7 @@ void AsyncFileStream::perform(Function<Function<void(FileStreamClient&)>(FileStr
         callOnMainThread([&internals, mainThreadWork = operation(internals.stream)] {
             if (internals.destroyed)
                 return;
-            mainThreadWork(internals.client);
+            mainThreadWork(Ref { internals.client.get() });
         });
     });
 }

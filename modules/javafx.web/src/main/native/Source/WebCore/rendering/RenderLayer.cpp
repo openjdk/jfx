@@ -51,10 +51,10 @@
 #include "BitmapImage.h"
 #include "BorderShape.h"
 #include "BoxLayoutShape.h"
-#include "ContainerNodeInlines.h"
-#include "CSSFilter.h"
+#include "CSSFilterRenderer.h"
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "DebugPageOverlays.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
@@ -69,11 +69,13 @@
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FocusController.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayer.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFrameElement.h"
@@ -93,7 +95,6 @@
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
-#include "OverflowEvent.h"
 #include "OverlapTestRequestClient.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
@@ -112,6 +113,7 @@
 #include "RenderLayerCompositor.h"
 #include "RenderLayerFilters.h"
 #include "RenderLayerInlines.h"
+#include "RenderLayerModelObjectInlines.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderMarquee.h"
 #include "RenderMultiColumnFlow.h"
@@ -127,7 +129,7 @@
 #include "RenderSVGViewportContainer.h"
 #include "RenderScrollbar.h"
 #include "RenderScrollbarPart.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderText.h"
@@ -136,8 +138,8 @@
 #include "RenderTreeMutationDisallowedScope.h"
 #include "RenderView.h"
 #include "SVGClipPathElement.h"
+#include "SVGFilterElement.h"
 #include "SVGNames.h"
-#include "ScaleTransformOperation.h"
 #include "ScrollAnimator.h"
 #include "ScrollSnapOffsetsInfo.h"
 #include "Scrollbar.h"
@@ -149,12 +151,15 @@
 #include "StyleAttributeMutationScope.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
+#include "StyleScaleTransformFunction.h"
+#include "StyleTransformResolver.h"
+#include "StyleTranslateTransformFunction.h"
 #include "Styleable.h"
 #include "TransformOperationData.h"
 #include "TransformationMatrix.h"
-#include "TranslateTransformOperation.h"
 #include "ViewTransition.h"
 #include "WheelEventTestMonitor.h"
+#include <ranges>
 #include <stdio.h>
 #include <wtf/HexNumber.h>
 #include <wtf/MonotonicTime.h>
@@ -265,7 +270,7 @@ public:
 
     void setClipRects(ClipRectsType clipRectsType, bool respectOverflowClip, RefPtr<ClipRects>&& clipRects)
     {
-        m_clipRects[getIndex(clipRectsType, respectOverflowClip)] = WTFMove(clipRects);
+        m_clipRects[getIndex(clipRectsType, respectOverflowClip)] = WTF::move(clipRects);
     }
 
 #if ASSERT_ENABLED
@@ -310,7 +315,7 @@ static ScrollingScope nextScrollingScope()
     return ++currentScope;
 }
 
-WTF_MAKE_PREFERABLY_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(RenderLayer);
+WTF_MAKE_PREFERABLY_COMPACT_TZONE_ALLOCATED_IMPL(RenderLayer);
 
 RenderLayer::RenderLayer(RenderLayerModelObject& renderer)
     : m_isRenderViewLayer(renderer.isRenderView())
@@ -412,18 +417,6 @@ RenderLayer::~RenderLayer()
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(renderer().renderTreeBeingDestroyed() || !firstChild());
 }
 
-RenderLayer::PaintedContentRequest::PaintedContentRequest(const RenderLayer& owningLayer)
-{
-#if HAVE(SUPPORT_HDR_DISPLAY)
-    if (owningLayer.renderer().document().drawsHDRContent())
-        makeHDRContentUnknown();
-    else
-        makeHDRContentFalse();
-#else
-    UNUSED_PARAM(owningLayer);
-#endif
-}
-
 void RenderLayer::removeClipperClientIfNeeded() const
 {
     WTF::switchOn(renderer().style().clipPath(),
@@ -487,7 +480,7 @@ void RenderLayer::addChild(RenderLayer& child, RenderLayer* beforeChild)
 
 void RenderLayer::removeChild(RenderLayer& oldChild)
 {
-    if (!renderer().renderTreeBeingDestroyed())
+    if (!renderer().renderTreeBeingDestroyed() && !isReflectionLayer(oldChild))
         compositor().layerWillBeRemoved(*this, oldChild);
 
     // remove the child
@@ -578,7 +571,7 @@ void RenderLayer::removeOnlyThisLayer()
         removeChild(*reflectionLayer);
 
     // Now walk our kids and reattach them to our parent.
-    RenderLayer* current = m_first;
+    RenderLayer* current = m_first.get();
     while (current) {
         RenderLayer* next = current->nextSibling();
         removeChild(*current);
@@ -613,8 +606,8 @@ static bool canCreateStackingContext(const RenderLayer& layer)
         || renderer.hasReflection()
         || renderer.style().hasIsolation()
         || renderer.shouldApplyPaintContainment()
-        || !renderer.style().hasAutoUsedZIndex()
-        || (renderer.style().willChange() && renderer.style().willChange()->canCreateStackingContext())
+        || !renderer.style().usedZIndex().isAuto()
+        || renderer.style().willChange().canCreateStackingContext()
         || layer.establishesTopLayer();
 }
 
@@ -634,7 +627,14 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
 
 bool RenderLayer::shouldBeCSSStackingContext() const
 {
-    return !renderer().style().hasAutoUsedZIndex() || renderer().shouldApplyLayoutContainment() || renderer().shouldApplyPaintContainment() || renderer().requiresRenderingConsolidationForViewTransition() || renderer().isRenderViewTransitionCapture() ||  renderer().isViewTransitionRoot() || renderer().isViewTransitionContainingBlock() || isRenderViewLayer();
+    return !renderer().style().usedZIndex().isAuto()
+        || renderer().shouldApplyLayoutContainment()
+        || renderer().shouldApplyPaintContainment()
+        || renderer().requiresRenderingConsolidationForViewTransition()
+        || renderer().isRenderViewTransitionCapture()
+        || renderer().isViewTransitionRoot()
+        || renderer().isViewTransitionContainingBlock()
+        || isRenderViewLayer();
 }
 
 bool RenderLayer::computeCanBeBackdropRoot() const
@@ -657,7 +657,7 @@ bool RenderLayer::computeCanBeBackdropRoot() const
         || renderer().hasBlendMode()
         || renderer().hasMask()
         || (renderer().requiresRenderingConsolidationForViewTransition() && !renderer().isDocumentElementRenderer())
-        || (renderer().style().willChange() && renderer().style().willChange()->canBeBackdropRoot());
+        || renderer().style().willChange().canBeBackdropRoot();
 }
 
 bool RenderLayer::setIsNormalFlowOnly(bool isNormalFlowOnly)
@@ -896,6 +896,7 @@ void RenderLayer::setWasOmittedFromZOrderTree()
 
     ASSERT(!isNormalFlowOnly());
     removeSelfFromCompositor();
+    setSelfAndDescendantsNeedPositionUpdate();
 
     // Omitting a stacking context removes the whole subtree, otherwise collectLayers will
     // visit and omit/include descendants separately.
@@ -906,6 +907,15 @@ void RenderLayer::setWasOmittedFromZOrderTree()
         parent()->setDescendantsNeedCompositingRequirementsTraversal();
 
     m_wasOmittedFromZOrderTree = true;
+}
+
+void RenderLayer::setWasIncludedInZOrderTree()
+{
+    if (!m_wasOmittedFromZOrderTree)
+        return;
+
+    m_wasOmittedFromZOrderTree = false;
+    setSelfAndDescendantsNeedPositionUpdate();
 }
 
 void RenderLayer::collectLayers(std::unique_ptr<Vector<RenderLayer*>>& positiveZOrderList, std::unique_ptr<Vector<RenderLayer*>>& negativeZOrderList, OptionSet<Compositing>& accumulatedDirtyFlags)
@@ -1000,12 +1010,7 @@ String RenderLayer::name() const
     return makeString(renderer().debugDescription(), " (reflection)"_s);
 }
 
-RenderLayerCompositor& RenderLayer::compositor() const
-{
-    return renderer().view().compositor();
-}
-
-void RenderLayer::contentChanged(ContentChangeType changeType)
+void RenderLayer::contentChanged(ContentChangeType changeType, const std::optional<FloatRect>& dirtyRect)
 {
     if (changeType == ContentChangeType::Canvas || changeType == ContentChangeType::Video || changeType == ContentChangeType::FullScreen || changeType == ContentChangeType::Model || changeType == ContentChangeType::HDRImage) {
         setNeedsPostLayoutCompositingUpdate();
@@ -1013,7 +1018,7 @@ void RenderLayer::contentChanged(ContentChangeType changeType)
     }
 
     if (auto* backing = this->backing())
-        backing->contentChanged(changeType);
+        backing->contentChanged(changeType, dirtyRect);
 }
 
 bool RenderLayer::canRender3DTransforms() const
@@ -1024,7 +1029,7 @@ bool RenderLayer::canRender3DTransforms() const
 bool RenderLayer::shouldPaintWithFilters(OptionSet<PaintBehavior> paintBehavior) const
 {
     const auto& filter = renderer().style().filter();
-    if (filter.isEmpty())
+    if (filter.isNone())
         return false;
 
     if (renderer().isRenderOrLegacyRenderSVGRoot() && filter.isReferenceFilter())
@@ -1260,7 +1265,7 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
     }
 
     if (mode == Write)
-    updateDescendantDependentFlags();
+        updateLayerListsIfNeeded();
     else {
         LAYER_POSITIONS_ASSERT(!m_visibleDescendantStatusDirty);
         LAYER_POSITIONS_ASSERT(!m_hasSelfPaintingLayerDescendantDirty);
@@ -1299,9 +1304,6 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
         if (mode == Verify) {
             WeakPtr repaintContainer = renderer().containerForRepaint().renderer.get();
             LAYER_POSITIONS_ASSERT(repaintRects() || (isSubtreeVisibilityHiddenOrOpacityZero() || !isSelfPaintingLayer()));
-            if (isSubtreeVisibilityHiddenOrOpacityZero())
-                LAYER_POSITIONS_ASSERT(!m_repaintContainer);
-            else
             LAYER_POSITIONS_ASSERT(m_repaintContainer == repaintContainer);
             LAYER_POSITIONS_ASSERT_IMPLIES(repaintRects(), *repaintRects() == renderer().rectsForRepaintingAfterLayout(repaintContainer.get(), RepaintOutlineBounds::Yes));
             return;
@@ -1321,7 +1323,7 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
         if (checkForRepaint && shouldRepaintAfterLayout() && newRects) {
             auto needsFullRepaint = repaintStatus() == RepaintStatus::NeedsFullRepaint ? RequiresFullRepaint::Yes : RequiresFullRepaint::No;
             auto resolvedOldRects = valueOrDefault(oldRects);
-            renderer().repaintAfterLayoutIfNeeded(WTFMove(repaintContainer), needsFullRepaint, resolvedOldRects, *newRects);
+            renderer().repaintAfterLayoutIfNeeded(WTF::move(repaintContainer), needsFullRepaint, resolvedOldRects, *newRects);
         }
     };
 
@@ -1496,9 +1498,6 @@ void RenderLayer::computeRepaintRects(const RenderLayerModelObject* repaintConta
     else
         setRepaintRects(renderer().rectsForRepaintingAfterLayout(repaintContainer, RepaintOutlineBounds::Yes));
 
-    if (isSubtreeVisibilityHiddenOrOpacityZero())
-        m_repaintContainer = nullptr;
-    else
     m_repaintContainer = repaintContainer;
 }
 
@@ -1697,14 +1696,14 @@ FloatRect RenderLayer::referenceBoxRectForClipPath(CSSBoxType boxType, const Lay
     return referenceBoxRect;
 }
 
-void RenderLayer::updateTransformFromStyle(TransformationMatrix& transform, const RenderStyle& style, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderLayer::updateTransformFromStyle(TransformationMatrix& transform, const RenderStyle& style, OptionSet<Style::TransformResolverOption> options) const
 {
     // https://drafts.csswg.org/css-anchor-position-1/#default-scroll-shift
     // > After layout has been performed for abspos, it is additionally shifted by
     // > the default scroll shift, as if affected by a transform
     // > ** (before any other transforms). **
-    if (m_snapshottedScrollOffsetForAnchorPositioning)
-        transform.translate(m_snapshottedScrollOffsetForAnchorPositioning->width(), m_snapshottedScrollOffsetForAnchorPositioning->height());
+    if (m_anchorScrollAdjustment)
+        transform.translate(m_anchorScrollAdjustment->width(), m_anchorScrollAdjustment->height());
 
     auto referenceBoxRect = snapRectToDevicePixelsIfNeeded(renderer().transformReferenceBoxRect(style), renderer());
     renderer().applyTransform(transform, style, referenceBoxRect, options);
@@ -1734,7 +1733,7 @@ void RenderLayer::updateTransform()
 
     if (hasTransform) {
         m_transform->makeIdentity();
-        updateTransformFromStyle(*m_transform, renderer().style(), RenderStyle::allTransformOperations());
+        updateTransformFromStyle(*m_transform, renderer().style(), Style::TransformResolver::allTransformOperations);
     }
 
     if (had3DTransform != has3DTransform()) {
@@ -1760,7 +1759,7 @@ void RenderLayer::forceStackingContextIfNeeded()
     }
 }
 
-TransformationMatrix RenderLayer::currentTransform(OptionSet<RenderStyle::TransformOperationOption> options) const
+TransformationMatrix RenderLayer::currentTransform(OptionSet<Style::TransformResolverOption> options) const
 {
     if (!m_transform)
         return { };
@@ -1770,7 +1769,7 @@ TransformationMatrix RenderLayer::currentTransform(OptionSet<RenderStyle::Transf
 
     // Query the animatedStyle() to obtain the current transformation, when accelerated transform animations are running.
     auto styleable = Styleable::fromRenderer(renderer());
-    if ((styleable && styleable->isRunningAcceleratedAnimationOfProperty(CSSPropertyTransform)) || !options.contains(RenderStyle::TransformOperationOption::TransformOrigin)) {
+    if ((styleable && styleable->isRunningAcceleratedTransformRelatedAnimation()) || !options.contains(Style::TransformResolverOption::TransformOrigin)) {
         std::unique_ptr<RenderStyle> animatedStyle = renderer().animatedStyle();
 
         TransformationMatrix transform;
@@ -1783,7 +1782,7 @@ TransformationMatrix RenderLayer::currentTransform(OptionSet<RenderStyle::Transf
 
 TransformationMatrix RenderLayer::currentTransform() const
 {
-    return currentTransform(RenderStyle::allTransformOperations());
+    return currentTransform(Style::TransformResolver::allTransformOperations);
 }
 
 TransformationMatrix RenderLayer::renderableTransform(OptionSet<PaintBehavior> paintBehavior) const
@@ -1993,7 +1992,11 @@ void RenderLayer::updateDescendantDependentFlags()
             hasViewportConstrainedDescendant |= child->m_hasViewportConstrainedDescendant || child->isViewportConstrained();
         }
 
+        if (hasVisibleDescendant != m_hasVisibleDescendant) {
         m_hasVisibleDescendant = hasVisibleDescendant;
+            if (!isNormalFlowOnly())
+                dirtyHiddenStackingContextAncestorZOrderLists();
+        }
         m_visibleDescendantStatusDirty = false;
         m_hasSelfPaintingLayerDescendant = hasSelfPaintingLayerDescendant;
         m_hasSelfPaintingLayerDescendantDirty = false;
@@ -2240,7 +2243,11 @@ TransformationMatrix RenderLayer::perspectiveTransform() const
         return { };
 
     auto transformReferenceBoxRect = snapRectToDevicePixelsIfNeeded(renderer().transformReferenceBoxRect(style), renderer());
-    auto perspectiveOrigin = style.computePerspectiveOrigin(transformReferenceBoxRect);
+
+    TransformationMatrix transform;
+    Style::TransformResolver transformResolver { transform, style };
+
+    auto perspectiveOrigin = transformResolver.computePerspectiveOrigin(transformReferenceBoxRect);
 
     // In the regular case of a non-clipped, non-scrolled GraphicsLayer, all transformations
     // (via CSS 'transform' / 'perspective') are applied with respect to a predefined anchor point,
@@ -2254,16 +2261,16 @@ TransformationMatrix RenderLayer::perspectiveTransform() const
     // However the GraphicsLayer platform implementations (e.g. CA on macOS) apply the children transform,
     // defined on the parent, with respect to the anchor point of the parent, when rendering child elements.
     // This is wrong, as the perspective transformation (applied to a child of the element defining the
-    // 3d effect), must be independant of the chosen transform-origin (the parents transform origin
+    // 3d effect), must be independent of the chosen transform-origin (the parents transform origin
     // must not affect its children).
     //
-    // To circumvent this, explicitely remove the transform-origin dependency in the perspective matrix.
+    // To circumvent this, explicitly remove the transform-origin dependency in the perspective matrix.
     auto transformOrigin = transformOriginPixelSnappedIfNeeded();
 
-    TransformationMatrix transform;
-    style.unapplyTransformOrigin(transform, transformOrigin);
-    style.applyPerspective(transform, perspectiveOrigin);
-    style.applyTransformOrigin(transform, transformOrigin);
+    transformResolver.unapplyTransformOrigin(transformOrigin);
+    transformResolver.applyPerspective(perspectiveOrigin);
+    transformResolver.applyTransformOrigin(transformOrigin);
+
     return transform;
 }
 
@@ -2275,7 +2282,7 @@ FloatPoint3D RenderLayer::transformOriginPixelSnappedIfNeeded() const
     const auto& style = renderer().style();
     auto referenceBoxRect = renderer().transformReferenceBoxRect(style);
 
-    auto origin = style.computeTransformOrigin(referenceBoxRect);
+    auto origin = Style::TransformResolver::computeTransformOrigin(style, referenceBoxRect);
     if (rendererNeedsPixelSnapping(renderer()))
         origin.setXY(roundPointToDevicePixels(LayoutPoint(origin.xy()), renderer().document().deviceScaleFactor()));
     return origin;
@@ -2285,7 +2292,7 @@ FloatPoint RenderLayer::perspectiveOrigin() const
 {
     if (!renderer().hasTransformRelatedProperty())
         return { };
-    return Style::evaluate(renderer().style().perspectiveOrigin(), renderer().transformReferenceBoxRect(renderer().style()).size());
+    return Style::evaluate<FloatPoint>(renderer().style().perspectiveOrigin(), renderer().transformReferenceBoxRect(renderer().style()).size(), Style::ZoomNeeded { });
 }
 
 static inline bool isContainerForPositioned(RenderLayer& layer, PositionType position, bool establishesTopLayer)
@@ -2763,7 +2770,7 @@ static RenderLayer* findCommonAncestor(const RenderLayer& firstLayer, const Rend
     if (&firstLayer == &secondLayer)
         return const_cast<RenderLayer*>(&firstLayer);
 
-    SingleThreadWeakHashSet<const RenderLayer> ancestorChain;
+    InlineWeakKeyHashSet<const RenderLayer> ancestorChain;
     for (auto* currLayer = &firstLayer; currLayer; currLayer = currLayer->parent())
         ancestorChain.add(*currLayer);
 
@@ -2928,10 +2935,15 @@ LayoutSize RenderLayer::offsetFromAncestor(const RenderLayer* ancestorLayer, Col
     return toLayoutSize(convertToLayerCoords(ancestorLayer, LayoutPoint(), adjustForColumns));
 }
 
-bool RenderLayer::shouldTryToScrollForScrollIntoView() const
+bool RenderLayer::shouldTryToScrollForScrollIntoView(const ScrollRectToVisibleOptions& options) const
 {
     if (!renderer().isRenderBox() || !renderer().hasNonVisibleOverflow())
         return false;
+
+    if (options.allowScrollingOverflowHidden == AllowScrollingOverflowHidden::No) {
+        if (renderer().style().overflowX() == Overflow::Hidden && renderer().style().overflowY() == Overflow::Hidden)
+            return false;
+    }
 
     // Don't scroll to reveal an overflow layer that is restricted by the -webkit-line-clamp property.
     // FIXME: Is this still needed? It used to be relevant for Safari RSS.
@@ -2961,15 +2973,15 @@ bool RenderLayer::canResize() const
     // We need a special case for <iframe> because they never have
     // hasNonVisibleOverflow(). However, they do "implicitly" clip their contents, so
     // we want to allow resizing them also.
-    return (renderer().hasNonVisibleOverflow() || renderer().isRenderIFrame()) && renderer().style().resize() != Resize::None;
+    return (renderer().hasNonVisibleOverflow() || renderer().isRenderIFrame()) && renderer().style().resize() != Style::Resize::None;
 }
 
 LayoutSize RenderLayer::minimumSizeForResizing(float zoomFactor) const
 {
     // Use the resizer size as the strict minimum size
     auto resizerRect = overflowControlsRects().resizer;
-    LayoutUnit minWidth = Style::evaluateMinimum(renderer().style().minWidth(), renderer().containingBlock()->width());
-    LayoutUnit minHeight = Style::evaluateMinimum(renderer().style().minHeight(), renderer().containingBlock()->height());
+    auto minWidth = Style::evaluateMinimum<LayoutUnit>(renderer().style().minWidth(), renderer().containingBlock()->width(), renderer().style().usedZoomForLength());
+    auto minHeight = Style::evaluateMinimum<LayoutUnit>(renderer().style().minHeight(), renderer().containingBlock()->height(), renderer().style().usedZoomForLength());
     minWidth = std::max(LayoutUnit(minWidth / zoomFactor), LayoutUnit(resizerRect.width()));
     minHeight = std::max(LayoutUnit(minHeight / zoomFactor), LayoutUnit(resizerRect.height()));
     return LayoutSize(minWidth, minHeight);
@@ -2997,7 +3009,7 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     float zoomFactor = renderer->style().usedZoom();
 
     auto absolutePoint = document->view()->windowToContents(evt.position());
-    auto localPoint = roundedIntPoint(absoluteToContents(absolutePoint));
+    auto localPoint = roundedIntPoint(absoluteToContents(LayoutPoint(absolutePoint)));
 
     LayoutSize newOffset = offsetFromResizeCorner(localPoint);
     newOffset.setWidth(newOffset.width() / zoomFactor);
@@ -3016,9 +3028,9 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     StyleAttributeMutationScope mutationScope { styledElement.get() };
     bool isBoxSizingBorder = renderer->style().boxSizing() == BoxSizing::BorderBox;
 
-    Resize resize = renderer->style().resize();
-    bool canResizeWidth = resize == Resize::Horizontal || resize == Resize::Both
-        || (renderer->isHorizontalWritingMode() ? resize == Resize::Inline : resize == Resize::Block);
+    auto resize = renderer->style().resize();
+    bool canResizeWidth = resize == Style::Resize::Horizontal || resize == Style::Resize::Both
+        || (renderer->isHorizontalWritingMode() ? resize == Style::Resize::Inline : resize == Style::Resize::Block);
     if (canResizeWidth && difference.width()) {
         if (is<HTMLFormControlElement>(*styledElement)) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
@@ -3032,8 +3044,8 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
         mutationScope.enqueueMutationRecord();
     }
 
-    bool canResizeHeight = resize == Resize::Vertical || resize == Resize::Both
-        || (renderer->isHorizontalWritingMode() ? resize == Resize::Block : resize == Resize::Inline);
+    bool canResizeHeight = resize == Style::Resize::Vertical || resize == Style::Resize::Both
+        || (renderer->isHorizontalWritingMode() ? resize == Style::Resize::Block : resize == Style::Resize::Inline);
     if (canResizeHeight && difference.height()) {
         if (is<HTMLFormControlElement>(*styledElement)) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
@@ -3071,7 +3083,7 @@ RenderLayer::OverflowControlRects RenderLayer::overflowControlsRects() const
     auto overflowControlsPositioningRect = snappedIntRect(renderBox.paddingBoxRectIncludingScrollbar());
 
     bool placeVerticalScrollbarOnTheLeft = renderBox.shouldPlaceVerticalScrollbarOnLeft();
-    bool haveResizer = renderer().style().resize() != Resize::None && renderer().style().pseudoElementType() == PseudoId::None;
+    bool haveResizer = renderer().style().resize() != Style::Resize::None && !renderer().style().pseudoElementType();
 
     OverflowControlRects result;
     auto cornerRect = [&](IntSize cornerSize) {
@@ -3216,7 +3228,6 @@ void RenderLayer::paint(GraphicsContext& context, const LayoutRect& damageRect, 
 
 void RenderLayer::clipToRect(GraphicsContext& context, GraphicsContextStateSaver& stateSaver, RegionContextStateSaver& regionContextStateSaver, const LayerPaintingInfo& paintingInfo, OptionSet<PaintBehavior> paintBehavior, const ClipRect& clipRect, BorderRadiusClippingRule rule)
 {
-    float deviceScaleFactor = renderer().document().deviceScaleFactor();
     bool needsClipping = !clipRect.isInfinite() && clipRect.rect() != paintingInfo.paintDirtyRect;
     if (needsClipping || clipRect.affectedByRadius())
         stateSaver.save();
@@ -3229,7 +3240,14 @@ void RenderLayer::clipToRect(GraphicsContext& context, GraphicsContextStateSaver
         regionContextStateSaver.pushClip(enclosingIntRect(snappedClipRect));
     }
 
-    if (clipRect.affectedByRadius()) {
+    if (clipRect.affectedByRadius())
+        applyAncestorClippingForBorderRadius(context, paintingInfo, paintBehavior, rule);
+}
+
+void RenderLayer::applyAncestorClippingForBorderRadius(GraphicsContext& context, const LayerPaintingInfo& paintingInfo, OptionSet<PaintBehavior> paintBehavior, BorderRadiusClippingRule rule)
+{
+    float deviceScaleFactor = renderer().document().deviceScaleFactor();
+
         // If the clip rect has been tainted by a border radius, then we have to walk up our layer chain applying the clips from
         // any layers with overflow. The condition for being able to apply these clips is that the overflow object be in our
         // containing block chain so we check that also.
@@ -3237,7 +3255,7 @@ void RenderLayer::clipToRect(GraphicsContext& context, GraphicsContextStateSaver
             if (paintBehavior.contains(PaintBehavior::CompositedOverflowScrollContent) && layer->usesCompositedScrolling())
                 break;
 
-            if (layer->renderer().hasNonVisibleOverflow() && layer->renderer().style().hasBorderRadius() && ancestorLayerIsInContainingBlockChain(*layer)) {
+        if (layer->renderer().hasNonVisibleOverflow() && layer->renderer().style().border().hasBorderRadius() && ancestorLayerIsInContainingBlockChain(*layer)) {
                 auto adjustedClipRect = LayoutRect { LayoutPoint { layer->offsetFromAncestor(paintingInfo.rootLayer, AdjustForColumns) }, layer->rendererBorderBoxRect().size() };
                 adjustedClipRect.move(paintingInfo.subpixelOffset);
                 auto borderShape = BorderShape::shapeForBorderRect(layer->renderer().style(), adjustedClipRect);
@@ -3250,7 +3268,6 @@ void RenderLayer::clipToRect(GraphicsContext& context, GraphicsContextStateSaver
             if (layer == paintingInfo.rootLayer)
                 break;
         }
-    }
 }
 
 static void performOverlapTests(OverlapTestRequestMap& overlapTestRequests, const RenderLayer* rootLayer, const RenderLayer* layer)
@@ -3364,11 +3381,15 @@ void RenderLayer::paintLayerWithEffects(GraphicsContext& context, const LayerPai
         return;
 
     // If this layer is totally invisible then there is nothing to paint.
-    if (!renderer().opacity() && !is<AccessibilityRegionContext>(paintingInfo.regionContext)) {
+    if (!renderer().opacity()
+        && !is<AccessibilityRegionContext>(paintingInfo.regionContext)
+        && !paintFlags.contains(PaintLayerFlag::CollectingEventRegion)) {
         // However, we do want to continue painting for accessibility paints, as we still need accurate
         // geometry for opacity:0 things. It's very common to make form controls "screenreader-only" via
         // CSS, often involving opacity:0, while positioning some other visual-only / mouse-only control in
-        // its place. Having the correct geometry is vital for ensuring VoiceOver can still press these controls.
+        // its place. Having the correct geometry is vital for ensuring VoiceOver can still press these
+        // controls. We need to paint if we are collecting event regions as well to ensure that elements
+        // with opacity:0 are included.
         return;
     }
 
@@ -3462,17 +3483,25 @@ bool RenderLayer::setupFontSubpixelQuantization(GraphicsContext& context, bool& 
     if (context.paintingDisabled())
         return false;
 
-    bool scrollingOnMainThread = true;
+    CheckedPtr box = dynamicDowncast<RenderBox>(renderer());
+    if (!box)
+        return false;
+
+    bool documentScrollsOnMainThread = [&]() {
+        auto& frameView = renderer().view().frameView();
 #if ENABLE(ASYNC_SCROLLING)
     if (RefPtr scrollingCoordinator = page().scrollingCoordinator())
-        scrollingOnMainThread = scrollingCoordinator->shouldUpdateScrollLayerPositionSynchronously(renderer().view().frameView());
+            return scrollingCoordinator->shouldUpdateScrollLayerPositionSynchronously(frameView);
 #endif
+        if (frameView.isScrollableOrRubberbandable())
+            return true;
 
-    // FIXME: We shouldn't have to disable subpixel quantization for overflow clips or subframes once we scroll those
-    // things on the scrolling thread.
-    bool contentsScrollByPainting = (renderer().hasNonVisibleOverflow() && !usesCompositedScrolling()) || (renderer().frame().ownerElement());
+        return false;
+    }();
+
+    bool contentScrollsByPainting = box->hasScrollableOverflow() && !usesCompositedScrolling();
     bool isZooming = !page().chrome().client().hasStablePageScaleFactor();
-    if (scrollingOnMainThread || contentsScrollByPainting || isZooming) {
+    if (documentScrollsOnMainThread || contentScrollsByPainting || isZooming) {
         didQuantizeFonts = context.shouldSubpixelQuantizeFonts();
         context.setShouldSubpixelQuantizeFonts(false);
         return true;
@@ -3625,9 +3654,20 @@ GraphicsContext* RenderLayer::setupFilters(GraphicsContext& destinationContext, 
     LayoutRect filterRepaintRect = paintingFilters->dirtySourceRect();
     filterRepaintRect.move(offsetFromRoot);
 
-    auto rootRelativeBounds = calculateLayerBounds(paintingInfo.rootLayer, offsetFromRoot, { RenderLayer::PreserveAncestorFlags });
+    auto rootRelativeBounds = calculateLayerBounds(paintingInfo.rootLayer, offsetFromRoot, { });
 
-    GraphicsContext* filterContext = paintingFilters->beginFilterEffect(renderer(), destinationContext, enclosingIntRect(rootRelativeBounds), enclosingIntRect(paintingInfo.paintDirtyRect), enclosingIntRect(filterRepaintRect), backgroundRect.rect());
+    // When the filter is applied via a transparency layer directly on the destination context (e.g. CG drop-shadow),
+    // the switcher doesn't consult applyFilters's clipToRect path, so the ancestor border-radius clip would be lost.
+    // Provide a callback that applies that rounded clip on the destination before the transparency layer begins.
+    Function<void(GraphicsContext&)> applyAdditionalDestinationClip;
+    if (backgroundRect.affectedByRadius()) {
+        applyAdditionalDestinationClip = [checkedThis = CheckedPtr { this }, &paintingInfo](GraphicsContext& context) {
+            checkedThis->applyAncestorClippingForBorderRadius(context, paintingInfo, paintingInfo.paintBehavior);
+        };
+    }
+
+    GraphicsContext* filterContext = paintingFilters->beginFilterEffect(renderer(), destinationContext, enclosingIntRect(rootRelativeBounds), enclosingIntRect(paintingInfo.paintDirtyRect), enclosingIntRect(filterRepaintRect),
+        backgroundRect.rect(), applyAdditionalDestinationClip);
     if (!filterContext)
         return nullptr;
 
@@ -3765,7 +3805,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
             CheckedPtr subtreeRootLayer = paintingInfo.subtreePaintRoot->enclosingLayer();
             bool isLayerInSubtree = (this == subtreeRootLayer) || isDescendantOf(*subtreeRootLayer);
 
-            if (isLayerInSubtree && (paintingInfo.subtreePaintRoot != &renderer() && shouldExcludeBasedOnContainingBlock()))
+            if (!isLayerInSubtree || (paintingInfo.subtreePaintRoot != &renderer() && shouldExcludeBasedOnContainingBlock()))
                 shouldPaintContent = false;
         } else if (renderer().isAbsolutelyPositioned() && paintingInfo.subtreePaintRoot != &renderer() && shouldExcludeBasedOnContainingBlock()) {
             shouldPaintContent = false;
@@ -3871,7 +3911,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
             updatePaintingInfoForFragments(layerFragments, paintingInfo, localPaintFlags, shouldPaintContent, offsetFromRoot);
 
             // FIXME: Handle more than one fragment.
-            backgroundRect = layerFragments.isEmpty() ? ClipRect() : layerFragments[0].backgroundRect;
+            backgroundRect = layerFragments.isEmpty() ? ClipRect() : layerFragments[0].backgroundRect();
 
             if (haveTransparency) {
             // If we have a filter and transparency, we have to eagerly start a transparency layer here, rather than risk a child layer lazily starts one with the wrong context.
@@ -4088,10 +4128,8 @@ void RenderLayer::collectFragments(LayerFragments& fragments, const RenderLayer*
     RenderLayer* paginationLayer = enclosingPaginationLayerInSubtree(rootLayer, inclusionMode);
     if (!paginationLayer || isTransformed()) {
         // For unpaginated layers, there is only one fragment.
-        LayerFragment fragment;
         ClipRectsContext clipRectsContext(rootLayer, clipRectsType, clipRectOptions);
-        calculateRects(clipRectsContext, dirtyRect, fragment.layerBounds, fragment.backgroundRect, fragment.foregroundRect, offsetFromRoot);
-        fragments.append(fragment);
+        fragments.append(LayerFragment { calculateRects(clipRectsContext, offsetFromRoot, dirtyRect) });
         return;
     }
 
@@ -4102,15 +4140,11 @@ void RenderLayer::collectFragments(LayerFragments& fragments, const RenderLayer*
     // layers between us and the pagination context. It's important to minimize the number of fragments we need to create and this helps with that.
     clipRectOptions.add(ClipRectsOption::Temporary);
     ClipRectsContext paginationClipRectsContext(paginationLayer, PaintingClipRects, clipRectOptions);
-    LayoutRect layerBoundsInFragmentedFlow;
-    ClipRect backgroundRectInFragmentedFlow;
-    ClipRect foregroundRectInFragmentedFlow;
-    calculateRects(paginationClipRectsContext, LayoutRect::infiniteRect(), layerBoundsInFragmentedFlow, backgroundRectInFragmentedFlow, foregroundRectInFragmentedFlow,
-        offsetWithinPaginatedLayer);
+    auto rectsInFragmentedFlow = calculateRects(paginationClipRectsContext, offsetWithinPaginatedLayer);
 
     // Take our bounding box within the flow thread and clip it.
     LayoutRect layerBoundingBoxInFragmentedFlow = layerBoundingBox ? *layerBoundingBox : boundingBox(paginationLayer, offsetWithinPaginatedLayer);
-    layerBoundingBoxInFragmentedFlow.intersect(backgroundRectInFragmentedFlow.rect());
+    layerBoundingBoxInFragmentedFlow.intersect(rectsInFragmentedFlow.dirtyBackgroundRect().rect());
 
     auto& enclosingFragmentedFlow = downcast<RenderFragmentedFlow>(paginationLayer->renderer());
     RenderLayer* parentPaginationLayer = paginationLayer->parent()->enclosingPaginationLayerInSubtree(rootLayer, inclusionMode);
@@ -4150,7 +4184,7 @@ void RenderLayer::collectFragments(LayerFragments& fragments, const RenderLayer*
                 LayerFragment& fragment = fragments.at(i);
 
                 // Set our four rects with all clipping applied that was internal to the flow thread.
-                fragment.setRects(layerBoundsInFragmentedFlow, backgroundRectInFragmentedFlow, foregroundRectInFragmentedFlow, layerBoundingBoxInFragmentedFlow);
+                fragment.rects = { rectsInFragmentedFlow, layerBoundingBoxInFragmentedFlow };
 
                 // Shift to the root-relative physical position used when painting the flow thread in this fragment.
                 fragment.moveBy(toLayoutPoint(ancestorFragment.paginationOffset + fragment.paginationOffset + offsetWithinParentPaginatedLayer));
@@ -4193,7 +4227,7 @@ void RenderLayer::collectFragments(LayerFragments& fragments, const RenderLayer*
 
     for (auto& fragment : fragments) {
         // Set our four rects with all clipping applied that was internal to the flow thread.
-        fragment.setRects(layerBoundsInFragmentedFlow, backgroundRectInFragmentedFlow, foregroundRectInFragmentedFlow, layerBoundingBoxInFragmentedFlow);
+        fragment.rects = { rectsInFragmentedFlow, layerBoundingBoxInFragmentedFlow };
 
         // Shift to the root-relative physical position used when painting the flow thread in this fragment.
         fragment.moveBy(toLayoutPoint(fragment.paginationOffset + offsetOfPaginationLayerFromRoot));
@@ -4218,7 +4252,7 @@ void RenderLayer::updatePaintingInfoForFragments(LayerFragments& fragments, cons
         fragment.shouldPaintContent = shouldPaintContent;
         if (this != localPaintingInfo.rootLayer || !(localPaintFlags & PaintLayerFlag::PaintingOverflowContents)) {
             LayoutSize newOffsetFromRoot = offsetFromRoot + fragment.paginationOffset;
-            fragment.shouldPaintContent &= intersectsDamageRect(fragment.layerBounds, fragment.backgroundRect.rect(), localPaintingInfo.rootLayer, newOffsetFromRoot, fragment.boundingBox);
+            fragment.shouldPaintContent &= intersectsDamageRect(fragment.layerBounds(), fragment.dirtyBackgroundRect().rect(), localPaintingInfo.rootLayer, newOffsetFromRoot, fragment.boundingBox());
         }
     }
 }
@@ -4240,7 +4274,7 @@ void RenderLayer::paintTransformedLayerIntoFragments(GraphicsContext& context, c
     for (const auto& fragment : enclosingPaginationFragments) {
         // Apply the page/column clip for this fragment, as well as any clips established by layers in between us and
         // the enclosing pagination layer.
-        LayoutRect clipRect = fragment.backgroundRect.rect();
+        LayoutRect clipRect = fragment.dirtyBackgroundRect().rect();
 
         // Now compute the clips within a given fragment
         if (parent() != paginatedLayer) {
@@ -4281,11 +4315,11 @@ void RenderLayer::paintBackgroundForFragments(const LayerFragments& layerFragmen
 
             // Paint our background first, before painting any child layers.
             // Establish the clip used to paint our background.
-            clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.backgroundRect, DoNotIncludeSelfForBorderRadius); // Background painting will handle clipping to self.
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.dirtyBackgroundRect(), DoNotIncludeSelfForBorderRadius); // Background painting will handle clipping to self.
 
         // Paint the background.
         // FIXME: Eventually we will collect the region from the fragment itself instead of just from the paint info.
-        PaintInfo paintInfo(context, fragment.backgroundRect.rect(), PaintPhase::BlockBackground, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
+        PaintInfo paintInfo(context, fragment.dirtyBackgroundRect().rect(), PaintPhase::BlockBackground, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
     }
 }
@@ -4297,7 +4331,7 @@ void RenderLayer::paintForegroundForFragments(const LayerFragments& layerFragmen
     // Begin transparency if we have something to paint.
     if (haveTransparency) {
         for (const auto& fragment : layerFragments) {
-            if (fragment.shouldPaintContent && !fragment.foregroundRect.isEmpty()) {
+            if (fragment.shouldPaintContent && !fragment.dirtyForegroundRect().isEmpty()) {
                 beginTransparencyLayers(contextForTransparencyLayer, localPaintingInfo, transparencyPaintDirtyRect);
                 break;
             }
@@ -4331,9 +4365,9 @@ void RenderLayer::paintForegroundForFragments(const LayerFragments& layerFragmen
     RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
     // Optimize clipping for the single fragment case.
-    bool shouldClip = layerFragments.size() == 1 && layerFragments[0].shouldPaintContent && !layerFragments[0].foregroundRect.isEmpty();
+    bool shouldClip = layerFragments.size() == 1 && layerFragments[0].shouldPaintContent && !layerFragments[0].dirtyForegroundRect().isEmpty();
     if (shouldClip)
-        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, localPaintBehavior, layerFragments[0].foregroundRect);
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, localPaintBehavior, layerFragments[0].dirtyForegroundRect());
 
     // We have to loop through every fragment multiple times, since we have to repaint in each specific phase in order for
     // interleaving of the fragments to work properly.
@@ -4369,16 +4403,16 @@ void RenderLayer::paintForegroundForFragmentsWithPhase(PaintPhase phase, const L
     bool shouldClip = layerFragments.size() > 1;
 
     for (const auto& fragment : layerFragments) {
-        if (!fragment.shouldPaintContent || fragment.foregroundRect.isEmpty())
+        if (!fragment.shouldPaintContent || fragment.dirtyForegroundRect().isEmpty())
             continue;
 
         GraphicsContextStateSaver stateSaver(context, false);
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
         if (shouldClip)
-            clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.foregroundRect);
+            clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.dirtyForegroundRect());
 
-        PaintInfo paintInfo(context, fragment.foregroundRect.rect(), phase, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this, localPaintingInfo.requireSecurityOriginAccessForWidgets);
+        PaintInfo paintInfo(context, fragment.dirtyForegroundRect().rect(), phase, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this, localPaintingInfo.requireSecurityOriginAccessForWidgets);
         if (phase == PaintPhase::Foreground)
             paintInfo.overlapTestRequests = localPaintingInfo.overlapTestRequests;
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
@@ -4389,16 +4423,16 @@ void RenderLayer::paintOutlineForFragments(const LayerFragments& layerFragments,
     OptionSet<PaintBehavior> paintBehavior, RenderObject* subtreePaintRootForRenderer)
 {
     for (const auto& fragment : layerFragments) {
-        if (fragment.backgroundRect.isEmpty())
+        if (fragment.dirtyBackgroundRect().isEmpty())
             continue;
 
         // Paint our own outline
-        PaintInfo paintInfo(context, fragment.backgroundRect.rect(), PaintPhase::SelfOutline, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
+        PaintInfo paintInfo(context, fragment.dirtyBackgroundRect().rect(), PaintPhase::SelfOutline, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
 
         GraphicsContextStateSaver stateSaver(context, false);
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
-        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.backgroundRect, DoNotIncludeSelfForBorderRadius);
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.dirtyBackgroundRect(), DoNotIncludeSelfForBorderRadius);
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
     }
 }
@@ -4413,11 +4447,11 @@ void RenderLayer::paintMaskForFragments(const LayerFragments& layerFragments, Gr
         GraphicsContextStateSaver stateSaver(context, false);
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
-            clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.backgroundRect, DoNotIncludeSelfForBorderRadius); // Mask painting will handle clipping to self.
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.dirtyBackgroundRect(), DoNotIncludeSelfForBorderRadius); // Mask painting will handle clipping to self.
 
         // Paint the mask.
         // FIXME: Eventually we will collect the region from the fragment itself instead of just from the paint info.
-        PaintInfo paintInfo(context, fragment.backgroundRect.rect(), PaintPhase::Mask, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
+        PaintInfo paintInfo(context, fragment.dirtyBackgroundRect().rect(), PaintPhase::Mask, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
     }
 }
@@ -4431,10 +4465,10 @@ void RenderLayer::paintChildClippingMaskForFragments(const LayerFragments& layer
         GraphicsContextStateSaver stateSaver(context, false);
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
-            clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.foregroundRect, IncludeSelfForBorderRadius); // Child clipping mask painting will handle clipping to self.
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, paintBehavior, fragment.dirtyForegroundRect(), IncludeSelfForBorderRadius); // Child clipping mask painting will handle clipping to self.
 
         // Paint the clipped mask.
-        PaintInfo paintInfo(context, fragment.backgroundRect.rect(), PaintPhase::ClippingMask, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
+        PaintInfo paintInfo(context, fragment.dirtyBackgroundRect().rect(), PaintPhase::ClippingMask, paintBehavior, subtreePaintRootForRenderer, nullptr, nullptr, &localPaintingInfo.rootLayer->renderer(), this);
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
     }
 }
@@ -4444,14 +4478,14 @@ void RenderLayer::paintOverflowControlsForFragments(const LayerFragments& layerF
     ASSERT(m_scrollableArea);
 
     for (const auto& fragment : layerFragments) {
-        if (fragment.backgroundRect.isEmpty())
+        if (fragment.dirtyBackgroundRect().isEmpty())
             continue;
 
         GraphicsContextStateSaver stateSaver(context, false);
         RegionContextStateSaver regionContextStateSaver(localPaintingInfo.regionContext);
 
-        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, { }, fragment.backgroundRect);
-        m_scrollableArea->paintOverflowControls(context, localPaintingInfo.paintBehavior, roundedIntPoint(paintOffsetForRenderer(fragment, localPaintingInfo)), snappedIntRect(fragment.backgroundRect.rect()), true);
+        clipToRect(context, stateSaver, regionContextStateSaver, localPaintingInfo, { }, fragment.dirtyBackgroundRect());
+        m_scrollableArea->paintOverflowControls(context, localPaintingInfo.paintBehavior, roundedIntPoint(paintOffsetForRenderer(fragment, localPaintingInfo)), snappedIntRect(fragment.dirtyBackgroundRect().rect()), true);
     }
 }
 
@@ -4459,9 +4493,9 @@ void RenderLayer::collectEventRegionForFragments(const LayerFragments& layerFrag
 {
     ASSERT(is<EventRegionContext>(localPaintingInfo.regionContext));
     for (const auto& fragment : layerFragments) {
-        PaintInfo paintInfo(context, fragment.foregroundRect.rect(), PaintPhase::EventRegion, paintBehavior);
+        PaintInfo paintInfo(context, fragment.dirtyForegroundRect().rect(), PaintPhase::EventRegion, paintBehavior);
         paintInfo.regionContext = localPaintingInfo.regionContext;
-            paintInfo.regionContext->pushClip(enclosingIntRect(fragment.backgroundRect.rect()));
+        paintInfo.regionContext->pushClip(enclosingIntRect(fragment.dirtyBackgroundRect().rect()));
 
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
             paintInfo.regionContext->popClip();
@@ -4472,7 +4506,7 @@ void RenderLayer::collectAccessibilityRegionsForFragments(const LayerFragments& 
 {
     ASSERT(is<AccessibilityRegionContext>(localPaintingInfo.regionContext));
     for (const auto& fragment : layerFragments) {
-        PaintInfo paintInfo(context, fragment.foregroundRect.rect(), PaintPhase::Accessibility, paintBehavior);
+        PaintInfo paintInfo(context, fragment.dirtyForegroundRect().rect(), PaintPhase::Accessibility, paintBehavior);
         paintInfo.regionContext = localPaintingInfo.regionContext;
         renderer().paint(paintInfo, paintOffsetForRenderer(fragment, localPaintingInfo));
     }
@@ -4659,9 +4693,11 @@ bool RenderLayer::ancestorLayerIsDOMParent(const RenderLayer* ancestor) const
     auto parent = flattenedParent(renderer().element());
     if (parent && ancestor->renderer().element() == parent)
         return true;
-
-    std::optional<PseudoId> parentPseudoId = parentPseudoElement(renderer().style().pseudoElementType());
+    if (renderer().style().pseudoElementType()) {
+        auto parentPseudoId = parentPseudoElement(*renderer().style().pseudoElementType());
     return parentPseudoId && *parentPseudoId == ancestor->renderer().style().pseudoElementType();
+    }
+    return false;
 }
 
 bool RenderLayer::participatesInPreserve3D() const
@@ -4669,25 +4705,33 @@ bool RenderLayer::participatesInPreserve3D() const
     return ancestorLayerIsDOMParent(parent()) && parent()->preserves3D() && (transform() || renderer().style().backfaceVisibility() == BackfaceVisibility::Hidden || preserves3D());
 }
 
-void RenderLayer::setSnapshottedScrollOffsetForAnchorPositioning(LayoutSize offset)
+bool RenderLayer::setAnchorScrollAdjustment(LayoutSize offset)
 {
-    if (m_snapshottedScrollOffsetForAnchorPositioning == offset)
-        return;
+    if (m_anchorScrollAdjustment == offset)
+        return false;
+
+    if (renderer().renderTreeBeingDestroyed())
+        return false;
 
     // FIXME: Scroll offset should be adjusted in the scrolling tree so layers stay exactly in sync.
-    m_snapshottedScrollOffsetForAnchorPositioning = offset;
+    m_anchorScrollAdjustment = offset;
     updateTransform();
 
     if (isComposited())
         setNeedsCompositingGeometryUpdate();
+
+    return true;
 }
 
-void RenderLayer::clearSnapshottedScrollOffsetForAnchorPositioning()
+void RenderLayer::clearAnchorScrollAdjustment()
 {
-    if (!m_snapshottedScrollOffsetForAnchorPositioning)
+    if (!m_anchorScrollAdjustment)
         return;
 
-    m_snapshottedScrollOffsetForAnchorPositioning = { };
+    if (renderer().renderTreeBeingDestroyed())
+        return;
+
+    m_anchorScrollAdjustment = { };
     updateTransform();
 
     if (isComposited())
@@ -4926,13 +4970,12 @@ bool RenderLayer::hitTestContentsForFragments(const LayerFragments& layerFragmen
     if (layerFragments.isEmpty())
         return false;
 
-    for (int i = layerFragments.size() - 1; i >= 0; --i) {
-        const auto& fragment = layerFragments.at(i);
-        if ((hitTestFilter == HitTestSelf && !fragment.backgroundRect.intersects(hitTestLocation))
-            || (hitTestFilter == HitTestDescendants && !fragment.foregroundRect.intersects(hitTestLocation)))
+    for (auto& fragment : std::views::reverse(layerFragments)) {
+        if ((hitTestFilter == HitTestSelf && !fragment.dirtyBackgroundRect().intersects(hitTestLocation))
+            || (hitTestFilter == HitTestDescendants && !fragment.dirtyForegroundRect().intersects(hitTestLocation)))
             continue;
         insideClipRect = true;
-        if (hitTestContents(request, result, fragment.layerBounds, hitTestLocation, hitTestFilter))
+        if (hitTestContents(request, result, fragment.layerBounds(), hitTestLocation, hitTestFilter))
             return true;
     }
 
@@ -4949,12 +4992,11 @@ RenderLayer::HitLayer RenderLayer::hitTestTransformedLayerInFragments(RenderLaye
     paginatedLayer->collectFragments(enclosingPaginationFragments, rootLayer, hitTestRect, IncludeCompositedPaginatedLayers,
         RootRelativeClipRects, { ClipRectsOption::RespectOverflowClip }, offsetOfPaginationLayerFromRoot, &transformedExtent);
 
-    for (int i = enclosingPaginationFragments.size() - 1; i >= 0; --i) {
-        const LayerFragment& fragment = enclosingPaginationFragments.at(i);
+    for (auto& fragment : std::views::reverse(enclosingPaginationFragments)) {
 
         // Apply the page/column clip for this fragment, as well as any clips established by layers in between us and
         // the enclosing pagination layer.
-        LayoutRect clipRect = fragment.backgroundRect.rect();
+        LayoutRect clipRect = fragment.dirtyBackgroundRect().rect();
 
         // Now compute the clips within a given fragment
         if (parent() != paginatedLayer) {
@@ -5314,66 +5356,87 @@ ClipRect RenderLayer::backgroundClipRect(const ClipRectsContext& clipRectsContex
     return backgroundClipRect;
 }
 
-void RenderLayer::calculateRects(const ClipRectsContext& clipRectsContext, const LayoutRect& paintDirtyRect, LayoutRect& layerBounds,
-    ClipRect& backgroundRect, ClipRect& foregroundRect, const LayoutSize& offsetFromRoot) const
+ClipRect RenderLayer::calculateBackgroundClipRect(const ClipRectsContext& clipRectsContext, const LayoutSize& offsetFromRoot) const
 {
-    if (clipRectsContext.rootLayer != this && parent()) {
-        backgroundRect = backgroundClipRect(clipRectsContext);
-        backgroundRect.intersect(paintDirtyRect);
-    } else
-        backgroundRect = paintDirtyRect;
+    ClipRect backgroundClipRect = LayoutRect::infiniteRect();
 
-    LayoutSize offsetFromRootLocal = offsetFromRoot;
+    if (clipRectsContext.rootLayer != this && parent())
+        backgroundClipRect = this->backgroundClipRect(clipRectsContext);
 
-    layerBounds = LayoutRect(toLayoutPoint(offsetFromRootLocal), size());
+    bool shouldApplyClip = clipRectsContext.clipRectsType != PaintingClipRects
+        || !m_suppressAncestorClippingInsideFilter
+        || clipRectsContext.options.contains(ClipRectsOption::OutsideFilter);
 
-    foregroundRect = backgroundRect;
-
-    bool shouldApplyClip = clipRectsContext.clipRectsType != PaintingClipRects || !m_suppressAncestorClippingInsideFilter || clipRectsContext.options.contains(ClipRectsOption::OutsideFilter);
-    if (renderer().hasClip() && shouldApplyClip) {
+    if (shouldApplyClip && renderer().hasClip()) {
         if (CheckedPtr box = dynamicDowncast<RenderBox>(renderer())) {
             // Clip applies to *us* as well, so update the damageRect.
-            LayoutRect newPosClip = box->clipRect(toLayoutPoint(offsetFromRootLocal));
-            backgroundRect.intersect(newPosClip);
-            foregroundRect.intersect(newPosClip);
+            auto newPosClip = box->clipRect(toLayoutPoint(offsetFromRoot));
+            backgroundClipRect.intersect(newPosClip);
         }
     }
 
-    if (clipRectsContext.options.contains(ClipRectsOption::OutsideFilter))
-        return;
+    return backgroundClipRect;
+}
 
-    // Update the clip rects that will be passed to child layers.
-    if (renderer().hasClipOrNonVisibleOverflow()) {
-        // This layer establishes a clip of some kind.
-        if (renderer().hasNonVisibleOverflow()) {
-            if (this != clipRectsContext.rootLayer || clipRectsContext.respectOverflowClip()) {
-                LayoutRect overflowClipRect = rendererOverflowClipRect(toLayoutPoint(offsetFromRootLocal), clipRectsContext.overlayScrollbarSizeRelevancy());
-                foregroundRect.intersect(overflowClipRect);
-                foregroundRect.setAffectedByRadius(true);
-            } else if (transform() && renderer().style().hasBorderRadius())
-                foregroundRect.setAffectedByRadius(true);
-        }
+ClipRect RenderLayer::calculateBackgroundRect(const ClipRectsContext& clipRectsContext, const LayoutSize& offsetFromRoot) const
+{
+    auto backgroundRect = calculateBackgroundClipRect(clipRectsContext, offsetFromRoot);
+
+    if (clipRectsContext.options.contains(ClipRectsOption::OutsideFilter) || !renderer().hasClipOrNonVisibleOverflow())
+        return backgroundRect;
+
+    if (this == clipRectsContext.rootLayer && !clipRectsContext.respectOverflowClip())
+        return backgroundRect;
 
         // If we establish a clip at all, then make sure our background rect is intersected with our layer's bounds including our visual overflow,
         // since any visual overflow like box-shadow or border-outset is not clipped by overflow:auto/hidden.
         if (rendererHasVisualOverflow()) {
             // FIXME: Does not do the right thing with CSS regions yet, since we don't yet factor in the
             // individual region boxes as overflow.
-            LayoutRect layerBoundsWithVisualOverflow = rendererVisualOverflowRect();
+        auto layerBoundsWithVisualOverflow = rendererVisualOverflowRect();
             if (renderer().isRenderBox())
                 renderBox()->flipForWritingMode(layerBoundsWithVisualOverflow); // Layers are in physical coordinates, so the overflow has to be flipped.
-            layerBoundsWithVisualOverflow.move(offsetFromRootLocal);
-            if (this != clipRectsContext.rootLayer || clipRectsContext.respectOverflowClip())
-                backgroundRect.intersect(layerBoundsWithVisualOverflow);
-        } else {
-            // Shift the bounds to be for our region only.
-            LayoutRect bounds = rendererBorderBoxRect();
 
-            bounds.move(offsetFromRootLocal);
-            if (this != clipRectsContext.rootLayer || clipRectsContext.respectOverflowClip())
-                backgroundRect.intersect(bounds);
-        }
+        layerBoundsWithVisualOverflow.move(offsetFromRoot);
+                backgroundRect.intersect(layerBoundsWithVisualOverflow);
+        return backgroundRect;
     }
+
+    auto bounds = rendererBorderBoxRect();
+
+    // Shift the bounds to be for our region only.
+    bounds.move(offsetFromRoot);
+                backgroundRect.intersect(bounds);
+    return backgroundRect;
+}
+
+ClipRect RenderLayer::calculateForegroundRect(const ClipRectsContext& clipRectsContext, const LayoutSize& offsetFromRoot) const
+{
+    auto foregroundRect = calculateBackgroundClipRect(clipRectsContext, offsetFromRoot);
+
+    if (clipRectsContext.options.contains(ClipRectsOption::OutsideFilter) || !renderer().hasNonVisibleOverflow())
+        return foregroundRect;
+
+    // This layer establishes a clip of some kind.
+    if (this != clipRectsContext.rootLayer || clipRectsContext.respectOverflowClip()) {
+        auto overflowClipRect = rendererOverflowClipRect(toLayoutPoint(offsetFromRoot), clipRectsContext.overlayScrollbarSizeRelevancy());
+        foregroundRect.intersect(overflowClipRect);
+        foregroundRect.setAffectedByRadius(true);
+        return foregroundRect;
+        }
+
+    if (transform() && renderer().style().hasBorderRadius())
+        foregroundRect.setAffectedByRadius(true);
+
+    return foregroundRect;
+}
+
+LayerFragment::Rects RenderLayer::calculateRects(const ClipRectsContext& clipRectsContext, const LayoutSize& offsetFromRoot, const LayoutRect& paintDirtyRect) const
+{
+    auto layerBounds = LayoutRect(toLayoutPoint(offsetFromRoot), size());
+    auto backgroundRect = calculateBackgroundRect(clipRectsContext, offsetFromRoot);
+    auto foregroundRect = calculateForegroundRect(clipRectsContext, offsetFromRoot);
+    return { layerBounds, paintDirtyRect, backgroundRect, foregroundRect };
 }
 
 LayoutRect RenderLayer::childrenClipRect() const
@@ -5381,12 +5444,9 @@ LayoutRect RenderLayer::childrenClipRect() const
     // FIXME: border-radius not accounted for.
     // FIXME: Regions not accounted for.
     RenderLayer* clippingRootLayer = clippingRootForPainting();
-    LayoutRect layerBounds;
-    ClipRect backgroundRect;
-    ClipRect foregroundRect;
     ClipRectsContext clipRectsContext(clippingRootLayer, PaintingClipRects, { ClipRectsOption::Temporary });
     // Need to use temporary clip rects, because the value of 'dontClipToOverflow' may be different from the painting path (<rdar://problem/11844909>).
-    calculateRects(clipRectsContext, LayoutRect::infiniteRect(), layerBounds, backgroundRect, foregroundRect, offsetFromAncestor(clipRectsContext.rootLayer));
+    auto foregroundRect = calculateForegroundRect(clipRectsContext, offsetFromAncestor(clipRectsContext.rootLayer));
     if (foregroundRect.rect().isInfinite())
         return renderer().view().unscaledDocumentRect();
 
@@ -5396,15 +5456,12 @@ LayoutRect RenderLayer::childrenClipRect() const
 
 LayoutRect RenderLayer::clipRectRelativeToAncestor(const RenderLayer* ancestor, LayoutSize offsetFromAncestor, const LayoutRect& constrainingRect, bool temporaryClipRects) const
 {
-    LayoutRect layerBounds;
-    ClipRect backgroundRect;
-    ClipRect foregroundRect;
     auto options = clipRectDefaultOptions;
     if ((m_enclosingPaginationLayer && m_enclosingPaginationLayer != ancestor) || temporaryClipRects)
         options.add(ClipRectsOption::Temporary);
     ClipRectsContext clipRectsContext(ancestor, PaintingClipRects, options);
-    calculateRects(clipRectsContext, constrainingRect, layerBounds, backgroundRect, foregroundRect, offsetFromAncestor);
-    return backgroundRect.rect();
+    auto backgroundRect = calculateBackgroundRect(clipRectsContext, offsetFromAncestor);
+    return intersection(backgroundRect.rect(), constrainingRect);
 }
 
 LayoutRect RenderLayer::selfClipRect() const
@@ -5896,7 +5953,7 @@ void RenderLayer::setBackingNeedsRepaint(GraphicsLayer::ShouldClipToLayer should
         backing()->setContentsNeedDisplay(shouldClip);
 }
 
-void RenderLayer::setBackingNeedsRepaintInRect(const LayoutRect& r, GraphicsLayer::ShouldClipToLayer shouldClip)
+void RenderLayer::setBackingNeedsRepaintInRect(const LayoutRect& r, GraphicsLayerShouldClipToLayer shouldClip)
 {
     // https://bugs.webkit.org/show_bug.cgi?id=61159 describes an unreproducible crash here,
     // so assert but check that the layer is composited.
@@ -5987,8 +6044,8 @@ static bool rendererHasHDRContent(const RenderElement& renderer)
                 return true;
     }
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    } else if (CheckedPtr canavsRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer)) {
-        if (auto* renderingContext = canavsRenderer->canvasElement().renderingContext()) {
+    } else if (CheckedPtr canvasRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer)) {
+        if (auto* renderingContext = canvasRenderer->canvasElement().renderingContext()) {
             if (renderingContext->isHDR())
                 return true;
         }
@@ -5997,19 +6054,18 @@ static bool rendererHasHDRContent(const RenderElement& renderer)
 
     auto styleHasHDRContent = [](const auto& style) {
         if (style.hasBackgroundImage()) {
-            if (style.backgroundLayers().hasHDRContent())
+            if (Style::hasHDRContent(style.backgroundLayers()))
                 return true;
         }
 
-        if (style.hasBorderImage()) {
-            auto image = style.borderImage().image();
-            if (auto* cachedImage = image ? image->cachedImage() : nullptr) {
+        if (auto image = style.borderImageSource().tryImage()) {
+            if (auto* cachedImage = image ? image->value->cachedImage() : nullptr) {
                 if (cachedImage->hasHDRContent())
                     return true;
             }
         }
 
-        if (auto image = style.listStyleImage()) {
+        if (RefPtr image = style.listStyleImage().tryStyleImage()) {
             if (auto* cachedImage = image->cachedImage()) {
                 if (cachedImage->hasHDRContent())
                     return true;
@@ -6050,20 +6106,20 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
                 return;
         }
 
-        CheckedPtr childElement = dynamicDowncast<RenderElement>(child);
-        if (!childElement)
+        CheckedPtr childRenderElement = dynamicDowncast<RenderElement>(child);
+        if (!childRenderElement)
             continue;
 
-        if (auto* modelObject = dynamicDowncast<RenderLayerModelObject>(*childElement); modelObject && modelObject->hasSelfPaintingLayer())
+        if (auto* modelObject = dynamicDowncast<RenderLayerModelObject>(*childRenderElement); modelObject && modelObject->hasSelfPaintingLayer())
             continue;
 
-        if (hasVisibleBoxDecorationsOrBackground(*childElement)) {
+        if (hasVisibleBoxDecorationsOrBackground(*childRenderElement)) {
             request.setHasPaintedContent();
             if (request.isSatisfied())
                 return;
         }
 
-        if (is<RenderReplaced>(*childElement)) {
+        if (is<RenderReplaced>(*childRenderElement)) {
             request.setHasPaintedContent();
 
             if (request.isSatisfied())
@@ -6071,7 +6127,7 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
         }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (!request.isHDRContentSatisfied() && rendererHasHDRContent(*childElement)) {
+        if (!request.isHDRContentSatisfied() && rendererHasHDRContent(*childRenderElement)) {
             request.setHasHDRContent();
 
             if (request.isSatisfied())
@@ -6079,7 +6135,7 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
         }
 #endif
 
-        determineNonLayerDescendantsPaintedContent(*childElement, renderersTraversed, request);
+        determineNonLayerDescendantsPaintedContent(*childRenderElement, renderersTraversed, request);
         if (request.isSatisfied())
             return;
     }
@@ -6139,6 +6195,15 @@ bool RenderLayer::isVisuallyNonEmpty(PaintedContentRequest* request) const
             return true;
     }
 
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (request && !request->isHDRContentSatisfied() && WebCore::rendererHasHDRContent(renderer())) {
+        request->setHasHDRContent();
+
+        if (request->isSatisfied())
+            return true;
+    }
+#endif
+
     if (hasVisibleBoxDecorationsOrBackground()) {
         if (!request)
             return true;
@@ -6156,7 +6221,7 @@ bool RenderLayer::isVisuallyNonEmpty(PaintedContentRequest* request) const
     return request->probablyHasPaintedContent();
 }
 
-void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderLayer::styleChanged(Style::Difference diff, const RenderStyle* oldStyle)
 {
     setIsNormalFlowOnly(shouldBeNormalFlowOnly());
     setCanBeBackdropRoot(computeCanBeBackdropRoot());
@@ -6195,7 +6260,7 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
             if (oldStyle->writingMode() != renderer().style().writingMode())
                 m_scrollableArea->invalidateScrollCornerRect({ });
             if (visibilityChanged || oldStyle->isOverflowVisible() != renderer().style().isOverflowVisible())
-                m_scrollableArea->computeHasCompositedScrollableOverflow(diff <= StyleDifference::RepaintLayer ? LayoutUpToDate::Yes : LayoutUpToDate::No);
+                m_scrollableArea->computeHasCompositedScrollableOverflow(diff <= Style::DifferenceResult::RepaintLayer ? LayoutUpToDate::Yes : LayoutUpToDate::No);
         }
 
         if (oldStyle->isOverflowVisible() != renderer().style().isOverflowVisible())
@@ -6245,7 +6310,7 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
         dirtyAncestorChainHasViewportConstrainedDescendantStatus();
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(TOUCH_EVENTS)
-    if (diff == StyleDifference::RecompositeLayer || diff >= StyleDifference::LayoutOutOfFlowMovementOnly)
+    if (diff == Style::DifferenceResult::RecompositeLayer || diff >= Style::DifferenceResult::LayoutOutOfFlowMovementOnly)
         renderer().document().invalidateRenderingDependentRegions();
 #else
     UNUSED_PARAM(diff);
@@ -6287,43 +6352,46 @@ RenderStyle RenderLayer::createReflectionStyle()
     auto newStyle = RenderStyle::create();
     newStyle.inheritFrom(renderer().style());
 
-    // Map in our transform.
-    Vector<Ref<TransformOperation>> operations;
+    auto reflection = renderer().style().boxReflect().tryReflection();
 
-    switch (renderer().style().boxReflect()->direction()) {
-    case ReflectionDirection::Below:
-        operations = {
-            TranslateTransformOperation::create(Length(0, LengthType::Fixed), Length(100., LengthType::Percent), TransformOperation::Type::Translate),
-            TranslateTransformOperation::create(Length(0, LengthType::Fixed), renderer().style().boxReflect()->offset(), TransformOperation::Type::Translate),
-            ScaleTransformOperation::create(1.0, -1.0, ScaleTransformOperation::Type::Scale)
+    // FIXME: This should be removed when bare LengthPercentage<> is moved off of LengthWrapperBase.
+    auto toTranslateLengthPercentage = [](const auto& boxReflectOffset) {
+        return WTF::switchOn(boxReflectOffset, [](const auto& value) { return Style::TranslateLengthPercentage { value }; });
         };
+
+    switch (reflection->direction) {
+    case ReflectionDirection::Below:
+        newStyle.setTransform({
+            { Style::TranslateTransformFunction::create(0_css_px, 100_css_percentage, Style::TransformFunctionType::Translate) },
+            { Style::TranslateTransformFunction::create(0_css_px, toTranslateLengthPercentage(reflection->offset), Style::TransformFunctionType::Translate) },
+            { Style::ScaleTransformFunction::create(1_css_number, -1_css_number, Style::TransformFunctionType::Scale) },
+        });
         break;
     case ReflectionDirection::Above:
-        operations = {
-            ScaleTransformOperation::create(1.0, -1.0, ScaleTransformOperation::Type::Scale),
-            TranslateTransformOperation::create(Length(0, LengthType::Fixed), Length(100., LengthType::Percent), TransformOperation::Type::Translate),
-            TranslateTransformOperation::create(Length(0, LengthType::Fixed), renderer().style().boxReflect()->offset(), TransformOperation::Type::Translate)
-        };
+        newStyle.setTransform({
+            { Style::ScaleTransformFunction::create(1_css_number, -1_css_number, Style::TransformFunctionType::Scale) },
+            { Style::TranslateTransformFunction::create(0_css_px, 100_css_percentage, Style::TransformFunctionType::Translate) },
+            { Style::TranslateTransformFunction::create(0_css_px, toTranslateLengthPercentage(reflection->offset), Style::TransformFunctionType::Translate) },
+        });
         break;
     case ReflectionDirection::Right:
-        operations = {
-            TranslateTransformOperation::create(Length(100., LengthType::Percent), Length(0, LengthType::Fixed), TransformOperation::Type::Translate),
-            TranslateTransformOperation::create(renderer().style().boxReflect()->offset(), Length(0, LengthType::Fixed), TransformOperation::Type::Translate),
-            ScaleTransformOperation::create(-1.0, 1.0, ScaleTransformOperation::Type::Scale)
-        };
+        newStyle.setTransform({
+            { Style::TranslateTransformFunction::create(100_css_percentage, 0_css_px, Style::TransformFunctionType::Translate) },
+            { Style::TranslateTransformFunction::create(toTranslateLengthPercentage(reflection->offset), 0_css_px, Style::TransformFunctionType::Translate) },
+            { Style::ScaleTransformFunction::create(-1_css_number, 1_css_number, Style::TransformFunctionType::Scale) },
+        });
         break;
     case ReflectionDirection::Left:
-        operations = {
-            ScaleTransformOperation::create(-1.0, 1.0, ScaleTransformOperation::Type::Scale),
-            TranslateTransformOperation::create(Length(100., LengthType::Percent), Length(0, LengthType::Fixed), TransformOperation::Type::Translate),
-            TranslateTransformOperation::create(renderer().style().boxReflect()->offset(), Length(0, LengthType::Fixed), TransformOperation::Type::Translate)
-        };
+        newStyle.setTransform({
+            { Style::ScaleTransformFunction::create(-1_css_number, 1_css_number, Style::TransformFunctionType::Scale) },
+            { Style::TranslateTransformFunction::create(100_css_percentage, 0_css_px, Style::TransformFunctionType::Translate) },
+            { Style::TranslateTransformFunction::create(toTranslateLengthPercentage(reflection->offset), 0_css_px, Style::TransformFunctionType::Translate) },
+        });
         break;
     }
-    newStyle.setTransform(TransformOperations { WTFMove(operations) });
 
     // Map in our mask.
-    newStyle.setMaskBorder(renderer().style().boxReflect()->mask());
+    newStyle.setMaskBorder(Style::MaskBorder { reflection->mask });
 
     // Style has transform and mask, so needs to be stacking context.
     newStyle.setUsedZIndex(0);
@@ -6336,15 +6404,15 @@ RenderLayerFilters& RenderLayer::ensureLayerFilters()
     if (m_filters)
         return *m_filters;
 
-    m_filters = makeUnique<RenderLayerFilters>(*this);
-    m_filters->setPreferredFilterRenderingModes(renderer().page().preferredFilterRenderingModes());
-    m_filters->setFilterScale({ page().deviceScaleFactor(), page().deviceScaleFactor() });
+    auto scale = page().deviceScaleFactor();
+    m_filters = RenderLayerFilters::create(*this, { scale, scale });
     return *m_filters;
 }
 
 void RenderLayer::clearLayerFilters()
 {
-    m_filters = nullptr;
+    if (RefPtr filters = std::exchange(m_filters, nullptr))
+        filters->detachFromLayer();
 }
 
 RenderLayerScrollableArea* RenderLayer::ensureLayerScrollableArea()
@@ -6372,7 +6440,7 @@ void RenderLayer::clearLayerScrollableArea()
     }
 }
 
-void RenderLayer::updateFiltersAfterStyleChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderLayer::updateFiltersAfterStyleChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     if (renderer().style().filter().hasReferenceFilter())
         ensureLayerFilters().updateReferenceFilterClients(renderer().style().filter());
@@ -6384,14 +6452,14 @@ void RenderLayer::updateFiltersAfterStyleChange(StyleDifference diff, const Rend
     auto filterChanged = [&] {
         if (!m_filters)
             return false;
-        if (diff < StyleDifference::RepaintLayer)
+        if (diff < Style::DifferenceResult::RepaintLayer)
             return false;
         if (!oldStyle)
             return false;
         if (oldStyle->filter() != renderer().style().filter())
             return true;
         auto currentColorChanged = oldStyle->color() != renderer().style().color();
-        if (currentColorChanged && oldStyle->filter().requiresRepaintForCurrentColorChange())
+        if (currentColorChanged && oldStyle->filter().hasFilterThatRequiresRepaintForCurrentColorChange())
             return true;
         return false;
     };
@@ -6446,7 +6514,7 @@ IntOutsets RenderLayer::filterOutsets() const
 {
     if (m_filters)
         return m_filters->calculateOutsets(renderer(), localBoundingBox());
-    return renderer().style().filterOutsets();
+    return renderer().style().filter().outsets();
 }
 
 static RenderLayer* parentLayerCrossFrame(const RenderLayer& layer)

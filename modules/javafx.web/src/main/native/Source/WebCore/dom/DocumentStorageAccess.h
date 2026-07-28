@@ -25,19 +25,10 @@
 
 #pragma once
 
-#include "RegistrableDomain.h"
-#include "Supplementable.h"
+#include <WebCore/RegistrableDomain.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class DocumentStorageAccess;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DocumentStorageAccess> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -49,6 +40,8 @@ class WeakPtrImplWithEventTargetData;
 enum class StorageAccessWasGranted : uint8_t { No, Yes, YesWithException };
 
 enum class StorageAccessPromptWasShown : bool { No, Yes };
+
+enum class HasOrShouldIgnoreUserGesture : bool { No, Yes };
 
 enum class StorageAccessScope : bool {
     PerFrame,
@@ -76,6 +69,9 @@ public:
     explicit DocumentStorageAccess(Document&);
     ~DocumentStorageAccess();
 
+    void ref() const;
+    void deref() const;
+
     static void hasStorageAccess(Document&, Ref<DeferredPromise>&&);
     static bool hasStorageAccessForDocumentQuirk(Document&);
 
@@ -95,7 +91,8 @@ private:
     void requestStorageAccessQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
 
     static DocumentStorageAccess* from(Document&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "DocumentStorageAccess"_s; }
+    bool isDocumentStorageAccess() const final { return true; }
     bool hasFrameSpecificStorageAccess() const;
     void setWasExplicitlyDeniedFrameSpecificStorageAccess() { ++m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
     bool isAllowedToRequestStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedStorageAccess; };
@@ -114,3 +111,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DocumentStorageAccess)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDocumentStorageAccess(); }
+SPECIALIZE_TYPE_TRAITS_END()

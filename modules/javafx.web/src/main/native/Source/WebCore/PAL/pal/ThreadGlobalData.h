@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <pal/ExportMacros.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
@@ -44,18 +45,18 @@ public:
     ICUConverterWrapper& cachedConverterICU() { return m_cachedConverterICU; }
 
 protected:
-    PAL_EXPORT ThreadGlobalData();
+    PAL_EXPORT explicit ThreadGlobalData(Type);
 
 private:
-    PAL_EXPORT friend ThreadGlobalData& threadGlobalData();
+    PAL_EXPORT friend ThreadGlobalData& threadGlobalDataSingleton();
 
     const UniqueRef<ICUConverterWrapper> m_cachedConverterICU;
 };
 
 #if USE(WEB_THREAD)
-PAL_EXPORT ThreadGlobalData& threadGlobalData();
+PAL_EXPORT ThreadGlobalData& threadGlobalDataSingleton();
 #else
-PAL_EXPORT ThreadGlobalData& threadGlobalData() PURE_FUNCTION;
+PAL_EXPORT ThreadGlobalData& threadGlobalDataSingleton() PURE_FUNCTION;
 #endif
 
 } // namespace PAL

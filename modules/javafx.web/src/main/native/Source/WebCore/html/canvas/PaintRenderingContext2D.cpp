@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaintRenderingContext2D);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PaintRenderingContext2D);
 
 std::unique_ptr<PaintRenderingContext2D> PaintRenderingContext2D::create(CustomPaintCanvas& canvas)
 {

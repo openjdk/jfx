@@ -41,6 +41,7 @@
 #include "ImageBitmap.h"
 #include "ImageBitmapRenderingContext.h"
 #include "ImageData.h"
+#include "InspectorCanvasCallTracer.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorShaderProgram.h"
 #include "InstrumentingAgents.h"
@@ -110,7 +111,7 @@ void InspectorCanvasAgent::didCreateFrontendAndBackend()
 
 void InspectorCanvasAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    disable();
+    std::ignore = disable();
 }
 
 void InspectorCanvasAgent::discardAgent()
@@ -137,14 +138,14 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::disable()
 
 bool InspectorCanvasAgent::enabled() const
 {
-    return m_instrumentingAgents.enabledCanvasAgent() == this;
+    return Ref { m_instrumentingAgents.get() }->enabledCanvasAgent() == this;
 }
 
 void InspectorCanvasAgent::internalEnable()
 {
     ASSERT(!enabled());
 
-    m_instrumentingAgents.setEnabledCanvasAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledCanvasAgent(this);
 
     {
         Locker locker { CanvasRenderingContext::instancesLock() };
@@ -179,7 +180,7 @@ void InspectorCanvasAgent::internalEnable()
 
 void InspectorCanvasAgent::internalDisable()
 {
-    m_instrumentingAgents.setEnabledCanvasAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledCanvasAgent(nullptr);
 
     reset();
 
@@ -250,7 +251,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorCanvasAgent::startRecording(co
         recordingOptions.frameCount = *frameCount;
     if (memoryLimit)
         recordingOptions.memoryLimit = *memoryLimit;
-    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Frontend, WTFMove(recordingOptions));
+    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Frontend, WTF::move(recordingOptions));
 
     return { };
 }
@@ -346,7 +347,7 @@ void InspectorCanvasAgent::didCreateCanvasRenderingContext(CanvasRenderingContex
     if (m_recordingAutoCaptureFrameCount) {
         RecordingOptions recordingOptions;
         recordingOptions.frameCount = m_recordingAutoCaptureFrameCount.value();
-        startRecording(inspectorCanvas, Inspector::Protocol::Recording::Initiator::AutoCapture, WTFMove(recordingOptions));
+        startRecording(inspectorCanvas, Inspector::Protocol::Recording::Initiator::AutoCapture, WTF::move(recordingOptions));
     }
 }
 
@@ -460,7 +461,7 @@ void InspectorCanvasAgent::consoleStartRecordingCanvas(CanvasRenderingContext& c
         if (JSC::JSValue optionName = options->get(&exec, JSC::Identifier::fromString(vm, "name"_s)))
             recordingOptions.name = optionName.toWTFString(&exec);
     }
-    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Console, WTFMove(recordingOptions));
+    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Console, WTF::move(recordingOptions));
 }
 
 void InspectorCanvasAgent::consoleStopRecordingCanvas(CanvasRenderingContext& context)
@@ -489,7 +490,7 @@ void InspectorCanvasAgent::didCreateWebGLProgram(WebGLRenderingContextBase& cont
 
     auto inspectorProgramRef = InspectorShaderProgram::create(program, *inspectorCanvas);
     auto& inspectorProgram = inspectorProgramRef.get();
-    m_identifierToInspectorProgram.set(inspectorProgram.identifier(), WTFMove(inspectorProgramRef));
+    m_identifierToInspectorProgram.set(inspectorProgram.identifier(), WTF::move(inspectorProgramRef));
     m_frontendDispatcher->programCreated(inspectorProgram.buildObjectForShaderProgram());
 }
 
@@ -524,18 +525,7 @@ bool InspectorCanvasAgent::isWebGLProgramHighlighted(WebGLProgram& program)
 
 #endif // ENABLE(WEBGL)
 
-#define PROCESS_ARGUMENT_DEFINITION(ArgumentType) \
-std::optional<InspectorCanvasCallTracer::ProcessedArgument> InspectorCanvasAgent::processArgument(CanvasRenderingContext& canvasRenderingContext, ArgumentType argument) \
-{ \
-    auto inspectorCanvas = findInspectorCanvas(canvasRenderingContext); \
-    ASSERT(inspectorCanvas); \
-    return inspectorCanvas->processArgument(argument); \
-} \
-// end of PROCESS_ARGUMENT_DEFINITION
-    FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_ARGUMENT(PROCESS_ARGUMENT_DEFINITION)
-#undef PROCESS_ARGUMENT_DEFINITION
-
-void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingContext, String&& name, InspectorCanvasCallTracer::ProcessedArguments&& arguments)
+void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingContext, String&& name, InspectorCanvasProcessedArguments&& arguments)
 {
     ASSERT(canvasRenderingContext.hasActiveInspectorCanvasCallTracer());
 
@@ -571,7 +561,7 @@ void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingC
 
     m_recordingCanvasIdentifiers.add(inspectorCanvas->identifier());
 
-    inspectorCanvas->recordAction(WTFMove(name), WTFMove(arguments));
+    inspectorCanvas->recordAction(WTF::move(name), WTF::move(arguments));
 
     if (!inspectorCanvas->hasBufferSpace())
         didFinishRecordingCanvasFrame(canvasRenderingContext, true);
@@ -676,7 +666,7 @@ InspectorCanvas& InspectorCanvasAgent::bindCanvas(CanvasRenderingContext& contex
     }
 #endif
 
-    return inspectorCanvas;
+    return inspectorCanvas.unsafeGet();
 }
 
 void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
@@ -687,7 +677,7 @@ void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
     Vector<InspectorShaderProgram*> programsToRemove;
     for (auto& inspectorProgram : m_identifierToInspectorProgram.values()) {
         if (&inspectorProgram->canvas() == &inspectorCanvas)
-            programsToRemove.append(inspectorProgram.get());
+            programsToRemove.append(inspectorProgram.ptr());
     }
     for (auto* inspectorProgram : programsToRemove)
         unbindProgram(*inspectorProgram);
@@ -721,7 +711,7 @@ RefPtr<InspectorCanvas> InspectorCanvasAgent::findInspectorCanvas(CanvasRenderin
 {
     for (auto& inspectorCanvas : m_identifierToInspectorCanvas.values()) {
         if (&inspectorCanvas->canvasContext() == &context)
-            return inspectorCanvas;
+            return inspectorCanvas.ptr();
     }
     return nullptr;
 }
@@ -756,7 +746,7 @@ RefPtr<InspectorShaderProgram> InspectorCanvasAgent::findInspectorProgram(WebGLP
 {
     for (auto& inspectorProgram : m_identifierToInspectorProgram.values()) {
         if (&inspectorProgram->program() == &program)
-            return inspectorProgram;
+            return inspectorProgram.ptr();
     }
     return nullptr;
 }

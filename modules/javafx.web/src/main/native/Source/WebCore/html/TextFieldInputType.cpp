@@ -36,11 +36,16 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ContainerNodeInlines.h"
+#include "CSSSelector.h"
 #include "DOMFormData.h"
+#include "DocumentEventLoop.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "Editor.h"
 #include "ElementRareData.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
 #include "HTMLDataListElement.h"
 #include "HTMLInputElement.h"
@@ -52,8 +57,8 @@
 #include "LocalFrameInlines.h"
 #include "LocalizedStrings.h"
 #include "NodeRenderStyle.h"
-#include "Page.h"
 #include "PlatformKeyboardEvent.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderTextControlSingleLine.h"
@@ -93,11 +98,12 @@ TextFieldInputType::~TextFieldInputType()
 bool TextFieldInputType::isKeyboardFocusable(const FocusEventData&) const
 {
     ASSERT(element());
+    Ref element = *this->element();
 #if PLATFORM(IOS_FAMILY)
-    if (element()->isReadOnly())
+    if (element->isReadOnly())
         return false;
 #endif
-    return protectedElement()->isTextFormControlFocusable();
+    return element->isTextFormControlFocusable();
 }
 
 bool TextFieldInputType::isMouseFocusable() const
@@ -297,12 +303,7 @@ RenderPtr<RenderElement> TextFieldInputType::createInputRenderer(RenderStyle&& s
 {
     ASSERT(element());
     // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
-    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderTextControlSingleLine>(RenderObject::Type::TextControlSingleLine, *protectedElement(), WTFMove(style));
-}
-
-bool TextFieldInputType::needsContainer() const
-{
-    return false;
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderTextControlSingleLine>(RenderObject::Type::TextControlSingleLine, *protectedElement(), WTF::move(style));
 }
 
 bool TextFieldInputType::shouldHaveSpinButton() const
@@ -450,16 +451,6 @@ void TextFieldInputType::readOnlyStateChanged()
         innerSpinButton->releaseCapture();
     capsLockStateMayHaveChanged();
     updateAutoFillButton();
-}
-
-bool TextFieldInputType::supportsReadOnly() const
-{
-    return true;
-}
-
-bool TextFieldInputType::shouldUseInputMethod() const
-{
-    return true;
 }
 
 void TextFieldInputType::createDataListDropdownIndicator()
@@ -649,7 +640,7 @@ void TextFieldInputType::updatePlaceholderText()
         else
             element->protectedUserAgentShadowRoot()->insertBefore(placeholder, innerTextElement());
     }
-    RefPtr { m_placeholder }->setInnerText(WTFMove(placeholderText));
+    RefPtr { m_placeholder }->setInnerText(WTF::move(placeholderText));
 }
 
 bool TextFieldInputType::appendFormData(DOMFormData& formData) const
@@ -793,9 +784,9 @@ void TextFieldInputType::autoFillButtonElementWasClicked()
     if (!page)
         return;
 
-    auto event = Event::create(eventNames().webkitautofillrequestEvent, Event::CanBubble::No, Event::IsCancelable::No);
+    auto event = Event::create(eventNames().webkitautofillrequestEvent, Event::CanBubble::No, Event::IsCancelable::No, Event::IsComposed::Yes);
     event->setIsAutofillEvent();
-    element->dispatchEvent(WTFMove(event));
+    element->dispatchEvent(WTF::move(event));
 
     page->chrome().client().handleAutoFillButtonClick(*element);
 }
@@ -961,13 +952,13 @@ Vector<DataListSuggestion> TextFieldInputType::suggestions()
                 suggestion.label = { };
 
             if (elementValue.isEmpty() || suggestion.value.startsWithIgnoringASCIICase(elementValue))
-                suggestions.append(WTFMove(suggestion));
+                suggestions.append(WTF::move(suggestion));
             else if (suggestion.value.containsIgnoringASCIICase(elementValue) || (canShowLabels && suggestion.label.containsIgnoringASCIICase(elementValue)))
-                matchesContainingValue.append(WTFMove(suggestion));
+                matchesContainingValue.append(WTF::move(suggestion));
         }
     }
 
-    suggestions.appendVector(WTFMove(matchesContainingValue));
+    suggestions.appendVector(WTF::move(matchesContainingValue));
     m_cachedSuggestions = std::make_pair(elementValue, suggestions);
 
     return suggestions;
@@ -983,39 +974,44 @@ void TextFieldInputType::didCloseSuggestions()
     m_cachedSuggestions = { };
     if (RefPtr suggestionPicker = std::exchange(m_suggestionPicker, nullptr))
         suggestionPicker->detach();
+    setPopupIsVisible(false);
     if (CheckedPtr renderer = element()->renderer())
         renderer->repaint();
 }
 
 void TextFieldInputType::displaySuggestions(DataListSuggestionActivationType type)
 {
-    if (element()->isDisabledFormControl() || !element()->renderer())
+    Ref element = *this->element();
+    if (element->isDisabledFormControl() || !element->renderer())
         return;
 
     if (!UserGestureIndicator::processingUserGesture() && !(type == DataListSuggestionActivationType::TextChanged || type == DataListSuggestionActivationType::DataListMayHaveChanged))
         return;
 
-    if (!m_suggestionPicker && suggestions().size() > 0)
+    if (!m_suggestionPicker && suggestions().size() > 0) {
+        setPopupIsVisible(true);
         m_suggestionPicker = chrome()->createDataListSuggestionPicker(*this);
+    }
 
-    if (RefPtr suggestionPicker = m_suggestionPicker)
+    if (RefPtr suggestionPicker = m_suggestionPicker) {
+        setPopupIsVisible(true);
         suggestionPicker->displayWithActivationType(type);
+    }
 }
 
 void TextFieldInputType::closeSuggestions()
 {
     if (RefPtr suggestionPicker = m_suggestionPicker)
         suggestionPicker->close();
+    setPopupIsVisible(false);
 }
 
-bool TextFieldInputType::isPresentingAttachedView() const
+void TextFieldInputType::setPopupIsVisible(bool visible)
 {
-    return !!m_suggestionPicker;
-}
-
-bool TextFieldInputType::isFocusingWithDataListDropdown() const
-{
-    return m_isFocusingWithDataListDropdown;
+    if (m_popupIsVisible == visible || !element())
+        return;
+    Style::PseudoClassChangeInvalidation styleInvalidation(*protectedElement(), CSSSelector::PseudoClass::Open, visible);
+    m_popupIsVisible = visible;
 }
 
 } // namespace WebCore

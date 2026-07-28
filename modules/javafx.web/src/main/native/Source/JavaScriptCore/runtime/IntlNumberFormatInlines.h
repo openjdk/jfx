@@ -29,6 +29,7 @@
 #include "IntlNumberFormat.h"
 #include "IntlPluralRules.h"
 #include "IntlObjectInlines.h"
+#include "JSBigIntInlines.h"
 #include "JSGlobalObject.h"
 #include "JSGlobalObjectFunctions.h"
 
@@ -224,7 +225,7 @@ void appendNumberFormatDigitOptionsToSkeleton(IntlType* intlInstance, StringBuil
 
     if (intlInstance->m_roundingIncrement != 1) {
         skeletonBuilder.append(" precision-increment/"_s);
-        auto string = numberToStringUnsigned<Vector<LChar, 10>>(intlInstance->m_roundingIncrement);
+        auto string = numberToStringUnsigned<Vector<Latin1Character, 10>>(intlInstance->m_roundingIncrement);
         if (intlInstance->m_maximumFractionDigits >= string.size()) {
             skeletonBuilder.append("0."_s);
             for (unsigned i = 0; i < (intlInstance->m_maximumFractionDigits - string.size()); ++i)
@@ -378,7 +379,7 @@ inline IntlMathematicalValue toIntlMathematicalValue(JSGlobalObject* globalObjec
     auto string = asString(primitive)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, IntlMathematicalValue::parseString(globalObject, WTFMove(string)));
+    RELEASE_AND_RETURN(scope, IntlMathematicalValue::parseString(globalObject, WTF::move(string)));
 }
 
 } // namespace JSC

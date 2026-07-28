@@ -166,7 +166,7 @@ namespace WebCore {
 class MediaPlayerFactoryJava final : public MediaPlayerFactory {
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MediaFoundation; };
-    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer& player) const final
     {
         return adoptRef(*new MediaPlayerPrivate(player));
     }
@@ -258,7 +258,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
 // *********************************************************
 // MediaPlayerPrivate
 // *********************************************************
-MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
+MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer &player)
     : m_player(player)
     , m_networkState(MediaPlayer::NetworkState::Empty)
     , m_readyState(MediaPlayer::ReadyState::HaveNothing)
@@ -650,7 +650,7 @@ void MediaPlayerPrivate::setNetworkState(MediaPlayer::NetworkState networkState)
         PLOG_TRACE4("MediaPlayerPrivate NetworkState: %s (%d) => %s (%d)\n",
             networkStateStr(m_networkState), (int)m_networkState, networkStateStr(networkState), (int)networkState);
         m_networkState = networkState;
-        m_player->networkStateChanged();
+        m_player.networkStateChanged();
     }
 }
 
@@ -660,7 +660,7 @@ void MediaPlayerPrivate::setReadyState(MediaPlayer::ReadyState readyState)
         PLOG_TRACE4("MediaPlayerPrivate ReadyState: %s (%d) => %s (%d)\n",
             readyStateStr(m_readyState), (int)m_readyState, readyStateStr(readyState), (int)readyState);
         m_readyState = readyState;
-        m_player->readyStateChanged();
+        m_player.readyStateChanged();
     }
 }
 
@@ -724,7 +724,7 @@ void MediaPlayerPrivate::notifyPaused(bool paused)
 
     if (m_paused != paused) {
         m_paused = paused;
-        m_player->playbackStateChanged();
+        m_player.playbackStateChanged();
     }
 }
 
@@ -736,14 +736,14 @@ void MediaPlayerPrivate::notifySeeking(bool seeking)
         if (!seeking) {
             // notify time change after seek completed
             //LOG_TRACE0("==MediaPlayerPrivate notifySeeking: NOTIFYING time changed\n");
-            m_player->timeChanged();
+            m_player.timeChanged();
         }
     }
 }
 
 void MediaPlayerPrivate::notifyFinished() {
     PLOG_TRACE0(">>MediaPlayerPrivate notifyFinished\n");
-    m_player->timeChanged();
+    m_player.timeChanged();
 }
 
 void MediaPlayerPrivate::notifyReady(bool hasVideo, bool hasAudio)
@@ -759,7 +759,7 @@ void MediaPlayerPrivate::notifyDurationChanged(float duration)
     PLOG_TRACE2(">>MediaPlayerPrivate notifyDurationChanged, %f => %f\n",
         m_duration, duration);
     m_duration = MediaTime::createWithFloat(duration);
-    m_player->durationChanged();
+    m_player.durationChanged();
 }
 
 void MediaPlayerPrivate::notifySizeChanged(int width, int height)
@@ -771,7 +771,7 @@ void MediaPlayerPrivate::notifySizeChanged(int width, int height)
 void MediaPlayerPrivate::notifyNewFrame()
 {
     PLOG_TRACE0(">>MediaPlayerPrivate notifyNewFrame\n");
-    m_player->repaint();
+    m_player.repaint();
     //PLOG_TRACE0("<<MediaPlayerPrivate notifyNewFrame\n");
 }
 

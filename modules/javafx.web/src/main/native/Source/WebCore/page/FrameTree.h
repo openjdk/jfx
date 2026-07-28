@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
+#include <WebCore/FrameIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -57,8 +57,8 @@ public:
     Frame* firstChild() const { return m_firstChild.get(); }
     Frame* lastChild() const { return m_lastChild.get(); }
 
-    Frame* firstRenderedChild() const;
-    Frame* nextRenderedSibling() const;
+    RefPtr<Frame> firstRenderedChild() const;
+    RefPtr<Frame> nextRenderedSibling() const;
 
     LocalFrame* firstLocalDescendant() const;
     LocalFrame* nextLocalSibling() const;
@@ -68,7 +68,7 @@ public:
     WEBCORE_EXPORT Frame* traverseNext(const Frame* stayWithin = nullptr) const;
     Frame* traverseNextSkippingChildren(const Frame* stayWithin = nullptr) const;
     // Rendered means being the main frame or having an ownerRenderer. It may not have been parented in the Widget tree yet (see WidgetHierarchyUpdatesSuspensionScope).
-    WEBCORE_EXPORT Frame* traverseNextRendered(const Frame* stayWithin = nullptr) const;
+    WEBCORE_EXPORT RefPtr<Frame> traverseNextRendered(const Frame* stayWithin = nullptr) const;
     WEBCORE_EXPORT Frame* traverseNext(CanWrap, DidWrap* = nullptr) const;
     WEBCORE_EXPORT Frame* traversePrevious(CanWrap, DidWrap* = nullptr) const;
 
@@ -86,17 +86,17 @@ public:
     Frame* childBySpecifiedName(const AtomString& name) const;
 #endif
     Frame* descendantByFrameID(FrameIdentifier) const;
-    WEBCORE_EXPORT Frame* findByUniqueName(const AtomString&, Frame& activeFrame) const;
-    WEBCORE_EXPORT Frame* findBySpecifiedName(const AtomString&, Frame& activeFrame) const;
+    WEBCORE_EXPORT RefPtr<Frame> findByUniqueName(const AtomString&, Frame& activeFrame) const;
+    WEBCORE_EXPORT RefPtr<Frame> findBySpecifiedName(const AtomString&, Frame& activeFrame) const;
     WEBCORE_EXPORT unsigned childCount() const;
     unsigned descendantCount() const;
     WEBCORE_EXPORT Frame& top() const;
     Ref<Frame> protectedTop() const;
     unsigned depth() const;
 
-    WEBCORE_EXPORT Frame* scopedChild(unsigned index) const;
-    WEBCORE_EXPORT Frame* scopedChildByUniqueName(const AtomString&) const;
-    Frame* scopedChildBySpecifiedName(const AtomString& name) const;
+    WEBCORE_EXPORT RefPtr<Frame> scopedChild(unsigned index) const;
+    WEBCORE_EXPORT RefPtr<Frame> scopedChildByUniqueName(const AtomString&) const;
+    RefPtr<Frame> scopedChildBySpecifiedName(const AtomString& name) const;
     unsigned scopedChildCount() const;
 #if PLATFORM(JAVA)
     void resetFrameIdentifiers() { m_frameIDGenerator = 0; }
@@ -106,11 +106,11 @@ private:
     Frame* deepLastChild() const;
     Frame* nextAncestorSibling(const Frame* stayWithin) const;
 
-    Frame* scopedChild(unsigned index, TreeScope*) const;
-    Frame* scopedChild(NOESCAPE const Function<bool(const FrameTree&)>& isMatch, TreeScope*) const;
+    RefPtr<Frame> scopedChild(unsigned index, TreeScope*) const;
+    RefPtr<Frame> scopedChild(NOESCAPE const Function<bool(const FrameTree&)>& isMatch, TreeScope*) const;
     unsigned scopedChildCount(TreeScope*) const;
 
-    template<typename F> Frame* find(const AtomString& name, F&& nameGetter, Frame& activeFrame) const;
+    template<typename F> RefPtr<Frame> find(const AtomString& name, F&& nameGetter, Frame& activeFrame) const;
 
     Ref<Frame> protectedThisFrame() const;
 #if PLATFORM(JAVA)

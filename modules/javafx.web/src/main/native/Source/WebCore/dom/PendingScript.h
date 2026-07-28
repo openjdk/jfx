@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "LoadableScript.h"
-#include "LoadableScriptClient.h"
+#include <WebCore/LoadableScript.h>
+#include <WebCore/LoadableScriptClient.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -46,6 +46,10 @@ public:
     static Ref<PendingScript> create(ScriptElement&, TextPosition scriptStartPosition);
 
     virtual ~PendingScript();
+
+    // LoadableScriptClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     TextPosition startingPosition() const { return m_startingPosition; }
     void setStartingPosition(const TextPosition& position) { m_startingPosition = position; }

@@ -1,0 +1,16 @@
+framework module WebCore_Private [system] {
+    explicit module PlatformExportMacros {
+        header "PlatformExportMacros.h"
+        export *
+    }
+
+    explicit module Core {
+        umbrella "PrivateHeaders"
+
+        requires cplusplus
+
+        explicit module * {
+            export *
+        }
+    }
+}

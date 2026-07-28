@@ -28,31 +28,116 @@
 #include "ScrollingTreeScrollingNodeDelegateCoordinated.h"
 
 #if ENABLE(ASYNC_SCROLLING) && USE(COORDINATED_GRAPHICS)
-#include "ScrollingTreeFrameScrollingNode.h"
+#include "ScrollerCoordinated.h"
+#include "ScrollingStateFrameScrollingNode.h"
+#include "ScrollingTreeOverflowScrollingNode.h"
 
 namespace WebCore {
 
 ScrollingTreeScrollingNodeDelegateCoordinated::ScrollingTreeScrollingNodeDelegateCoordinated(ScrollingTreeScrollingNode& scrollingNode, bool scrollAnimatorEnabled)
     : ThreadedScrollingTreeScrollingNodeDelegate(scrollingNode)
     , m_scrollAnimatorEnabled(scrollAnimatorEnabled)
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    , m_scrollerPair(ScrollerPairCoordinated::create(scrollingNode))
+#endif
 {
+    ASSERT(isMainThread());
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    if (is<ScrollingTreeOverflowScrollingNode>(scrollingNode) && ScrollbarTheme::theme().usesOverlayScrollbars()) {
+        m_scrollerPair->horizontalScroller().setOverlayScrollbarEnabled(true);
+        m_scrollerPair->verticalScroller().setOverlayScrollbarEnabled(true);
+    }
+#endif
 }
 
 ScrollingTreeScrollingNodeDelegateCoordinated::~ScrollingTreeScrollingNodeDelegateCoordinated() = default;
 
+FloatPoint ScrollingTreeScrollingNodeDelegateCoordinated::adjustedScrollPosition(const FloatPoint& position) const
+{
+    return position;
+}
+
 void ScrollingTreeScrollingNodeDelegateCoordinated::updateVisibleLengths()
 {
     m_scrollController.contentsSizeChanged();
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    m_scrollerPair->updateValues();
+#endif
 }
 
 bool ScrollingTreeScrollingNodeDelegateCoordinated::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
-    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { *scrollingTree(), scrollingNode().scrollingNodeID(), WheelEventTestMonitor::DeferReason::HandlingWheelEvent };
+    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { *scrollingTree(), scrollingNode()->scrollingNodeID(), WheelEventTestMonitor::DeferReason::HandlingWheelEvent };
 
     updateUserScrollInProgressForEvent(wheelEvent);
 
     return m_scrollController.handleWheelEvent(wheelEvent);
 }
+
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+void ScrollingTreeScrollingNodeDelegateCoordinated::updateFromStateNode(const ScrollingStateScrollingNode& scrollingStateNode)
+{
+    ASSERT(isMainThread());
+    CheckedRef horizontalScroller = m_scrollerPair->horizontalScroller();
+    CheckedRef verticalScroller = m_scrollerPair->verticalScroller();
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::PainterForScrollbar)) {
+        horizontalScroller->setScrollerImp(scrollingStateNode.horizontalScrollerImp());
+        verticalScroller->setScrollerImp(scrollingStateNode.verticalScrollerImp());
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollbarHoverState)) {
+        auto hoverState = scrollingStateNode.scrollbarHoverState();
+        verticalScroller->setHoveredAndPressedParts(hoverState.hoveredPartInVerticalScrollbar, hoverState.pressedPartInVerticalScrollbar);
+        horizontalScroller->setHoveredAndPressedParts(hoverState.hoveredPartInHorizontalScrollbar, hoverState.pressedPartInHorizontalScrollbar);
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::HorizontalScrollbarLayer))
+        horizontalScroller->setHostLayer(static_cast<CoordinatedPlatformLayer*>(scrollingStateNode.horizontalScrollbarLayer()));
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::VerticalScrollbarLayer))
+        verticalScroller->setHostLayer(static_cast<CoordinatedPlatformLayer*>(scrollingStateNode.verticalScrollbarLayer()));
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollbarEnabledState)) {
+        auto scrollbarEnabledState = scrollingStateNode.scrollbarEnabledState();
+        horizontalScroller->setEnabled(scrollbarEnabledState.horizontalScrollbarIsEnabled);
+        verticalScroller->setEnabled(scrollbarEnabledState.verticalScrollbarIsEnabled);
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollbarLayoutDirection)) {
+        auto scrollbarLayoutDirection = scrollingStateNode.scrollbarLayoutDirection();
+        horizontalScroller->setScrollbarLayoutDirection(scrollbarLayoutDirection);
+        verticalScroller->setScrollbarLayoutDirection(scrollbarLayoutDirection);
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::UseDarkAppearanceForScrollbars)) {
+        bool useDarkAppearanceForScrollbars = scrollingStateNode.useDarkAppearanceForScrollbars();
+        horizontalScroller->setUseDarkAppearance(useDarkAppearanceForScrollbars);
+        verticalScroller->setUseDarkAppearance(useDarkAppearanceForScrollbars);
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::OverlayScrollbarsEnabled)) {
+        if (auto* scrollingStateFrameScrollingNode = dynamicDowncast<ScrollingStateFrameScrollingNode>(&scrollingStateNode)) {
+            auto overlayScrollbarsEnabled = scrollingStateFrameScrollingNode->overlayScrollbarsEnabled();
+            horizontalScroller->setOverlayScrollbarEnabled(overlayScrollbarsEnabled);
+            verticalScroller->setOverlayScrollbarEnabled(overlayScrollbarsEnabled);
+        }
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollbarOpacity)) {
+        float scrollbarOpacity = scrollingStateNode.scrollbarOpacity();
+        horizontalScroller->setOpacity(scrollbarOpacity);
+        verticalScroller->setOpacity(scrollbarOpacity);
+    }
+
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollbarColor)) {
+        horizontalScroller->setScrollbarColor(scrollingStateNode.scrollbarColor());
+        verticalScroller->setScrollbarColor(scrollingStateNode.scrollbarColor());
+    }
+
+    ThreadedScrollingTreeScrollingNodeDelegate::updateFromStateNode(scrollingStateNode);
+}
+#endif
 
 } // namespace WebCore
 

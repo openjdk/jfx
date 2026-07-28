@@ -33,7 +33,8 @@
 #include "PathUtilities.h"
 #include "RenderAncestorIterator.h"
 #include "RenderBox.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SimpleRange.h"
 #include "WindRule.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -50,7 +51,7 @@ EventRegionContext::EventRegionContext(EventRegion& eventRegion)
 
 EventRegionContext::~EventRegionContext() = default;
 
-void EventRegionContext::unite(const FloatRoundedRect& roundedRect, RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
+void EventRegionContext::unite(const FloatRoundedRect& roundedRect, const RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
 {
     auto transformAndClipIfNeeded = [&](auto input, auto transform) {
         if (m_transformStack.isEmpty() && m_clipStack.isEmpty())
@@ -133,7 +134,7 @@ static std::optional<FloatRect> guardRectForRegionBounds(const InteractionRegion
     return std::nullopt;
 }
 
-void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const FloatRect& layerBounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
+void EventRegionContext::uniteInteractionRegions(const RenderObject& renderer, const FloatRect& layerBounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
 {
     if (!renderer.page().shouldBuildInteractionRegions())
         return;
@@ -195,7 +196,7 @@ void EventRegionContext::uniteInteractionRegions(RenderObject& renderer, const F
     }
 }
 
-bool EventRegionContext::shouldConsolidateInteractionRegion(RenderObject& renderer, const IntRect& bounds, const NodeIdentifier& nodeIdentifier)
+bool EventRegionContext::shouldConsolidateInteractionRegion(const RenderObject& renderer, const IntRect& bounds, const NodeIdentifier& nodeIdentifier)
 {
     for (auto& ancestor : ancestorsOfType<RenderElement>(renderer)) {
         if (!ancestor.element())
@@ -366,7 +367,7 @@ void EventRegionContext::shrinkWrapInteractionRegions()
                 continue;
             }
             extraRegion.contentHint = m_interactionRectsAndContentHints.get(extraRectForTracking);
-            m_interactionRegions.insert(++i, WTFMove(extraRegion));
+            m_interactionRegions.insert(++i, WTF::move(extraRegion));
         }
     }
 }
@@ -442,27 +443,27 @@ EventRegion::EventRegion(Region&& region
     , Vector<WebCore::InteractionRegion> interactionRegions
 #endif
     )
-    : m_region(WTFMove(region))
+    : m_region(WTF::move(region))
 #if ENABLE(TOUCH_ACTION_REGIONS)
-    , m_touchActionRegions(WTFMove(touchActionRegions))
+    , m_touchActionRegions(WTF::move(touchActionRegions))
 #endif
 #if ENABLE(WHEEL_EVENT_REGIONS)
-    , m_wheelEventListenerRegion(WTFMove(wheelEventListenerRegion))
-    , m_nonPassiveWheelEventListenerRegion(WTFMove(nonPassiveWheelEventListenerRegion))
+    , m_wheelEventListenerRegion(WTF::move(wheelEventListenerRegion))
+    , m_nonPassiveWheelEventListenerRegion(WTF::move(nonPassiveWheelEventListenerRegion))
 #endif
 #if ENABLE(TOUCH_EVENT_REGIONS)
-    , m_touchEventListenerRegion(WTFMove(touchEventListenerRegion))
+    , m_touchEventListenerRegion(WTF::move(touchEventListenerRegion))
 #endif
 #if ENABLE(EDITABLE_REGION)
-    , m_editableRegion(WTFMove(editableRegion))
+    , m_editableRegion(WTF::move(editableRegion))
 #endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-    , m_interactionRegions(WTFMove(interactionRegions))
+    , m_interactionRegions(WTF::move(interactionRegions))
 #endif
 {
 }
 
-void EventRegion::unite(const Region& region, RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
+void EventRegion::unite(const Region& region, const RenderObject& renderer, const RenderStyle& style, bool overrideUserModifyIsEditable)
 {
     if (renderer.usedPointerEvents() == PointerEvents::None)
         return;
@@ -470,7 +471,7 @@ void EventRegion::unite(const Region& region, RenderObject& renderer, const Rend
     m_region.unite(region);
 
 #if ENABLE(TOUCH_ACTION_REGIONS)
-    uniteTouchActions(region, style.usedTouchActions());
+    uniteTouchActions(region, Style::toPlatform(style.usedTouchAction()));
 #endif
 
     uniteEventListeners(region, style.eventListenerRegionTypes());
@@ -501,6 +502,10 @@ void EventRegion::translate(const IntSize& offset)
 #if ENABLE(WHEEL_EVENT_REGIONS)
     m_wheelEventListenerRegion.translate(offset);
     m_nonPassiveWheelEventListenerRegion.translate(offset);
+#endif
+
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    m_touchEventListenerRegion.translate(offset);
 #endif
 
 #if ENABLE(EDITABLE_REGION)
@@ -612,7 +617,8 @@ OptionSet<EventListenerRegionType> touchEventTypes =
     EventListenerRegionType::TouchStart, EventListenerRegionType::NonPassiveTouchStart
     , EventListenerRegionType::TouchEnd, EventListenerRegionType::NonPassiveTouchEnd
     , EventListenerRegionType::TouchMove, EventListenerRegionType::NonPassiveTouchMove
-    , EventListenerRegionType::TouchCancel, EventListenerRegionType::NonPassiveTouchCancel
+    , EventListenerRegionType::TouchCancel
+    , EventListenerRegionType::TouchForceChange, EventListenerRegionType::NonPassiveTouchForceChange
     , EventListenerRegionType::PointerDown, EventListenerRegionType::NonPassivePointerDown
     , EventListenerRegionType::PointerEnter, EventListenerRegionType::NonPassivePointerEnter
     , EventListenerRegionType::PointerLeave, EventListenerRegionType::NonPassivePointerLeave
@@ -623,6 +629,9 @@ OptionSet<EventListenerRegionType> touchEventTypes =
     , EventListenerRegionType::MouseMove, EventListenerRegionType::NonPassiveMouseMove
     , EventListenerRegionType::MouseDown, EventListenerRegionType::NonPassiveMouseDown
     , EventListenerRegionType::MouseMove, EventListenerRegionType::NonPassiveMouseMove
+    , EventListenerRegionType::GestureChange, EventListenerRegionType::NonPassiveGestureChange
+    , EventListenerRegionType::GestureEnd, EventListenerRegionType::NonPassiveGestureEnd
+    , EventListenerRegionType::GestureStart, EventListenerRegionType::NonPassiveGestureStart
 };
 
 OptionSet<EventListenerRegionType> touchEventNonPassiveTypes =
@@ -630,7 +639,7 @@ OptionSet<EventListenerRegionType> touchEventNonPassiveTypes =
     EventListenerRegionType::NonPassiveTouchStart
     , EventListenerRegionType::NonPassiveTouchEnd
     , EventListenerRegionType::NonPassiveTouchMove
-    , EventListenerRegionType::NonPassiveTouchCancel
+    , EventListenerRegionType::NonPassiveTouchForceChange
     , EventListenerRegionType::NonPassivePointerDown
     , EventListenerRegionType::NonPassivePointerEnter
     , EventListenerRegionType::NonPassivePointerLeave
@@ -641,6 +650,9 @@ OptionSet<EventListenerRegionType> touchEventNonPassiveTypes =
     , EventListenerRegionType::NonPassiveMouseDown
     , EventListenerRegionType::NonPassiveMouseUp
     , EventListenerRegionType::NonPassiveMouseMove
+    , EventListenerRegionType::NonPassiveGestureChange
+    , EventListenerRegionType::NonPassiveGestureEnd
+    , EventListenerRegionType::NonPassiveGestureStart
 };
 
 static bool isNonPassiveTouchEventType(EventListenerRegionType eventListenerRegionType)
@@ -662,7 +674,7 @@ static EventTrackingRegionsEventType eventTypeForEventListenerType(EventListener
         return EventTrackingRegionsEventType::Touchend;
     case EventListenerRegionType::NonPassiveTouchMove:
         return EventTrackingRegionsEventType::Touchmove;
-    case EventListenerRegionType::NonPassiveTouchCancel:
+    case EventListenerRegionType::NonPassiveTouchForceChange:
         return EventTrackingRegionsEventType::Touchforcechange;
     case EventListenerRegionType::NonPassivePointerDown:
         return EventTrackingRegionsEventType::Pointerdown;
@@ -684,6 +696,12 @@ static EventTrackingRegionsEventType eventTypeForEventListenerType(EventListener
         return EventTrackingRegionsEventType::Mousemove;
     case EventListenerRegionType::NonPassiveMouseMove:
         return EventTrackingRegionsEventType::Mouseup;
+    case EventListenerRegionType::NonPassiveGestureChange:
+        return EventTrackingRegionsEventType::Gesturechange;
+    case EventListenerRegionType::NonPassiveGestureEnd:
+        return EventTrackingRegionsEventType::Gestureend;
+    case EventListenerRegionType::NonPassiveGestureStart:
+        return EventTrackingRegionsEventType::Gesturestart;
     default:
         break;
     }

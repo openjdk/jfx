@@ -788,4 +788,14 @@ String validationMessageValueMissingForSwitchText()
     return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
 }
 
+String captionStylePreview()
+{
+    return WEB_UI_STRING_KEY("This is a preview style", "This is a preview style (Caption User Preferences)", "Caption Style Preview String");
+}
+
+String textTrackOnMenuItemText()
+{
+    return WEB_UI_STRING_KEY("On", "On (text track)", "Menu item label for the track that represents enabling closed captions.");
+}
+
 } // namespace WebCore

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "DFGCodeOriginPool.h"
-#include "JITStubRoutine.h"
-#include "JSObject.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/DFGCodeOriginPool.h>
+#include <JavaScriptCore/JITStubRoutine.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Hasher.h>
 #include <wtf/Vector.h>

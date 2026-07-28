@@ -32,7 +32,7 @@
 #include "PathTraversalState.h"
 #include "RenderBlock.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TransformOperationData.h"
 #include "TransformationMatrix.h"
 
@@ -93,16 +93,16 @@ std::optional<MotionPathData> MotionPath::motionPathDataForRenderer(const Render
 
     auto startingPositionForOffsetPosition = [&](const Style::OffsetPosition& offsetPosition, const FloatRect& referenceRect, RenderBlock& container) -> FloatPoint {
         return WTF::switchOn(offsetPosition,
-            [&](const CSS::Keyword::Normal&) -> FloatPoint {
+            [&](const CSS::Keyword::Normal&) {
         // If offset-position is normal, the element does not have an offset starting position.
                 return normalPositionForOffsetPath(offsetPath, referenceRect);
             },
-            [&](const CSS::Keyword::Auto&) -> FloatPoint  {
+            [&](const CSS::Keyword::Auto&)  {
         // If offset-position is auto, use top / left corner of the box.
             return offsetFromContainer(renderer, container, referenceRect);
             },
-            [&](const Style::Position& position) -> FloatPoint {
-                return Style::evaluate(position, referenceRect.size());
+            [&](const Style::Position& position) {
+                return Style::evaluate<FloatPoint>(position, referenceRect.size(), Style::ZoomNeeded { });
             }
         );
     };
@@ -124,7 +124,7 @@ std::optional<MotionPathData> MotionPath::motionPathDataForRenderer(const Render
         [&](const Style::RayPath& offsetPath) {
             auto startingPosition = offsetPath.ray()->position;
             data.usedStartingPosition = startingPosition
-                ? Style::evaluate(*startingPosition, data.containingBlockBoundingRect.rect().size())
+                ? Style::evaluate<FloatPoint>(*startingPosition, data.containingBlockBoundingRect.rect().size(), Style::ZoomNeeded { })
                 : startingPositionForOffsetPosition(offsetPosition, data.containingBlockBoundingRect.rect(), *container);
         },
         [&](const auto&) { }
@@ -133,11 +133,9 @@ std::optional<MotionPathData> MotionPath::motionPathDataForRenderer(const Render
     return data;
 }
 
-static PathTraversalState traversalStateAtDistance(const Path& path, const Style::OffsetDistance& distance)
+static PathTraversalState traversalStateAtDistance(const Path& path, float distanceValue)
 {
     auto pathLength = path.length();
-    auto distanceValue = Style::evaluate(distance, pathLength);
-
     float resolvedLength = 0;
     if (path.isClosed()) {
         if (pathLength) {
@@ -152,30 +150,21 @@ static PathTraversalState traversalStateAtDistance(const Path& path, const Style
     return path.traversalStateAtLength(resolvedLength);
 }
 
-void MotionPath::applyMotionPathTransform(TransformationMatrix& matrix, const TransformOperationData& transformData, const FloatPoint& transformOrigin, const Style::OffsetPath& offsetPath, const Style::OffsetAnchor& offsetAnchor, const Style::OffsetDistance& offsetDistance, const Style::OffsetRotate& offsetRotate, TransformBox transformBox)
+void MotionPath::applyMotionPathTransform(TransformationMatrix& matrix, const TransformOperationData& transformData, FloatPoint transformOrigin, TransformBox transformBox, const Path& offsetPath, std::optional<FloatPoint> offsetAnchor, float offsetDistance, float offsetRotate, bool offsetRotateHasAuto)
 {
     auto boundingBox = transformData.boundingBox;
     auto anchor = transformOrigin;
-    WTF::switchOn(offsetAnchor,
-        [&](const Style::Position& position) {
-            anchor = Style::evaluate(position, boundingBox.size()) + boundingBox.location();
-        },
-        [&](const CSS::Keyword::Auto&) { }
-    );
 
-    // Shift element to the point on path specified by offset-path and offset-distance.
-    auto path = Style::tryPath(offsetPath, transformData);
-    if (!path)
-        return;
-
-    auto traversalState = traversalStateAtDistance(*path, offsetDistance);
-    matrix.translate(traversalState.current().x(), traversalState.current().y());
+    if (offsetAnchor)
+        anchor = *offsetAnchor + boundingBox.location();
 
     auto shiftToOrigin = anchor - transformOrigin;
 
-    // Adjust anchor for SVG.
     if (transformData.isSVGRenderer && transformBox != TransformBox::ViewBox)
         anchor += boundingBox.location();
+
+    auto traversalState = traversalStateAtDistance(offsetPath, offsetDistance);
+    matrix.translate(traversalState.current().x(), traversalState.current().y());
 
     // Shift element to the anchor specified by offset-anchor.
     matrix.translate(-anchor.x(), -anchor.y());
@@ -183,23 +172,12 @@ void MotionPath::applyMotionPathTransform(TransformationMatrix& matrix, const Tr
     matrix.translate(shiftToOrigin.width(), shiftToOrigin.height());
 
     // Apply rotation.
-    auto& rotation = offsetRotate;
-    if (rotation.hasAuto())
-        matrix.rotate(traversalState.normalAngle() + rotation.angle().value);
+    if (offsetRotateHasAuto)
+        matrix.rotate(traversalState.normalAngle() + offsetRotate);
     else
-        matrix.rotate(rotation.angle().value);
+        matrix.rotate(offsetRotate);
 
     matrix.translate(-shiftToOrigin.width(), -shiftToOrigin.height());
-}
-
-void MotionPath::applyMotionPathTransform(const RenderStyle& style, const TransformOperationData& transformData, TransformationMatrix& matrix)
-{
-    auto& offsetPath = style.offsetPath();
-    if (WTF::holdsAlternative<CSS::Keyword::None>(offsetPath))
-        return;
-
-    auto transformOrigin = style.computeTransformOrigin(transformData.boundingBox).xy();
-    applyMotionPathTransform(matrix, transformData, transformOrigin, offsetPath, style.offsetAnchor(), style.offsetDistance(), style.offsetRotate(), style.transformBox());
 }
 
 bool MotionPath::needsUpdateAfterContainingBlockLayout(const Style::OffsetPath& offsetPath)

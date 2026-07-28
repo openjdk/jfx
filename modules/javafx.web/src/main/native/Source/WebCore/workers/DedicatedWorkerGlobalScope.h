@@ -63,7 +63,8 @@ using CallbackId = int;
 using TransferredMessagePort = std::pair<WebCore::MessagePortIdentifier, WebCore::MessagePortIdentifier>;
 
 class DedicatedWorkerGlobalScope final : public WorkerGlobalScope {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DedicatedWorkerGlobalScope);
+    WTF_MAKE_TZONE_ALLOCATED(DedicatedWorkerGlobalScope);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DedicatedWorkerGlobalScope);
 public:
     static Ref<DedicatedWorkerGlobalScope> create(const WorkerParameters&, Ref<SecurityOrigin>&&, DedicatedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
     virtual ~DedicatedWorkerGlobalScope();
@@ -72,7 +73,7 @@ public:
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
-    DedicatedWorkerThread& thread();
+    Ref<DedicatedWorkerThread> thread();
 
 #if ENABLE(NOTIFICATIONS)
     NotificationClient* notificationClient() final;
@@ -103,17 +104,23 @@ private:
     String m_name;
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
-    RefPtr<WorkerAnimationController> m_workerAnimationController;
+    const RefPtr<WorkerAnimationController> m_workerAnimationController;
 #endif
 #if ENABLE(NOTIFICATIONS)
-    RefPtr<WorkerNotificationClient> m_notificationClient;
+    const RefPtr<WorkerNotificationClient> m_notificationClient;
 #endif
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DedicatedWorkerGlobalScope)
+    static bool isType(const WebCore::EventTarget& context) { return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::DedicatedWorkerGlobalScope; }
     static bool isType(const WebCore::ScriptExecutionContext& context)
+    {
+        auto* global = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
+        return global && global->type() == WebCore::WorkerGlobalScope::Type::DedicatedWorker;
+    }
+    static bool isType(const WebCore::WorkerOrWorkletGlobalScope& context)
     {
         auto* global = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
         return global && global->type() == WebCore::WorkerGlobalScope::Type::DedicatedWorker;

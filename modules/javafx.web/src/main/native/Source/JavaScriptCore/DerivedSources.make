@@ -45,12 +45,9 @@ EXTERNAL_FLAGS := -DRELEASE_WITHOUT_OPTIMIZATIONS $(addprefix -D, $(GCC_PREPROCE
 
 platform_h_compiler_command = $(CC) -std=c++2b -x c++ $(1) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) $(EXTERNAL_FLAGS) -include "wtf/Platform.h" /dev/null
 
-FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
-
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
-
-PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
-FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
+FEATURE_AND_PLATFORM_FLAGS_RESPONSE_FILE = platform-enabled-swift-args.$(WK_CURRENT_ARCH).resp
+FEATURE_AND_PLATFORM_FLAGS := $(shell cat $(FEATURE_AND_PLATFORM_FLAGS_RESPONSE_FILE))
+FEATURE_AND_PLATFORM_DEFINES := $(patsubst -D%, %, $(filter -D%, $(FEATURE_AND_PLATFORM_FLAGS)))
 
 to-pattern = $(join $(basename $1), $(subst .,%,$(suffix $1)))
 
@@ -109,14 +106,12 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/ArrayIteratorPrototype.js \
     $(JavaScriptCore)/builtins/ArrayPrototype.js \
     $(JavaScriptCore)/builtins/AsyncDisposableStackPrototype.js \
-    $(JavaScriptCore)/builtins/AsyncFunctionPrototype.js \
     $(JavaScriptCore)/builtins/AsyncGeneratorPrototype.js \
     $(JavaScriptCore)/builtins/AsyncIteratorPrototype.js \
     $(JavaScriptCore)/builtins/DisposableStackPrototype.js \
     $(JavaScriptCore)/builtins/FunctionPrototype.js \
     $(JavaScriptCore)/builtins/GeneratorPrototype.js \
     $(JavaScriptCore)/builtins/GlobalOperations.js \
-    $(JavaScriptCore)/builtins/InternalPromiseConstructor.js \
     $(JavaScriptCore)/builtins/IteratorHelpers.js \
     $(JavaScriptCore)/builtins/JSIteratorConstructor.js \
     $(JavaScriptCore)/builtins/JSIteratorHelperPrototype.js \
@@ -128,7 +123,6 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/ObjectConstructor.js \
     $(JavaScriptCore)/builtins/PromiseConstructor.js \
     $(JavaScriptCore)/builtins/PromiseOperations.js \
-    $(JavaScriptCore)/builtins/PromisePrototype.js \
     $(JavaScriptCore)/builtins/ProxyHelpers.js \
     $(JavaScriptCore)/builtins/ReflectObject.js \
     $(JavaScriptCore)/builtins/RegExpPrototype.js \
@@ -223,8 +217,12 @@ OBJECT_LUT_HEADERS = \
     TemporalPlainDatePrototype.lut.h \
     TemporalPlainDateTimeConstructor.lut.h \
     TemporalPlainDateTimePrototype.lut.h \
+    TemporalPlainMonthDayConstructor.lut.h \
+    TemporalPlainMonthDayPrototype.lut.h \
     TemporalPlainTimeConstructor.lut.h \
     TemporalPlainTimePrototype.lut.h \
+    TemporalPlainYearMonthConstructor.lut.h \
+    TemporalPlainYearMonthPrototype.lut.h \
     TemporalTimeZoneConstructor.lut.h \
     TemporalTimeZonePrototype.lut.h \
     WebAssemblyArrayConstructor.lut.h \
@@ -274,8 +272,6 @@ BYTECODE_FILES = \
     BytecodeIndices.h \
     BytecodeStructs.h \
     InitBytecodes.asm \
-    WasmLLIntGeneratorInlines.h \
-    InitWasm.asm \
     BytecodeDumperGenerated.cpp \
 #
 BYTECODE_FILES_PATTERNS = $(call to-pattern, $(BYTECODE_FILES))
@@ -289,8 +285,6 @@ $(BYTECODE_FILES_PATTERNS): $(wildcard $(JavaScriptCore)/generator/*.rb) $(JavaS
     --bytecodes_h Bytecodes.h \
     --bytecode_indices_h BytecodeIndices.h \
     --wasm_json $(JavaScriptCore)/wasm/wasm.json \
-    --wasm_llint_generator_h WasmLLIntGeneratorInlines.h \
-    --init_wasm_llint InitWasm.asm \
     --bytecode_dumper BytecodeDumperGenerated.cpp \
 
 # Inspector interfaces
@@ -366,7 +360,7 @@ all : $(INSPECTOR_DISPATCHER_FILES)
 EnabledInspectorDomains : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py force
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(INSPECTOR_DOMAINS)' $@
 
-CombinedDomains.json : $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) EnabledInspectorDomains
+CombinedDomains.json : $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) EnabledInspectorDomains $(FEATURE_AND_PLATFORM_FLAGS_RESPONSE_FILE)
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) "$(FEATURE_AND_PLATFORM_DEFINES)" > ./CombinedDomains.json
 
 # Inspector Backend Dispatchers, Frontend Dispatchers, Type Builders

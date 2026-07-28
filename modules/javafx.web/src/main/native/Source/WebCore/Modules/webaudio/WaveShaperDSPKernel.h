@@ -51,6 +51,8 @@ public:
     void lazyInitializeOversampling();
 
 private:
+    bool isWaveShaperDSPKernel() const final { return true; }
+
     // Apply the shaping curve.
     void processCurve(std::span<const float> source, std::span<float> destination);
 
@@ -73,3 +75,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WaveShaperDSPKernel)
+    static bool isType(const WebCore::AudioDSPKernel& kernel) { return kernel.isWaveShaperDSPKernel(); }
+SPECIALIZE_TYPE_TRAITS_END()

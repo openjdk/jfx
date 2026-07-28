@@ -35,6 +35,8 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageDecoderJava);
+
 #ifndef NDEBUG
   struct ImageDecoderCounter {
     static int created;

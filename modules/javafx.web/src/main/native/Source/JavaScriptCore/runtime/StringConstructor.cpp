@@ -89,7 +89,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
         return JSValue::encode(jsSingleCharacterString(vm, code));
     }
 
-    std::span<LChar> buf8Bit;
+    std::span<Latin1Character> buf8Bit;
     auto impl8Bit = StringImpl::createUninitialized(length, buf8Bit);
     for (unsigned i = 0; i < length; ++i) {
         char16_t character = static_cast<char16_t>(callFrame->uncheckedArgument(i).toUInt32(globalObject));
@@ -104,11 +104,11 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
                 buf16Bit[i] = static_cast<char16_t>(callFrame->uncheckedArgument(i).toUInt32(globalObject));
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(impl16Bit))));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTF::move(impl16Bit))));
         }
-        buf8Bit[i] = static_cast<LChar>(character);
+        buf8Bit[i] = static_cast<Latin1Character>(character);
     }
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(impl8Bit))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTF::move(impl8Bit))));
 }
 
 JSString* stringFromCharCode(JSGlobalObject* globalObject, int32_t arg)
@@ -164,9 +164,18 @@ JSC_DEFINE_HOST_FUNCTION(constructWithStringConstructor, (JSGlobalObject* global
 JSString* stringConstructor(JSGlobalObject* globalObject, JSValue argument)
 {
     VM& vm = globalObject->vm();
-    if (argument.isSymbol())
-        return jsNontrivialString(vm, asSymbol(argument)->descriptiveString());
-    return argument.toString(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (argument.isSymbol()) {
+        auto description = asSymbol(argument)->tryGetDescriptiveString();
+        if (!description) [[unlikely]] {
+            ASSERT(description.error() == ErrorTypeWithExtension::OutOfMemoryError);
+            throwOutOfMemoryError(globalObject, scope);
+            return nullptr;
+        }
+        return jsNontrivialString(vm, description.value());
+    }
+    RELEASE_AND_RETURN(scope, argument.toString(globalObject));
 }
 
 JSC_DEFINE_HOST_FUNCTION(callStringConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))

@@ -119,7 +119,7 @@ void OSRExit::emitRestoreArguments(CCallHelpers& jit, VM& vm, const Operands<Val
                 GPRInfo::regT1);
         }
 
-        static_assert(std::is_same<decltype(operationCreateDirectArgumentsDuringExit), decltype(operationCreateClonedArgumentsDuringExit)>::value, "We assume these functions have the same signature below.");
+        static_assert(std::same_as<decltype(operationCreateDirectArgumentsDuringExit), decltype(operationCreateClonedArgumentsDuringExit)>, "We assume these functions have the same signature below.");
         jit.setupArguments<decltype(operationCreateDirectArgumentsDuringExit)>(
             AssemblyHelpers::TrustedImmPtr(&vm), AssemblyHelpers::TrustedImmPtr(inlineCallFrame), GPRInfo::regT0, GPRInfo::regT1);
         jit.prepareCallOperation(vm);
@@ -235,7 +235,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (V
     sideStates.reserveInitialCapacity(exit.m_codeOrigin.inlineDepth());
     auto sideStateCommitter = makeScopeExit([&] {
         for (size_t i = sideStates.size(); i--;)
-            vm.pushCheckpointOSRSideState(WTFMove(sideStates[i]));
+            vm.pushCheckpointOSRSideState(WTF::move(sideStates[i]));
     });
 
     auto addSideState = [&] (CallFrame* frame, BytecodeIndex index, size_t tmpOffset) {
@@ -245,7 +245,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (V
         for (size_t i = 0; i < maxNumCheckpointTmps; ++i)
             sideState->tmps[i] = JSValue::decode(tmpScratch[i + tmpOffset]);
 
-        sideStates.append(WTFMove(sideState));
+        sideStates.append(WTF::move(sideState));
     };
 
     const CodeOrigin* codeOrigin;
@@ -276,7 +276,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         debugInfo->kind = exit.m_kind;
         debugInfo->exitIndex = osrExitIndex;
         debugInfo->bytecodeIndex = exit.m_codeOrigin.bytecodeIndex();
-        jit.probe(tagCFunction<JITProbePtrTag>(operationDebugPrintSpeculationFailure), debugInfo, SavedFPWidth::DontSaveVectors);
+        jit.probe(tagCFunction<JITProbePtrTag>(operationDebugPrintSpeculationFailure), debugInfo);
     }
 
     // Perform speculation recovery. This only comes into play when an operation
@@ -491,7 +491,8 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
 
     // Save all state from GPRs into the scratch buffer.
 
-    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(sizeof(EncodedJSValue) * operands.size());
+    const size_t scratchBufferSize = sizeof(EncodedJSValue) * operands.size();
+    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(scratchBufferSize);
     EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : nullptr;
 
     for (size_t index = 0; index < operands.size(); ++index) {
@@ -697,6 +698,14 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         }
     }
 
+    // The scratch buffer can become the sole retainer of saved on-stack values if the
+    // stack is overwritten by emitSaveCalleeSavesFor below, so set the active length
+    // for the GC.
+    if (scratchBuffer) {
+        jit.move(CCallHelpers::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
+        jit.storePtr(CCallHelpers::TrustedImm32(scratchBufferSize), CCallHelpers::Address(GPRInfo::regT0));
+    }
+
     if constexpr (validateDFGDoesGC) {
         if (Options::validateDoesGC()) {
             // We're about to exit optimized code. So, there's no longer any optimized
@@ -827,6 +836,11 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
 #if USE(JSVALUE64)
     spooler.finalizeGPR();
 #endif
+
+    if (scratchBuffer) {
+        jit.move(CCallHelpers::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
+        jit.storePtr(CCallHelpers::TrustedImm32(0), CCallHelpers::Address(GPRInfo::regT0));
+    }
 
     // Now that things on the stack are recovered, do the arguments recovery. We assume that arguments
     // recoveries don't recursively refer to each other. But, we don't try to assume that they only

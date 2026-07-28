@@ -29,6 +29,7 @@
 #include "BaselineAlignmentInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -128,8 +129,11 @@ LayoutUnit BaselineAlignmentState::synthesizedBaseline(const RenderBox& box, Fon
         boxSize += lineDirection == LineDirection::Horizontal ? box.verticalMarginExtent() : box.horizontalMarginExtent();
 
     if (baselineType == FontBaseline::Alphabetic) {
-        auto shouldTreatAsHorizontal = lineDirection == LineDirection::Horizontal
-            || (writingModeForSynthesis.isSidewaysOrientation() && writingModeForSynthesis.computedWritingMode() == StyleWritingMode::VerticalRl);
+        // When synthesizing the alphabetic baseline for a box we are determining the distance
+        // to the line-under edge. For a box with vertical-lr writing mode the location
+        // of the line-under edge should be the same as the box's block-start edge. For
+        // vertical-rl writing mode we need the box's size since they are on opposiate sides.
+        auto shouldTreatAsHorizontal = lineDirection == LineDirection::Horizontal || writingModeForSynthesis.computedWritingMode() == StyleWritingMode::VerticalRl;
         return shouldTreatAsHorizontal ? boxSize : LayoutUnit();
     }
     return boxSize / 2;

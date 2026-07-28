@@ -30,13 +30,14 @@
 #include "IntSize.h"
 #include "SharedBuffer.h"
 #include "RQRef.h"
+#include <wtf/TZoneMalloc.h>
 
 #include <jni.h>
 
 namespace WebCore {
 
 class ImageDecoderJava : public ImageDecoder {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ImageDecoderJava);
+    WTF_MAKE_TZONE_ALLOCATED(ImageDecoderJava);
 public:
     ImageDecoderJava();
     ~ImageDecoderJava();
