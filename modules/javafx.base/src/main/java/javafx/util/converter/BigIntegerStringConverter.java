@@ -37,7 +37,17 @@ public class BigIntegerStringConverter extends BaseStringConverter<BigInteger> {
     }
 
     @Override
+    public BigInteger fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     BigInteger fromNonEmptyString(String string) {
         return new BigInteger(string);
+    }
+
+    @Override
+    public String toString(BigInteger value) {
+        return super.toString(value);
     }
 }

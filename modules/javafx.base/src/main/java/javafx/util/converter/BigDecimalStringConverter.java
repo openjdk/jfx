@@ -37,7 +37,17 @@ public class BigDecimalStringConverter extends BaseStringConverter<BigDecimal> {
     }
 
     @Override
+    public BigDecimal fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     BigDecimal fromNonEmptyString(String string) {
         return new BigDecimal(string);
+    }
+
+    @Override
+    public String toString(BigDecimal value) {
+        return super.toString(value);
     }
 }
