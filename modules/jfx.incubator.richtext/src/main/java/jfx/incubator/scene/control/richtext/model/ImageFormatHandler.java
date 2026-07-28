@@ -75,7 +75,6 @@ public class ImageFormatHandler extends DataFormatHandler {
                 return lossless ?
                     RichUtils.writePNG(im) :
                     RichUtils.writeJPG(im);
-                    
             }
         };
     }

@@ -70,7 +70,7 @@ public class TestImageFormatHandler extends RobotTestBase {
     private static final byte[] JPG_SIGNATURE = mkSignature("ffd8ffe1");
     private static final byte[] PNG_SIGNATURE = mkSignature("89504e47");
     private RichTextArea rta;
-    
+
     @BeforeEach
     public void beforeEach() {
         rta = new RichTextArea();
