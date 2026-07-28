@@ -36,7 +36,17 @@ public class DoubleStringConverter extends BaseStringConverter<Double> {
     }
 
     @Override
+    public Double fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Double fromNonEmptyString(String string) {
         return Double.valueOf(string);
+    }
+
+    @Override
+    public String toString(Double value) {
+        return super.toString(value);
     }
 }

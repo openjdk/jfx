@@ -36,7 +36,17 @@ public class BooleanStringConverter extends BaseStringConverter<Boolean> {
     }
 
     @Override
+    public Boolean fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Boolean fromNonEmptyString(String string) {
         return Boolean.valueOf(string);
+    }
+
+    @Override
+    public String toString(Boolean value) {
+        return super.toString(value);
     }
 }

@@ -36,7 +36,17 @@ public class ByteStringConverter extends BaseStringConverter<Byte> {
     }
 
     @Override
+    public Byte fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Byte fromNonEmptyString(String string) {
         return Byte.valueOf(string);
+    }
+
+    @Override
+    public String toString(Byte value) {
+        return super.toString(value);
     }
 }

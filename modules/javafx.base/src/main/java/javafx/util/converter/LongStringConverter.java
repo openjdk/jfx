@@ -35,7 +35,17 @@ public class LongStringConverter extends BaseStringConverter<Long> {
     }
 
     @Override
+    public Long fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Long fromNonEmptyString(String string) {
         return Long.valueOf(string);
+    }
+
+    @Override
+    public String toString(Long value) {
+        return super.toString(value);
     }
 }

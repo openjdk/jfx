@@ -36,7 +36,17 @@ public class ShortStringConverter extends BaseStringConverter<Short> {
     }
 
     @Override
+    public Short fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Short fromNonEmptyString(String string) {
         return Short.valueOf(string);
+    }
+
+    @Override
+    public String toString(Short value) {
+        return super.toString(value);
     }
 }

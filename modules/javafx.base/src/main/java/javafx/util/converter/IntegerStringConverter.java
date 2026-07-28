@@ -36,7 +36,17 @@ public class IntegerStringConverter extends BaseStringConverter<Integer> {
     }
 
     @Override
+    public Integer fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Integer fromNonEmptyString(String string) {
         return Integer.valueOf(string);
+    }
+
+    @Override
+    public String toString(Integer value) {
+        return super.toString(value);
     }
 }

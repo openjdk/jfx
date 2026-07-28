@@ -36,7 +36,17 @@ public class CharacterStringConverter extends BaseStringConverter<Character> {
     }
 
     @Override
+    public Character fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Character fromNonEmptyString(String string) {
         return Character.valueOf(string.charAt(0));
+    }
+
+    @Override
+    public String toString(Character value) {
+        return super.toString(value);
     }
 }

@@ -36,7 +36,17 @@ public class FloatStringConverter extends BaseStringConverter<Float> {
     }
 
     @Override
+    public Float fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Float fromNonEmptyString(String string) {
         return Float.valueOf(string);
+    }
+
+    @Override
+    public String toString(Float value) {
+        return super.toString(value);
     }
 }
