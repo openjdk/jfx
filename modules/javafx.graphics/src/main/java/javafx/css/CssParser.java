@@ -821,74 +821,75 @@ final public class CssParser {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-        if ("-fx-fill".equals(prop)) {
-             ParsedValueImpl pv = parse(root);
+
+        switch (prop) {
+        case "-fx-fill":
+            ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
                 // Pending JDK-8090988
                 pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
             }
             return pv;
-        }
-        else if ("-fx-background-color".equals(prop)) {
+        case "-fx-background-color":
             return parsePaintLayers(root);
-        } else if ("-fx-background-image".equals(prop)) {
+        case "-fx-background-image":
             return parseURILayers(root);
-        } else if ("-fx-background-insets".equals(prop)) {
+        case "-fx-background-insets":
              return parseInsetsLayers(root);
-        } else if ("-fx-opaque-insets".equals(prop)) {
+        case "-fx-opaque-insets":
             return parseInsetsLayer(root);
-        } else if ("-fx-background-position".equals(prop)) {
+        case "-fx-background-position":
              return parseBackgroundPositionLayers(root);
-        } else if ("-fx-background-radius".equals(prop)) {
+        case "-fx-background-radius":
             return parseCornerRadius(root);
-        } else if ("-fx-background-repeat".equals(prop)) {
+        case "-fx-background-repeat":
              return parseBackgroundRepeatStyleLayers(root);
-        } else if ("-fx-background-size".equals(prop)) {
+        case "-fx-background-size":
              return parseBackgroundSizeLayers(root);
-        } else if ("-fx-border-color".equals(prop)) {
+        case "-fx-border-color":
              return parseBorderPaintLayers(root);
-        } else if ("-fx-border-insets".equals(prop)) {
+        case "-fx-border-insets":
              return parseInsetsLayers(root);
-        } else if ("-fx-border-radius".equals(prop)) {
+        case "-fx-border-radius":
              return parseCornerRadius(root);
-        } else if ("-fx-border-style".equals(prop)) {
+        case "-fx-border-style":
              return parseBorderStyleLayers(root);
-        } else if ("-fx-border-width".equals(prop)) {
+        case "-fx-border-width":
              return parseMarginsLayers(root);
-        } else if ("-fx-border-image-insets".equals(prop)) {
+        case "-fx-border-image-insets":
              return parseInsetsLayers(root);
-        } else if ("-fx-border-image-repeat".equals(prop)) {
+        case "-fx-border-image-repeat":
              return parseBorderImageRepeatStyleLayers(root);
-        } else if ("-fx-border-image-slice".equals(prop)) {
+        case "-fx-border-image-slice":
              return parseBorderImageSliceLayers(root);
-        } else if ("-fx-border-image-source".equals(prop)) {
+        case "-fx-border-image-source":
              return parseURILayers(root);
-        } else if ("-fx-border-image-width".equals(prop)) {
+        case "-fx-border-image-width":
              return parseBorderImageWidthLayers(root);
-        } else if ("-fx-padding".equals(prop)) {
+        case "-fx-padding":
             ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
             return new ParsedValueImpl<>(sides, InsetsConverter.getInstance());
-        } else if ("-fx-label-padding".equals(prop)) {
-            ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
-            return new ParsedValueImpl<>(sides, InsetsConverter.getInstance());
-        } else if (prop.endsWith("font-family")) {
+        case "-fx-label-padding":
+            ParsedValueImpl<?,Size>[] lsides = parseSize1to4(root);
+            return new ParsedValueImpl<>(lsides, InsetsConverter.getInstance());
+        case "-fx-font-family":
             return parseFontFamily(root);
-        } else if (prop.endsWith("font-size")) {
+        case "-fx-font-size":
             ParsedValueImpl fsize = parseFontSize(root);
             if (fsize == null) error(root, "Expected \'<font-size>\'");
             return fsize;
-        } else if (prop.endsWith("font-style")) {
+        case "-fx-font-style":
             ParsedValueImpl fstyle = parseFontStyle(root);
             if (fstyle == null) error(root, "Expected \'<font-style>\'");
             return fstyle;
-        } else if (prop.endsWith("font-weight")) {
+        case "-fx-font-weight":
             ParsedValueImpl fweight = parseFontWeight(root);
             if (fweight == null) error(root, "Expected \'<font-style>\'");
             return fweight;
-        } else if (prop.endsWith("font")) {
+        case "-fx-font":
             return parseFont(root);
-        } else if ("-fx-stroke-dash-array".equals(prop)) {
+        case "-fx-stroke-dash-array":
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
             Term term = root;
@@ -902,25 +903,26 @@ final public class CssParser {
 
             return new ParsedValueImpl<>(segments,SequenceConverter.getInstance());
 
-        } else if ("-fx-stroke-line-join".equals(prop)) {
+        case "-fx-stroke-line-join":
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
             ParsedValueImpl[] values = parseStrokeLineJoin(root);
             if (values == null) error(root, "Expected \'miter', \'bevel\' or \'round\'");
             return values[0];
-        } else if ("-fx-stroke-line-cap".equals(prop)) {
+        case "-fx-stroke-line-cap":
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
-            ParsedValueImpl value = parseStrokeLineCap(root);
-            if (value == null) error(root, "Expected \'square', \'butt\' or \'round\'");
-            return value;
-        } else if ("-fx-stroke-type".equals(prop)) {
+            ParsedValueImpl cap = parseStrokeLineCap(root);
+            if (cap == null) error(root, "Expected \'square', \'butt\' or \'round\'");
+            return cap;
+        case "-fx-stroke-type":
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
             ParsedValueImpl value = parseStrokeType(root);
             if (value == null) error(root, "Expected \'centered', \'inside\' or \'outside\'");
             return value;
-        } else if ("-fx-font-smoothing-type".equals(prop) || "-fx-blend-mode".equals(prop)) {
+        case "-fx-font-smoothing-type":
+        case "-fx-blend-mode":
             // TODO: Figure out a way that these properties don't need to be special cased.
             String str = null;
             int ttype = -1;
@@ -934,15 +936,15 @@ final public class CssParser {
                 error(root,  "Expected STRING or IDENT");
             }
             return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);
-        } else if ("transition".equals(prop)) {
+        case "transition":
             return parseTransitionLayers(root);
-        } else if ("transition-duration".equals(prop)) {
+        case "transition-duration":
             return parseDurationLayers(root, false);
-        } else if ("transition-delay".equals(prop)) {
+        case "transition-delay":
             return parseDurationLayers(root, true);
-        } else if ("transition-timing-function".equals(prop)) {
+        case "transition-timing-function":
             return parseEasingFunctionLayers(root);
-        } else if ("transition-property".equals(prop)) {
+        case "transition-property":
             return parseTransitionPropertyLayers(root);
         }
         return parse(root);
