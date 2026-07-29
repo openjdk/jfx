@@ -55,6 +55,6 @@ public abstract class StringConverter<T> {
     /// Converts a string to an object. The parsing mechanism is defined by the specific converter.
     ///
     /// @param string the `String` to convert
-    /// @return an object of type `T` created from the string passed in.
+    /// @return an object of type `T` created from the string passed in
     public abstract T fromString(String string);
 }
