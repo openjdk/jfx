@@ -41,9 +41,8 @@
 #include "pas_segregated_heap_inlines.h"
 #include "pas_segregated_size_directory.h"
 #include "pas_segregated_page.h"
-#include "pas_thread_local_cache.h"
-#include "pas_thread_local_cache_layout.h"
 #include "pas_utility_heap_config.h"
+#include "pas_zero_memory.h"
 
 unsigned pas_segregated_heap_num_size_lookup_rematerializations;
 
@@ -540,7 +539,6 @@ unsigned pas_segregated_heap_medium_allocator_index_for_index(
         if (verbose && !result)
             pas_log("found null allocator index\n");
         return result;
-
 }
 
 pas_segregated_size_directory* pas_segregated_heap_medium_size_directory_for_index(
@@ -555,7 +553,6 @@ pas_segregated_size_directory* pas_segregated_heap_medium_size_directory_for_ind
         heap, index, search_mode, heap_lock_hold_mode);
 
     return medium_directory.directory;
-
 }
 
 static size_t compute_small_index_upper_bound(pas_segregated_heap* heap,

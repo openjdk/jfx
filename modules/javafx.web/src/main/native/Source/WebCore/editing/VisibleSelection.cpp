@@ -28,10 +28,10 @@
 
 #include "BoundaryPointInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "Editing.h"
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
+#include "NodeInlines.h"
 #include "PositionInlines.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -480,17 +480,17 @@ void VisibleSelection::setWithoutValidation(const Position& anchor, const Positi
 
 Position VisibleSelection::adjustPositionForEnd(const Position& currentPosition, Node* startContainerNode)
 {
-    TreeScope& treeScope = startContainerNode->treeScope();
+    Ref treeScope = startContainerNode->treeScope();
 
-    ASSERT(&currentPosition.containerNode()->treeScope() != &treeScope);
+    ASSERT(&currentPosition.containerNode()->treeScope() != treeScope.ptr());
 
-    if (RefPtr ancestor = treeScope.ancestorNodeInThisScope(currentPosition.protectedContainerNode().get())) {
+    if (RefPtr ancestor = treeScope->ancestorNodeInThisScope(currentPosition.protectedContainerNode().get())) {
         if (ancestor->contains(startContainerNode))
             return positionAfterNode(ancestor.get());
         return positionBeforeNode(ancestor.get());
     }
 
-    if (RefPtr lastChild = treeScope.rootNode().lastChild())
+    if (RefPtr lastChild = treeScope->rootNode().lastChild())
         return positionAfterNode(lastChild.get());
 
     return Position();
@@ -498,17 +498,17 @@ Position VisibleSelection::adjustPositionForEnd(const Position& currentPosition,
 
 Position VisibleSelection::adjustPositionForStart(const Position& currentPosition, Node* endContainerNode)
 {
-    TreeScope& treeScope = endContainerNode->treeScope();
+    Ref treeScope = endContainerNode->treeScope();
 
-    ASSERT(&currentPosition.containerNode()->treeScope() != &treeScope);
+    ASSERT(&currentPosition.containerNode()->treeScope() != treeScope.ptr());
 
-    if (RefPtr ancestor = treeScope.ancestorNodeInThisScope(currentPosition.protectedContainerNode().get())) {
+    if (RefPtr ancestor = treeScope->ancestorNodeInThisScope(currentPosition.protectedContainerNode().get())) {
         if (ancestor->contains(endContainerNode))
             return positionBeforeNode(ancestor.get());
         return positionAfterNode(ancestor.get());
     }
 
-    if (RefPtr firstChild = treeScope.rootNode().firstChild())
+    if (RefPtr firstChild = treeScope->rootNode().firstChild())
         return positionBeforeNode(firstChild.get());
 
     return Position();
@@ -679,6 +679,11 @@ bool VisibleSelection::isContentRichlyEditable() const
 Element* VisibleSelection::rootEditableElement() const
 {
     return editableRootForPosition(start());
+}
+
+RefPtr<Element> VisibleSelection::protectedRootEditableElement() const
+{
+    return rootEditableElement();
 }
 
 Node* VisibleSelection::nonBoundaryShadowTreeRootNode() const

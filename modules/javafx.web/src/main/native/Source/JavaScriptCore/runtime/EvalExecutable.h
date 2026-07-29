@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "GlobalExecutable.h"
-#include "UnlinkedEvalCodeBlock.h"
+#include <JavaScriptCore/GlobalExecutable.h>
+#include <JavaScriptCore/UnlinkedEvalCodeBlock.h>
 
 namespace JSC {
 

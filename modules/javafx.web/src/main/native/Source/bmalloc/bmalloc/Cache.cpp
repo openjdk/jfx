@@ -50,40 +50,40 @@ Cache::Cache(HeapKind heapKind)
     : m_deallocator(PerProcess<PerHeapKind<Heap>>::get()->at(heapKind))
     , m_allocator(PerProcess<PerHeapKind<Heap>>::get()->at(heapKind), m_deallocator)
 {
-    BASSERT(!Environment::get()->isSystemHeapEnabled());
+    BASSERT(!Environment::get()->shouldBmallocAllocateThroughSystemHeap());
 }
 
 BNO_INLINE void* Cache::tryAllocateSlowCaseNullCache(HeapKind heapKind, size_t size)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->malloc(size, FailureAction::ReturnNull);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().tryAllocate(size);
 }
 
 BNO_INLINE void* Cache::allocateSlowCaseNullCache(HeapKind heapKind, size_t size)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->malloc(size, FailureAction::Crash);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().allocate(size);
 }
 
 BNO_INLINE void* Cache::tryAllocateSlowCaseNullCache(HeapKind heapKind, size_t alignment, size_t size)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->memalign(alignment, size, FailureAction::ReturnNull);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().tryAllocate(alignment, size);
 }
 
 BNO_INLINE void* Cache::allocateSlowCaseNullCache(HeapKind heapKind, size_t alignment, size_t size)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->memalign(alignment, size, FailureAction::Crash);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().allocate(alignment, size);
 }
 
 BNO_INLINE void Cache::deallocateSlowCaseNullCache(HeapKind heapKind, void* object)
 {
-    if (auto* systemHeap = SystemHeap::tryGet()) {
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc()) {
         systemHeap->free(object);
         return;
     }
@@ -92,14 +92,14 @@ BNO_INLINE void Cache::deallocateSlowCaseNullCache(HeapKind heapKind, void* obje
 
 BNO_INLINE void* Cache::tryReallocateSlowCaseNullCache(HeapKind heapKind, void* object, size_t newSize)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->realloc(object, newSize, FailureAction::ReturnNull);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().tryReallocate(object, newSize);
 }
 
 BNO_INLINE void* Cache::reallocateSlowCaseNullCache(HeapKind heapKind, void* object, size_t newSize)
 {
-    if (auto* systemHeap = SystemHeap::tryGet())
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
         return systemHeap->realloc(object, newSize, FailureAction::Crash);
     return PerThread<PerHeapKind<Cache>>::getSlowCase()->at(mapToActiveHeapKind(heapKind)).allocator().reallocate(object, newSize);
 }

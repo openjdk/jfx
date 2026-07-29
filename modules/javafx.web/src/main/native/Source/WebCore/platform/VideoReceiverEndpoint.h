@@ -26,8 +26,8 @@
 #pragma once
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-#include <wtf/OSObjectPtr.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/darwin/XPCObjectPtr.h>
 #include <xpc/xpc.h>
 #endif
 
@@ -37,7 +37,7 @@ struct VideoReceiverEndpointIdentifierType;
 using VideoReceiverEndpointIdentifier = ObjectIdentifier<VideoReceiverEndpointIdentifierType>;
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-using VideoReceiverEndpoint = OSObjectPtr<xpc_object_t>;
+using VideoReceiverEndpoint = XPCObjectPtr<xpc_object_t>;
 #else
 using VideoReceiverEndpoint = void*;
 #endif

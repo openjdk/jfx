@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -35,7 +35,7 @@ struct Perspective : ValueOrKeyword<Length<CSS::Nonnegative, float>, CSS::Keywor
     using Base::Base;
     using Length = typename Base::Value;
 
-    float usedPerspective() const { return std::max(1.0f, tryValue().value_or(1.0f).value); }
+    float usedPerspective() const { return std::max(1.0f, tryValue().value_or(1.0f).resolveZoom(Style::ZoomNeeded { })); }
 
     bool isNone() const { return isKeyword(); }
     bool isLength() const { return isValue(); }

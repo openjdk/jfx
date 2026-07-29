@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include <utility>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/Ref.h>
+#include <wtf/SwiftBridging.h>
 
 namespace WTF {
 
@@ -58,23 +59,24 @@ public:
     RefPtr(HashTableDeletedValueType) : m_ptr(PtrTraits::hashTableDeletedValue()) { }
     bool isHashTableDeletedValue() const { return PtrTraits::isHashTableDeletedValue(m_ptr); }
 
+    RefPtr(HashTableEmptyValueType) : m_ptr(hashTableEmptyValue()) { }
+    bool isHashTableEmptyValue() const { return m_ptr == hashTableEmptyValue(); }
+    static T* hashTableEmptyValue() { return nullptr; }
+
     ALWAYS_INLINE ~RefPtr() { RefDerefTraits::derefIfNotNull(PtrTraits::exchange(m_ptr, nullptr)); }
 
-    T* get() const { return PtrTraits::unwrap(m_ptr); }
+    T* get() const LIFETIME_BOUND { return PtrTraits::unwrap(m_ptr); }
+    T* unsafeGet() const { return PtrTraits::unwrap(m_ptr); } // FIXME: Replace with get() then remove.
+    operator T*() const LIFETIME_BOUND { return PtrTraits::unwrap(m_ptr); }
 
     Ref<T> releaseNonNull() { ASSERT(m_ptr); Ref<T> tmp(adoptRef(*m_ptr)); m_ptr = nullptr; return tmp; }
 
-    T* leakRef() WARN_UNUSED_RETURN;
+    [[nodiscard]] T* leakRef();
 
-    T& operator*() const { ASSERT(m_ptr); return *PtrTraits::unwrap(m_ptr); }
-    ALWAYS_INLINE T* operator->() const { return PtrTraits::unwrap(m_ptr); }
+    ALWAYS_INLINE T& operator*() const LIFETIME_BOUND { ASSERT(m_ptr); return *PtrTraits::unwrap(m_ptr); }
+    ALWAYS_INLINE T* operator->() const LIFETIME_BOUND { return &**this; }
 
     bool operator!() const { return !m_ptr; }
-
-    // This conversion operator allows implicit conversion to bool but not to other integer types.
-    using UnspecifiedBoolType = void (RefPtr::*)() const;
-    operator UnspecifiedBoolType() const { return m_ptr ? &RefPtr::unspecifiedBoolTypeInstance : nullptr; }
-
     explicit operator bool() const { return !!m_ptr; }
 
     RefPtr& operator=(const RefPtr&);
@@ -88,11 +90,9 @@ public:
     template<typename X, typename Y, typename Z> void swap(RefPtr<X, Y, Z>&);
 
     RefPtr copyRef() && = delete;
-    RefPtr copyRef() const & WARN_UNUSED_RETURN { return RefPtr(m_ptr); }
+    [[nodiscard]] RefPtr copyRef() const & { return RefPtr(m_ptr); }
 
 private:
-    void unspecifiedBoolTypeInstance() const { }
-
     friend RefPtr adoptRef<T, PtrTraits, RefDerefTraits>(T*);
     template<typename X, typename Y, typename Z> friend class RefPtr;
 
@@ -105,7 +105,7 @@ private:
     RefPtr(T* ptr, AdoptTag) : m_ptr(ptr) { }
 
     typename PtrTraits::StorageType m_ptr;
-};
+} SWIFT_ESCAPABLE;
 
 // Template deduction guide.
 template<typename X, typename Y> RefPtr(Ref<X, Y>&&) -> RefPtr<X, Y, DefaultRefDerefTraits<X>>;
@@ -158,7 +158,7 @@ inline RefPtr<T, U, V>& RefPtr<T, U, V>::operator=(std::nullptr_t)
 template<typename T, typename U, typename V>
 inline RefPtr<T, U, V>& RefPtr<T, U, V>::operator=(RefPtr&& o)
 {
-    RefPtr ptr = WTFMove(o);
+    RefPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
@@ -167,7 +167,7 @@ template<typename T, typename U, typename V>
 template<typename X, typename Y, typename Z>
 inline RefPtr<T, U, V>& RefPtr<T, U, V>::operator=(RefPtr<X, Y, Z>&& o)
 {
-    RefPtr ptr = WTFMove(o);
+    RefPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
@@ -176,7 +176,7 @@ template<typename T, typename V, typename W>
 template<typename U>
 inline RefPtr<T, V, W>& RefPtr<T, V, W>::operator=(Ref<U>&& reference)
 {
-    RefPtr ptr = WTFMove(reference);
+    RefPtr ptr = WTF::move(reference);
     swap(ptr);
     return *this;
 }
@@ -214,15 +214,35 @@ inline RefPtr<T, U, V> adoptRef(T* p)
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
-inline RefPtr<T, U, V> static_pointer_cast(const RefPtr<X, Y, Z>& p)
+inline RefPtr<T, U, V> upcast(const RefPtr<X, Y, Z>& p)
 {
+    static_assert(!std::same_as<X, T>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<X, T>, "Should be an upcast");
     return RefPtr<T, U, V>(static_cast<T*>(p.get()));
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
-inline RefPtr<T, U, V> static_pointer_cast(RefPtr<X, Y, Z>&& p)
+inline RefPtr<T, U, V> upcast(RefPtr<X, Y, Z>&& p)
 {
+    static_assert(!std::same_as<X, T>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<X, T>, "Should be an upcast");
     return adoptRef(static_cast<T*>(p.leakRef()));
+}
+
+template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
+inline RefPtr<T, U, V> unsafeRefPtrDowncast(const RefPtr<X, Y, Z>& p)
+{
+    static_assert(!std::same_as<X, T>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<T, X>, "Use upcast instead");
+    SUPPRESS_MEMORY_UNSAFE_CAST return RefPtr<T, U, V>(static_cast<T*>(p.get()));
+}
+
+template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
+inline RefPtr<T, U, V> unsafeRefPtrDowncast(RefPtr<X, Y, Z>&& p)
+{
+    static_assert(!std::same_as<X, T>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<T, X>, "Use upcast instead");
+    SUPPRESS_MEMORY_UNSAFE_CAST return adoptRef(static_cast<T*>(p.leakRef()));
 }
 
 template <typename T, typename U, typename V>
@@ -240,42 +260,43 @@ inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
 inline RefPtr<match_constness_t<Source, Target>> uncheckedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
-    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
-    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    static_assert(!std::same_as<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<Target, Source>, "Should be a downcast");
     ASSERT_WITH_SECURITY_IMPLICATION(!source || is<Target>(*source));
-    return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
+    return unsafeRefPtrDowncast<match_constness_t<Source, Target>>(WTF::move(source));
 }
 
 template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
 inline RefPtr<match_constness_t<Source, Target>> downcast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
 {
-    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
-    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    static_assert(!std::same_as<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<Target, Source>, "Should be a downcast");
     RELEASE_ASSERT(!source || is<Target>(*source));
-    return static_pointer_cast<match_constness_t<Source, Target>>(WTFMove(source));
+    return unsafeRefPtrDowncast<match_constness_t<Source, Target>>(WTF::move(source));
 }
 
 template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,
     typename SourcePtrTraits, typename SourceRefDerefTraits>
 inline RefPtr<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits> source)
 {
-    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
-    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    static_assert(!std::same_as<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::derived_from<Target, Source>, "Should be a downcast");
     if (!is<Target>(source))
         return nullptr;
-    return static_pointer_cast<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits>(WTFMove(source));
+    return unsafeRefPtrDowncast<match_constness_t<Source, Target>, TargetPtrTraits, TargetRefDerefTraits>(WTF::move(source));
 }
 
 template<typename T, typename U>
 ALWAYS_INLINE void lazyInitialize(const RefPtr<T>& ptr, Ref<U>&& obj)
 {
     RELEASE_ASSERT(!ptr);
-    const_cast<RefPtr<T>&>(ptr) = WTFMove(obj);
+    const_cast<RefPtr<T>&>(ptr) = WTF::move(obj);
 }
 
 } // namespace WTF
 
 using WTF::RefPtr;
 using WTF::adoptRef;
-using WTF::static_pointer_cast;
+using WTF::upcast;
+using WTF::unsafeRefPtrDowncast;
 using WTF::lazyInitialize;

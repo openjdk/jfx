@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include <WebCore/PlatformExportMacros.h>
 #include <wtf/OptionSet.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -91,7 +93,8 @@ enum class MediaPlayerMediaEngineIdentifier : uint8_t {
         HolePunch,
         MediaFoundation,
         MockMSE,
-        CocoaWebM
+    CocoaWebM,
+    WirelessPlayback,
 };
 
 enum class MediaPlayerWirelessPlaybackTargetType : uint8_t {
@@ -150,13 +153,16 @@ String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
 String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
 
-enum class VideoMediaSampleRendererPreference : uint8_t {
+enum class VideoRendererPreference : uint8_t {
     PrefersDecompressionSession = 1 << 0,
     ProtectedFallbackDisabled = 1 << 1,
     UseDecompressionSessionForProtectedContent = 1 << 2,
     UseStereoDecoding = 1 << 3,
+#if PLATFORM(IOS_FAMILY)
+    CanShowWhileLocked = 1 << 4,
+#endif
 };
-using VideoMediaSampleRendererPreferences = OptionSet<VideoMediaSampleRendererPreference>;
+using VideoRendererPreferences = OptionSet<VideoRendererPreference>;
 
 } // namespace WebCore
 

@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "ActiveDOMCallback.h"
-#include "CallbackResult.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/CallbackResult.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -36,6 +36,10 @@ class Node;
 class NodeFilter : public RefCounted<NodeFilter>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual CallbackResult<unsigned short> acceptNode(Node&) = 0;
     virtual CallbackResult<unsigned short> acceptNodeRethrowingException(Node&) = 0;

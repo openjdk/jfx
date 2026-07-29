@@ -40,11 +40,15 @@
 #include "DiagnosticLoggingKeys.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
-#include "LocalFrame.h"
+#include "HTMLPlugInElement.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "MIMETypeRegistry.h"
 #include "MixedContentChecker.h"
@@ -56,6 +60,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderView.h"
+#include "ResourceLoader.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
@@ -143,7 +148,7 @@ bool FrameLoader::SubframeLoader::resourceWillUsePlugin(const String& url, const
     return shouldUsePlugin(completedURL, mimeType, false, useFallback);
 }
 
-bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const HTMLPlugInImageElement& ownerElement, const String& mimeType) const
+bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const HTMLPlugInElement& ownerElement, const String& mimeType) const
 {
     if (RefPtr document = m_frame->document()) {
         bool isFullMainFramePlugin = m_frame->isMainFrame() && is<PluginDocument>(m_frame->document());
@@ -161,7 +166,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const HTMLPlu
             return false;
         }
 
-        if (MixedContentChecker::shouldBlockRequestForRunnableContent(protectedFrame(), securityOrigin, url))
+        if (MixedContentChecker::shouldBlockRequest(protectedFrame(), url))
             return false;
     }
 
@@ -187,7 +192,7 @@ static String findPluginMIMETypeFromURL(Page& page, const URL& url)
     return { };
 }
 
-bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerElement, const URL& url, const String& explicitMIMEType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
+bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInElement& ownerElement, const URL& url, const String& explicitMIMEType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
 {
     String mimeType = explicitMIMEType;
     if (mimeType.isEmpty()) {
@@ -226,7 +231,7 @@ static void logPluginRequest(Page* page, const String& mimeType, const URL& url)
     page->sawPlugin(description);
 }
 
-bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerElement, const String& url, const AtomString& frameName, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
+bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInElement& ownerElement, const String& url, const AtomString& frameName, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
 {
     if (url.isEmpty() && mimeType.isEmpty())
         return false;
@@ -274,7 +279,7 @@ LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerEl
         if (upgradedRequestURL.protocolIsJavaScript()) {
             Ref ownerDocument = ownerElement.document();
             ownerDocument->incrementLoadEventDelayCount();
-            stopDelayingLoadEvent = [ownerDocument = WTFMove(ownerDocument)] (ScheduleLocationChangeResult) {
+            stopDelayingLoadEvent = [ownerDocument = WTF::move(ownerDocument)] (ScheduleLocationChangeResult) {
                 ownerDocument->decrementLoadEventDelayCount();
             };
         }
@@ -284,7 +289,7 @@ LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerEl
                 page->willChangeLocationInCompletelyLoadedSubframe();
         }
 
-        frame->protectedNavigationScheduler()->scheduleLocationChange(initiatingDocument, initiatingDocument->protectedSecurityOrigin(), upgradedRequestURL, m_frame->loader().outgoingReferrer(), lockHistory, lockBackForwardList, NavigationHistoryBehavior::Auto, WTFMove(stopDelayingLoadEvent));
+        frame->protectedNavigationScheduler()->scheduleLocationChange(initiatingDocument, initiatingDocument->protectedSecurityOrigin(), upgradedRequestURL, m_frame->loader().outgoingReferrer(), lockHistory, lockBackForwardList, NavigationHistoryBehavior::Auto, WTF::move(stopDelayingLoadEvent));
     } else
         frame = loadSubframe(ownerElement, upgradedRequestURL, frameName, m_frame->loader().outgoingReferrerURL());
 
@@ -305,7 +310,7 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
         return nullptr;
     }
 
-    if (!portAllowed(url) || isIPAddressDisallowed(url)) {
+    if (!ResourceLoader::isPortAllowed(url) || isIPAddressDisallowed(url)) {
         FrameLoader::reportBlockedLoadFailed(frame, url);
         return nullptr;
     }
@@ -348,9 +353,9 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
     frame->loader().loadURLIntoChildFrame(url, referrerToUse, *subFrame);
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    RefPtr subFramePage = subFrame->page();
-    if ((url.isAboutBlank() || url.isAboutSrcDoc()) && subFramePage) {
-        subFramePage->protectedUserContentProvider()->userContentExtensionBackend().forEach([&] (const String& identifier, ContentExtensions::ContentExtension& extension) {
+    RefPtr userContentProvider = frame->userContentProvider();
+    if ((url.isAboutBlank() || url.isAboutSrcDoc()) && userContentProvider) {
+        userContentProvider->userContentExtensionBackend().forEach([&] (const String& identifier, ContentExtensions::ContentExtension& extension) {
             if (RefPtr styleSheetContents = extension.globalDisplayNoneStyleSheet())
                 subFrame->protectedDocument()->extensionStyleSheets().maybeAddContentExtensionSheet(identifier, *styleSheetContents);
         });
@@ -377,7 +382,7 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
         CheckedPtr renderWidget = dynamicDowncast<RenderWidget>(ownerElement.renderer());
         RefPtr view = subFrame->view();
         if (renderWidget && view)
-            renderWidget->setWidget(WTFMove(view));
+            renderWidget->setWidget(WTF::move(view));
     }
 
     frame->loader().checkCallImplicitClose();
@@ -412,7 +417,7 @@ bool FrameLoader::SubframeLoader::shouldUsePlugin(const URL& url, const String& 
     return objectType == ObjectContentType::None || objectType == ObjectContentType::PlugIn;
 }
 
-bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginElement, const URL& url, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
+bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInElement& pluginElement, const URL& url, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
 {
     if (useFallback)
         return false;
@@ -442,7 +447,7 @@ bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginEleme
         return false;
     }
 
-    CheckedRef { *renderer }->setWidget(WTFMove(widget));
+    CheckedRef { *renderer }->setWidget(WTF::move(widget));
     m_containsPlugins = true;
     return true;
 }

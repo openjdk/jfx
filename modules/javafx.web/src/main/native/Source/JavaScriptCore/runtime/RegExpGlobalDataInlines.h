@@ -98,7 +98,7 @@ inline MatchResult RegExpGlobalData::matchResult() const
 
 inline void RegExpGlobalData::resetResultFromCache(JSGlobalObject* owner, RegExp* regExp, JSString* string, MatchResult matchResult, Vector<int>&& vector)
 {
-    m_ovector = WTFMove(vector);
+    m_ovector = WTF::move(vector);
     m_cachedResult.record(getVM(owner), owner, regExp, string, matchResult, /* oneCharacterMatch */ false);
 }
 

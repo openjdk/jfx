@@ -31,7 +31,10 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ContainerNodeInlines.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Element.h"
@@ -41,6 +44,8 @@
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
+#include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "HTMLAreaElement.h"
@@ -51,9 +56,10 @@
 #include "HTMLTextAreaElement.h"
 #include "HitTestResult.h"
 #include "KeyboardEvent.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeDocument.h"
 #include "Page.h"
 #include "PopoverData.h"
 #include "RemoteFrame.h"
@@ -68,6 +74,7 @@
 #include <limits>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -83,14 +90,14 @@ static HTMLElement* invokerForOpenPopover(const Node* candidatePopover)
     return nullptr;
 }
 
-static Element* openPopoverForInvoker(const Node* candidateInvoker)
+static RefPtr<Element> openPopoverForInvoker(const Node* candidateInvoker)
 {
     RefPtr invoker = dynamicDowncast<HTMLElement>(candidateInvoker);
     if (!invoker)
         return nullptr;
     RefPtr popover = invoker->invokedPopover();
     if (popover && popover->isPopoverShowing() && popover->popoverData()->invoker() == invoker)
-        return popover.get();
+        return popover;
     return nullptr;
 }
 
@@ -407,11 +414,21 @@ static inline void dispatchEventsOnWindowAndFocusedElement(Document* document, b
             return;
     }
 
-    if (!focused && document->focusedElement())
-        document->focusedElement()->dispatchBlurEvent(nullptr);
+    if (RefPtr focusedElement = document->focusedElement(); !focused && focusedElement) {
+        if (focusedElement->transferredFocusToPicker()) {
+            // The webpage lost focus because the focused element transferred focus to
+            // a non-web-content picker when it was activated. We don't want to post any
+            // web-exposed events (e.g. blur) in these cases, so return.
+            focusedElement->didSuppressBlurDueToPickerFocusTransfer();
+            return;
+        }
+
+        focusedElement->dispatchBlurEvent(nullptr);
+    }
+
     document->dispatchWindowEvent(Event::create(focused ? eventNames().focusEvent : eventNames().blurEvent, Event::CanBubble::No, Event::IsCancelable::No));
-    if (focused && document->focusedElement())
-        document->focusedElement()->dispatchFocusEvent(nullptr, { });
+    if (RefPtr focusedElement = document->focusedElement(); focused && focusedElement)
+        focusedElement->dispatchFocusEvent(nullptr, { });
 }
 
 static inline bool isFocusableElementOrScopeOwner(Element& element, const FocusEventData& focusEventData)
@@ -452,12 +469,14 @@ void FocusController::setFocusedFrame(Frame* frame, BroadcastFocusedFrame broadc
     if (m_focusedFrame == frame || m_isChangingFocusedFrame)
         return;
 
+    bool shouldBroadcast = broadcast == BroadcastFocusedFrame::Yes;
     m_isChangingFocusedFrame = true;
 
     RefPtr oldFrame { focusedLocalFrame() };
     RefPtr newFrame { dynamicDowncast<LocalFrame>(frame) };
 
     m_focusedFrame = frame;
+    m_focusedFrameBeforeRemoteFocusBroadcast = (is<RemoteFrame>(frame) && !shouldBroadcast) ? oldFrame.get() : nullptr;
 
     // Now that the frame is updated, fire events and update the selection focused states of both frames.
     if (auto* oldFrameView = oldFrame ? oldFrame->view() : nullptr) {
@@ -488,7 +507,7 @@ void FocusController::setFocusedFrame(Frame* frame, BroadcastFocusedFrame broadc
         } while (frame);
     }
 
-    if (broadcast == BroadcastFocusedFrame::Yes)
+    if (shouldBroadcast)
         protectedPage()->chrome().focusedFrameChanged(frame);
 
     m_isChangingFocusedFrame = false;
@@ -498,8 +517,8 @@ LocalFrame* FocusController::focusedOrMainFrame() const
 {
     if (auto* frame = focusedLocalFrame())
         return frame;
-    if (RefPtr localMainFrame = m_page->localMainFrame())
-        return localMainFrame.get();
+    if (auto* localMainFrame = m_page->localMainFrame())
+        return localMainFrame;
     ASSERT(m_page->settings().siteIsolationEnabled());
     return nullptr;
 }
@@ -547,9 +566,8 @@ FocusableElementSearchResult FocusController::findFocusableElementDescendingInto
     RefPtr element = startingElement;
     while (RefPtr owner = dynamicDowncast<HTMLFrameOwnerElement>(element)) {
         if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(owner->contentFrame())) {
-            remoteFrame->client().findFocusableElementDescendingIntoRemoteFrame(direction, focusEventData, [](FoundElementInRemoteFrame found) {
+            remoteFrame->client().findFocusableElementDescendingIntoRemoteFrame(direction, focusEventData, [](FoundElementInRemoteFrame) {
                 // FIXME: Implement sibling frame search by continuing here.
-                UNUSED_PARAM(found);
             });
 
             return { nullptr, ContinuedSearchInRemoteFrame::Yes };
@@ -577,7 +595,7 @@ bool FocusController::setInitialFocus(FocusDirection direction, KeyboardEvent* p
     // of handleFocusedUIElementChanged, because this will send the notification even if the element is the same.
     RefPtr focusedOrMainFrame = this->focusedOrMainFrame();
     if (CheckedPtr cache = focusedOrMainFrame ? focusedOrMainFrame->document()->existingAXObjectCache() : nullptr)
-        cache->postNotification(focusedOrMainFrame->document(), AXNotification::FocusedUIElementChanged);
+        cache->onDocumentInitialFocus(*focusedOrMainFrame->document());
 
     return didAdvanceFocus;
 }
@@ -636,7 +654,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, cons
     RefPtr startingNode = document->focusNavigationStartingNode(direction);
     auto findResult = findAndFocusElementInDocumentOrderStartingWithFrame(*frame, startingNode, startingNode, direction, focusEventData, initialFocus, ContinuingRemoteSearch::No);
 
-    return findResult.element;
+    return findResult.element || findResult.relinquishedFocusToChrome == RelinquishedFocusToChrome::Yes;
 }
 
 FocusableElementSearchResult FocusController::findAndFocusElementInDocumentOrderStartingWithFrame(Ref<LocalFrame> frame, RefPtr<Node> scopeNode, RefPtr<Node> startingNode, FocusDirection direction, const FocusEventData& focusEventData, InitialFocus initialFocus, ContinuingRemoteSearch continuingRemoteSearch)
@@ -666,8 +684,10 @@ FocusableElementSearchResult FocusController::findAndFocusElementInDocumentOrder
 
         // We didn't find a node to focus, so we should try to pass focus to Chrome.
         if (initialFocus == InitialFocus::No) {
-            if (relinquishFocusToChrome(direction))
+            if (relinquishFocusToChrome(direction)) {
+                findResult.relinquishedFocusToChrome = RelinquishedFocusToChrome::Yes;
                 return findResult;
+        }
         }
 
         // Chrome doesn't want focus, so we should wrap focus.
@@ -732,7 +752,7 @@ FocusableElementSearchResult FocusController::findFocusableElementAcrossFocusSco
             auto candidateInInnerScope = findFocusableElementWithinScope(direction, FocusNavigationScope::scopeOwnedByScopeOwner(*currentElement), nullptr, focusEventData);
             if (candidateInInnerScope.element)
             return candidateInInnerScope;
-        } else if (auto* popover = openPopoverForInvoker(currentNode)) {
+        } else if (RefPtr popover = openPopoverForInvoker(currentNode)) {
             auto candidateInInnerScope = findFocusableElementWithinScope(direction, FocusNavigationScope::scopeOwnedByScopeOwner(*popover), nullptr, focusEventData);
             if (candidateInInnerScope.element)
                 return candidateInInnerScope;
@@ -1006,10 +1026,14 @@ static bool shouldClearSelectionWhenChangingFocusedElement(const Page& page, Ref
     return true;
 }
 
-bool FocusController::setFocusedElement(Element* element, LocalFrame& newFocusedFrame, const FocusOptions& options)
+bool FocusController::setFocusedElement(Element* element, Frame* newFocusedFrame, const FocusOptions& options, BroadcastFocusedElement broadcast)
 {
-    Ref protectedNewFocusedFrame { newFocusedFrame };
-    RefPtr oldFocusedFrame { focusedLocalFrame() };
+    ASSERT(broadcast == BroadcastFocusedElement::Yes || (!element && is<RemoteFrame>(newFocusedFrame)));
+
+    RefPtr newFocusedLocalFrame { dynamicDowncast<LocalFrame>(newFocusedFrame) };
+    RefPtr oldFocusedFrame = focusedLocalFrame();
+    if (m_focusedFrameBeforeRemoteFocusBroadcast && broadcast == BroadcastFocusedElement::No)
+        oldFocusedFrame = std::exchange(m_focusedFrameBeforeRemoteFocusBroadcast, nullptr).get();
     RefPtr oldDocument = oldFocusedFrame ? oldFocusedFrame->document() : nullptr;
 
     RefPtr oldFocusedElement = oldDocument ? oldDocument->focusedElement() : nullptr;
@@ -1024,12 +1048,12 @@ bool FocusController::setFocusedElement(Element* element, LocalFrame& newFocused
     if (oldFocusedElement && oldFocusedElement->isRootEditableElement() && !relinquishesEditingFocus(*oldFocusedElement))
         return false;
 
-    if (shouldClearSelectionWhenChangingFocusedElement(page, WTFMove(oldFocusedElement), element))
-        clearSelectionIfNeeded(oldFocusedFrame.get(), &newFocusedFrame, element);
+    if (shouldClearSelectionWhenChangingFocusedElement(page, WTF::move(oldFocusedElement), element))
+        clearSelectionIfNeeded(oldFocusedFrame.get(), newFocusedLocalFrame.get(), element);
 
     if (!element) {
         if (oldDocument)
-            oldDocument->setFocusedElement(nullptr);
+            oldDocument->setFocusedElement(nullptr, broadcast);
         page->editorClient().setInputMethodState(nullptr);
         return true;
     }
@@ -1042,15 +1066,15 @@ bool FocusController::setFocusedElement(Element* element, LocalFrame& newFocused
     }
 
     if (oldDocument && oldDocument != newDocument.ptr())
-        oldDocument->setFocusedElement(nullptr);
+        oldDocument->setFocusedElement(nullptr, broadcast);
 
-    if (!newFocusedFrame.page()) {
+    if (newFocusedLocalFrame && !newFocusedLocalFrame->page()) {
         setFocusedFrame(nullptr);
         return false;
     }
-    setFocusedFrame(&newFocusedFrame);
+    setFocusedFrame(newFocusedFrame);
 
-    bool successfullyFocused = newDocument->setFocusedElement(element, options);
+    bool successfullyFocused = newDocument->setFocusedElement(element, options, broadcast);
     if (!successfullyFocused)
         return false;
 
@@ -1370,6 +1394,15 @@ void FocusController::focusRepaintTimerFired()
 Seconds FocusController::timeSinceFocusWasSet() const
 {
     return MonotonicTime::now() - m_focusSetTime;
+}
+
+TextStream& operator<<(TextStream& ts, const FocusableElementSearchResult& result)
+{
+    TextStream::GroupScope group(ts);
+    ts.dumpProperty("element"_s, result.element);
+    ts.dumpProperty("continuedSearchInRemoteFrame"_s, result.continuedSearchInRemoteFrame == ContinuedSearchInRemoteFrame::Yes);
+    ts.dumpProperty("relinquishedFocusToChrome"_s, result.relinquishedFocusToChrome == RelinquishedFocusToChrome::Yes);
+    return ts;
 }
 
 } // namespace WebCore

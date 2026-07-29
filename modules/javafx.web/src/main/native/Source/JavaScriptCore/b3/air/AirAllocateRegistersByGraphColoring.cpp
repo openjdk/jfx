@@ -377,7 +377,7 @@ protected:
                 auto addResult = m_biases.add(getAlias(key), IndexTypeSet());
                 if (addResult.isNewEntry) {
                     ASSERT(!addResult.iterator->value.size());
-                    addResult.iterator->value = WTFMove(keysBiases);
+                    addResult.iterator->value = WTF::move(keysBiases);
                 } else {
                     IndexTypeSet& setToAddTo = addResult.iterator->value;
                     for (IndexType tmp : keysBiases)
@@ -1395,7 +1395,7 @@ public:
         initializePrecoloredTmp();
         build();
 
-        if constexpr (reportInterferenceGraphMemoryUse && (std::is_same<InterferenceSet, LargeInterferenceGraph>::value || std::is_same<InterferenceSet, HugeInterferenceGraph>::value)) {
+        if constexpr (reportInterferenceGraphMemoryUse && (std::same_as<InterferenceSet, LargeInterferenceGraph> || std::same_as<InterferenceSet, HugeInterferenceGraph>)) {
             dataLog("numTmps|numEdges|memoryUse(kB): ", m_code.numTmps(bank), " | ", m_interferenceEdges.size(), " | ");
             m_interferenceEdges.dumpMemoryUseInKB();
             dataLog("\n");
@@ -1442,7 +1442,7 @@ public:
     class IndexToTmpIteratorAdaptor {
     public:
         IndexToTmpIteratorAdaptor(IndexIterator&& indexIterator)
-            : m_indexIterator(WTFMove(indexIterator))
+            : m_indexIterator(WTF::move(indexIterator))
         {
         }
 

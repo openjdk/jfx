@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(DFG_JIT)
 
-#include "DeferredCompilationCallback.h"
+#include <JavaScriptCore/DeferredCompilationCallback.h>
 
 namespace JSC {
 

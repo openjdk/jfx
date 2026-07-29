@@ -27,6 +27,7 @@
 [
     Conditional=WEBXR,
     EnabledBySetting=WebXREnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRSessionEventInit : EventInit {
     required WebXRSession session;
 };

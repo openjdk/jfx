@@ -106,7 +106,7 @@ public:
     WTF_EXPORT_PRIVATE ~ThreadSuspendLocker();
 };
 
-class WTF_CAPABILITY("is current") Thread : public ThreadSafeRefCounted<Thread>, ThreadLike {
+class WTF_CAPABILITY("is current") Thread : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Thread>, ThreadLike {
 public:
     friend class ThreadGroup;
     friend WTF_EXPORT_PRIVATE void initialize();
@@ -114,6 +114,17 @@ public:
     class ClientData : public ThreadSafeRefCounted<ClientData> {
     public:
         virtual ~ClientData() = default;
+
+        enum class Type : uint8_t {
+            WebCoreThreadGlobalData
+        };
+        Type type() const { return Type::WebCoreThreadGlobalData; }
+
+    protected:
+        explicit ClientData(Type type)
+        {
+            ASSERT_UNUSED(type, type == Type::WebCoreThreadGlobalData);
+        }
     };
 
     WTF_EXPORT_PRIVATE ~Thread();
@@ -144,8 +155,7 @@ public:
     static Thread& currentSingleton();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
-    WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
+    WTF_EXPORT_PRIVATE static ThreadSafeWeakHashSet<Thread>& allThreads();
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
 
@@ -303,12 +313,15 @@ public:
 #endif
 
 protected:
-    Thread() = default;
+    explicit Thread(SchedulingPolicy schedulingPolicy)
+        : m_isRealtime(schedulingPolicy == SchedulingPolicy::Realtime)
+    {
+    }
 
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*, std::optional<size_t> stackSize, QOS, SchedulingPolicy);
+    bool establishHandle(NewThreadContext&, std::optional<size_t> stackSize, QOS, SchedulingPolicy);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -348,7 +361,6 @@ protected:
 
     // These functions are only called from ThreadGroup.
     ThreadGroupAddResult addToThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup&);
-    void removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup&);
 
     // For pthread, the Thread instance is ref'ed and held in thread-specific storage. It will be deref'ed by destructTLS at thread destruction time.
     // It employs pthreads-specific 2-pass destruction to reliably remove Thread.
@@ -370,14 +382,11 @@ protected:
     static Thread& initializeTLS(Ref<Thread>&&);
     WTF_EXPORT_PRIVATE static Thread& initializeCurrentTLS();
 
-    static Lock s_allThreadsLock;
-
     JoinableState m_joinableState { Joinable };
     bool m_isShuttingDown : 1 { false };
     bool m_didExit : 1 { false };
     bool m_isDestroyedOnce : 1 { false };
     bool m_isCompilationThread: 1 { false };
-    bool m_didUnregisterFromAllThreads : 1 { false };
     bool m_isJSThread : 1 { false };
     unsigned m_gcThreadType : 2 { static_cast<unsigned>(GCThreadType::None) };
 
@@ -387,7 +396,7 @@ protected:
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
     WordLock m_mutex;
     StackBounds m_stack { StackBounds::emptyBounds() };
-    HashMap<ThreadGroup*, std::weak_ptr<ThreadGroup>> m_threadGroupMap;
+    ThreadSafeWeakHashSet<ThreadGroup> m_threadGroups;
     PlatformThreadHandle m_handle;
     uint32_t m_uid { ++s_uid };
 #if OS(WINDOWS)

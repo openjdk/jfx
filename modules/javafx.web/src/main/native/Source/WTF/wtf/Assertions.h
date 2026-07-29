@@ -73,7 +73,6 @@
 #define _XSTRINGIFY(line) #line
 #define _STRINGIFY(line) _XSTRINGIFY(line)
 
-
 /* ASSERT_ENABLED is defined in PlatformEnable.h. */
 
 #ifndef BACKTRACE_DISABLED
@@ -112,13 +111,22 @@
 
 #define WTF_PRETTY_FUNCTION __PRETTY_FUNCTION__
 
-#if COMPILER(GCC_COMPATIBLE) && !defined(__OBJC__)
-/* WTF logging functions can process %@ in the format string to log a NSObject* but the printf format attribute
-   emits a warning when %@ is used in the format string.  Until <rdar://problem/5195437> is resolved we can't include
-   the attribute when being used from Objective-C code in case it decides to use %@. */
+#if USE(CF)
+#define WTF_ATTRIBUTE_NSSTRING(formatStringArgument, extraArguments) __attribute__((__format__(__NSString__, formatStringArgument, extraArguments)))
+#else
+#define WTF_ATTRIBUTE_NSSTRING WTF_ATTRIBUTE_PRINTF
+#endif
+
+#if COMPILER(GCC_COMPATIBLE)
 #define WTF_ATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
 #else
 #define WTF_ATTRIBUTE_PRINTF(formatStringArgument, extraArguments)
+#endif
+
+#if COMPILER_HAS_ATTRIBUTE(format_matches)
+#define WTF_ATTRIBUTE_PRINTF_MATCHES(formatStringArgument, formatStringTemplate) __attribute__((format_matches(printf, formatStringArgument, formatStringTemplate)))
+#else
+#define WTF_ATTRIBUTE_PRINTF_MATCHES(formatStringArgument, formatStringTemplate)
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -169,8 +177,7 @@ typedef struct {
     const char* name;
     WTFLogLevel level;
 #if !RELEASE_LOG_DISABLED && USE(OS_LOG)
-    const char* subsystem;
-    __unsafe_unretained os_log_t osLogChannel;
+    SUPPRESS_UNRETAINED_MEMBER __unsafe_unretained os_log_t osLogChannel;
 #endif
 } WTFLogChannel;
 
@@ -194,10 +201,10 @@ typedef struct {
 
 #if !defined(DEFINE_LOG_CHANNEL)
 #if USE(OS_LOG)
-#define DEFINE_LOG_CHANNEL_WITH_DETAILS(name, initialState, level, subsystem) \
-    WTFLogChannel LOG_CHANNEL(name) = { initialState, #name, level, subsystem, OS_LOG_DEFAULT };
+#define DEFINE_LOG_CHANNEL_WITH_DETAILS(name, initialState, level) \
+    WTFLogChannel LOG_CHANNEL(name) = { initialState, #name, level, OS_LOG_DEFAULT };
 #else
-#define DEFINE_LOG_CHANNEL_WITH_DETAILS(name, initialState, level, subsystem) \
+#define DEFINE_LOG_CHANNEL_WITH_DETAILS(name, initialState, level) \
     WTFLogChannel LOG_CHANNEL(name) = { initialState, #name, level };
 #endif
 #endif
@@ -206,22 +213,22 @@ typedef struct {
 static const WTFLogChannelState logChannelStateOff = (WTFLogChannelState)0;
 static const WTFLogChannelState logChannelStateOn = (WTFLogChannelState)1;
 static const WTFLogLevel logLevelError = (WTFLogLevel)1;
-#define DEFINE_LOG_CHANNEL(name, subsystem) DEFINE_LOG_CHANNEL_WITH_DETAILS(name, logChannelStateOff, logLevelError, subsystem);
+#define DEFINE_LOG_CHANNEL(name) DEFINE_LOG_CHANNEL_WITH_DETAILS(name, logChannelStateOff, logLevelError);
 
 WTF_EXPORT_PRIVATE void WTFReportNotImplementedYet(const char* file, int line, const char* function);
 WTF_EXPORT_PRIVATE void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
-WTF_EXPORT_PRIVATE void WTFReportAssertionFailureWithMessage(const char* file, int line, const char* function, const char* assertion, const char* format, ...) WTF_ATTRIBUTE_PRINTF(5, 6);
+WTF_EXPORT_PRIVATE void WTFReportAssertionFailureWithMessage(const char* file, int line, const char* function, const char* assertion, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(5, 6);
 WTF_EXPORT_PRIVATE void WTFReportArgumentAssertionFailure(const char* file, int line, const char* function, const char* argName, const char* assertion);
-WTF_EXPORT_PRIVATE void WTFReportFatalError(const char* file, int line, const char* function, const char* format, ...) WTF_ATTRIBUTE_PRINTF(4, 5);
-WTF_EXPORT_PRIVATE void WTFReportError(const char* file, int line, const char* function, const char* format, ...) WTF_ATTRIBUTE_PRINTF(4, 5);
-WTF_EXPORT_PRIVATE void WTFLog(WTFLogChannel*, const char* format, ...) WTF_ATTRIBUTE_PRINTF(2, 3);
-WTF_EXPORT_PRIVATE void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChannel*, const char* format, ...) WTF_ATTRIBUTE_PRINTF(5, 6);
-WTF_EXPORT_PRIVATE void WTFLogAlwaysV(const char* format, va_list) WTF_ATTRIBUTE_PRINTF(1, 0);
-WTF_EXPORT_PRIVATE void WTFLogAlways(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
-WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFLogAlwaysAndCrash(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
+WTF_EXPORT_PRIVATE void WTFReportFatalError(const char* file, int line, const char* function, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(4, 5);
+WTF_EXPORT_PRIVATE void WTFReportError(const char* file, int line, const char* function, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(4, 5);
+WTF_EXPORT_PRIVATE void WTFLog(WTFLogChannel*, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(2, 3);
+WTF_EXPORT_PRIVATE void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChannel*, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(5, 6);
+WTF_EXPORT_PRIVATE void WTFLogAlwaysV(const char* format, va_list) WTF_ATTRIBUTE_NSSTRING(1, 0);
+WTF_EXPORT_PRIVATE void WTFLogAlways(const char* format, ...) WTF_ATTRIBUTE_NSSTRING(1, 2);
+WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFLogAlwaysAndCrash(const char* format, ...) WTF_ATTRIBUTE_NSSTRING(1, 2);
 WTF_EXPORT_PRIVATE WTFLogChannel* WTFLogChannelByName(WTFLogChannel*[], size_t count, const char*);
 WTF_EXPORT_PRIVATE void WTFInitializeLogChannelStatesFromString(WTFLogChannel*[], size_t count, const char*);
-WTF_EXPORT_PRIVATE void WTFLogWithLevel(WTFLogChannel*, WTFLogLevel, const char* format, ...) WTF_ATTRIBUTE_PRINTF(3, 4);
+WTF_EXPORT_PRIVATE void WTFLogWithLevel(WTFLogChannel*, WTFLogLevel, const char* format, ...) WTF_ATTRIBUTE_NSSTRING(3, 4);
 WTF_EXPORT_PRIVATE void WTFSetLogChannelLevel(WTFLogChannel*, WTFLogLevel);
 WTF_EXPORT_PRIVATE bool WTFWillLogWithLevel(WTFLogChannel*, WTFLogLevel);
 
@@ -295,11 +302,11 @@ WTF_EXPORT_PRIVATE bool WTFIsDebuggerAttached(void);
 #if ASAN_ENABLED
 #define WTFBreakpointTrap()  __builtin_trap()
 #elif CPU(X86_64) || CPU(X86)
-#define WTFBreakpointTrap()  asm volatile (WTF_FATAL_CRASH_INST)
+#define WTFBreakpointTrap()  __asm__ volatile (WTF_FATAL_CRASH_INST)
 #elif CPU(ARM_THUMB2)
-#define WTFBreakpointTrap()  asm volatile ("bkpt #0")
+#define WTFBreakpointTrap()  __asm__ volatile ("bkpt #0")
 #elif CPU(ARM64)
-#define WTFBreakpointTrap()  asm volatile (WTF_FATAL_CRASH_INST)
+#define WTFBreakpointTrap()  __asm__ volatile (WTF_FATAL_CRASH_INST)
 #else
 #define WTFBreakpointTrap() WTFCrash() // Not implemented.
 #endif
@@ -678,6 +685,7 @@ static constexpr bool unreachableForValue = false;
 #define RELEASE_LOG(channel, ...) ((void)0)
 #define RELEASE_LOG_ERROR(channel, ...) LOG_ERROR(__VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) LOG_ERROR(__VA_ARGS__)
+#define RELEASE_LOG_FAULT_WITH_PAYLOAD(channel, message) LOG_ERROR("%s", message)
 #define RELEASE_LOG_INFO(channel, ...) ((void)0)
 #define RELEASE_LOG_DEBUG(channel, ...) ((void)0)
 
@@ -697,6 +705,7 @@ static constexpr bool unreachableForValue = false;
 #define RELEASE_LOG(channel, ...) SUPPRESS_UNCOUNTED_LOCAL os_log(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_ERROR(channel, ...) SUPPRESS_UNCOUNTED_LOCAL os_log_error(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) SUPPRESS_UNCOUNTED_LOCAL os_log_fault(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
+#define RELEASE_LOG_FAULT_WITH_PAYLOAD(channel, message) os_fault_with_payload(OS_REASON_WEBKIT, 0, nullptr, 0, message, 0)
 #define RELEASE_LOG_INFO(channel, ...) SUPPRESS_UNCOUNTED_LOCAL os_log_info(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_DEBUG(channel, ...) SUPPRESS_UNCOUNTED_LOCAL os_log_debug(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_WITH_LEVEL(channel, logLevel, ...) do { \
@@ -724,6 +733,7 @@ static constexpr bool unreachableForValue = false;
 #define RELEASE_LOG(channel, ...) LOG_ANDROID_SEND(channel, VERBOSE, __VA_ARGS__)
 #define RELEASE_LOG_ERROR(channel, ...) LOG_ANDROID_SEND(channel, ERROR, __VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) LOG_ANDROID_SEND(channel, FATAL, __VA_ARGS__)
+#define RELEASE_LOG_FAULT_WITH_PAYLOAD(channel, message) LOG_ANDROID_SEND(channel, FATAL, "%s", message)
 #define RELEASE_LOG_INFO(channel, ...) LOG_ANDROID_SEND(channel, INFO, __VA_ARGS__)
 #define RELEASE_LOG_DEBUG(channel, ...) LOG_ANDROID_SEND(channel, DEBUG, __VA_ARGS__)
 
@@ -743,13 +753,16 @@ static constexpr bool unreachableForValue = false;
 #define PRIVATE_LOG_STRING "s"
 #define SENSITIVE_LOG_STRING "s"
 #define SD_JOURNAL_SEND(channel, priority, file, line, function, ...) do { \
+    IGNORE_WARNINGS_BEGIN("unsafe-buffer-usage-in-format-attr-call") \
     if (LOG_CHANNEL(channel).state != WTFLogChannelState::Off) \
-        sd_journal_send_with_location("CODE_FILE=" file, "CODE_LINE=" line, function, "WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", LOG_CHANNEL(channel).name, "PRIORITY=%i", priority, "MESSAGE=" __VA_ARGS__, nullptr); \
+        sd_journal_send_with_location("CODE_FILE=" file, "CODE_LINE=" line, function, "WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", LOG_CHANNEL(channel).name, "PRIORITY=%u", static_cast<unsigned>(priority), "MESSAGE=" __VA_ARGS__, nullptr); \
+    IGNORE_WARNINGS_END \
 } while (0)
 
 #define RELEASE_LOG(channel, ...) SD_JOURNAL_SEND(channel, LOG_NOTICE, __FILE__, _STRINGIFY(__LINE__), __func__, __VA_ARGS__)
 #define RELEASE_LOG_ERROR(channel, ...) SD_JOURNAL_SEND(channel, LOG_ERR, __FILE__, _STRINGIFY(__LINE__), __func__, __VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) SD_JOURNAL_SEND(channel, LOG_CRIT, __FILE__, _STRINGIFY(__LINE__), __func__, __VA_ARGS__)
+#define RELEASE_LOG_FAULT_WITH_PAYLOAD(channel, message) SD_JOURNAL_SEND(channel, LOG_CRIT, __FILE__, _STRINGIFY(__LINE__), __func__, "%s", message)
 #define RELEASE_LOG_INFO(channel, ...) SD_JOURNAL_SEND(channel, LOG_INFO, __FILE__, _STRINGIFY(__LINE__), __func__, __VA_ARGS__)
 #define RELEASE_LOG_DEBUG(channel, ...) SD_JOURNAL_SEND(channel, LOG_DEBUG, __FILE__, _STRINGIFY(__LINE__), __func__, __VA_ARGS__)
 
@@ -777,6 +790,7 @@ static constexpr bool unreachableForValue = false;
 #define RELEASE_LOG(channel, ...) LOGF(channel, 4, __VA_ARGS__)
 #define RELEASE_LOG_ERROR(channel, ...) LOGF(channel, 1, __VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) LOGF(channel, 2, __VA_ARGS__)
+#define RELEASE_LOG_FAULT_WITH_PAYLOAD(channel, message) LOGF(channel, 2, "%s", message)
 #define RELEASE_LOG_INFO(channel, ...) LOGF(channel, 3, __VA_ARGS__)
 #define RELEASE_LOG_DEBUG(channel, ...) LOGF(channel, 4, __VA_ARGS__)
 
@@ -955,10 +969,10 @@ NO_RETURN_DUE_TO_CRASH ALWAYS_INLINE void WTFCrashWithInfo(int line, const char*
     uint64_t x1Value = reinterpret_cast<uintptr_t>(file);
     uint64_t x2Value = reinterpret_cast<uintptr_t>(function);
     uint64_t x3Value = static_cast<uint64_t>(static_cast<int64_t>(counter));
-    register uint64_t x0GPR asm(CRASH_ARG_GPR0) = x0Value;
-    register uint64_t x1GPR asm(CRASH_ARG_GPR1) = x1Value;
-    register uint64_t x2GPR asm(CRASH_ARG_GPR2) = x2Value;
-    register uint64_t x3GPR asm(CRASH_ARG_GPR3) = x3Value;
+    register uint64_t x0GPR __asm__(CRASH_ARG_GPR0) = x0Value;
+    register uint64_t x1GPR __asm__(CRASH_ARG_GPR1) = x1Value;
+    register uint64_t x2GPR __asm__(CRASH_ARG_GPR2) = x2Value;
+    register uint64_t x3GPR __asm__(CRASH_ARG_GPR3) = x3Value;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(x0GPR), "r"(x1GPR), "r"(x2GPR), "r"(x3GPR));
     __builtin_unreachable();
 }

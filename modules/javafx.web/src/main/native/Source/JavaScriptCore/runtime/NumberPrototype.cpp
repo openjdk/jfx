@@ -345,9 +345,9 @@ static char* toStringWithRadixInternal(RadixBuffer& buffer, double originalNumbe
 
 static String toStringWithRadixInternal(int32_t number, unsigned radix)
 {
-    LChar buf[1 + 32]; // Worst case is radix == 2, which gives us 32 digits + sign.
-    LChar* end = std::end(buf);
-    LChar* p = end;
+    Latin1Character buf[1 + 32]; // Worst case is radix == 2, which gives us 32 digits + sign.
+    Latin1Character* end = std::end(buf);
+    Latin1Character* p = end;
 
     bool negative = false;
     uint32_t positiveNumber = number;

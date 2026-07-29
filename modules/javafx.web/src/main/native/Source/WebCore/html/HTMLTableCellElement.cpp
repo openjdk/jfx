@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableCellElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableCellElement);
 
 using namespace HTMLNames;
 
@@ -197,16 +197,16 @@ void HTMLTableCellElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) c
 {
     HTMLTablePartElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(backgroundAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(backgroundAttr)));
 }
 
 HTMLTableCellElement* HTMLTableCellElement::cellAbove() const
 {
-    auto* tableCellRenderer = dynamicDowncast<RenderTableCell>(renderer());
+    CheckedPtr tableCellRenderer = dynamicDowncast<RenderTableCell>(renderer());
     if (!tableCellRenderer)
         return nullptr;
 
-    auto* cellAboveRenderer = tableCellRenderer->table()->cellAbove(tableCellRenderer);
+    CheckedPtr cellAboveRenderer = tableCellRenderer->checkedTable()->cellAbove(tableCellRenderer.get());
     if (!cellAboveRenderer)
         return nullptr;
 

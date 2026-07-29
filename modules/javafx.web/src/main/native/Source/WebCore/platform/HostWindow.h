@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "GraphicsClient.h"
-#include "Widget.h"
+#include <WebCore/GraphicsClient.h>
+#include <WebCore/Widget.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)

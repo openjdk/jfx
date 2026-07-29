@@ -21,9 +21,10 @@
 
 #pragma once
 
-#include "JSDOMGlobalObject.h"
-#include "NodeConstants.h"
 #include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/StructureInlines.h>
+#include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/NodeConstants.h>
 #include <wtf/Compiler.h>
 #include <wtf/SignedPtr.h>
 
@@ -84,7 +85,7 @@ public:
 protected:
     JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject& globalObject, Ref<ImplementationClass>&& impl)
         : Base(structure, globalObject)
-        , m_wrapped(WTFMove(impl)) { }
+        , m_wrapped(WTF::move(impl)) { }
 
 private:
     Ref<ImplementationClass, PtrTraits> m_wrapped;

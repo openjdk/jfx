@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,13 +32,13 @@
 
 #pragma once
 
-#include "CSSColor.h"
-#include "CSSColorDescriptors.h"
-#include "CSSColorType.h"
-#include "CSSValueKeywords.h"
-#include "StyleColorOptions.h"
-#include "StyleCurrentColor.h"
-#include "StyleResolvedColor.h"
+#include <WebCore/CSSColor.h>
+#include <WebCore/CSSColorDescriptors.h>
+#include <WebCore/CSSColorType.h>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/StyleColorOptions.h>
+#include <WebCore/StyleCurrentColor.h>
+#include <WebCore/StyleResolvedColor.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/UniqueRef.h>
@@ -52,6 +52,8 @@ class RenderStyle;
 namespace Style {
 
 enum class ForVisitedLink : bool;
+
+class ComputedStyle;
 
 // The following style color kinds are forward declared and stored in
 // UniqueRefs to avoid unnecessarily growing the size of Color for the
@@ -83,6 +85,7 @@ private:
         UniqueRef<RelativeColor<OKLCHFunction>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>>,
+        UniqueRef<RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>>,
@@ -98,10 +101,14 @@ public:
     // The default constructor initializes to Style::CurrentColor to preserve old behavior,
     // we might want to remove it entirely at some point.
     Color();
+    Color(CSS::Keyword::Currentcolor);
 
     // Convenience constructors that create Style::ResolvedColor.
     Color(WebCore::Color);
     Color(SRGBA<uint8_t>);
+    Color(CSS::Keyword::Transparent);
+    Color(CSS::Keyword::Black);
+    Color(CSS::Keyword::White);
 
     WEBCORE_EXPORT Color(ResolvedColor&&);
     WEBCORE_EXPORT Color(CurrentColor&&);
@@ -117,6 +124,7 @@ public:
     Color(RelativeColor<OKLCHFunction>&&);
     Color(RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>&&);
     Color(RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>&&);
+    Color(RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>&&);
     Color(RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>&&);
     Color(RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>&&);
     Color(RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>&&);
@@ -134,7 +142,7 @@ public:
 
     bool operator==(const Color&) const;
 
-    static Color currentColor();
+    static const Color& currentColor();
 
     bool containsCurrentColor() const;
     bool isCurrentColor() const;
@@ -146,6 +154,8 @@ public:
     const WebCore::Color& resolvedColor() const;
 
     WEBCORE_EXPORT WebCore::Color resolveColor(const WebCore::Color& currentColor) const;
+
+    bool isKnownTransparent() const;
 
     // This helper allows us to treat all the alternatives in ColorKind
     // as const references, pretending the UniqueRefs don't exist.
@@ -176,7 +186,8 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 // MARK: - Conversion
 
 Color toStyleColor(const CSS::Color&, ColorResolutionState&);
-Color toStyleColor(const CSS::Color&, Ref<const Document>, const RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
+Color toStyleColor(const CSS::Color&, Ref<const Document>, const ComputedStyle&, const CSSToLengthConversionData&, ForVisitedLink);
+Color toStyleColor(const CSS::Color&, const BuilderState&, ForVisitedLink);
 
 template<> struct ToCSS<Color> {
     auto operator()(const Color&, const RenderStyle&) -> CSS::Color;
@@ -188,6 +199,7 @@ template<> struct ToStyle<CSS::Color> {
 
 template<> struct CSSValueConversion<Color> {
     auto operator()(BuilderState&, const CSSValue&, ForVisitedLink) -> Color;
+    auto operator()(BuilderState&, const CSSValue&) -> Color;
 };
 template<> struct CSSValueCreation<Color> {
     auto operator()(CSSValuePool&, const RenderStyle&, const Color&) -> Ref<CSSValue>;

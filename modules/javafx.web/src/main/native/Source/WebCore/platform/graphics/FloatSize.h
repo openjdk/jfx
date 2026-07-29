@@ -28,9 +28,11 @@
 
 #pragma once
 
-#include "IntPoint.h"
+#include <WebCore/DoubleSize.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -139,6 +141,16 @@ public:
         return FloatSize(m_height, m_width);
     }
 
+    FloatSize scaledBy(float scale) const
+    {
+        return scaledBy(scale, scale);
+    }
+
+    FloatSize scaledBy(float scaleX, float scaleY) const
+    {
+        return FloatSize(m_width * scaleX, m_height * scaleY);
+    }
+
 #if USE(CG)
     WEBCORE_EXPORT explicit FloatSize(const CGSize&); // don't do this implicitly since it's lossy
     WEBCORE_EXPORT operator CGSize() const;
@@ -149,6 +161,8 @@ public:
 
     WEBCORE_EXPORT String toJSONString() const;
     WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
+
+    operator DoubleSize() const { return { m_width, m_height }; }
 
     friend bool operator==(const FloatSize&, const FloatSize&) = default;
 

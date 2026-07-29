@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "ParserModes.h"
-#include "VariableEnvironment.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/VariableEnvironment.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
 
@@ -119,7 +119,7 @@ UnlinkedCodeBlock* decodeCodeBlockImpl(VM&, const SourceCodeKey&, Ref<CachedByte
 template<typename UnlinkedCodeBlockType>
 UnlinkedCodeBlockType* decodeCodeBlock(VM& vm, const SourceCodeKey& key, Ref<CachedBytecode> cachedBytecode)
 {
-    return jsCast<UnlinkedCodeBlockType*>(decodeCodeBlockImpl(vm, key, WTFMove(cachedBytecode)));
+    return jsCast<UnlinkedCodeBlockType*>(decodeCodeBlockImpl(vm, key, WTF::move(cachedBytecode)));
 }
 
 JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeFunctionCodeBlock(VM&, const UnlinkedFunctionCodeBlock*, BytecodeCacheError&);

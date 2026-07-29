@@ -144,7 +144,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             }
         }
 
-        RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, WTFMove(buffer), offset, length));
+        RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, WTF::move(buffer), offset, length));
     }
     ASSERT(!offset && !lengthOpt);
 
@@ -237,7 +237,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
         return result;
     }
 
-    size_t length = firstValue.toTypedArrayIndex(globalObject, "length"_s);
+    size_t length = firstValue.toIndex(globalObject, "length"_s);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, length));
@@ -269,7 +269,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
     std::optional<size_t> length;
     if (auto* arrayBuffer = jsDynamicCast<JSArrayBuffer*>(firstValue)) {
         if (argCount > 1) {
-            offset = callFrame->uncheckedArgument(1).toTypedArrayIndex(globalObject, "byteOffset"_s);
+            offset = callFrame->uncheckedArgument(1).toIndex(globalObject, "byteOffset"_s);
             RETURN_IF_EXCEPTION(scope, { });
 
             if constexpr (ViewClass::TypedArrayStorageType == TypeDataView) {
@@ -293,7 +293,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
             // If the length value is present but undefined, treat it as missing.
             JSValue lengthValue = callFrame->uncheckedArgument(2);
             if (!lengthValue.isUndefined()) {
-                    length = lengthValue.toTypedArrayIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength"_s : "length"_s);
+                length = lengthValue.toIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength"_s : "length"_s);
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
         }

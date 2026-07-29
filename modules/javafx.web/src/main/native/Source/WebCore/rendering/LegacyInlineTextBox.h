@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "GlyphDisplayListCacheRemoval.h"
-#include "LegacyInlineBox.h"
-#include "TextBoxSelectableRange.h"
-#include "TextRun.h"
+#include <WebCore/GlyphDisplayListCacheRemoval.h>
+#include <WebCore/LegacyInlineBox.h>
+#include <WebCore/TextBoxSelectableRange.h>
+#include <WebCore/TextRun.h>
 
 namespace WebCore {
 
@@ -36,7 +36,7 @@ class BoxLegacyPath;
 }
 
 class LegacyInlineTextBox : public LegacyInlineBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyInlineTextBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyInlineTextBox);
 public:
     explicit LegacyInlineTextBox(RenderSVGInlineText&);
     virtual ~LegacyInlineTextBox();

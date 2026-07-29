@@ -29,8 +29,7 @@
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "StyleBuilderChecking.h"
-#include "StyleBuilderConverter.h"
-#include "StyleExtractorSerializer.h"
+#include "StyleLengthWrapper+CSSValueConversion.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -38,27 +37,44 @@ namespace Style {
 
 auto ViewTimelineInsetDefaulter::operator()() const -> const ViewTimelineInsetItem&
 {
-    static NeverDestroyed staticValue = ViewTimelineInsetItem { WebCore::Length(WebCore::LengthType::Auto), std::nullopt };
+    static NeverDestroyed staticValue = ViewTimelineInsetItem { CSS::Keyword::Auto { } };
     return staticValue.get();
 }
 
 // MARK: - Conversion
 
+auto CSSValueConversion<ViewTimelineInsetItem>::operator()(BuilderState& state, const CSSPrimitiveValue& value) -> ViewTimelineInsetItem
+{
+    return toStyleFromCSSValue<ViewTimelineInsetItem::Length>(state, value);
+}
+
+auto CSSValueConversion<ViewTimelineInsetItem>::operator()(BuilderState& state, const CSSValuePair& value) -> ViewTimelineInsetItem
+{
+    return {
+        toStyleFromCSSValue<ViewTimelineInsetItem::Length>(state, value.first()),
+        toStyleFromCSSValue<ViewTimelineInsetItem::Length>(state, value.second()),
+    };
+}
+
 auto CSSValueConversion<ViewTimelineInsetItem>::operator()(BuilderState& state, const CSSValue& value) -> ViewTimelineInsetItem
 {
     if (RefPtr pair = dynamicDowncast<CSSValuePair>(value))
-        return { BuilderConverter::convertLengthOrAuto(state, pair->first()), BuilderConverter::convertLengthOrAuto(state, pair->second()) };
-    if (RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(state, value))
-        return { BuilderConverter::convertLengthOrAuto(state, *primitiveValue), std::nullopt };
-    return { WebCore::Length(WebCore::LengthType::Auto), std::nullopt };
+        return this->operator()(state, *pair);
+
+    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(state, value);
+    if (!primitiveValue)
+        return CSS::Keyword::Auto { };
+
+    return this->operator()(state, *primitiveValue);
 }
 
 auto CSSValueConversion<ViewTimelineInsets>::operator()(BuilderState& state, const CSSValue& value) -> ViewTimelineInsets
 {
     if (RefPtr pair = dynamicDowncast<CSSValuePair>(value))
-        return { ViewTimelineInsetItem { BuilderConverter::convertLengthOrAuto(state, pair->first()), BuilderConverter::convertLengthOrAuto(state, pair->second()) } };
+        return { toStyleFromCSSValue<ViewTimelineInsetItem>(state, *pair) };
+
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
-        return { ViewTimelineInsetItem { BuilderConverter::convertLengthOrAuto(state, *primitiveValue), std::nullopt } };
+        return { toStyleFromCSSValue<ViewTimelineInsetItem>(state, *primitiveValue) };
 
     auto list = requiredListDowncast<CSSValueList, CSSValue>(state, value);
     if (!list)
@@ -67,33 +83,6 @@ auto CSSValueConversion<ViewTimelineInsets>::operator()(BuilderState& state, con
     return ViewTimelineInsetList::map(*list, [&](auto& element) -> ViewTimelineInsetItem {
         return toStyleFromCSSValue<ViewTimelineInsetItem>(state, element);
     });
-}
-
-auto CSSValueCreation<ViewTimelineInsetItem>::operator()(CSSValuePool&, const RenderStyle& style, const ViewTimelineInsetItem& insets) -> Ref<CSSValue>
-{
-    ASSERT(insets.start);
-    if (!insets.end || insets.start == insets.end)
-        return CSSPrimitiveValue::create(*insets.start, style);
-
-    return CSSValuePair::createNoncoalescing(
-        CSSPrimitiveValue::create(*insets.start, style),
-        CSSPrimitiveValue::create(*insets.end, style)
-    );
-}
-
-// MARK: - Serialization
-
-void Serialize<ViewTimelineInsetItem>::operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const ViewTimelineInsetItem& insets)
-{
-    ASSERT(insets.start);
-    if (!insets.end || insets.start == insets.end) {
-        ExtractorSerializer::serializeLength(style, builder, context, *insets.start);
-        return;
-    }
-
-    ExtractorSerializer::serializeLength(style, builder, context, *insets.start);
-    builder.append(' ');
-    ExtractorSerializer::serializeLength(style, builder, context, *insets.end);
 }
 
 } // namespace Style

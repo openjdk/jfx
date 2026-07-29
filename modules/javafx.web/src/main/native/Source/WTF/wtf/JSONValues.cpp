@@ -403,7 +403,7 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
             }
         }
         ASSERT(token == Token::ArrayEnd);
-        result = WTFMove(array);
+        result = WTF::move(array);
         break;
     }
     case Token::ObjectBegin: {
@@ -445,7 +445,7 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
             }
         }
         ASSERT(token == Token::ObjectEnd);
-        result = WTFMove(object);
+        result = WTF::move(object);
         break;
     }
 
@@ -461,19 +461,11 @@ RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const C
 
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(Visitor&& visitor)
 {
-    switch (m_type) {
-    case Type::Null:
-    case Type::Boolean:
-    case Type::Double:
-    case Type::Integer:
-    case Type::String:
-        return std::invoke(std::forward<Visitor>(visitor), static_cast<Value&>(*this));
-    case Type::Object:
+    if (std::holds_alternative<ObjectTypeTag>(m_value))
         return std::invoke(std::forward<Visitor>(visitor), static_cast<Object&>(*this));
-    case Type::Array:
+    if (std::holds_alternative<ArrayTypeTag>(m_value))
         return std::invoke(std::forward<Visitor>(visitor), static_cast<Array&>(*this));
-    }
-    RELEASE_ASSERT_NOT_REACHED();
+    return std::invoke(std::forward<Visitor>(visitor), static_cast<Value&>(*this));
 }
 
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(Visitor&& visitor) const
@@ -531,7 +523,7 @@ RefPtr<Value> Value::parseJSON(StringView json)
     RefPtr<Value> result;
     if (json.is8Bit()) {
         auto data = json.span8();
-        std::span<const LChar> tokenEnd;
+        std::span<const Latin1Character> tokenEnd;
         result = buildValue(data, tokenEnd, 0);
         if (containsNonSpace(tokenEnd))
             return nullptr;
@@ -563,57 +555,56 @@ String Value::toJSONString() const
 
 std::optional<bool> Value::asBoolean() const
 {
-    if (type() != Type::Boolean)
+    if (auto* boolean = std::get_if<bool>(&m_value))
+        return *boolean;
         return std::nullopt;
-    return m_value.boolean;
 }
 
 std::optional<double> Value::asDouble() const
 {
-    if (type() != Type::Double && type() != Type::Integer)
+    if (auto* number = std::get_if<double>(&m_value))
+        return *number;
+    if (auto* number = std::get_if<int>(&m_value))
+        return static_cast<double>(*number);
         return std::nullopt;
-    return m_value.number;
 }
 
 std::optional<int> Value::asInteger() const
 {
-    if (type() != Type::Double && type() != Type::Integer)
+    if (auto* number = std::get_if<int>(&m_value))
+        return *number;
+    if (auto* number = std::get_if<double>(&m_value))
+        return static_cast<int>(*number);
         return std::nullopt;
-    return static_cast<int>(m_value.number);
 }
 
-String Value::asString() const
+const String& Value::asString() const
 {
-    if (type() != Type::String)
+    if (auto* string = std::get_if<String>(&m_value))
+        return *string;
         return nullString();
-    return m_value.string;
 }
 
 void Value::dump(PrintStream& out) const
 {
-    switch (m_type) {
-    case Type::Null:
+    WTF::visit(WTF::makeVisitor([&](std::monostate) {
         out.print("null"_s);
-        break;
-    case Type::Boolean:
-        out.print(m_value.boolean ? "true"_s : "false"_s);
-        break;
-    case Type::String: {
-        StringBuilder builder;
-        builder.appendQuotedJSONString(m_value.string);
-        out.print(builder.toString());
-        break;
-    }
-    case Type::Double:
-    case Type::Integer: {
-        if (!std::isfinite(m_value.number))
+    }, [&](bool boolean) {
+        out.print(boolean ? "true"_s : "false"_s);
+    }, [&](double number) {
+        if (!std::isfinite(number))
             out.print("null"_s);
         else
-            out.print(makeString(m_value.number));
-        break;
-    }
-    case Type::Object: {
-        auto& object = *static_cast<const ObjectBase*>(this);
+            out.print(makeString(number));
+    }, [&](int number) {
+        out.print(makeString(number));
+    }, [&](const String& string) {
+        StringBuilder builder;
+        builder.appendQuotedJSONString(string);
+        out.print(builder.toString());
+    }, [&](ObjectTypeTag) {
+        // Safety: This lambda runs synchronously so it is safe to capture `this` without refing.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto& object = *static_cast<const ObjectBase*>(this);
         CommaPrinter comma(","_s);
         out.print("{"_s);
         for (const auto& key : object.m_order) {
@@ -624,20 +615,15 @@ void Value::dump(PrintStream& out) const
             out.print(comma, builder.toString(), ":"_s, findResult->value.get());
         }
         out.print("}"_s);
-        break;
-    }
-    case Type::Array: {
-        auto& array = *static_cast<const ArrayBase*>(this);
+    }, [&](ArrayTypeTag) {
+        // Safety: This lambda runs synchronously so it is safe to capture `this` without refing.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto& array = *static_cast<const ArrayBase*>(this);
         CommaPrinter comma(","_s);
         out.print("["_s);
         for (auto& value : array.m_map)
             out.print(comma, value.get());
         out.print("]"_s);
-        break;
-    }
-    default:
-        ASSERT_NOT_REACHED();
-    }
+    }), m_value);
 }
 
 void Value::writeJSON(StringBuilder& output) const
@@ -649,31 +635,27 @@ void Value::writeJSON(StringBuilder& output) const
 
 void Value::writeJSONImpl(StringBuilder& output) const
 {
-    switch (m_type) {
-    case Type::Null:
+    WTF::visit(WTF::makeVisitor([&](std::monostate) {
         output.append("null"_s);
-        break;
-    case Type::Boolean:
-        if (m_value.boolean)
+    }, [&](bool boolean) {
+        if (boolean)
             output.append("true"_s);
         else
             output.append("false"_s);
-        break;
-    case Type::String:
-        output.appendQuotedJSONString(m_value.string);
-        break;
-    case Type::Double:
-    case Type::Integer: {
-        if (!std::isfinite(m_value.number))
+    }, [&](double number) {
+        if (!std::isfinite(number))
             output.append("null"_s);
         else
-            output.append(m_value.number);
-        break;
-    }
-    case Type::Object:
-    case Type::Array:
+            output.append(number);
+    }, [&](int number) {
+        output.append(number);
+    }, [&](const String& string) {
+        output.appendQuotedJSONString(string);
+    }, [&](ObjectTypeTag) {
         ASSERT_NOT_REACHED();
-    }
+    }, [&](ArrayTypeTag) {
+        ASSERT_NOT_REACHED();
+    }), m_value);
 }
 
 size_t Value::memoryCost() const
@@ -686,8 +668,8 @@ size_t Value::memoryCost() const
 size_t Value::memoryCostImpl() const
 {
     size_t memoryCost = sizeof(*this);
-    if (m_type == Type::String && m_value.string)
-        memoryCost += m_value.string->sizeInBytes();
+    if (auto* string = std::get_if<String>(&m_value))
+        memoryCost += string->sizeInBytes();
     return memoryCost;
 }
 
@@ -697,7 +679,7 @@ size_t ObjectBase::memoryCostImpl() const
 {
     size_t memoryCost = sizeof(*this);
     for (const auto& entry : m_map)
-        memoryCost += entry.key.sizeInBytes() + entry.value->memoryCost();
+        memoryCost += entry.key.sizeInBytes() + Ref { entry.value }->memoryCost();
     return memoryCost;
 }
 
@@ -773,13 +755,13 @@ void ObjectBase::writeJSONImpl(StringBuilder& output) const
             output.append(',');
         output.appendQuotedJSONString(findResult->key);
         output.append(':');
-        findResult->value->writeJSON(output);
+        Ref { findResult->value }->writeJSON(output);
     }
     output.append('}');
 }
 
 ObjectBase::ObjectBase()
-    : Value(Type::Object)
+    : Value(ObjectTypeTag::Object)
 {
 }
 
@@ -800,7 +782,7 @@ void ArrayBase::writeJSONImpl(StringBuilder& output) const
 }
 
 ArrayBase::ArrayBase()
-    : Value(Type::Array)
+    : Value(ArrayTypeTag::Array)
 {
 }
 

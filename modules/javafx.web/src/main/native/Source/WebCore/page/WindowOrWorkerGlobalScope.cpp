@@ -46,7 +46,11 @@ ExceptionOr<String> WindowOrWorkerGlobalScope::btoa(const String& stringToEncode
     if (!stringToEncode.containsOnlyLatin1())
         return Exception { ExceptionCode::InvalidCharacterError };
 
-    return base64EncodeToString(byteCast<uint8_t>(stringToEncode.latin1().span()));
+    String encodedString = base64EncodeToStringReturnNullIfOverflow(stringToEncode.latin1());
+    if (!encodedString)
+        return Exception { ExceptionCode::OutOfMemoryError };
+
+    return encodedString;
 }
 
 ExceptionOr<String> WindowOrWorkerGlobalScope::atob(const String& encodedString)
@@ -75,11 +79,11 @@ void WindowOrWorkerGlobalScope::reportError(JSDOMGlobalObject& globalObject, JSC
 ExceptionOr<JSC::JSValue> WindowOrWorkerGlobalScope::structuredClone(JSDOMGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& relevantGlobalObject, JSC::JSValue value, StructuredSerializeOptions&& options)
 {
     Vector<Ref<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(lexicalGlobalObject, value, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WindowPostMessage);
+    auto messageData = SerializedScriptValue::create(lexicalGlobalObject, value, WTF::move(options.transfer), ports, SerializationForStorage::No, SerializationContext::WindowPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
-    auto disentangledPorts = MessagePort::disentanglePorts(WTFMove(ports));
+    auto disentangledPorts = MessagePort::disentanglePorts(WTF::move(ports));
     if (disentangledPorts.hasException())
         return disentangledPorts.releaseException();
 
@@ -87,7 +91,7 @@ ExceptionOr<JSC::JSValue> WindowOrWorkerGlobalScope::structuredClone(JSDOMGlobal
     if (RefPtr scriptExecutionContext = relevantGlobalObject.scriptExecutionContext())
         entangledPorts = MessagePort::entanglePorts(*scriptExecutionContext, disentangledPorts.releaseReturnValue());
 
-    return messageData.returnValue()->deserialize(lexicalGlobalObject, &relevantGlobalObject, WTFMove(entangledPorts));
+    return messageData.returnValue()->deserialize(lexicalGlobalObject, &relevantGlobalObject, WTF::move(entangledPorts));
 }
 
 } // namespace WebCore

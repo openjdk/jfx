@@ -37,18 +37,19 @@
 #include "CryptoAlgorithmAESCBC.h"
 #include "CryptoAlgorithmAesCbcCfbParams.h"
 #include "CryptoAlgorithmECDH.h"
+#include "CryptoAlgorithmHKDF.h"
 #include "CryptoAlgorithmHMAC.h"
+#include "CryptoAlgorithmHkdfParams.h"
 #include "CryptoKeyAES.h"
 #include "CryptoKeyEC.h"
 #include "CryptoKeyHMAC.h"
+#include "CryptoKeyRaw.h"
 #include "DeviceResponseConverter.h"
 #include "ExceptionOr.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
-#if HAVE(SWIFT_CPP_INTEROP)
-#include <pal/PALSwift.h>
-#endif
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace fido {
 using namespace WebCore;
@@ -65,14 +66,44 @@ static bool hasAtLeastFourCodepoints(const String& pin)
     return pin.length() >= 4;
 }
 
-// makePinAuth returns `LEFT(HMAC-SHA-256(secret, data), 16)`.
-static Vector<uint8_t> makePinAuth(const CryptoKeyHMAC& key, const Vector<uint8_t>& data)
+static Vector<uint8_t> decryptForProtocol(PINUVAuthProtocol protocol, const CryptoKeyAES& key, const Vector<uint8_t>& ciphertext)
 {
-    auto result = CryptoAlgorithmHMAC::platformSign(key, data);
+    if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        // CTAP 2.1 spec 6.5.7: Protocol 2 decrypt
+        // Split ciphertext into IV (first 16 bytes) and ct (remaining bytes)
+        if (ciphertext.size() < 16)
+            return { };
+
+        Vector<uint8_t> iv(ciphertext.subspan(0, 16));
+        Vector<uint8_t> ct(ciphertext.subspan(16));
+
+        CryptoAlgorithmAesCbcCfbParams params;
+        params.iv = BufferSource(iv);
+
+        auto result = CryptoAlgorithmAESCBC::platformDecrypt(params, key, ct, CryptoAlgorithmAESCBC::Padding::No);
+        if (result.hasException())
+            return { };
+        return result.releaseReturnValue();
+    }
+
+    // CTAP 2.1 spec 6.5.6: Protocol 1 decrypt with zero IV
+    auto result = CryptoAlgorithmAESCBC::platformDecrypt({ }, key, ciphertext, CryptoAlgorithmAESCBC::Padding::No);
+    if (result.hasException())
+        return { };
+    return result.releaseReturnValue();
+}
+static Vector<uint8_t> authenticateForProtocol(PINUVAuthProtocol protocol, const CryptoKeyHMAC& key, const Vector<uint8_t>& message)
+{
+    auto result = CryptoAlgorithmHMAC::platformSign(key, message);
     ASSERT(!result.hasException());
-    auto pinAuth = result.releaseReturnValue();
-    pinAuth.shrink(16);
-    return pinAuth;
+    auto signature = result.releaseReturnValue();
+
+    // https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#pinProto1
+    // Pin Protocol 1 should trim to 16 bytes, Pin Protocol 2 uses full 32.
+    if (protocol == PINUVAuthProtocol::kPinProtocol1)
+        signature.shrink(16);
+
+    return signature;
 }
 
 std::optional<CString> validateAndConvertToUTF8(const String& pin)
@@ -88,16 +119,16 @@ std::optional<CString> validateAndConvertToUTF8(const String& pin)
 // encodePINCommand returns a CTAP2 PIN command for the operation |subcommand|.
 // Additional elements of the top-level CBOR map can be added with the optional
 // |addAdditional| callback.
-static Vector<uint8_t> encodePinCommand(Subcommand subcommand, Function<void(CBORValue::MapValue*)> addAdditional = nullptr)
+static Vector<uint8_t> encodePinCommand(Subcommand subcommand, PINUVAuthProtocol protocol, Function<void(CBORValue::MapValue*)> addAdditional = nullptr)
 {
     CBORValue::MapValue map;
-    map.emplace(static_cast<int64_t>(RequestKey::kProtocol), kProtocolVersion);
+    map.emplace(static_cast<int64_t>(RequestKey::kProtocol), static_cast<int64_t>(protocol));
     map.emplace(static_cast<int64_t>(RequestKey::kSubcommand), static_cast<int64_t>(subcommand));
 
     if (addAdditional)
         addAdditional(&map);
 
-    auto serializedParam = CBORWriter::write(CBORValue(WTFMove(map)));
+    auto serializedParam = CBORWriter::write(CBORValue(WTF::move(map)));
     ASSERT(serializedParam);
 
     Vector<uint8_t> cborRequest({ static_cast<uint8_t>(CtapRequestCommand::kAuthenticatorClientPin) });
@@ -124,7 +155,7 @@ std::optional<RetriesResponse> RetriesResponse::parse(const Vector<uint8_t>& inB
 }
 
 KeyAgreementResponse::KeyAgreementResponse(Ref<CryptoKeyEC>&& peerKey)
-    : peerKey(WTFMove(peerKey))
+    : peerKey(WTF::move(peerKey))
 {
 }
 
@@ -187,18 +218,18 @@ cbor::CBORValue::MapValue encodeCOSEPublicKey(const Vector<uint8_t>& rawPublicKe
     publicKeyMap[cbor::CBORValue(COSE::kty)] = cbor::CBORValue(COSE::EC2);
     publicKeyMap[cbor::CBORValue(COSE::alg)] = cbor::CBORValue(COSE::ECDH256);
     publicKeyMap[cbor::CBORValue(COSE::crv)] = cbor::CBORValue(COSE::P_256);
-    publicKeyMap[cbor::CBORValue(COSE::x)] = cbor::CBORValue(WTFMove(x));
-    publicKeyMap[cbor::CBORValue(COSE::y)] = cbor::CBORValue(WTFMove(y));
+    publicKeyMap[cbor::CBORValue(COSE::x)] = cbor::CBORValue(WTF::move(x));
+    publicKeyMap[cbor::CBORValue(COSE::y)] = cbor::CBORValue(WTF::move(y));
 
     return publicKeyMap;
 }
 
 TokenResponse::TokenResponse(Ref<WebCore::CryptoKeyHMAC>&& token)
-    : m_token(WTFMove(token))
+    : m_token(WTF::move(token))
 {
 }
 
-std::optional<TokenResponse> TokenResponse::parse(const WebCore::CryptoKeyAES& sharedKey, const Vector<uint8_t>& inBuffer)
+std::optional<TokenResponse> TokenResponse::parse(PINUVAuthProtocol protocol, const WebCore::CryptoKeyAES& sharedKey, const Vector<uint8_t>& inBuffer)
 {
     auto decodedMap = decodeResponseMap(inBuffer);
     if (!decodedMap)
@@ -210,20 +241,20 @@ std::optional<TokenResponse> TokenResponse::parse(const WebCore::CryptoKeyAES& s
         return std::nullopt;
     const auto& encryptedToken = it->second.getByteString();
 
-    auto tokenResult = CryptoAlgorithmAESCBC::platformDecrypt({ }, sharedKey, encryptedToken, CryptoAlgorithmAESCBC::Padding::No);
-    if (tokenResult.hasException())
+    auto token = decryptForProtocol(protocol, sharedKey, encryptedToken);
+    if (token.isEmpty())
         return std::nullopt;
-    auto token = tokenResult.releaseReturnValue();
 
-    auto tokenKey = CryptoKeyHMAC::importRaw(token.size() * 8, CryptoAlgorithmIdentifier::SHA_256, WTFMove(token), true, CryptoKeyUsageSign);
-    ASSERT(tokenKey);
+    auto tokenKey = CryptoKeyHMAC::importRaw(token.size() * 8, CryptoAlgorithmIdentifier::SHA_256, WTF::move(token), true, CryptoKeyUsageSign);
+    if (!tokenKey)
+        return std::nullopt;
 
     return TokenResponse(tokenKey.releaseNonNull());
 }
 
-Vector<uint8_t> TokenResponse::pinAuth(const Vector<uint8_t>& clientDataHash) const
+Vector<uint8_t> TokenResponse::pinAuth(PINUVAuthProtocol protocol, const Vector<uint8_t>& clientDataHash) const
 {
-    return makePinAuth(m_token, clientDataHash);
+    return authenticateForProtocol(protocol, m_token, clientDataHash);
 }
 
 const Vector<uint8_t>& TokenResponse::token() const
@@ -231,17 +262,80 @@ const Vector<uint8_t>& TokenResponse::token() const
     return m_token->key();
 }
 
-Vector<uint8_t> encodeAsCBOR(const RetriesRequest&)
+Vector<uint8_t> encodeAsCBOR(const RetriesRequest& request)
 {
-    return encodePinCommand(Subcommand::kGetRetries);
+    return encodePinCommand(Subcommand::kGetRetries, request.protocol);
 }
 
-Vector<uint8_t> encodeAsCBOR(const KeyAgreementRequest&)
+Vector<uint8_t> encodeAsCBOR(const KeyAgreementRequest& request)
 {
-    return encodePinCommand(Subcommand::kGetKeyAgreement);
+    return encodePinCommand(Subcommand::kGetKeyAgreement, request.protocol);
 }
 
-std::optional<TokenRequest> TokenRequest::tryCreate(const CString& pin, const CryptoKeyEC& peerKey)
+static Vector<uint8_t> deriveProtocolSharedSecret(PINUVAuthProtocol protocol, Vector<uint8_t>&& ecdhResult)
+{
+    // CTAP spec 6.5.6 (Protocol 1) and 6.5.7 (Protocol 2).
+    Vector<uint8_t> sharedSecret;
+    if (protocol == PINUVAuthProtocol::kPinProtocol1) {
+        auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
+        crypto->addBytes(ecdhResult.span());
+        sharedSecret = crypto->computeHash();
+    } else if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        sharedSecret.reserveInitialCapacity(64);
+        auto hkdfKey = CryptoKeyRaw::create(CryptoAlgorithmIdentifier::HKDF, WTF::move(ecdhResult), CryptoKeyUsageDeriveBits);
+
+        CryptoAlgorithmHkdfParams hmacHkdfParams;
+        hmacHkdfParams.hashIdentifier = CryptoAlgorithmIdentifier::SHA_256;
+        Vector<uint8_t> hkdfSalt(32, 0);
+        hmacHkdfParams.salt = toBufferSource(hkdfSalt.span());
+        hmacHkdfParams.info = toBufferSource(std::span { kHKDFInfoHMACKey });
+
+        auto hmacKeyMaterial = CryptoAlgorithmHKDF::deriveBits(hmacHkdfParams, hkdfKey.get(), 32 * 8);
+        if (hmacKeyMaterial.hasException())
+            return { };
+        sharedSecret.appendVector(hmacKeyMaterial.releaseReturnValue());
+
+        CryptoAlgorithmHkdfParams aesHkdfParams;
+        aesHkdfParams.hashIdentifier = CryptoAlgorithmIdentifier::SHA_256;
+        aesHkdfParams.salt = toBufferSource(hkdfSalt.span());
+        aesHkdfParams.info = toBufferSource(std::span { kHKDFInfoAESKey });
+
+        auto aesKeyMaterial = CryptoAlgorithmHKDF::deriveBits(aesHkdfParams, hkdfKey.get(), 32 * 8);
+        if (aesKeyMaterial.hasException())
+            return { };
+        sharedSecret.appendVector(aesKeyMaterial.releaseReturnValue());
+    } else {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    return sharedSecret;
+}
+
+static Vector<uint8_t> encryptForProtocol(PINUVAuthProtocol protocol, const CryptoKeyAES& key, const Vector<uint8_t>& plaintext)
+{
+    if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        Vector<uint8_t> iv(16);
+        cryptographicallyRandomValues(iv.mutableSpan());
+
+        CryptoAlgorithmAesCbcCfbParams params;
+        params.iv = BufferSource(iv);
+
+        auto result = CryptoAlgorithmAESCBC::platformEncrypt(params, key, plaintext, CryptoAlgorithmAESCBC::Padding::No);
+        ASSERT(!result.hasException());
+
+        Vector<uint8_t> output;
+        output.reserveInitialCapacity(iv.size() + result.returnValue().size());
+        output.appendVector(iv);
+        output.appendVector(result.releaseReturnValue());
+        return output;
+    }
+
+    auto result = CryptoAlgorithmAESCBC::platformEncrypt({ }, key, plaintext, CryptoAlgorithmAESCBC::Padding::No);
+    ASSERT(!result.hasException());
+    return result.releaseReturnValue();
+}
+
+std::optional<TokenRequest> TokenRequest::tryCreate(PINUVAuthProtocol protocol, const CString& pin, const CryptoKeyEC& peerKey)
 {
     // The following implements Section 5.5.4 Getting sharedSecret from Authenticator.
     // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#gettingSharedSecret
@@ -250,16 +344,23 @@ std::optional<TokenRequest> TokenRequest::tryCreate(const CString& pin, const Cr
     ASSERT(!keyPairResult.hasException());
     auto keyPair = keyPairResult.releaseReturnValue();
 
-    // 2. Use ECDH and SHA-256 to compute the shared AES-CBC key.
+    // 2. Use ECDH to compute the shared secret, then apply protocol-specific KDF.
     auto sharedKeyResult = CryptoAlgorithmECDH::platformDeriveBits(downcast<CryptoKeyEC>(*keyPair.privateKey), peerKey);
     if (!sharedKeyResult)
         return std::nullopt;
 
-    auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    crypto->addBytes(sharedKeyResult->span());
-    auto sharedKeyHash = crypto->computeHash();
+    auto sharedSecret = deriveProtocolSharedSecret(protocol, WTF::move(*sharedKeyResult));
+    if (sharedSecret.isEmpty())
+        return std::nullopt;
 
-    auto sharedKey = CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier::AES_CBC, WTFMove(sharedKeyHash), true, CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt);
+    Vector<uint8_t> aesKeyMaterial;
+    if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        ASSERT(sharedSecret.size() == 64);
+        aesKeyMaterial = Vector<uint8_t>(sharedSecret.span().last(32));
+    } else
+        aesKeyMaterial = sharedSecret;
+
+    auto sharedKey = CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier::AES_CBC, WTF::move(aesKeyMaterial), true, CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt);
     ASSERT(sharedKey);
 
     // The following encodes the public key of the above key pair into COSE format.
@@ -268,26 +369,28 @@ std::optional<TokenRequest> TokenRequest::tryCreate(const CString& pin, const Cr
     auto coseKey = encodeCOSEPublicKey(rawPublicKeyResult.returnValue());
 
     // The following calculates a SHA-256 digest of the PIN, and shrink to the left 16 bytes.
-    crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
+    auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     crypto->addBytes(byteCast<uint8_t>(pin.span()));
     auto pinHash = crypto->computeHash();
     pinHash.shrink(16);
 
-    return TokenRequest(sharedKey.releaseNonNull(), WTFMove(coseKey), WTFMove(pinHash));
+    return TokenRequest(sharedKey.releaseNonNull(), WTF::move(coseKey), WTF::move(pinHash), protocol);
 }
 
-TokenRequest::TokenRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORValue::MapValue&& coseKey, Vector<uint8_t>&& pinHash)
-    : m_sharedKey(WTFMove(sharedKey))
-    , m_coseKey(WTFMove(coseKey))
-    , m_pinHash(WTFMove(pinHash))
+TokenRequest::TokenRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORValue::MapValue&& coseKey, Vector<uint8_t>&& pinHash, PINUVAuthProtocol protocol)
+    : m_sharedKey(WTF::move(sharedKey))
+    , m_coseKey(WTF::move(coseKey))
+    , m_pinHash(WTF::move(pinHash))
+    , m_protocol(protocol)
 {
 }
 
-SetPinRequest::SetPinRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORValue::MapValue&& coseKey, Vector<uint8_t>&& newPinEnc, Vector<uint8_t>&& pinUvAuthParam)
-    : m_sharedKey(WTFMove(sharedKey))
-    , m_coseKey(WTFMove(coseKey))
-    , m_newPinEnc(WTFMove(newPinEnc))
-    , m_pinUvAuthParam(WTFMove(pinUvAuthParam))
+SetPinRequest::SetPinRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORValue::MapValue&& coseKey, Vector<uint8_t>&& newPinEnc, Vector<uint8_t>&& pinUvAuthParam, PINUVAuthProtocol protocol)
+    : m_sharedKey(WTF::move(sharedKey))
+    , m_coseKey(WTF::move(coseKey))
+    , m_newPinEnc(WTF::move(newPinEnc))
+    , m_pinUvAuthParam(WTF::move(pinUvAuthParam))
+    , m_protocol(protocol)
 {
 }
 
@@ -296,7 +399,7 @@ const Vector<uint8_t>& SetPinRequest::pinAuth() const
     return m_pinUvAuthParam;
 }
 
-std::optional<SetPinRequest> SetPinRequest::tryCreate(const String& inputPin, const WebCore::CryptoKeyEC& peerKey)
+std::optional<SetPinRequest> SetPinRequest::tryCreate(PINUVAuthProtocol protocol, const String& inputPin, const WebCore::CryptoKeyEC& peerKey)
 {
     std::optional<CString> newPin = validateAndConvertToUTF8(inputPin);
     if (!newPin)
@@ -309,16 +412,25 @@ std::optional<SetPinRequest> SetPinRequest::tryCreate(const String& inputPin, co
     ASSERT(!keyPairResult.hasException());
     auto keyPair = keyPairResult.releaseReturnValue();
 
-    // 2. Use ECDH and SHA-256 to compute the shared AES-CBC key.
     auto sharedKeyResult = CryptoAlgorithmECDH::platformDeriveBits(downcast<CryptoKeyEC>(*keyPair.privateKey), peerKey);
     if (!sharedKeyResult)
         return std::nullopt;
 
-    auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    crypto->addBytes(sharedKeyResult->span());
-    auto sharedKeyHash = crypto->computeHash();
+    auto sharedSecret = deriveProtocolSharedSecret(protocol, WTF::move(*sharedKeyResult));
+    if (sharedSecret.isEmpty())
+        return std::nullopt;
 
-    auto sharedKey = CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier::AES_CBC, Vector { sharedKeyHash }, true, CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt);
+    Vector<uint8_t> hmacKeyMaterial, aesKeyMaterial;
+    if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        ASSERT(sharedSecret.size() == 64);
+        hmacKeyMaterial = Vector<uint8_t>(sharedSecret.span().first(32));
+        aesKeyMaterial = Vector<uint8_t>(sharedSecret.span().last(32));
+    } else {
+        hmacKeyMaterial = sharedSecret;
+        aesKeyMaterial = sharedSecret;
+    }
+
+    auto sharedKey = CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier::AES_CBC, WTF::move(aesKeyMaterial), true, CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt);
     ASSERT(sharedKey);
 
     // The following encodes the public key of the above key pair into COSE format.
@@ -333,35 +445,120 @@ std::optional<SetPinRequest> SetPinRequest::tryCreate(const String& inputPin, co
     for (int i = paddedPin.size(); i < 64; i++)
         paddedPin.append('\0');
 
-    auto hmacKey = CryptoKeyHMAC::importRaw(sharedKeyHash.size() * 8 /* lengthInBits */, CryptoAlgorithmIdentifier::SHA_256, WTFMove(sharedKeyHash), true, CryptoKeyUsageSign);
+    auto hmacKey = CryptoKeyHMAC::importRaw(hmacKeyMaterial.size() * 8 /* lengthInBits */, CryptoAlgorithmIdentifier::SHA_256, WTF::move(hmacKeyMaterial), true, CryptoKeyUsageSign);
 
-    auto newPinEnc = CryptoAlgorithmAESCBC::platformEncrypt({ }, *sharedKey, paddedPin, CryptoAlgorithmAESCBC::Padding::No);
-    ASSERT(!newPinEnc.hasException());
+    auto newPinEnc = encryptForProtocol(protocol, *sharedKey, paddedPin);
 
-    auto pinUvAuthParam = CryptoAlgorithmHMAC::platformSign(*hmacKey, newPinEnc.returnValue());
-    ASSERT(!pinUvAuthParam.hasException());
+    auto pinUvAuthParam = authenticateForProtocol(protocol, *hmacKey, newPinEnc);
 
-    return SetPinRequest(sharedKey.releaseNonNull(), WTFMove(coseKey), newPinEnc.releaseReturnValue(), pinUvAuthParam.releaseReturnValue());
+    return SetPinRequest(sharedKey.releaseNonNull(), WTF::move(coseKey), WTF::move(newPinEnc), WTF::move(pinUvAuthParam), protocol);
 }
 
 Vector<uint8_t> encodeAsCBOR(const TokenRequest& request)
 {
-    auto result = CryptoAlgorithmAESCBC::platformEncrypt({ }, request.sharedKey(), request.m_pinHash, CryptoAlgorithmAESCBC::Padding::No);
-    ASSERT(!result.hasException());
+    auto encryptedPin = encryptForProtocol(request.m_protocol, request.sharedKey(), request.m_pinHash);
 
-    return encodePinCommand(Subcommand::kGetPinToken, [coseKey = WTFMove(request.m_coseKey), encryptedPin = result.releaseReturnValue()] (CBORValue::MapValue* map) mutable {
-        map->emplace(static_cast<int64_t>(RequestKey::kKeyAgreement), WTFMove(coseKey));
-        map->emplace(static_cast<int64_t>(RequestKey::kPinHashEnc), WTFMove(encryptedPin));
+    return encodePinCommand(Subcommand::kGetPinToken, request.m_protocol, [coseKey = WTF::move(request.m_coseKey), encryptedPin = WTF::move(encryptedPin)] (CBORValue::MapValue* map) mutable {
+        map->emplace(static_cast<int64_t>(RequestKey::kKeyAgreement), WTF::move(coseKey));
+        map->emplace(static_cast<int64_t>(RequestKey::kPinHashEnc), WTF::move(encryptedPin));
     });
 }
 
 Vector<uint8_t> encodeAsCBOR(const SetPinRequest& request)
 {
-    return encodePinCommand(Subcommand::kSetPin, [coseKey = WTFMove(request.m_coseKey), encryptedPin = request.m_newPinEnc, pinUvAuthParam = request.m_pinUvAuthParam] (CBORValue::MapValue* map) mutable {
-        map->emplace(static_cast<int64_t>(RequestKey::kKeyAgreement), WTFMove(coseKey));
-        map->emplace(static_cast<int64_t>(RequestKey::kNewPinEnc), WTFMove(encryptedPin));
-        map->emplace(static_cast<int64_t>(RequestKey::kPinAuth), WTFMove(pinUvAuthParam));
+    return encodePinCommand(Subcommand::kSetPin, request.m_protocol, [coseKey = WTF::move(request.m_coseKey), encryptedPin = request.m_newPinEnc, pinUvAuthParam = request.m_pinUvAuthParam] (CBORValue::MapValue* map) mutable {
+        map->emplace(static_cast<int64_t>(RequestKey::kKeyAgreement), WTF::move(coseKey));
+        map->emplace(static_cast<int64_t>(RequestKey::kNewPinEnc), WTF::move(encryptedPin));
+        map->emplace(static_cast<int64_t>(RequestKey::kPinAuth), WTF::move(pinUvAuthParam));
     });
+}
+
+// HmacSecretRequest implementation
+HmacSecretRequest::HmacSecretRequest(Ref<CryptoKeyAES>&& sharedKey, CBORValue::MapValue&& coseKey, Vector<uint8_t>&& saltEnc, Vector<uint8_t>&& saltAuth, PINUVAuthProtocol protocol)
+    : m_sharedKey(WTF::move(sharedKey))
+    , m_coseKey(WTF::move(coseKey))
+    , m_saltEnc(WTF::move(saltEnc))
+    , m_saltAuth(WTF::move(saltAuth))
+    , m_protocol(protocol)
+{
+}
+
+std::optional<HmacSecretRequest> HmacSecretRequest::create(PINUVAuthProtocol protocol, const Vector<uint8_t>& salt1, const std::optional<Vector<uint8_t>>& salt2, RefPtr<CryptoKeyEC>&& peerKey)
+{
+    if (salt1.size() != 32)
+        return std::nullopt;
+    if (salt2 && salt2->size() != 32)
+        return std::nullopt;
+
+    // The following implements Section 5.5.4 Getting sharedSecret from Authenticator
+    auto keyPairResult = CryptoKeyEC::generatePair(CryptoAlgorithmIdentifier::ECDH, "P-256"_s, true, CryptoKeyUsageDeriveBits);
+    if (keyPairResult.hasException())
+        return std::nullopt;
+    auto keyPair = keyPairResult.releaseReturnValue();
+
+    auto sharedKeyResult = CryptoAlgorithmECDH::platformDeriveBits(downcast<CryptoKeyEC>(*keyPair.privateKey), *peerKey);
+    if (!sharedKeyResult)
+        return std::nullopt;
+
+    auto sharedSecret = deriveProtocolSharedSecret(protocol, WTF::move(*sharedKeyResult));
+    if (sharedSecret.isEmpty())
+        return std::nullopt;
+
+    Vector<uint8_t> hmacKeyMaterial, aesKeyMaterial;
+    if (protocol == PINUVAuthProtocol::kPinProtocol2) {
+        ASSERT(sharedSecret.size() == 64);
+        hmacKeyMaterial = Vector<uint8_t>(sharedSecret.span().first(32));
+        aesKeyMaterial = Vector<uint8_t>(sharedSecret.span().last(32));
+    } else {
+        hmacKeyMaterial = sharedSecret;
+        aesKeyMaterial = sharedSecret;
+    }
+
+    auto sharedKey = CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier::AES_CBC, WTF::move(aesKeyMaterial), true, CryptoKeyUsageEncrypt | CryptoKeyUsageDecrypt);
+    if (!sharedKey)
+        return std::nullopt;
+
+    auto rawPublicKeyResult = downcast<CryptoKeyEC>(*keyPair.publicKey).exportRaw();
+    if (rawPublicKeyResult.hasException())
+        return std::nullopt;
+    auto coseKey = encodeCOSEPublicKey(rawPublicKeyResult.returnValue());
+
+    Vector<uint8_t> saltsBuffer = salt1;
+    if (salt2)
+        saltsBuffer.appendVector(*salt2);
+
+    auto saltEnc = encryptForProtocol(protocol, *sharedKey, saltsBuffer);
+
+    auto hmacKey = CryptoKeyHMAC::importRaw(hmacKeyMaterial.size() * 8, CryptoAlgorithmIdentifier::SHA_256, WTF::move(hmacKeyMaterial), true, CryptoKeyUsageSign);
+    if (!hmacKey)
+        return std::nullopt;
+
+    auto saltAuth = authenticateForProtocol(protocol, *hmacKey, saltEnc);
+
+    return HmacSecretRequest(sharedKey.releaseNonNull(), WTF::move(coseKey), WTF::move(saltEnc), WTF::move(saltAuth), protocol);
+}
+
+// HmacSecretResponse implementation
+HmacSecretResponse::HmacSecretResponse(Vector<uint8_t>&& decryptedOutput)
+    : m_output(WTF::move(decryptedOutput))
+{
+}
+
+std::optional<HmacSecretResponse> HmacSecretResponse::parse(PINUVAuthProtocol protocol, const CryptoKeyAES& sharedKey, const Vector<uint8_t>& encryptedOutput)
+{
+    auto output = decryptForProtocol(protocol, sharedKey, encryptedOutput);
+    if (output.isEmpty())
+        return std::nullopt;
+
+    if (output.size() != 32 && output.size() != 64)
+        return std::nullopt;
+
+    return HmacSecretResponse(WTF::move(output));
+}
+
+const Vector<uint8_t>& HmacSecretResponse::output() const
+{
+    return m_output;
 }
 
 } // namespace pin

@@ -25,16 +25,18 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(SAMPLING_PROFILER)
 
-#include "CallFrame.h"
-#include "CodeBlockHash.h"
-#include "JITCode.h"
-#include "MachineStackMarker.h"
-#include "NativeCallee.h"
-#include "PCToCodeOriginMap.h"
-#include "WasmCompilationMode.h"
-#include "WasmIndexOrName.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/JITCode.h>
+#include <JavaScriptCore/MachineStackMarker.h>
+#include <JavaScriptCore/NativeCallee.h>
+#include <JavaScriptCore/PCToCodeOriginMap.h>
+#include <JavaScriptCore/WasmCompilationMode.h>
+#include <JavaScriptCore/WasmIndexOrName.h>
 #include <wtf/Box.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -175,7 +177,7 @@ public:
         { }
         StackTrace(StackTrace&& other)
             : timestamp(other.timestamp)
-            , frames(WTFMove(other.frames))
+            , frames(WTF::move(other.frames))
         { }
     };
 
@@ -194,7 +196,7 @@ public:
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
     void noticeCurrentThreadAsJSCExecutionThreadWithLock() WTF_REQUIRES_LOCK(m_lock);
     void processUnverifiedStackTraces() WTF_REQUIRES_LOCK(m_lock);
-    void setStopWatch(Ref<Stopwatch>&& stopwatch) WTF_REQUIRES_LOCK(m_lock) { m_stopwatch = WTFMove(stopwatch); }
+    void setStopWatch(Ref<Stopwatch>&& stopwatch) WTF_REQUIRES_LOCK(m_lock) { m_stopwatch = WTF::move(stopwatch); }
     void pause() WTF_REQUIRES_LOCK(m_lock);
     void clearData() WTF_REQUIRES_LOCK(m_lock);
 

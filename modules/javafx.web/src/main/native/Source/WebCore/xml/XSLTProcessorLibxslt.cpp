@@ -27,18 +27,21 @@
 #include "XSLTProcessor.h"
 
 #include "CachedResourceLoader.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentSecurityOrigin.h"
+#include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "SharedBuffer.h"
+#include "Text.h"
 #include "TransformSource.h"
 #include "XMLDocumentParser.h"
 #include "XMLDocumentParserScope.h"
@@ -67,7 +70,7 @@ void XSLTProcessor::parseErrorFunc(void* userData, const xmlError* error)
 void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 #endif
 {
-    PageConsoleClient* console = static_cast<PageConsoleClient*>(userData);
+    FrameConsoleClient* console = static_cast<FrameConsoleClient*>(userData);
     if (!console)
         return;
 
@@ -118,14 +121,15 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         RefPtr<SharedBuffer> data;
         RefPtr cachedResourceLoader = globalCachedResourceLoader().get();
 
-        bool requestAllowed = cachedResourceLoader && cachedResourceLoader->frame() && cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+        RefPtr cachedResourceLoaderDocument = cachedResourceLoader->document();
+        bool requestAllowed = cachedResourceLoader && cachedResourceLoader->frame() && cachedResourceLoaderDocument->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
         if (requestAllowed) {
             FetchOptions options;
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
             cachedResourceLoader->frame()->loader().loadResourceSynchronously(URL { url }, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
             if (error.isNull())
-                requestAllowed = cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
+                requestAllowed = cachedResourceLoaderDocument->protectedSecurityOrigin()->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
             else if (data)
                 data = nullptr;
         }
@@ -140,10 +144,9 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         if (!data || !data->size())
             return nullptr;
 
-        PageConsoleClient* console = nullptr;
-        RefPtr frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
-        if (frame && frame->page())
-            console = &frame->page()->console();
+        FrameConsoleClient* console = nullptr;
+        if (RefPtr frame = globalProcessor->xslStylesheet()->ownerDocument()->frame())
+            console = &frame->console();
         XMLDocumentParserScope scope(cachedResourceLoader.get(), XSLTProcessor::genericErrorFunc, XSLTProcessor::parseErrorFunc, console);
 
         // We don't specify an encoding here. Neither Gecko nor WinIE respects
@@ -154,7 +157,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         return xmlReadMemory(dataSpan.data(), static_cast<int>(dataSpan.size()), byteCast<char>(uri), nullptr, options);
     }
     case XSLT_LOAD_STYLESHEET:
-        return globalProcessor->xslStylesheet()->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);
+        return RefPtr { globalProcessor->xslStylesheet() }->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);
     default:
         break;
     }
@@ -241,7 +244,8 @@ static void freeXsltParamsInArray(std::span<const char*> params)
 static xsltStylesheetPtr xsltStylesheetPointer(RefPtr<XSLStyleSheet>& cachedStylesheet, Node* stylesheetRootNode)
 {
     if (!cachedStylesheet && stylesheetRootNode) {
-        cachedStylesheet = XSLStyleSheet::createForXSLTProcessor(stylesheetRootNode->parentNode() ? stylesheetRootNode->parentNode() : stylesheetRootNode,
+        RefPtr parentNode = stylesheetRootNode->parentNode() ? stylesheetRootNode->parentNode() : stylesheetRootNode;
+        cachedStylesheet = XSLStyleSheet::createForXSLTProcessor(parentNode.get(),
             stylesheetRootNode->document().url().string(),
             stylesheetRootNode->document().url()); // FIXME: Should we use baseURL here?
 
@@ -265,7 +269,7 @@ static inline xmlDocPtr xmlDocPtrFromNode(Node& sourceNode, bool& shouldDelete)
     if (sourceIsDocument && ownerDocument->transformSource())
         sourceDoc = ownerDocument->transformSource()->platformSource();
     if (!sourceDoc) {
-        sourceDoc = xmlDocPtrForString(ownerDocument->cachedResourceLoader(), serializeFragment(sourceNode, SerializedNodes::SubtreeIncludingNode),
+        sourceDoc = xmlDocPtrForString(ownerDocument->protectedCachedResourceLoader(), serializeFragment(sourceNode, SerializedNodes::SubtreeIncludingNode),
             sourceIsDocument ? ownerDocument->url().string() : String());
         shouldDelete = sourceDoc;
     }
@@ -295,14 +299,14 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 {
     Ref<Document> ownerDocument(sourceNode.document());
 
-    setXSLTLoadCallBack(docLoaderFunc, this, &ownerDocument->cachedResourceLoader());
+    setXSLTLoadCallBack(docLoaderFunc, this, &ownerDocument->protectedCachedResourceLoader().get());
     xsltStylesheetPtr sheet = xsltStylesheetPointer(m_stylesheet, m_stylesheetRootNode.get());
     if (!sheet) {
         setXSLTLoadCallBack(nullptr, nullptr, nullptr);
         m_stylesheet = nullptr;
         return false;
     }
-    m_stylesheet->clearDocuments();
+    RefPtr { m_stylesheet }->clearDocuments();
 
     int origXsltMaxDepth = xsltMaxDepth;
     xsltMaxDepth = 1000;

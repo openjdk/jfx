@@ -52,7 +52,7 @@ JSArrayBuffer* JSArrayBuffer::create(
 {
     JSArrayBuffer* result =
         new (NotNull, allocateCell<JSArrayBuffer>(vm))
-        JSArrayBuffer(vm, structure, WTFMove(buffer));
+        JSArrayBuffer(vm, structure, WTF::move(buffer));
     result->finishCreation(vm, structure->globalObject());
     return result;
 }

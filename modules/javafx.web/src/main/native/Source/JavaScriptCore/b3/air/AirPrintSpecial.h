@@ -41,25 +41,18 @@ namespace Printer {
 
 typedef Vector<B3::Air::Arg> ArgList;
 
-// IsSameOrReference::value is true if T is the same type as U or U&. Else, it is false.
-
 template<typename T, typename U>
-static constexpr auto IsSameOrReferenceHelper(int) -> std::enable_if_t<std::is_same<T, U>::value || std::is_same<T, U&>::value, std::true_type>;
+concept IsSameOrReference = std::same_as<T, U> || std::same_as<T, U&>;
 
-template<typename T, typename U>
-static constexpr std::false_type IsSameOrReferenceHelper(...);
-
-template<class T, typename U>
-struct IsSameOrReference : public std::is_same<decltype(IsSameOrReferenceHelper<T, U>(0)), std::true_type> { };
-
-
-template<typename T, typename... Arguments, typename = std::enable_if_t<IsSameOrReference<T, B3::Air::Tmp>::value || IsSameOrReference<T, Reg>::value>>
+template<typename T, typename... Arguments>
+    requires (IsSameOrReference<T, B3::Air::Tmp> || IsSameOrReference<T, Reg>)
 inline void appendAirArg(B3::Air::Inst& inst, T&& arg)
 {
     inst.args.append(std::forward<T>(arg));
 }
 
-template<typename T, typename... Arguments, typename = std::enable_if_t<!IsSameOrReference<T, B3::Air::Tmp>::value && !IsSameOrReference<T, Reg>::value>>
+template<typename T, typename... Arguments>
+    requires (!IsSameOrReference<T, B3::Air::Tmp> && !IsSameOrReference<T, Reg>)
 inline void appendAirArg(B3::Air::Inst&, T&&, int = 0) { }
 
 inline void appendAirArgs(B3::Air::Inst&) { }

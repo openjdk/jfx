@@ -25,23 +25,23 @@
 
 #pragma once
 
-#include "BackgroundFetchRecordIdentifier.h"
-#include "BackgroundFetchStore.h"
-#include "ClientOrigin.h"
-#include "NotificationPayload.h"
-#include "PageIdentifier.h"
-#include "SWServerDelegate.h"
-#include "SWServerWorker.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "SecurityOriginData.h"
-#include "ServiceWorkerClientData.h"
-#include "ServiceWorkerClientPendingMessage.h"
-#include "ServiceWorkerIdentifier.h"
-#include "ServiceWorkerJob.h"
-#include "ServiceWorkerRegistrationData.h"
-#include "ServiceWorkerRegistrationKey.h"
-#include "ServiceWorkerTypes.h"
-#include "WorkerThreadMode.h"
+#include <WebCore/BackgroundFetchRecordIdentifier.h>
+#include <WebCore/BackgroundFetchStore.h>
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/NotificationPayload.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/SWServerDelegate.h>
+#include <WebCore/SWServerWorker.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/SecurityOriginData.h>
+#include <WebCore/ServiceWorkerClientData.h>
+#include <WebCore/ServiceWorkerClientPendingMessage.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/ServiceWorkerJob.h>
+#include <WebCore/ServiceWorkerRegistrationData.h>
+#include <WebCore/ServiceWorkerRegistrationKey.h>
+#include <WebCore/ServiceWorkerTypes.h>
+#include <WebCore/WorkerThreadMode.h>
 #include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -123,7 +123,7 @@ public:
         virtual void setRegistrationLastUpdateTime(ServiceWorkerRegistrationIdentifier, WallTime) = 0;
         virtual void setRegistrationUpdateViaCache(ServiceWorkerRegistrationIdentifier, ServiceWorkerUpdateViaCache) = 0;
         virtual void notifyClientsOfControllerChange(const HashSet<ScriptExecutionContextIdentifier>& contextIdentifiers, const std::optional<ServiceWorkerData>& newController) = 0;
-        virtual void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const String& sourceOrigin) = 0;
+        virtual void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const SecurityOriginData& sourceOrigin) = 0;
         virtual void focusServiceWorkerClient(ScriptExecutionContextIdentifier, CompletionHandler<void(std::optional<ServiceWorkerClientData>&&)>&&) = 0;
         virtual void updateBackgroundFetchRegistration(const BackgroundFetchInformation&) = 0;
 
@@ -140,6 +140,8 @@ public:
         WEBCORE_EXPORT void finishFetchingScriptInServer(const ServiceWorkerJobDataIdentifier&, const ServiceWorkerRegistrationKey&, WorkerFetchResult&&);
         WEBCORE_EXPORT void addServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier);
         WEBCORE_EXPORT void removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier);
+        WEBCORE_EXPORT void registerServiceWorkerInServer(ServiceWorkerIdentifier);
+        WEBCORE_EXPORT void unregisterServiceWorkerInServer(ServiceWorkerIdentifier);
         WEBCORE_EXPORT void whenRegistrationReady(const SecurityOriginData& topOrigin, const URL& clientURL, CompletionHandler<void(std::optional<ServiceWorkerRegistrationData>&&)>&&);
 
         WEBCORE_EXPORT void storeRegistrationsOnDisk(CompletionHandler<void()>&&);
@@ -292,15 +294,15 @@ public:
     WEBCORE_EXPORT std::optional<GatheredClientData> gatherClientData(const ClientOrigin&, ScriptExecutionContextIdentifier);
     WEBCORE_EXPORT void getAllOrigins(CompletionHandler<void(HashSet<ClientOrigin>&&)>&&);
 
-    void requestBackgroundFetchPermission(const ClientOrigin& clientOrigin, CompletionHandler<void(bool)>&& callback) { m_delegate->requestBackgroundFetchPermission(clientOrigin, WTFMove(callback)); }
-    RefPtr<BackgroundFetchRecordLoader> createBackgroundFetchRecordLoader(BackgroundFetchRecordLoaderClient& client, const BackgroundFetchRequest& request, size_t responseDataSize, const WebCore::ClientOrigin& origin) { return m_delegate->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin); }
-    Ref<BackgroundFetchStore> createBackgroundFetchStore() { return m_delegate->createBackgroundFetchStore(); }
+    void requestBackgroundFetchPermission(const ClientOrigin& clientOrigin, CompletionHandler<void(bool)>&& callback) { CheckedRef { *m_delegate }->requestBackgroundFetchPermission(clientOrigin, WTF::move(callback)); }
+    RefPtr<BackgroundFetchRecordLoader> createBackgroundFetchRecordLoader(BackgroundFetchRecordLoaderClient& client, const BackgroundFetchRequest& request, size_t responseDataSize, const WebCore::ClientOrigin& origin) { return CheckedRef { *m_delegate }->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin); }
+    Ref<BackgroundFetchStore> createBackgroundFetchStore() { return CheckedRef { *m_delegate }->createBackgroundFetchStore(); }
     WEBCORE_EXPORT BackgroundFetchEngine& backgroundFetchEngine();
     WEBCORE_EXPORT Ref<BackgroundFetchEngine> protectedBackgroundFetchEngine();
 
     WEBCORE_EXPORT Vector<ServiceWorkerClientPendingMessage> releaseServiceWorkerClientPendingMessage(ScriptExecutionContextIdentifier);
 
-    WEBCORE_EXPORT void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const String&, NOESCAPE const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const String&)>&);
+    WEBCORE_EXPORT void postMessageToServiceWorkerClient(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier, const SecurityOriginData&, NOESCAPE const Function<void(ScriptExecutionContextIdentifier, const MessageWithMessagePorts&, const ServiceWorkerData&, const SecurityOriginData&)>&);
 
     WEBCORE_EXPORT OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtectionsFromClient(const ClientOrigin&) const;
 
@@ -328,6 +330,8 @@ private:
 
     void addClientServiceWorkerRegistration(Connection&, ServiceWorkerRegistrationIdentifier);
     void removeClientServiceWorkerRegistration(Connection&, ServiceWorkerRegistrationIdentifier);
+    void registerServiceWorkerConnection(Connection&, ServiceWorkerIdentifier);
+    void unregisterServiceWorkerConnection(Connection&, ServiceWorkerIdentifier);
 
     void terminatePreinstallationWorker(SWServerWorker&);
 
@@ -354,6 +358,8 @@ private:
 
     enum class ShouldUpdateRegistrations : bool { No, Yes };
     void unregisterServiceWorkerClientInternal(const ClientOrigin&, ScriptExecutionContextIdentifier, ShouldUpdateRegistrations);
+
+    CheckedRef<SWServerDelegate> checkedDelegate() const;
 
     WeakPtr<SWServerDelegate> m_delegate;
 

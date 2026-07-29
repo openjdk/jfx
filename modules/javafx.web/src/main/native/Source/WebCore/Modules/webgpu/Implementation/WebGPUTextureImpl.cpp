@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureImpl);
 TextureImpl::TextureImpl(WebGPUPtr<WGPUTexture>&& texture, TextureFormat format, TextureDimension dimension, ConvertToBackingContext& convertToBackingContext)
     : m_format(format)
     , m_dimension(dimension)
-    , m_backing(WTFMove(texture))
+    , m_backing(WTF::move(texture))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -56,7 +56,6 @@ RefPtr<TextureView> TextureImpl::createView(const std::optional<TextureViewDescr
     Ref convertToBackingContext = m_convertToBackingContext;
 
     WGPUTextureViewDescriptor backingDescriptor {
-        .nextInChain = nullptr,
         .label = label.data(),
         .format = descriptor && descriptor->format ? convertToBackingContext->convertToBacking(*descriptor->format) : WGPUTextureFormat_Undefined,
         .dimension = descriptor && descriptor->dimension ? convertToBackingContext->convertToBacking(*descriptor->dimension) : WGPUTextureViewDimension_Undefined,
@@ -65,6 +64,7 @@ RefPtr<TextureView> TextureImpl::createView(const std::optional<TextureViewDescr
         .baseArrayLayer = descriptor ? descriptor->baseArrayLayer : 0,
         .arrayLayerCount = descriptor && descriptor->arrayLayerCount ? *descriptor->arrayLayerCount : static_cast<uint32_t>(WGPU_ARRAY_LAYER_COUNT_UNDEFINED),
         .aspect = descriptor ? convertToBackingContext->convertToBacking(descriptor->aspect) : WGPUTextureAspect_All,
+        .usage = descriptor ? convertToBackingContext->convertTextureUsageFlagsToBacking(descriptor->usage) : 0,
     };
 
     return TextureViewImpl::create(adoptWebGPU(wgpuTextureCreateView(m_backing.get(), &backingDescriptor)), convertToBackingContext);

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CallEdge.h"
-#include "CallLinkInfoBase.h"
-#include "CallVariant.h"
-#include "GCAwareJITStubRoutine.h"
+#include <JavaScriptCore/CallEdge.h>
+#include <JavaScriptCore/CallLinkInfoBase.h>
+#include <JavaScriptCore/CallVariant.h>
+#include <JavaScriptCore/GCAwareJITStubRoutine.h>
 #include <wtf/ButterflyArray.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/UniqueArray.h>

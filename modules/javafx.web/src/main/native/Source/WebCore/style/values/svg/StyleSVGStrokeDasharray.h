@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StyleLengthWrapper.h"
+#include <WebCore/StyleLengthWrapper.h>
 
 namespace WebCore {
 namespace Style {
@@ -40,12 +40,9 @@ struct SVGStrokeDasharrayValue {
 
     SVGStrokeDasharrayValueLength value;
 
-    SVGStrokeDasharrayValue(SVGStrokeDasharrayValueLength&& length) : value { WTFMove(length) } { }
+    SVGStrokeDasharrayValue(SVGStrokeDasharrayValueLength&& length) : value { WTF::move(length) } { }
     SVGStrokeDasharrayValue(CSS::ValueLiteral<CSS::LengthUnit::Px> literal) : value { literal } { }
     SVGStrokeDasharrayValue(CSS::ValueLiteral<CSS::PercentageUnit::Percentage> literal) : value { literal } { }
-
-    bool isZero() const { return value.isZero(); }
-    bool isPositive() const { return value.isPositive(); }
 
     template<typename... F> decltype(auto) switchOn(F&&... f) const
     {

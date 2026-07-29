@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "DefinePropertyAttributes.h"
-#include "JSCJSValue.h"
-#include "PropertySlot.h"
+#include <JavaScriptCore/DefinePropertyAttributes.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/PropertySlot.h>
 
 namespace JSC {
 
@@ -46,8 +46,8 @@ public:
         , m_seenAttributes(EnumerablePresent | ConfigurablePresent | WritablePresent)
     {
         ASSERT(m_value);
-        ASSERT(!m_value.isGetterSetter());
-        ASSERT(!m_value.isCustomGetterSetter());
+        ASSERT(!m_value.isGetterSetterSlow());
+        ASSERT(!m_value.isCustomGetterSetterSlow());
     }
     JS_EXPORT_PRIVATE bool writable() const;
     JS_EXPORT_PRIVATE bool enumerable() const;

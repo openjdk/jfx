@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "NodeFilter.h"
-#include "NodeFilterCondition.h"
+#include <WebCore/NodeFilter.h>
+#include <WebCore/NodeFilterCondition.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -35,7 +35,7 @@ class NativeNodeFilter final : public NodeFilter {
 public:
     static Ref<NativeNodeFilter> create(ScriptExecutionContext* context, Ref<NodeFilterCondition>&& condition)
     {
-        return adoptRef(*new NativeNodeFilter(context, WTFMove(condition)));
+        return adoptRef(*new NativeNodeFilter(context, WTF::move(condition)));
     }
 
     CallbackResult<unsigned short> acceptNode(Node&) override;

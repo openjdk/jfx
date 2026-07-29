@@ -3169,4 +3169,83 @@ public class GridPaneTest {
         assertEquals(3, gridpane.getHgap(), 0);
         assertEquals(8, gridpane.getVgap(), 0);
     }
+
+    static class FixedAreaRegion extends Region {
+        final double SIDE = 100;
+        final double AREA = SIDE * SIDE;
+        final Orientation bias;
+
+        public FixedAreaRegion(Orientation bias) {
+            this.bias = bias;
+        }
+
+        @Override public Orientation getContentBias() {
+            return bias;
+        }
+
+        @Override
+        protected double computePrefWidth(double height) {
+            return height <= 0 ? SIDE : AREA / height;
+        }
+
+        @Override
+        protected double computePrefHeight(double width) {
+            return width <= 0 ? SIDE : AREA / width;
+        }
+
+        void assertSize() {
+            // This should work when the Node is laid out properly.
+            assertEquals(AREA, getWidth() * getHeight(), 20);
+        }
+    }
+
+    @Test
+    public void testDynamicAreaHorizontal() {
+        FixedAreaRegion fixedArea = new FixedAreaRegion(Orientation.HORIZONTAL);
+        gridpane.setHgap(5);
+        gridpane.add(fixedArea, 0, 0, 5, 1);
+
+        for (int i = 0; i < 5; i++) {
+            gridpane.add(new MockResizable(10,10,10,10,10,10), i, 1);
+        }
+
+        gridpane.resize(70, 500);
+        gridpane.layout();
+
+        assertEquals(70, fixedArea.getWidth());
+        fixedArea.assertSize();
+    }
+
+    @Test
+    public void testDynamicAreaVertical() {
+        FixedAreaRegion fixedArea = new FixedAreaRegion(Orientation.VERTICAL);
+        gridpane.setVgap(5);
+        gridpane.add(fixedArea, 0, 0, 1, 5);
+
+        for (int i = 0; i < 5; i++) {
+            gridpane.add(new MockResizable(10,10,10,10,10,10), 1, i);
+        }
+
+        gridpane.resize(500, 70);
+        gridpane.layout();
+
+        assertEquals(70, fixedArea.getHeight());
+        fixedArea.assertSize();
+    }
+
+    @Test
+    public void testLayoutBaseline() {
+        gridpane.setHgap(10);
+        FixedAreaRegion fixedArea = new FixedAreaRegion(Orientation.HORIZONTAL);
+        gridpane.add(fixedArea, 0, 0, 5, 1);
+
+        GridPane.setValignment(fixedArea, VPos.BASELINE);
+        GridPane.setFillHeight(fixedArea, false);
+
+        gridpane.resize(100, 500);
+        gridpane.layout();
+
+        assertEquals(100, fixedArea.getWidth());
+        fixedArea.assertSize();
+    }
 }

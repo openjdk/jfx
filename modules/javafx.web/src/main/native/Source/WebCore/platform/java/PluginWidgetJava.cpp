@@ -35,6 +35,7 @@
 #include "PluginWidgetJava.h"
 #include "RenderBox.h"
 #include "StringJava.h"
+#include "NodeDocument.h"
 
 #include "com_sun_webkit_WCPluginWidget.h"
 

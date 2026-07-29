@@ -79,7 +79,7 @@ const GlobalObjectMethodTable* JSShadowRealmGlobalScopeBase::globalObjectMethodT
 
 JSShadowRealmGlobalScopeBase::JSShadowRealmGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<ShadowRealmGlobalScope>&& impl)
     : JSDOMGlobalObject(vm, structure, normalWorld(vm), globalObjectMethodTable())
-    , m_wrapped(WTFMove(impl))
+    , m_wrapped(WTF::move(impl))
 {
 }
 
@@ -116,7 +116,8 @@ const JSDOMGlobalObject* JSShadowRealmGlobalScopeBase::incubatingRealm() const
 
 void JSShadowRealmGlobalScopeBase::destroy(JSCell* cell)
 {
-    static_cast<JSShadowRealmGlobalScopeBase*>(cell)->JSShadowRealmGlobalScopeBase::~JSShadowRealmGlobalScopeBase();
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSShadowRealmGlobalScopeBase*>(cell)->JSShadowRealmGlobalScopeBase::~JSShadowRealmGlobalScopeBase();
 }
 
 bool JSShadowRealmGlobalScopeBase::supportsRichSourceInfo(const JSGlobalObject* object)
@@ -158,7 +159,7 @@ void JSShadowRealmGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObj
 void JSShadowRealmGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, QueuedTask&& task)
 {
     auto incubating = jsCast<JSShadowRealmGlobalScopeBase*>(&object)->incubatingRealm();
-    incubating->globalObjectMethodTable()->queueMicrotaskToEventLoop(*incubating, WTFMove(task));
+    incubating->globalObjectMethodTable()->queueMicrotaskToEventLoop(*incubating, WTF::move(task));
 }
 
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, ShadowRealmGlobalScope& realmGlobalScope)

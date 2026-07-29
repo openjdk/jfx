@@ -44,17 +44,17 @@ ExceptionOr<Ref<WebCodecsAudioData>> WebCodecsAudioData::create(ScriptExecutionC
         return Exception { ExceptionCode::TypeError, "Invalid init data"_s };
 
     auto rawData = init.data.span();
-    auto data = PlatformRawAudioData::create(WTFMove(rawData), init.format, init.sampleRate, init.timestamp, init.numberOfFrames, init.numberOfChannels);
+    auto data = PlatformRawAudioData::create(WTF::move(rawData), init.format, init.sampleRate, init.timestamp, init.numberOfFrames, init.numberOfChannels);
 
     if (!data)
         return Exception { ExceptionCode::NotSupportedError, "AudioData creation failed"_s };
 
-    return adoptRef(*new WebCodecsAudioData(context, WebCodecsAudioInternalData { WTFMove(data) }));
+    return adoptRef(*new WebCodecsAudioData(context, WebCodecsAudioInternalData { WTF::move(data) }));
 }
 
 Ref<WebCodecsAudioData> WebCodecsAudioData::create(ScriptExecutionContext& context, Ref<PlatformRawAudioData>&& data)
 {
-    return adoptRef(*new WebCodecsAudioData(context, WebCodecsAudioInternalData { WTFMove(data) }));
+    return adoptRef(*new WebCodecsAudioData(context, WebCodecsAudioInternalData { WTF::move(data) }));
 }
 
 WebCodecsAudioData::WebCodecsAudioData(ScriptExecutionContext& context)
@@ -64,7 +64,7 @@ WebCodecsAudioData::WebCodecsAudioData(ScriptExecutionContext& context)
 
 WebCodecsAudioData::WebCodecsAudioData(ScriptExecutionContext& context, WebCodecsAudioInternalData&& data)
     : ContextDestructionObserver(&context)
-    , m_data(WTFMove(data))
+    , m_data(WTF::move(data))
 {
 }
 

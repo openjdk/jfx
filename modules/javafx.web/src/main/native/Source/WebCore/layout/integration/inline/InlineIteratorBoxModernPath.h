@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "FontCascade.h"
-#include "InlineIteratorBoxLegacyPath.h"
-#include "LayoutElementBox.h"
-#include "LayoutIntegrationInlineContent.h"
-#include "TextBoxSelectableRange.h"
+#include <WebCore/FontCascade.h>
+#include <WebCore/InlineIteratorBoxLegacyPath.h>
+#include <WebCore/LayoutElementBox.h>
+#include <WebCore/LayoutIntegrationInlineContent.h>
+#include <WebCore/RenderBlockFlow.h>
+#include <WebCore/TextBoxSelectableRange.h>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -50,11 +51,14 @@ public:
     bool isText() const { return box().isTextOrSoftLineBreak(); }
     bool isInlineBox() const { return box().isInlineBox(); }
     bool isRootInlineBox() const { return box().isRootInlineBox(); }
+    // Blocks-in-inline.
+    bool isBlockLevelBox() const { return box().isBlockLevelBox(); }
+    bool isAtomicInlineBox() const { return box().isAtomicInlineBox(); }
 
     FloatRect visualRectIgnoringBlockDirection() const { return box().visualRectIgnoringBlockDirection(); }
 
     inline bool isHorizontal() const;
-    inline WritingMode writingMode() const;
+    WritingMode writingMode() const { return box().writingMode(); }
     bool isLineBreak() const { return box().isLineBreak(); }
 
     unsigned minimumCaretOffset() const { return isText() ? start() : 0; }
@@ -87,7 +91,8 @@ public:
             length(),
             extraTrailingLength(),
             box.isLineBreak(),
-            textContent.partiallyVisibleContentLength()
+            textContent.partiallyVisibleContentLength(),
+            formattingContextRoot().writingMode().bidiDirection() != direction()
         };
     }
 
@@ -209,6 +214,16 @@ public:
             setAtEnd();
     }
 
+    void traversePreviousBoxOnLine()
+    {
+        auto lineIndex = box().lineIndex();
+
+        traversePreviousBox();
+
+        if (!atEnd() && lineIndex != box().lineIndex())
+            setAtEnd();
+    }
+
     BoxModernPath firstLeafBoxForInlineBox() const
     {
         ASSERT(box().isInlineBox());
@@ -261,7 +276,7 @@ public:
     }
 
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
-    bool isFirstLine() const { return !box().lineIndex(); }
+    bool isFirstFormattedLine() const { return box().isFirstFormattedLine(); }
 
     const Vector<SVGTextFragment>& svgTextFragments() const
     {

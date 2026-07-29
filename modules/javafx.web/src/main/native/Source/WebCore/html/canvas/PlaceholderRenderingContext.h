@@ -62,7 +62,7 @@ private:
 };
 
 class PlaceholderRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PlaceholderRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(PlaceholderRenderingContext);
 public:
     static std::unique_ptr<PlaceholderRenderingContext> create(HTMLCanvasElement&);
 
@@ -76,7 +76,7 @@ public:
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
     void setContentsToLayer(GraphicsLayer&) final;
-    ImageBufferPixelFormat pixelFormat() const final;
+    PixelFormat pixelFormat() const final;
     bool isOpaque() const final { return m_opaque; }
 
     const Ref<PlaceholderRenderingContextSource> m_source;

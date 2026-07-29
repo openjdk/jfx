@@ -44,7 +44,7 @@ class WebResourceLoadScheduler;
 
 WebResourceLoadScheduler& webResourceLoadScheduler();
 
-class WebResourceLoadScheduler final : public WebCore::LoaderStrategy, public CanMakeCheckedPtr<WebResourceLoadScheduler> {
+class WebResourceLoadScheduler final : public WebCore::LoaderStrategy {
     WTF_MAKE_TZONE_ALLOCATED(WebResourceLoadScheduler);
     WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebResourceLoadScheduler);

@@ -28,6 +28,7 @@
 #include "DecodingOptions.h"
 #include "ImageTypes.h"
 #include "Timer.h"
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
@@ -36,7 +37,7 @@ namespace WebCore {
 class BitmapImageSource;
 class ImageFrame;
 
-class ImageFrameAnimator {
+class ImageFrameAnimator : public CanMakeWeakPtr<ImageFrameAnimator> {
     WTF_MAKE_TZONE_ALLOCATED(ImageFrameAnimator);
 public:
     explicit ImageFrameAnimator(BitmapImageSource&);
@@ -71,7 +72,7 @@ private:
 
     CString sourceUTF8() const;
 
-    ThreadSafeWeakPtr<BitmapImageSource> m_source; // Cannot be null.
+    ThreadSafeWeakRef<BitmapImageSource> m_source;
     unsigned m_frameCount { 0 };
     RepetitionCount m_repetitionCount { RepetitionCountNone };
 

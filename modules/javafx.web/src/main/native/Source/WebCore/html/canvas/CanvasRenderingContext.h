@@ -49,11 +49,11 @@ class HTMLVideoElement;
 class ImageBitmap;
 class SVGImageElement;
 class WebGLObject;
-enum class ImageBufferPixelFormat : uint8_t;
+enum class PixelFormat : uint8_t;
 
 class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext> {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(CanvasRenderingContext);
 public:
     virtual ~CanvasRenderingContext();
 
@@ -114,14 +114,14 @@ public:
     // Swaps the current drawing buffer to display buffer.
     virtual void prepareForDisplay() { }
 
-    virtual ImageBufferPixelFormat pixelFormat() const;
+    virtual PixelFormat pixelFormat() const;
     virtual DestinationColorSpace colorSpace() const;
     virtual bool isOpaque() const;
     virtual bool willReadFrequently() const;
     virtual std::optional<RenderingMode> renderingModeForTesting() const { return std::nullopt; }
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    bool isHDR() const { return pixelFormat() == ImageBufferPixelFormat::RGBA16F; }
+    bool isHDR() const { return pixelFormat() == PixelFormat::RGBA16F; }
     virtual void setDynamicRangeLimit(PlatformDynamicRangeLimit) { };
 #endif
     virtual std::optional<double> getEffectiveDynamicRangeLimitValue() const { return std::nullopt; };

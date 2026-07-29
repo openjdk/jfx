@@ -26,19 +26,172 @@
 
 #include "config.h"
 #include "FetchBodySource.h"
+#include "ContextDestructionObserverInlines.h"
 
 #include "FetchResponse.h"
+#include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
+#include "ReadableByteStreamController.h"
 
 namespace WebCore {
 
-FetchBodySource::FetchBodySource(FetchBodyOwner& bodyOwner)
+std::pair<Ref<FetchBodySource>, Ref<RefCountedReadableStreamSource>> FetchBodySource::createNonByteSource(FetchBodyOwner& bodyOwner)
+{
+    Ref nonByteSource = NonByteSource::create(bodyOwner);
+    Ref source = adoptRef(*new FetchBodySource(bodyOwner, nonByteSource.ptr()));
+    return { WTF::move(source), WTF::move(nonByteSource) };
+}
+
+Ref<FetchBodySource> FetchBodySource::createByteSource(FetchBodyOwner& bodyOwner)
+{
+    return adoptRef(*new FetchBodySource(bodyOwner));
+}
+
+FetchBodySource::FetchBodySource(FetchBodyOwner& bodyOwner, RefPtr<NonByteSource>&& nonByteSource)
     : m_bodyOwner(bodyOwner)
+    , m_nonByteSource(WTF::move(nonByteSource))
 {
 }
 
 FetchBodySource::~FetchBodySource() = default;
 
-void FetchBodySource::setActive()
+void FetchBodySource::setByteController(ReadableByteStreamController& controller)
+{
+    ASSERT(!m_nonByteSource);
+    ASSERT(!m_byteController);
+    m_byteController = controller;
+
+    if (RefPtr bodyOwner = m_bodyOwner.get())
+        bodyOwner->consumeBodyAsStream();
+}
+
+Ref<DOMPromise> FetchBodySource::pull(JSDOMGlobalObject& globalObject, ReadableByteStreamController& controller)
+{
+    ASSERT_UNUSED(controller, &controller == m_byteController.get() || !m_byteController);
+
+    auto [promise, deferred] = createPromiseAndWrapper(globalObject);
+    m_isPulling = true;
+    m_pullPromise = WTF::move(deferred);
+    return promise;
+}
+
+Ref<DOMPromise> FetchBodySource::cancel(JSDOMGlobalObject& globalObject, ReadableByteStreamController& controller, std::optional<JSC::JSValue>&&)
+{
+    ASSERT_UNUSED(controller, &controller == m_byteController.get());
+
+    m_isCancelling = true;
+    if (RefPtr bodyOwner = m_bodyOwner.get())
+        bodyOwner->cancel();
+
+    auto [promise, deferred] = createPromiseAndWrapper(globalObject);
+    deferred->resolve();
+    return promise;
+}
+
+static JSDOMGlobalObject* globalObjectFromBodyOwner(RefPtr<FetchBodyOwner>&& bodyOwner)
+{
+    RefPtr context = bodyOwner ? bodyOwner->scriptExecutionContext() : nullptr;
+    return JSC::jsCast<JSDOMGlobalObject*>(context->globalObject());
+}
+
+// FIXME: We should be able to take a FragmentedSharedBuffer
+bool FetchBodySource::enqueue(RefPtr<JSC::ArrayBuffer>&& chunk)
+{
+    if (m_nonByteSource)
+        return m_nonByteSource->enqueue(WTF::move(chunk));
+
+    if (!chunk)
+        return false;
+
+    RefPtr controller = m_byteController.get();
+    if (!controller)
+        return false;
+
+    auto* globalObject = globalObjectFromBodyOwner(m_bodyOwner.get());
+    if (!globalObject)
+        return false;
+
+    size_t byteLength = chunk->byteLength();
+    auto result = controller->enqueue(*globalObject, Uint8Array::create(chunk.releaseNonNull(), 0, byteLength));
+    return !result.hasException();
+}
+
+void FetchBodySource::close()
+{
+    if (m_nonByteSource) {
+        m_nonByteSource->close();
+        return;
+    }
+
+    RefPtr controller = m_byteController.get();
+    if (!controller)
+        return;
+
+    auto* globalObject = globalObjectFromBodyOwner(m_bodyOwner.get());
+    if (!globalObject)
+        return;
+
+    controller->closeAndRespondToPendingPullIntos(*globalObject);
+}
+
+void FetchBodySource::error(const Exception& exception)
+{
+    if (m_nonByteSource) {
+        m_nonByteSource->error(exception);
+        return;
+    }
+
+    RefPtr controller = m_byteController.get();
+    if (!controller)
+        return;
+
+    auto* globalObject = globalObjectFromBodyOwner(m_bodyOwner.get());
+    if (!globalObject)
+        return;
+
+    controller->error(*globalObject, exception);
+}
+
+bool FetchBodySource::isPulling() const
+{
+    return m_nonByteSource ? m_nonByteSource->isPulling() : m_isPulling;
+}
+
+bool FetchBodySource::isCancelling() const
+{
+    return m_nonByteSource ? m_nonByteSource->isCancelling() : m_isCancelling;
+}
+
+void FetchBodySource::resolvePullPromise()
+{
+    if (m_nonByteSource) {
+        m_nonByteSource->resolvePullPromise();
+        return;
+    }
+
+    m_isPulling = false;
+    if (auto pullPromise = std::exchange(m_pullPromise, { }))
+        pullPromise->resolve();
+}
+
+void FetchBodySource::detach()
+{
+    if (m_nonByteSource) {
+        m_nonByteSource->detach();
+        return;
+    }
+
+    m_bodyOwner = nullptr;
+    m_byteController = nullptr;
+    m_pullPromise = nullptr;
+}
+
+FetchBodySource::NonByteSource::NonByteSource(FetchBodyOwner& owner)
+    : m_bodyOwner(owner)
+{
+}
+
+void FetchBodySource::NonByteSource::setActive()
 {
     ASSERT(m_bodyOwner);
     ASSERT(!m_pendingActivity);
@@ -46,28 +199,28 @@ void FetchBodySource::setActive()
         m_pendingActivity = bodyOwner->makePendingActivity(*bodyOwner);
 }
 
-void FetchBodySource::setInactive()
+void FetchBodySource::NonByteSource::setInactive()
 {
     ASSERT(m_bodyOwner);
     ASSERT(m_pendingActivity);
     m_pendingActivity = nullptr;
 }
 
-void FetchBodySource::doStart()
+void FetchBodySource::NonByteSource::doStart()
 {
     ASSERT(m_bodyOwner);
     if (RefPtr bodyOwner = m_bodyOwner.get())
         bodyOwner->consumeBodyAsStream();
 }
 
-void FetchBodySource::doPull()
+void FetchBodySource::NonByteSource::doPull()
 {
     ASSERT(m_bodyOwner);
     if (RefPtr bodyOwner = m_bodyOwner.get())
         bodyOwner->feedStream();
 }
 
-void FetchBodySource::doCancel()
+void FetchBodySource::NonByteSource::doCancel(JSC::JSValue)
 {
     m_isCancelling = true;
     RefPtr bodyOwner = m_bodyOwner.get();
@@ -78,7 +231,7 @@ void FetchBodySource::doCancel()
     m_bodyOwner = nullptr;
 }
 
-void FetchBodySource::close()
+void FetchBodySource::NonByteSource::close()
 {
 #if ASSERT_ENABLED
     ASSERT(!m_isClosed);
@@ -90,7 +243,7 @@ void FetchBodySource::close()
     m_bodyOwner = nullptr;
 }
 
-void FetchBodySource::error(const Exception& value)
+void FetchBodySource::NonByteSource::error(const Exception& value)
 {
     controller().error(value);
     clean();

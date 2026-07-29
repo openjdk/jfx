@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "WasmStreamingParser.h"
+#include <JavaScriptCore/WasmStreamingParser.h>
+#include <wtf/Platform.h>
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "DeferredWorkTimer.h"
-#include "JSCJSValue.h"
+#include <JavaScriptCore/DeferredWorkTimer.h>
+#include <JavaScriptCore/JSCJSValue.h>
 
 namespace JSC {
 
@@ -58,6 +59,8 @@ public:
 
     void didCompileFunction(StreamingPlan&);
 
+    JS_EXPORT_PRIVATE JSGlobalObject* globalObjectIfActive();
+
 private:
     JS_EXPORT_PRIVATE StreamingCompiler(VM&, CompilerMode, JSGlobalObject*, JSPromise*, JSObject*, const SourceCode&);
 
@@ -65,6 +68,7 @@ private:
     void didFinishParsing() final;
     void didComplete() WTF_REQUIRES_LOCK(m_lock);
     void completeIfNecessary() WTF_REQUIRES_LOCK(m_lock);
+    RefPtr<DeferredWorkTimer::TicketData> takeTicketIfActive();
 
     VM& m_vm;
     CompilerMode m_compilerMode;
@@ -73,7 +77,7 @@ private:
     bool m_threadedCompilationStarted { false };
     Lock m_lock;
     unsigned m_remainingCompilationRequests { 0 };
-    DeferredWorkTimer::Ticket m_ticket;
+    ThreadSafeWeakPtr<DeferredWorkTimer::TicketData> m_ticket;
     const Ref<Wasm::ModuleInformation> m_info;
     StreamingParser m_parser;
     RefPtr<EntryPlan> m_plan;

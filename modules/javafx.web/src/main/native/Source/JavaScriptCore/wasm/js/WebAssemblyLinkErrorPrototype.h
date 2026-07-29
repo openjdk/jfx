@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSDestructibleObject.h"
-#include "JSObject.h"
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 

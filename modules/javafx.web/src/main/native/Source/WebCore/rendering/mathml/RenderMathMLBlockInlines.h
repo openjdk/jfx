@@ -28,15 +28,16 @@
 
 #if ENABLE(MATHML)
 
+#include "FontMetrics.h"
 #include "RenderBoxInlines.h"
 #include "RenderMathMLBlock.h"
 #include "RenderTableInlines.h"
-#include "StyleInheritedData.h"
+#include "Settings.h"
 
 namespace WebCore {
 
 inline RenderMathMLTable::RenderMathMLTable(MathMLElement& element, RenderStyle&& style)
-    : RenderTable(Type::MathMLTable, element, WTFMove(style))
+    : RenderTable(Type::MathMLTable, element, WTF::move(style))
     , m_mathMLStyle(MathMLStyle::create())
 {
     ASSERT(isRenderMathMLTable());
@@ -44,7 +45,8 @@ inline RenderMathMLTable::RenderMathMLTable(MathMLElement& element, RenderStyle&
 
 inline LayoutUnit RenderMathMLBlock::ascentForChild(const RenderBox& child)
 {
-    return child.firstLineBaseline().value_or(child.logicalHeight().toInt());
+    auto logicalHeight = child.settings().subpixelInlineLayoutEnabled() ? child.logicalHeight() : LayoutUnit(child.logicalHeight().toInt());
+    return child.firstLineBaseline().value_or(logicalHeight);
 }
 
 inline LayoutUnit RenderMathMLBlock::mirrorIfNeeded(LayoutUnit horizontalOffset, const RenderBox& child) const
@@ -52,12 +54,10 @@ inline LayoutUnit RenderMathMLBlock::mirrorIfNeeded(LayoutUnit horizontalOffset,
     return mirrorIfNeeded(horizontalOffset, child.logicalWidth());
 }
 
+// https://w3c.github.io/mathml-core/#dfn-default-rule-thickness
 inline LayoutUnit RenderMathMLBlock::ruleThicknessFallback() const
 {
-    // This function returns a value for the default rule thickness (TeX's \xi_8) to be used as a fallback when we lack a MATH table.
-    // This arbitrary value of 0.05em was used in early WebKit MathML implementations for the thickness of the fraction bars.
-    // Note that Gecko has a slower but more accurate version that measures the thickness of U+00AF MACRON to be more accurate and otherwise fallback to some arbitrary value.
-    return LayoutUnit(0.05f * style().fontCascade().size());
+    return LayoutUnit(checkedStyle()->metricsOfPrimaryFont().underlineThickness().value_or(0.0f));
 }
 
 } // namespace WebCore

@@ -31,7 +31,7 @@ namespace WebCore {
 
 template <CollectionTraversalType traversalType>
 class GenericCachedHTMLCollection final : public CachedHTMLCollection<GenericCachedHTMLCollection<traversalType>, traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE(GenericCachedHTMLCollection);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(GenericCachedHTMLCollection);
     static_assert(traversalType != CollectionTraversalType::CustomForwardOnly, "CustomForwardOnly should use non GenericCachedHTMLCollection.");
 public:
     static Ref<GenericCachedHTMLCollection> create(ContainerNode& base, CollectionType collectionType)
@@ -47,6 +47,6 @@ private:
     GenericCachedHTMLCollection(ContainerNode&, CollectionType);
 };
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_TEMPLATE_IMPL(template<CollectionTraversalType traversalType>, GenericCachedHTMLCollection<traversalType>);
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<CollectionTraversalType traversalType>, GenericCachedHTMLCollection<traversalType>);
 
 } // namespace WebCore

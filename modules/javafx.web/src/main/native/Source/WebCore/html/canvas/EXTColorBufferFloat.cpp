@@ -32,12 +32,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTColorBufferFloat);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTColorBufferFloat);
 
 EXTColorBufferFloat::EXTColorBufferFloat(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTColorBufferFloat)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_color_buffer_float"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_color_buffer_float);
 
     // https://github.com/KhronosGroup/WebGL/pull/2830
     // Spec requires EXT_float_blend to be turned on implicitly here.
@@ -49,7 +49,7 @@ EXTColorBufferFloat::~EXTColorBufferFloat() = default;
 
 bool EXTColorBufferFloat::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_color_buffer_float"_s);
+    return context.supportsExtension(GCGLExtension::EXT_color_buffer_float);
 }
 
 } // namespace WebCore

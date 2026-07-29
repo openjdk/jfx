@@ -20,9 +20,10 @@
 #include "config.h"
 #include "MediaQueryMatcher.h"
 
-#include "Document.h"
+#include "DocumentView.h"
 #include "EventNames.h"
-#include "LocalFrame.h"
+#include "FrameDestructionObserverInlines.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaQueryEvaluator.h"
@@ -101,7 +102,7 @@ RefPtr<MediaQueryList> MediaQueryMatcher::matchMedia(const String& query)
 
     auto queries = MQ::MediaQueryParser::parse(query, m_document->cssParserContext());
     bool matches = evaluate(queries);
-    return MediaQueryList::create(*m_document, *this, WTFMove(queries), matches);
+    return MediaQueryList::create(*m_document, *this, WTF::move(queries), matches);
 }
 
 void MediaQueryMatcher::evaluateAll(EventMode eventMode)

@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "DigitalCredentialRequest.h"
+#include <WebCore/DigitalCredentialGetRequest.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct DigitalCredentialRequestOptions {
-    Vector<DigitalCredentialRequest> requests;
+    Vector<DigitalCredentialGetRequest> requests;
 };
 
 } // namespace WebCore

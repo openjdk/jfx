@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=WebTransportEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebTransportSendStreamOptions {
     long long? sendOrder = null;
 };

@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "Concurrency.h"
-#include "ECMAMode.h"
-#include "JSExportMacros.h"
-#include "PureNaN.h"
+#include <JavaScriptCore/Concurrency.h>
+#include <JavaScriptCore/ECMAMode.h>
+#include <JavaScriptCore/JSExportMacros.h>
+#include <JavaScriptCore/PureNaN.h>
 #include <functional>
 #include <math.h>
 #include <stddef.h>
@@ -47,6 +47,8 @@ namespace JSC {
 class AssemblyHelpers;
 class DeletePropertySlot;
 class JSBigInt;
+class JSHeapDouble;
+class JSHeapInt32;
 class CallFrame;
 class JSCell;
 class JSValueSource;
@@ -127,8 +129,8 @@ enum WhichValueWord {
     PayloadWord
 };
 
-int64_t tryConvertToInt52(double);
-bool isInt52(double);
+inline int64_t tryConvertToInt52(double);
+inline bool isInt52(double);
 
 enum class SourceCodeRepresentation : uint8_t {
     Other,
@@ -217,7 +219,7 @@ public:
 
     // Numbers
     JSValue(EncodeAsDoubleTag, double);
-    explicit JSValue(double);
+    inline explicit JSValue(double); // Defined in JSCJSValueInlines.h
     explicit JSValue(char);
     explicit JSValue(unsigned char);
     explicit JSValue(short);
@@ -240,8 +242,8 @@ public:
 
     int32_t asInt32() const;
     uint32_t asUInt32() const;
-    std::optional<uint32_t> tryGetAsUint32Index();
-    std::optional<int32_t> tryGetAsInt32();
+    inline std::optional<uint32_t> tryGetAsUint32Index(); // Defined in JSCJSValueInlines.h
+    inline std::optional<int32_t> tryGetAsInt32(); // Defined in JSCJSValueInlines.h
     int64_t asAnyInt() const;
     uint32_t asUInt32AsAnyInt() const;
     int32_t asInt32AsAnyInt() const;
@@ -256,10 +258,10 @@ public:
 
     // Querying the type.
     bool isEmpty() const;
-    bool isCallable() const;
-    template<Concurrency> TriState isCallableWithConcurrency() const;
-    bool isConstructor() const;
-    template<Concurrency> TriState isConstructorWithConcurrency() const;
+    inline bool isCallable() const; // Defined in JSCJSValueCellInlines.h
+    template<Concurrency> inline TriState isCallableWithConcurrency() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isConstructor() const; // Defined in JSCJSValueCellInlines.h
+    template<Concurrency> inline TriState isConstructorWithConcurrency() const; // Defined in JSCJSValueCellInlines.h
     bool isUndefined() const;
     bool isNull() const;
     bool isUndefinedOrNull() const;
@@ -268,33 +270,38 @@ public:
     bool isUInt32AsAnyInt() const;
     bool isInt32AsAnyInt() const;
     bool isNumber() const;
-    bool isString() const;
-    bool isBigInt() const;
-    bool isHeapBigInt() const;
+    inline bool isString() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isBigInt() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isHeapBigInt() const; // Defined in JSCJSValueCellInlines.h
     bool isBigInt32() const;
-    bool isZeroBigInt() const;
-    bool isNegativeBigInt() const;
-    bool isSymbol() const;
-    bool isPrimitive() const;
-    bool isGetterSetter() const;
-    bool isCustomGetterSetter() const;
-    bool isObject() const;
+    inline bool isZeroBigInt() const; // Defined in JSCJSValueInlines.h
+    inline bool isNegativeBigInt() const; // Defined in JSCJSValueInlines.h
+    inline bool isSymbol() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isPrimitive() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isGetterSetter() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isCustomGetterSetter() const; // Defined in JSCJSValueCellInlines.h
+    inline bool isObject() const; // Defined in JSCJSValueCellInlines.h
     bool inherits(const ClassInfo*) const;
     template<typename Target> bool inherits() const;
     const ClassInfo* classInfoOrNull() const;
 
+    // Non-inline versions of above for use in header ASSERT macros:
+    JS_EXPORT_PRIVATE bool isGetterSetterSlow() const;
+    JS_EXPORT_PRIVATE bool isCustomGetterSetterSlow() const;
+    JS_EXPORT_PRIVATE bool isStringSlow() const;
+
     // Extracting the value.
-    bool getString(JSGlobalObject*, WTF::String&) const;
-    WTF::String getString(JSGlobalObject*) const; // null string if not a string
-    JSObject* getObject() const; // 0 if not an object
+    inline bool getString(JSGlobalObject*, WTF::String&) const; // Defined in JSCJSValueCellInlines.h
+    inline WTF::String getString(JSGlobalObject*) const; // null string if not a string. Defined in JSCJSValueCellInlines.h
+    inline JSObject* getObject() const; // 0 if not an object. Defined in JSCJSValueCellInlines.h
 
     // Extracting integer values.
     bool getUInt32(uint32_t&) const;
 
     // Basic conversions.
-    JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType = NoPreference) const;
-    bool toBoolean(JSGlobalObject*) const;
-    TriState pureToBoolean() const;
+    inline JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType = NoPreference) const; // Defined in JSCJSValueCellInlines.h
+    inline bool toBoolean(JSGlobalObject*) const; // Defined in JSCJSValueCellInlines.h
+    inline TriState pureToBoolean() const; // Defined in JSCJSValueInlines.h
 
     // toNumber conversion is expected to be side effect free if an exception has
     // been set in the CallFrame already.
@@ -307,22 +314,21 @@ public:
     // toNumber conversion if it can be done without side effects.
     std::optional<double> toNumberFromPrimitive() const;
 
-    JSString* toString(JSGlobalObject*) const; // On exception, this returns the empty string.
-    JSString* toStringOrNull(JSGlobalObject*) const; // On exception, this returns null, to make exception checks faster.
+    inline JSString* toString(JSGlobalObject*) const; // On exception, this returns the empty string. Defined in JSCJSValueInlines.h
+    inline JSString* toStringOrNull(JSGlobalObject*) const; // On exception, this returns null, to make exception checks faster. Defined in JSCJSValueInlines.h
     Identifier toPropertyKey(JSGlobalObject*) const;
     JSValue toPropertyKeyValue(JSGlobalObject*) const;
-    WTF::String toWTFString(JSGlobalObject*) const;
+    inline WTF::String toWTFString(JSGlobalObject*) const; // Defined in JSCJSValueInlines.h
     JS_EXPORT_PRIVATE WTF::String toWTFStringForConsole(JSGlobalObject*) const;
-    JSObject* toObject(JSGlobalObject*) const;
+    inline JSObject* toObject(JSGlobalObject*) const; // Defined in JSCJSValueCellInlines.h
 
     // Integer conversions.
     JS_EXPORT_PRIVATE double toIntegerPreserveNaN(JSGlobalObject*) const;
     double toIntegerWithTruncation(JSGlobalObject*) const;
     double toIntegerOrInfinity(JSGlobalObject*) const;
-    int32_t toInt32(JSGlobalObject*) const;
-    uint32_t toUInt32(JSGlobalObject*) const;
-    uint32_t toIndex(JSGlobalObject*, ASCIILiteral errorName) const;
-    size_t toTypedArrayIndex(JSGlobalObject*, ASCIILiteral) const;
+    inline int32_t toInt32(JSGlobalObject*) const; // Defined in JSCJSValueInlines.h
+    inline uint32_t toUInt32(JSGlobalObject*) const; // Defined in JSCJSValueInlines.h
+    inline uint64_t toIndex(JSGlobalObject*, ASCIILiteral errorName) const; // Defined in JSCJSValueInlines.h
     uint64_t toLength(JSGlobalObject*) const;
 
     JS_EXPORT_PRIVATE JSValue toBigInt(JSGlobalObject*) const;
@@ -351,21 +357,21 @@ public:
 
     bool getOwnPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
 
-    bool put(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    inline bool put(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&); // Defined in JSCJSValueInlines.h
     bool putInline(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     JS_EXPORT_PRIVATE bool putToPrimitive(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     JS_EXPORT_PRIVATE bool putToPrimitiveByIndex(JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
-    bool putByIndex(JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
+    inline bool putByIndex(JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow); // Defined in JSCJSValueInlines.h
 
     JSValue getPrototype(JSGlobalObject*) const;
     JSValue toThis(JSGlobalObject*, ECMAMode) const;
 
-    static bool equal(JSGlobalObject*, JSValue v1, JSValue v2);
+    inline static bool equal(JSGlobalObject*, JSValue v1, JSValue v2); // Defined in JSCJSValueInlines.h
     static bool equalSlowCase(JSGlobalObject*, JSValue v1, JSValue v2);
-    static bool equalSlowCaseInline(JSGlobalObject*, JSValue v1, JSValue v2);
-    static bool strictEqual(JSGlobalObject*, JSValue v1, JSValue v2);
-    static bool strictEqualForCells(JSGlobalObject*, JSCell* v1, JSCell* v2);
-    static TriState pureStrictEqual(JSValue v1, JSValue v2);
+    inline static bool equalSlowCaseInline(JSGlobalObject*, JSValue v1, JSValue v2); // Defined in JSCJSValueInlines.h
+    inline static bool strictEqual(JSGlobalObject*, JSValue v1, JSValue v2); // Defined in JSCJSValueInlines.h
+    inline static bool strictEqualForCells(JSGlobalObject*, JSCell* v1, JSCell* v2); // Defined in JSCJSValueInlines.h
+    inline static TriState pureStrictEqual(JSValue v1, JSValue v2); // Defined in JSCJSValueInlines.h
 
     bool isCell() const;
     JSCell* asCell() const;
@@ -378,7 +384,7 @@ public:
     void dumpForBacktrace(PrintStream&) const;
 
     JS_EXPORT_PRIVATE JSObject* synthesizePrototype(JSGlobalObject*) const;
-    bool requireObjectCoercible(JSGlobalObject*) const;
+    inline bool requireObjectCoercible(JSGlobalObject*) const;
 
     // Constants used for Int52. Int52 isn't part of JSValue right now, but JSValues may be
     // converted to Int52s and back again.
@@ -662,23 +668,500 @@ ALWAYS_INLINE JSValue wasmUnboxedFloat(float f)
 }
 #endif
 
+inline JSValue jsNaN()
+{
+    return JSValue(JSValue::EncodeAsDouble, PNaN);
+}
+
+inline JSValue::JSValue(char i)
+{
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(unsigned char i)
+{
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(short i)
+{
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(unsigned short i)
+{
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(unsigned i)
+{
+    if (static_cast<int32_t>(i) < 0) {
+        *this = JSValue(EncodeAsDouble, static_cast<double>(i));
+        return;
+    }
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(long i)
+{
+    if (static_cast<int32_t>(i) != i) {
+        *this = JSValue(EncodeAsDouble, static_cast<double>(i));
+        return;
+    }
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(unsigned long i)
+{
+    if (static_cast<uint32_t>(i) != i) {
+        *this = JSValue(EncodeAsDouble, static_cast<double>(i));
+        return;
+    }
+    *this = JSValue(static_cast<uint32_t>(i));
+}
+
+inline JSValue::JSValue(long long i)
+{
+    if (static_cast<int32_t>(i) != i) {
+        *this = JSValue(EncodeAsDouble, static_cast<double>(i));
+        return;
+    }
+    *this = JSValue(static_cast<int32_t>(i));
+}
+
+inline JSValue::JSValue(unsigned long long i)
+{
+    if (static_cast<uint32_t>(i) != i) {
+        *this = JSValue(EncodeAsDouble, static_cast<double>(i));
+        return;
+    }
+    *this = JSValue(static_cast<uint32_t>(i));
+}
+
+inline EncodedJSValue JSValue::encode(JSValue value)
+{
+    return value.u.asInt64;
+}
+
+inline JSValue JSValue::decode(EncodedJSValue encodedJSValue)
+{
+    JSValue v;
+    v.u.asInt64 = encodedJSValue;
+    return v;
+}
+
+#if USE(JSVALUE32_64)
+inline JSValue::JSValue()
+{
+    u.asBits.tag = EmptyValueTag;
+    u.asBits.payload = 0;
+}
+
+inline JSValue::JSValue(JSNullTag)
+{
+    u.asBits.tag = NullTag;
+    u.asBits.payload = 0;
+}
+
+inline JSValue::JSValue(JSUndefinedTag)
+{
+    u.asBits.tag = UndefinedTag;
+    u.asBits.payload = 0;
+}
+
+inline JSValue::JSValue(JSTrueTag)
+{
+    u.asBits.tag = BooleanTag;
+    u.asBits.payload = 1;
+}
+
+inline JSValue::JSValue(JSFalseTag)
+{
+    u.asBits.tag = BooleanTag;
+    u.asBits.payload = 0;
+}
+
+inline JSValue::JSValue(HashTableDeletedValueTag)
+{
+    u.asBits.tag = DeletedValueTag;
+    u.asBits.payload = 0;
+}
+
+inline JSValue::JSValue(JSCell* ptr)
+{
+    if (ptr)
+        u.asBits.tag = CellTag;
+    else
+        u.asBits.tag = EmptyValueTag;
+    u.asBits.payload = reinterpret_cast<int32_t>(ptr);
+}
+
+inline JSValue::JSValue(const JSCell* ptr)
+{
+    if (ptr)
+        u.asBits.tag = CellTag;
+    else
+        u.asBits.tag = EmptyValueTag;
+    u.asBits.payload = reinterpret_cast<int32_t>(const_cast<JSCell*>(ptr));
+}
+
+inline JSValue::operator bool() const
+{
+    ASSERT(tag() != DeletedValueTag);
+    return tag() != EmptyValueTag;
+}
+
+inline bool JSValue::operator==(const JSValue& other) const
+{
+    return u.asInt64 == other.u.asInt64;
+}
+
+inline bool JSValue::isEmpty() const
+{
+    return tag() == EmptyValueTag;
+}
+
+inline bool JSValue::isUndefined() const
+{
+    return tag() == UndefinedTag;
+}
+
+inline bool JSValue::isNull() const
+{
+    return tag() == NullTag;
+}
+
+inline bool JSValue::isUndefinedOrNull() const
+{
+    return isUndefined() || isNull();
+}
+
+inline bool JSValue::isCell() const
+{
+    return tag() == CellTag;
+}
+
+inline bool JSValue::isInt32() const
+{
+    return tag() == Int32Tag;
+}
+
+inline bool JSValue::isDouble() const
+{
+    return tag() < LowestTag;
+}
+
+inline bool JSValue::isTrue() const
+{
+    return tag() == BooleanTag && payload();
+}
+
+inline bool JSValue::isFalse() const
+{
+    return tag() == BooleanTag && !payload();
+}
+
+inline uint32_t JSValue::tag() const
+{
+    return u.asBits.tag;
+}
+
+inline int32_t JSValue::payload() const
+{
+    return u.asBits.payload;
+}
+
+inline int32_t JSValue::asInt32() const
+{
+    ASSERT(isInt32());
+    return u.asBits.payload;
+}
+
+inline double JSValue::asDouble() const
+{
+    ASSERT(isDouble());
+    return u.asDouble;
+}
+
+ALWAYS_INLINE JSCell* JSValue::asCell() const
+{
+    ASSERT(isCell());
+    return reinterpret_cast<JSCell*>(u.asBits.payload);
+}
+
+ALWAYS_INLINE JSValue::JSValue(EncodeAsDoubleTag, double d)
+{
+    ASSERT(!isImpureNaN(d));
+    u.asDouble = d;
+}
+
+inline JSValue::JSValue(int i)
+{
+    u.asBits.tag = Int32Tag;
+    u.asBits.payload = i;
+}
+
+inline JSValue::JSValue(int32_t tag, int32_t payload)
+{
+    u.asBits.tag = tag;
+    u.asBits.payload = payload;
+}
+
+inline bool JSValue::isNumber() const
+{
+    return isInt32() || isDouble();
+}
+
+inline bool JSValue::isBoolean() const
+{
+    return tag() == BooleanTag;
+}
+
+inline bool JSValue::asBoolean() const
+{
+    ASSERT(isBoolean());
+    return payload();
+}
+
+#else // !USE(JSVALUE32_64) i.e. USE(JSVALUE64)
+
+// 0x0 can never occur naturally because it has a tag of 00, indicating a pointer value, but a payload of 0x0, which is in the (invalid) zero page.
+inline JSValue::JSValue()
+{
+    u.asInt64 = ValueEmpty;
+}
+
+// 0x4 can never occur naturally because it has a tag of 00, indicating a pointer value, but a payload of 0x4, which is in the (invalid) zero page.
+inline JSValue::JSValue(HashTableDeletedValueTag)
+{
+    u.asInt64 = ValueDeleted;
+}
+
+inline JSValue::JSValue(JSCell* ptr)
+{
+    u.asInt64 = reinterpret_cast<uintptr_t>(ptr);
+}
+
+inline JSValue::JSValue(const JSCell* ptr)
+{
+    u.asInt64 = reinterpret_cast<uintptr_t>(const_cast<JSCell*>(ptr));
+}
+
+inline JSValue::operator bool() const
+{
+    return u.asInt64;
+}
+
+inline bool JSValue::operator==(const JSValue& other) const
+{
+    return u.asInt64 == other.u.asInt64;
+}
+
+inline bool JSValue::isEmpty() const
+{
+    return u.asInt64 == ValueEmpty;
+}
+
+inline bool JSValue::isUndefined() const
+{
+    return asValue() == JSValue(JSUndefined);
+}
+
+inline bool JSValue::isNull() const
+{
+    return asValue() == JSValue(JSNull);
+}
+
+inline bool JSValue::isTrue() const
+{
+    return asValue() == JSValue(JSTrue);
+}
+
+inline bool JSValue::isFalse() const
+{
+    return asValue() == JSValue(JSFalse);
+}
+
+inline bool JSValue::asBoolean() const
+{
+    ASSERT(isBoolean());
+    return asValue() == JSValue(JSTrue);
+}
+
+inline int32_t JSValue::asInt32() const
+{
+    ASSERT(isInt32());
+    return static_cast<int32_t>(u.asInt64);
+}
+
+inline bool JSValue::isDouble() const
+{
+    return isNumber() && !isInt32();
+}
+
+inline JSValue::JSValue(JSNullTag)
+{
+    u.asInt64 = ValueNull;
+}
+
+inline JSValue::JSValue(JSUndefinedTag)
+{
+    u.asInt64 = ValueUndefined;
+}
+
+inline JSValue::JSValue(JSTrueTag)
+{
+    u.asInt64 = ValueTrue;
+}
+
+inline JSValue::JSValue(JSFalseTag)
+{
+    u.asInt64 = ValueFalse;
+}
+
+inline bool JSValue::isUndefinedOrNull() const
+{
+    // Undefined and null share the same value, bar the 'undefined' bit in the extended tag.
+    return (u.asInt64 & ~UndefinedTag) == ValueNull;
+}
+
+inline bool JSValue::isBoolean() const
+{
+    return (u.asInt64 & ~1) == ValueFalse;
+}
+
+inline bool JSValue::isCell() const
+{
+    return !(u.asInt64 & NotCellMask);
+}
+
+inline bool JSValue::isInt32() const
+{
+    return (u.asInt64 & NumberTag) == NumberTag;
+}
+
+inline int64_t reinterpretDoubleToInt64(double value)
+{
+    return std::bit_cast<int64_t>(value);
+}
+inline double reinterpretInt64ToDouble(int64_t value)
+{
+    return std::bit_cast<double>(value);
+}
+
+ALWAYS_INLINE JSValue::JSValue(EncodeAsDoubleTag, double d)
+{
+    ASSERT(!isImpureNaN(d));
+    u.asInt64 = reinterpretDoubleToInt64(d) + JSValue::DoubleEncodeOffset;
+}
+
+inline JSValue::JSValue(int i)
+{
+    u.asInt64 = JSValue::NumberTag | static_cast<uint32_t>(i);
+}
+
+inline double JSValue::asDouble() const
+{
+    ASSERT(isDouble());
+    return reinterpretInt64ToDouble(u.asInt64 - JSValue::DoubleEncodeOffset);
+}
+
+inline bool JSValue::isNumber() const
+{
+    return u.asInt64 & JSValue::NumberTag;
+}
+
+ALWAYS_INLINE JSCell* JSValue::asCell() const
+{
+    ASSERT(isCell());
+    return u.ptr;
+}
+
+#endif // USE(JSVALUE64)
+
+#if USE(BIGINT32)
+inline JSValue::JSValue(EncodeAsBigInt32Tag, int32_t value)
+{
+    uint64_t shiftedValue = static_cast<uint64_t>(static_cast<uint32_t>(value)) << 16;
+    ASSERT(!(shiftedValue & NumberTag));
+    u.asInt64 = shiftedValue | BigInt32Tag;
+}
+#endif // USE(BIGINT32)
+
+#if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
+inline JSValue::JSValue(EncodeAsUnboxedFloatTag, float value)
+{
+    u.asBits.payload = std::bit_cast<int32_t>(value);
+}
+#endif
+
+inline bool JSValue::isBigInt32() const
+{
+#if USE(BIGINT32)
+    return (u.asInt64 & BigInt32Mask) == BigInt32Tag;
+#else
+    return false;
+#endif
+}
+
+ALWAYS_INLINE double JSValue::toNumber(JSGlobalObject* globalObject) const
+{
+    if (isInt32())
+        return asInt32();
+    if (isDouble())
+        return asDouble();
+    return toNumberSlowCase(globalObject);
+}
+
+// https://tc39.es/proposal-temporal/#sec-tointegerwithtruncation
+inline double JSValue::toIntegerWithTruncation(JSGlobalObject* globalObject) const
+{
+    if (isInt32())
+        return asInt32();
+    return std::trunc(toNumber(globalObject) + 0.0);
+}
+
+// https://tc39.es/ecma262/#sec-tointegerorinfinity
+inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
+{
+    if (isInt32())
+        return asInt32();
+    double d = toNumber(globalObject);
+    return std::isnan(d) ? 0.0 : std::trunc(d) + 0.0;
+}
+
+inline bool JSValue::isUInt32() const
+{
+    return isInt32() && asInt32() >= 0;
+}
+
+inline uint32_t JSValue::asUInt32() const
+{
+    ASSERT(isUInt32());
+    return asInt32();
+}
+
+inline double JSValue::asNumber() const
+{
+    ASSERT(isNumber());
+    return isInt32() ? asInt32() : asDouble();
+}
+
 ALWAYS_INLINE JSValue jsDoubleNumber(double d)
 {
     ASSERT(JSValue(JSValue::EncodeAsDouble, d).isNumber());
     return JSValue(JSValue::EncodeAsDouble, d);
 }
 
-ALWAYS_INLINE JSValue jsNumber(double d)
+inline int32_t JSValue::asInt32ForArithmetic() const
 {
-    ASSERT(JSValue(d).isNumber());
-    ASSERT(!isImpureNaN(d));
-    return JSValue(d);
+    if (isBoolean())
+        return asBoolean();
+    return asInt32();
 }
 
-ALWAYS_INLINE JSValue jsNumber(const MediaTime& t)
-{
-    return jsNumber(t.toDouble());
-}
+inline JSValue jsNumber(double); // Defined in JSCJSValueInlines.h
+inline JSValue jsNumber(const MediaTime&); // Defined in JSCJSValueInlines.h
 
 ALWAYS_INLINE JSValue jsNumber(char i)
 {
@@ -742,10 +1225,89 @@ ALWAYS_INLINE EncodedJSValue encodedJSValue()
 
 inline bool operator==(const JSValue a, const JSCell* b) { return a == JSValue(b); }
 
-bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
+inline int64_t tryConvertToInt52(double number)
+{
+    if (number != number)
+        return JSValue::notInt52;
+#if OS(WINDOWS) && CPU(X86)
+    // The VS Compiler for 32-bit builds generates a floating point error when attempting to cast
+    // from an infinity to a 64-bit integer. We leave this routine with the floating point error
+    // left in a register, causing undefined behavior in later floating point operations.
+    //
+    // To avoid this issue, we check for infinity here, and return false in that case.
+    if (std::isinf(number))
+        return JSValue::notInt52;
+#endif
+    int64_t asInt64 = static_cast<int64_t>(number);
+    if (asInt64 != number)
+        return JSValue::notInt52;
+    if (!asInt64 && std::signbit(number))
+        return JSValue::notInt52;
+    if (asInt64 >= (static_cast<int64_t>(1) << (JSValue::numberOfInt52Bits - 1)))
+        return JSValue::notInt52;
+    if (asInt64 < -(static_cast<int64_t>(1) << (JSValue::numberOfInt52Bits - 1)))
+        return JSValue::notInt52;
+    return asInt64;
+}
+
+inline bool isInt52(double number)
+{
+    return tryConvertToInt52(number) != JSValue::notInt52;
+}
+
+inline bool JSValue::isAnyInt() const
+{
+    if (isInt32())
+        return true;
+    if (!isNumber())
+        return false;
+    return isInt52(asDouble());
+}
+
+inline int64_t JSValue::asAnyInt() const
+{
+    ASSERT(isAnyInt());
+    if (isInt32())
+        return asInt32();
+    return static_cast<int64_t>(asDouble());
+}
+
+inline bool JSValue::isInt32AsAnyInt() const
+{
+    if (!isAnyInt())
+        return false;
+    int64_t value = asAnyInt();
+    return value >= INT32_MIN && value <= INT32_MAX;
+}
+
+inline int32_t JSValue::asInt32AsAnyInt() const
+{
+    ASSERT(isInt32AsAnyInt());
+    if (isInt32())
+        return asInt32();
+    return static_cast<int32_t>(asDouble());
+}
+
+inline bool JSValue::isUInt32AsAnyInt() const
+{
+    if (!isAnyInt())
+        return false;
+    int64_t value = asAnyInt();
+    return value >= 0 && value <= UINT32_MAX;
+}
+
+inline uint32_t JSValue::asUInt32AsAnyInt() const
+{
+    ASSERT(isUInt32AsAnyInt());
+    if (isUInt32())
+        return asUInt32();
+    return static_cast<uint32_t>(asDouble());
+}
+
+inline bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
 
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
-bool sameValue(JSGlobalObject*, JSValue a, JSValue b);
+inline bool sameValue(JSGlobalObject*, JSValue, JSValue);
 
 ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
 {
@@ -839,5 +1401,13 @@ inline void clearEncodedJSValueConcurrent(EncodedJSValue& dest)
 #else
 #  error "Unsupported configuration"
 #endif
+
+#if USE(BIGINT32)
+inline int32_t JSValue::bigInt32AsInt32() const
+{
+    ASSERT(isBigInt32());
+    return static_cast<int32_t>(u.asInt64 >> 16);
+}
+#endif // USE(BIGINT32)
 
 } // namespace JSC

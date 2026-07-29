@@ -39,6 +39,7 @@
 #include "pas_root.h"
 #include "pas_segregated_page_config_inlines.h"
 #include "pas_stream.h"
+#include "pas_zero_memory.h"
 
 #if defined(PAS_BMALLOC)
 #include "BPlatform.h"

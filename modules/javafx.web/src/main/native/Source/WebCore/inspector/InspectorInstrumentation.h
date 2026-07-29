@@ -34,16 +34,16 @@
 #include "CSSSelector.h"
 #include "CanvasBase.h"
 #include "CanvasRenderingContext.h"
-#include "DocumentInlines.h"
-#include "DocumentThreadableLoader.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventTarget.h"
 #include "FormData.h"
+#include "Frame.h"
 #include "HitTestResult.h"
 #include "InspectorInstrumentationPublic.h"
+#include "InstrumentingAgents.h"
 #include "LocalFrame.h"
-#include "LocalFrameView.h"
+#include "NodeDocument.h"
 #include "Page.h"
 #include "ResourceLoader.h"
 #include "ResourceLoaderIdentifier.h"
@@ -63,7 +63,6 @@
 #include "WebGLRenderingContextBase.h"
 #endif
 
-
 namespace Inspector {
 class ConsoleMessage;
 class ScriptArguments;
@@ -78,11 +77,15 @@ class LocalDOMWindow;
 class DOMWrapperWorld;
 class Document;
 class DocumentLoader;
+class DocumentThreadableLoader;
 class EventListener;
 class HTTPHeaderMap;
 class InspectorTimelineAgent;
 class InstrumentingAgents;
 class KeyframeEffect;
+class LargestContentfulPaint;
+class LocalFrame;
+class LocalFrameView;
 class NetworkLoadMetrics;
 class Node;
 class PseudoElement;
@@ -103,6 +106,8 @@ class WebSocketChannel;
 class WorkerOrWorkletGlobalScope;
 
 struct Styleable;
+
+enum class PlatformEventModifier : uint8_t;
 
 #if ENABLE(WEBGL)
 class WebGLProgram;
@@ -206,7 +211,7 @@ public:
     static void willSendRequest(LocalFrame*, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*, ResourceLoader*);
     static void didLoadResourceFromMemoryCache(Page&, DocumentLoader*, CachedResource*);
     static void didReceiveResourceResponse(LocalFrame&, ResourceLoaderIdentifier, DocumentLoader*, const ResourceResponse&, ResourceLoader*);
-    static void didReceiveThreadableLoaderResponse(DocumentThreadableLoader&, ResourceLoaderIdentifier);
+    static void didReceiveThreadableLoaderResponse(Document&, DocumentThreadableLoader&, ResourceLoaderIdentifier);
     static void didReceiveData(LocalFrame*, ResourceLoaderIdentifier, const SharedBuffer*, int encodedDataLength);
     static void didFinishLoading(LocalFrame*, DocumentLoader*, ResourceLoaderIdentifier, const NetworkLoadMetrics&, ResourceLoader*);
     static void didFailLoading(LocalFrame*, DocumentLoader*, ResourceLoaderIdentifier, const ResourceError&);
@@ -239,9 +244,7 @@ public:
     static void loaderDetachedFromFrame(LocalFrame&, DocumentLoader&);
     static void frameStartedLoading(LocalFrame&);
     static void frameStoppedLoading(LocalFrame&);
-    static void didCompleteRenderingFrame(Frame&);
-    static void frameScheduledNavigation(Frame&, Seconds delay);
-    static void frameClearedScheduledNavigation(Frame&);
+    static void didCompleteRenderingFrame(LocalFrame&);
     static void accessibilitySettingsDidChange(Page&);
 #if ENABLE(DARK_MODE_CSS)
     static void defaultAppearanceDidChange(Page&);
@@ -254,32 +257,35 @@ public:
     static void interceptRequest(ResourceLoader&, Function<void(const ResourceRequest&)>&&);
     static void interceptResponse(const LocalFrame&, const ResourceResponse&, ResourceLoaderIdentifier, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&&);
 
-    static void addMessageToConsole(Page&, std::unique_ptr<Inspector::ConsoleMessage>);
+    static void addMessageToConsole(LocalFrame&, std::unique_ptr<Inspector::ConsoleMessage>);
     static void addMessageToConsole(WorkerOrWorkletGlobalScope&, std::unique_ptr<Inspector::ConsoleMessage>);
 
-    static void consoleCount(Page&, JSC::JSGlobalObject*, const String& label);
+    static void consoleCount(LocalFrame&, JSC::JSGlobalObject*, const String& label);
     static void consoleCount(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
-    static void consoleCountReset(Page&, JSC::JSGlobalObject*, const String& label);
+    static void consoleCountReset(LocalFrame&, JSC::JSGlobalObject*, const String& label);
     static void consoleCountReset(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
 
-    static void takeHeapSnapshot(Frame&, const String& title);
+    static void takeHeapSnapshot(LocalFrame&, const String& title);
     static void takeHeapSnapshot(WorkerOrWorkletGlobalScope&, const String& title);
-    static void startConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
+    static void startConsoleTiming(LocalFrame&, JSC::JSGlobalObject*, const String& label);
     static void startConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
-    static void logConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label, Ref<Inspector::ScriptArguments>&&);
+    static void logConsoleTiming(LocalFrame&, JSC::JSGlobalObject*, const String& label, Ref<Inspector::ScriptArguments>&&);
     static void logConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label, Ref<Inspector::ScriptArguments>&&);
-    static void stopConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
+    static void stopConsoleTiming(LocalFrame&, JSC::JSGlobalObject*, const String& label);
     static void stopConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
-    static void consoleTimeStamp(Frame&, Ref<Inspector::ScriptArguments>&&);
+    static void consoleTimeStamp(LocalFrame&, Ref<Inspector::ScriptArguments>&&);
     static void consoleTimeStamp(WorkerOrWorkletGlobalScope&, Ref<Inspector::ScriptArguments>&&);
-    static void startProfiling(Page&, const String& title);
+    static void startProfiling(LocalFrame&, const String& title);
     static void startProfiling(WorkerOrWorkletGlobalScope&, const String& title);
-    static void stopProfiling(Page&, const String& title);
+    static void stopProfiling(LocalFrame&, const String& title);
     static void stopProfiling(WorkerOrWorkletGlobalScope&, const String& title);
     static void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::JSGlobalObject&, JSC::JSObject* options);
     static void consoleStopRecordingCanvas(CanvasRenderingContext&);
 
     static void performanceMark(ScriptExecutionContext&, const String&, std::optional<MonotonicTime>);
+
+    static void didEnqueueFirstContentfulPaint(ScriptExecutionContext&);
+    static void didEnqueueLargestContentfulPaint(ScriptExecutionContext&, const LargestContentfulPaint&);
 
     static void didRequestAnimationFrame(ScriptExecutionContext&, int callbackId);
     static void didCancelAnimationFrame(ScriptExecutionContext&, int callbackId);
@@ -456,8 +462,6 @@ private:
     static void frameStartedLoadingImpl(InstrumentingAgents&, LocalFrame&);
     static void didCompleteRenderingFrameImpl(InstrumentingAgents&);
     static void frameStoppedLoadingImpl(InstrumentingAgents&, LocalFrame&);
-    static void frameScheduledNavigationImpl(InstrumentingAgents&, Frame&, Seconds delay);
-    static void frameClearedScheduledNavigationImpl(InstrumentingAgents&, Frame&);
     static void accessibilitySettingsDidChangeImpl(InstrumentingAgents&);
 #if ENABLE(DARK_MODE_CSS)
     static void defaultAppearanceDidChangeImpl(InstrumentingAgents&);
@@ -485,6 +489,8 @@ private:
     static void consoleStopRecordingCanvasImpl(InstrumentingAgents&, CanvasRenderingContext&);
 
     static void performanceMarkImpl(InstrumentingAgents&, const String& label, std::optional<MonotonicTime>);
+    static void didEnqueueFirstContentfulPaintImpl(InstrumentingAgents&);
+    static void didEnqueueLargestContentfulPaintImpl(InstrumentingAgents&, const LargestContentfulPaint&);
 
     static void didRequestAnimationFrameImpl(InstrumentingAgents&, int callbackId, ScriptExecutionContext&);
     static void didCancelAnimationFrameImpl(InstrumentingAgents&, int callbackId);
@@ -537,29 +543,29 @@ private:
     static void renderLayerDestroyedImpl(InstrumentingAgents&, const RenderLayer&);
 
     static InstrumentingAgents& instrumentingAgents(Page&);
+    static InstrumentingAgents& instrumentingAgents(const LocalFrame&);
+    static InstrumentingAgents& instrumentingAgents(const LocalFrameView&);
     static InstrumentingAgents& instrumentingAgents(WorkerOrWorkletGlobalScope&);
     static InstrumentingAgents& instrumentingAgents(ServiceWorkerGlobalScope&);
+    static InstrumentingAgents& instrumentingAgents(const RenderObject&);
 
-    static InstrumentingAgents* instrumentingAgents(const Frame&);
-    static InstrumentingAgents* instrumentingAgents(const Frame*);
+    static InstrumentingAgents* instrumentingAgents(const LocalFrame*);
     static InstrumentingAgents* instrumentingAgents(ScriptExecutionContext&);
     static InstrumentingAgents* instrumentingAgents(Document&);
     static InstrumentingAgents* instrumentingAgents(Document*);
-    static InstrumentingAgents* instrumentingAgents(const RenderObject&);
     static InstrumentingAgents* instrumentingAgents(WorkerOrWorkletGlobalScope*);
 };
 
 inline void InspectorInstrumentation::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didClearWindowObjectInWorldImpl(*agents, frame, world);
+    didClearWindowObjectInWorldImpl(instrumentingAgents(frame), frame, world);
 }
 
 inline bool InspectorInstrumentation::isDebuggerPaused(LocalFrame* frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         return isDebuggerPausedImpl(*agents);
     return false;
 }
@@ -567,7 +573,7 @@ inline bool InspectorInstrumentation::isDebuggerPaused(LocalFrame* frame)
 inline int InspectorInstrumentation::identifierForNode(Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(0);
-    if (auto* agents = instrumentingAgents(node.document()))
+    if (RefPtr agents = instrumentingAgents(node.document()))
         return identifierForNodeImpl(*agents, node);
     return 0;
 }
@@ -575,209 +581,206 @@ inline int InspectorInstrumentation::identifierForNode(Node& node)
 inline void InspectorInstrumentation::addEventListenersToNode(Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(node.document()))
+    if (RefPtr agents = instrumentingAgents(node.document()))
         addEventListenersToNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::willInsertDOMNode(Document& document, Node& parent)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willInsertDOMNodeImpl(*agents, parent);
 }
 
 inline void InspectorInstrumentation::didInsertDOMNode(Document& document, Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didInsertDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::willRemoveDOMNode(Document& document, Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willRemoveDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::didRemoveDOMNode(Document& document, Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didRemoveDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::willDestroyDOMNode(Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(node.document()))
+    if (RefPtr agents = instrumentingAgents(node.document()))
         willDestroyDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::didChangeRendererForDOMNode(Node& node)
 {
     ASSERT(InspectorInstrumentationPublic::hasFrontends());
-    if (auto* agents = instrumentingAgents(node.document()))
+    if (RefPtr agents = instrumentingAgents(node.document()))
         didChangeRendererForDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::didAddOrRemoveScrollbars(LocalFrameView& frameView)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frameView.frame().document()))
-        didAddOrRemoveScrollbarsImpl(*agents, frameView);
+    didAddOrRemoveScrollbarsImpl(instrumentingAgents(frameView), frameView);
 }
 
 inline void InspectorInstrumentation::didAddOrRemoveScrollbars(RenderObject& renderer)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(renderer))
-        didAddOrRemoveScrollbarsImpl(*agents, renderer);
+    didAddOrRemoveScrollbarsImpl(instrumentingAgents(renderer), renderer);
 }
 
 inline void InspectorInstrumentation::willModifyDOMAttr(Document& document, Element& element, const AtomString& oldValue, const AtomString& newValue)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willModifyDOMAttrImpl(*agents, element, oldValue, newValue);
 }
 
 inline void InspectorInstrumentation::didModifyDOMAttr(Document& document, Element& element, const AtomString& name, const AtomString& value)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didModifyDOMAttrImpl(*agents, element, name, value);
 }
 
 inline void InspectorInstrumentation::didRemoveDOMAttr(Document& document, Element& element, const AtomString& name)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didRemoveDOMAttrImpl(*agents, element, name);
 }
 
 inline void InspectorInstrumentation::willInvalidateStyleAttr(Element& element)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(element.document()))
+    if (RefPtr agents = instrumentingAgents(element.document()))
         willInvalidateStyleAttrImpl(*agents, element);
 }
 
 inline void InspectorInstrumentation::didInvalidateStyleAttr(Element& element)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(element.document()))
+    if (RefPtr agents = instrumentingAgents(element.document()))
         didInvalidateStyleAttrImpl(*agents, element);
 }
 
 inline void InspectorInstrumentation::documentDetached(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         documentDetachedImpl(*agents, document);
 }
 
 inline void InspectorInstrumentation::frameWindowDiscarded(LocalFrame& frame, LocalDOMWindow* domWindow)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        frameWindowDiscardedImpl(*agents, domWindow);
+    frameWindowDiscardedImpl(instrumentingAgents(frame), domWindow);
 }
 
 inline void InspectorInstrumentation::mediaQueryResultChanged(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         mediaQueryResultChangedImpl(*agents);
 }
 
 inline void InspectorInstrumentation::activeStyleSheetsUpdated(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         activeStyleSheetsUpdatedImpl(*agents, document);
 }
 
 inline void InspectorInstrumentation::didPushShadowRoot(Element& host, ShadowRoot& root)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(host.document()))
+    if (RefPtr agents = instrumentingAgents(host.document()))
         didPushShadowRootImpl(*agents, host, root);
 }
 
 inline void InspectorInstrumentation::willPopShadowRoot(Element& host, ShadowRoot& root)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(host.document()))
+    if (RefPtr agents = instrumentingAgents(host.document()))
         willPopShadowRootImpl(*agents, host, root);
 }
 
 inline void InspectorInstrumentation::didChangeAssignedSlot(Node& slotable)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(slotable.document()))
+    if (RefPtr agents = instrumentingAgents(slotable.document()))
         didChangeAssignedSlotImpl(*agents, slotable);
 }
 
 inline void InspectorInstrumentation::didChangeAssignedNodes(Element& slotElement)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(slotElement.document()))
+    if (RefPtr agents = instrumentingAgents(slotElement.document()))
         didChangeAssignedNodesImpl(*agents, slotElement);
 }
 
 inline void InspectorInstrumentation::didChangeCustomElementState(Element& element)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(element.document()))
+    if (RefPtr agents = instrumentingAgents(element.document()))
         didChangeCustomElementStateImpl(*agents, element);
 }
 
 inline void InspectorInstrumentation::pseudoElementCreated(Page* page, PseudoElement& pseudoElement)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(page))
+    if (RefPtr agents = instrumentingAgents(page))
         pseudoElementCreatedImpl(*agents, pseudoElement);
 }
 
 inline void InspectorInstrumentation::pseudoElementDestroyed(Page* page, PseudoElement& pseudoElement)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(page))
+    if (RefPtr agents = instrumentingAgents(page))
         pseudoElementDestroyedImpl(*agents, pseudoElement);
 }
 
 inline void InspectorInstrumentation::didCreateNamedFlow(Document* document, WebKitNamedFlow& namedFlow)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didCreateNamedFlowImpl(*agents, document, namedFlow);
 }
 
 inline void InspectorInstrumentation::willRemoveNamedFlow(Document* document, WebKitNamedFlow& namedFlow)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willRemoveNamedFlowImpl(*agents, document, namedFlow);
 }
 
 inline void InspectorInstrumentation::didChangeRegionOverset(Document& document, WebKitNamedFlow& namedFlow)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didChangeRegionOversetImpl(*agents, document, namedFlow);
 }
 
 inline void InspectorInstrumentation::didRegisterNamedFlowContentElement(Document& document, WebKitNamedFlow& namedFlow, Node& contentElement, Node* nextContentElement)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didRegisterNamedFlowContentElementImpl(*agents, document, namedFlow, contentElement, nextContentElement);
 }
 
 inline void InspectorInstrumentation::didUnregisterNamedFlowContentElement(Document& document, WebKitNamedFlow& namedFlow, Node& contentElement)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didUnregisterNamedFlowContentElementImpl(*agents, document, namedFlow, contentElement);
 }
 
@@ -790,23 +793,19 @@ inline void InspectorInstrumentation::mouseDidMoveOverElement(Page& page, const 
 inline bool InspectorInstrumentation::handleTouchEvent(LocalFrame& frame, Node& node)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(frame))
-        return handleTouchEventImpl(*agents, node);
-    return false;
+    return handleTouchEventImpl(instrumentingAgents(frame), node);
 }
 
 inline bool InspectorInstrumentation::handleMousePress(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(frame))
-        return handleMousePressImpl(*agents);
-    return false;
+    return handleMousePressImpl(instrumentingAgents(frame));
 }
 
 inline bool InspectorInstrumentation::forcePseudoState(const Element& element, CSSSelector::PseudoClass pseudoState)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(element.document()))
+    if (RefPtr agents = instrumentingAgents(element.document()))
         return forcePseudoStateImpl(*agents, element, pseudoState);
     return false;
 }
@@ -814,56 +813,56 @@ inline bool InspectorInstrumentation::forcePseudoState(const Element& element, C
 inline void InspectorInstrumentation::characterDataModified(Document& document, CharacterData& characterData)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         characterDataModifiedImpl(*agents, characterData);
 }
 
 inline void InspectorInstrumentation::willSendXMLHttpRequest(ScriptExecutionContext* context, const String& url)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willSendXMLHttpRequestImpl(*agents, url);
 }
 
 inline void InspectorInstrumentation::willFetch(ScriptExecutionContext& context, const String& url)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willFetchImpl(*agents, url);
 }
 
 inline void InspectorInstrumentation::didInstallTimer(ScriptExecutionContext& context, int timerId, Seconds timeout, bool singleShot)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didInstallTimerImpl(*agents, timerId, timeout, singleShot, context);
 }
 
 inline void InspectorInstrumentation::didRemoveTimer(ScriptExecutionContext& context, int timerId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didRemoveTimerImpl(*agents, timerId);
 }
 
 inline void InspectorInstrumentation::didAddEventListener(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(target.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(target.scriptExecutionContext()))
         didAddEventListenerImpl(*agents, target, eventType, listener, capture);
 }
 
 inline void InspectorInstrumentation::willRemoveEventListener(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(target.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(target.scriptExecutionContext()))
         willRemoveEventListenerImpl(*agents, target, eventType, listener, capture);
 }
 
 inline bool InspectorInstrumentation::isEventListenerDisabled(EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(target.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(target.scriptExecutionContext()))
         return isEventListenerDisabledImpl(*agents, target, eventType, listener, capture);
     return false;
 }
@@ -871,92 +870,86 @@ inline bool InspectorInstrumentation::isEventListenerDisabled(EventTarget& targe
 inline int InspectorInstrumentation::willPostMessage(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(0);
-    if (auto* agents = instrumentingAgents(frame))
-        return willPostMessageImpl(*agents);
-    return 0;
+    return willPostMessageImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::didPostMessage(LocalFrame& frame, int postMessageIdentifier, JSC::JSGlobalObject& state)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didPostMessageImpl(*agents, postMessageIdentifier, state);
+    didPostMessageImpl(instrumentingAgents(frame), postMessageIdentifier, state);
 }
 
 inline void InspectorInstrumentation::didFailPostMessage(LocalFrame& frame, int postMessageIdentifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didFailPostMessageImpl(*agents, postMessageIdentifier);
+    didFailPostMessageImpl(instrumentingAgents(frame), postMessageIdentifier);
 }
 
 inline void InspectorInstrumentation::willDispatchPostMessage(LocalFrame& frame, int postMessageIdentifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        willDispatchPostMessageImpl(*agents, postMessageIdentifier);
+    willDispatchPostMessageImpl(instrumentingAgents(frame), postMessageIdentifier);
 }
 
 inline void InspectorInstrumentation::didDispatchPostMessage(LocalFrame& frame, int postMessageIdentifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didDispatchPostMessageImpl(*agents, postMessageIdentifier);
+    didDispatchPostMessageImpl(instrumentingAgents(frame), postMessageIdentifier);
 }
 
 inline void InspectorInstrumentation::willCallFunction(ScriptExecutionContext* context, const String& scriptName, int scriptLine, int scriptColumn)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willCallFunctionImpl(*agents, scriptName, scriptLine, scriptColumn);
 }
 
 inline void InspectorInstrumentation::didCallFunction(ScriptExecutionContext* context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didCallFunctionImpl(*agents);
 }
 
 inline void InspectorInstrumentation::willDispatchEvent(ScriptExecutionContext& context, const Event& event)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willDispatchEventImpl(*agents, event);
 }
 
 inline void InspectorInstrumentation::didDispatchEvent(ScriptExecutionContext& context, const Event& event)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didDispatchEventImpl(*agents, event);
 }
 
 inline void InspectorInstrumentation::willHandleEvent(ScriptExecutionContext& context, Event& event, const RegisteredEventListener& listener)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         return willHandleEventImpl(*agents, context, event, listener);
 }
 
 inline void InspectorInstrumentation::didHandleEvent(ScriptExecutionContext& context, Event& event, const RegisteredEventListener& listener)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         return didHandleEventImpl(*agents, context, event, listener);
 }
 
 inline void InspectorInstrumentation::willDispatchEventOnWindow(LocalFrame* frame, const Event& event)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         willDispatchEventOnWindowImpl(*agents, event);
 }
 
 inline void InspectorInstrumentation::didDispatchEventOnWindow(LocalFrame* frame, const Event& event)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         didDispatchEventOnWindowImpl(*agents, event);
 }
 
@@ -967,16 +960,15 @@ inline void InspectorInstrumentation::eventDidResetAfterDispatch(const Event& ev
     if (!is<Node>(event.target()))
         return;
 
-    auto* node = downcast<Node>(event.target());
-    if (auto* agents = instrumentingAgents(node->scriptExecutionContext()))
+    RefPtr node = downcast<Node>(event.target());
+    if (RefPtr agents = instrumentingAgents(node->scriptExecutionContext()))
         return eventDidResetAfterDispatchImpl(*agents, event);
 }
 
 inline void InspectorInstrumentation::willEvaluateScript(LocalFrame& frame, const String& url, int lineNumber, int columnNumber)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        willEvaluateScriptImpl(*agents, url, lineNumber, columnNumber);
+    willEvaluateScriptImpl(instrumentingAgents(frame), url, lineNumber, columnNumber);
 }
 
 inline void InspectorInstrumentation::willEvaluateScript(WorkerOrWorkletGlobalScope& globalScope, const String& url, int lineNumber, int columnNumber)
@@ -988,8 +980,7 @@ inline void InspectorInstrumentation::willEvaluateScript(WorkerOrWorkletGlobalSc
 inline void InspectorInstrumentation::didEvaluateScript(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didEvaluateScriptImpl(*agents);
+    didEvaluateScriptImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::didEvaluateScript(WorkerOrWorkletGlobalScope& globalScope)
@@ -1001,36 +992,33 @@ inline void InspectorInstrumentation::didEvaluateScript(WorkerOrWorkletGlobalSco
 inline void InspectorInstrumentation::willFireTimer(ScriptExecutionContext& context, int timerId, bool oneShot)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willFireTimerImpl(*agents, timerId, oneShot);
 }
 
 inline void InspectorInstrumentation::didFireTimer(ScriptExecutionContext& context, int timerId, bool oneShot)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didFireTimerImpl(*agents, timerId, oneShot);
 }
 
 inline void InspectorInstrumentation::didInvalidateLayout(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didInvalidateLayoutImpl(*agents);
+    didInvalidateLayoutImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::willLayout(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        willLayoutImpl(*agents);
+    willLayoutImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::didLayout(LocalFrame& frame, const Vector<FloatQuad>& layoutAreas)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didLayoutImpl(*agents, layoutAreas);
+    didLayoutImpl(instrumentingAgents(frame), layoutAreas);
 }
 
 inline void InspectorInstrumentation::didScroll(Page& page)
@@ -1042,84 +1030,76 @@ inline void InspectorInstrumentation::didScroll(Page& page)
 inline void InspectorInstrumentation::willComposite(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        willCompositeImpl(*agents);
+    willCompositeImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::didComposite(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didCompositeImpl(*agents);
+    didCompositeImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::willPaint(RenderObject& renderer)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(renderer))
-        return willPaintImpl(*agents);
+    willPaintImpl(instrumentingAgents(renderer));
 }
 
 inline void InspectorInstrumentation::didPaint(RenderObject& renderer, const LayoutRect& rect)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(renderer))
-        didPaintImpl(*agents, renderer, rect);
+    didPaintImpl(instrumentingAgents(renderer), renderer, rect);
 }
 
 inline void InspectorInstrumentation::willRecalculateStyle(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willRecalculateStyleImpl(*agents);
 }
 
 inline void InspectorInstrumentation::didRecalculateStyle(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didRecalculateStyleImpl(*agents);
 }
 
 inline void InspectorInstrumentation::didScheduleStyleRecalculation(Document& document)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didScheduleStyleRecalculationImpl(*agents, document);
 }
 
 inline void InspectorInstrumentation::applyUserAgentOverride(LocalFrame& frame, String& userAgent)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        applyUserAgentOverrideImpl(*agents, userAgent);
+    applyUserAgentOverrideImpl(instrumentingAgents(frame), userAgent);
 }
 
 inline void InspectorInstrumentation::applyEmulatedMedia(LocalFrame& frame, AtomString& media)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        applyEmulatedMediaImpl(*agents, media);
+    applyEmulatedMediaImpl(instrumentingAgents(frame), media);
 }
 
 inline void InspectorInstrumentation::flexibleBoxRendererBeganLayout(const RenderObject& renderer)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(renderer))
-        flexibleBoxRendererBeganLayoutImpl(*agents, renderer);
+    flexibleBoxRendererBeganLayoutImpl(instrumentingAgents(renderer), renderer);
 }
 
 inline void InspectorInstrumentation::flexibleBoxRendererWrappedToNextLine(const RenderObject& renderer, size_t lineStartItemIndex)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(renderer))
-        flexibleBoxRendererWrappedToNextLineImpl(*agents, renderer, lineStartItemIndex);
+    flexibleBoxRendererWrappedToNextLineImpl(instrumentingAgents(renderer), renderer, lineStartItemIndex);
 }
 
 inline void InspectorInstrumentation::willSendRequest(LocalFrame* frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, const ResourceResponse& redirectResponse, const CachedResource* cachedResource, ResourceLoader* resourceLoader)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         willSendRequestImpl(*agents, identifier, loader, request, redirectResponse, cachedResource, resourceLoader);
 }
 
@@ -1132,7 +1112,7 @@ inline void InspectorInstrumentation::willSendRequest(ServiceWorkerGlobalScope& 
 inline void InspectorInstrumentation::willSendRequestOfType(LocalFrame* frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, LoadType loadType)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         willSendRequestOfTypeImpl(*agents, identifier, loader, request, loadType);
 }
 
@@ -1144,8 +1124,7 @@ inline void InspectorInstrumentation::didLoadResourceFromMemoryCache(Page& page,
 
 inline void InspectorInstrumentation::didReceiveResourceResponse(LocalFrame& frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, const ResourceResponse& response, ResourceLoader* resourceLoader)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        didReceiveResourceResponseImpl(*agents, identifier, loader, response, resourceLoader);
+    didReceiveResourceResponseImpl(instrumentingAgents(frame), identifier, loader, response, resourceLoader);
 }
 
 inline void InspectorInstrumentation::didReceiveResourceResponse(ServiceWorkerGlobalScope& globalScope, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
@@ -1153,17 +1132,17 @@ inline void InspectorInstrumentation::didReceiveResourceResponse(ServiceWorkerGl
     didReceiveResourceResponseImpl(instrumentingAgents(globalScope), identifier, nullptr, response, nullptr);
 }
 
-inline void InspectorInstrumentation::didReceiveThreadableLoaderResponse(DocumentThreadableLoader& documentThreadableLoader, ResourceLoaderIdentifier identifier)
+inline void InspectorInstrumentation::didReceiveThreadableLoaderResponse(Document& document, DocumentThreadableLoader& documentThreadableLoader, ResourceLoaderIdentifier identifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(documentThreadableLoader.document()))
+    if (RefPtr agents = instrumentingAgents(document))
         didReceiveThreadableLoaderResponseImpl(*agents, documentThreadableLoader, identifier);
 }
 
 inline void InspectorInstrumentation::didReceiveData(LocalFrame* frame, ResourceLoaderIdentifier identifier, const SharedBuffer* buffer, int encodedDataLength)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         didReceiveDataImpl(*agents, identifier, buffer, encodedDataLength);
 }
 
@@ -1176,7 +1155,7 @@ inline void InspectorInstrumentation::didReceiveData(ServiceWorkerGlobalScope& g
 inline void InspectorInstrumentation::didFinishLoading(LocalFrame* frame, DocumentLoader* loader, ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& networkLoadMetrics, ResourceLoader* resourceLoader)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         didFinishLoadingImpl(*agents, identifier, loader, networkLoadMetrics, resourceLoader);
 }
 
@@ -1188,7 +1167,7 @@ inline void InspectorInstrumentation::didFinishLoading(ServiceWorkerGlobalScope&
 
 inline void InspectorInstrumentation::didFailLoading(LocalFrame* frame, DocumentLoader* loader, ResourceLoaderIdentifier identifier, const ResourceError& error)
 {
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         didFailLoadingImpl(*agents, identifier, loader, error);
 }
 
@@ -1200,133 +1179,108 @@ inline void InspectorInstrumentation::didFailLoading(ServiceWorkerGlobalScope& g
 inline void InspectorInstrumentation::continueAfterXFrameOptionsDenied(LocalFrame& frame, ResourceLoaderIdentifier identifier, DocumentLoader& loader, const ResourceResponse& response)
 {
     // Treat the same as didReceiveResponse.
-    if (auto* agents = instrumentingAgents(frame))
-        didReceiveResourceResponseImpl(*agents, identifier, &loader, response, nullptr);
+    didReceiveResourceResponseImpl(instrumentingAgents(frame), identifier, &loader, response, nullptr);
 }
 
 inline void InspectorInstrumentation::continueWithPolicyDownload(LocalFrame& frame, ResourceLoaderIdentifier identifier, DocumentLoader& loader, const ResourceResponse& response)
 {
     // Treat the same as didReceiveResponse.
-    if (auto* agents = instrumentingAgents(frame))
-        didReceiveResourceResponseImpl(*agents, identifier, &loader, response, nullptr);
+    didReceiveResourceResponseImpl(instrumentingAgents(frame), identifier, &loader, response, nullptr);
 }
 
 inline void InspectorInstrumentation::continueWithPolicyIgnore(LocalFrame& frame, ResourceLoaderIdentifier identifier, DocumentLoader& loader, const ResourceResponse& response)
 {
     // Treat the same as didReceiveResponse.
-    if (auto* agents = instrumentingAgents(frame))
-        didReceiveResourceResponseImpl(*agents, identifier, &loader, response, nullptr);
+    didReceiveResourceResponseImpl(instrumentingAgents(frame), identifier, &loader, response, nullptr);
 }
 
 inline void InspectorInstrumentation::willLoadXHRSynchronously(ScriptExecutionContext* context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willLoadXHRSynchronouslyImpl(*agents);
 }
 
 inline void InspectorInstrumentation::didLoadXHRSynchronously(ScriptExecutionContext* context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didLoadXHRSynchronouslyImpl(*agents);
 }
 
 inline void InspectorInstrumentation::scriptImported(ScriptExecutionContext& context, ResourceLoaderIdentifier identifier, const String& sourceString)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         scriptImportedImpl(*agents, identifier, sourceString);
 }
 
 inline void InspectorInstrumentation::scriptExecutionBlockedByCSP(ScriptExecutionContext* context, const String& directiveText)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         scriptExecutionBlockedByCSPImpl(*agents, directiveText);
 }
 
 inline void InspectorInstrumentation::didReceiveScriptResponse(ScriptExecutionContext& context, ResourceLoaderIdentifier identifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didReceiveScriptResponseImpl(*agents, identifier);
 }
 
 inline void InspectorInstrumentation::domContentLoadedEventFired(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        domContentLoadedEventFiredImpl(*agents, frame);
+    domContentLoadedEventFiredImpl(instrumentingAgents(frame), frame);
 }
 
 inline void InspectorInstrumentation::loadEventFired(LocalFrame* frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         loadEventFiredImpl(*agents, frame);
 }
 
 inline void InspectorInstrumentation::frameDetachedFromParent(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameDetachedFromParentImpl(*agents, frame);
+    frameDetachedFromParentImpl(instrumentingAgents(frame), frame);
 }
 
 inline void InspectorInstrumentation::didCommitLoad(LocalFrame& frame, DocumentLoader* loader)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        didCommitLoadImpl(*agents, frame, loader);
+    didCommitLoadImpl(instrumentingAgents(frame), frame, loader);
 }
 
 inline void InspectorInstrumentation::frameDocumentUpdated(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameDocumentUpdatedImpl(*agents, frame);
+    frameDocumentUpdatedImpl(instrumentingAgents(frame), frame);
 }
 
 inline void InspectorInstrumentation::loaderDetachedFromFrame(LocalFrame& frame, DocumentLoader& loader)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        loaderDetachedFromFrameImpl(*agents, loader);
+    loaderDetachedFromFrameImpl(instrumentingAgents(frame), loader);
 }
 
 inline void InspectorInstrumentation::frameStartedLoading(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameStartedLoadingImpl(*agents, frame);
+    frameStartedLoadingImpl(instrumentingAgents(frame), frame);
 }
 
-inline void InspectorInstrumentation::didCompleteRenderingFrame(Frame& frame)
+inline void InspectorInstrumentation::didCompleteRenderingFrame(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        didCompleteRenderingFrameImpl(*agents);
+    didCompleteRenderingFrameImpl(instrumentingAgents(frame));
 }
 
 inline void InspectorInstrumentation::frameStoppedLoading(LocalFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameStoppedLoadingImpl(*agents, frame);
-}
-
-inline void InspectorInstrumentation::frameScheduledNavigation(Frame& frame, Seconds delay)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameScheduledNavigationImpl(*agents, frame, delay);
-}
-
-inline void InspectorInstrumentation::frameClearedScheduledNavigation(Frame& frame)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        frameClearedScheduledNavigationImpl(*agents, frame);
+    frameStoppedLoadingImpl(instrumentingAgents(frame), frame);
 }
 
 inline void InspectorInstrumentation::accessibilitySettingsDidChange(Page& page)
@@ -1352,7 +1306,7 @@ inline void InspectorInstrumentation::willDestroyCachedResource(CachedResource& 
 inline bool InspectorInstrumentation::willIntercept(const LocalFrame* frame, const ResourceRequest& request)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(frame))
+    if (RefPtr agents = instrumentingAgents(frame))
         return willInterceptImpl(*agents, request);
     return false;
 }
@@ -1360,7 +1314,7 @@ inline bool InspectorInstrumentation::willIntercept(const LocalFrame* frame, con
 inline bool InspectorInstrumentation::shouldInterceptRequest(const ResourceLoader& loader)
 {
     ASSERT(InspectorInstrumentationPublic::hasFrontends());
-    if (auto* agents = instrumentingAgents(loader.frame()))
+    if (RefPtr agents = instrumentingAgents(loader.frame()))
         return shouldInterceptRequestImpl(*agents, loader);
     return false;
 }
@@ -1368,23 +1322,20 @@ inline bool InspectorInstrumentation::shouldInterceptRequest(const ResourceLoade
 inline bool InspectorInstrumentation::shouldInterceptResponse(const LocalFrame& frame, const ResourceResponse& response)
 {
     ASSERT(InspectorInstrumentationPublic::hasFrontends());
-    if (auto* agents = instrumentingAgents(frame))
-        return shouldInterceptResponseImpl(*agents, response);
-    return false;
+    return shouldInterceptResponseImpl(instrumentingAgents(frame), response);
 }
 
 inline void InspectorInstrumentation::interceptRequest(ResourceLoader& loader, Function<void(const ResourceRequest&)>&& handler)
 {
     ASSERT(InspectorInstrumentation::shouldInterceptRequest(loader));
-    if (auto* agents = instrumentingAgents(loader.frame()))
-        interceptRequestImpl(*agents, loader, WTFMove(handler));
+    if (RefPtr agents = instrumentingAgents(loader.frame()))
+        interceptRequestImpl(*agents, loader, WTF::move(handler));
 }
 
 inline void InspectorInstrumentation::interceptResponse(const LocalFrame& frame, const ResourceResponse& response, ResourceLoaderIdentifier identifier, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&& handler)
 {
     ASSERT(InspectorInstrumentation::shouldInterceptResponse(frame, response));
-    if (auto* agents = instrumentingAgents(frame))
-        interceptResponseImpl(*agents, response, identifier, WTFMove(handler));
+    interceptResponseImpl(instrumentingAgents(frame), response, identifier, WTF::move(handler));
 }
 
 inline void InspectorInstrumentation::didDispatchDOMStorageEvent(Page& page, const String& key, const String& oldValue, const String& newValue, StorageType storageType, const SecurityOrigin& securityOrigin)
@@ -1396,7 +1347,7 @@ inline void InspectorInstrumentation::didDispatchDOMStorageEvent(Page& page, con
 inline bool InspectorInstrumentation::shouldWaitForDebuggerOnStart(ScriptExecutionContext& context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         return shouldWaitForDebuggerOnStartImpl(*agents);
     return false;
 }
@@ -1404,63 +1355,63 @@ inline bool InspectorInstrumentation::shouldWaitForDebuggerOnStart(ScriptExecuti
 inline void InspectorInstrumentation::workerStarted(WorkerInspectorProxy& proxy)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(proxy.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(proxy.scriptExecutionContext()))
         workerStartedImpl(*agents, proxy);
 }
 
 inline void InspectorInstrumentation::workerTerminated(WorkerInspectorProxy& proxy)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(proxy.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(proxy.scriptExecutionContext()))
         workerTerminatedImpl(*agents, proxy);
 }
 
 inline void InspectorInstrumentation::didCreateWebSocket(Document* document, WebSocketChannelIdentifier identifier, const URL& requestURL)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didCreateWebSocketImpl(*agents, identifier, requestURL);
 }
 
 inline void InspectorInstrumentation::willSendWebSocketHandshakeRequest(Document* document, WebSocketChannelIdentifier identifier, const ResourceRequest& request)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         willSendWebSocketHandshakeRequestImpl(*agents, identifier, request);
 }
 
 inline void InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(Document* document, WebSocketChannelIdentifier identifier, const ResourceResponse& response)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didReceiveWebSocketHandshakeResponseImpl(*agents, identifier, response);
 }
 
 inline void InspectorInstrumentation::didCloseWebSocket(Document* document, WebSocketChannelIdentifier identifier)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didCloseWebSocketImpl(*agents, identifier);
 }
 
 inline void InspectorInstrumentation::didReceiveWebSocketFrame(Document* document, WebSocketChannelIdentifier identifier, const WebSocketFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didReceiveWebSocketFrameImpl(*agents, identifier, frame);
 }
 
 inline void InspectorInstrumentation::didReceiveWebSocketFrameError(Document* document, WebSocketChannelIdentifier identifier, const String& errorMessage)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didReceiveWebSocketFrameErrorImpl(*agents, identifier, errorMessage);
 }
 
 inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, WebSocketChannelIdentifier identifier, const WebSocketFrame& frame)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(document))
+    if (RefPtr agents = instrumentingAgents(document))
         didSendWebSocketFrameImpl(*agents, identifier, frame);
 }
 
@@ -1475,35 +1426,35 @@ inline void InspectorInstrumentation::didHandleMemoryPressure(Page& page, Critic
 inline void InspectorInstrumentation::didChangeCSSCanvasClientNodes(CanvasBase& canvasBase)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(canvasBase.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(canvasBase.scriptExecutionContext()))
         didChangeCSSCanvasClientNodesImpl(*agents, canvasBase);
 }
 
 inline void InspectorInstrumentation::didCreateCanvasRenderingContext(CanvasRenderingContext& context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         didCreateCanvasRenderingContextImpl(*agents, context);
 }
 
 inline void InspectorInstrumentation::didChangeCanvasSize(CanvasRenderingContext& context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         didChangeCanvasSizeImpl(*agents, context);
 }
 
 inline void InspectorInstrumentation::didChangeCanvasMemory(CanvasRenderingContext& context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         didChangeCanvasMemoryImpl(*agents, context);
 }
 
 inline void InspectorInstrumentation::didFinishRecordingCanvasFrame(CanvasRenderingContext& context, bool forceDispatch)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         didFinishRecordingCanvasFrameImpl(*agents, context, forceDispatch);
 }
 
@@ -1511,28 +1462,21 @@ inline void InspectorInstrumentation::didFinishRecordingCanvasFrame(CanvasRender
 inline void InspectorInstrumentation::didEnableExtension(WebGLRenderingContextBase& contextWebGLBase, const String& extension)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
         didEnableExtensionImpl(*agents, contextWebGLBase, extension);
 }
 
 inline void InspectorInstrumentation::didCreateWebGLProgram(WebGLRenderingContextBase& contextWebGLBase, WebGLProgram& program)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
         didCreateWebGLProgramImpl(*agents, contextWebGLBase, program);
-}
-
-inline void InspectorInstrumentation::willDestroyWebGLProgram(WebGLProgram& program)
-{
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(program.scriptExecutionContext()))
-        willDestroyWebGLProgramImpl(*agents, program);
 }
 
 inline bool InspectorInstrumentation::isWebGLProgramDisabled(WebGLRenderingContextBase& contextWebGLBase, WebGLProgram& program)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
         return isWebGLProgramDisabledImpl(*agents, program);
     return false;
 }
@@ -1540,7 +1484,7 @@ inline bool InspectorInstrumentation::isWebGLProgramDisabled(WebGLRenderingConte
 inline bool InspectorInstrumentation::isWebGLProgramHighlighted(WebGLRenderingContextBase& contextWebGLBase, WebGLProgram& program)
 {
     FAST_RETURN_IF_NO_FRONTENDS(false);
-    if (auto* agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(contextWebGLBase.canvasBase().scriptExecutionContext()))
         return isWebGLProgramHighlightedImpl(*agents, program);
     return false;
 }
@@ -1549,65 +1493,65 @@ inline bool InspectorInstrumentation::isWebGLProgramHighlighted(WebGLRenderingCo
 inline void InspectorInstrumentation::willApplyKeyframeEffect(const Styleable& target, KeyframeEffect& effect, const ComputedEffectTiming& computedTiming)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(target.element.document()))
+    if (RefPtr agents = instrumentingAgents(target.element.document()))
         willApplyKeyframeEffectImpl(*agents, target, effect, computedTiming);
 }
 
 inline void InspectorInstrumentation::didChangeWebAnimationName(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         didChangeWebAnimationNameImpl(*agents, animation);
 }
 
 inline void InspectorInstrumentation::didSetWebAnimationEffect(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         didSetWebAnimationEffectImpl(*agents, animation);
 }
 
 inline void InspectorInstrumentation::didChangeWebAnimationEffectTiming(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         didChangeWebAnimationEffectTimingImpl(*agents, animation);
 }
 
 inline void InspectorInstrumentation::didChangeWebAnimationEffectTarget(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         didChangeWebAnimationEffectTargetImpl(*agents, animation);
 }
 
 inline void InspectorInstrumentation::didCreateWebAnimation(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         didCreateWebAnimationImpl(*agents, animation);
 }
 
 inline void InspectorInstrumentation::willDestroyWebAnimation(WebAnimation& animation)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(animation.scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(animation.scriptExecutionContext()))
         willDestroyWebAnimationImpl(*agents, animation);
 }
 
-inline void InspectorInstrumentation::addMessageToConsole(Page& page, std::unique_ptr<Inspector::ConsoleMessage> message)
+inline void InspectorInstrumentation::addMessageToConsole(LocalFrame& frame, std::unique_ptr<Inspector::ConsoleMessage> message)
 {
-    addMessageToConsoleImpl(instrumentingAgents(page), WTFMove(message));
+    addMessageToConsoleImpl(instrumentingAgents(frame), WTF::move(message));
 }
 
 inline void InspectorInstrumentation::addMessageToConsole(WorkerOrWorkletGlobalScope& globalScope, std::unique_ptr<Inspector::ConsoleMessage> message)
 {
-    addMessageToConsoleImpl(instrumentingAgents(globalScope), WTFMove(message));
+    addMessageToConsoleImpl(instrumentingAgents(globalScope), WTF::move(message));
 }
 
-inline void InspectorInstrumentation::consoleCount(Page& page, JSC::JSGlobalObject* state, const String& label)
+inline void InspectorInstrumentation::consoleCount(LocalFrame& frame, JSC::JSGlobalObject* state, const String& label)
 {
-    consoleCountImpl(instrumentingAgents(page), state, label);
+    consoleCountImpl(instrumentingAgents(frame), state, label);
 }
 
 inline void InspectorInstrumentation::consoleCount(WorkerOrWorkletGlobalScope& globalScope, JSC::JSGlobalObject* state, const String& label)
@@ -1615,9 +1559,9 @@ inline void InspectorInstrumentation::consoleCount(WorkerOrWorkletGlobalScope& g
     consoleCountImpl(instrumentingAgents(globalScope), state, label);
 }
 
-inline void InspectorInstrumentation::consoleCountReset(Page& page, JSC::JSGlobalObject* state, const String& label)
+inline void InspectorInstrumentation::consoleCountReset(LocalFrame& frame, JSC::JSGlobalObject* state, const String& label)
 {
-    consoleCountResetImpl(instrumentingAgents(page), state, label);
+    consoleCountResetImpl(instrumentingAgents(frame), state, label);
 }
 
 inline void InspectorInstrumentation::consoleCountReset(WorkerOrWorkletGlobalScope& globalScope, JSC::JSGlobalObject* state, const String& label)
@@ -1625,11 +1569,10 @@ inline void InspectorInstrumentation::consoleCountReset(WorkerOrWorkletGlobalSco
     consoleCountResetImpl(instrumentingAgents(globalScope), state, label);
 }
 
-inline void InspectorInstrumentation::takeHeapSnapshot(Frame& frame, const String& title)
+inline void InspectorInstrumentation::takeHeapSnapshot(LocalFrame& frame, const String& title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        takeHeapSnapshotImpl(*agents, title);
+    takeHeapSnapshotImpl(instrumentingAgents(frame), title);
 }
 
 inline void InspectorInstrumentation::takeHeapSnapshot(WorkerOrWorkletGlobalScope& globalScope, const String& title)
@@ -1638,10 +1581,9 @@ inline void InspectorInstrumentation::takeHeapSnapshot(WorkerOrWorkletGlobalScop
     takeHeapSnapshotImpl(instrumentingAgents(globalScope), title);
 }
 
-inline void InspectorInstrumentation::startConsoleTiming(Frame& frame, JSC::JSGlobalObject* exec, const String& label)
+inline void InspectorInstrumentation::startConsoleTiming(LocalFrame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        startConsoleTimingImpl(*agents, exec, label);
+    startConsoleTimingImpl(instrumentingAgents(frame), exec, label);
 }
 
 inline void InspectorInstrumentation::startConsoleTiming(WorkerOrWorkletGlobalScope& globalScope, JSC::JSGlobalObject* exec, const String& label)
@@ -1649,21 +1591,19 @@ inline void InspectorInstrumentation::startConsoleTiming(WorkerOrWorkletGlobalSc
     startConsoleTimingImpl(instrumentingAgents(globalScope), exec, label);
 }
 
-inline void InspectorInstrumentation::logConsoleTiming(Frame& frame, JSC::JSGlobalObject* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
+inline void InspectorInstrumentation::logConsoleTiming(LocalFrame& frame, JSC::JSGlobalObject* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        logConsoleTimingImpl(*agents, exec, label, WTFMove(arguments));
+    logConsoleTimingImpl(instrumentingAgents(frame), exec, label, WTF::move(arguments));
 }
 
 inline void InspectorInstrumentation::logConsoleTiming(WorkerOrWorkletGlobalScope& globalScope, JSC::JSGlobalObject* exec, const String& label, Ref<Inspector::ScriptArguments>&& arguments)
 {
-    logConsoleTimingImpl(instrumentingAgents(globalScope), exec, label, WTFMove(arguments));
+    logConsoleTimingImpl(instrumentingAgents(globalScope), exec, label, WTF::move(arguments));
 }
 
-inline void InspectorInstrumentation::stopConsoleTiming(Frame& frame, JSC::JSGlobalObject* exec, const String& label)
+inline void InspectorInstrumentation::stopConsoleTiming(LocalFrame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
-    if (auto* agents = instrumentingAgents(frame))
-        stopConsoleTimingImpl(*agents, exec, label);
+    stopConsoleTimingImpl(instrumentingAgents(frame), exec, label);
 }
 
 inline void InspectorInstrumentation::stopConsoleTiming(WorkerOrWorkletGlobalScope& globalScope, JSC::JSGlobalObject* exec, const String& label)
@@ -1671,23 +1611,22 @@ inline void InspectorInstrumentation::stopConsoleTiming(WorkerOrWorkletGlobalSco
     stopConsoleTimingImpl(instrumentingAgents(globalScope), exec, label);
 }
 
-inline void InspectorInstrumentation::consoleTimeStamp(Frame& frame, Ref<Inspector::ScriptArguments>&& arguments)
+inline void InspectorInstrumentation::consoleTimeStamp(LocalFrame& frame, Ref<Inspector::ScriptArguments>&& arguments)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(frame))
-        consoleTimeStampImpl(*agents, WTFMove(arguments));
+    consoleTimeStampImpl(instrumentingAgents(frame), WTF::move(arguments));
 }
 
 inline void InspectorInstrumentation::consoleTimeStamp(WorkerOrWorkletGlobalScope& globalScope, Ref<Inspector::ScriptArguments>&& arguments)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    consoleTimeStampImpl(instrumentingAgents(globalScope), WTFMove(arguments));
+    consoleTimeStampImpl(instrumentingAgents(globalScope), WTF::move(arguments));
 }
 
-inline void InspectorInstrumentation::startProfiling(Page& page, const String &title)
+inline void InspectorInstrumentation::startProfiling(LocalFrame& frame, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    startProfilingImpl(instrumentingAgents(page), title);
+    startProfilingImpl(instrumentingAgents(frame), title);
 }
 
 inline void InspectorInstrumentation::startProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
@@ -1696,10 +1635,11 @@ inline void InspectorInstrumentation::startProfiling(WorkerOrWorkletGlobalScope&
     startProfilingImpl(instrumentingAgents(globalScope), title);
 }
 
-inline void InspectorInstrumentation::stopProfiling(Page& page, const String &title)
+inline void InspectorInstrumentation::stopProfiling(LocalFrame& frame, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    stopProfilingImpl(instrumentingAgents(page), title);
+
+    stopProfilingImpl(instrumentingAgents(frame), title);
 }
 
 inline void InspectorInstrumentation::stopProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
@@ -1710,76 +1650,90 @@ inline void InspectorInstrumentation::stopProfiling(WorkerOrWorkletGlobalScope& 
 
 inline void InspectorInstrumentation::consoleStartRecordingCanvas(CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)
 {
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         consoleStartRecordingCanvasImpl(*agents, context, exec, options);
 }
 
 inline void InspectorInstrumentation::consoleStopRecordingCanvas(CanvasRenderingContext& context)
 {
-    if (auto* agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
+    if (RefPtr agents = instrumentingAgents(context.canvasBase().scriptExecutionContext()))
         consoleStopRecordingCanvasImpl(*agents, context);
 }
 
 inline void InspectorInstrumentation::performanceMark(ScriptExecutionContext& context, const String& label, std::optional<MonotonicTime> startTime)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
-        performanceMarkImpl(*agents, label, WTFMove(startTime));
+    if (RefPtr agents = instrumentingAgents(context))
+        performanceMarkImpl(*agents, label, WTF::move(startTime));
+}
+
+inline void InspectorInstrumentation::didEnqueueFirstContentfulPaint(ScriptExecutionContext& context)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (RefPtr agents = instrumentingAgents(context))
+        didEnqueueFirstContentfulPaintImpl(*agents);
+}
+
+inline void InspectorInstrumentation::didEnqueueLargestContentfulPaint(ScriptExecutionContext& context, const LargestContentfulPaint& entry)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (RefPtr agents = instrumentingAgents(context))
+        didEnqueueLargestContentfulPaintImpl(*agents, entry);
 }
 
 inline void InspectorInstrumentation::didRequestAnimationFrame(ScriptExecutionContext& scriptExecutionContext, int callbackId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(scriptExecutionContext))
+    if (RefPtr agents = instrumentingAgents(scriptExecutionContext))
         didRequestAnimationFrameImpl(*agents, callbackId, scriptExecutionContext);
 }
 
 inline void InspectorInstrumentation::didCancelAnimationFrame(ScriptExecutionContext& scriptExecutionContext, int callbackId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(scriptExecutionContext))
+    if (RefPtr agents = instrumentingAgents(scriptExecutionContext))
         didCancelAnimationFrameImpl(*agents, callbackId);
 }
 
 inline void InspectorInstrumentation::willFireAnimationFrame(ScriptExecutionContext& scriptExecutionContext, int callbackId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(scriptExecutionContext))
+    if (RefPtr agents = instrumentingAgents(scriptExecutionContext))
         willFireAnimationFrameImpl(*agents, callbackId);
 }
 
 inline void InspectorInstrumentation::didFireAnimationFrame(ScriptExecutionContext& scriptExecutionContext, int callbackId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(scriptExecutionContext))
+    if (RefPtr agents = instrumentingAgents(scriptExecutionContext))
         didFireAnimationFrameImpl(*agents, callbackId);
 }
 
 inline void InspectorInstrumentation::willFireObserverCallback(ScriptExecutionContext& context, const String& callbackType)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         willFireObserverCallbackImpl(*agents, callbackType);
 }
 
 inline void InspectorInstrumentation::didFireObserverCallback(ScriptExecutionContext& context)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(context))
+    if (RefPtr agents = instrumentingAgents(context))
         didFireObserverCallbackImpl(*agents);
 }
 
 inline void InspectorInstrumentation::layerTreeDidChange(Page* page)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(page))
+    if (RefPtr agents = instrumentingAgents(page))
         layerTreeDidChangeImpl(*agents);
 }
 
 inline void InspectorInstrumentation::renderLayerDestroyed(Page* page, const RenderLayer& renderLayer)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (auto* agents = instrumentingAgents(page))
+    if (RefPtr agents = instrumentingAgents(page))
         renderLayerDestroyedImpl(*agents, renderLayer);
 }
 
@@ -1788,27 +1742,14 @@ inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(Script
     return context ? instrumentingAgents(*context) : nullptr;
 }
 
-inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(const Frame* frame)
+inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(const LocalFrame* frame)
 {
-    return frame ? instrumentingAgents(*frame) : nullptr;
-}
-
-inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(const Frame& frame)
-{
-    return instrumentingAgents(frame.page());
+    return frame ? &instrumentingAgents(*frame) : nullptr;
 }
 
 inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(Document* document)
 {
     return document ? instrumentingAgents(*document) : nullptr;
-}
-
-inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(Document& document)
-{
-    Page* page = document.page();
-    if (!page && document.templateDocumentHost())
-        page = document.templateDocumentHost()->page();
-    return instrumentingAgents(page);
 }
 
 inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(Page* page)

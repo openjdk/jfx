@@ -26,7 +26,7 @@
 #pragma once
 
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,7 +39,7 @@ enum class StorageType : uint8_t;
 
 class SecurityOriginData;
 
-class StorageArea : public RefCounted<StorageArea> {
+class StorageArea : public RefCountedAndCanMakeWeakPtr<StorageArea> {
 public:
     virtual ~StorageArea() = default;
 

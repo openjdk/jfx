@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpuimagecopybuffer
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUImageCopyBuffer : GPUImageDataLayout {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUImageCopyBuffer : GPUImageDataLayout {
     required GPUBuffer buffer;
 };

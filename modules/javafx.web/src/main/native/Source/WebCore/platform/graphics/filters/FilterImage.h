@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "ImageBuffer.h"
-#include "IntRect.h"
-#include "PixelBuffer.h"
-#include "RenderingMode.h"
 #include <JavaScriptCore/Forward.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PixelBuffer.h>
+#include <WebCore/RenderingMode.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -81,6 +81,8 @@ public:
     void transformToColorSpace(const DestinationColorSpace&);
 
 #if USE(CORE_IMAGE)
+    ImageBuffer* filterResultImageBuffer(const Filter&);
+
     RetainPtr<CIImage> ciImage() const { return m_ciImage; }
     void setCIImage(RetainPtr<CIImage>&&);
     size_t memoryCostOfCIImage() const;
@@ -93,10 +95,6 @@ private:
     RefPtr<PixelBuffer>& pixelBufferSlot(AlphaPremultiplication);
 
     ImageBuffer* imageBufferFromPixelBuffer();
-
-#if USE(CORE_IMAGE)
-    ImageBuffer* imageBufferFromCIImage();
-#endif
 
     bool requiresPixelBufferColorSpaceConversion(std::optional<DestinationColorSpace>) const;
 

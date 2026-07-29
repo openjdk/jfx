@@ -27,8 +27,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "DocumentInlines.h"
-#include "FrameInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "LocalFrame.h"
@@ -43,7 +43,7 @@ namespace WebCore {
 
 Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
 {
-    auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTFMove(promise)));
+    auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTF::move(promise)));
     result->suspendIfNeeded();
     return result;
 }
@@ -51,14 +51,14 @@ Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, con
 MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
     , m_keySystem(keySystem)
-    , m_promise(WTFMove(promise))
+    , m_promise(WTF::move(promise))
 {
 }
 
 MediaKeySystemRequest::~MediaKeySystemRequest()
 {
     if (m_allowCompletionHandler)
-        m_allowCompletionHandler({ }, WTFMove(m_promise));
+        m_allowCompletionHandler({ }, WTF::move(m_promise));
 }
 
 SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
@@ -90,9 +90,9 @@ void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
     if (!scriptExecutionContext())
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)](auto& request) mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [mediaKeysHashSalt = WTF::move(mediaKeysHashSalt)](auto& request) mutable {
         if (auto allowCompletionHandler = std::exchange(request.m_allowCompletionHandler, { }))
-            allowCompletionHandler(WTFMove(mediaKeysHashSalt), WTFMove(request.m_promise));
+            allowCompletionHandler(WTF::move(mediaKeysHashSalt), WTF::move(request.m_promise));
     });
 }
 

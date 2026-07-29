@@ -26,11 +26,12 @@
 #pragma once
 
 #include "RTCDtlsTransportState.h"
-#include "RTCIceCandidateType.h"
-#include "RTCIceRole.h"
-#include "RTCIceServerTransportProtocol.h"
-#include "RTCIceTcpCandidateType.h"
+#include <WebCore/RTCIceCandidateType.h>
+#include <WebCore/RTCIceRole.h>
+#include <WebCore/RTCIceServerTransportProtocol.h>
+#include <WebCore/RTCIceTcpCandidateType.h>
 #include "RTCIceTransportState.h"
+#include <wtf/Function.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -74,7 +75,7 @@ class DOMMapAdapter;
 class RTCStatsReport : public RefCounted<RTCStatsReport> {
 public:
     using MapInitializer = Function<void(DOMMapAdapter&)>;
-    static Ref<RTCStatsReport> create(MapInitializer&& mapInitializer) { return adoptRef(*new RTCStatsReport(WTFMove(mapInitializer))); }
+    static Ref<RTCStatsReport> create(MapInitializer&& mapInitializer) { return adoptRef(*new RTCStatsReport(WTF::move(mapInitializer))); }
 
     void initializeMapLike(DOMMapAdapter& adapter) { m_mapInitializer(adapter); }
 
@@ -407,7 +408,7 @@ public:
     };
     static_assert(!std::is_default_constructible_v<CodecStats>);
 
-    enum DtlsRole {
+    enum class DtlsRole : uint8_t {
         Client,
         Server,
         Unknown
@@ -516,7 +517,7 @@ private:
 };
 
 inline RTCStatsReport::RTCStatsReport(MapInitializer&& mapInitializer)
-    : m_mapInitializer(WTFMove(mapInitializer))
+    : m_mapInitializer(WTF::move(mapInitializer))
 {
 }
 

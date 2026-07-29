@@ -25,7 +25,13 @@
 
 #pragma once
 
-#include "BoundaryPoint.h"
+#include <WebCore/BoundaryPoint.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <wtf/Ref.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtrImpl.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -68,9 +74,9 @@ std::optional<SimpleRange> makeSimpleRangeHelper(const WeakBoundaryPoint&, const
 std::optional<SimpleRange> makeSimpleRange(const WeakSimpleRange&);
 
 inline BoundaryPoint makeBoundaryPointHelper(const BoundaryPoint& point) { return point; }
-inline BoundaryPoint makeBoundaryPointHelper(BoundaryPoint&& point) { return WTFMove(point); }
+inline BoundaryPoint makeBoundaryPointHelper(BoundaryPoint&& point) { return WTF::move(point); }
 inline std::optional<BoundaryPoint> makeBoundaryPointHelper(const std::optional<BoundaryPoint>& point) { return point; }
-inline std::optional<BoundaryPoint> makeBoundaryPointHelper(std::optional<BoundaryPoint>&& point) { return WTFMove(point); }
+inline std::optional<BoundaryPoint> makeBoundaryPointHelper(std::optional<BoundaryPoint>&& point) { return WTF::move(point); }
 std::optional<BoundaryPoint> makeBoundaryPointHelper(const WeakBoundaryPoint&);
 template<typename T> auto makeBoundaryPointHelper(T&& argument) -> decltype(makeBoundaryPoint(std::forward<T>(argument))) { return makeBoundaryPoint(std::forward<T>(argument)); }
 
@@ -201,27 +207,27 @@ inline IntersectingNodeRangeWithQuirk intersectingNodesWithDeprecatedZeroOffsetS
 
 inline SimpleRange makeSimpleRangeHelper(BoundaryPoint&& start, BoundaryPoint&& end)
 {
-    return { WTFMove(start), WTFMove(end) };
+    return { WTF::move(start), WTF::move(end) };
 }
 
 inline std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&& start, std::optional<BoundaryPoint>&& end)
 {
     if (!start || !end)
         return std::nullopt;
-    return makeSimpleRangeHelper(WTFMove(*start), WTFMove(*end));
+    return makeSimpleRangeHelper(WTF::move(*start), WTF::move(*end));
 }
 
 inline SimpleRange makeSimpleRangeHelper(BoundaryPoint&& point)
 {
     auto end = point;
-    return makeSimpleRangeHelper(WTFMove(point), WTFMove(end));
+    return makeSimpleRangeHelper(WTF::move(point), WTF::move(end));
 }
 
 inline std::optional<SimpleRange> makeSimpleRangeHelper(std::optional<BoundaryPoint>&& point)
 {
     if (!point)
         return std::nullopt;
-    return makeSimpleRangeHelper(WTFMove(*point));
+    return makeSimpleRangeHelper(WTF::move(*point));
 }
 
 inline std::optional<BoundaryPoint> makeBoundaryPointHelper(const WeakBoundaryPoint& point)

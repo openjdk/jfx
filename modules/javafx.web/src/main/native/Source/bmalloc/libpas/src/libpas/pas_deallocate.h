@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,8 @@
 #include "pas_system_heap.h"
 #include "pas_thread_local_cache.h"
 #include "pas_utils.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -103,7 +105,7 @@ static PAS_ALWAYS_INLINE bool pas_try_deallocate_not_small_exclusive_segregated(
         }
     }
 
-    if (pas_system_heap_is_enabled(config.kind)) {
+    if (pas_system_heap_should_supplant_bmalloc(config.kind)) {
         pas_system_heap_free((void*)begin);
         return true;
     }
@@ -223,5 +225,5 @@ static PAS_ALWAYS_INLINE void pas_deallocate(void* ptr,
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_DEALLOCATE_H */
-

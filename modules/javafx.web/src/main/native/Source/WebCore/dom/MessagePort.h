@@ -26,13 +26,12 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "ContextDestructionObserverInlines.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "MessagePortChannel.h"
-#include "MessagePortIdentifier.h"
-#include "MessageWithMessagePorts.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MessagePortChannel.h>
+#include <WebCore/MessagePortIdentifier.h>
+#include <WebCore/MessageWithMessagePorts.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -52,7 +51,7 @@ template<typename> class ExceptionOr;
 
 class MessagePort final : public ActiveDOMObject, public EventTarget, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MessagePort> {
     WTF_MAKE_NONCOPYABLE(MessagePort);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(MessagePort, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MessagePort, WEBCORE_EXPORT);
 public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
     WEBCORE_EXPORT virtual ~MessagePort();
@@ -60,6 +59,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
@@ -90,7 +90,8 @@ public:
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MessagePort; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -100,7 +101,7 @@ public:
     static Ref<MessagePort> entangle(ScriptExecutionContext&, TransferredMessagePort&&);
 
 private:
-    explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
+    MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
@@ -125,3 +126,5 @@ private:
 WebCoreOpaqueRoot root(MessagePort*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MessagePort)

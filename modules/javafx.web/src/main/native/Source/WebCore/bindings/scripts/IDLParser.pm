@@ -1359,7 +1359,7 @@ sub parseDictionary
         my $nameToken = $self->getToken();
         $self->assertTokenType($nameToken, IdentifierToken);
 
-        my $name = $nameToken->value();
+        my $name = identifierRemoveNullablePrefix($nameToken->value());
         $dictionary->type(makeSimpleType($name));
 
         $next = $self->nextToken();
@@ -1425,7 +1425,7 @@ sub parseDictionaryMember
 
         my $nameToken = $self->getToken();
         $self->assertTokenType($nameToken, IdentifierToken);
-        $member->name($nameToken->value);
+        $member->name(identifierRemoveNullablePrefix($nameToken->value));
         $member->default($self->parseDefault());
         $self->assertTokenValue($self->getToken(), ";", __LINE__);
         return $member;

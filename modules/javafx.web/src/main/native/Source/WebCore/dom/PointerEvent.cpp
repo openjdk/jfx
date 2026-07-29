@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PointerEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PointerEvent);
 
 AtomString PointerEvent::typeFromMouseEventType(const AtomString& mouseEventType)
 {
@@ -148,6 +148,7 @@ PointerEvent::PointerEvent(const AtomString& type, Init&& initializer, IsTrusted
     , m_azimuthAngle(initializer.azimuthAngle)
     , m_pointerType(initializer.pointerType)
     , m_isPrimary(initializer.isPrimary)
+    , m_fractionalCoordinatesAllowed(fractionalCoordinatesAllowedForType(type))
     , m_coalescedEvents(initializer.coalescedEvents)
     , m_predictedEvents(initializer.predictedEvents)
 {
@@ -174,7 +175,7 @@ static Vector<Ref<PointerEvent>> createCoalescedPointerEvents(const AtomString& 
     Vector<Ref<PointerEvent>> result;
     for (Ref coalescedMouseEvent : mouseEvent.coalescedEvents()) {
         Ref pointerEvent = PointerEvent::create(type, button, coalescedMouseEvent.get(), pointerId, pointerType, Event::CanBubble::No, Event::IsCancelable::No);
-        result.append(WTFMove(pointerEvent));
+        result.append(WTF::move(pointerEvent));
     }
 
     return result;
@@ -190,7 +191,7 @@ static Vector<Ref<PointerEvent>> createPredictedPointerEvents(const AtomString& 
     Vector<Ref<PointerEvent>> result;
     for (Ref predictedMouseEvent : mouseEvent.predictedEvents()) {
         Ref pointerEvent = PointerEvent::create(type, button, predictedMouseEvent.get(), pointerId, pointerType, Event::CanBubble::No, Event::IsCancelable::No);
-        result.append(WTFMove(pointerEvent));
+        result.append(WTF::move(pointerEvent));
     }
 
     return result;
@@ -206,6 +207,7 @@ PointerEvent::PointerEvent(const AtomString& type, MouseButton button, const Mou
     , m_pressure(pointerType != mousePointerEventType() ? std::clamp(mouseEvent.force(), 0., 1.) : pressureForPressureInsensitiveInputDevices(buttons()))
     , m_pointerType(pointerType)
     , m_isPrimary(true)
+    , m_fractionalCoordinatesAllowed(fractionalCoordinatesAllowedForType(type))
     , m_coalescedEvents(createCoalescedPointerEvents(type, button, mouseEvent, pointerId, pointerType))
     , m_predictedEvents(createPredictedPointerEvents(type, button, mouseEvent, pointerId, pointerType))
 {
@@ -219,6 +221,7 @@ PointerEvent::PointerEvent(const AtomString& type, PointerID pointerId, const St
     , m_pressure(pressureForPressureInsensitiveInputDevices(buttons()))
     , m_pointerType(pointerType)
     , m_isPrimary(isPrimary == IsPrimary::Yes)
+    , m_fractionalCoordinatesAllowed(fractionalCoordinatesAllowedForType(type))
 {
 }
 
@@ -291,6 +294,41 @@ void PointerEvent::receivedTarget()
 
     for (Ref predictedEvent : m_predictedEvents)
         predictedEvent->setTarget(this->target());
+}
+
+bool PointerEvent::fractionalCoordinatesAllowedForType(const AtomString& type)
+{
+    return !(type == eventNames().auxclickEvent
+        || type == eventNames().clickEvent
+        || type == eventNames().contextmenuEvent);
+}
+
+double PointerEvent::adjustedCoordinateForType(double coordinate) const
+{
+    if (fractionalCoordinatesAllowed())
+        return coordinate;
+
+    return std::floor(coordinate);
+}
+
+double PointerEvent::offsetX()
+{
+    if (isSimulated())
+        return 0;
+    if (!hasCachedRelativePosition())
+        computeRelativePosition();
+
+    return adjustedCoordinateForType(offsetLocation().x());
+}
+
+double PointerEvent::offsetY()
+{
+    if (isSimulated())
+        return 0;
+    if (!hasCachedRelativePosition())
+        computeRelativePosition();
+
+    return adjustedCoordinateForType(offsetLocation().y());
 }
 
 } // namespace WebCore

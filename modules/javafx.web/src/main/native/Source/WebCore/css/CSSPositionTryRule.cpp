@@ -33,13 +33,20 @@ namespace WebCore {
 
 Ref<StyleRulePositionTry> StyleRulePositionTry::create(AtomString&& name, Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRulePositionTry(WTFMove(name), WTFMove(properties)));
+    return adoptRef(*new StyleRulePositionTry(WTF::move(name), WTF::move(properties)));
 }
 
 StyleRulePositionTry::StyleRulePositionTry(AtomString&& name, Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::PositionTry)
     , m_name(name)
     , m_properties(properties)
+{
+}
+
+StyleRulePositionTry::StyleRulePositionTry(const StyleRulePositionTry& o)
+    : StyleRuleBase(o)
+    , m_name(o.m_name)
+    , m_properties(o.protectedProperties()->mutableCopy())
 {
 }
 
@@ -87,6 +94,8 @@ String CSSPositionTryRule::cssText() const
 void CSSPositionTryRule::reattach(StyleRuleBase& rule)
 {
     m_positionTryRule = downcast<StyleRulePositionTry>(rule);
+    if (RefPtr propertiesCSSOMWrapper = m_propertiesCSSOMWrapper)
+        propertiesCSSOMWrapper->reattach(protectedPositionTryRule()->protectedMutableProperties());
 }
 
 AtomString CSSPositionTryRule::name() const
