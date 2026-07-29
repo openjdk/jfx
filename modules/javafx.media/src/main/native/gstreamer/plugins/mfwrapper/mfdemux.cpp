@@ -1413,17 +1413,37 @@ static GstFlowReturn mfdemux_deliver_sample(GstMFDemux *demux, GstPad* pad,
     }
     else if (demux->cached_segment_event != NULL)
     {
-        GstSegment segment;
-        gst_event_copy_segment(demux->cached_segment_event, &segment);
+        GstSegment input_segment;
+        GstSegment output_segment;
 
-        // Adjust segment time to first sample time. For HLS Live time
-        // can start from any PTS. By default segment starts at 0, so pipeline
-        // will start from 0 and wait until PTS is reached. Thus we need to adjust
-        // it to start imidiately.
-        segment.start = GST_BUFFER_TIMESTAMP(pBuffer);
-        segment.position = GST_BUFFER_TIMESTAMP(pBuffer);
+        gst_event_copy_segment(demux->cached_segment_event, &input_segment);
 
-        GstEvent *event = gst_event_new_segment(&segment);
+        if (input_segment.format == GST_FORMAT_BYTES)
+        {
+            // hlsprogressbuffer uses a byte segment for HLS Live. Convert it to
+            // time since we will handle timestamps for HLS Live.
+            gst_segment_init(&output_segment, GST_FORMAT_TIME);
+            output_segment.rate = input_segment.rate;
+            output_segment.applied_rate = input_segment.applied_rate;
+            output_segment.flags = input_segment.flags;
+            output_segment.start = GST_BUFFER_TIMESTAMP(pBuffer);
+            output_segment.stop = GST_CLOCK_TIME_NONE;
+            output_segment.position = GST_BUFFER_TIMESTAMP(pBuffer);
+            output_segment.time = 0;
+        }
+        else
+        {
+            output_segment = input_segment;
+
+            // Adjust segment time to first sample time. For HLS Live time
+            // can start from any PTS. By default segment starts at 0, so pipeline
+            // will start from 0 and wait until PTS is reached. Thus we need to adjust
+            // it to start imidiately.
+            output_segment.start = GST_BUFFER_TIMESTAMP(pBuffer);
+            output_segment.position = GST_BUFFER_TIMESTAMP(pBuffer);
+        }
+
+        GstEvent *event = gst_event_new_segment(&output_segment);
         gst_event_unref(demux->cached_segment_event);
         demux->cached_segment_event = NULL;
 
