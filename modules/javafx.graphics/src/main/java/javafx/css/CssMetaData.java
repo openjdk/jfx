@@ -140,8 +140,8 @@ public abstract class CssMetaData<S extends Styleable, V> {
 
     /**
      * Check to see if the corresponding property on the given Node is
-     * settable. This method is called before any styles are looked up for the
-     * given property. It is abstract so that the code can check if the property
+     * settable. This method is checked before calling {@link StyleableProperty#applyStyle(javafx.css.StyleOrigin, java.lang.Object)}
+     * for the given property. It is abstract so that the code can check if the property
      * is settable without expanding the property. Generally, the property is
      * settable if it is not null or is not bound.
      *
