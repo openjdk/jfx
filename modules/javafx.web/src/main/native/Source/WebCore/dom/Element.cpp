@@ -1397,8 +1397,8 @@ void Element::scrollTo(const ScrollToOptions& options, ScrollClamping clamping, 
         adjustForAbsoluteZoom(renderer->scrollTop(), *renderer)
     );
     IntPoint scrollPosition(
-        clampToInteger(scrollToOptions.left.value() * renderer->style().usedZoom()),
-        clampToInteger(scrollToOptions.top.value() * renderer->style().usedZoom())
+        clampTo<int>(scrollToOptions.left.value() * renderer->style().usedZoom()),
+        clampTo<int>(scrollToOptions.top.value() * renderer->style().usedZoom())
     );
 
     auto animated = useSmoothScrolling(scrollToOptions.behavior.value_or(ScrollBehavior::Auto), this) ? ScrollIsAnimated::Yes : ScrollIsAnimated::No;
@@ -1735,14 +1735,14 @@ void Element::setScrollLeft(int newLeft)
 
     if (document->scrollingElement() == this) {
         if (RefPtr frame = documentFrameWithNonNullView()) {
-            IntPoint position(static_cast<int>(newLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), frame->view()->scrollY());
+            IntPoint position(clampTo<int>(newLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), frame->view()->scrollY());
             frame->protectedView()->setScrollPosition(position, options);
         }
         return;
     }
 
     if (CheckedPtr renderer = renderBox()) {
-        int clampedLeft = clampToInteger(newLeft * renderer->style().usedZoom());
+        int clampedLeft = clampTo<int>(newLeft * renderer->style().usedZoom());
         renderer->setScrollLeft(clampedLeft, options);
         if (CheckedPtr scrollableArea = renderer && renderer->layer() ? renderer->layer()->scrollableArea() : nullptr)
             scrollableArea->setScrollShouldClearLatchedState(true);
@@ -1761,14 +1761,14 @@ void Element::setScrollTop(int newTop)
 
     if (document->scrollingElement() == this) {
         if (RefPtr frame = documentFrameWithNonNullView()) {
-            IntPoint position(frame->view()->scrollX(), static_cast<int>(newTop * frame->pageZoomFactor() * frame->frameScaleFactor()));
+            IntPoint position(frame->view()->scrollX(), clampTo<int>(newTop * frame->pageZoomFactor() * frame->frameScaleFactor()));
             frame->protectedView()->setScrollPosition(position, options);
         }
         return;
     }
 
     if (CheckedPtr renderer = renderBox()) {
-        int clampedTop = clampToInteger(newTop * renderer->style().usedZoom());
+        int clampedTop = clampTo<int>(newTop * renderer->style().usedZoom());
         renderer->setScrollTop(clampedTop, options);
         if (CheckedPtr scrollableArea = renderer && renderer->layer() ? renderer->layer()->scrollableArea() : nullptr)
             scrollableArea->setScrollShouldClearLatchedState(true);
@@ -4421,7 +4421,7 @@ ExceptionOr<void> Element::replaceChildrenWithMarkup(const String& markup, Optio
 
 ExceptionOr<void> Element::setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&& html)
 {
-    auto stringValueHolder = trustedTypeCompliantString(document().contextDocument(), WTF::move(html), "Element setHTMLUnsafe"_s);
+    auto stringValueHolder = trustedTypeCompliantString(protect(document().contextDocument()), WTF::move(html), "Element setHTMLUnsafe"_s);
 
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
@@ -4455,7 +4455,7 @@ String Element::outerHTML() const
 
 ExceptionOr<void> Element::setOuterHTML(Variant<RefPtr<TrustedHTML>, String>&& html)
 {
-    auto stringValueHolder = trustedTypeCompliantString(document().contextDocument(), WTF::move(html), "Element outerHTML"_s);
+    auto stringValueHolder = trustedTypeCompliantString(protect(document().contextDocument()), WTF::move(html), "Element outerHTML"_s);
 
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
@@ -4496,7 +4496,7 @@ ExceptionOr<void> Element::setOuterHTML(Variant<RefPtr<TrustedHTML>, String>&& h
 
 ExceptionOr<void> Element::setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&& html)
 {
-    auto stringValueHolder = trustedTypeCompliantString(document().contextDocument(), WTF::move(html), "Element innerHTML"_s);
+    auto stringValueHolder = trustedTypeCompliantString(protect(document().contextDocument()), WTF::move(html), "Element innerHTML"_s);
 
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
@@ -6110,7 +6110,7 @@ ExceptionOr<void> Element::insertAdjacentHTML(const String& where, const String&
 
 ExceptionOr<void> Element::insertAdjacentHTML(const String& where, Variant<RefPtr<TrustedHTML>, String>&& markup)
 {
-    auto stringValueHolder = trustedTypeCompliantString(document().contextDocument(), WTF::move(markup), "Element insertAdjacentHTML"_s);
+    auto stringValueHolder = trustedTypeCompliantString(protect(document().contextDocument()), WTF::move(markup), "Element insertAdjacentHTML"_s);
 
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();

@@ -64,8 +64,8 @@ inline JSValue jsNumber(const MediaTime& t)
 
 inline JSValue::JSValue(double d)
 {
-    if (canBeStrictInt32(d)) {
-        *this = JSValue(static_cast<int32_t>(d));
+    if (auto int32Value = tryConvertToStrictInt32(d)) {
+        *this = JSValue(int32Value.value());
         return;
     }
     *this = JSValue(EncodeAsDouble, d);
@@ -125,7 +125,7 @@ inline std::optional<uint32_t> JSValue::tryGetAsUint32Index()
     }
     if (isNumber()) {
         double number = asNumber();
-        uint32_t asUint = static_cast<uint32_t>(number);
+        uint32_t asUint = static_cast<uint32_t>(truncateDoubleToUint64(number));
         if (static_cast<double>(asUint) == number && isIndex(asUint))
             return asUint;
     }
@@ -138,7 +138,7 @@ inline std::optional<int32_t> JSValue::tryGetAsInt32()
         return asInt32();
     if (isNumber()) {
         double number = asNumber();
-        int32_t asInt = static_cast<int32_t>(number);
+        int32_t asInt = truncateDoubleToInt32(number);
         if (static_cast<double>(asInt) == number)
             return asInt;
     }
@@ -158,15 +158,6 @@ ALWAYS_INLINE JSBigInt* JSValue::asHeapBigInt() const
     return static_cast<JSBigInt*>(u.ptr);
 }
 #endif // USE(JSVALUE64)
-
-// ECMA 11.9.3
-inline bool JSValue::equal(JSGlobalObject* globalObject, JSValue v1, JSValue v2)
-{
-    if (v1.isInt32() && v2.isInt32())
-        return v1 == v2;
-
-    return equalSlowCase(globalObject, v1, v2);
-}
 
 inline bool JSValue::isZeroBigInt() const
 {
@@ -193,21 +184,6 @@ inline bool JSValue::isNegativeBigInt() const
 template <typename Base> String HandleConverter<Base, Unknown>::getString(JSGlobalObject* globalObject) const
 {
     return jsValue().getString(globalObject);
-}
-
-ALWAYS_INLINE bool JSValue::getUInt32(uint32_t& v) const
-{
-    if (isInt32()) {
-        int32_t i = asInt32();
-        v = static_cast<uint32_t>(i);
-        return i >= 0;
-    }
-    if (isDouble()) {
-        double d = asDouble();
-        v = static_cast<uint32_t>(d);
-        return v == d;
-    }
-    return false;
 }
 
 ALWAYS_INLINE Identifier JSValue::toPropertyKey(JSGlobalObject* globalObject) const
@@ -309,8 +285,11 @@ ALWAYS_INLINE JSValue JSValue::toBigIntOrInt32(JSGlobalObject* globalObject) con
 
     if (isInt32() || isBigInt())
         return *this;
-    if (isDouble() && canBeInt32(asDouble()))
-        return jsNumber(static_cast<int32_t>(asDouble()));
+
+    if (isDouble()) {
+        if (auto int32Value = tryConvertToStrictInt32(asDouble()))
+            return jsNumber(int32Value.value());
+    }
 
     JSValue primValue = this->toPrimitive(globalObject, PreferNumber);
     RETURN_IF_EXCEPTION(scope, { });

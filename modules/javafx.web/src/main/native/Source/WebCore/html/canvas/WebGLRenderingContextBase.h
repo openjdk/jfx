@@ -208,12 +208,12 @@ public:
     void copyTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLint border);
     void copyTexSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height);
 
-    RefPtr<WebGLBuffer> createBuffer();
-    RefPtr<WebGLFramebuffer> createFramebuffer();
-    RefPtr<WebGLProgram> createProgram();
-    RefPtr<WebGLRenderbuffer> createRenderbuffer();
+    Ref<WebGLBuffer> createBuffer();
+    Ref<WebGLFramebuffer> createFramebuffer();
+    Ref<WebGLProgram> createProgram();
+    Ref<WebGLRenderbuffer> createRenderbuffer();
     RefPtr<WebGLShader> createShader(GCGLenum type);
-    RefPtr<WebGLTexture> createTexture();
+    Ref<WebGLTexture> createTexture();
 
     void cullFace(GCGLenum mode);
 
@@ -429,9 +429,10 @@ public:
 
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 
-    void reshape() override;
+    void didUpdateCanvasSizeProperties(bool) override;
 
     RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) final;
+    bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const final { return false; }
 
     RefPtr<ByteArrayPixelBuffer> drawingBufferToPixelBuffer();
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
@@ -528,8 +529,8 @@ protected:
     friend class ScopedWebGLRestoreTexture;
 
     void initializeNewContext(Ref<GraphicsContextGL>);
-    virtual void initializeContextState();
-    virtual void initializeDefaultObjects();
+    virtual void initializeContextState() WTF_REQUIRES_LOCK(objectGraphLock());
+    virtual void initializeDefaultObjects() WTF_REQUIRES_LOCK(objectGraphLock());
 
     // ActiveDOMObject
     void stop() override;
@@ -588,6 +589,7 @@ protected:
     virtual void uncacheDeletedBuffer(const AbstractLocker&, WebGLBuffer*);
     bool needsPreparationForDisplay() const final { return true; }
     void updateActiveOrdinal();
+    void updateMemoryCost() const;
 
     struct ContextLostState {
         ContextLostState(LostContextMode mode)
@@ -707,7 +709,8 @@ protected:
     int m_numGLErrorsToConsoleAllowed;
 
     bool m_compositingResultsNeedUpdating { false };
-    std::optional<SurfaceBuffer> m_canvasBufferContents;
+    RefPtr<ImageBuffer> m_readDrawingBuffer;
+    RefPtr<ImageBuffer> m_readDisplayBuffer;
 
     // Enabled extension objects.
     // FIXME: Move some of these to WebGLRenderingContext, the ones not needed for WebGL2

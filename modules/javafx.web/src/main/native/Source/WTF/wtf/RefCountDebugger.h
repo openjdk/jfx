@@ -44,7 +44,7 @@ public:
     WTF_EXPORT_PRIVATE static void printRefDuringDestructionLogAndCrash (const void*) NO_RETURN_DUE_TO_CRASH;
 
     RefCountDebugger()
-#if ASSERT_ENABLED && !PLATFORM(JAVA)
+#if ASSERT_ENABLED
         : m_isOwnedByMainThread(isMainThread())
 #endif
     {

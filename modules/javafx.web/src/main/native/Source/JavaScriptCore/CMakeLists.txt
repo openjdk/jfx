@@ -438,9 +438,11 @@ set(LLIntSettingsExtractor_DEPENDENCIES
     JavaScriptCore_CopyHeaders
     JavaScriptCore_CopyPrivateHeaders
     WTF_CopyHeaders
+    bmalloc_CopyHeaders
 )
-if (NOT USE_SYSTEM_MALLOC)
-    list(APPEND LLIntSettingsExtractor_DEPENDENCIES  bmalloc_CopyHeaders)
+# bmalloc headers are not available when using the system allocator.
+if (USE_SYSTEM_MALLOC)
+    list(REMOVE_ITEM LLIntSettingsExtractor_DEPENDENCIES  bmalloc_CopyHeaders)
 endif ()
 WEBKIT_EXECUTABLE(LLIntSettingsExtractor)
 
@@ -1095,7 +1097,6 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/DateInstance.h
     runtime/DateInstanceCache.h
     runtime/DeferredWorkTimer.h
-    runtime/DeferredWorkTimerInlines.h
     runtime/DeferTermination.h
     runtime/DefinePropertyAttributes.h
     runtime/DeletePropertySlot.h

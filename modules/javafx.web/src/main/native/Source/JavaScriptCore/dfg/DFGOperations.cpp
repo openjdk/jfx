@@ -172,9 +172,6 @@ static ALWAYS_INLINE void putWithThis(JSGlobalObject* globalObject, EncodedJSVal
 
 static ALWAYS_INLINE EncodedJSValue parseIntResult(double input)
 {
-    int asInt = static_cast<int>(input);
-    if (static_cast<double>(asInt) == input && (asInt || !std::signbit(input))) [[likely]]
-        return JSValue::encode(jsNumber(asInt));
     return JSValue::encode(jsNumber(input));
 }
 
@@ -4691,7 +4688,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSpecies, JSObject*, (JSGlobalObjec
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    uint64_t length = static_cast<uint64_t>(JSValue::decode(encodedLength).asNumber());
+    uint64_t length = truncateDoubleToUint64(JSValue::decode(encodedLength).asNumber());
     OPERATION_RETURN(scope, newArrayWithSpeciesImpl(globalObject, length, array, indexingType));
 }
 
