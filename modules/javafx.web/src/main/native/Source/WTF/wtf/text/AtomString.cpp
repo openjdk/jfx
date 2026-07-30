@@ -64,12 +64,12 @@ ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
         }
         return *this;
 SlowPath:
-        std::array<LChar, localBufferSize> localBuffer;
+        std::array<Latin1Character, localBufferSize> localBuffer;
         for (unsigned i = 0; i < failingIndex; ++i)
             localBuffer[i] = characters[i];
         for (unsigned i = failingIndex; i < length; ++i)
             localBuffer[i] = type == CaseConvertType::Lower ? toASCIILower(characters[i]) : toASCIIUpper(characters[i]);
-        return std::span<const LChar> { localBuffer }.first(length);
+        return std::span<const Latin1Character> { localBuffer }.first(length);
     }
 
     Ref<StringImpl> convertedString = type == CaseConvertType::Lower ? impl->convertToASCIILowercase() : impl->convertToASCIIUppercase();
@@ -115,14 +115,14 @@ AtomString AtomString::number(float number)
 {
     NumberToStringBuffer buffer;
     auto span = numberToStringAndSize(number, buffer);
-    return AtomString { byteCast<LChar>(span) };
+    return AtomString { byteCast<Latin1Character>(span) };
 }
 
 AtomString AtomString::number(double number)
 {
     NumberToStringBuffer buffer;
     auto span = numberToStringAndSize(number, buffer);
-    return AtomString { byteCast<LChar>(span) };
+    return AtomString { byteCast<Latin1Character>(span) };
 }
 
 AtomString AtomString::fromUTF8Internal(std::span<const char> characters)
@@ -159,7 +159,7 @@ AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string
 {
     // Fast path for the case where there are no unpaired surrogates.
     if (!hasUnpairedSurrogate(string)) [[likely]]
-        return WTFMove(string);
+        return WTF::move(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toAtomString();
 }
 
@@ -167,7 +167,7 @@ String replaceUnpairedSurrogatesWithReplacementCharacter(String&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
     if (!hasUnpairedSurrogate(string)) [[likely]]
-        return WTFMove(string);
+        return WTF::move(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toString();
 }
 

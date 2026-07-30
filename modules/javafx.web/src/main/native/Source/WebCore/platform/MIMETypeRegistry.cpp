@@ -28,6 +28,7 @@
 #include "MIMETypeRegistry.h"
 
 #include "DeprecatedGlobalSettings.h"
+#include "HTTPParsers.h"
 #include "MediaPlayer.h"
 #include "ThreadGlobalData.h"
 #include <ranges>
@@ -78,7 +79,7 @@ static String normalizedImageMIMEType(const String&);
 // supported (should be image/tiff). This can be removed when Mail addresses:
 // <rdar://problem/7879510> Mail should use standard image mimetypes
 // and we fix sniffing so that it corrects items such as image/jpg -> image/jpeg.
-constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
+constexpr SortedArraySet supportedImageMIMETypeSet { std::to_array<ComparableCaseFoldingASCIILiteral>({
 #if PLATFORM(IOS_FAMILY)
     "application/bmp"_s,
     "application/jpg"_s,
@@ -152,20 +153,41 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
 #if PLATFORM(IOS_FAMILY) || !USE(CG)
     "image/x-xbitmap"_s,
 #endif
-};
+}) };
 
-template<ASCIISubset subset, unsigned size> static FixedVector<ASCIILiteral> makeFixedVector(const ComparableASCIISubsetLiteral<subset> (&array)[size])
+template<ASCIISubset subset, std::size_t size> static FixedVector<ASCIILiteral> makeFixedVector(const std::array<ComparableASCIISubsetLiteral<subset>, size>& array)
 {
-    FixedVector<ASCIILiteral> result(std::size(array));
+    FixedVector<ASCIILiteral> result(array.size());
     std::ranges::transform(array, result.begin(), [](auto literal) {
         return literal.literal;
     });
     return result;
 }
 
+static bool isValidMIMETypeWithSuffix(const String& mimeType, const ASCIILiteral suffix)
+{
+    if (!mimeType.endsWithIgnoringASCIICase(suffix))
+        return false;
+
+    if (mimeType.length() < suffix.length() + 2)
+        return false;
+
+    auto slashPosition = mimeType.find('/');
+    if (slashPosition == notFound || slashPosition <= 0)
+        return false;
+
+    auto type = mimeType.substring(0, slashPosition);
+    if (!isValidHTTPToken(type))
+        return false;
+
+    // Assume the suffix is already a valid HTTP token and avoid checking it.
+    auto subtypeExcludingSuffix = mimeType.substring(slashPosition + 1, mimeType.length() - slashPosition - suffix.length());
+    return isValidHTTPToken(subtypeExcludingSuffix);
+}
+
 FixedVector<ASCIILiteral> MIMETypeRegistry::supportedImageMIMETypes()
 {
-    return makeFixedVector(supportedImageMIMETypeArray);
+    return makeFixedVector(supportedImageMIMETypeSet.array());
 }
 
 HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::additionalSupportedImageMIMETypes()
@@ -175,7 +197,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::additionalSupported
 }
 
 // https://html.spec.whatwg.org/multipage/scripting.html#javascript-mime-type
-constexpr ComparableLettersLiteral supportedJavaScriptMIMETypeArray[] = {
+constexpr SortedArraySet supportedJavaScriptMIMETypes { std::to_array<ComparableLettersLiteral>({
     "application/ecmascript"_s,
     "application/javascript"_s,
     "application/x-ecmascript"_s,
@@ -192,7 +214,7 @@ constexpr ComparableLettersLiteral supportedJavaScriptMIMETypeArray[] = {
     "text/livescript"_s,
     "text/x-ecmascript"_s,
     "text/x-javascript"_s,
-};
+}) };
 
 HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMIMETypes()
 {
@@ -219,7 +241,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
         // Note: Adding a new type here will probably render it as HTML.
         // This can result in cross-site scripting vulnerabilities.
         };
-        for (auto& type : supportedJavaScriptMIMETypeArray)
+        for (auto& type : supportedJavaScriptMIMETypes.array())
             types.add(type.literal);
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
         ArchiveFactory::registerKnownArchiveMIMETypes(types);
@@ -241,17 +263,17 @@ const HashSet<String>& MIMETypeRegistry::supportedMediaMIMETypes()
     return types;
 }
 
-constexpr ComparableLettersLiteral pdfMIMETypeArray[] = {
+static constexpr SortedArraySet pdfMIMETypeSet { std::to_array<ComparableLettersLiteral>({
     "application/pdf"_s,
     "text/pdf"_s,
-};
+}) };
 
 FixedVector<ASCIILiteral> MIMETypeRegistry::pdfMIMETypes()
 {
-    return makeFixedVector(pdfMIMETypeArray);
+    return makeFixedVector(pdfMIMETypeSet.array());
 }
 
-constexpr ComparableLettersLiteral unsupportedTextMIMETypeArray[] = {
+static constexpr SortedArraySet unsupportedTextMIMETypesSet { std::to_array<ComparableLettersLiteral>({
     "text/calendar"_s,
     "text/directory"_s,
     "text/ldif"_s,
@@ -270,11 +292,11 @@ constexpr ComparableLettersLiteral unsupportedTextMIMETypeArray[] = {
     "text/x-vcalendar"_s,
     "text/x-vcard"_s,
     "text/x-vcf"_s,
-};
+}) };
 
 FixedVector<ASCIILiteral> MIMETypeRegistry::unsupportedTextMIMETypes()
 {
-    return makeFixedVector(unsupportedTextMIMETypeArray);
+    return makeFixedVector(unsupportedTextMIMETypesSet.array());
 }
 
 static const HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMimeTypesMap()
@@ -284,7 +306,7 @@ static const HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMi
         HashMap<String, Vector<String>, ASCIICaseInsensitiveHash> map;
         // A table of common media MIME types and file extensions used when a platform's
         // specific MIME type lookup doesn't have a match for a media file extension.
-        static constexpr TypeExtensionPair commonMediaTypes[] = {
+        static constexpr auto commonMediaTypes = std::to_array<TypeExtensionPair>({
             // Ogg
             { "application/ogg"_s, "ogx"_s },
             { "audio/ogg"_s, "ogg"_s },
@@ -362,7 +384,7 @@ static const HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMi
             // ADPCM
             { "audio/x-wav"_s, "wav"_s },
             { "audio/vnd.wave"_s, "wav"_s },
-        };
+        });
         for (auto& pair : commonMediaTypes) {
             ASCIILiteral type = pair.type;
             ASCIILiteral extension = pair.extension;
@@ -412,9 +434,8 @@ bool MIMETypeRegistry::isSupportedImageMIMEType(const String& mimeType)
 {
     if (mimeType.isEmpty())
         return false;
-    static constexpr SortedArraySet supportedImageMIMETypeSet { supportedImageMIMETypeArray };
 #if USE(CG) && ASSERT_ENABLED
-    // Ensure supportedImageMIMETypeArray matches defaultSupportedImageTypes().
+    // Ensure supportedImageMIMETypeSet matches defaultSupportedImageTypes().
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         for (auto& imageType : supportedImageTypes()) {
@@ -455,10 +476,10 @@ std::unique_ptr<MIMETypeRegistryThreadGlobalData> MIMETypeRegistry::createMIMETy
     HashSet<String, ASCIICaseInsensitiveHash> supportedImageMIMETypesForEncoding;
     CFIndex count = CFArrayGetCount(supportedTypes.get());
     for (CFIndex i = 0; i < count; i++) {
-        CFStringRef supportedType = reinterpret_cast<CFStringRef>(CFArrayGetValueAtIndex(supportedTypes.get(), i));
-        if (!isSupportedImageType(supportedType))
+        RetainPtr supportedType = checked_cf_cast<CFStringRef>(CFArrayGetValueAtIndex(supportedTypes.get(), i));
+        if (!isSupportedImageType(supportedType.get()))
             continue;
-            String mimeType = MIMETypeForImageType(supportedType);
+        String mimeType = MIMETypeForImageType(supportedType.get());
         if (mimeType.isEmpty())
             continue;
             supportedImageMIMETypesForEncoding.add(mimeType);
@@ -491,19 +512,18 @@ std::unique_ptr<MIMETypeRegistryThreadGlobalData> MIMETypeRegistry::createMIMETy
 #endif
     };
 #endif
-    return makeUnique<MIMETypeRegistryThreadGlobalData>(WTFMove(supportedImageMIMETypesForEncoding));
+    return makeUnique<MIMETypeRegistryThreadGlobalData>(WTF::move(supportedImageMIMETypesForEncoding));
 }
 
 bool MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(const String& mimeType)
 {
     if (mimeType.isEmpty())
         return false;
-    return threadGlobalData().mimeTypeRegistryThreadGlobalData().supportedImageMIMETypesForEncoding().contains(mimeType);
+    return threadGlobalDataSingleton().mimeTypeRegistryThreadGlobalData().supportedImageMIMETypesForEncoding().contains(mimeType);
 }
 
 bool MIMETypeRegistry::isSupportedJavaScriptMIMEType(const String& mimeType)
 {
-    static constexpr SortedArraySet supportedJavaScriptMIMETypes { supportedJavaScriptMIMETypeArray };
     return supportedJavaScriptMIMETypes.contains(mimeType);
 }
 
@@ -553,23 +573,10 @@ bool MIMETypeRegistry::isTextMediaPlaylistMIMEType(const String& mimeType)
 // https://mimesniff.spec.whatwg.org/#json-mime-type
 bool MIMETypeRegistry::isSupportedJSONMIMEType(const String& mimeType)
 {
-    if (mimeType.isEmpty())
-        return false;
-
-    if (equalLettersIgnoringASCIICase(mimeType, "application/json"_s))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/json"_s) || equalLettersIgnoringASCIICase(mimeType, "application/json"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(mimeType, "text/json"_s))
-        return true;
-
-    // When detecting +json ensure there is a non-empty type / subtype preceeding the suffix.
-    if (mimeType.endsWithIgnoringASCIICase("+json"_s) && mimeType.length() >= 8) {
-        size_t slashPosition = mimeType.find('/');
-        if (slashPosition != notFound && slashPosition > 0 && slashPosition <= mimeType.length() - 6)
-            return true;
-    }
-
-    return false;
+    return isValidMIMETypeWithSuffix(mimeType, "+json"_s);
 }
 
 bool MIMETypeRegistry::isSupportedNonImageMIMEType(const String& mimeType)
@@ -593,8 +600,7 @@ bool MIMETypeRegistry::isSupportedTextTrackMIMEType(const String& mimeType)
 
 bool MIMETypeRegistry::isUnsupportedTextMIMEType(const String& mimeType)
 {
-    static constexpr SortedArraySet unsupportedTextMIMETypes { unsupportedTextMIMETypeArray };
-    return unsupportedTextMIMETypes.contains(mimeType);
+    return unsupportedTextMIMETypesSet.contains(mimeType);
 }
 
 bool MIMETypeRegistry::isTextMIMEType(const String& mimeType)
@@ -607,35 +613,13 @@ bool MIMETypeRegistry::isTextMIMEType(const String& mimeType)
             && !equalLettersIgnoringASCIICase(mimeType, "text/xsl"_s));
 }
 
-static inline bool isValidXMLMIMETypeChar(char16_t c)
-{
-    // Valid characters per RFCs 3023 and 2045: 0-9a-zA-Z_-+~!$^{}|.%'`#&*
-    return isASCIIAlphanumeric(c) || c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' || c == '+'
-        || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '{' || c == '|' || c == '}' || c == '~';
-}
-
 // https://mimesniff.spec.whatwg.org/#xml-mime-type
 bool MIMETypeRegistry::isXMLMIMEType(const String& mimeType)
 {
     if (equalLettersIgnoringASCIICase(mimeType, "text/xml"_s) || equalLettersIgnoringASCIICase(mimeType, "application/xml"_s))
         return true;
 
-    if (!mimeType.endsWithIgnoringASCIICase("+xml"_s))
-        return false;
-
-    size_t slashPosition = mimeType.find('/');
-    // Take into account the '+xml' ending of mimeType.
-    if (slashPosition == notFound || !slashPosition || slashPosition == mimeType.length() - 5)
-        return false;
-
-    // Again, mimeType ends with '+xml', no need to check the validity of that substring.
-    size_t mimeLength = mimeType.length();
-    for (size_t i = 0; i < mimeLength - 4; ++i) {
-        if (!isValidXMLMIMETypeChar(mimeType[i]) && i != slashPosition)
-            return false;
-    }
-
-    return true;
+    return isValidMIMETypeWithSuffix(mimeType, "+xml"_s);
 }
 
 bool MIMETypeRegistry::isXMLEntityMIMEType(StringView mimeType)
@@ -646,8 +630,7 @@ bool MIMETypeRegistry::isXMLEntityMIMEType(StringView mimeType)
 
 bool MIMETypeRegistry::isPDFMIMEType(const String& mimeType)
 {
-    static constexpr SortedArraySet set { pdfMIMETypeArray };
-    return set.contains(mimeType);
+    return pdfMIMETypeSet.contains(mimeType);
 }
 
 bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
@@ -680,27 +663,40 @@ const String& defaultMIMEType()
     return defaultMIMEType;
 }
 
-constexpr ComparableLettersLiteral usdMIMETypeArray[] = {
+constexpr SortedArraySet usdMIMETypeSet { std::to_array<ComparableLettersLiteral>({
     "model/usd"_s, // Unofficial, but supported because we documented this.
     "model/vnd.pixar.usd"_s, // Unofficial, but supported because we documented this.
     "model/vnd.reality"_s,
     "model/vnd.usdz+zip"_s, // The official type: https://www.iana.org/assignments/media-types/model/vnd.usdz+zip
-};
+}) };
+
+static constexpr SortedArraySet gltfMIMETypeSet { std::to_array<ComparableLettersLiteral>({
+    "model/gltf-binary"_s, // The official glTF binary (.glb) format: https://www.iana.org/assignments/media-types/model/gltf-binary
+}) };
 
 FixedVector<ASCIILiteral> MIMETypeRegistry::usdMIMETypes()
 {
-    return makeFixedVector(usdMIMETypeArray);
+    return makeFixedVector(usdMIMETypeSet.array());
+}
+
+FixedVector<ASCIILiteral> MIMETypeRegistry::gltfMIMETypes()
+{
+    return makeFixedVector(gltfMIMETypeSet.array());
 }
 
 bool MIMETypeRegistry::isUSDMIMEType(const String& mimeType)
 {
-    static constexpr SortedArraySet usdMIMETypeSet { usdMIMETypeArray };
     return usdMIMETypeSet.contains(mimeType);
+}
+
+bool MIMETypeRegistry::isGLTFMIMEType(const String& mimeType)
+{
+    return gltfMIMETypeSet.contains(mimeType);
 }
 
 bool MIMETypeRegistry::isSupportedModelMIMEType(const String& mimeType)
 {
-    return MIMETypeRegistry::isUSDMIMEType(mimeType);
+    return MIMETypeRegistry::isUSDMIMEType(mimeType) || MIMETypeRegistry::isGLTFMIMEType(mimeType);
 }
 
 // FIXME: Not great that CURL needs this concept; other platforms do not.
@@ -708,7 +704,7 @@ static String normalizedImageMIMEType(const String& mimeType)
 {
 #if USE(CURL)
     // FIXME: Since this is only used in isSupportedImageMIMEType, we should consider removing the non-image types below.
-    static constexpr std::pair<ComparableLettersLiteral, ASCIILiteral> mimeTypeAssociationArray[] = {
+    static constexpr SortedArrayMap associationMap { std::to_array<std::pair<ComparableLettersLiteral, ASCIILiteral>>({
         { "application/ico"_s, "image/vnd.microsoft.icon"_s },
         { "application/java"_s, "application/java-archive"_s },
         { "application/x-java-archive"_s, "application/java-archive"_s },
@@ -755,8 +751,7 @@ static String normalizedImageMIMEType(const String& mimeType)
         { "video/avi"_s, "video/x-msvideo"_s },
         { "video/x-m4v"_s, "video/mp4"_s },
         { "video/x-quicktime"_s, "video/quicktime"_s },
-    };
-    static constexpr SortedArrayMap associationMap { mimeTypeAssociationArray };
+    }) };
     auto normalizedType = associationMap.tryGet(mimeType);
     return normalizedType ? *normalizedType : mimeType;
 #else

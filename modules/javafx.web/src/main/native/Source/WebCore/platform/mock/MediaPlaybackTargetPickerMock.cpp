@@ -41,7 +41,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlaybackTargetPickerMock);
 static const Seconds timerInterval { 100_ms };
 
 MediaPlaybackTargetPickerMock::MediaPlaybackTargetPickerMock(MediaPlaybackTargetPicker::Client& client)
-    : MediaPlaybackTargetPicker(client)
+    : MediaPlaybackTargetPicker { client }
+    , m_state { MediaPlaybackTargetMock::State::Unknown }
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::MediaPlaybackTargetPickerMock");
 }
@@ -55,13 +56,13 @@ MediaPlaybackTargetPickerMock::~MediaPlaybackTargetPickerMock()
 bool MediaPlaybackTargetPickerMock::externalOutputDeviceAvailable()
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::externalOutputDeviceAvailable");
-    return m_state == MediaPlaybackTargetContext::MockState::OutputDeviceAvailable;
+    return m_state == MediaPlaybackTargetMock::State::OutputDeviceAvailable;
 }
 
 Ref<MediaPlaybackTarget> MediaPlaybackTargetPickerMock::playbackTarget()
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::playbackTarget");
-    return WebCore::MediaPlaybackTargetMock::create(MediaPlaybackTargetContextMock { m_deviceName, m_state });
+    return MediaPlaybackTargetMock::create(m_deviceName, m_state);
 }
 
 void MediaPlaybackTargetPickerMock::showPlaybackTargetPicker(CocoaView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance)
@@ -77,12 +78,13 @@ void MediaPlaybackTargetPickerMock::showPlaybackTargetPicker(CocoaView*, const F
     LOG(Media, "MediaPlaybackTargetPickerMock::showPlaybackTargetPicker - checkActiveRoute = %i, useDarkAppearance = %i", (int)checkActiveRoute, (int)useDarkAppearance);
 
     m_showingMenu = true;
-    callOnMainThread([this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    callOnMainThread([weakThis = WeakPtr { *this }] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        m_showingMenu = false;
-        currentDeviceDidChange();
+        checkedThis->m_showingMenu = false;
+        checkedThis->currentDeviceDidChange();
     });
 }
 
@@ -90,15 +92,16 @@ void MediaPlaybackTargetPickerMock::startingMonitoringPlaybackTargets()
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::startingMonitoringPlaybackTargets");
 
-    callOnMainThread([this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    callOnMainThread([weakThis = WeakPtr { *this }] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        if (m_state == MediaPlaybackTargetContext::MockState::OutputDeviceAvailable)
-            availableDevicesDidChange();
+        if (checkedThis->m_state == MediaPlaybackTargetMock::State::OutputDeviceAvailable)
+            checkedThis->availableDevicesDidChange();
 
-        if (!m_deviceName.isEmpty() && m_state != MediaPlaybackTargetContext::MockState::Unknown)
-            currentDeviceDidChange();
+        if (!checkedThis->m_deviceName.isEmpty() && checkedThis->m_state != MediaPlaybackTargetMock::State::Unknown)
+            checkedThis->currentDeviceDidChange();
     });
 }
 
@@ -110,25 +113,26 @@ void MediaPlaybackTargetPickerMock::stopMonitoringPlaybackTargets()
 void MediaPlaybackTargetPickerMock::invalidatePlaybackTargets()
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::invalidatePlaybackTargets");
-    setState(emptyString(), MediaPlaybackTargetContext::MockState::Unknown);
+    setState(emptyString(), MediaPlaybackTargetMock::State::Unknown);
 }
 
-void MediaPlaybackTargetPickerMock::setState(const String& deviceName, MediaPlaybackTargetContext::MockState state)
+void MediaPlaybackTargetPickerMock::setState(const String& deviceName, MediaPlaybackTargetMock::State state)
 {
     LOG(Media, "MediaPlaybackTargetPickerMock::setState - name = %s, state = 0x%x", deviceName.utf8().data(), (unsigned)state);
 
-    callOnMainThread([this, weakThis = WeakPtr { *this }, state, deviceName] {
-        if (!weakThis)
+    callOnMainThread([weakThis = WeakPtr { *this }, state, deviceName] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
 
-        if (deviceName != m_deviceName && state != MediaPlaybackTargetContext::MockState::Unknown) {
-            m_deviceName = deviceName;
-            currentDeviceDidChange();
+        if (deviceName != checkedThis->m_deviceName && state != MediaPlaybackTargetMock::State::Unknown) {
+            checkedThis->m_deviceName = deviceName;
+            checkedThis->currentDeviceDidChange();
         }
 
-        if (m_state != state) {
-            m_state = state;
-            availableDevicesDidChange();
+        if (checkedThis->m_state != state) {
+            checkedThis->m_state = state;
+            checkedThis->availableDevicesDidChange();
         }
     });
 }

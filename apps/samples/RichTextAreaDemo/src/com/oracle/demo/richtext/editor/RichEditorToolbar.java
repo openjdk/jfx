@@ -169,9 +169,11 @@ public class RichEditorToolbar extends BorderPane {
     }
 
     public Ruler setRulerFor(RichTextArea editor) {
-        if (editor == null) {
+        if (ruler != null) {
+            ruler.dispose();
             ruler = null;
-        } else {
+        }
+        if (editor != null) {
             ruler = new Ruler(editor);
         }
         setBottom(ruler);

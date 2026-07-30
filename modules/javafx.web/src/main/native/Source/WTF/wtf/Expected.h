@@ -184,6 +184,7 @@ inline namespace fundamentals_v3 {
 #include <utility>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Unexpected.h>
 #include <wtf/Variant.h>
@@ -218,8 +219,8 @@ public:
     const char* what() const noexcept override { return std::exception::what(); }
     E& error() & { return val; }
     const E& error() const& { return val; }
-    E&& error() && { return WTFMove(val); }
-    const E&&  error() const&& { return WTFMove(val); }
+    E&& error() && { return WTF::move(val); }
+    const E&&  error() const&& { return WTF::move(val); }
 
 private:
     E val;
@@ -248,8 +249,10 @@ struct base {
     constexpr base(value_tag_t, value_type&& val) : s(WTF::InPlaceIndexT<0>(), std::forward<value_type>(val)) { }
     constexpr base(error_tag_t, const error_type& err) : s(WTF::InPlaceIndexT<1>(), err) { }
     constexpr base(error_tag_t, error_type&& err) : s(WTF::InPlaceIndexT<1>(), std::forward<error_type>(err)) { }
+#ifndef __swift__ // FIXME: (rdar://167557269) temporary until SWIFT_COPYABLE_IF is fully supported
     constexpr base(const base& o)
         : s(o.s) { }
+#endif
     constexpr base(base&& o)
         : s(std::forward<Variant<value_type, error_type>>(o.s)) { }
 };
@@ -307,10 +310,10 @@ public:
     ~expected() = default;
 
     expected& operator=(const expected& e) { type(e).swap(*this); return *this; }
-    expected& operator=(expected&& e) { type(WTFMove(e)).swap(*this); return *this; }
+    expected& operator=(expected&& e) { type(WTF::move(e)).swap(*this); return *this; }
     template<class U> expected& operator=(U&& u) { type(std::forward<U>(u)).swap(*this); return *this; }
     expected& operator=(const unexpected_type& u) { type(u).swap(*this); return *this; }
-    expected& operator=(unexpected_type&& u) { type(WTFMove(u)).swap(*this); return *this; }
+    expected& operator=(unexpected_type&& u) { type(WTF::move(u)).swap(*this); return *this; }
     // template<class... Args> void emplace(Args&&...);
     // template<class U, class... Args> void emplace(std::initializer_list<U>, Args&&...);
 
@@ -323,20 +326,20 @@ public:
     value_type* operator->() { return &std::get<0>(base::s); }
     constexpr const value_type& operator*() const & { return std::get<0>(base::s); }
     value_type& operator*() & { return std::get<0>(base::s); }
-    constexpr const value_type&& operator*() const && { return WTFMove(std::get<0>(base::s)); }
-    constexpr value_type&& operator*() && { return WTFMove(std::get<0>(base::s)); }
+    constexpr const value_type&& operator*() const && { return WTF::move(std::get<0>(base::s)); }
+    constexpr value_type&& operator*() && { return WTF::move(std::get<0>(base::s)); }
     constexpr explicit operator bool() const { return has_value(); }
     constexpr bool has_value() const { return !base::s.index(); }
     constexpr const value_type& value() const & { return std::get<0>(base::s); }
     constexpr value_type& value() & { return std::get<0>(base::s); }
-    constexpr const value_type&& value() const && { return WTFMove(std::get<0>(base::s)); }
-    constexpr value_type&& value() && { return WTFMove(std::get<0>(base::s)); }
+    constexpr const value_type&& value() const && { return WTF::move(std::get<0>(base::s)); }
+    constexpr value_type&& value() && { return WTF::move(std::get<0>(base::s)); }
     constexpr const error_type& error() const & { return std::get<1>(base::s); }
     error_type& error() & { return std::get<1>(base::s); }
-    constexpr error_type&& error() && { return WTFMove(std::get<1>(base::s)); }
-    constexpr const error_type&& error() const && { return WTFMove(std::get<1>(base::s)); }
+    constexpr error_type&& error() && { return WTF::move(std::get<1>(base::s)); }
+    constexpr const error_type&& error() const && { return WTF::move(std::get<1>(base::s)); }
     template<class U> constexpr value_type value_or(U&& u) const & { return has_value() ? **this : static_cast<value_type>(std::forward<U>(u)); }
-    template<class U> value_type value_or(U&& u) && { return has_value() ? WTFMove(**this) : static_cast<value_type>(std::forward<U>(u)); }
+    template<class U> value_type value_or(U&& u) && { return has_value() ? WTF::move(**this) : static_cast<value_type>(std::forward<U>(u)); }
 };
 
 template<class E>
@@ -367,9 +370,9 @@ public:
     ~expected() = default;
 
     expected& operator=(const expected& e) { type(e).swap(*this); return *this; }
-    expected& operator=(expected&& e) { type(WTFMove(e)).swap(*this); return *this; }
+    expected& operator=(expected&& e) { type(WTF::move(e)).swap(*this); return *this; }
     expected& operator=(const unexpected_type& u) { type(u).swap(*this); return *this; } // Not in the current paper.
-    expected& operator=(unexpected_type&& u) { type(WTFMove(u)).swap(*this); return *this; } // Not in the current paper.
+    expected& operator=(unexpected_type&& u) { type(WTF::move(u)).swap(*this); return *this; } // Not in the current paper.
     // void emplace();
 
     void swap(expected& o)
@@ -382,7 +385,7 @@ public:
     void value() const { !has_value() ? __EXPECTED_THROW(bad_expected_access<void>()) : void(); }
     constexpr const E& error() const & { return *base::error; }
     E& error() & { return *base::error; }
-    constexpr E&& error() && { return WTFMove(*base::error); }
+    constexpr E&& error() && { return WTF::move(*base::error); }
 };
 
 template<class T, class E> constexpr bool operator==(const expected<T, E>& x, const expected<T, E>& y) { return bool(x) == bool(y) && (x ? x.value() == y.value() : x.error() == y.error()); }

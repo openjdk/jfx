@@ -27,6 +27,8 @@
 #include "JSArrayInlines.h"
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"
+#include "ResourceExhaustion.h"
+#include "ScopedArguments.h"
 #include "TypeError.h"
 #include <wtf/Assertions.h>
 
@@ -287,7 +289,7 @@ static int compareKeysForQSort(const void* a, const void* b)
     return (da > db) - (da < db);
 }
 
-void JSArray::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSArray::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     if (mode == DontEnumPropertiesMode::Include)
@@ -568,6 +570,8 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
             nullptr, AllocationFailureMode::ReturnNull);
         if (!memory) [[unlikely]]
             return nullptr;
+
+        DeferGC deferGC(vm);
         auto* butterfly = Butterfly::fromBase(memory, 0, 0);
         butterfly->setVectorLength(vectorLength);
         butterfly->setPublicLength(length);
@@ -595,7 +599,7 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
             }
             std::reverse(resultBuffer, resultBuffer + length);
         }
-        Butterfly::clearOptimalVectorLengthGap(resultType, butterfly, vectorLength, length);
+        Butterfly::clearRange(resultType, butterfly, length, vectorLength);
         return createWithButterfly(vm, nullptr, resultStructure, butterfly);
     }
     case ArrayWithArrayStorage: {
@@ -670,6 +674,8 @@ JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue
             nullptr, AllocationFailureMode::ReturnNull);
         if (!memory) [[unlikely]]
             return nullptr;
+
+        DeferGC deferGC(vm);
         auto* butterfly = Butterfly::fromBase(memory, 0, 0);
         butterfly->setVectorLength(vectorLength);
         butterfly->setPublicLength(length);
@@ -703,7 +709,7 @@ JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue
             resultBuffer[index].setWithoutWriteBarrier(value);
         }
 
-        Butterfly::clearOptimalVectorLengthGap(indexingType, butterfly, vectorLength, length);
+        Butterfly::clearRange(indexingType, butterfly, length, vectorLength);
         return createWithButterfly(vm, nullptr, resultStructure, butterfly);
     }
     case ArrayWithArrayStorage: {
@@ -935,6 +941,8 @@ JSArray* JSArray::fastToSpliced(JSGlobalObject* globalObject, CallFrame* callFra
             nullptr, AllocationFailureMode::ReturnNull);
         if (!memory) [[unlikely]]
             return nullptr;
+
+        DeferGC deferGC(vm);
         auto* resultButterfly = Butterfly::fromBase(memory, 0, 0);
         resultButterfly->setVectorLength(vectorLength);
         resultButterfly->setPublicLength(newLength);
@@ -980,7 +988,7 @@ JSArray* JSArray::fastToSpliced(JSGlobalObject* globalObject, CallFrame* callFra
         } else
             RELEASE_ASSERT_NOT_REACHED();
 
-        Butterfly::clearOptimalVectorLengthGap(resultIndexingType, resultButterfly, vectorLength, newLength);
+        Butterfly::clearRange(resultIndexingType, resultButterfly, newLength, vectorLength);
         return createWithButterfly(vm, nullptr, resultStructure, resultButterfly);
     }
     default: {
@@ -1002,12 +1010,12 @@ JSString* JSArray::fastToString(JSGlobalObject* globalObject)
         return jsEmptyString(vm);
 
     if (canUseFastArrayJoin(this)) [[likely]] {
-        const LChar comma = ',';
+        const Latin1Character comma = ',';
 
         bool isCoW = isCopyOnWrite(this->indexingMode());
-        JSImmutableButterfly* immutableButterfly = nullptr;
+        JSCellButterfly* immutableButterfly = nullptr;
         if (isCoW) {
-            immutableButterfly = JSImmutableButterfly::fromButterfly(this->butterfly());
+            immutableButterfly = JSCellButterfly::fromButterfly(this->butterfly());
             auto iter = vm.heap.immutableButterflyToStringCache.find(immutableButterfly);
             if (iter != vm.heap.immutableButterflyToStringCache.end())
                 return iter->value;
@@ -1019,7 +1027,7 @@ JSString* JSArray::fastToString(JSGlobalObject* globalObject)
         RETURN_IF_EXCEPTION(scope, { });
 
         if (!sawHoles && !genericCase && result && isCoW) {
-            ASSERT(JSImmutableButterfly::fromButterfly(this->butterfly()) == immutableButterfly);
+            ASSERT(JSCellButterfly::fromButterfly(this->butterfly()) == immutableButterfly);
             vm.heap.immutableButterflyToStringCache.add(immutableButterfly, jsCast<JSString*>(result));
         }
 
@@ -1038,233 +1046,6 @@ JSString* JSArray::fastToString(JSGlobalObject* globalObject)
     }
 
     RELEASE_AND_RETURN(scope, joiner.join(globalObject));
-}
-
-static uint64_t calculateFlattenedLength(JSGlobalObject* globalObject, JSArray* sourceArray, uint64_t sourceLength, uint64_t depth)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
-        throwStackOverflowError(globalObject, scope);
-        return std::numeric_limits<uint64_t>::max();
-    }
-
-    CheckedUint64 resultLength = 0;
-    auto lengthExceeded = [&]() -> bool {
-        return resultLength.hasOverflowed() || resultLength > maxSafeIntegerAsUInt64();
-    };
-
-    IndexingType sourceType = sourceArray->indexingType();
-    switch (sourceType) {
-    case ArrayWithInt32: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            JSValue element = sourceBuffer[i].get();
-            if (!element) [[unlikely]]
-                continue;
-            resultLength++;
-            if (lengthExceeded()) [[unlikely]] {
-                throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
-                return std::numeric_limits<uint64_t>::max();
-            }
-        }
-        break;
-    }
-    case ArrayWithContiguous: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            JSValue element = sourceBuffer[i].get();
-            if (!element) [[unlikely]]
-                continue;
-            if (depth > 0 && isJSArray(element)) {
-                JSArray* elementArray = jsCast<JSArray*>(element);
-                uint64_t newDepth = (depth == std::numeric_limits<uint64_t>::max()) ? depth : depth - 1;
-                uint64_t flatLength = calculateFlattenedLength(globalObject, elementArray, elementArray->length(), newDepth);
-                RETURN_IF_EXCEPTION(scope, flatLength);
-                if (flatLength == std::numeric_limits<uint64_t>::max()) [[unlikely]]
-                    return flatLength;
-                resultLength += flatLength;
-                if (lengthExceeded()) [[unlikely]] {
-                    throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
-                    return std::numeric_limits<uint64_t>::max();
-                }
-            } else {
-                if (element.isObject()) {
-                    auto elementObject = asObject(element);
-                    if (elementObject->isProxy()) [[unlikely]]
-                        return std::numeric_limits<uint64_t>::max();
-                }
-                resultLength++;
-                if (lengthExceeded()) [[unlikely]] {
-                    throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
-                    return std::numeric_limits<uint64_t>::max();
-                }
-            }
-        }
-        break;
-    }
-    case ArrayWithDouble: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguousDouble().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            double value = sourceBuffer[i];
-            if (std::isnan(value)) [[unlikely]]
-                continue;
-            resultLength++;
-            if (lengthExceeded()) [[unlikely]] {
-                throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
-                return std::numeric_limits<uint64_t>::max();
-            }
-        }
-        break;
-    }
-    default:
-        return std::numeric_limits<uint64_t>::max();
-    }
-
-    return resultLength;
-}
-
-template<typename T>
-static uint64_t fastFlatIntoBuffer(JSGlobalObject* globalObject, T* resultBuffer, uint64_t& resultIndex, JSArray* sourceArray, uint64_t sourceLength, uint64_t depth, uint64_t vectorLength)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
-        throwStackOverflowError(globalObject, scope);
-        return std::numeric_limits<uint64_t>::max();
-    }
-
-    IndexingType sourceType = sourceArray->indexingType();
-
-    switch (sourceType) {
-    case ArrayWithInt32: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            if (resultIndex >= vectorLength) [[unlikely]]
-                return std::numeric_limits<uint64_t>::max();
-            JSValue element = sourceBuffer[i].get();
-            if (!element) [[unlikely]]
-                continue;
-            if constexpr (std::is_same_v<T, double>)
-                resultBuffer[resultIndex] = element.asNumber();
-            else
-                resultBuffer[resultIndex].setWithoutWriteBarrier(element);
-            ++resultIndex;
-        }
-        break;
-    }
-    case ArrayWithContiguous: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            if (resultIndex >= vectorLength) [[unlikely]]
-                return std::numeric_limits<uint64_t>::max();
-            JSValue element = sourceBuffer[i].get();
-            if (!element) [[unlikely]]
-                continue;
-            if (depth > 0 && isJSArray(element)) {
-                JSArray* elementArray = jsCast<JSArray*>(element);
-                uint64_t newDepth = (depth == std::numeric_limits<uint64_t>::max()) ? depth : depth - 1;
-                resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, elementArray, elementArray->length(), newDepth, vectorLength);
-                RETURN_IF_EXCEPTION(scope, resultIndex);
-                if (resultIndex == std::numeric_limits<uint64_t>::max())
-                    return std::numeric_limits<uint64_t>::max();
-            } else {
-                if constexpr (std::is_same_v<T, double>)
-                    resultBuffer[resultIndex] = element.asNumber();
-                else
-                    resultBuffer[resultIndex].setWithoutWriteBarrier(element);
-                ++resultIndex;
-            }
-        }
-        break;
-    }
-    case ArrayWithDouble: {
-        auto* sourceBuffer = sourceArray->butterfly()->contiguousDouble().data();
-        for (uint64_t i = 0; i < sourceLength; ++i) {
-            if (resultIndex >= vectorLength) [[unlikely]]
-                return std::numeric_limits<uint64_t>::max();
-            double value = sourceBuffer[i];
-            if (std::isnan(value)) [[unlikely]]
-                continue;
-            if constexpr (std::is_same_v<T, double>)
-                resultBuffer[resultIndex] = value;
-            else
-                resultBuffer[resultIndex].setWithoutWriteBarrier(JSValue(value));
-            ++resultIndex;
-        }
-        break;
-    }
-    default: {
-        RELEASE_ASSERT_NOT_REACHED();
-        return std::numeric_limits<uint64_t>::max();
-    }
-    }
-    return resultIndex;
-}
-
-JSArray* JSArray::fastFlat(JSGlobalObject* globalObject, uint64_t depth, uint64_t length)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
-    IndexingType sourceType = this->indexingType();
-
-    switch (sourceType) {
-    case ArrayWithInt32:
-    case ArrayWithDouble:
-    case ArrayWithContiguous: {
-        if (length > this->butterfly()->vectorLength()) [[unlikely]]
-            return nullptr;
-
-        if (holesMustForwardToPrototype()) [[unlikely]]
-            return nullptr;
-
-        uint64_t flattenedLength = calculateFlattenedLength(globalObject, this, length, depth);
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        if (flattenedLength == std::numeric_limits<uint64_t>::max()) [[unlikely]]
-            return nullptr;
-
-        Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(sourceType);
-
-        IndexingType indexingType = resultStructure->indexingType();
-        if (hasAnyArrayStorage(indexingType)) [[unlikely]]
-            return nullptr;
-        ASSERT(!globalObject->isHavingABadTime());
-
-        auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, flattenedLength);
-
-        void* memory = vm.auxiliarySpace().allocate(
-            vm,
-            Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
-            nullptr, AllocationFailureMode::ReturnNull);
-        if (!memory) [[unlikely]]
-            return nullptr;
-
-        auto* butterfly = Butterfly::fromBase(memory, 0, 0);
-        butterfly->setVectorLength(vectorLength);
-        butterfly->setPublicLength(flattenedLength);
-
-        uint64_t resultIndex = 0;
-        if (indexingType == ArrayWithDouble) {
-            auto* resultBuffer = butterfly->contiguousDouble().data();
-            resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, this, length, depth, vectorLength);
-        } else {
-            auto* resultBuffer = butterfly->contiguous().data();
-            resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, this, length, depth, vectorLength);
-        }
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        if (resultIndex == std::numeric_limits<uint64_t>::max())
-            return nullptr;
-
-        Butterfly::clearOptimalVectorLengthGap(indexingType, butterfly, vectorLength, resultIndex);
-        return createWithButterfly(vm, nullptr, resultStructure, butterfly);
-    }
-    default: {
-        return nullptr;
-    }
-    }
 }
 
 bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startIndex, IndexingType otherType, std::span<const EncodedJSValue> values)
@@ -1597,6 +1378,8 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
         switch (source->type()) {
         case DirectArgumentsType:
             return DirectArguments::fastSlice(globalObject, jsCast<DirectArguments*>(source), startIndex, count);
+        case ScopedArgumentsType:
+            return ScopedArguments::fastSlice(globalObject, jsCast<ScopedArguments*>(source), startIndex, count);
         default:
             return nullptr;
         }
@@ -1635,13 +1418,14 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
         if (!memory) [[unlikely]]
             return nullptr;
 
+        DeferGC deferGC(vm);
         auto* butterfly = Butterfly::fromBase(memory, 0, 0);
         butterfly->setVectorLength(vectorLength);
         butterfly->setPublicLength(initialLength);
         // We initialize Butterfly first before setting it to JSArray. In that case, butterfly is not scannoed so that we can safely use memcpy here.
         memcpy(butterfly->contiguous().data(), source->butterfly()->contiguous().data() + startIndex, sizeof(JSValue) * initialLength);
 
-        Butterfly::clearOptimalVectorLengthGap(indexingType, butterfly, vectorLength, initialLength);
+        Butterfly::clearRange(indexingType, butterfly, initialLength, vectorLength);
         return createWithButterfly(vm, nullptr, resultStructure, butterfly);
     }
     case ArrayWithArrayStorage: {
@@ -2247,7 +2031,7 @@ inline JSArray* constructArray(ObjectInitializationScope& scope, Structure* arra
     // function will correctly handle an exception being thrown from here.
     // https://bugs.webkit.org/show_bug.cgi?id=169786
     if constexpr (failureMode == AllocationFailureMode::Assert)
-    RELEASE_ASSERT(array);
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(array, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
     else if (!array)
         return nullptr;
 
@@ -2297,6 +2081,29 @@ JSArray* constructArrayNegativeIndexed(JSGlobalObject* globalObject, Structure* 
 
     for (int i = 0; i < static_cast<int>(length); ++i)
         array->initializeIndex(scope, i, values[-i]);
+    return array;
+}
+
+JSArray* constructArrayPair(JSGlobalObject* globalObject, JSValue first, JSValue second)
+{
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    ObjectInitializationScope initializationScope(vm);
+
+    IndexingType indexingType = ArrayWithUndecided;
+    indexingType = leastUpperBoundOfIndexingTypeAndValue(indexingType, first);
+    indexingType = leastUpperBoundOfIndexingTypeAndValue(indexingType, second);
+
+    Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType);
+
+    JSArray* array = JSArray::tryCreateUninitializedRestricted(initializationScope, structure, 2);
+    if (!array) [[unlikely]] {
+        throwOutOfMemoryError(globalObject, throwScope);
+        return nullptr;
+    }
+    array->initializeIndex(initializationScope, 0, first);
+    array->initializeIndex(initializationScope, 1, second);
+
     return array;
 }
 
@@ -2375,6 +2182,8 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
+
+    DeferGC deferGC(vm);
     auto* resultButterfly = Butterfly::fromBase(memory, 0, 0);
     resultButterfly->setVectorLength(vectorLength);
     resultButterfly->setPublicLength(resultSize);
@@ -2412,12 +2221,240 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    Butterfly::clearOptimalVectorLengthGap(resultType, resultButterfly, vectorLength, resultSize);
+    Butterfly::clearRange(resultType, resultButterfly, resultSize, vectorLength);
     return JSArray::createWithButterfly(vm, nullptr, resultStructure, resultButterfly);
 }
 
 template JSArray* tryCloneArrayFromFast<ArrayFillMode::Undefined>(JSGlobalObject*, JSValue);
 template JSArray* tryCloneArrayFromFast<ArrayFillMode::Empty>(JSGlobalObject*, JSValue);
+
+static uint64_t calculateFlattenedLength(JSGlobalObject* globalObject, JSArray* sourceArray, uint64_t sourceLength, uint64_t depth)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
+        throwStackOverflowError(globalObject, scope);
+        return std::numeric_limits<uint64_t>::max();
+    }
+
+    CheckedUint64 resultLength = 0;
+    auto lengthExceeded = [&]() -> bool {
+        return resultLength.hasOverflowed() || resultLength > maxSafeIntegerAsUInt64();
+    };
+
+    IndexingType sourceType = sourceArray->indexingType();
+    switch (sourceType) {
+    case ArrayWithInt32: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            JSValue element = sourceBuffer[i].get();
+            if (!element) [[unlikely]]
+                continue;
+            resultLength++;
+            if (lengthExceeded()) [[unlikely]] {
+                throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
+                return std::numeric_limits<uint64_t>::max();
+            }
+        }
+        break;
+    }
+    case ArrayWithContiguous: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            JSValue element = sourceBuffer[i].get();
+            if (!element) [[unlikely]]
+                continue;
+            if (depth > 0 && isJSArray(element)) {
+                JSArray* elementArray = jsCast<JSArray*>(element);
+                uint64_t newDepth = (depth == std::numeric_limits<uint64_t>::max()) ? depth : depth - 1;
+                uint64_t flatLength = calculateFlattenedLength(globalObject, elementArray, elementArray->length(), newDepth);
+                RETURN_IF_EXCEPTION(scope, flatLength);
+                if (flatLength == std::numeric_limits<uint64_t>::max()) [[unlikely]]
+                    return flatLength;
+                resultLength += flatLength;
+                if (lengthExceeded()) [[unlikely]] {
+                    throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
+                    return std::numeric_limits<uint64_t>::max();
+                }
+            } else {
+                if (element.isObject()) {
+                    auto elementObject = asObject(element);
+                    if (elementObject->isProxy()) [[unlikely]]
+                        return std::numeric_limits<uint64_t>::max();
+                }
+                resultLength++;
+                if (lengthExceeded()) [[unlikely]] {
+                    throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
+                    return std::numeric_limits<uint64_t>::max();
+                }
+            }
+        }
+        break;
+    }
+    case ArrayWithDouble: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguousDouble().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            double value = sourceBuffer[i];
+            if (std::isnan(value)) [[unlikely]]
+                continue;
+            resultLength++;
+            if (lengthExceeded()) [[unlikely]] {
+                throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
+                return std::numeric_limits<uint64_t>::max();
+            }
+        }
+        break;
+    }
+    default:
+        return std::numeric_limits<uint64_t>::max();
+    }
+
+    return resultLength;
+}
+
+template<typename T>
+static uint64_t fastFlatIntoBuffer(JSGlobalObject* globalObject, T* resultBuffer, uint64_t& resultIndex, JSArray* sourceArray, uint64_t sourceLength, uint64_t depth, uint64_t vectorLength)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
+        throwStackOverflowError(globalObject, scope);
+        return std::numeric_limits<uint64_t>::max();
+    }
+
+    IndexingType sourceType = sourceArray->indexingType();
+
+    switch (sourceType) {
+    case ArrayWithInt32: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            if (resultIndex >= vectorLength) [[unlikely]]
+                return std::numeric_limits<uint64_t>::max();
+            JSValue element = sourceBuffer[i].get();
+            if (!element) [[unlikely]]
+                continue;
+            if constexpr (std::is_same_v<T, double>)
+                resultBuffer[resultIndex] = element.asNumber();
+            else
+                resultBuffer[resultIndex].setWithoutWriteBarrier(element);
+            ++resultIndex;
+        }
+        break;
+    }
+    case ArrayWithContiguous: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguous().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            if (resultIndex >= vectorLength) [[unlikely]]
+                return std::numeric_limits<uint64_t>::max();
+            JSValue element = sourceBuffer[i].get();
+            if (!element) [[unlikely]]
+                continue;
+            if (depth > 0 && isJSArray(element)) {
+                JSArray* elementArray = jsCast<JSArray*>(element);
+                uint64_t newDepth = (depth == std::numeric_limits<uint64_t>::max()) ? depth : depth - 1;
+                resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, elementArray, elementArray->length(), newDepth, vectorLength);
+                RETURN_IF_EXCEPTION(scope, resultIndex);
+                if (resultIndex == std::numeric_limits<uint64_t>::max())
+                    return std::numeric_limits<uint64_t>::max();
+            } else {
+                if constexpr (std::is_same_v<T, double>)
+                    resultBuffer[resultIndex] = element.asNumber();
+                else
+                    resultBuffer[resultIndex].setWithoutWriteBarrier(element);
+                ++resultIndex;
+            }
+        }
+        break;
+    }
+    case ArrayWithDouble: {
+        auto* sourceBuffer = sourceArray->butterfly()->contiguousDouble().data();
+        for (uint64_t i = 0; i < sourceLength; ++i) {
+            if (resultIndex >= vectorLength) [[unlikely]]
+                return std::numeric_limits<uint64_t>::max();
+            double value = sourceBuffer[i];
+            if (std::isnan(value)) [[unlikely]]
+                continue;
+            if constexpr (std::is_same_v<T, double>)
+                resultBuffer[resultIndex] = value;
+            else
+                resultBuffer[resultIndex].setWithoutWriteBarrier(JSValue(value));
+            ++resultIndex;
+        }
+        break;
+    }
+    default: {
+        RELEASE_ASSERT_NOT_REACHED();
+        return std::numeric_limits<uint64_t>::max();
+    }
+    }
+    return resultIndex;
+}
+
+JSArray* JSArray::fastFlat(JSGlobalObject* globalObject, uint64_t depth, uint64_t length)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    IndexingType sourceType = this->indexingType();
+
+    switch (sourceType) {
+    case ArrayWithInt32:
+    case ArrayWithDouble:
+    case ArrayWithContiguous: {
+        if (length > this->butterfly()->vectorLength()) [[unlikely]]
+            return nullptr;
+
+        if (holesMustForwardToPrototype()) [[unlikely]]
+            return nullptr;
+
+        uint64_t flattenedLength = calculateFlattenedLength(globalObject, this, length, depth);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        if (flattenedLength == std::numeric_limits<uint64_t>::max()) [[unlikely]]
+            return nullptr;
+
+        Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(sourceType);
+
+        IndexingType indexingType = resultStructure->indexingType();
+        if (hasAnyArrayStorage(indexingType)) [[unlikely]]
+            return nullptr;
+        ASSERT(!globalObject->isHavingABadTime());
+
+        auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, flattenedLength);
+
+        void* memory = vm.auxiliarySpace().allocate(
+            vm,
+            Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
+            nullptr, AllocationFailureMode::ReturnNull);
+        if (!memory) [[unlikely]]
+            return nullptr;
+
+        DeferGC deferGC(vm);
+        auto* butterfly = Butterfly::fromBase(memory, 0, 0);
+        butterfly->setVectorLength(vectorLength);
+        butterfly->setPublicLength(flattenedLength);
+
+        uint64_t resultIndex = 0;
+        if (indexingType == ArrayWithDouble) {
+            auto* resultBuffer = butterfly->contiguousDouble().data();
+            resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, this, length, depth, vectorLength);
+        } else {
+            auto* resultBuffer = butterfly->contiguous().data();
+            resultIndex = fastFlatIntoBuffer(globalObject, resultBuffer, resultIndex, this, length, depth, vectorLength);
+        }
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        if (resultIndex == std::numeric_limits<uint64_t>::max())
+            return nullptr;
+
+        Butterfly::clearRange(indexingType, butterfly, resultIndex, vectorLength);
+        return createWithButterfly(vm, nullptr, resultStructure, butterfly);
+    }
+    default: {
+        return nullptr;
+    }
+    }
+}
 
 } // namespace JSC
 

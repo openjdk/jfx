@@ -31,6 +31,8 @@
     readonly attribute EventTarget? relatedTarget;
 };
 
-dictionary FocusEventInit : UIEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FocusEventInit : UIEventInit {
     EventTarget? relatedTarget = null;
 };

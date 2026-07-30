@@ -28,6 +28,7 @@
 
 #include "AbortController.h"
 #include "AbortSignal.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Exception.h"
 #include "ExceptionCode.h"
 #include "InternalObserver.h"
@@ -46,7 +47,7 @@ class InternalObserverLast final : public InternalObserver {
 public:
     static Ref<InternalObserverLast> create(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
     {
-        Ref internalObserver = adoptRef(*new InternalObserverLast(context, WTFMove(promise)));
+        Ref internalObserver = adoptRef(*new InternalObserverLast(context, WTF::move(promise)));
         internalObserver->suspendIfNeeded();
         return internalObserver;
     }
@@ -81,7 +82,7 @@ private:
 
     InternalObserverLast(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
-        , m_promise(WTFMove(promise))
+        , m_promise(WTF::move(promise))
     {
     }
 
@@ -100,9 +101,9 @@ void createInternalObserverOperatorLast(ScriptExecutionContext& context, Observa
         });
     }
 
-    Ref observer = InternalObserverLast::create(context, WTFMove(promise));
+    Ref observer = InternalObserverLast::create(context, WTF::move(promise));
 
-    observable.subscribeInternal(context, WTFMove(observer), options);
+    observable.subscribeInternal(context, WTF::move(observer), options);
 }
 
 } // namespace WebCore

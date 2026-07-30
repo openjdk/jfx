@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "BlockFormattingQuirks.h"
+#include "LayoutBoxInlines.h"
 
 #include "BlockFormattingContext.h"
 #include "BlockFormattingGeometry.h"
@@ -35,7 +36,7 @@
 #include "LayoutElementBox.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Layout {
@@ -139,7 +140,7 @@ LayoutUnit BlockFormattingQuirks::heightValueOfNearestContainingBlockWithFixedHe
     for (auto& containingBlock : containingBlockChain(layoutBox)) {
         auto containingBlockHeight = containingBlock.style().logicalHeight();
         if (auto fixedContainingBlockHeight = containingBlockHeight.tryFixed())
-            return LayoutUnit(fixedContainingBlockHeight->value - bodyAndDocumentVerticalMarginPaddingAndBorder);
+            return LayoutUnit(fixedContainingBlockHeight->resolveZoom(containingBlock.style().usedZoomForLength()) - bodyAndDocumentVerticalMarginPaddingAndBorder);
 
         // If the only fixed value box we find is the ICB, then ignore the body and the document (vertical) margin, padding and border. So much quirkiness.
         // -and it's totally insane because now we freely travel across formatting context boundaries and computed margins are nonexistent.

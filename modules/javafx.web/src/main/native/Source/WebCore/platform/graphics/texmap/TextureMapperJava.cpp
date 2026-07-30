@@ -36,6 +36,8 @@
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapperJava);
+
 static const int s_maximumAllowedImageBufferDimension = 256;
 
 TextureMapperJava::TextureMapperJava()

@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "pas_platform.h"
 
 #ifdef __cplusplus
@@ -97,16 +99,16 @@ static inline __pas_size_t __pas_round_up_to_power_of_2(__pas_size_t size, __pas
 
 static __PAS_ALWAYS_INLINE void __pas_compiler_fence(void)
 {
-    asm volatile("" ::: "memory");
+    __asm__ volatile("" ::: "memory");
 }
 
 static __PAS_ALWAYS_INLINE void __pas_fence(void)
 {
 #if !__PAS_ARM && !__PAS_RISCV
     if (sizeof(void*) == 8)
-        asm volatile("lock; orl $0, (%%rsp)" ::: "memory");
+        __asm__ volatile("lock; orl $0, (%%rsp)" ::: "memory");
     else
-        asm volatile("lock; orl $0, (%%esp)" ::: "memory");
+        __asm__ volatile("lock; orl $0, (%%esp)" ::: "memory");
 #else
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
 #endif
@@ -126,13 +128,13 @@ static __PAS_ALWAYS_INLINE unsigned __pas_depend_impl(unsigned long input, int c
     // dependent loads in their store order without the reader using a barrier
     // or an acquire load.
     __PAS_UNUSED_PARAM(cpu_only);
-    asm volatile ("eor %w[out], %w[in], %w[in]"
+    __asm__ volatile ("eor %w[out], %w[in], %w[in]"
                   : [out] "=r"(output)
                   : [in] "r"(input)
                   : "memory");
 #elif __PAS_ARM
     __PAS_UNUSED_PARAM(cpu_only);
-    asm volatile ("eor %[out], %[in], %[in]"
+    __asm__ volatile ("eor %[out], %[in], %[in]"
                   : [out] "=r"(output)
                   : [in] "r"(input)
                   : "memory");

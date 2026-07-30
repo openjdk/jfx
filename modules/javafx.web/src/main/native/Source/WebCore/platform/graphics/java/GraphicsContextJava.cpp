@@ -1049,7 +1049,7 @@ void GraphicsContextJava::fillRoundedRectImpl(const FloatRoundedRect& rect, cons
     fillRoundedRect(rect, color, BlendMode::Normal);
 }
 
-void GraphicsContextJava::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void GraphicsContextJava::drawNativeImage(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     /* flush ImageRq  to decode previous recorded  command buffer */
     flushImageRQ(platformContext(), image.platformImage());

@@ -23,14 +23,16 @@
  */
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebLockManagerSnapshot {
     sequence<WebLockInfo> held;
     sequence<WebLockInfo> pending;
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebLockInfo {
     DOMString name;
     WebLockMode mode;

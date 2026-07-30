@@ -26,8 +26,9 @@
 #include "config.h"
 #include "TableFormattingState.h"
 
+#include "LayoutBoxInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderObject.h"
-#include "RenderStyleInlines.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "TableFormattingContext.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -35,15 +36,15 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TableFormattingState);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TableFormattingState);
 
 static UniqueRef<TableGrid> ensureTableGrid(const ElementBox& tableBox)
 {
     auto tableGrid = makeUniqueRef<TableGrid>();
     auto& tableStyle = tableBox.style();
     auto shouldApplyBorderSpacing = tableStyle.borderCollapse() == BorderCollapse::Separate;
-    tableGrid->setHorizontalSpacing(LayoutUnit { shouldApplyBorderSpacing ? Style::evaluate(tableStyle.borderHorizontalSpacing()) : 0 });
-    tableGrid->setVerticalSpacing(LayoutUnit { shouldApplyBorderSpacing ? Style::evaluate(tableStyle.borderVerticalSpacing()) : 0 });
+    tableGrid->setHorizontalSpacing(LayoutUnit { shouldApplyBorderSpacing ? tableStyle.borderHorizontalSpacing().resolveZoom(tableStyle.usedZoomForLength()) : 0 });
+    tableGrid->setVerticalSpacing(LayoutUnit { shouldApplyBorderSpacing ? tableStyle.borderVerticalSpacing().resolveZoom(tableStyle.usedZoomForLength()) : 0 });
 
     auto* firstChild = tableBox.firstChild();
     if (!firstChild) {

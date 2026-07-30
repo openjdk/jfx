@@ -146,6 +146,7 @@ typedef struct streamBufferStruct {
     int bufferLength; // Allocated, nut just used
     int suspendable; // Set to true to suspend input
     long remaining_skip; // Used only on input
+    jboolean isCopy; // GetByteArrayElements copied/pinned the Java array
 } streamBuffer, *streamBufferPtr;
 
 /*
@@ -184,7 +185,6 @@ static int initStreamBuffer(JNIEnv *env, streamBufferPtr sb) {
     if (sb->hstreamBuffer == NULL) {
         return NOT_OK;
     }
-
 
     sb->stream = NULL;
 
@@ -230,8 +230,8 @@ static void resetStreamBuffer(JNIEnv *env, streamBufferPtr sb) {
 }
 
 /*
- * Pins the data buffer associated with this stream.  Returns OK on
- * success, NOT_OK on failure, as GetPrimitiveArrayCritical may fail.
+ * Pins/copies the data buffer associated with this stream. Returns OK on
+ * success, NOT_OK on failure, as GetByteArrayElements may fail.
  */
 static int pinStreamBuffer(JNIEnv *env,
         streamBufferPtr sb,
@@ -239,9 +239,9 @@ static int pinStreamBuffer(JNIEnv *env,
     if (sb->hstreamBuffer != NULL) {
         assert(sb->buf == NULL);
         sb->buf =
-                (JOCTET *) (*env)->GetPrimitiveArrayCritical(env,
+                (JOCTET *) (*env)->GetByteArrayElements(env,
                 sb->hstreamBuffer,
-                NULL);
+                &sb->isCopy);
         if (sb->buf == NULL) {
             return NOT_OK;
         }
@@ -253,7 +253,8 @@ static int pinStreamBuffer(JNIEnv *env,
 }
 
 /*
- * Unpins the data buffer associated with this stream.
+ * Unpins/releases the data buffer associated with this stream.
+ * We also use specific release mode to optimise for performance.
  */
 static void unpinStreamBuffer(JNIEnv *env,
         streamBufferPtr sb,
@@ -265,10 +266,10 @@ static void unpinStreamBuffer(JNIEnv *env,
         } else {
             sb->bufferOffset = next_byte - sb->buf;
         }
-        (*env)->ReleasePrimitiveArrayCritical(env,
+        (*env)->ReleaseByteArrayElements(env,
                 sb->hstreamBuffer,
-                sb->buf,
-                0);
+                (jbyte *)sb->buf,
+                JNI_ABORT);
         sb->buf = NULL;
     }
 }
@@ -281,90 +282,6 @@ static void clearStreamBuffer(streamBufferPtr sb) {
 }
 
 /*************************** end StreamBuffer definition *************/
-
-/*************************** Pixel Buffer definition ******************/
-
-typedef struct pixelBufferStruct {
-    jobject hpixelObject; // Usually a DataBuffer bank as a byte array
-
-    union pixptr {
-        INT32 *ip; // Pinned buffer pointer, as 32-bit ints
-        unsigned char *bp; // Pinned buffer pointer, as bytes
-    } buf;
-} pixelBuffer, *pixelBufferPtr;
-
-/*
- * Initialize a freshly allocated PixelBuffer.  All fields are simply
- * set to NULL, as we have no idea what size buffer we will need.
- */
-static void initPixelBuffer(pixelBufferPtr pb) {
-    pb->hpixelObject = NULL;
-    pb->buf.ip = NULL;
-}
-
-/*
- * Set the pixelBuffer to use the given buffer, acquiring a new global
- * reference for it.  Returns OK on success, NOT_OK on failure.
- */
-static int setPixelBuffer(JNIEnv *env, pixelBufferPtr pb, jobject obj) {
-    pb->hpixelObject = (*env)->NewGlobalRef(env, obj);
-
-    if (pb->hpixelObject == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Setting Pixel Buffer");
-        return NOT_OK;
-    }
-    return OK;
-}
-
-// Forward reference
-static void unpinPixelBuffer(JNIEnv *env, pixelBufferPtr pb);
-
-/*
- * Resets a pixel buffer to its initial state.  Unpins any pixel buffer,
- * releases the global reference, and resets fields to NULL.  Use this
- * method to dispose the object as well (there is no destroyPixelBuffer).
- */
-static void resetPixelBuffer(JNIEnv *env, pixelBufferPtr pb) {
-    if (pb->hpixelObject != NULL) {
-        unpinPixelBuffer(env, pb);
-        (*env)->DeleteGlobalRef(env, pb->hpixelObject);
-        pb->hpixelObject = NULL;
-    }
-}
-
-/*
- * Pins the data buffer.  Returns OK on success, NOT_OK on failure.
- */
-static int pinPixelBuffer(JNIEnv *env, pixelBufferPtr pb) {
-    if (pb->hpixelObject != NULL) {
-        assert(pb->buf.ip == NULL);
-        pb->buf.bp = (unsigned char *) (*env)->GetPrimitiveArrayCritical
-                (env, pb->hpixelObject, NULL);
-        if (pb->buf.bp == NULL) {
-            return NOT_OK;
-        }
-    }
-    return OK;
-}
-
-/*
- * Unpins the data buffer.
- */
-static void unpinPixelBuffer(JNIEnv *env, pixelBufferPtr pb) {
-
-    if (pb->buf.ip != NULL) {
-        assert(pb->hpixelObject != NULL);
-        (*env)->ReleasePrimitiveArrayCritical(env,
-                pb->hpixelObject,
-                pb->buf.ip,
-                0);
-        pb->buf.ip = NULL;
-    }
-}
-
-/********************* end PixelBuffer definition *******************/
 
 /********************* ImageIOData definition ***********************/
 
@@ -402,7 +319,6 @@ typedef struct imageIODataStruct {
     jobject imageIOobj; // A JPEGImageLoader
 
     streamBuffer streamBuf; // Buffer for the stream
-    pixelBuffer pixelBuf; // Buffer for pixels
 
     jboolean abortFlag; // Passed down from Java abort method
 } imageIOData, *imageIODataPtr;
@@ -437,7 +353,6 @@ static imageIODataPtr initImageioData(JNIEnv *env,
         free(data);
         return NULL;
     }
-    initPixelBuffer(&data->pixelBuf);
 
     data->abortFlag = JNI_FALSE;
 
@@ -450,7 +365,6 @@ static imageIODataPtr initImageioData(JNIEnv *env,
  */
 static void resetImageIOData(JNIEnv *env, imageIODataPtr data) {
     resetStreamBuffer(env, &data->streamBuf);
-    resetPixelBuffer(env, &data->pixelBuf);
     data->abortFlag = JNI_FALSE;
 }
 
@@ -466,57 +380,12 @@ static j_common_ptr destroyImageioData(JNIEnv *env, imageIODataPtr data) {
     j_common_ptr ret = data->jpegObj;
     (*env)->DeleteWeakGlobalRef(env, data->imageIOobj);
     destroyStreamBuffer(env, &data->streamBuf);
-    resetPixelBuffer(env, &data->pixelBuf);
     ret->client_data = NULL;
     free(data);
     return ret;
 }
 
 /******************** end ImageIOData definition ***********************/
-
-/******************** Java array pinning and unpinning *****************/
-
-/* We use Get/ReleasePrimitiveArrayCritical functions to avoid
- * the need to copy array elements for the above two objects.
- *
- * MAKE SURE TO:
- *
- * - carefully insert pairs of RELEASE_ARRAYS and GET_ARRAYS around
- *   callbacks to Java.
- * - call RELEASE_ARRAYS before returning to Java.
- *
- * Otherwise things will go horribly wrong. There may be memory leaks,
- * excessive pinning, or even VM crashes!
- *
- * Note that GetPrimitiveArrayCritical may fail!
- */
-
-/*
- * Release (unpin) all the arrays in use during a read.
- */
-static void RELEASE_ARRAYS(JNIEnv *env, imageIODataPtr data, const JOCTET *next_byte) {
-    unpinStreamBuffer(env, &data->streamBuf, next_byte);
-
-    unpinPixelBuffer(env, &data->pixelBuf);
-
-}
-
-/*
- * Get (pin) all the arrays in use during a read.
- */
-static int GET_ARRAYS(JNIEnv *env, imageIODataPtr data, const JOCTET **next_byte) {
-    if (pinStreamBuffer(env, &data->streamBuf, next_byte) == NOT_OK) {
-        return NOT_OK;
-    }
-
-    if (pinPixelBuffer(env, &data->pixelBuf) == NOT_OK) {
-        RELEASE_ARRAYS(env, data, *next_byte);
-        return NOT_OK;
-    }
-    return OK;
-}
-
-/****** end of Java array pinning and unpinning ***********/
 
 /****** Error Handling *******/
 
@@ -571,7 +440,6 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
 
     if (cinfo->is_decompressor) {
         dinfo = (j_decompress_ptr)cinfo;
-        RELEASE_ARRAYS(env, data, dinfo->src->next_input_byte);
     }
     // Create a new java string from the message
     string = (*env)->NewStringUTF(env, buffer);
@@ -583,9 +451,6 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
                 JPEGImageLoader_emitWarningID,
                 string);
         checkAndClearException(env);
-        if (!GET_ARRAYS(env, data, &(dinfo->src->next_input_byte))) {
-            cinfo->err->error_exit(cinfo);
-        }
     }
 }
 
@@ -738,7 +603,7 @@ imageio_fill_input_buffer(j_decompress_ptr cinfo) {
 #ifdef DEBUG_IIO_JPEG
     printf("Filling input buffer, remaining skip is %ld, ",
             sb->remaining_skip);
-    printf("Buffer length is %d\n", sb->bufferLength);
+    printf("Buffer length is %zu\n", sb->bufferLength);
 #endif
 
     /*
@@ -753,18 +618,34 @@ imageio_fill_input_buffer(j_decompress_ptr cinfo) {
     /*
      * Now fill a complete buffer, or as much of one as the stream
      * will give us if we are near the end.
+     *
+     * The native copy of java array is not valid anymore so we just
+     * release it and get new copy, if we don't have native copy we rely
+     * on JVM to maintain the pinned handle of java array.
      */
-    RELEASE_ARRAYS(env, data, src->next_input_byte);
+    jboolean isCopy = sb->isCopy;
+    if (isCopy) {
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
+    }
+
     ret = (*env)->CallIntMethod(env,
             sb->stream,
             InputStream_readID,
             sb->hstreamBuffer, 0,
             sb->bufferLength);
     if (ret > sb->bufferLength) ret = sb->bufferLength;
-    if ((*env)->ExceptionOccurred(env)
-            || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
-        cinfo->err->error_exit((j_common_ptr) cinfo);
+    if (isCopy) {
+        if ((*env)->ExceptionCheck(env)
+            || (pinStreamBuffer(env, &data->streamBuf,
+                                &(src->next_input_byte)) == NOT_OK)) {
+            cinfo->err->error_exit((j_common_ptr) cinfo);
+        }
+    } else {
+        if ((*env)->ExceptionCheck(env)) {
+            cinfo->err->error_exit((j_common_ptr) cinfo);
+        }
     }
+
 
 #ifdef DEBUG_IIO_JPEG
     printf("Buffer filled. ret = %d\n", ret);
@@ -780,12 +661,10 @@ imageio_fill_input_buffer(j_decompress_ptr cinfo) {
 #ifdef DEBUG_IIO_JPEG
         printf("YO! Early EOI! ret = %d\n", ret);
 #endif
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
         (*env)->CallVoidMethod(env, reader,
                 JPEGImageLoader_emitWarningID,
                 READ_NO_EOI);
-        if ((*env)->ExceptionOccurred(env)
-                || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
+        if ((*env)->ExceptionCheck(env)) {
             cinfo->err->error_exit((j_common_ptr) cinfo);
         }
 
@@ -798,89 +677,6 @@ imageio_fill_input_buffer(j_decompress_ptr cinfo) {
     src->bytes_in_buffer = ret;
 
     return TRUE;
-}
-
-/*
- * With I/O suspension turned on, the JPEG library requires that all
- * buffer filling be done at the top application level, using this
- * function.  Due to the way that backtracking works, this procedure
- * saves all of the data that was left in the buffer when suspension
- * occured and read new data only at the end.
- */
-
-GLOBAL(void)
-imageio_fill_suspended_buffer(j_decompress_ptr cinfo) {
-    struct jpeg_source_mgr *src = cinfo->src;
-    imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
-    streamBufferPtr sb = &data->streamBuf;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
-    jint ret;
-    int offset, buflen;
-
-    /*
-     * The original (jpegdecoder.c) had code here that called
-     * InputStream.available and just returned if the number of bytes
-     * available was less than any remaining skip.  Presumably this was
-     * to avoid blocking, although the benefit was unclear, as no more
-     * decompression can take place until more data is available, so
-     * the code would block on input a little further along anyway.
-     * ImageInputStreams don't have an available method, so we'll just
-     * block in the skip if we have to.
-     */
-
-    if (sb->remaining_skip) {
-        src->skip_input_data(cinfo, 0);
-    }
-
-    /* Save the data currently in the buffer */
-    offset = src->bytes_in_buffer;
-    if (src->next_input_byte > sb->buf) {
-        memcpy(sb->buf, src->next_input_byte, offset);
-    }
-    RELEASE_ARRAYS(env, data, src->next_input_byte);
-    buflen = sb->bufferLength - offset;
-    if (buflen <= 0) {
-        if (!GET_ARRAYS(env, data, &(src->next_input_byte))) {
-            cinfo->err->error_exit((j_common_ptr) cinfo);
-        }
-        return;
-    }
-
-    ret = (*env)->CallIntMethod(env, sb->stream,
-            InputStream_readID,
-            sb->hstreamBuffer,
-            offset, buflen);
-    if (ret > buflen) ret = buflen;
-    if ((*env)->ExceptionOccurred(env)
-            || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
-        cinfo->err->error_exit((j_common_ptr) cinfo);
-    }
-    /*
-     * If we have reached the end of the stream, then the EOI marker
-     * is missing.  We accept such streams but generate a warning.
-     * The image is likely to be corrupted, though everything through
-     * the end of the last complete MCU should be usable.
-     */
-    if (ret <= 0) {
-        jobject reader = data->imageIOobj;
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
-        (*env)->CallVoidMethod(env, reader,
-                JPEGImageLoader_emitWarningID,
-                READ_NO_EOI);
-        if ((*env)->ExceptionOccurred(env)
-                || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
-            cinfo->err->error_exit((j_common_ptr) cinfo);
-        }
-
-        sb->buf[offset] = (JOCTET) 0xFF;
-        sb->buf[offset + 1] = (JOCTET) JPEG_EOI;
-        ret = 2;
-    }
-
-    src->next_input_byte = sb->buf;
-    src->bytes_in_buffer = ret + offset;
-
-    return;
 }
 
 /*
@@ -938,14 +734,12 @@ imageio_skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
         return;
     }
 
-    RELEASE_ARRAYS(env, data, src->next_input_byte);
     ret = (*env)->CallLongMethod(env,
             sb->stream,
             InputStream_skipID,
             (jlong) num_bytes);
-    if ((*env)->ExceptionOccurred(env)
-            || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
-        cinfo->err->error_exit((j_common_ptr) cinfo);
+    if ((*env)->ExceptionCheck(env)) {
+            cinfo->err->error_exit((j_common_ptr) cinfo);
     }
 
     /*
@@ -956,14 +750,12 @@ imageio_skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
      */
     if (ret <= 0) {
         reader = data->imageIOobj;
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
         (*env)->CallVoidMethod(env,
                 reader,
                 JPEGImageLoader_emitWarningID,
                 READ_NO_EOI);
 
-        if ((*env)->ExceptionOccurred(env)
-                || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
+        if ((*env)->ExceptionCheck(env)) {
             cinfo->err->error_exit((j_common_ptr) cinfo);
         }
         sb->buf[0] = (JOCTET) 0xFF;
@@ -989,12 +781,6 @@ imageio_term_source(j_decompress_ptr cinfo) {
     JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     jobject reader = data->imageIOobj;
     if (src->bytes_in_buffer > 0) {
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
-
-        if ((*env)->ExceptionOccurred(env)
-                || !GET_ARRAYS(env, data, &(src->next_input_byte))) {
-            cinfo->err->error_exit((j_common_ptr) cinfo);
-        }
         src->bytes_in_buffer = 0;
         //src->next_input_byte = sb->buf;
     }
@@ -1377,7 +1163,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading the header. */
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
@@ -1388,10 +1174,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
         return 0;
     }
 
-    if (GET_ARRAYS(env, data, &src->next_input_byte) == NOT_OK) {
+    if (pinStreamBuffer(env, &data->streamBuf,
+                        &(src->next_input_byte)) == NOT_OK) {
         ThrowByName(env,
                 "java/io/IOException",
-                "Array pin failed");
+                "Get array elements failed");
         disposeIIO(env, data);
         return 0;
     }
@@ -1404,7 +1191,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
         printf("just read tables-only image; q table 0 at %p\n",
                 cinfo->quant_tbl_ptrs[0]);
 #endif
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
+        /*
+         * initDecompressor is called separately, so
+         * we release the arrays when we return back.
+         */
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
     } else {
         /*
          * Now adjust the jpeg_color_space variable, which was set in
@@ -1483,7 +1274,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                 /* There is no support for CMYK on jfx side, so request RGB output */
                 cinfo->out_color_space = JCS_RGB;
         }
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
+        /*
+         * initDecompressor is called separately, so
+         * we release the arrays when we return back.
+         */
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
 
         /* read icc profile data */
         profileData = read_icc_profile(env, cinfo);
@@ -1521,10 +1316,11 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
     jfloat y_scale;
     jfloat max_scale;
 
-    if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
+    if (pinStreamBuffer(env, &data->streamBuf,
+                        &(src->next_input_byte)) == NOT_OK) {
         ThrowByName(env,
                 "java/io/IOException",
-                "Array pin failed");
+                "Get array elements failed");
         return JCS_UNKNOWN;
     }
 
@@ -1536,7 +1332,7 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while initializing compression. */
-        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
@@ -1579,7 +1375,6 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
 
     jpeg_start_decompress(cinfo);
 
-    RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
     (*env)->CallVoidMethod(env, this,
             JPEGImageLoader_setOutputAttributesID,
             cinfo->output_width,
@@ -1610,16 +1405,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         ((*env)->GetArrayLength(env, barray) <
          (bytes_per_row * cinfo->output_height)))
      {
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Reading JPEG Stream");
-        return JNI_FALSE;
-    }
-
-    if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-        ThrowByName(env,
-                "java/io/IOException",
-                "Array pin failed");
         return JNI_FALSE;
     }
 
@@ -1629,6 +1418,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading. */
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
@@ -1636,13 +1426,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             ThrowByName(env, "java/io/IOException", buffer);
         }
         SAFE_FREE(scanline_ptr);
-        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         return JNI_FALSE;
     }
 
     scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof(JSAMPLE));
     if (scanline_ptr == NULL) {
-        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+        unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Reading JPEG Stream");
@@ -1652,20 +1441,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     while (cinfo->output_scanline < cinfo->output_height) {
         int num_scanlines;
         if (report_progress == JNI_TRUE) {
-            RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
             (*env)->CallVoidMethod(env, this,
                     JPEGImageLoader_updateImageProgressID,
                     cinfo->output_scanline);
             if ((*env)->ExceptionCheck(env)) {
-                SAFE_FREE(scanline_ptr);
-                return JNI_FALSE;
-            }
-            if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-                SAFE_FREE(scanline_ptr);
-                ThrowByName(env,
-                          "java/io/IOException",
-                          "Array pin failed");
-                return JNI_FALSE;
+                cinfo->err->error_exit((j_common_ptr) cinfo);
             }
         }
 
@@ -1673,7 +1453,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         if (num_scanlines == 1) {
             jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, NULL);
             if (body == NULL) {
-                RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+                unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
                 fprintf(stderr, "decompressIndirect: GetPrimitiveArrayCritical returns NULL: out of memory\n");
                 SAFE_FREE(scanline_ptr);
                 return JNI_FALSE;
@@ -1686,23 +1466,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     SAFE_FREE(scanline_ptr);
 
     if (report_progress == JNI_TRUE) {
-        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         (*env)->CallVoidMethod(env, this,
                 JPEGImageLoader_updateImageProgressID,
                 cinfo->output_height);
         if ((*env)->ExceptionCheck(env)) {
-            return JNI_FALSE;
-        }
-        if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-            ThrowByName(env,
-                "java/io/IOException",
-                "Array pin failed");
-            return JNI_FALSE;
+            cinfo->err->error_exit((j_common_ptr) cinfo);
         }
     }
 
     jpeg_finish_decompress(cinfo);
 
-    RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+    unpinStreamBuffer(env, &data->streamBuf, src->next_input_byte);
     return JNI_TRUE;
 }

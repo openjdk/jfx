@@ -37,6 +37,7 @@
 #include "SharedBuffer.h"
 
 #include <array>
+#include <wtf/IndexedRange.h>
 
 namespace WebCore {
 
@@ -57,9 +58,9 @@ struct MathValueRecord {
 };
 
 struct MathConstants {
-    OpenType::Int16 intConstants[OpenTypeMathData::ScriptScriptPercentScaleDown - OpenTypeMathData::ScriptPercentScaleDown + 1];
-    OpenType::UInt16 uIntConstants[OpenTypeMathData::DisplayOperatorMinHeight - OpenTypeMathData::DelimitedSubFormulaMinHeight + 1];
-    OpenType::MathValueRecord mathValuesConstants[OpenTypeMathData::RadicalKernAfterDegree - OpenTypeMathData::MathLeading + 1];
+    std::array<OpenType::Int16, OpenTypeMathData::ScriptScriptPercentScaleDown - OpenTypeMathData::ScriptPercentScaleDown + 1> intConstants;
+    std::array<OpenType::UInt16, OpenTypeMathData::DisplayOperatorMinHeight - OpenTypeMathData::DelimitedSubFormulaMinHeight + 1> uIntConstants;
+    std::array<OpenType::MathValueRecord, OpenTypeMathData::RadicalKernAfterDegree - OpenTypeMathData::MathLeading + 1> mathValuesConstants;
     OpenType::UInt16 radicalDegreeBottomRaisePercent;
 };
 
@@ -68,11 +69,12 @@ struct MathItalicsCorrectionInfo : TableWithCoverage {
     OpenType::UInt16 italicsCorrectionCount;
     OpenType::MathValueRecord italicsCorrection[1]; // There are italicsCorrectionCount italic correction values.
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    std::span<const OpenType::MathValueRecord> italicsCorrections() const { return unsafeMakeSpan(italicsCorrection, static_cast<size_t>(italicsCorrectionCount)); }
+
     int16_t getItalicCorrection(const SharedBuffer& buffer, Glyph glyph) const
     {
-        uint16_t count = uint16_t(italicsCorrectionCount);
-        if (!isValidEnd(buffer, &italicsCorrection[count]))
+        auto italicsCorrections = this->italicsCorrections();
+        if (!buffer.isSpanWithinBounds(italicsCorrections))
             return 0;
 
         uint16_t offset = coverageOffset;
@@ -84,12 +86,11 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
         // We determine the index in the italicsCorrection table.
         uint32_t i;
-        if (!getCoverageIndex(buffer, coverage, glyph, i) || i >= count)
+        if (!getCoverageIndex(buffer, coverage, glyph, i) || i >= italicsCorrections.size())
             return 0;
 
-        return int16_t(italicsCorrection[i].value);
+        return int16_t(italicsCorrections[i].value);
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 };
 
 struct MathGlyphInfo : TableWithCoverage {
@@ -118,6 +119,8 @@ struct GlyphAssembly : TableBase {
         OpenType::UInt16 partFlags;
     } partRecords[1]; // There are partCount GlyphPartRecord's.
 
+    std::span<const GlyphPartRecord> parts() const { return unsafeMakeSpan(partRecords, static_cast<size_t>(partCount)); }
+
     // PartFlags enumeration currently uses only one bit:
     // 0x0001 If set, the part can be skipped or repeated.
     // 0xFFFE Reserved.
@@ -125,20 +128,18 @@ struct GlyphAssembly : TableBase {
         PartFlagsExtender = 0x01
     };
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void getAssemblyParts(const SharedBuffer& buffer, Vector<OpenTypeMathData::AssemblyPart>& assemblyParts) const
     {
-        uint16_t count = partCount;
-        if (!isValidEnd(buffer, &partRecords[count]))
+        auto parts = this->parts();
+        if (!buffer.isSpanWithinBounds(parts))
             return;
-        assemblyParts.resize(count);
-        for (uint16_t i = 0; i < count; i++) {
-            assemblyParts[i].glyph = partRecords[i].glyph;
-            uint16_t flag = partRecords[i].partFlags;
+        assemblyParts.resize(parts.size());
+        for (auto [i, part] : indexedRange(parts)) {
+            assemblyParts[i].glyph = part.glyph;
+            uint16_t flag = part.partFlags;
             assemblyParts[i].isExtender = flag & PartFlagsExtender;
         }
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 };
 
 struct MathGlyphConstruction : TableBase {
@@ -149,17 +150,17 @@ struct MathGlyphConstruction : TableBase {
         OpenType::UInt16 advanceMeasurement;
     } mathGlyphVariantRecords[1]; // There are variantCount MathGlyphVariantRecord's.
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    std::span<const MathGlyphVariantRecord> variantRecords() const { return unsafeMakeSpan(mathGlyphVariantRecords, static_cast<size_t>(variantCount)); }
+
     void getSizeVariants(const SharedBuffer& buffer, Vector<Glyph>& variants) const
     {
-        uint16_t count = variantCount;
-        if (!isValidEnd(buffer, &mathGlyphVariantRecords[count]))
+        auto variantRecords = this->variantRecords();
+        if (!buffer.isSpanWithinBounds(variantRecords))
             return;
-        variants.resize(count);
-        for (uint16_t i = 0; i < count; i++)
-            variants[i] = mathGlyphVariantRecords[i].variantGlyph;
+        variants.resize(variantRecords.size());
+        for (auto [i, variantRecord] : indexedRange(variantRecords))
+            variants[i] = variantRecord.variantGlyph;
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     void getAssemblyParts(const SharedBuffer& buffer, Vector<OpenTypeMathData::AssemblyPart>& assemblyParts) const
     {
@@ -178,11 +179,12 @@ struct MathVariants : TableWithCoverage {
     OpenType::UInt16 horizontalGlyphCount;
     OpenType::Offset mathGlyphConstructionsOffset[1]; // There are verticalGlyphCount vertical glyph contructions and horizontalGlyphCount vertical glyph contructions.
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    std::span<const OpenType::Offset> mathGlyphConstructionsOffsets() const { return unsafeMakeSpan(mathGlyphConstructionsOffset, static_cast<size_t>(verticalGlyphCount) + static_cast<size_t>(horizontalGlyphCount)); }
+
     const MathGlyphConstruction* mathGlyphConstruction(const SharedBuffer& buffer, Glyph glyph, bool isVertical) const
     {
-        uint32_t count = uint16_t(verticalGlyphCount) + uint16_t(horizontalGlyphCount);
-        if (!isValidEnd(buffer, &mathGlyphConstructionsOffset[count]))
+        auto mathGlyphConstructionsOffsets = this->mathGlyphConstructionsOffsets();
+        if (!buffer.isSpanWithinBounds(mathGlyphConstructionsOffsets))
             return nullptr;
 
         // We determine the coverage table for the specified glyph.
@@ -197,15 +199,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         uint32_t i;
         if (!getCoverageIndex(buffer, coverage, glyph, i))
             return nullptr;
-        count = isVertical ? verticalGlyphCount : horizontalGlyphCount;
+        auto count = isVertical ? verticalGlyphCount : horizontalGlyphCount;
         if (i >= count)
             return nullptr;
         if (!isVertical)
             i += uint16_t(verticalGlyphCount);
 
-        return validateOffset<MathGlyphConstruction>(buffer, mathGlyphConstructionsOffset[i]);
+        return validateOffset<MathGlyphConstruction>(buffer, mathGlyphConstructionsOffsets[i]);
     }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 };
 
 struct MATHTable : TableBase {
@@ -280,7 +281,6 @@ OpenTypeMathData::OpenTypeMathData(const FontPlatformData&) = default;
 
 OpenTypeMathData::~OpenTypeMathData() = default;
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #if ENABLE(OPENTYPE_MATH)
 float OpenTypeMathData::getMathConstant(const Font& font, MathConstant constant) const
 {
@@ -319,7 +319,6 @@ float OpenTypeMathData::getMathConstant(const Font&, MathConstant) const
     return 0;
 #endif
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if ENABLE(OPENTYPE_MATH)
 float OpenTypeMathData::getItalicCorrection(const Font& font, Glyph glyph) const

@@ -34,7 +34,7 @@ namespace WebCore {
 class WebCoreOpaqueRoot;
 
 class XMLHttpRequestUpload final : public XMLHttpRequestEventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLHttpRequestUpload);
+    WTF_MAKE_TZONE_ALLOCATED(XMLHttpRequestUpload);
 public:
     explicit XMLHttpRequestUpload(XMLHttpRequest&);
 
@@ -52,7 +52,7 @@ private:
     void derefEventTarget() final { deref(); }
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::XMLHttpRequestUpload; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return m_request->scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     WeakRef<XMLHttpRequest, WeakPtrImplWithEventTargetData> m_request;
 };
@@ -60,3 +60,5 @@ private:
 WebCoreOpaqueRoot root(XMLHttpRequestUpload*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(XMLHttpRequestUpload)

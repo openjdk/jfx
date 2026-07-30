@@ -39,6 +39,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WGSL {
@@ -136,7 +137,7 @@ public:
         , m_shaderModule(shaderModule)
         , m_prepareResult(prepareResult)
         , m_constantValues(constantValues)
-        , m_deviceState(WTFMove(deviceState))
+        , m_deviceState(WTF::move(deviceState))
     {
     }
 
@@ -156,6 +157,7 @@ public:
     void visit(AST::SizeAttribute&) override;
     void visit(AST::AlignAttribute&) override;
     void visit(AST::InterpolateAttribute&) override;
+    void visit(AST::InvariantAttribute&) override;
 
     void visit(AST::Function&) override;
     void visit(AST::Structure&) override;
@@ -213,6 +215,8 @@ private:
     void serializeVariable(AST::Variable&);
     void generatePackingHelpers(AST::Structure&);
     bool emitPackedVector(const Types::Vector&, bool shouldPack);
+
+    bool outlineConstant(const Type*, AST::Expression&);
     void serializeConstant(const Type*, ConstantValue);
     void serializeBinaryExpression(AST::Expression&, AST::BinaryOperation, AST::Expression&);
     void visitStatements(AST::Statement::List&);
@@ -220,15 +224,16 @@ private:
 
     HelperGenerator m_helperGenerator;
     StringBuilder m_body;
+    StringBuilder m_constants;
     StringBuilder& m_output;
     ShaderModule& m_shaderModule;
     Indentation<4> m_indent { 0 };
+    uint32_t m_constID { 0 };
     std::optional<AST::StructureRole> m_structRole;
     std::optional<AST::VariableRole> m_variableRole;
     std::optional<AST::ParameterRole> m_parameterRole;
     std::optional<ShaderStage> m_entryPointStage;
     AST::Function* m_currentFunction { nullptr };
-    unsigned m_functionConstantIndex { 0 };
     AST::Continuing*m_continuing { nullptr };
     HashSet<AST::Function*> m_visitedFunctions;
     PrepareResult& m_prepareResult;
@@ -267,17 +272,21 @@ void FunctionDefinitionWriter::write()
             generatePackingHelpers(*structure);
     }
 
+    m_output.append(m_body);
+    m_body.clear();
+
     for (auto& entryPoint : m_shaderModule.callGraph().entrypoints()) {
         if (m_prepareResult.entryPoints.contains(entryPoint.originalName))
         visit(entryPoint.function);
     }
 
+    m_output.append(m_constants);
     m_output.append(m_body);
 }
 
 void FunctionDefinitionWriter::emitNecessaryHelpers()
 {
-    m_body.append("template<typename T>\n"_s,
+    m_output.append("template<typename T>\n"_s,
         "struct __UnpackedTypeImpl;\n\n"_s,
         "template<typename T>\n"_s,
         "struct __PackedTypeImpl;\n\n"_s,
@@ -287,13 +296,13 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
         "using __PackedType = typename __PackedTypeImpl<T>::Type;\n\n"_s);
 
     if (m_shaderModule.usesPackedVec3()) {
-        m_body.append(
+        m_output.append(
             m_indent, "template<typename T>\n"_s,
             m_indent, "struct PackedVec3 {\n"_s
         );
         {
             IndentationScope scope(m_indent);
-            m_body.append(
+            m_output.append(
                 m_indent, "union { T x; T r; };\n"_s,
                 m_indent, "union { T y; T g; };\n"_s,
                 m_indent, "union { T z; T b; };\n"_s,
@@ -313,238 +322,238 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
                 m_indent, "threadgroup T& operator[](int i) threadgroup { return i ? i == 2 ? z : y : x; }\n"_s
             );
         }
-        m_body.append(m_indent, "};\n\n"_s);
+        m_output.append(m_indent, "};\n\n"_s);
     }
 
     if (m_shaderModule.usesExternalTextures()) {
         m_shaderModule.clearUsesExternalTextures();
-        m_body.append("struct texture_external {\n"_s);
+        m_output.append("struct texture_external {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "texture2d<float> FirstPlane;\n"_s,
+            m_output.append(m_indent, "texture2d<float> FirstPlane;\n"_s,
                 m_indent, "texture2d<float> SecondPlane;\n"_s,
                 m_indent, "float3x2 UVRemapMatrix;\n"_s,
                 m_indent, "float4x3 ColorSpaceConversionMatrix;\n"_s,
                 m_indent, "uint get_width(uint lod = 0) const { return FirstPlane.get_width(lod); }\n"_s,
                 m_indent, "uint get_height(uint lod = 0) const { return FirstPlane.get_height(lod); }\n"_s);
         }
-        m_body.append("};\n\n"_s);
+        m_output.append("};\n\n"_s);
     }
 
     if (m_shaderModule.usesPackArray()) {
         m_shaderModule.clearUsesPackArray();
 
-        m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+        m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
             m_indent, "struct __PackedTypeImpl<array<T, N>> {\n"_s,
             m_indent, "using Type = array<__PackedType<T>, N>;\n"_s,
             m_indent, "};\n\n"_s);
 
         if (m_shaderModule.usesPackedVec3()) {
-            m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+            m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
                 m_indent, "struct __PackedTypeImpl<array<vec<T, 3>, N>> {"_s,
                 m_indent, "using Type = array<PackedVec3<T>, N>;"_s,
                 m_indent, "};\n\n"_s);
 
-            m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+            m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
                 m_indent, "static __attribute__((always_inline)) array<PackedVec3<T>, N> __pack(array<vec<T, 3>, N> unpacked)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-                m_body.append(m_indent, "array<PackedVec3<T>, N> packed;\n"_s,
+                m_output.append(m_indent, "array<PackedVec3<T>, N> packed;\n"_s,
                 m_indent, "for (size_t i = 0; i < N; ++i)\n"_s);
         {
             IndentationScope scope(m_indent);
-                    m_body.append(m_indent, "packed[i] = PackedVec3<T>(unpacked[i]);\n"_s);
+                    m_output.append(m_indent, "packed[i] = PackedVec3<T>(unpacked[i]);\n"_s);
         }
-                m_body.append(m_indent, "return packed;\n"_s);
+                m_output.append(m_indent, "return packed;\n"_s);
     }
-            m_body.append(m_indent, "}\n\n"_s);
+            m_output.append(m_indent, "}\n\n"_s);
         }
 
-        m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+        m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
             m_indent, "static __attribute__((always_inline)) array<__PackedType<T>, N> __pack(array<T, N> unpacked)\n"_s,
                 m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "array<__PackedType<T>, N> packed;\n"_s,
+            m_output.append(m_indent, "array<__PackedType<T>, N> packed;\n"_s,
                     m_indent, "for (size_t i = 0; i < N; ++i)\n"_s);
             {
                 IndentationScope scope(m_indent);
-                m_body.append(m_indent, "packed[i] = __pack(unpacked[i]);\n"_s);
+                m_output.append(m_indent, "packed[i] = __pack(unpacked[i]);\n"_s);
                 }
-            m_body.append(m_indent, "return packed;\n"_s);
+            m_output.append(m_indent, "return packed;\n"_s);
             }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
 
             }
 
     if (m_shaderModule.usesUnpackArray()) {
         m_shaderModule.clearUsesUnpackArray();
 
-        m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+        m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
             m_indent, "struct __UnpackedTypeImpl<array<T, N>> {\n"_s,
             m_indent, "using Type = array<__UnpackedType<T>, N>;\n"_s,
             m_indent, "};\n\n"_s);
 
         if (m_shaderModule.usesPackedVec3()) {
-            m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+            m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
                 m_indent, "struct __UnpackedTypeImpl<array<PackedVec3<T>, N>> {"_s,
                 m_indent, "using Type = array<vec<T, 3>, N>;"_s,
                 m_indent, "};\n\n"_s);
 
-            m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+            m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
                 m_indent, "static __attribute__((always_inline)) array<vec<T, 3>, N> __unpack(array<PackedVec3<T>, N> packed)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-                m_body.append(m_indent, "array<vec<T, 3>, N> unpacked;\n"_s,
+                m_output.append(m_indent, "array<vec<T, 3>, N> unpacked;\n"_s,
                 m_indent, "for (size_t i = 0; i < N; ++i)\n"_s);
             {
                 IndentationScope scope(m_indent);
-                    m_body.append(m_indent, "unpacked[i] = vec<T, 3>(packed[i]);\n"_s);
+                    m_output.append(m_indent, "unpacked[i] = vec<T, 3>(packed[i]);\n"_s);
             }
-                m_body.append(m_indent, "return unpacked;\n"_s);
+                m_output.append(m_indent, "return unpacked;\n"_s);
     }
-            m_body.append(m_indent, "}\n\n"_s);
+            m_output.append(m_indent, "}\n\n"_s);
         }
 
-        m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
+        m_output.append(m_indent, "template<typename T, size_t N>\n"_s,
             m_indent, "static __attribute__((always_inline)) array<__UnpackedType<T>, N> __unpack(array<T, N> packed)\n"_s,
                 m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "array<__UnpackedType<T>, N> unpacked;\n"_s,
+            m_output.append(m_indent, "array<__UnpackedType<T>, N> unpacked;\n"_s,
                     m_indent, "for (size_t i = 0; i < N; ++i)\n"_s);
             {
                 IndentationScope scope(m_indent);
-                m_body.append(m_indent, "unpacked[i] = __unpack(packed[i]);\n"_s);
+                m_output.append(m_indent, "unpacked[i] = __unpack(packed[i]);\n"_s);
                 }
-            m_body.append(m_indent, "return unpacked;\n"_s);
+            m_output.append(m_indent, "return unpacked;\n"_s);
             }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
         }
 
     if (m_shaderModule.usesPackVector()) {
         m_shaderModule.clearUsesPackVector();
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static __attribute__((always_inline)) packed_vec<T, 3> __pack(vec<T, 3> unpacked) { return unpacked; }\n\n"_s);
     }
 
     if (m_shaderModule.usesUnpackVector()) {
         m_shaderModule.clearUsesUnpackVector();
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static __attribute__((always_inline)) vec<T, 3> __unpack(packed_vec<T, 3> packed) { return packed; }\n\n"_s);
 
         if (m_shaderModule.usesPackedVec3()) {
-            m_body.append(m_indent, "template<typename T>\n"_s,
+            m_output.append(m_indent, "template<typename T>\n"_s,
                 m_indent, "static vec<T, 3> __unpack(PackedVec3<T> packed) { return packed; }\n\n"_s);
         }
     }
 
     if (m_shaderModule.usesWorkgroupUniformLoad()) {
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, (shaderValidationEnabled() ? "[[clang::optnone]] "_s : ""_s), "static T __workgroup_uniform_load(threadgroup T* const ptr)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "threadgroup_barrier(mem_flags::mem_threadgroup);\n"_s,
+            m_output.append(m_indent, "threadgroup_barrier(mem_flags::mem_threadgroup);\n"_s,
                 m_indent, "auto result = *ptr;\n"_s,
                 m_indent, "threadgroup_barrier(mem_flags::mem_threadgroup);\n"_s,
                 m_indent, "return result;\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesDivision()) {
-        m_body.append(m_indent, "template<typename T, typename U, typename V = conditional_t<is_scalar_v<U>, T, U>>\n"_s,
+        m_output.append(m_indent, "template<typename T, typename U, typename V = conditional_t<is_scalar_v<U>, T, U>>\n"_s,
             m_indent, "static V __wgslDiv(T lhs, U rhs)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto predicate = V(rhs) == V(0);\n"_s,
+            m_output.append(m_indent, "auto predicate = V(rhs) == V(0);\n"_s,
                 m_indent, "if constexpr (is_signed_v<U>)\n"_s);
             {
                 IndentationScope scope(m_indent);
-                m_body.append(m_indent, "predicate = predicate || (V(lhs) == V(numeric_limits<T>::lowest()) && V(rhs) == V(-1));\n"_s);
+                m_output.append(m_indent, "predicate = predicate || (V(lhs) == V(numeric_limits<T>::lowest()) && V(rhs) == V(-1));\n"_s);
             }
-            m_body.append(m_indent, "return lhs / select(V(rhs), V(1), predicate);\n"_s);
+            m_output.append(m_indent, "return lhs / select(V(rhs), V(1), predicate);\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesModulo()) {
-        m_body.append(m_indent, "template<typename T, typename U, typename V = conditional_t<is_scalar_v<U>, T, U>>\n"_s,
+        m_output.append(m_indent, "template<typename T, typename U, typename V = conditional_t<is_scalar_v<U>, T, U>>\n"_s,
             m_indent, "static V __wgslMod(T lhs, U rhs)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto predicate = V(rhs) == V(0);\n"_s,
+            m_output.append(m_indent, "auto predicate = V(rhs) == V(0);\n"_s,
                 m_indent, "if constexpr (is_signed_v<U>)\n"_s);
             {
                 IndentationScope scope(m_indent);
-                m_body.append(m_indent, "predicate = predicate || (V(lhs) == V(numeric_limits<T>::lowest()) && V(rhs) == V(-1));\n"_s);
+                m_output.append(m_indent, "predicate = predicate || (V(lhs) == V(numeric_limits<T>::lowest()) && V(rhs) == V(-1));\n"_s);
             }
-            m_body.append(m_indent, "return select(lhs % V(rhs), V(0), predicate);\n"_s);
+            m_output.append(m_indent, "return select(lhs % V(rhs), V(0), predicate);\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
 
     if (m_shaderModule.usesFrexp()) {
-        m_body.append(m_indent, "template<typename T, typename U>\n"_s,
+        m_output.append(m_indent, "template<typename T, typename U>\n"_s,
             m_indent, "struct __frexp_result {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "T fract;\n"_s,
+            m_output.append(m_indent, "T fract;\n"_s,
                 m_indent, "U exp;\n"_s);
         }
-        m_body.append(m_indent, "};\n\n"_s,
+        m_output.append(m_indent, "};\n\n"_s,
             m_indent, "template<typename T, typename U = conditional_t<is_vector_v<T>, vec<int, vec_elements<T>::value ?: 2>, int>>\n"_s,
             m_indent, "static __frexp_result<T, U> __wgslFrexp(T value)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "__frexp_result<T, U> result;\n"_s,
+            m_output.append(m_indent, "__frexp_result<T, U> result;\n"_s,
                 m_indent, "result.fract = frexp(value, result.exp);\n"_s,
                 m_indent, "return result;\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesModf()) {
-        m_body.append(m_indent, "template<typename T, typename U>\n"_s,
+        m_output.append(m_indent, "template<typename T, typename U>\n"_s,
             m_indent, "struct __modf_result {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "T fract;\n"_s,
+            m_output.append(m_indent, "T fract;\n"_s,
                 m_indent, "U whole;\n"_s);
         }
-        m_body.append(m_indent, "};\n\n"_s,
+        m_output.append(m_indent, "};\n\n"_s,
             m_indent, "template<typename T>\n"_s,
             m_indent, "static __modf_result<T, T> __wgslModf(T value)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "__modf_result<T, T> result;\n"_s,
+            m_output.append(m_indent, "__modf_result<T, T> result;\n"_s,
                 m_indent, "result.fract = modf(value, result.whole);\n"_s,
                 m_indent, "return result;\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesAtomicCompareExchange()) {
-        m_body.append(m_indent, "template<typename T, typename U = bool>\n"_s,
+        m_output.append(m_indent, "template<typename T, typename U = bool>\n"_s,
             m_indent, "struct __atomic_compare_exchange_result {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "T old_value;\n"_s,
+            m_output.append(m_indent, "T old_value;\n"_s,
                 m_indent, "U exchanged;\n"_s);
         }
-        m_body.append(m_indent, "};\n\n"_s,
+        m_output.append(m_indent, "};\n\n"_s,
             m_indent, "template<typename T, typename S, typename V> __atomic_compare_exchange_result<S> __wgslAtomicCompareExchangeWeak(T atomic1, S compare, V value) {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto innerCompare = compare; \n"_s,
+            m_output.append(m_indent, "auto innerCompare = compare; \n"_s,
                 m_indent, "bool exchanged = atomic_compare_exchange_weak_explicit(atomic1, &innerCompare, value, memory_order_relaxed, memory_order_relaxed); \n"_s,
                 m_indent, "return __atomic_compare_exchange_result<decltype(compare)> { innerCompare, exchanged }; \\\n"_s,
                 m_indent, "}\n"_s);
@@ -552,128 +561,128 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
     }
 
     if (m_shaderModule.usesDot()) {
-        m_body.append(m_indent, "template<typename T, unsigned N>\n"_s,
+        m_output.append(m_indent, "template<typename T, unsigned N>\n"_s,
             m_indent, "static T __wgslDot(vec<T, N> lhs, vec<T, N> rhs)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto result = lhs[0] * rhs[0] + lhs[1] * rhs[1];\n"_s,
+            m_output.append(m_indent, "auto result = lhs[0] * rhs[0] + lhs[1] * rhs[1];\n"_s,
                 m_indent, "if constexpr (N > 2) result += lhs[2] * rhs[2];\n"_s,
                 m_indent, "if constexpr (N > 3) result += lhs[3] * rhs[3];\n"_s,
                 m_indent, "return result;\n"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesDot4I8Packed()) {
-        m_body.append(m_indent, "static int __wgslDot4I8Packed(uint lhs, uint rhs)\n"_s,
+        m_output.append(m_indent, "static int __wgslDot4I8Packed(uint lhs, uint rhs)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto vec1 = as_type<packed_char4>(lhs);"_s,
+            m_output.append(m_indent, "auto vec1 = as_type<packed_char4>(lhs);"_s,
                 m_indent, "auto vec2 = as_type<packed_char4>(rhs);"_s,
                 m_indent, "return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2] + vec1[3] * vec2[3];"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesDot4U8Packed()) {
-        m_body.append(m_indent, "static uint __wgslDot4U8Packed(uint lhs, uint rhs)\n"_s,
+        m_output.append(m_indent, "static uint __wgslDot4U8Packed(uint lhs, uint rhs)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto vec1 = as_type<packed_uchar4>(lhs);"_s,
+            m_output.append(m_indent, "auto vec1 = as_type<packed_uchar4>(lhs);"_s,
                 m_indent, "auto vec2 = as_type<packed_uchar4>(rhs);"_s,
                 m_indent, "return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2] + vec1[3] * vec2[3];"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesFirstLeadingBit()) {
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static T __wgslFirstLeadingBit(T e)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "if constexpr (is_signed_v<T>)\n"_s,
+            m_output.append(m_indent, "if constexpr (is_signed_v<T>)\n"_s,
                 m_indent, "    return select(T(31 - select(clz(e), clz(~e), e < T(0))), T(-1), e == T(0) || e == T(-1));\n"_s,
                 m_indent, "else\n"_s,
                 m_indent, "    return select(T(31 - clz(e)), T(-1), e == T(0));\n"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesFirstTrailingBit()) {
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static T __wgslFirstTrailingBit(T e)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "return select(ctz(e), T(-1), e == T(0));\n"_s);
+            m_output.append(m_indent, "return select(ctz(e), T(-1), e == T(0));\n"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesSign()) {
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static T __wgslSign(T e)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "return select(select(T(-1), T(1), e > 0), T(0), e == 0);\n"_s);
+            m_output.append(m_indent, "return select(select(T(-1), T(1), e > 0), T(0), e == 0);\n"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesExtractBits()) {
-        m_body.append(m_indent, "template<typename T>\n"_s,
+        m_output.append(m_indent, "template<typename T>\n"_s,
             m_indent, "static T __wgslExtractBits(T e, uint offset, uint count)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "auto o = min(offset, 32u);\n"_s,
+            m_output.append(m_indent, "auto o = min(offset, 32u);\n"_s,
                 m_indent, "auto c = min(count, 32u - o);\n"_s,
                 m_indent, "return select((T)0, extract_bits(e, min(o, 31u), c), c);\n"_s);
         }
-        m_body.append(m_indent, "}\n"_s);
+        m_output.append(m_indent, "}\n"_s);
     }
 
     if (m_shaderModule.usesMin()) {
-        m_body.append(m_indent, "static uint __attribute__((always_inline)) __wgslMin(uint a, uint b)\n"_s,
+        m_output.append(m_indent, "static uint __attribute__((always_inline)) __wgslMin(uint a, uint b)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append("return min(a, b);\n"_s);
+            m_output.append("return min(a, b);\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesFtoi()) {
-        m_body.append(m_indent, "template <typename T, typename S>\n"_s,
+        m_output.append(m_indent, "template <typename T, typename S>\n"_s,
             m_indent, "static T __wgslFtoi(S value)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "if constexpr (is_same_v<make_scalar_t<S>, half>)\n"_s);
-            m_body.append(m_indent, "return T(select(clamp(value, max(S(numeric_limits<T>::min()), numeric_limits<S>::lowest()), numeric_limits<S>::max()), S(0), isnan(value)));\n"_s);
-            m_body.append(m_indent, "else\n"_s);
-            m_body.append(m_indent, "return T(select(clamp(value, S(numeric_limits<T>::min()), S(numeric_limits<T>::max() - ((128 << (!is_signed_v<T>)) - 1))), S(0), isnan(value)));\n"_s);
+            m_output.append(m_indent, "if constexpr (is_same_v<make_scalar_t<S>, half>)\n"_s);
+            m_output.append(m_indent, "return T(select(clamp(value, max(S(numeric_limits<T>::min()), numeric_limits<S>::lowest()), numeric_limits<S>::max()), S(0), isnan(value)));\n"_s);
+            m_output.append(m_indent, "else\n"_s);
+            m_output.append(m_indent, "return T(select(clamp(value, S(numeric_limits<T>::min()), S(numeric_limits<T>::max() - ((128 << (!is_signed_v<T>)) - 1))), S(0), isnan(value)));\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     if (m_shaderModule.usesInsertBits()) {
-        m_body.append(m_indent, "template <typename T>\n"_s,
+        m_output.append(m_indent, "template <typename T>\n"_s,
             m_indent, "static T __wgslInsertBits(T e, T newBits, unsigned offset, unsigned count)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "constexpr unsigned w = 8 * static_cast<unsigned>(sizeof(make_scalar_t<T>));\n"_s);
-            m_body.append(m_indent, "const unsigned o = min(offset, w);\n"_s);
-            m_body.append(m_indent, "const unsigned c = min(count, w - o);\n"_s);
-            m_body.append(m_indent, "return insert_bits(e, newBits, min(o, w - 1), c);\n"_s);
+            m_output.append(m_indent, "constexpr unsigned w = 8 * static_cast<unsigned>(sizeof(make_scalar_t<T>));\n"_s);
+            m_output.append(m_indent, "const unsigned o = min(offset, w);\n"_s);
+            m_output.append(m_indent, "const unsigned c = min(count, w - o);\n"_s);
+            m_output.append(m_indent, "return insert_bits(e, newBits, min(o, w - 1), c);\n"_s);
         }
-        m_body.append(m_indent, "}\n\n"_s);
+        m_output.append(m_indent, "}\n\n"_s);
     }
 
     m_shaderModule.clearUsesPackedVec3();
@@ -789,7 +798,7 @@ void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
                 }
             }
             m_body.append(m_indent, "{ }\n"_s);
-        } else if (structDecl.role() == AST::StructureRole::FragmentOutputWrapper) {
+        } else if (structDecl.role() == AST::StructureRole::FragmentOutputWrapper || structDecl.role() == AST::StructureRole::VertexOutputWrapper) {
             ASSERT(structDecl.members().size() == 1);
             auto& member = structDecl.members()[0];
 
@@ -983,7 +992,7 @@ void FunctionDefinitionWriter::visit(AST::BuiltinAttribute& builtin)
     // Built-in attributes are only valid for parameters. If a struct member originally
     // had a built-in attribute it must have already been hoisted into a parameter, but
     // we keep the original struct so we can reconstruct it.
-    if (m_structRole.has_value() && *m_structRole != AST::StructureRole::VertexOutput && *m_structRole != AST::StructureRole::FragmentOutput && *m_structRole != AST::StructureRole::FragmentOutputWrapper)
+    if (m_structRole.has_value() && *m_structRole != AST::StructureRole::VertexOutput && *m_structRole != AST::StructureRole::VertexOutputWrapper && *m_structRole != AST::StructureRole::FragmentOutput && *m_structRole != AST::StructureRole::FragmentOutputWrapper)
         return;
 
     switch (builtin.builtin()) {
@@ -998,6 +1007,7 @@ void FunctionDefinitionWriter::visit(AST::BuiltinAttribute& builtin)
         break;
     case Builtin::InstanceIndex:
         m_body.append("[[instance_id]]"_s);
+        break;
         break;
     case Builtin::LocalInvocationId:
         m_body.append("[[thread_position_in_threadgroup]]"_s);
@@ -1065,6 +1075,7 @@ void FunctionDefinitionWriter::visit(AST::LocationAttribute& location)
         switch (role) {
         case AST::StructureRole::VertexOutput:
         case AST::StructureRole::FragmentInput:
+        case AST::StructureRole::VertexOutputWrapper:
             m_body.append("[[user(loc"_s, location.location().constantValue()->integerValue(), ")]]"_s);
             return;
         case AST::StructureRole::BindGroup:
@@ -1074,7 +1085,6 @@ void FunctionDefinitionWriter::visit(AST::LocationAttribute& location)
         case AST::StructureRole::PackedResource:
             return;
         case AST::StructureRole::FragmentOutputWrapper:
-            RELEASE_ASSERT_NOT_REACHED();
         case AST::StructureRole::FragmentOutput:
             m_body.append("[[color("_s, location.location().constantValue()->integerValue(), ")]]"_s);
             return;
@@ -1139,6 +1149,14 @@ static ASCIILiteral convertToSampleMode(InterpolationType type, InterpolationSam
 void FunctionDefinitionWriter::visit(AST::InterpolateAttribute& attribute)
 {
     m_body.append("[["_s, convertToSampleMode(attribute.type(), attribute.sampling()), "]]"_s);
+}
+
+void FunctionDefinitionWriter::visit(AST::InvariantAttribute&)
+{
+    if (!m_structRole.has_value() || (*m_structRole != AST::StructureRole::VertexOutput && *m_structRole != AST::StructureRole::VertexOutputWrapper))
+        return;
+
+    m_body.append("[[invariant]]"_s);
 }
 
 // Types
@@ -1376,8 +1394,37 @@ void FunctionDefinitionWriter::visit(AST::Expression& expression)
     visit(expression.inferredType(), expression);
 }
 
+bool FunctionDefinitionWriter::outlineConstant(const Type* type, AST::Expression& expression)
+{
+    auto constantValue = expression.constantValue();
+    if (!constantValue)
+        return false;
+
+    auto* maybeArrayValue = std::get_if<ConstantArray>(&*constantValue);
+    if (!maybeArrayValue)
+        return false;
+
+    auto constantName = makeString("__wgslConst"_s, m_constID++);
+
+    std::swap(m_body, m_constants);
+
+    m_body.append("const constant "_s);
+    visit(type);
+    m_body.append(' ', constantName, " = "_s);
+    serializeConstant(type, *constantValue);
+    m_body.append(";\n"_s);
+
+    std::swap(m_body, m_constants);
+
+    m_body.append(constantName);
+    return true;
+}
+
 void FunctionDefinitionWriter::visit(const Type* type, AST::Expression& expression)
 {
+    if (outlineConstant(type, expression))
+        return;
+
     if (auto constantValue = expression.constantValue()) {
         serializeConstant(type, *constantValue);
         return;
@@ -2127,7 +2174,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
     }
 
     if (auto* target = dynamicDowncast<AST::IdentifierExpression>(call.target())) {
-        static constexpr std::pair<ComparableASCIILiteral, void(*)(FunctionDefinitionWriter*, AST::CallExpression&)> builtinMappings[] {
+        static constexpr SortedArrayMap builtins { std::to_array<std::pair<ComparableASCIILiteral, void(*)(FunctionDefinitionWriter*, AST::CallExpression&)>>({
             { "__dynamicOffset"_s, emitDynamicOffset },
             { "arrayLength"_s, emitArrayLength },
             { "atomicAdd"_s, emitAtomicAdd },
@@ -2172,8 +2219,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "unpack4xU8"_s, emitUnpack4xU8 },
             { "workgroupBarrier"_s, emitWorkgroupBarrier },
             { "workgroupUniformLoad"_s, emitWorkgroupUniformLoad },
-        };
-        static constexpr SortedArrayMap builtins { builtinMappings };
+        }) };
         const auto& targetName = target->identifier().id();
         if (auto mappedBuiltin = builtins.get(targetName)) {
             mappedBuiltin(this, call);
@@ -2190,7 +2236,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
 #define NOOP_HELPER(name) \
     [](HelperGenerator&) { return #name##_s; }
 
-        static constexpr std::pair<ComparableASCIILiteral, ASCIILiteral(*)(HelperGenerator&)> directMappings[] {
+        static constexpr SortedArrayMap mappedNames { std::to_array<std::pair<ComparableASCIILiteral, ASCIILiteral(*)(HelperGenerator&)>>({
             { "acos"_s, EMIT_HELPER(Acos) },
             { "acosh"_s, EMIT_HELPER(Acosh) },
             { "asin"_s, EMIT_HELPER(Asin) },
@@ -2232,12 +2278,10 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "unpack2x16unorm"_s, NOOP_HELPER(unpack_unorm2x16_to_float) },
             { "unpack4x8snorm"_s, NOOP_HELPER(unpack_snorm4x8_to_float) },
             { "unpack4x8unorm"_s, NOOP_HELPER(unpack_unorm4x8_to_float) },
-        };
-
+        }) };
 #undef EMIT_HELPER
 #undef NOOP_HELPER
 
-        static constexpr SortedArrayMap mappedNames { directMappings };
         if (call.isConstructor()) {
             if (call.isFloatToIntConversion()) {
                 m_body.append("__wgslFtoi<"_s);
@@ -2929,7 +2973,7 @@ void FunctionDefinitionWriter::serializeConstant(const Type* type, ConstantValue
 
 void emitMetalFunctions(StringBuilder& stringBuilder, ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues, DeviceState&& deviceState)
 {
-    FunctionDefinitionWriter functionDefinitionWriter(shaderModule, stringBuilder, prepareResult, constantValues, WTFMove(deviceState));
+    FunctionDefinitionWriter functionDefinitionWriter(shaderModule, stringBuilder, prepareResult, constantValues, WTF::move(deviceState));
     functionDefinitionWriter.write();
 }
 

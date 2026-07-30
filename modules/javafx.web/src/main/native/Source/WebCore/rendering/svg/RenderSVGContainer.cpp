@@ -29,6 +29,7 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderTreeBuilder.h"
@@ -42,15 +43,15 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGContainer);
 
 RenderSVGContainer::RenderSVGContainer(Type type, Document& document, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
-    : RenderSVGModelObject(type, document, WTFMove(style), svgFlags | SVGModelObjectFlag::IsContainer)
+    : RenderSVGModelObject(type, document, WTF::move(style), svgFlags | SVGModelObjectFlag::IsContainer)
 {
 }
 
 RenderSVGContainer::RenderSVGContainer(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
-    : RenderSVGModelObject(type, element, WTFMove(style), svgFlags | SVGModelObjectFlag::IsContainer)
+    : RenderSVGModelObject(type, element, WTF::move(style), svgFlags | SVGModelObjectFlag::IsContainer)
 {
 }
 

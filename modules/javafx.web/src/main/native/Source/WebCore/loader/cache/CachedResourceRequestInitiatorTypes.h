@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "LoaderMalloc.h"
-#include "ThreadGlobalData.h"
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/ThreadGlobalData.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -48,7 +48,7 @@ private:
 
 inline const CachedResourceRequestInitiatorTypes& cachedResourceRequestInitiatorTypes()
 {
-    return threadGlobalData().cachedResourceRequestInitiatorTypes();
+    return threadGlobalDataSingleton().cachedResourceRequestInitiatorTypes();
 }
 
 } // namespace WebCore

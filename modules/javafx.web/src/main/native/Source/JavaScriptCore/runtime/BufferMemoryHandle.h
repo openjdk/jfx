@@ -25,12 +25,11 @@
 
 #pragma once
 
+#include <JavaScriptCore/MemoryMode.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/PageCount.h>
+
 #include <atomic>
-
-#include "MemoryMode.h"
-#include "Options.h"
-#include "PageCount.h"
-
 #include <set>
 
 #include <wtf/CagedPtr.h>
@@ -49,8 +48,12 @@ class PrintStream;
 }
 
 namespace JSC {
+namespace Wasm {
+class InstanceAnchor;
+}
 
 class LLIntOffsetsExtractor;
+class JSWebAssemblyInstance;
 
 enum class GrowFailReason : uint8_t {
     InvalidDelta,
@@ -61,7 +64,7 @@ enum class GrowFailReason : uint8_t {
 };
 
 struct BufferMemoryResult {
-    enum Kind {
+    enum class Kind {
         Success,
         SuccessAndNotifyMemoryPressure,
         SyncTryToReclaimMemory
@@ -162,6 +165,12 @@ public:
 
     static void* nullBasePointer();
 
+#if ENABLE(WEBASSEMBLY)
+    const ThreadSafeWeakHashSet<Wasm::InstanceAnchor>& anchors(const AbstractLocker&) const { return m_anchors; }
+    void transferAnchors(BufferMemoryHandle& newHandle);
+    void registerInstance(JSWebAssemblyInstance&);
+#endif
+
 private:
     using CagedMemory = CagedPtr<Gigacage::Primitive, void>;
 
@@ -173,6 +182,9 @@ private:
     size_t m_mappedCapacity { 0 };
     PageCount m_initial;
     PageCount m_maximum;
+#if ENABLE(WEBASSEMBLY)
+    ThreadSafeWeakHashSet<Wasm::InstanceAnchor> m_anchors;
+#endif
 };
 
 } // namespace JSC

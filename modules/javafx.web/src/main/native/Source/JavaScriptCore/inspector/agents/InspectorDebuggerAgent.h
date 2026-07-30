@@ -29,15 +29,15 @@
 
 #pragma once
 
-#include "Breakpoint.h"
-#include "ContentSearchUtilities.h"
-#include "Debugger.h"
-#include "DebuggerPrimitives.h"
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
-#include "Microtask.h"
-#include "RegularExpression.h"
+#include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/ContentSearchUtilities.h>
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/RegularExpression.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>

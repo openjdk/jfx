@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleValueTypes.h"
+#include <WebCore/AcceleratedEffectOffsetRotate.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -39,6 +40,10 @@ struct OffsetRotate {
 
     constexpr OffsetRotate(CSS::Keyword::Auto keyword) : m_angle { 0 }, m_autoKeyword { keyword } { }
     constexpr OffsetRotate(std::optional<CSS::Keyword::Auto> autoKeyword, Angle angle) : m_angle(angle), m_autoKeyword(autoKeyword) { }
+
+#if ENABLE(THREADED_ANIMATIONS)
+    constexpr explicit OffsetRotate(AcceleratedEffectOffsetRotate rotate) : m_angle(rotate.angle), m_autoKeyword(rotate.hasAuto ? std::make_optional(CSS::Keyword::Auto { }) : std::nullopt) { }
+#endif
 
     bool hasAuto() const { return m_autoKeyword.has_value(); }
     std::optional<CSS::Keyword::Auto> autoKeyword() const { return m_autoKeyword; }
@@ -71,6 +76,16 @@ template<> struct Blending<OffsetRotate> {
     auto canBlend(const OffsetRotate&, const OffsetRotate&) -> bool;
     auto blend(const OffsetRotate&, const OffsetRotate&, const BlendingContext&) -> OffsetRotate;
 };
+
+// MARK: - Evaluation
+
+#if ENABLE(THREADED_ANIMATIONS)
+
+template<> struct Evaluation<OffsetRotate, AcceleratedEffectOffsetRotate> {
+    auto operator()(const OffsetRotate&) -> AcceleratedEffectOffsetRotate;
+};
+
+#endif
 
 // MARK: - Logging
 

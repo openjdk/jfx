@@ -27,7 +27,7 @@
 
 #include <unicode/utypes.h>
 #include <wtf/Assertions.h>
-#include <wtf/text/LChar.h>
+#include <wtf/text/Latin1Character.h>
 #include <wtf/text/ParsingUtilities.h>
 
 namespace WTF {
@@ -79,14 +79,14 @@ private:
 };
 
 template<>
-ALWAYS_INLINE char32_t CodePointIterator<LChar>::operator*() const
+ALWAYS_INLINE char32_t CodePointIterator<Latin1Character>::operator*() const
 {
     ASSERT(!atEnd());
     return m_data.front();
 }
 
 template<>
-ALWAYS_INLINE auto CodePointIterator<LChar>::operator++() -> CodePointIterator&
+ALWAYS_INLINE auto CodePointIterator<Latin1Character>::operator++() -> CodePointIterator&
 {
     skip(m_data, 1);
     return *this;

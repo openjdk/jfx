@@ -31,16 +31,15 @@
 #include "RenderSVGShape.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFitToViewBox.h"
-#include "SVGRenderStyle.h"
 #include "SVGVisitedRendererTracking.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourcePattern);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGResourcePattern);
 
 RenderSVGResourcePattern::RenderSVGResourcePattern(SVGElement& element, RenderStyle&& style)
-    : RenderSVGResourcePaintServer(Type::SVGResourcePattern, element, WTFMove(style))
+    : RenderSVGResourcePaintServer(Type::SVGResourcePattern, element, WTF::move(style))
 {
 }
 
@@ -74,12 +73,12 @@ void RenderSVGResourcePattern::collectPatternAttributesIfNeeded()
     if (attributes.hasViewBox() && attributes.viewBox().isEmpty())
         return;
 
-    m_attributes = WTFMove(attributes);
+    m_attributes = WTF::move(attributes);
 }
 
 RefPtr<Pattern> RenderSVGResourcePattern::buildPattern(GraphicsContext& context, const RenderLayerModelObject& renderer)
 {
-    RefPtr<ImageBuffer> tileImage = m_imageMap.get(renderer);
+    RefPtr tileImage = m_imageMap.get(renderer);
     if (!tileImage) {
     collectPatternAttributesIfNeeded();
 
@@ -122,12 +121,12 @@ RefPtr<Pattern> RenderSVGResourcePattern::buildPattern(GraphicsContext& context,
     if (!patternTransform.isIdentity())
             transform = patternTransform * transform;
 
-        m_imageMap.set(renderer, tileImage);
+        m_imageMap.set(renderer, *tileImage);
         m_transformMap.set(renderer, transform);
     }
 
     // Build pattern.
-    return Pattern::create({ *tileImage }, { true, true, m_transformMap.get(renderer) } );
+    return Pattern::create({ tileImage.releaseNonNull() }, { true, true, m_transformMap.get(renderer) } );
 }
 
 bool RenderSVGResourcePattern::prepareFillOperation(GraphicsContext& context, const RenderLayerModelObject& targetRenderer, const RenderStyle& style)
@@ -136,9 +135,8 @@ bool RenderSVGResourcePattern::prepareFillOperation(GraphicsContext& context, co
     if (!pattern)
         return false;
 
-    const auto& svgStyle = style.svgStyle();
-    context.setAlpha(svgStyle.fillOpacity().value.value);
-    context.setFillRule(svgStyle.fillRule());
+    context.setAlpha(style.fillOpacity().value.value);
+    context.setFillRule(style.fillRule());
     context.setFillPattern(*pattern);
     return true;
 }
@@ -149,11 +147,9 @@ bool RenderSVGResourcePattern::prepareStrokeOperation(GraphicsContext& context, 
     if (!pattern)
         return false;
 
-    const auto& svgStyle = style.svgStyle();
-
-    context.setAlpha(svgStyle.strokeOpacity().value.value);
+    context.setAlpha(style.strokeOpacity().value.value);
     SVGRenderSupport::applyStrokeStyleToContext(context, style, targetRenderer);
-    if (svgStyle.vectorEffect() == VectorEffect::NonScalingStroke) {
+    if (style.vectorEffect() == VectorEffect::NonScalingStroke) {
         if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(targetRenderer))
             pattern->setPatternSpaceTransform(shape->nonScalingStrokeTransform().multiply(m_transformMap.get(targetRenderer)));
     }
@@ -181,7 +177,7 @@ bool RenderSVGResourcePattern::buildTileImageTransform(const RenderElement& rend
 
 RefPtr<ImageBuffer> RenderSVGResourcePattern::createTileImage(GraphicsContext& context, const PatternAttributes& attributes, const FloatSize& size, const FloatSize& scale, const AffineTransform& tileImageTransform) const
 {
-    CheckedPtr patternRenderer = static_cast<RenderSVGResourcePattern*>(attributes.patternContentElement()->renderer());
+    CheckedPtr patternRenderer = downcast<RenderSVGResourcePattern>(attributes.patternContentElement()->renderer());
     ASSERT(patternRenderer);
     ASSERT(patternRenderer->hasLayer());
 

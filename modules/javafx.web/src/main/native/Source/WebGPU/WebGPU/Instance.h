@@ -49,8 +49,10 @@ class MachSendRight;
 namespace WebGPU {
 
 class Adapter;
+class DDMesh;
 class Device;
 class PresentationContext;
+class Texture;
 
 // https://gpuweb.github.io/gpuweb/#gpu
 class Instance : public WGPUInstanceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Instance> {
@@ -75,6 +77,8 @@ public:
     using WorkItem = Function<void()>;
     void scheduleWork(WorkItem&&);
     const std::optional<const MachSendRight>& webProcessID() const;
+    Ref<DDMesh> createModelBacking(const WGPUDDCreateMeshDescriptor&);
+    id<MTLDevice> device() const;
 
 private:
     Instance(WGPUScheduleWorkBlock, const WTF::MachSendRight* webProcessResourceOwner);

@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
 
@@ -33,9 +34,10 @@ namespace WTF {
 
 class RegisteredSymbolImpl;
 
-class SymbolRegistry {
+class SymbolRegistry final : public CanMakeThreadSafeCheckedPtr<SymbolRegistry> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SymbolRegistry);
     WTF_MAKE_NONCOPYABLE(SymbolRegistry);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SymbolRegistry);
 public:
     enum class Type : uint8_t { PublicSymbol, PrivateSymbol };
     WTF_EXPORT_PRIVATE SymbolRegistry(Type = Type::PublicSymbol);
@@ -50,4 +52,6 @@ private:
     Type m_symbolType;
 };
 
-}
+} // namespace WTF
+
+using WTF::SymbolRegistry;

@@ -31,7 +31,7 @@
 #include "Logging.h"
 #include "NodeInlines.h"
 #include "RenderBoxInlines.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "SVGElement.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -42,7 +42,7 @@ Ref<ResizeObservation> ResizeObservation::create(Element& target, ResizeObserver
     return adoptRef(*new ResizeObservation(target, observedBox));
 }
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ResizeObservation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResizeObservation);
 
 ResizeObservation::ResizeObservation(Element& element, ResizeObserverBoxOptions observedBox)
     : m_target { element }
@@ -92,6 +92,9 @@ auto ResizeObservation::computeObservedSizes() const -> std::optional<BoxSizes>
 
 LayoutPoint ResizeObservation::computeTargetLocation() const
 {
+    if (!m_target)
+        return { };
+
     if (!m_target->isSVGElement()) {
         if (auto box = m_target->renderBox())
             return LayoutPoint(box->paddingLeft(), box->paddingTop());

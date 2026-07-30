@@ -46,7 +46,7 @@ template<typename> class ExceptionOr;
 class Exception;
 
 class WebCodecsAudioDecoder : public WebCodecsBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebCodecsAudioDecoder);
+    WTF_MAKE_TZONE_ALLOCATED(WebCodecsAudioDecoder);
 public:
     ~WebCodecsAudioDecoder();
 
@@ -92,6 +92,8 @@ private:
     size_t m_decoderCount { 0 };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebCodecsAudioDecoder)
 
 #endif

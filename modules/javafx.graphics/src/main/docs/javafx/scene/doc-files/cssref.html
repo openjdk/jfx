@@ -485,7 +485,7 @@
     </p>
     <p>
       The structure of this document is as follows. First, there is a
-      description of all value types for JavaFX CSS properties.Where
+      description of all value types for JavaFX CSS properties. Where
       appropriate, this includes a grammar for the syntax of values of that
       type. Then, for each scene&#8209;graph node that supports CSS styles, a table is
       given that lists the properties that are supported, along with type and
@@ -596,7 +596,7 @@
         Beginning with JavaFX 2.1, the Parent class has a
         <a href="../../../javafx/scene/Parent.html#getStylesheets--">getStylesheets</a> property,
         allowing style sheets to be set on a container. This allows for one branch
-        of of the scene&#8209;graph to have a distinct set of styles. Any instance of
+        of the scene&#8209;graph to have a distinct set of styles. Any instance of
         Parent can have style sheets. A child will take its styles from its own
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
@@ -1260,7 +1260,7 @@
     <p>If the <span class="grammar">&lt;address&gt;</span> does not have a [scheme:] component, the <span class="grammar">&lt;address&gt;</span>
         is considered to be the [path] component only.
         A leading '/' character indicates that the [path] is relative to the
-        root of the classpath. If the the style appears in a stylesheet and
+        root of the classpath. If the style appears in a stylesheet and
         has no leading '/' character, the path is relative to the base URI of
         the stylesheet. If the style appears in an inline style, the path is
         relative to the root of the classpath (regardless of whether or not
@@ -1762,7 +1762,7 @@
       feature, as it allows a generic palette of colors to be specified on the
       scene then used throughout the application. If you want to change one of
       those palette colors you can do so at any level in the scene tree and it
-      will affect that node and all its decendents. Looked-up colors are not
+      will affect that node and all its descendants. Looked-up colors are not
       looked up until they are applied, so they are live and react to any style
       changes that might occur, such as replacing a palette color at runtime
       with the "style" property on a node.</p>
@@ -1912,7 +1912,7 @@
     <p class="grammar">linear | &lt;linear-easing-function&gt; | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
     <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br>
        The linear easing keyword is a simple linear mapping from the input progress value to the output progress value.<br>
-       It it equivalent to <span class="grammar">linear(0, 1)</span></p>
+       It is equivalent to <span class="grammar">linear(0, 1)</span></p>
     <figure style="display: inline-block">
         <img src="easing-linear.svg" width="200" alt="Linear easing function">
     </figure>
@@ -1966,7 +1966,7 @@
     <p>A cubic Bézier function is defined by four control points, where P0 is fixed at (0,0) and P3 is fixed at (1,1).
        P1 and P2 are restricted to the interval [0,1] on the input progress axis:</p>
     <figure style="display: inline-block">
-        <img src="easing-cubicbezier.svg" width="200" alt="Cubic Bèzier easing function">
+        <img src="easing-cubicbezier.svg" width="200" alt="Cubic Bézier easing function">
     </figure>
     <p><strong>Step Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;step-easing-function&gt;</span></p>
     <p class="grammar">step-start | step-end | steps(<a href="#typenumber" class="typelink">&lt;integer&gt;</a>[,&lt;step-position&gt;]?)</p>
@@ -2046,7 +2046,7 @@
         </tr>
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-both</span></td>
-            <td>SMIL 3.0 ease-in/out function with an acceleration and decelaration factor of 0.2</td>
+            <td>SMIL 3.0 ease-in/out function with an acceleration and deceleration factor of 0.2</td>
         </tr>
     </table>
     <p>These functions are provided for compatibility with <code>javafx.animation.Interpolator</code>
@@ -5272,7 +5272,7 @@
         </tr>
         <tr>
         <th class="propertyname" scope="row">right</th>
-          <td>applies if the side is rght</td>
+          <td>applies if the side is right</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">bottom</th>
@@ -6623,6 +6623,39 @@
 
     <h4><a id="richtextarea">RichTextArea</a></h4>
     <p class="styleclass">Style class: rich-text-area</p>
+
+    <table class="csspropertytable">
+      <caption>Available Style Classes</caption>
+      <thead>
+        <tr>
+          <th class="propertyname" scope="col">Style Class</th>
+          <th scope="col">Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" class="propertyname">
+            text-highlight-1<br>
+            text-highlight-2<br>
+            text-highlight-3<br>
+            text-highlight-4<br>
+            text-highlight-5
+          </th>
+          <td>The text highlight styles.</td>
+        </tr>
+        <tr>
+          <th scope="row" class="propertyname">
+            wavy-underline-1<br>
+            wavy-underline-2<br>
+            wavy-underline-3
+         </th>
+          <td>The wavy underline styles.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>&nbsp;</p>
+
       <table class="csspropertytable">
         <caption>Available CSS Properties</caption>
         <thead>
@@ -6632,7 +6665,7 @@
             <th scope="col">Default</th>
             <th scope="col">Comments</th>
           </tr>
-        </thead>   
+        </thead>
         <tbody>
           <tr>
             <th class="propertyname" scope="row">-fx-caret-blink-period</th>
@@ -6642,12 +6675,12 @@
           </tr>
           <tr>
             <th class="propertyname" scope="row">-fx-content-padding</th>
-			<td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
-			  | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-			    class="typelink">&lt;size&gt;</a>
-			  <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-			    class="typelink">&lt;size&gt;</a>
-			</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
+                | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+                <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+            </td>
             <td>0 0 0 0</td>
             <td>Amount of padding in the content area.</td>
           </tr>
@@ -6713,22 +6746,27 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>main-pane &mdash; Pane
+      <li>rich-text-area &mdash; Pane</li>
         <ul>
-          <li>vflow &mdash; Pane
+          <li>vflow &mdash; Pane</li>
           <ul>
-            <li>content &mdash; Pane
-            <ul>
-              <li>caret-line &mdash; Path</li>
-              <li>selection-highlight &mdash; Path</li>
-              <li>flow &mdash; Pane</li>
-              <li>caret &mdash; Path</li>
-            </ul></li>
             <li>left-side &mdash; Pane</li>
             <li>right-side &mdash; Pane</li>
+            <li>scroll-bar:vertical &mdash; ScrollBar</li>
+            <li>scroll-bar:horizontal &mdash; ScrollBar</li>
+            <li>vport &mdash; Pane</li>
+            <ul>
+              <li>content &mdash; Pane</li>
+              <ul>
+                <li>drop-target &mdash; Path</li>
+                <li>caret &mdash; Path</li>
+                <li>(paragraphs cells)</li>
+                <li>selection-highlight &mdash; Path</li>
+                <li>caret-line &mdash; Path</li>
+                
+              </ul></li>
+            </ul></li>
           </ul></li>
-          <li>scroll-bar:vertical &mdash; ScrollBar</li>
-          <li>scroll-bar:horizontal &mdash; ScrollBar</li>
         </ul></li>
     </ul>
 

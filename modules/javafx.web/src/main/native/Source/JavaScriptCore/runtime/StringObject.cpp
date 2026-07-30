@@ -144,7 +144,7 @@ bool StringObject::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObj
     return JSObject::deletePropertyByIndex(thisObject, globalObject, i);
 }
 
-void StringObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void StringObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     StringObject* thisObject = jsCast<StringObject*>(object);

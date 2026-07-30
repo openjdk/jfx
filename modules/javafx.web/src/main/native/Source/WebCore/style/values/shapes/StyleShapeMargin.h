@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StyleLengthWrapper.h"
+#include <WebCore/StyleLengthWrapper.h>
 
 namespace WebCore {
 namespace Style {

@@ -73,6 +73,9 @@ public:
     void start() { observeSource(); }
     void stop() { unobserveSource(); }
 
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
     void setSource(Ref<MediaStreamTrackPrivate>&&);
     MediaStreamTrackPrivate& source() const { return m_audioSource.get(); }
 

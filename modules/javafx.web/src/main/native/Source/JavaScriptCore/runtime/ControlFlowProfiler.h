@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "BasicBlockLocation.h"
-#include "SourceID.h"
+#include <JavaScriptCore/BasicBlockLocation.h>
+#include <JavaScriptCore/SourceID.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -52,6 +52,7 @@ struct BasicBlockKey {
     { }
 
     bool isHashTableDeletedValue() const { return m_startOffset == -2 && m_endOffset == -2; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     friend bool operator==(const BasicBlockKey&, const BasicBlockKey&) = default;
     unsigned hash() const { return m_startOffset + m_endOffset + 1; }
 
@@ -59,18 +60,9 @@ struct BasicBlockKey {
     int m_endOffset;
 };
 
-struct BasicBlockKeyHash {
-    static unsigned hash(const BasicBlockKey& key) { return key.hash(); }
-    static bool equal(const BasicBlockKey& a, const BasicBlockKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::BasicBlockKey> : JSC::BasicBlockKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::BasicBlockKey> : SimpleClassHashTraits<JSC::BasicBlockKey> {

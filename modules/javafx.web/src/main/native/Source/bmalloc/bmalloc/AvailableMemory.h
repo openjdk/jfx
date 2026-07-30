@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 #include "Sizes.h"
 
@@ -69,3 +71,5 @@ inline bool isUnderMemoryPressure()
 }
 
 } // namespace bmalloc
+
+#endif

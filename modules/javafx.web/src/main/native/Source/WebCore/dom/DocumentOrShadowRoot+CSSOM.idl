@@ -31,3 +31,4 @@ partial interface mixin DocumentOrShadowRoot {
     // https://bugs.webkit.org/show_bug.cgi?id=238281
     [CallWith=CurrentGlobalObject, ImplementedAs=adoptedStyleSheetWrapper, CachedAttribute, CustomSetter] attribute any adoptedStyleSheets;
 };
+

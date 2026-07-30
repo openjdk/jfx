@@ -33,8 +33,8 @@
 namespace WebCore::ContentExtensions {
 
 ContentExtensionRule::ContentExtensionRule(Trigger&& trigger, Action&& action)
-    : m_trigger(WTFMove(trigger))
-    , m_action(WTFMove(action))
+    : m_trigger(WTF::move(trigger))
+    , m_action(WTF::move(action))
 {
     ASSERT(!m_trigger.urlFilter.isEmpty());
 }
@@ -87,6 +87,7 @@ DeserializedAction DeserializedAction::deserialize(std::span<const uint8_t> seri
 {
     auto serializedActionSize = serializedActions.size();
     RELEASE_ASSERT(location < serializedActionSize, location, serializedActionSize);
+
     return { location, VariantDeserializer<ActionData>::deserialize(serializedActions.subspan(location + 1), serializedActions[location]) };
 }
 
@@ -104,7 +105,7 @@ Trigger Trigger::isolatedCopy() const &
 
 Trigger Trigger::isolatedCopy() &&
 {
-    return { WTFMove(urlFilter).isolatedCopy(), urlFilterIsCaseSensitive, topURLFilterIsCaseSensitive, frameURLFilterIsCaseSensitive, flags, crossThreadCopy(WTFMove(conditions)) };
+    return { WTF::move(urlFilter).isolatedCopy(), urlFilterIsCaseSensitive, topURLFilterIsCaseSensitive, frameURLFilterIsCaseSensitive, flags, crossThreadCopy(WTF::move(conditions)) };
 }
 
 Action Action::isolatedCopy() const &
@@ -114,7 +115,7 @@ Action Action::isolatedCopy() const &
 
 Action Action::isolatedCopy() &&
 {
-    return { crossThreadCopy(WTFMove(m_data)) };
+    return { crossThreadCopy(WTF::move(m_data)) };
 }
 
 } // namespace WebCore::ContentExtensions

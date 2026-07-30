@@ -33,6 +33,9 @@
         "AtomString": {
             "contextsAllowed": ["type"]
         },
+        "BypassDocumentFullyActiveCheck": {
+            "contextsAllowed": ["type"]
+        },
         "CEReactions": {
             "contextsAllowed": ["attribute", "operation"],
             "values": ["Needed", "NotNeeded"],
@@ -188,11 +191,19 @@
             "values": ["*"],
             "supportsConjunction": true
         },
+        "EnabledConditionallyReadWriteBySetting": {
+            "contextsAllowed": ["attribute"],
+            "values": ["*"],
+            "supportsConjunction": true
+        },
         "EnabledForContext": {
             "contextsAllowed": ["attribute", "interface"]
         },
+        "EnabledForGlobalObject": {
+            "contextsAllowed": ["attribute", "operation", "interface"]
+        },
         "EnabledForWorld": {
-            "contextsAllowed": ["attribute", "operation", "interface"],
+            "contextsAllowed": ["attribute", "operation", "interface", "dictionary-member"],
             "values": ["*"],
             "supportsConjunction": true
         },
@@ -260,6 +271,9 @@
             },
             "unsupported": true
         },
+        "IgnoreSubclassesWhenGeneratingToJSObject": {
+            "contextsAllowed": ["interface"]
+        },
         "ImplementedAs": {
             "contextsAllowed": ["interface", "dictionary", "dictionary-member", "enum", "attribute", "operation", "constant"],
             "values": ["*"]
@@ -301,7 +315,7 @@
             "contextsAllowed": ["interface"]
         },
         "JSGenerateToJSObject": {
-            "contextsAllowed": ["interface", "dictionary", "callback-function"]
+            "contextsAllowed": ["dictionary"]
         },
         "JSGenerateToNativeObject": {
             "contextsAllowed": ["interface", "dictionary"]
@@ -345,6 +359,9 @@
                 "url": "https://webidl.spec.whatwg.org/#LegacyNamespace"
             },
             "unsupported": true
+        },
+        "LegacyNativeDictionaryRequiredInterfaceNullability": {
+            "contextsAllowed": ["dictionary"]
         },
         "LegacyNoInterfaceObject": {
             "contextsAllowed": ["interface"],
@@ -412,16 +429,20 @@
         "NotEnumerable": {
             "contextsAllowed": ["attribute", "operation"]
         },
+        "OptimizedUnionSetterUsingOverloads": {
+            "contextsAllowed": ["attribute"]
+        },
         "OverrideIDLType": {
             "contextsAllowed": ["type"],
             "values": ["*"]
         },
-        "BypassDocumentFullyActiveCheck": {
-            "contextsAllowed": ["type"]
-        },
         "Plugin": {
             "contextsAllowed": ["interface"],
             "notes" : "Should only be used by elements that forward to Netscape plug-ins"
+        },
+        "PermissiveInvalidValue": {
+            "contextsAllowed": ["dictionary-member"],
+            "notes": "For optional enum dictionary members, return nullopt instead of throwing TypeError on invalid enum values. Non-standard extension for forward-compatibility."
         },
         "PrivateIdentifier": {
             "contextsAllowed": ["interface", "attribute", "operation"]
@@ -512,11 +533,6 @@
         "SetterCallWith": {
             "contextsAllowed": ["attribute"],
             "values": ["CurrentScriptExecutionContext", "CurrentGlobalObject", "ActiveWindow", "FirstWindow", "PropertyName"],
-            "supportsConjunction": true
-        },
-        "EnabledConditionallyReadWriteBySetting": {
-            "contextsAllowed": ["attribute"],
-            "values": ["*"],
             "supportsConjunction": true
         },
         "SkipCallbackInvokeCheck": {

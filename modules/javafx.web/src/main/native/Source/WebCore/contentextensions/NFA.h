@@ -27,8 +27,8 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionsDebugging.h"
-#include "ImmutableNFANodeBuilder.h"
+#include <WebCore/ContentExtensionsDebugging.h>
+#include <WebCore/ImmutableNFANodeBuilder.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {

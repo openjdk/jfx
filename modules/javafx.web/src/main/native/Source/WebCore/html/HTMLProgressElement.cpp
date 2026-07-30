@@ -23,18 +23,22 @@
 
 #include "AXObjectCache.h"
 #include "ContainerNodeInlines.h"
+#include "DocumentView.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "NodeDocument.h"
 #include "ProgressShadowElement.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderProgress.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLProgressElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLProgressElement);
 
 using namespace HTMLNames;
 
@@ -59,9 +63,9 @@ Ref<HTMLProgressElement> HTMLProgressElement::create(const QualifiedName& tagNam
 RenderPtr<RenderElement> HTMLProgressElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (!style.hasUsedAppearance())
-        return RenderElement::createFor(*this, WTFMove(style));
+        return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderProgress>(*this, WTFMove(style));
+    return createRenderer<RenderProgress>(*this, WTF::move(style));
 }
 
 RenderProgress* HTMLProgressElement::renderProgress() const
@@ -149,7 +153,7 @@ void HTMLProgressElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     Ref valueElement = ProgressValueElement::create(document);
     valueElement->setInlineSizePercentage(HTMLProgressElement::IndeterminatePosition * 100);
     bar->appendChild(valueElement);
-    m_valueElement = WTFMove(valueElement);
+    m_valueElement = WTF::move(valueElement);
 
     inner->appendChild(bar);
 }

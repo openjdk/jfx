@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 #if HAVE(WEBCONTENTRESTRICTIONS)
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -32,6 +35,8 @@
 #import <WebContentRestrictions/WebContentRestrictions.h>
 
 #else
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface WCRBrowserEngineClient : NSObject
 + (BOOL)shouldEvaluateURLs;
@@ -43,6 +48,8 @@
 + (BOOL)shouldEvaluateURLsForConfigurationAtPath:(NSString *)configurationPath;
 #endif
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif // USE(APPLE_INTERNAL_SDK)
 

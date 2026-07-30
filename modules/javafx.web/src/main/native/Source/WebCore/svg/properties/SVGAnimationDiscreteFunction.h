@@ -37,7 +37,7 @@ public:
 
     bool isDiscrete() const override { return true; }
 
-    void setToAtEndOfDurationValue(const String&) override
+    void setToAtEndOfDurationValue(SVGElement&, const String&) override
     {
         ASSERT_NOT_REACHED();
     }

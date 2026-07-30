@@ -167,7 +167,7 @@ SecurityOriginData SecurityOriginData::isolatedCopy() const &
 
 SecurityOriginData SecurityOriginData::isolatedCopy() &&
 {
-    return SecurityOriginData { crossThreadCopy(WTFMove(m_data)) };
+    return SecurityOriginData { crossThreadCopy(WTF::move(m_data)) };
 }
 
 bool operator==(const SecurityOriginData& a, const SecurityOriginData& b)
@@ -215,6 +215,9 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         || url.protocolIs("resource"_s)
+#endif
+#if PLATFORM(JAVA)
+        || url.protocolIs("jar:file"_s)
 #endif
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)

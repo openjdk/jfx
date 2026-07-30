@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "ColorComponents.h"
-#include "FilterEffect.h"
+#include <WebCore/ColorComponents.h>
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
@@ -70,6 +70,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

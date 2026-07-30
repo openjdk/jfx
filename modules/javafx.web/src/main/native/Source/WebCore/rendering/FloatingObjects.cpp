@@ -86,12 +86,14 @@ std::unique_ptr<FloatingObject> FloatingObject::create(RenderBox& renderer)
 
 std::unique_ptr<FloatingObject> FloatingObject::copyToNewContainer(LayoutSize offset, bool shouldPaint, bool isDescendant, bool overflowClipped) const
 {
-    return makeUnique<FloatingObject>(renderer(), type(), LayoutRect(frameRect().location() - offset, frameRect().size()), marginOffset(), shouldPaint, isDescendant, overflowClipped);
+    ASSERT(renderer());
+    return makeUnique<FloatingObject>(*renderer(), type(), LayoutRect(frameRect().location() - offset, frameRect().size()), marginOffset(), shouldPaint, isDescendant, overflowClipped);
 }
 
 std::unique_ptr<FloatingObject> FloatingObject::cloneForNewParent() const
 {
-    auto cloneObject = makeUnique<FloatingObject>(renderer(), type(), m_frameRect, m_marginOffset, m_paintsFloat, m_isDescendant, m_hasAncestorWithOverflowClip);
+    ASSERT(renderer());
+    auto cloneObject = makeUnique<FloatingObject>(*renderer(), type(), m_frameRect, m_marginOffset, m_paintsFloat, m_isDescendant, m_hasAncestorWithOverflowClip);
     cloneObject->m_paginationStrut = m_paginationStrut;
     cloneObject->m_isPlaced = m_isPlaced;
     return cloneObject;
@@ -107,7 +109,8 @@ bool FloatingObject::shouldPaint() const
 
 LayoutSize FloatingObject::translationOffsetToAncestor() const
 {
-    return locationOffsetOfBorderBox() - renderer().locationOffset();
+    ASSERT(renderer());
+    return locationOffsetOfBorderBox() - renderer()->locationOffset();
 }
 
 #if ENABLE(TREE_DEBUGGING)
@@ -115,7 +118,7 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
 TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
     stream << "(" << &object << ") renderer (";
-    object.hasRenderer() ? stream  << &object.renderer() << ")" : stream << "destroyed)";
+    object.hasRenderer() ? stream  << object.renderer() << ")" : stream << "destroyed)";
 
     if (object.isPlaced())
         stream << " " << object.frameRect();
@@ -247,8 +250,11 @@ inline void FindNextFloatLogicalBottomAdapter::collectIfNeeded(const IntervalTyp
     if (m_nextLogicalBottom && m_nextLogicalBottom.value() < floatBottom)
         return;
 
-    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer().shapeOutsideInfo()) {
-        LayoutUnit shapeBottom = m_renderer->logicalTopForFloat(floatingObject) + m_renderer->marginBeforeForChild(floatingObject.renderer()) + shapeOutside->shapeLogicalBottom();
+    if (!floatingObject.renderer())
+        return;
+
+    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer()->shapeOutsideInfo()) {
+        LayoutUnit shapeBottom = m_renderer->logicalTopForFloat(floatingObject) + m_renderer->marginBeforeForChild(*floatingObject.renderer()) + shapeOutside->shapeLogicalBottom();
         // Use the shapeBottom unless it extends outside of the margin box, in which case it is clipped.
         m_nextShapeLogicalBottom = std::min(shapeBottom, floatBottom);
     } else
@@ -347,7 +353,7 @@ FloatingObject* FloatingObjects::add(std::unique_ptr<FloatingObject> floatingObj
     increaseObjectsCount(floatingObject->type());
     if (floatingObject->isPlaced())
         addPlacedObject(floatingObject.get());
-    return m_set.add(WTFMove(floatingObject)).iterator->get();
+    return m_set.add(WTF::move(floatingObject)).iterator->get();
 }
 
 void FloatingObjects::remove(FloatingObject* floatingObject)
@@ -429,12 +435,15 @@ void FloatingObjects::shiftFloatsBy(LayoutUnit blockShift)
     auto shiftY = (m_horizontalWritingMode) ? blockShift : 0_lu;
 
     for (auto& floatBox : m_set) {
+        if (!floatBox->renderer())
+            continue;
+
         auto isPlaced = floatBox->isPlaced();
         if (isPlaced)
             removePlacedObject(floatBox.get());
 
         floatBox->m_frameRect.move(shiftX, shiftY);
-        floatBox->renderer().move(shiftX, shiftY);
+        floatBox->renderer()->move(shiftX, shiftY);
 
         if (isPlaced)
             addPlacedObject(floatBox.get());
@@ -489,8 +498,11 @@ inline void ComputeFloatOffsetAdapter<FloatTypeValue>::collectIfNeeded(const Int
 template<>
 inline bool ComputeFloatOffsetForLineLayoutAdapter<FloatingObject::FloatLeft>::updateOffsetIfNeeded(const FloatingObject& floatingObject)
 {
+    if (!floatingObject.renderer())
+        return false;
+
     LayoutUnit logicalRight = m_renderer->logicalRightForFloat(floatingObject);
-    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer().shapeOutsideInfo()) {
+    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer()->shapeOutsideInfo()) {
         ShapeOutsideDeltas shapeDeltas = shapeOutside->computeDeltasForContainingBlockLine(*m_renderer, floatingObject, m_lineTop, m_lineBottom - m_lineTop);
         if (!shapeDeltas.isValid() || !shapeDeltas.lineOverlapsShape())
             return false;
@@ -508,8 +520,11 @@ inline bool ComputeFloatOffsetForLineLayoutAdapter<FloatingObject::FloatLeft>::u
 template<>
 inline bool ComputeFloatOffsetForLineLayoutAdapter<FloatingObject::FloatRight>::updateOffsetIfNeeded(const FloatingObject& floatingObject)
 {
+    if (!floatingObject.renderer())
+        return false;
+
     LayoutUnit logicalLeft = m_renderer->logicalLeftForFloat(floatingObject);
-    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer().shapeOutsideInfo()) {
+    if (ShapeOutsideInfo* shapeOutside = floatingObject.renderer()->shapeOutsideInfo()) {
         ShapeOutsideDeltas shapeDeltas = shapeOutside->computeDeltasForContainingBlockLine(*m_renderer, floatingObject, m_lineTop, m_lineBottom - m_lineTop);
         if (!shapeDeltas.isValid() || !shapeDeltas.lineOverlapsShape())
             return false;

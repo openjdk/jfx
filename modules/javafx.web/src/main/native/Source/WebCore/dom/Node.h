@@ -24,13 +24,19 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "NodeIdentifier.h"
-#include "RenderStyleConstants.h"
-#include "StyleValidity.h"
+#include <WebCore/EventTarget.h>
+#include <WebCore/NodeIdentifier.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleValidity.h>
+#include <bit>
 #include <compare>
+#include <new>
+#include <wtf/CheckedPtr.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactUniquePtrTuple.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
@@ -38,9 +44,12 @@
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace WTF {
 class TextStream;
@@ -100,13 +109,15 @@ enum class TaskSource : uint8_t;
 using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
 using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
 
+enum class IsMutationBySetInnerHTML : uint8_t { No, Yes };
+
 using NodeOrString = Variant<RefPtr<Node>, String>;
 
 const int initialNodeVectorSize = 11; // Covers 99.5%. See webkit.org/b/80706
 typedef Vector<Ref<Node>, initialNodeVectorSize> NodeVector;
 
 class Node : public EventTarget, public CanMakeCheckedPtr<Node> {
-    WTF_MAKE_PREFERABLY_COMPACT_TZONE_OR_ISO_ALLOCATED(Node);
+    WTF_MAKE_PREFERABLY_COMPACT_TZONE_ALLOCATED(Node);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Node);
 
     friend class Document;
@@ -138,9 +149,6 @@ public:
         DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20,
     };
 
-    WEBCORE_EXPORT static void startIgnoringLeaks();
-    WEBCORE_EXPORT static void stopIgnoringLeaks();
-
     static void dumpStatistics();
 
     virtual ~Node();
@@ -167,7 +175,7 @@ public:
     Node* nextSibling() const { return m_next.get(); }
     RefPtr<Node> protectedNextSibling() const { return m_next.get(); }
     static constexpr ptrdiff_t nextSiblingMemoryOffset() { return OBJECT_OFFSETOF(Node, m_next); }
-    WEBCORE_EXPORT RefPtr<NodeList> childNodes();
+    WEBCORE_EXPORT Ref<NodeList> childNodes();
     inline Node* firstChild() const;
     inline RefPtr<Node> protectedFirstChild() const;
     inline Node* lastChild() const;
@@ -249,13 +257,13 @@ public:
     bool isPseudoElement() const { return isElementNode() && hasTypeFlag(TypeFlag::IsPseudoElementOrSpecialInternalNode); }
     inline bool isBeforePseudoElement() const;
     inline bool isAfterPseudoElement() const;
-    inline PseudoId pseudoId() const;
+    inline std::optional<PseudoElementType> pseudoElementType() const;
+    inline std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier() const;
 
 #if ENABLE(VIDEO)
     virtual bool isWebVTTElement() const { return false; }
 #endif
     bool isStyledElement() const { return hasTypeFlag(TypeFlag::IsHTMLElement) || hasTypeFlag(TypeFlag::IsSVGElement) || hasTypeFlag(TypeFlag::IsMathMLElement); }
-    virtual bool isAttributeNode() const { return false; }
     virtual bool isHTMLFrameOwnerElement() const { return false; }
     virtual bool isPluginElement() const { return false; }
 
@@ -263,7 +271,7 @@ public:
     bool isTreeScope() const { return isDocumentNode() || isShadowRoot(); }
     bool isDocumentFragment() const { return nodeType() == DOCUMENT_FRAGMENT_NODE; }
     bool isShadowRoot() const { return isDocumentFragment() && hasTypeFlag(TypeFlag::IsShadowRootOrFormControlElement); }
-    bool isUserAgentShadowRoot() const; // Defined in ShadowRoot.h
+    inline bool isUserAgentShadowRoot() const; // Defined in NodeInlines.h
 
     bool hasCustomStyleResolveCallbacks() const { return hasTypeFlag(TypeFlag::HasCustomStyleResolveCallbacks); }
 
@@ -317,15 +325,17 @@ public:
     Node* nonBoundaryShadowTreeRootNode();
 
     // Node's parent or shadow tree host.
-    inline ContainerNode* parentOrShadowHostNode() const; // Defined in ShadowRoot.h
-    inline RefPtr<ContainerNode> protectedParentOrShadowHostNode() const; // Defined in ShadowRoot.h
+    inline ContainerNode* parentOrShadowHostNode() const; // Defined in NodeInlines.h
+    inline RefPtr<ContainerNode> protectedParentOrShadowHostNode() const; // Defined in NodeInlines.h
     ContainerNode* parentInComposedTree() const;
     WEBCORE_EXPORT Element* parentElementInComposedTree() const;
     Element* parentOrShadowHostElement() const;
     inline void setParentNode(ContainerNode*);
     inline Node& rootNode() const;
+    inline Ref<Node> protectedRootNode() const;
     WEBCORE_EXPORT Node& traverseToRootNode() const;
-    Node& shadowIncludingRoot() const;
+    Node& shadowIncludingRoot() const { return *m_shadowIncludingRoot; }
+    void resetShadowIncludingRoot() { m_shadowIncludingRoot = this; }
 
     struct GetRootNodeOptions {
         bool composed;
@@ -333,7 +343,6 @@ public:
     Node& getRootNode(const GetRootNodeOptions&) const;
 
     inline WebCoreOpaqueRoot opaqueRoot() const;
-    WebCoreOpaqueRoot traverseToOpaqueRoot() const;
 
     void queueTaskKeepingThisNodeAlive(TaskSource, Function<void ()>&&);
     void queueTaskToDispatchEvent(TaskSource, Ref<Event>&&);
@@ -386,6 +395,15 @@ public:
     void setHasHeldBackChildrenChanged() { setStateFlag(StateFlag::HasHeldBackChildrenChanged); }
     void clearHasHeldBackChildrenChanged() { clearStateFlag(StateFlag::HasHeldBackChildrenChanged); }
 
+    bool hasDidMutateSubtreeAfterSetInnerHTML() const { return hasStateFlag(StateFlag::DidMutateSubtreeAfterSetInnerHTML); }
+    void setDidMutateSubtreeAfterSetInnerHTML() { setStateFlag(StateFlag::DidMutateSubtreeAfterSetInnerHTML); }
+    void clearDidMutateSubtreeAfterSetInnerHTML() { clearStateFlag(StateFlag::DidMutateSubtreeAfterSetInnerHTML); }
+    void setDidMutateSubtreeAfterSetInnerHTMLOnAncestors();
+
+    bool hasWasParsedWithFastPath() const { return hasStateFlag(StateFlag::WasParsedWithFastPath); }
+    void setWasParsedWithFastPath() { setStateFlag(StateFlag::WasParsedWithFastPath); }
+    void clearWasParsedWithFastPath() { clearStateFlag(StateFlag::WasParsedWithFastPath); }
+
     void setChildNeedsStyleRecalc() { setStyleFlag(NodeStyleFlag::DescendantNeedsStyleResolution); }
     inline void clearChildNeedsStyleRecalc();
 
@@ -423,8 +441,8 @@ public:
     WEBCORE_EXPORT Document* ownerDocument() const;
 
     // Returns the document associated with this node. A document node returns itself.
-    inline Document& document() const; // Defined in NodeInlines.h
-    inline Ref<Document> protectedDocument() const; // Defined in NodeInlines.h
+    inline Document& document() const; // Defined in NodeDocument.h
+    inline Ref<Document> protectedDocument() const; // Defined in NodeDocument.h
 
     TreeScope& treeScope() const
     {
@@ -496,6 +514,7 @@ public:
 
     // Use these two methods with caution.
     inline RenderBox* renderBox() const; // Defined in NodeInlines.h
+    inline CheckedPtr<RenderBox> checkedRenderBox() const; // Defined in NodeInlines.h
     inline RenderBoxModelObject* renderBoxModelObject() const; // Defined in NodeInlines.h
 
     // Wrapper for nodes that don't have a renderer, but still cache the style (like HTMLOptionElement).
@@ -523,6 +542,8 @@ public:
     };
     virtual void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree);
 
+    void updateShadowIncludingRootForSubtree();
+
     virtual String description() const;
     virtual String debugDescription() const;
 
@@ -535,7 +556,7 @@ public:
 #endif // ENABLE(TREE_DEBUGGING)
 
     void invalidateNodeListAndCollectionCachesInAncestors();
-    void invalidateNodeListAndCollectionCachesInAncestorsForAttribute(const QualifiedName&);
+    void invalidateNodeListCollectionAndInnerHTMLPrefixCachesInAncestorsForAttribute(const QualifiedName&, const IsMutationBySetInnerHTML = IsMutationBySetInnerHTML::No);
     NodeListsNodeData* nodeLists();
     void clearNodeLists();
 
@@ -562,6 +583,8 @@ public:
 
     void dispatchSubtreeModifiedEvent();
     void dispatchDOMActivateEvent(Event& underlyingClickEvent);
+
+    void dispatchWebKitSubmitEvent(Event& underlyingSubmitEvent);
 
 #if ENABLE(TOUCH_EVENTS)
     virtual bool allowsDoubleTapGesture() const { return true; }
@@ -665,7 +688,11 @@ protected:
 #if ENABLE(FULLSCREEN_API)
         IsFullscreen = 1 << 19,
 #endif
-        // 12 bits free.
+        IsShadowRootAttachedEventPending = 1 << 20,
+        InLargestContentfulPaintTextContentSet = 1 << 21,
+        DidMutateSubtreeAfterSetInnerHTML = 1 << 22,
+        WasParsedWithFastPath = 1 << 23
+        // 8 bits free.
     };
 
     enum class TabIndexState : uint8_t {
@@ -784,9 +811,12 @@ private:
     void derefEventTarget() final;
 
     void trackForDebugging();
+
+    void updateShadowIncludingRoot();
+
     void materializeRareData();
 
-    Vector<std::unique_ptr<MutationObserverRegistration>>* mutationObserverRegistry();
+    Vector<Ref<MutationObserverRegistration>>* mutationObserverRegistry();
     WeakHashSet<MutationObserverRegistration>* transientMutationObserverRegistry();
 
     void adjustStyleValidity(Style::Validity, Style::InvalidationMode);
@@ -814,6 +844,7 @@ private:
 
     CheckedPtr<ContainerNode> m_parentNode;
     TreeScope* m_treeScope { nullptr };
+    Node* m_shadowIncludingRoot { nullptr };
     Node* m_previousSibling { nullptr };
     CheckedPtr<Node> m_next;
     RenderObject* m_renderer { nullptr };
@@ -855,7 +886,7 @@ inline void Node::applyRefDuringDestructionCheck() const
 #if ASSERT_ENABLED
     if (!deletionHasBegun())
         return;
-    WTF::RefCountedBase::logRefDuringDestruction(this);
+    WTF::RefCountDebugger::logRefDuringDestruction(this);
 #endif
 }
 

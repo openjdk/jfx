@@ -36,7 +36,8 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledBySetting=PeerConnectionEnabled
+    EnabledBySetting=PeerConnectionEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCDTMFToneChangeEventInit : EventInit {
     DOMString tone;
 };

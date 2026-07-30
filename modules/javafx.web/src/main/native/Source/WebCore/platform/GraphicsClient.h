@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PlatformScreen.h"
+#include <WebCore/PlatformScreen.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

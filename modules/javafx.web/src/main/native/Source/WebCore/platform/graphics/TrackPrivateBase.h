@@ -29,8 +29,8 @@
 
 #if ENABLE(VIDEO)
 
-#include "ScriptExecutionContextIdentifier.h"
-#include "TrackPrivateBaseClient.h"
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/TrackPrivateBaseClient.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
@@ -38,7 +38,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
-#include <wtf/text/AtomString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -59,11 +59,11 @@ public:
     void removeClient(uint32_t); // Can be called multiple times with the same id.
 
     virtual TrackID id() const { return 0; }
-    virtual AtomString label() const { return emptyAtom(); }
-    virtual AtomString language() const { return emptyAtom(); }
+    virtual String label() const { return emptyString(); }
+    virtual String language() const { return emptyString(); }
 
     virtual int trackIndex() const { return 0; }
-    virtual std::optional<AtomString> trackUID() const;
+    virtual std::optional<String> trackUID() const;
     virtual std::optional<bool> defaultEnabled() const;
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
@@ -97,12 +97,12 @@ protected:
     template <typename T>
     class Shared final : public ThreadSafeRefCounted<Shared<T>> {
     public:
-        static Ref<Shared> create(T&& obj) { return adoptRef(*new Shared(WTFMove(obj))); }
+        static Ref<Shared> create(T&& obj) { return adoptRef(*new Shared(WTF::move(obj))); }
 
         T& get() { return m_obj; };
     private:
         Shared(T&& obj)
-            : m_obj(WTFMove(obj))
+            : m_obj(WTF::move(obj))
         {
         }
         T m_obj;

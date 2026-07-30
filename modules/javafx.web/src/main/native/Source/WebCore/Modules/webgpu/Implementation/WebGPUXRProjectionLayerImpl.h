@@ -41,15 +41,16 @@ namespace WebCore::WebGPU {
 class ConvertToBackingContext;
 
 class XRProjectionLayerImpl final : public XRProjectionLayer {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRProjectionLayerImpl);
+    WTF_MAKE_TZONE_ALLOCATED(XRProjectionLayerImpl);
 public:
     static Ref<XRProjectionLayerImpl> create(WebGPUPtr<WGPUXRProjectionLayer>&& projectionLayer, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new XRProjectionLayerImpl(WTFMove(projectionLayer), convertToBackingContext));
+        return adoptRef(*new XRProjectionLayerImpl(WTF::move(projectionLayer), convertToBackingContext));
     }
 
     virtual ~XRProjectionLayerImpl();
     WGPUXRProjectionLayer backing() const { return m_backing.get(); }
+    bool isXRProjectionLayerImpl() const final { return true; }
 
 private:
     friend class DowncastConvertToBackingContext;
@@ -73,7 +74,7 @@ private:
 
     // WebXRLayer
 #if PLATFORM(COCOA)
-    void startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex) final;
+    void startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex, PlatformXR::RateMapDescription&&) final;
 #endif
     void endFrame() final;
 
@@ -85,5 +86,9 @@ private:
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::XRProjectionLayerImpl)
+    static bool isType(const WebCore::WebGPU::XRProjectionLayer& xrProjectionLayer) { return xrProjectionLayer.isXRProjectionLayerImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

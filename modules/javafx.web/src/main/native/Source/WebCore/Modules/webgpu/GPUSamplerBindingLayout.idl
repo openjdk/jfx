@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpusamplerbindinglayout
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUSamplerBindingLayout {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUSamplerBindingLayout {
     GPUSamplerBindingType type = "filtering";
 };

@@ -30,6 +30,7 @@
 #include <wtf/Condition.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -40,7 +41,7 @@ namespace WebKit {
 
 class StorageAreaImpl;
 
-class StorageAreaSync : public ThreadSafeRefCounted<StorageAreaSync, WTF::DestructionThread::Main> {
+class StorageAreaSync : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<StorageAreaSync, WTF::DestructionThread::Main> {
 public:
     static Ref<StorageAreaSync> create(RefPtr<WebCore::StorageSyncManager>&&, Ref<StorageAreaImpl>&&, const String& databaseIdentifier);
     ~StorageAreaSync();
@@ -67,7 +68,7 @@ private:
     RefPtr<WebCore::StorageSyncManager> m_syncManager;
 
     // The database handle will only ever be opened and used on the background thread.
-    WebCore::SQLiteDatabase m_database;
+    const UniqueRef<WebCore::SQLiteDatabase> m_database;
 
     // The following members are subject to thread synchronization issues.
 public:

@@ -83,6 +83,7 @@ public class Ruler extends BorderPane {
     private Pane tickPane;
     private SelectionSegment selection;
     private SimpleObjectProperty<Runnable> onChange;
+    private Subscription subs;
 
     public Ruler(RichTextArea editor) {
         this.editor = editor;
@@ -112,16 +113,21 @@ public class Ruler extends BorderPane {
             }
         };
 
-        widthProperty().subscribe(this::requestLayout);
-        editor.contentPaddingProperty().subscribe(this::requestLayout);
-        editor.documentAreaProperty().subscribe(this::clearTicks);
+        subs = widthProperty().subscribe(this::requestLayout);
+        subs = subs.and(editor.contentPaddingProperty().subscribe(this::requestLayout));
+        subs = subs.and(editor.documentAreaProperty().subscribe(this::clearTicks));
 
-        editor.modelProperty().subscribe(this::updateModel);
-        editor.selectionProperty().subscribe(this::clearTicks);
+        subs = subs.and(editor.modelProperty().subscribe(this::updateModel));
+        subs = subs.and(editor.selectionProperty().subscribe(this::clearTicks));
 
         tickPane.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         tickPane.addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
         tickPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
+    }
+
+    public void dispose() {
+        subs.unsubscribe();
+        subs = null;
     }
 
     // default tab interval will be ignored

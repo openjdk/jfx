@@ -29,12 +29,13 @@
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-#include "Handle.h"
-#include "HandleSet.h"
-#include "Heap.h"
-#include "InitializeThreading.h"
-#include "JSLock.h"
-#include "StrongForward.h"
+#include <JavaScriptCore/Handle.h>
+#include <JavaScriptCore/HandleSet.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/InitializeThreading.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/StrongForward.h>
+#include <wtf/HashFunctions.h>
 #include <wtf/RefTrackerMixin.h>
 
 namespace JSC {
@@ -52,7 +53,9 @@ template <typename T, ShouldStrongDestructorGrabLock shouldStrongDestructorGrabL
     template <typename U, ShouldStrongDestructorGrabLock> friend class Strong;
 
 public:
-    typedef typename Handle<T>::ExternalType ExternalType;
+    using ExternalType = typename Handle<T>::ExternalType;
+    using ValueType = std::remove_pointer_t<ExternalType>;
+    using PtrType = ExternalType;
 
     Strong()
         : Handle<T>()
@@ -184,6 +187,15 @@ template<typename T> struct VectorTraits<JSC::Strong<T>> : SimpleClassVectorTrai
     static constexpr bool canMoveWithMemcpy = false;
 #endif
 };
+
+template <typename P>
+struct IsSmartPtr<JSC::Strong<P>> {
+    static constexpr bool value = true;
+    static constexpr bool isNullable = true;
+};
+
+template<typename> struct DefaultHash;
+template<typename P> struct DefaultHash<JSC::Strong<P>> : PtrHash<JSC::Strong<P>> { };
 
 template<typename P> struct HashTraits<JSC::Strong<P>> : SimpleClassHashTraits<JSC::Strong<P>> {
 #if ENABLE(REFTRACKER)
