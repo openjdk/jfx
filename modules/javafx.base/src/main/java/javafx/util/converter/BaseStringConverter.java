@@ -30,6 +30,7 @@ import javafx.util.StringConverter;
 /// A base class containing common implementations for `StringConverter`s as noted in the @implNote of `StringConverter`.
 abstract class BaseStringConverter<T> extends StringConverter<T> {
 
+    /// {@inheritDoc} `null` and empty string are converted to `null`.
     @Override
     public T fromString(String string) {
         if (string == null) {
@@ -47,6 +48,7 @@ abstract class BaseStringConverter<T> extends StringConverter<T> {
     /// Treat as protected (implementing classes are public so they can't add a new protected method).
     abstract T fromNonEmptyString(String string);
 
+    /// {@inheritDoc} `null` is converted to an empty string, otherwise the type's `toString` is used.
     @Override
     public String toString(T object) {
         return object == null ? "" : toStringFromNonNull(object);

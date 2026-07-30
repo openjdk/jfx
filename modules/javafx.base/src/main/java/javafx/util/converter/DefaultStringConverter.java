@@ -36,11 +36,13 @@ public class DefaultStringConverter extends StringConverter<String> {
     public DefaultStringConverter() {
     }
 
+    /// {@return `string`, or empty string if `null`}
     @Override
     public String toString(String string) {
         return string == null ? "" : string;
     }
 
+    /// {@return `string`}
     @Override
     public String fromString(String string) {
         return string;
