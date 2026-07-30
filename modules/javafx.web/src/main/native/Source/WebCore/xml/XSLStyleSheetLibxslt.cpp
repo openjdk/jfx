@@ -26,6 +26,7 @@
 #include "DocumentResourceLoader.h"
 #include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
+#include "JSNodeCustomInlines.h"
 #include "LocalFrame.h"
 #include "NodeDocument.h"
 #include "Page.h"
@@ -45,8 +46,7 @@
 namespace WebCore {
 
 XSLStyleSheet::XSLStyleSheet(XSLStyleSheet* parentSheet, const String& originalURL, const URL& finalURL)
-    : m_ownerNode(nullptr)
-    , m_originalURL(originalURL)
+    : m_originalURL(originalURL)
     , m_finalURL(finalURL)
     , m_embedded(false)
     , m_processed(false) // Child sheets get marked as processed when the libxslt engine has finally seen them.
@@ -71,6 +71,20 @@ XSLStyleSheet::~XSLStyleSheet()
         ASSERT(import->parentStyleSheet() == this);
         import->setParentStyleSheet(nullptr);
     }
+}
+
+void XSLStyleSheet::clearOwnerNode()
+{
+    Locker locker { m_opaqueRootLockForGC };
+    m_ownerNode = nullptr;
+}
+
+WebCoreOpaqueRoot XSLStyleSheet::opaqueRootForGCThread()
+{
+    Locker locker { m_opaqueRootLockForGC };
+    if (m_ownerNode)
+        return root(m_ownerNode.get());
+    return WebCoreOpaqueRoot { this };
 }
 
 bool XSLStyleSheet::isLoading() const
@@ -151,13 +165,16 @@ bool XSLStyleSheet::parseString(const String& string)
     if (!ctxt)
         return false;
 
-    if (m_parentStyleSheet && m_parentStyleSheet->m_stylesheetDoc) {
+    if (m_parentStyleSheet && m_parentStyleSheet->m_stylesheetDoc && !m_parentStyleSheet->m_stylesheetDocTaken) {
         // The XSL transform may leave the newly-transformed document
         // with references to the symbol dictionaries of the style sheet
         // and any of its children. XML document disposal can corrupt memory
         // if a document uses more than one symbol dictionary, so we
         // ensure that all child stylesheets use the same dictionaries as their
         // parents.
+        // Only share the parent's dict if the parent still owns the document.
+        // Once m_stylesheetDocTaken is set, libxslt owns the doc and may free
+        // it at any time (e.g. on compilation failure), making the pointer unsafe.
         SUPPRESS_FORWARD_DECL_ARG xmlDictFree(ctxt->dict);
         ctxt->dict = m_parentStyleSheet->m_stylesheetDoc->dict;
         SUPPRESS_FORWARD_DECL_ARG xmlDictReference(ctxt->dict);

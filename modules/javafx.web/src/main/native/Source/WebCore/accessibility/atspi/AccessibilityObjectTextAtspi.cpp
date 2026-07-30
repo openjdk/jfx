@@ -837,7 +837,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     if (!m_coreObject->node())
         return { WTF::move(defaultAttributes), -1, -1 };
 
-    if (!*utf16Offset && m_hasListMarkerAtStart) {
+    if (!*utf16Offset && m_hasListMarkerAtStart && !m_coreObject->children().isEmpty()) {
         // Always consider list marker an independent run.
         auto attributes = accessibilityTextAttributes(m_coreObject->children()[0].get(), defaultAttributes);
         if (!includeDefault)
@@ -849,7 +849,14 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     }
 
     VisiblePosition offsetPosition = m_coreObject->visiblePositionForIndex(adjustInputOffset(*utf16Offset, m_hasListMarkerAtStart));
-    RefPtr childNode = offsetPosition.deepEquivalent().deprecatedNode();
+    auto deepPosition = offsetPosition.deepEquivalent();
+    RefPtr childNode = deepPosition.deprecatedNode();
+    // visiblePositionForIndex() may canonicalize to an equivalent position in preceding content; use
+    // the downstream position so childNode stays inside this object.
+    if (childNode && !m_coreObject->node()->contains(*childNode)) {
+        if (RefPtr downstreamNode = deepPosition.downstream().deprecatedNode(); m_coreObject->node()->contains(downstreamNode.get()))
+            childNode = WTF::move(downstreamNode);
+    }
     if (!childNode)
         return { WTF::move(defaultAttributes), -1, -1 };
 

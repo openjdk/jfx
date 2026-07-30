@@ -27,6 +27,7 @@
 #include <wtf/RawPtrTraits.h>
 #include <wtf/Ref.h>
 #include <wtf/SwiftBridging.h>
+#include <wtf/TypeTraits.h>
 
 namespace WTF {
 
@@ -54,6 +55,7 @@ public:
     ALWAYS_INLINE RefPtr(RefPtr&& o) : m_ptr(o.leakRef()) { }
     template<typename X, typename Y, typename Z> RefPtr(RefPtr<X, Y, Z>&& o) : m_ptr(o.leakRef()) { }
     template<typename X, typename Y> RefPtr(Ref<X, Y>&&);
+    template<typename X, typename Y, typename Z> RefPtr(const WeakPtr<X, Y, Z>& o) requires std::is_convertible_v<X*, T*> : m_ptr(RefDerefTraits::refIfNotNull(o.get())) { }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     RefPtr(HashTableDeletedValueType) : m_ptr(PtrTraits::hashTableDeletedValue()) { }
@@ -109,6 +111,8 @@ private:
 
 // Template deduction guide.
 template<typename X, typename Y> RefPtr(Ref<X, Y>&&) -> RefPtr<X, Y, DefaultRefDerefTraits<X>>;
+template<typename X, typename Y, typename Z> RefPtr(const WeakPtr<X, Y, Z>&) -> RefPtr<X, RawPtrTraits<X>, DefaultRefDerefTraits<X>>;
+template<typename X, typename Y, typename Z> RefPtr(WeakPtr<X, Y, Z>&) -> RefPtr<X, RawPtrTraits<X>, DefaultRefDerefTraits<X>>;
 
 template<typename T, typename U, typename V>
 template<typename X, typename Y>
@@ -213,6 +217,19 @@ inline RefPtr<T, U, V> adoptRef(T* p)
     return RefPtr<T, U, V>(p, RefPtr<T, U, V>::Adopt);
 }
 
+template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>>
+    requires HasRefPtrMemberFunctions<T>::value
+ALWAYS_INLINE CLANG_POINTER_CONVERSION RefPtr<T, PtrTraits, RefDerefTraits> protect(T* ptr)
+{
+    return RefPtr<T, PtrTraits, RefDerefTraits>(ptr);
+}
+
+template<typename T, typename PtrTraits, typename RefDerefTraits>
+ALWAYS_INLINE CLANG_POINTER_CONVERSION RefPtr<T, PtrTraits, RefDerefTraits> protect(const RefPtr<T, PtrTraits, RefDerefTraits>& ptr)
+{
+    return ptr.copyRef();
+}
+
 template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
 inline RefPtr<T, U, V> upcast(const RefPtr<X, Y, Z>& p)
 {
@@ -297,6 +314,7 @@ ALWAYS_INLINE void lazyInitialize(const RefPtr<T>& ptr, Ref<U>&& obj)
 
 using WTF::RefPtr;
 using WTF::adoptRef;
+using WTF::protect;
 using WTF::upcast;
 using WTF::unsafeRefPtrDowncast;
 using WTF::lazyInitialize;
