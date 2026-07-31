@@ -27,9 +27,15 @@ package test.com.sun.javafx.images;
 
 import java.net.URL;
 
-public class TestData {
-    public static String getURI(String name) {
-        URL u = TestData.class.getResource(name);
+/// Provides test images.
+public class Images {
+    /**
+     * Returns the test image URL to pass to the {@code Image} constructor.
+     * @param name resource name
+     * @return the URL string
+     */
+    public static String getURL(String name) {
+        URL u = Images.class.getResource(name);
         return u == null ? null : u.toExternalForm();
     }
 }

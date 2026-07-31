@@ -53,7 +53,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
-import test.com.sun.javafx.images.TestData;
+import test.com.sun.javafx.images.Images;
 import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
@@ -107,7 +107,7 @@ public class TestImageFormatHandler extends RobotTestBase {
     }
 
     private void test(String name) {
-        String url = TestData.getURI(name);
+        String url = Images.getURL(name);
         Image im = new Image(url);
         StyledInput in = null;
         try {
