@@ -100,6 +100,7 @@ import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.layout.Layoutable;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
@@ -412,7 +413,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  */
 @IDProperty("id")
 public abstract sealed class Node
-        implements EventTarget, Styleable
+        implements EventTarget, Styleable, Layoutable
         permits AbstractNode, Camera, LightBase, Parent, SubScene, Canvas, ImageView, Shape, Shape3D {
 
     /*
@@ -1046,7 +1047,7 @@ public abstract sealed class Node
                 protected void invalidated() {
                     if (oldParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
-                            ((Node) oldParent).localToSceneTransformProperty().removeListener(
+                            oldParent.localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
                         }
                     }
@@ -1061,7 +1062,7 @@ public abstract sealed class Node
 
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
-                            ((Node) newParent).localToSceneTransformProperty().addListener(
+                            newParent.localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
                         }
                         //
@@ -2958,8 +2959,10 @@ public abstract sealed class Node
     }
 
     /**
-     * Sets the node's layoutX and layoutY translation properties in order to
-     * relocate this node to the x,y location in the parent.
+     * {@inheritDoc}
+     * <p>
+     * This is done by setting the node's layoutX and layoutY translation
+     * properties, relocating it to the x,y location in the parent.
      * <p>
      * This method does not alter translateX or translateY, which if also set
      * will be added to layoutX and layoutY, adjusting the final location by
@@ -2968,6 +2971,7 @@ public abstract sealed class Node
      * @param x the target x coordinate location
      * @param y the target y coordinate location
      */
+    @Override
     public void relocate(double x, double y) {
         setLayoutX(x - getLayoutBounds().getMinX());
         setLayoutY(y - getLayoutBounds().getMinY());
@@ -2979,20 +2983,17 @@ public abstract sealed class Node
     }
 
     /**
-     * Indicates whether this node is a type which can be resized by its parent.
-     * If this method returns true, then the parent will resize the node (ideally
-     * within its size range) by calling node.resize(width,height) during the
-     * layout pass.  All Regions, Controls, and WebView are resizable classes
-     * which depend on their parents resizing them during layout once all sizing
-     * and CSS styling information has been applied.
+     * {@inheritDoc}
+     * <p>
+     * If this method returns true, then the parent will resize the node
+     * (ideally within its size range) by calling node.resize(width,height)
+     * during the layout pass.  All Regions, Controls, and WebView are
+     * resizable classes which depend on their parents resizing them during
+     * layout once all sizing and CSS styling information has been applied.
      * <p>
      * If this method returns false, then the parent cannot resize it during
-     * layout (resize() is a no-op) and it should return its layoutBounds for
-     * minimum, preferred, and maximum sizes.  Group, Text, and all Shapes are not
-     * resizable and hence depend on the application to establish their sizing
-     * by setting appropriate properties (e.g.  width/height for Rectangle,
-     * text on Text, and so on).  Non-resizable nodes may still be relocated
-     * during layout.
+     * layout (resize() is a no-op).  Group, Text, and all Shapes are not
+     * resizable classes.
      *
      * @see #getContentBias()
      * @see #minWidth(double)
@@ -3006,15 +3007,13 @@ public abstract sealed class Node
      *
      * @return whether or not this node type can be resized by its parent during layout
      */
+    @Override
     public boolean isResizable() {
         return false;
     }
 
     /**
-     * Returns the orientation of a node's resizing bias for layout purposes.
-     * If the node type has no bias, returns null.  If the node is resizable and
-     * it's height depends on its width, returns HORIZONTAL, else if its width
-     * depends on its height, returns VERTICAL.
+     * {@inheritDoc}
      * <p>
      * Resizable subclasses should override this method to return an
      * appropriate value.
@@ -3029,28 +3028,18 @@ public abstract sealed class Node
      *
      * @return orientation of width/height dependency or null if there is none
      */
+    @Override
     public Orientation getContentBias() {
         return null;
     }
 
     /**
-     * Returns the node's minimum width for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should not resize its width any
      * smaller than this value.  If the node is not resizable, returns its
-     * layoutBounds width.
-     * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a vertical content-bias, then callers
-     * should pass in a height value that the minimum width should be based on.
-     * If the node has either a horizontal or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a vertical content-bias should honor the height
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the height parameter (which will likely be -1).
-     * <p>
-     * If Node's {@link #maxWidth(double)} is lower than this number,
-     * {@code minWidth} takes precedence. This means the Node should never be resized below {@code minWidth}.
+     * layoutBounds width.  This means the Node should never be resized below
+     * {@code minWidth}.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3059,28 +3048,18 @@ public abstract sealed class Node
      * @return the minimum width that the node should be resized to during layout.
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double minWidth(double height) {
         return prefWidth(height);
     }
 
     /**
-     * Returns the node's minimum height for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should not resize its height any
      * smaller than this value.  If the node is not resizable, returns its
-     * layoutBounds height.
-     * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a horizontal content-bias, then callers
-     * should pass in a width value that the minimum height should be based on.
-     * If the node has either a vertical or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a horizontal content-bias should honor the width
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the width parameter (which will likely be -1).
-     * <p>
-     * If Node's {@link #maxHeight(double)} is lower than this number,
-     * {@code minHeight} takes precedence. This means the Node should never be resized below {@code minHeight}.
+     * layoutBounds height.  This means the Node should never be resized below
+     * {@code minHeight}.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3089,26 +3068,18 @@ public abstract sealed class Node
      * @return the minimum height that the node should be resized to during layout
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double minHeight(double width) {
         return prefHeight(width);
     }
 
     /**
-     * Returns the node's preferred width for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should treat this value as the
      * node's ideal width within its range.  If the node is not resizable,
      * just returns its layoutBounds width, which should be treated as the rigid
      * width of the node.
-     * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a vertical content-bias, then callers
-     * should pass in a height value that the preferred width should be based on.
-     * If the node has either a horizontal or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a vertical content-bias should honor the height
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the height parameter (which will likely be -1).
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3118,27 +3089,19 @@ public abstract sealed class Node
      * @return the preferred width that the node should be resized to during layout
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double prefWidth(double height) {
         final double result = getLayoutBounds().getWidth();
         return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
-     * Returns the node's preferred height for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should treat this value as the
      * node's ideal height within its range.  If the node is not resizable,
      * just returns its layoutBounds height, which should be treated as the rigid
      * height of the node.
-     * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a horizontal content-bias, then callers
-     * should pass in a width value that the preferred height should be based on.
-     * If the node has either a vertical or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a horizontal content-bias should honor the height
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the height parameter (which will likely be -1).
      *
      * @see #getContentBias()
      * @see #autosize()
@@ -3147,31 +3110,22 @@ public abstract sealed class Node
      * @return the preferred height that the node should be resized to during layout
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double prefHeight(double width) {
         final double result = getLayoutBounds().getHeight();
         return Double.isNaN(result) || result < 0 ? 0 : result;
     }
 
     /**
-     * Returns the node's maximum width for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should not resize its width any
      * larger than this value.  A value of Double.MAX_VALUE indicates the
      * parent may expand the node's width beyond its preferred without limits.
      * <p>
      * If the node is not resizable, returns its layoutBounds width.
      * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a vertical content-bias, then callers
-     * should pass in a height value that the maximum width should be based on.
-     * If the node has either a horizontal or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a vertical content-bias should honor the height
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the height parameter (which will likely be -1).
-     * <p>
-     * If Node's {@link #minWidth(double)} is greater, it should take precedence
-     * over the {@code maxWidth}. This means the Node should never be resized below {@code minWidth}.
+     * This means the Node should never be resized below {@code minWidth}.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3180,30 +3134,21 @@ public abstract sealed class Node
      * @return the maximum width that the node should be resized to during layout
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double maxWidth(double height) {
         return prefWidth(height);
     }
 
     /**
-     * Returns the node's maximum height for use in layout calculations.
+     * {@inheritDoc}
+     * <p>
      * If the node is resizable, its parent should not resize its height any
      * larger than this value.  A value of Double.MAX_VALUE indicates the
      * parent may expand the node's height beyond its preferred without limits.
      * <p>
      * If the node is not resizable, returns its layoutBounds height.
      * <p>
-     * Layout code which calls this method should first check the content-bias
-     * of the node.  If the node has a horizontal content-bias, then callers
-     * should pass in a width value that the maximum height should be based on.
-     * If the node has either a vertical or null content-bias, then the caller
-     * should pass in -1.
-     * <p>
-     * Node subclasses with a horizontal content-bias should honor the width
-     * parameter whether -1 or a positive value.   All other subclasses may ignore
-     * the width parameter (which will likely be -1).
-     * <p>
-     * If Node's {@link #minHeight(double)} is greater, it should take precedence
-     * over the {@code maxHeight}.  This means the Node should never be resized below {@code minHeight}.
+     * This means the Node should never be resized below {@code minHeight}.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3212,22 +3157,21 @@ public abstract sealed class Node
      * @return the maximum height that the node should be resized to during layout
      *         The result will never be NaN, nor will it ever be negative.
      */
+    @Override
     public double maxHeight(double width) {
         return prefHeight(width);
     }
 
     /**
-     * If the node is resizable, will set its layout bounds to the specified
-     * width and height.   If the node is not resizable, this method is a no-op.
+     * {@inheritDoc}
      * <p>
      * This method should generally only be called by parent nodes from their
      * layoutChildren() methods.   All Parent classes will automatically resize
      * resizable children, so resizing done directly by the application will be
      * overridden by the node's parent, unless the child is unmanaged.
      * <p>
-     * Parents are responsible for ensuring the width and height values fall
-     * within the resizable node's preferred range.  The autosize() method may
-     * be used if the parent just needs to resize the node to its preferred size.
+     * The autosize() method may be used if the parent just needs to resize the
+     * node to its preferred size.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3243,6 +3187,7 @@ public abstract sealed class Node
      * @param width the target layout bounds width
      * @param height the target layout bounds height
      */
+    @Override
     public void resize(double width, double height) {
     }
 
@@ -3286,22 +3231,18 @@ public abstract sealed class Node
     }
 
     /**
-     * If the node is resizable, will set its layout bounds to the specified
-     * width and height.   If the node is not resizable, the resize step is skipped.
+     * {@inheritDoc}
      * <p>
-     * Once the node has been resized (if resizable) then sets the node's layoutX
-     * and layoutY translation properties in order to relocate it to x,y in the
-     * parent's coordinate space.
+     * This relocation is performed by setting the node's layoutX and layoutY
+     * translation properties, in the parent's coordinate space.
      * <p>
      * This method should generally only be called by parent nodes from their
      * layoutChildren() methods.   All Parent classes will automatically resize
      * resizable children, so resizing done directly by the application will be
      * overridden by the node's parent, unless the child is unmanaged.
      * <p>
-     * Parents are responsible for ensuring the width and height values fall
-     * within the resizable node's preferred range.  The autosize() and relocate()
-     * methods may be used if the parent just needs to resize the node to its
-     * preferred size and reposition it.
+     * The autosize() and relocate() methods may be used if the parent just
+     * needs to resize the node to its preferred size and reposition it.
      *
      * @see #isResizable()
      * @see #getContentBias()
@@ -3319,26 +3260,20 @@ public abstract sealed class Node
      * @param height the target layout bounds height
      *
      */
+    @Override
     public void resizeRelocate(double x, double y, double width, double height) {
         resize(width, height);
         relocate(x,y);
     }
 
     /**
-     * This is a special value that might be returned by {@link #getBaselineOffset()}.
-     * This means that the Parent (layout Pane) of this Node should use the height of this Node as a baseline.
-     */
-    public static final double BASELINE_OFFSET_SAME_AS_HEIGHT = Double.NEGATIVE_INFINITY;
-
-    /**
-     * The 'alphabetic' (or 'roman') baseline offset from the node's layoutBounds.minY location
-     * that should be used when this node is being vertically aligned by baseline with
-     * other nodes.  By default this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable Nodes
-     * and layoutBounds height for non-resizable.  Subclasses
-     * which contain text should override this method to return their actual text baseline offset.
+     * {@inheritDoc}
+     * <p>
+     * For a Node, this offset is measured from {@code layoutBounds.minY}.
      *
      * @return offset of text baseline from layoutBounds.minY for non-resizable Nodes or {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} otherwise
      */
+    @Override
     public double getBaselineOffset() {
         if (isResizable()) {
             return BASELINE_OFFSET_SAME_AS_HEIGHT;
