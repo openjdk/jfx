@@ -35,14 +35,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledOutput;
@@ -62,13 +60,8 @@ import test.util.Util;
 // Tests ImageFormatHandler
 public class TestImageFormatHandler extends RobotTestBase {
 
-    private enum Size { SMALL, LARGE }
-    private enum Type { JPG, PNG }
-    private static final int SMALL_SIZE = 128; // ImageFormatHandler.SMALL_SIZE
-
+    private static final byte[] PNG_SIGNATURE = Util.hexToByteArray("89504e47");
     private static final ImageFormatHandler handler = ImageFormatHandler.getInstance();
-    private static final byte[] JPG_SIGNATURE = mkSignature("ffd8ffe1");
-    private static final byte[] PNG_SIGNATURE = mkSignature("89504e47");
     private RichTextArea rta;
 
     @BeforeEach
@@ -78,24 +71,13 @@ public class TestImageFormatHandler extends RobotTestBase {
     }
 
     @Test
-    public void smallJpg() {
-        test(Size.SMALL, Type.JPG, Type.PNG);
+    public void processJpg() {
+        test("banana-slug.jpg");
     }
 
     @Test
-    public void smallPng() {
-        test(Size.SMALL, Type.PNG, Type.PNG);
-    }
-
-    @Disabled("JDK-8388450") // TODO
-    @Test
-    public void largeJpg() {
-        test(Size.LARGE, Type.JPG, Type.JPG);
-    }
-
-    @Test
-    public void largePng() {
-        test(Size.LARGE, Type.PNG, Type.PNG);
+    public void processPng() {
+        test("underlines.png");
     }
 
     @Test
@@ -124,23 +106,7 @@ public class TestImageFormatHandler extends RobotTestBase {
         return ss;
     }
 
-    private static String getName(Size size, Type source) {
-        return switch(size) {
-        case LARGE ->
-            switch(source) {
-            case JPG -> "banana-slug.jpg";
-            case PNG -> "underlines.png";
-            };
-        case SMALL ->
-            switch(source) {
-            case JPG -> "banana-slug-small.jpg";
-            case PNG -> "underlines-small.png";
-            };
-        };
-    }
-
-    private void test(Size size, Type source, Type expectedType) {
-        String name = getName(size, source);
+    private void test(String name) {
         String url = TestData.getURI(name);
         Image im = new Image(url);
         StyledInput in = null;
@@ -160,7 +126,7 @@ public class TestImageFormatHandler extends RobotTestBase {
         assertNotNull(em);
         byte[] b = EmbeddedImageHelper.getBytes(em);
         assertNotNull(b);
-        assertSignature(expectedType, b);
+        assertSignature(b);
 
         // let's see if it pastes
         Util.runAndWait(() -> {
@@ -195,15 +161,10 @@ public class TestImageFormatHandler extends RobotTestBase {
         });
     }
 
-    private void assertSignature(Type expected, byte[] bytes) {
+    private void assertSignature(byte[] bytes) {
         assertNotNull(bytes);
-        byte[] exp = (expected == Type.JPG) ? JPG_SIGNATURE : PNG_SIGNATURE;
-        assertTrue(bytes.length > exp.length);
-        byte[] b = Arrays.copyOf(bytes, exp.length);
-        assertArrayEquals(exp, b, "wrong image signature, expected " + expected);
-    }
-
-    private static byte[] mkSignature(String hexPattern) {
-        return HexFormat.of().parseHex(hexPattern);
+        assertTrue(bytes.length > PNG_SIGNATURE.length);
+        byte[] b = Arrays.copyOf(bytes, PNG_SIGNATURE.length);
+        assertArrayEquals(PNG_SIGNATURE, b, "wrong image signature");
     }
 }

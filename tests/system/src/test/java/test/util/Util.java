@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -463,5 +464,16 @@ public class Util {
      */
     public static boolean isNear(double a, double b) {
         return Math.abs(a - b) < 0.1;
+    }
+
+    /**
+     * Parses hex string into a byte array.
+     * Example: "0001" -> byte[] { 0x00, 0x01 }
+     * No spaces or symbols other than upper/lower case hex digits is allosed.
+     * @param hexPattern hex string
+     * @return the byte array
+     */
+    public static byte[] hexToByteArray(String hexPattern) {
+        return HexFormat.of().parseHex(hexPattern);
     }
 }
