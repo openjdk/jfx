@@ -870,6 +870,34 @@ public class PopupTest {
         assertEquals(List.of(popupStylesheet, ownerStylesheet), popup.getScene().getStylesheets());
     }
 
+    @Test
+    public void testShowTwiceAddsStylesheetOfOwnerOnlyOnce() {
+        final String ownerStylesheet = toBase64(".owner { -fx-fill: green; }");
+        scene.getStylesheets().add(ownerStylesheet);
+
+        final Popup popup = new Popup();
+
+        popup.show(stage);
+        popup.hide();
+        popup.show(stage);
+
+        assertEquals(List.of(ownerStylesheet), popup.getScene().getStylesheets());
+    }
+
+    @Test
+    public void testShowDoesNotAddStylesheetTwiceWhenPopupAndOwnerShareIt() {
+        final String sharedStylesheet = toBase64(".owner { -fx-fill: green; }");
+
+        scene.getStylesheets().addAll(sharedStylesheet);
+
+        final Popup popup = new Popup();
+        popup.getScene().getStylesheets().add(sharedStylesheet);
+
+        popup.show(stage);
+
+        assertEquals(List.of(sharedStylesheet), popup.getScene().getStylesheets());
+    }
+
     private String toBase64(String stylesheet) {
         return "data:base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
