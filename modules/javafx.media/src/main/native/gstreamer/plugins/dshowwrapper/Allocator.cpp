@@ -69,6 +69,7 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
         return hr;
 
     pSample->m_pGstBuffer = m_pBuffer;
+    pSample->m_pMappedGstBuffer = m_pBuffer;
     pSample->m_GstMapInfo = m_MapInfo;
 
     hr = pSample->SetPointer(m_MapInfo.data, m_MapInfo.size);
@@ -86,7 +87,11 @@ HRESULT CAllocator::ReleaseBuffer(IMediaSample *pBuffer)
     CSample *pSample = (CSample*)pBuffer;
     if (ReleaseSample != NULL)
     {
-        gst_buffer_unmap(pSample->m_pGstBuffer, &pSample->m_GstMapInfo);
+        if (pSample->m_pMappedGstBuffer != NULL)
+        {
+            gst_buffer_unmap(pSample->m_pMappedGstBuffer, &pSample->m_GstMapInfo);
+            pSample->m_pMappedGstBuffer = NULL;
+        }
         ReleaseSample(pSample->m_pGstBuffer, &m_UserData);
         pSample->m_pGstBuffer = NULL;
     }

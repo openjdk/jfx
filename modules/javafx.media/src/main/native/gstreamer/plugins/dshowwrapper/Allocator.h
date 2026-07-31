@@ -40,8 +40,14 @@ struct sUserData
 class CSample : public CMediaSample
 {
 public:
-    CSample(TCHAR *pName, CBaseAllocator *pAllocator, HRESULT *phr) : CMediaSample(pName, pAllocator, phr) { m_pGstBuffer = NULL; }
+    CSample(TCHAR *pName, CBaseAllocator *pAllocator, HRESULT *phr)
+        : CMediaSample(pName, pAllocator, phr)
+    {
+        m_pGstBuffer = NULL;
+        m_pMappedGstBuffer = NULL;
+    }
     GstBuffer *m_pGstBuffer;
+    GstBuffer *m_pMappedGstBuffer;
     GstMapInfo m_GstMapInfo;
 };
 
