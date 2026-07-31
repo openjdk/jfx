@@ -45,7 +45,6 @@ class CanvasRenderingContext;
 class Element;
 class Event;
 class GraphicsContext;
-class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
 class IntRect;
@@ -73,17 +72,9 @@ public:
     virtual unsigned width() const { return m_size.width(); }
     virtual unsigned height() const { return m_size.height(); }
     const IntSize& size() const { return m_size; }
-
-    ImageBuffer* buffer() const;
-
-    virtual void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) { }
+    virtual void setSizeForControllingContext(IntSize) = 0;
 
     RefPtr<ImageBuffer> makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect = ShouldApplyPostProcessingToDirtyRect::Yes);
-
-    size_t memoryCost() const;
-#if ENABLE(RESOURCE_USAGE)
-    size_t externalMemoryCost() const;
-#endif
 
     void setOriginClean() { m_originClean = true; }
     void setOriginTainted() { m_originClean = false; }
@@ -119,9 +110,10 @@ public:
 
     bool hasActiveInspectorCanvasCallTracer() const;
 
-    bool shouldAccelerate(const IntSize&) const;
+    bool shouldAccelerate() const;
 
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
+    [[nodiscard]] bool validateArea() const;
 
     virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
@@ -129,16 +121,8 @@ public:
     bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
     void recordLastFillText(const String&);
 
-    void resetGraphicsContextState() const;
-
     void setNoiseInjectionSalt(NoiseInjectionHashSalt salt) { m_canvasNoiseHashSalt = salt; }
     bool havePendingCanvasNoiseInjection() const { return m_canvasNoiseInjection.haveDirtyRects(); }
-
-    // FIXME(https://bugs.webkit.org/show_bug.cgi?id=275100): The image buffer from CanvasBase should be moved to CanvasRenderingContext2DBase.
-    RefPtr<ImageBuffer> allocateImageBuffer() const;
-
-    void setHasCreatedImageBuffer(bool hasCreatedImageBuffer) { m_hasCreatedImageBuffer = hasCreatedImageBuffer; }
-    bool hasCreatedImageBuffer() const { return m_hasCreatedImageBuffer; }
 
     RefPtr<ImageBuffer> createImageForNoiseInjection() const;
 
@@ -151,20 +135,14 @@ protected:
 
     void setSize(const IntSize&);
 
-    RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
     String lastFillText() const { return m_lastFillText; }
     void addCanvasNeedingPreparationForDisplayOrFlush();
     void removeCanvasNeedingPreparationForDisplayOrFlush();
 
 private:
     bool shouldInjectNoiseBeforeReadback() const;
-    virtual void createImageBuffer() const { }
-    bool shouldAccelerate(uint64_t area) const;
 
     mutable IntSize m_size;
-    mutable RefPtr<ImageBuffer> m_imageBuffer;
-    mutable std::atomic<size_t> m_imageBufferMemoryCost { 0 };
-    mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
     mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 
     String m_lastFillText;
@@ -176,8 +154,7 @@ private:
     Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
 
     bool m_originClean { true };
-    // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
-    bool m_hasCreatedImageBuffer { false };
+    mutable bool m_hasWarnedExceedsArea { false };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif

@@ -33,6 +33,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/SwiftBridging.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/TypeTraits.h>
 
 #if ASAN_ENABLED
 extern "C" void __asan_poison_memory_region(void const volatile *addr, size_t size);
@@ -113,6 +114,12 @@ public:
         ASSERT(m_ptr);
     }
 
+    template<typename X, typename WeakPtrImplType>
+    Ref(const WeakRef<X, WeakPtrImplType>& other) requires std::is_convertible_v<X*, T*>
+        : m_ptr(&RefDerefTraits::ref(other.get()))
+    {
+    }
+
     Ref& operator=(T&);
     Ref& operator=(Ref&&);
     template<typename X, typename Y, typename Z> Ref& operator=(Ref<X, Y, Z>&&);
@@ -173,6 +180,10 @@ private:
 
     typename PtrTraits::StorageType m_ptr;
 } SWIFT_ESCAPABLE;
+
+// Template deduction guide.
+template<typename X, typename Y> Ref(const WeakRef<X, Y>&) -> Ref<X, RawPtrTraits<X>, DefaultRefDerefTraits<X>>;
+template<typename X, typename Y> Ref(WeakRef<X, Y>&) -> Ref<X, RawPtrTraits<X>, DefaultRefDerefTraits<X>>;
 
 template<typename T, typename _PtrTraits, typename RefDerefTraits> Ref<T, _PtrTraits, RefDerefTraits> adoptRef(T&);
 
@@ -319,6 +330,19 @@ inline Ref<T, _PtrTraits, RefDerefTraits> adoptRef(T& reference)
     return Ref<T, _PtrTraits, RefDerefTraits>(reference, Ref<T, _PtrTraits, RefDerefTraits>::Adopt);
 }
 
+template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>>
+    requires HasRefPtrMemberFunctions<T>::value
+ALWAYS_INLINE CLANG_POINTER_CONVERSION Ref<T, PtrTraits, RefDerefTraits> protect(T& reference)
+{
+    return Ref<T, PtrTraits, RefDerefTraits>(reference);
+}
+
+template<typename T, typename PtrTraits, typename RefDerefTraits>
+ALWAYS_INLINE CLANG_POINTER_CONVERSION Ref<T, PtrTraits, RefDerefTraits> protect(const Ref<T, PtrTraits, RefDerefTraits>& reference)
+{
+    return reference.copyRef();
+}
+
 template<typename ExpectedType, typename ArgType, typename PtrTraits, typename RefDerefTraits>
 inline bool is(const Ref<ArgType, PtrTraits, RefDerefTraits>& source)
 {
@@ -364,5 +388,6 @@ inline bool arePointingToEqualData(const Ref<T, PtrTraits, RefDerefTraits>& a, c
 using WTF::Ref;
 using WTF::adoptRef;
 using WTF::arePointingToEqualData;
+using WTF::protect;
 using WTF::upcast;
 using WTF::unsafeRefDowncast;

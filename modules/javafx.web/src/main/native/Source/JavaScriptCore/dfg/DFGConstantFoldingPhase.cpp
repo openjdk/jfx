@@ -337,6 +337,12 @@ private:
                     break;
                 }
 
+                if (view->isResizableOrGrowableShared()) {
+                    // Because resizable and growable-shared views can have their backing store reallocated
+                    // by resize() / WebAssembly.Memory.grow(), a folded vector pointer would go stale.
+                    break;
+                }
+
                 m_interpreter.execute(indexInBlock);
                 eliminated = true;
 
