@@ -31,9 +31,8 @@ package javafx.util;
 ///
 /// Subclasses are provided for primitive wrapper types, numbers, dates and times, and custom formats.
 ///
-/// @implNote JavaFX's implementations are immutable (the same converter can be reused, except for
-/// `DateTimeStringConverter`s that can only be reused on the same thread). Implementing classes are not required to be
-/// immutable.
+/// @implNote JavaFX's implementations are immutable, but might not be thread-safe: the same converter can be reused as
+/// long as all access are on the same thread or are synchronized. Implementing classes are not required to be immutable.
 ///
 /// @param <T> the type associated with the string conversions
 /// @since JavaFX 2.0
