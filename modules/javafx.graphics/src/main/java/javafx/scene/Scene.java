@@ -50,6 +50,7 @@ import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.layout.Snapper;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
@@ -83,6 +84,7 @@ import javafx.scene.input.*;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
+import javafx.scene.layout.RenderScaleContext;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -509,6 +511,16 @@ public class Scene implements EventTarget {
                         @Override
                         public SceneContext getSceneContext(Scene scene) {
                             return scene.context;
+                        }
+
+                        @Override
+                        public Snapper getSnapper(Scene scene) {
+                            return scene.snapper;
+                        }
+
+                        @Override
+                        public RenderScaleContext getRenderScaleContext(Scene scene) {
+                            return scene.renderScaleContext;
                         }
                     });
         }
@@ -2175,14 +2187,68 @@ public class Scene implements EventTarget {
     private void windowForSceneChanged(Window oldWindow, Window newWindow) {
         if (oldWindow != null) {
             oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
+            oldWindow.renderScaleXProperty().removeListener(sceneWindowRenderScaleListener);
+            oldWindow.renderScaleYProperty().removeListener(sceneWindowRenderScaleListener);
         }
 
         if (newWindow != null) {
             newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
+            newWindow.renderScaleXProperty().addListener(sceneWindowRenderScaleListener);
+            newWindow.renderScaleYProperty().addListener(sceneWindowRenderScaleListener);
             setWindowFocused(newWindow.isFocused());
+            requestLayoutRecursive(getRoot());
         } else {
             setWindowFocused(false);
         }
+
+        updateRenderScaleCache();
+    }
+
+    /**
+     * Trigger a requestLayout() call on the given Node and all its
+     * descendants in the Scene, in order to invalidate any caches that
+     * these Nodes may be holding that were calculated using an outdated
+     * render scale (the main culprit here is Parent's caching of
+     * min/pref/max sizes but there are many Nodes that follow a similar
+     * "invalidate on requestLayout()" pattern).
+     *
+     * @param parent a start node, cannot be {@code null}
+     */
+    private static void requestLayoutRecursive(Parent parent) {
+        parent.requestLayout();
+
+        for (Node child : parent.getChildrenUnmodifiable()) {
+            if (child instanceof Parent p) {
+                requestLayoutRecursive(p);
+            }
+        }
+    }
+
+    private final InvalidationListener sceneWindowRenderScaleListener =
+            _ -> {
+                updateRenderScaleCache();
+                requestLayoutRecursive(getRoot());
+            };
+
+    /**
+     * Cached {@link Snapper} for this scene's window render scale, refreshed
+     * whenever the window changes or its render scale changes.
+     */
+    private Snapper snapper = Snapper.DEFAULT;
+
+    /**
+     * Cached {@link RenderScaleContext} for this scene's window render scale, refreshed
+     * whenever the window changes or its render scale changes.
+     */
+    private RenderScaleContext renderScaleContext = RenderScaleContext.DEFAULT;
+
+    private void updateRenderScaleCache() {
+        Window window = getWindow();
+
+        this.renderScaleContext = window == null
+            ? RenderScaleContext.DEFAULT
+            : new RenderScaleContext(window.getRenderScaleX(), window.getRenderScaleY());
+        this.snapper = Snapper.createSnapper(renderScaleContext);
     }
 
     private final InvalidationListener sceneWindowFocusedListener =

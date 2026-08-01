@@ -176,7 +176,7 @@ public class FlowPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
+    private static final Callback<Layoutable, Insets> marginAccessor = n -> getMargin((Node)n);
 
     /**
      * Removes all flowpane constraints from the child node.
