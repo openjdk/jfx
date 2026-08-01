@@ -25,106 +25,131 @@
 
 package javafx.scene.input;
 
+import java.io.IOException;
+
+import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.NamedArg;
+import javafx.event.EventDispatcher;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import com.sun.javafx.scene.input.InputEventUtils;
-import java.io.IOException;
+import javafx.scene.Node;
 
-// PENDING_DOC_REVIEW
-/**
- * When a mouse event occurs, the top-most node under cursor is picked and
- * the event is delivered to it through capturing and bubbling phases
- * described at {@link javafx.event.EventDispatcher EventDispatcher}.
- * <p>
- * The mouse (pointer's) location is available relative to several
- * coordinate systems: x,y - relative to the origin of the
- * MouseEvent's node, sceneX,sceneY - relative to to the
- * origin of the {@code Scene} that contains the node,
- * screenX,screenY - relative to origin of the screen that
- * contains the mouse pointer.
- *
- * <h2>Dragging gestures</h2>
- * <p>
- * There are three types of dragging gestures. They are all initiated by
- * a mouse press event and terminated as a result of a mouse released
- * event, the source node decides which gesture will take place.
- * <p>
- * The simple press-drag-release gesture is the default. It's best used to allow
- * changing the size of a shape, dragging it around and so on. The whole
- * press-drag-release gesture is delivered to one node. When a mouse
- * button is pressed, the top-most node is picked and all subsequent
- * mouse events are delivered to that same node until the button is released.
- * If a mouse clicked event is generated from these events, it is still
- * delivered to the same node.
- * <p>
- * During a simple press-drag-release gesture, the other nodes are not involved
- * and don't get any events. If these nodes need to be involved in the gesture,
- * full press-drag-release gesture has to be activated. This gesture is
- * best used for connecting nodes by "wires", dragging nodes to other nodes etc.
- * This gesture type is more closely described at
- * {@link javafx.scene.input.MouseDragEvent MouseDragEvent} which contains
- * the events delivered to the gesture targets.
- * <p>
- * The third gesture type is the platform-supported drag-and-drop gesture. It serves
- * best to transfer data and works also between (not necessarily FX)
- * applications. This gesture type is more closely described
- * at {@link javafx.scene.input.DragEvent DragEvent}.
- * <p>
- * In summary, simple press-drag-release gestures are activated
- * automatically when a mouse button is pressed and delivers all
- * {@code MouseEvent}s to the gesture source. When you start dragging,
- * eventually the {@code DRAG_DETECTED} event arrives. In its handler,
- * you can either start a full press-drag-release gesture by calling the
- * {@code startFullDrag} method on a node or scene - the {@code MouseDragEvent}s
- * start to be delivered to gesture targets, or you can start drag and drop
- * gesture by calling {@code startDragAndDrop} method on a node or scene -
- * the system switches into the drag and drop mode and {@code DragEvent}s start
- * to be delivered instead of {@code MouseEvent}s. If you don't call any of
- * those methods, the simple press-drag-release gesture continues.
- * <p>
- * Note that dragging a finger over touch screen produces mouse dragging events,
- * but also scroll gesture events. If it means a conflict in an application
- * (the physical dragging action is handled by two different handlers), the
- * {@code isSynthesized()} method may be used to detect the problem and make the
- * dragging handlers behave accordingly.
- *
- * <h2>Mouse enter/exit handling</h2>
- * <p>
- * When the mouse enters a node, the node gets a {@code MOUSE_ENTERED} event, when
- * it leaves, it gets a {@code MOUSE_EXITED} event. These events are delivered
- * only to the entered/exited node and seemingly don't go through the
- * capturing/bubbling phases. This is the most common use-case.
- * <p>
- * When capturing or bubbling is desired, there are
- * {@code MOUSE_ENTERED_TARGET}/{@code MOUSE_EXITED_TARGET} events. These events
- * go through capturing/bubbling phases normally. This means that a parent may
- * receive the {@code MOUSE_ENTERED_TARGET} event when the mouse entered
- * either the parent itself or some of its children. To distinguish between
- * these two cases, the event target can be tested on equality with the node.
- * <p>
- * These two types are closely connected:
- * {@code MOUSE_ENTERED}/{@code MOUSE_EXITED} are subtypes
- * of {@code MOUSE_ENTERED_TARGET}/{@code MOUSE_EXITED_TARGET}.
- * During capturing phase,
- * {@code MOUSE_ENTERED_TARGET} is delivered to the
- * parents. When the event is delivered to the event target (the node that
- * has actually been entered), its type is switched to
- * {@code MOUSE_ENTERED}. Then the type is switched back to
- * {@code MOUSE_ENTERED_TARGET} for the bubbling phase.
- * It's still one event just switching types, so if it's filtered or consumed,
- * it affects both event variants. Thanks to the subtype-relationship, a
- * {@code MOUSE_ENTERED_TARGET} event handler will receive the
- * {@code MOUSE_ENTERED} event on target.
- *
- * <h2>Notes</h2>
- * <ul>
- *   <li>For triggering context menus see the {@link ContextMenuEvent}.</li>
- * </ul>
- * @since JavaFX 2.0
- */
+/// An event originating by mouse buttons and movements. Mouse events can generally be categorized into button events,
+/// movement events, and drag events (resulting from the combination of the previous two). These are described below in
+/// more detail. [ScrollEvent]s produced by the mouse wheel are not `MouseEvent`s (but events produced by using the
+/// scroll wheel as a button are).
+///
+/// The buttons involved in any event can be queried with [#isPrimaryButtonDown()], [#isSecondaryButtonDown()] etc. and
+/// [#getClickCount()]. Modifiers can be queried with [#isShiftDown()], [#isControlDown()] etc.
+///
+/// The mouse (pointer's) location is available in several coordinate systems:
+/// * ([x][#getX()], [y][#getY()], [z][#getZ()]) - relative to the origin of the `MouseEvent`'s node.
+/// * ([sceneX][#getSceneX()], [sceneY][#getSceneY()]) - relative to to the origin of the `Scene` that contains the node.
+/// * ([screenX][#getScreenX()], [screenY][#getScreenY()]) - relative to the origin of the screen that contains the mouse
+///   pointer.
+///
+/// When a mouse event occurs, the top-most node under the cursor is [picked][#getPickResult()] and the event is
+/// delivered to it through the capturing and bubbling phases described in [EventDispatcher]. Nodes that have
+/// [mouseTransparent][javafx.scene.Node#mouseTransparentProperty()] set to `true` do not receive mouse events.
+///
+/// ## Button events
+/// A mouse button can be [pressed][#MOUSE_PRESSED] and [released][#MOUSE_RELEASED]. A button [click][#MOUSE_CLICKED]
+/// occurs when these happen over the same node. Button events can still be produced during a drag gesture.
+///
+/// Not all buttons on the mouse are supported, such as macro buttons or buttons that change the DPI.
+///
+/// ## Dragging gestures
+/// Dragging occurs when the mouse moves outside of its [hysteresis][#isStillSincePress()] area while a button is
+/// pressed, at which point a [#DRAG_DETECTED] event is dispatched to the source node. Dragging ends when a mouse button
+/// is released. Dragging a finger over touch screens produces both drag events and scroll events. The [#isSynthesized()]
+/// method can be used to differentiate between these events.
+///
+/// There are 3 types of drag gestures that can be chosen from within the `DRAG_DETECTED` handler:
+///
+/// 1. Simple press-drag-release (PDR), in which the source (picked) node is the only node involved. It receives all the
+/// events in the PDR gesture, including button events even when they occur over other nodes.
+/// During the gesture, [#MOUSE_DRAGGED] events are delivered.
+/// PDR is best used to allow changing the size of a shape, dragging it around etc.
+/// This gesture starts when no designated method is invoked within the event handler.
+///
+/// 2. Full PDR, in which nodes other than the source node are involved. Nodes receive events when they are picked
+/// according to the cursor location.
+/// Full PDR is best used for connecting nodes by "wires", dragging nodes to other nodes etc.
+/// This gesture starts when the [startFullDrag][javafx.scene.Node#startFullDrag()] method of a node (or a
+/// [scene][javafx.scene.Scene#startFullDrag()]) is invoked.
+/// See [MouseDragEvent] for more details on full PDR.
+///
+/// 3. Drag-and-drop (DnD), in which both nodes in the FX application and other operating system applications are
+/// involved.
+/// DnD serves best to transfer data and works between applications, for example, to move/copy text between a `TextArea`
+/// and a notepad.
+/// This gestures starts when the [startDragAndDrop][javafx.scene.Node#startDragAndDrop(TransferMode...)] method of a
+/// node (or a [scene][javafx.scene.Scene#startDragAndDrop(TransferMode...)]) is invoked.
+/// See [DragEvent] for more details on DnD. Note that `DragEvent` is not a `MouseEvent` and can be started without a
+/// mouse (for example, with a touch screen).
+///
+/// The following flow diagram shows the stages of event delivery depending on the type of drag gesture:
+///
+/// <img src="doc-files/mouse_events.svg" alt="Drag mouse events flow" width="700">
+///
+/// The following table summarizes the different drag gestures:
+///
+/// <table border="1">
+/// <caption>Drag Gestures Summary Table</caption>
+///   <tr>
+///     <th scope="col">Name</th>
+///     <th scope="col">Involved</th>
+///     <th scope="col">Usage example</th>
+///     <th scope="col">Start method</th>
+///     <th scope="col">Event class</th>
+///   </tr>
+///   <tr>
+///     <th scope="row">PDR</th>
+///     <td>Source node/scene</td>
+///     <td>Resize or move a shape</td>
+///     <td></td>
+///     <td>{@code MouseEvent}</td>
+///   </tr>
+///   <tr>
+///     <th scope="row">Full PDR</th>
+///     <td>Any node/scene</td>
+///     <td>Connecting nodes or dropping a node on another</td>
+///     <td>{@code startFullDrag}</td>
+///     <td>{@code MouseDragEvent}</td>
+///   </tr>
+///   <tr>
+///     <th scope="row">DnD</th>
+///     <td>Any node/scene and OS applications</td>
+///     <td>Copy/move text between applications</td>
+///     <td>{@code startDragAndDrop}</td>
+///     <td>{@code DragEvent}</td>
+///   </tr>
+/// </table>
+///
+/// ## Movement events
+/// When the mouse moves while a drag gesture is not ongoing, it produces [#MOUSE_MOVED] events.
+///
+/// When the mouse enters/exits a node while DnD is not ongoing, the node gets a [#MOUSE_ENTERED]/[#MOUSE_EXITED] event.
+/// These events are delivered only to the entered/exited node and don't go through the capturing/bubbling phases.
+/// Conversely, [#MOUSE_ENTERED_TARGET]/[#MOUSE_EXITED_TARGET] events do go through capturing/bubbling phases normally.
+/// This means that a node can receive these events when the mouse enters a node in its scenegraph hierarchy. To
+/// distinguish between these two cases, the event target can be tested on equality with the node.
+///
+/// Since `MOUSE_ENTERED`/`MOUSE_EXITED` are subtypes of `MOUSE_ENTERED_TARGET`/`MOUSE_EXITED_TARGET`, they are also
+/// handled by `MOUSE_ENTERED_TARGET`/`MOUSE_EXITED_TARGET` event handlers. In fact, a single even changes its type
+/// during its lifetime in the following way:
+/// 1. During capturing phase, `MOUSE_ENTERED_TARGET` is delivered to the parents.
+/// 2. When the event is delivered to the event target (the node that was entered), its type is switched to
+/// `MOUSE_ENTERED`.
+/// 3. During the bubbling phase, its type is switched back to `MOUSE_ENTERED_TARGET`.
+///
+/// If the event is filtered or consumed, it affects both event types.
+///
+/// @see ContextMenuEvent ContextMenuEvent for triggering context menus
+/// @since JavaFX 2.0
 public class MouseEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -227,7 +252,7 @@ public class MouseEvent extends InputEvent {
      * dragging gesture. Handler of this event is the only place where
      * full press-drag-release gesture or a drag and drop gesture can be
      * started (by calling {@link javafx.scene.Node#startFullDrag startFullDrag()}
-     * of {@link javafx.scene.Node#startDragAndDrop startDragAndDrop()} method).
+     * or {@link javafx.scene.Node#startDragAndDrop startDragAndDrop()} method).
      * If none of them is called, simple press-drag-release gesture will continue.
      * <p>
      * Note that his event is generated based on dragging the mouse over a
