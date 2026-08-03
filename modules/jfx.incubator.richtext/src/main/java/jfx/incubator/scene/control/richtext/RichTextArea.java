@@ -2745,19 +2745,20 @@ public class RichTextArea extends Control {
         promptProperty().set(x);
     }
 
-    // TODO own javadoc?
-    public final void setPrompt(Supplier<Object> x) {
-        promptProperty().set(x);
-    }
-
-    // FIX remove
-    private void test() {
-        setPrompt("a");
-        setPrompt(this::getPrompt);
-        setPrompt(() -> new Object());
-        setPrompt(new Object());
-        setPrompt(null);
-        setPrompt((String)null);
-        setPrompt((Supplier)null);
+    /**
+     * Sets the value of the property {@link #prompt}.
+     * For maximum flexibility, the supplied values can be either
+     * <ul>
+     *   <li>a {@code String}
+     *   <li>a {@code Node}
+     *   <li>{@code null}
+     * </ul>
+     * A {@code null} value supplied removes the prompt.
+     *
+     * @param sup the prompt value supplier
+     * @since 28
+     */
+    public final void setPrompt(Supplier<Object> sup) {
+        promptProperty().set(sup);
     }
 }

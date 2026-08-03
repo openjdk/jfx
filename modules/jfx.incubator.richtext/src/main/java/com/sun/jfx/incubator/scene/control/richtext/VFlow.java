@@ -1733,13 +1733,13 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 promptNode.applyCss();
             }
         }
-        // hide or resize
         if (promptNode != this) {
             if (RichUtils.isEmpty(control)) {
+                // show
                 promptNode.setVisible(true);
                 RichUtils.layoutInArea(promptNode, 0.0, 0.0, content.getWidth(), content.getHeight());
             } else {
-                // hide prompt node            
+                // hide
                 if (promptNode != null) {
                     promptNode.setVisible(false);
                 }
@@ -1851,5 +1851,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             promptNode = null;
         }
         requestLayout();
+    }
+
+    /// Returns the prompt node (for testing).
+    public Node promptNode() {
+        return promptNode;
     }
 }
