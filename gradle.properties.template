@@ -26,8 +26,10 @@
 #####################################################################################
 #                                                                                   #
 # This properties file allows for a developer to override various properties used   #
-# when building JavaFX. Any settings you configure in the gradle.properties file    #
-# will have precedence over any values specified in the build script itself.        #
+# when building JavaFX. Place your gradle.properties file in your Gradle user home  #
+# directory. Any settings you configure in this file will have precedence over the  #
+# project's properties file (if one exists) and any values specified in the build   #
+# script itself.                                                                    #
 #                                                                                   #
 #####################################################################################
 
