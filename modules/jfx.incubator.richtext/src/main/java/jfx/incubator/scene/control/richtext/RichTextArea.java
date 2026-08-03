@@ -2715,13 +2715,14 @@ public class RichTextArea extends Control {
      * <ul>
      *   <li>a {@code String}
      *   <li>a {@code Node}
-     *   <li>a {@link Supplier}
+     *   <li>a {code Supplier&lt;Object&gt;}
      * </ul>
      * A {@code null} value set or supplied removes the prompt.
-     * If the the property is set to a {@code Node} value, or a {@code Supplier} that supplies a {@code Node},
+     * <p>
+     * If the property is set to a {@code Node} value, or a {@code Supplier} that supplies a {@code Node},
      * that node will be used.  For any other type, its {@code toString()} value will be used.
      *
-     * @defaultValue An empty String
+     * @defaultValue {@code null}
      * @return the property
      * @since 28
      */
@@ -2753,7 +2754,7 @@ public class RichTextArea extends Control {
      *   <li>a {@code Node}
      *   <li>{@code null}
      * </ul>
-     * A {@code null} value supplied removes the prompt.
+     * Supplied {@code null} value removes the prompt.
      *
      * @param sup the prompt value supplier
      * @since 28
