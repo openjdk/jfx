@@ -293,7 +293,7 @@ public class Region extends Parent {
     /**
      * Returns the {@link RenderScaleContext} for this region's current
      * scene/window, or {@link RenderScaleContext#DEFAULT} if unattached.
-     * 
+     *
      * @return the {@link RenderScaleContext}, never {@code null}
      */
     RenderScaleContext renderScaleContext() {
