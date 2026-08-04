@@ -75,7 +75,6 @@ public:
 
 private:
     GstBuffer *m_pBuffer;
-    GstMapInfo m_MapInfo;
     sUserData m_UserData;
     void (*ReleaseSample)(GstBuffer *pBuffer, sUserData *pUserData);
     void (*GetGstBuffer)(GstBuffer **ppBuffer, long lSize, sUserData *pUserData); // This function will be called before GetBuffer() (before CBaseOutputPin::GetDeliveryBuffer()) if SetGstBuffer was not called
