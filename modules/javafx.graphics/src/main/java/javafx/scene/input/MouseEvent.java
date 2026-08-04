@@ -57,7 +57,7 @@ import javafx.scene.Node;
 ///
 /// ## Button events
 /// A mouse button can be [pressed][#MOUSE_PRESSED] and [released][#MOUSE_RELEASED]. A button [click][#MOUSE_CLICKED]
-/// occurs when these happen over the same node. Button events can still be produced during a drag gesture.
+/// occurs after these happen over the same node. Button events can still be produced during a drag gesture.
 ///
 /// Not all buttons on the mouse are supported, such as macro buttons or buttons that change the DPI.
 ///
@@ -69,8 +69,8 @@ import javafx.scene.Node;
 ///
 /// There are 3 types of drag gestures that can be chosen from within the `DRAG_DETECTED` handler:
 ///
-/// 1. Simple press-drag-release (PDR), in which the source (picked) node is the only node involved. It receives all the
-/// events in the PDR gesture, including button events even when they occur over other nodes.
+/// 1. Simple press-drag-release (PDR), in which the source (picked) node receives all the events in the PDR gesture,
+/// including click events even when they occur over other nodes.
 /// During the gesture, [#MOUSE_DRAGGED] events are delivered.
 /// PDR is best used to allow changing the size of a shape, dragging it around etc.
 /// This gesture starts when no designated method is invoked within the event handler.
