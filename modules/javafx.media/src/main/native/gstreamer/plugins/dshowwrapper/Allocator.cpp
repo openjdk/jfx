@@ -55,20 +55,29 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
     if (FAILED(hr))
         return hr;
 
+    pSample = (CSample*)*ppBuffer;
+
     if (m_pBuffer == NULL)
     {
         if (GetGstBuffer != NULL)
             GetGstBuffer(&m_pBuffer, m_lSize, &m_UserData);
 
         if (m_pBuffer == NULL)
+        {
+            pSample->Release();
+            *ppBuffer = NULL;
             return E_FAIL;
+        }
     }
 
-    pSample = (CSample*)*ppBuffer;
     hr = pSample->SetGstBuffer(m_pBuffer);
     m_pBuffer = NULL;
     if (FAILED(hr))
+    {
+        pSample->Release();
+        *ppBuffer = NULL;
         return hr;
+    }
 
     return S_OK;
 }
