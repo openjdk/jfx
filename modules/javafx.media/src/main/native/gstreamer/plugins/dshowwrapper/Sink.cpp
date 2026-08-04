@@ -389,8 +389,7 @@ HRESULT CSink::DoRenderSampleInternal(IMediaSample *pMediaSample)
     if (pSample == NULL)
         return S_FALSE;
 
-    pBuffer = pSample->m_pGstBuffer;
-    pSample->m_pGstBuffer = NULL;
+    pBuffer = pSample->TakeGstBuffer();
     if (pBuffer == NULL)
         return S_FALSE;
 

@@ -44,11 +44,16 @@ public:
         : CMediaSample(pName, pAllocator, phr)
     {
         m_pGstBuffer = NULL;
-        m_pMappedGstBuffer = NULL;
+        m_bGstBufferMapped = false;
     }
+
+    HRESULT SetGstBuffer(GstBuffer *pGstBuffer);
+    GstBuffer *TakeGstBuffer();
+
+private:
     GstBuffer *m_pGstBuffer;
-    GstBuffer *m_pMappedGstBuffer;
     GstMapInfo m_GstMapInfo;
+    bool m_bGstBufferMapped;
 };
 
 class CAllocator : public CBaseAllocator
