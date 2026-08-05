@@ -133,6 +133,7 @@ typedef struct
 - (void) releaseVertexBuffer
 {
     for (int i = 0; i < BUFFER_SIZE; i++) {
+        [vertexBuffer[i] release];
         vertexBuffer[i] = nil;
     }
     numVertices = 0;
@@ -150,6 +151,7 @@ typedef struct
 - (void) releaseIndexBuffer
 {
     for (int i = 0; i < BUFFER_SIZE; i++) {
+        [indexBuffer[i] release];
         indexBuffer[i] = nil;
     }
     numIndices = 0;
