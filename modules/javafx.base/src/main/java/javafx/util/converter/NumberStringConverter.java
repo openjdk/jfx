@@ -32,8 +32,8 @@ import java.text.ParseException;
 import java.util.Locale;
 import java.util.Objects;
 
-/// A `StringConverter` implementation for `Number` values. Instances of this class are immutable unless create with the
-/// [#NumberStringConverter(NumberFormat)] constructor (with a non-`null` argument).
+/// A `StringConverter` implementation for `Number` values. Instances of this class are immutable unless created with
+/// the [#NumberStringConverter(NumberFormat)] constructor (with a non-`null` argument).
 ///
 /// @since JavaFX 2.1
 public class NumberStringConverter extends BaseStringConverter<Number> {
