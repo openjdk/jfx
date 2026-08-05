@@ -31,7 +31,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/// A `StringConverter` implementation for [Date] values that represent dates and times.
+/// A `StringConverter` implementation for [Date] values that represent dates and times. Instances of this class are
+/// immutable unless create with the [#DateTimeStringConverter(DateFormat)] constructor (with a non-`null` argument).
 ///
 /// Note that using `Date` is not recommended in JDK versions where [java.time.LocalDateTime] is available, in which
 /// case [LocalDateTimeStringConverter] should be used.

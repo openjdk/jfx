@@ -32,6 +32,7 @@ import java.util.Objects;
 import javafx.beans.NamedArg;
 
 /// A `StringConverter` implementation that can use a [Format] instance to convert arbitrary types to and from a string.
+/// Instances of this class are only immutable if the used `Format` is immutable.
 ///
 /// @param <T> the type converted to/from a string
 /// @since JavaFX 2.2
