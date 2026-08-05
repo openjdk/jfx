@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class TextureMapperJava : public TextureMapper, public ThreadSafeRefCounted<TextureMapperJava>  {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TextureMapperJava);
+    WTF_MAKE_TZONE_ALLOCATED(TextureMapperJava);
 public:
     TextureMapperJava();
 

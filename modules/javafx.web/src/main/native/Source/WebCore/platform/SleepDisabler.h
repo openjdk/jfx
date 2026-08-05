@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "PageIdentifier.h"
-#include "SleepDisablerIdentifier.h"
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/SleepDisablerIdentifier.h>
 #include <pal/system/SleepDisabler.h>
+#include <wtf/Markable.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {

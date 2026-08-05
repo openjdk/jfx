@@ -31,9 +31,11 @@
 #include "B3AtomicValue.h"
 #include "B3BasicBlockInlines.h"
 #include "B3BlockInsertionSet.h"
+#include "B3BulkMemoryValue.h"
 #include "B3ComputeDivisionMagic.h"
 #include "B3EliminateDeadCode.h"
 #include "B3InsertionSetInlines.h"
+#include "B3MemoryValueInlines.h"
 #include "B3PhaseScope.h"
 #include "B3PhiChildren.h"
 #include "B3ProcedureInlines.h"
@@ -380,13 +382,13 @@ public:
     {
         if (couldOverflowMul<T>(other))
             return top<T>();
-        return IntRange(
-            std::min(
-                std::min(m_min * other.m_min, m_min * other.m_max),
-                std::min(m_max * other.m_min, m_max * other.m_max)),
-            std::max(
-                std::max(m_min * other.m_min, m_min * other.m_max),
-                std::max(m_max * other.m_min, m_max * other.m_max)));
+        auto [min, max] = std::minmax({
+            m_min * other.m_min,
+            m_min * other.m_max,
+            m_max * other.m_min,
+            m_max * other.m_max
+        });
+        return IntRange(min, max);
     }
 
     IntRange mul(const IntRange& other, Type type)
@@ -994,7 +996,7 @@ private:
                         break;
 
                     int32_t divisor = m_value->child(1)->asInt32();
-                    DivisionMagic<int32_t> magic = computeDivisionMagic(divisor);
+                    DivisionMagic<int32_t> magic = computeSignedDivisionMagic(divisor);
                     Value* dividend = m_value->child(0);
 
                     Value* magicQuotient = nullptr;
@@ -1071,8 +1073,85 @@ private:
                     replaceWithIdentity(m_value->child(0));
                     break;
                 default:
-                    // FIXME: We should do comprehensive strength reduction for unsigned numbers. Likely,
-                    // we will just want copy what llvm does. https://bugs.webkit.org/show_bug.cgi?id=164809
+                    // Perform comprehensive strength reduction for unsigned division.
+                    // Currently we only do this for 32-bit divisions, since we need a high multiply
+                    // operation. We emulate it using 64-bit multiply. We can't emulate 64-bit
+                    // high multiply with a 128-bit multiply because we don't have a 128-bit
+                    // multiply. We could do it with a patchpoint if we cared badly enough.
+
+                    if (m_value->type() != Int32)
+                        break;
+
+                    if (m_proc.optLevel() < 2)
+                        break;
+
+                    uint32_t divisor = static_cast<uint32_t>(m_value->child(1)->asInt32());
+                    DivisionMagic<uint32_t> magic = computeUnsignedDivisionMagic(divisor);
+                    Value* dividend = m_value->child(0);
+
+                    // Power of 2 case: magic.magicMultiplier == 0
+                    // Turn this: UDiv(value, 2^k)
+                    // Into this: ZShr(value, k)
+                    if (!magic.magicMultiplier) {
+                        ASSERT(!magic.add && !magic.preShift);
+                        replaceWithNew<Value>(
+                            ZShr, m_value->origin(), dividend,
+                            m_insertionSet.insert<Const32Value>(
+                                m_index, m_value->origin(), magic.shift));
+                        break;
+                    }
+
+                    // Apply pre-shift if needed (for even divisor optimization)
+                    if (magic.preShift > 0) {
+                        dividend = m_insertionSet.insert<Value>(
+                            m_index, ZShr, m_value->origin(), dividend,
+                            m_insertionSet.insert<Const32Value>(
+                                m_index, m_value->origin(), magic.preShift));
+                    }
+
+                    // Compute the high part of the multiplication: UMulHigh(dividend, magic)
+                    Value* magicQuotient = nullptr;
+                    if constexpr (isARM64() || isX86()) {
+                        magicQuotient = m_insertionSet.insert<Value>(m_index, UMulHigh, m_value->origin(),
+                            dividend,
+                            m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), magic.magicMultiplier));
+                    }
+
+                    if (!magicQuotient) {
+                        // Fallback: use 64-bit multiply and extract high 32 bits
+                        // UMulHigh(a, b) = (ZExt32(a) * ZExt32(b)) >> 32
+                        magicQuotient = m_insertionSet.insert<Value>(
+                            m_index, Trunc, m_value->origin(),
+                            m_insertionSet.insert<Value>(
+                                m_index, ZShr, m_value->origin(),
+                                m_insertionSet.insert<Value>(
+                                    m_index, Mul, m_value->origin(),
+                                    m_insertionSet.insert<Value>(
+                                        m_index, ZExt32, m_value->origin(), dividend),
+                                    m_insertionSet.insert<Const64Value>(
+                                        m_index, m_value->origin(), static_cast<uint64_t>(magic.magicMultiplier))),
+                                m_insertionSet.insert<Const32Value>(
+                                    m_index, m_value->origin(), 32)));
+                    }
+
+                    // If 'add' is true, we use the "round down" algorithm from Hacker's Delight:
+                    // quotient = (((n - muluh(n,m)) >> 1) + muluh(n,m)) >> shift
+                    if (magic.add) {
+                        ASSERT(!magic.preShift); // preShift optimization should have eliminated the add case
+                        Value* diff = m_insertionSet.insert<Value>(m_index, Sub, m_value->origin(), dividend, magicQuotient);
+                        diff = m_insertionSet.insert<Value>(m_index, ZShr, m_value->origin(), diff, m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), 1));
+                        magicQuotient = m_insertionSet.insert<Value>(m_index, Add, m_value->origin(), diff, magicQuotient);
+                    }
+
+                    // Apply the final shift if needed
+                    if (magic.shift > 0) {
+                        magicQuotient = m_insertionSet.insert<Value>(
+                            m_index, ZShr, m_value->origin(), magicQuotient,
+                            m_insertionSet.insert<Const32Value>(
+                                m_index, m_value->origin(), magic.shift));
+                    }
+
+                    replaceWithIdentity(magicQuotient);
                     break;
                 }
             }
@@ -2310,6 +2389,147 @@ private:
 
             break;
         }
+
+#if !CPU(NEEDS_ALIGNED_ACCESS) && CPU(ADDRESS64)
+        case MemoryCopy: {
+            if (m_value->child(2)->hasInt()) {
+                auto* memoryCopy = m_value->as<BulkMemoryValue>();
+                uint64_t count = m_value->child(2)->asInt();
+                constexpr uint64_t threshold = 128;
+                if (count <= threshold) {
+                    int32_t offset = 0;
+                    Vector<MemoryValue*, 16> loads;
+
+                    if (count >= 16 && m_proc.usesSIMD()) {
+                        while (count >= 16) {
+                            MemoryValue* load = m_insertionSet.insert<MemoryValue>(m_index, Load, V128, m_value->origin(), m_value->child(1), offset);
+                            load->setRange(memoryCopy->readRange());
+                            loads.append(load);
+                            offset += 16;
+                            count -= 16;
+                        }
+                    }
+
+                    while (count >= 8) {
+                        MemoryValue* load = m_insertionSet.insert<MemoryValue>(m_index, Load, Int64, m_value->origin(), m_value->child(1), offset);
+                        load->setRange(memoryCopy->readRange());
+                        loads.append(load);
+                        offset += 8;
+                        count -= 8;
+                    }
+
+                    while (count >= 4) {
+                        MemoryValue* load = m_insertionSet.insert<MemoryValue>(m_index, Load, Int32, m_value->origin(), m_value->child(1), offset);
+                        load->setRange(memoryCopy->readRange());
+                        loads.append(load);
+                        offset += 4;
+                        count -= 4;
+                    }
+
+                    while (count >= 2) {
+                        MemoryValue* load = m_insertionSet.insert<MemoryValue>(m_index, Load16Z, Int32, m_value->origin(), m_value->child(1), offset);
+                        load->setRange(memoryCopy->readRange());
+                        loads.append(load);
+                        offset += 2;
+                        count -= 2;
+                    }
+
+                    while (count >= 1) {
+                        MemoryValue* load = m_insertionSet.insert<MemoryValue>(m_index, Load8Z, Int32, m_value->origin(), m_value->child(1), offset);
+                        load->setRange(memoryCopy->readRange());
+                        loads.append(load);
+                        offset += 1;
+                        count -= 1;
+                    }
+
+                    for (auto* load : loads) {
+                        switch (load->accessWidth()) {
+                        case Width128:
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), load, m_value->child(0), load->offset(), memoryCopy->writeRange());
+                            break;
+                        case Width64:
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), load, m_value->child(0), load->offset(), memoryCopy->writeRange());
+                            break;
+                        case Width32:
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), load, m_value->child(0), load->offset(), memoryCopy->writeRange());
+                            break;
+                        case Width16:
+                            m_insertionSet.insert<MemoryValue>(m_index, Store16, m_value->origin(), load, m_value->child(0), load->offset(), memoryCopy->writeRange());
+                            break;
+                        case Width8:
+                            m_insertionSet.insert<MemoryValue>(m_index, Store8, m_value->origin(), load, m_value->child(0), load->offset(), memoryCopy->writeRange());
+                            break;
+                        }
+                    }
+
+                    m_value->replaceWithNop();
+                    m_changed = true;
+                    break;
+                }
+            }
+            break;
+        }
+
+        case MemoryFill: {
+            if (m_value->child(1)->hasInt() && m_value->child(2)->hasInt()) {
+                auto* memoryFill = m_value->as<BulkMemoryValue>();
+                uint64_t target = static_cast<uint8_t>(m_value->child(1)->asInt());
+                uint64_t count = m_value->child(2)->asInt();
+                constexpr uint64_t threshold = 128;
+                if (count <= threshold) {
+                    int32_t offset = 0;
+
+                    if (count >= 16 && m_proc.usesSIMD()) {
+                        uint64_t mask64 = target << 56 | target << 48 | target << 40 | target << 32 | target << 24 | target << 16 | target << 8 | target << 0;
+                        v128_t mask { mask64, mask64 };
+                        auto* maskValue = m_insertionSet.insert<Const128Value>(m_index, m_value->origin(), mask);
+                        while (count >= 16) {
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), maskValue, m_value->child(0), offset, memoryFill->writeRange());
+                            offset += 16;
+                            count -= 16;
+                        }
+                    }
+
+                    if (count >= 8) {
+                        uint64_t mask = target << 56 | target << 48 | target << 40 | target << 32 | target << 24 | target << 16 | target << 8 | target << 0;
+                        auto* maskValue = m_insertionSet.insert<Const64Value>(m_index, m_value->origin(), mask);
+                        while (count >= 8) {
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), maskValue, m_value->child(0), offset, memoryFill->writeRange());
+                            offset += 8;
+                            count -= 8;
+                        }
+                    }
+
+                    {
+                        uint32_t mask = target << 24 | target << 16 | target << 8 | target << 0;
+                        auto* maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask);
+                        while (count >= 4) {
+                            m_insertionSet.insert<MemoryValue>(m_index, Store, m_value->origin(), maskValue, m_value->child(0), offset, memoryFill->writeRange());
+                            offset += 4;
+                            count -= 4;
+                        }
+
+                        while (count >= 2) {
+                            m_insertionSet.insert<MemoryValue>(m_index, Store16, m_value->origin(), maskValue, m_value->child(0), offset, memoryFill->writeRange());
+                            offset += 2;
+                            count -= 2;
+                        }
+
+                        while (count >= 1) {
+                            m_insertionSet.insert<MemoryValue>(m_index, Store8, m_value->origin(), maskValue, m_value->child(0), offset, memoryFill->writeRange());
+                            offset += 1;
+                            count -= 1;
+                        }
+                    }
+
+                    m_value->replaceWithNop();
+                    m_changed = true;
+                    break;
+                }
+            }
+            break;
+        }
+#endif
 
         case CCall: {
             // Turn this: Call(fmod, constant1, constant2)

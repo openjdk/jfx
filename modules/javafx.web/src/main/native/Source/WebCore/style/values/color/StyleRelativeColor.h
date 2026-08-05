@@ -33,6 +33,7 @@
 #include "Color.h"
 #include "ColorSerialization.h"
 #include "StyleColor.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Logging.h"
 #include "StyleResolvedColor.h"
 #include <wtf/text/TextStream.h>
@@ -69,7 +70,7 @@ template<typename D> Style::Color toStyleColor(const CSS::RelativeColor<D>& unre
         // return a Style::RelativeColor to be resolved at use time.
         return Style::Color {
             RelativeColor<D> {
-                .origin = WTFMove(origin),
+                .origin = WTF::move(origin),
                 .components = simplifyUnevaluatedCalc(unresolved.components, state.conversionData, CSSCalcSymbolTable { })
             }
         };
@@ -84,7 +85,7 @@ template<typename D> Style::Color toStyleColor(const CSS::RelativeColor<D>& unre
         state.conversionData
     );
 
-    return { ResolvedColor { WTFMove(color) } };
+    return { ResolvedColor { WTF::move(color) } };
 }
 
 template<typename D> WebCore::Color resolveColor(const RelativeColor<D>& relative, const WebCore::Color& currentColor)

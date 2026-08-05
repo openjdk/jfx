@@ -28,12 +28,13 @@
 #include "config.h"
 #include "PageTimelineAgent.h"
 
+#include "DocumentView.h"
 #include "FrameSnapshotting.h"
 #include "ImageBuffer.h"
 #include "InspectorBackendClient.h"
-#include "InspectorController.h"
 #include "InstrumentingAgents.h"
 #include "Page.h"
+#include "PageInspectorController.h"
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TimelineRecordFactory.h"
@@ -80,19 +81,19 @@ PageTimelineAgent::~PageTimelineAgent() = default;
 
 bool PageTimelineAgent::enabled() const
 {
-    return m_instrumentingAgents.enabledPageTimelineAgent() == this && InspectorTimelineAgent::enabled();
+    return Ref { m_instrumentingAgents.get() }->enabledPageTimelineAgent() == this && InspectorTimelineAgent::enabled();
 }
 
 void PageTimelineAgent::internalEnable()
 {
-    m_instrumentingAgents.setEnabledPageTimelineAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageTimelineAgent(this);
 
     InspectorTimelineAgent::internalEnable();
 }
 
 void PageTimelineAgent::internalDisable()
 {
-    m_instrumentingAgents.setEnabledPageTimelineAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageTimelineAgent(nullptr);
 
     m_autoCaptureEnabled = false;
 
@@ -101,22 +102,25 @@ void PageTimelineAgent::internalDisable()
 
 bool PageTimelineAgent::tracking() const
 {
-    return m_instrumentingAgents.trackingPageTimelineAgent() == this && InspectorTimelineAgent::tracking();
+    return Ref { m_instrumentingAgents.get() }->trackingPageTimelineAgent() == this && InspectorTimelineAgent::tracking();
 }
 
 void PageTimelineAgent::internalStart(std::optional<int>&& maxCallStackDepth)
 {
-    m_instrumentingAgents.setTrackingPageTimelineAgent(this);
+    Ref { m_instrumentingAgents.get() }->setTrackingPageTimelineAgent(this);
 
     // FIXME: Abstract away platform-specific code once https://bugs.webkit.org/show_bug.cgi?id=142748 is fixed.
 
 #if PLATFORM(COCOA)
-    m_frameStartObserver = makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::InspectorFrameBegin, [this] {
-        if (!tracking() || m_environment.debugger()->isPaused())
+    m_frameStartObserver = makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::InspectorFrameBegin, [weakThis = WeakPtr { *this }] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
             return;
-        if (!m_runLoopNestingLevel) {
-            pushCurrentRecord(JSON::Object::create(), TimelineRecordType::RenderingFrame, false);
-            m_runLoopNestingLevel++;
+        if (!checkedThis->tracking() || checkedThis->checkedEnvironment()->debugger()->isPaused())
+            return;
+        if (!checkedThis->m_runLoopNestingLevel) {
+            checkedThis->pushCurrentRecord(JSON::Object::create(), TimelineRecordType::RenderingFrame, false);
+            checkedThis->m_runLoopNestingLevel++;
         }
     });
 
@@ -128,25 +132,28 @@ void PageTimelineAgent::internalStart(std::optional<int>&& maxCallStackDepth)
 
     m_runLoopNestingLevel = 1;
 #elif USE(GLIB_EVENT_LOOP)
-    m_runLoopObserver = makeUnique<RunLoop::Observer>([this](RunLoop::Event event, const String& name) {
-        if (!tracking() || m_environment.debugger()->isPaused())
+    m_runLoopObserver = RunLoop::EventObserver::create([weakThis = WeakPtr { *this }](RunLoop::Event event, const String& name) {
+        CheckedPtr checkedThis = weakThis.get();
+        if (!checkedThis)
+            return;
+        if (!checkedThis->tracking() || checkedThis->checkedEnvironment()->debugger()->isPaused())
             return;
 
         switch (event) {
         case RunLoop::Event::WillDispatch:
-            pushCurrentRecord(TimelineRecordFactory::createRenderingFrameData(name), TimelineRecordType::RenderingFrame, false);
+            checkedThis->pushCurrentRecord(TimelineRecordFactory::createRenderingFrameData(name), TimelineRecordType::RenderingFrame, false);
             break;
         case RunLoop::Event::DidDispatch:
-            if (m_startedComposite)
-                didComposite();
-            didCompleteCurrentRecord(TimelineRecordType::RenderingFrame);
+            if (checkedThis->m_startedComposite)
+                checkedThis->didComposite();
+            checkedThis->didCompleteCurrentRecord(TimelineRecordType::RenderingFrame);
             break;
         }
     });
-    RunLoop::currentSingleton().observe(*m_runLoopObserver);
+    RunLoop::currentSingleton().observeEvent(*m_runLoopObserver);
 #endif
 
-    InspectorTimelineAgent::internalStart(WTFMove(maxCallStackDepth));
+    InspectorTimelineAgent::internalStart(WTF::move(maxCallStackDepth));
 
     if (auto* client = m_inspectedPage->inspectorController().inspectorBackendClient())
         client->timelineRecordingChanged(true);
@@ -154,7 +161,7 @@ void PageTimelineAgent::internalStart(std::optional<int>&& maxCallStackDepth)
 
 void PageTimelineAgent::internalStop()
 {
-    m_instrumentingAgents.setTrackingPageTimelineAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setTrackingPageTimelineAgent(nullptr);
 
     m_autoCapturePhase = AutoCapturePhase::None;
 
@@ -262,6 +269,9 @@ void PageTimelineAgent::didPaint(RenderObject& renderer, const LayoutRect& clipR
 
 void PageTimelineAgent::mainFrameStartedLoading()
 {
+    if (tracking())
+        return;
+
     if (!m_autoCaptureEnabled)
         return;
 
@@ -271,8 +281,8 @@ void PageTimelineAgent::mainFrameStartedLoading()
     m_autoCapturePhase = AutoCapturePhase::BeforeLoad;
 
     // Pre-emptively disable breakpoints. The frontend must re-enable them.
-    if (auto* webDebuggerAgent = m_instrumentingAgents.enabledWebDebuggerAgent())
-        webDebuggerAgent->setBreakpointsActive(false);
+    if (auto* webDebuggerAgent = Ref { m_instrumentingAgents.get() }->enabledWebDebuggerAgent())
+        std::ignore = webDebuggerAgent->setBreakpointsActive(false);
 
     // Inform the frontend we started an auto capture. The frontend must stop capture.
     autoCaptureStarted();
@@ -292,7 +302,7 @@ void PageTimelineAgent::mainFrameNavigated()
 void PageTimelineAgent::didCompleteRenderingFrame()
 {
 #if PLATFORM(COCOA)
-    if (!tracking() || m_environment.debugger()->isPaused())
+    if (!tracking() || checkedEnvironment()->debugger()->isPaused())
         return;
 
     ASSERT(m_runLoopNestingLevel > 0);
@@ -329,9 +339,9 @@ void PageTimelineAgent::captureScreenshot()
     if (!localMainFrameView)
         return;
 
-    if (auto snapshot = snapshotFrameRect(*localMainFrame, localMainFrameView->unobscuredContentRect(), { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() })) {
+    if (auto snapshot = snapshotFrameRect(*localMainFrame, localMainFrameView->unobscuredContentRect(), { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() })) {
         auto snapshotRecord = TimelineRecordFactory::createScreenshotData(snapshot->toDataURL("image/png"_s));
-        pushCurrentRecord(WTFMove(snapshotRecord), TimelineRecordType::Screenshot, false, snapshotStartTime);
+        pushCurrentRecord(WTF::move(snapshotRecord), TimelineRecordType::Screenshot, false, snapshotStartTime);
         didCompleteCurrentRecord(TimelineRecordType::Screenshot);
     }
 }

@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "StylePosition.h"
-#include "StylePrimitiveNumeric.h"
+#include <WebCore/StylePosition.h>
+#include <WebCore/StylePrimitiveNumeric.h>
 
 namespace WebCore {
 namespace Style {

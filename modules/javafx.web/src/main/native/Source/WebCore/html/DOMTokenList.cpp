@@ -27,6 +27,7 @@
 #include "DOMTokenList.h"
 
 #include "ExceptionOr.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
@@ -42,7 +43,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMTokenList);
 DOMTokenList::DOMTokenList(Element& element, const QualifiedName& attributeName, IsSupportedTokenFunction&& isSupportedToken)
     : m_element(element)
     , m_attributeName(attributeName)
-    , m_isSupportedToken(WTFMove(isSupportedToken))
+    , m_isSupportedToken(WTF::move(isSupportedToken))
 {
 }
 
@@ -210,7 +211,7 @@ ExceptionOr<bool> DOMTokenList::supports(StringView token)
 {
     if (!m_isSupportedToken)
         return Exception { ExceptionCode::TypeError };
-    return m_isSupportedToken(m_element->document(), token);
+    return m_isSupportedToken(m_element->protectedDocument(), token);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-value
@@ -249,7 +250,7 @@ void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
         if (!addedTokens.contains<StringViewHashTranslator>(tokenView)) {
             auto token = tokenView.toAtomString();
             m_tokens.append(token);
-            addedTokens.add(WTFMove(token));
+            addedTokens.add(WTF::move(token));
         }
 
         start = end + 1;

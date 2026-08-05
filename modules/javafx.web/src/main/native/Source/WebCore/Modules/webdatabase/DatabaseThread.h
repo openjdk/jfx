@@ -43,7 +43,7 @@ class DatabaseTaskSynchronizer;
 class Document;
 class SQLTransactionCoordinator;
 
-class DatabaseThread : public ThreadSafeRefCounted<DatabaseThread> {
+class DatabaseThread : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DatabaseThread> {
 public:
     static Ref<DatabaseThread> create() { return adoptRef(*new DatabaseThread); }
     ~DatabaseThread();
@@ -69,7 +69,7 @@ private:
     void databaseThread();
 
     Lock m_threadCreationMutex;
-    RefPtr<Thread> m_thread;
+    const RefPtr<Thread> m_thread;
     RefPtr<DatabaseThread> m_selfRef;
 
     MessageQueue<DatabaseTask> m_queue;

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
+#include <WebCore/ProcessQualified.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
@@ -48,7 +48,7 @@ public:
 
         friend bool operator==(const Tuple&, const Tuple&) = default;
         Tuple isolatedCopy() const & { return { protocol.isolatedCopy(), host.isolatedCopy(), port }; }
-        Tuple isolatedCopy() && { return { WTFMove(protocol).isolatedCopy(), WTFMove(host).isolatedCopy(), port }; }
+        Tuple isolatedCopy() && { return { WTF::move(protocol).isolatedCopy(), WTF::move(host).isolatedCopy(), port }; }
     };
 
     SecurityOriginData() = default;
@@ -60,7 +60,7 @@ public:
     explicit SecurityOriginData(ProcessQualified<OpaqueOriginIdentifier> opaqueOriginIdentifier)
         : m_data(opaqueOriginIdentifier) { }
     explicit SecurityOriginData(Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
-        : m_data(WTFMove(data)) { }
+        : m_data(WTF::move(data)) { }
     SecurityOriginData(WTF::HashTableDeletedValueType)
         : m_data { Tuple { WTF::HashTableDeletedValue, { }, { } } } { }
 

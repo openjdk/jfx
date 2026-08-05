@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "CSSCalcTree.h"
+#include <WebCore/CSSCalcTree.h>
 #include <optional>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
@@ -44,7 +44,7 @@ struct RandomCachingKey {
     Identifier identifier;
 
     RandomCachingKey(Variant<Random::SharingOptions::Auto, AtomString>&& identifier)
-        : identifier { WTF::switchOn(WTFMove(identifier), [](auto&& alternative) { return Identifier { WTFMove(alternative) }; }) }
+        : identifier { WTF::switchOn(WTF::move(identifier), [](auto&& alternative) { return Identifier { WTF::move(alternative) }; }) }
     {
     }
 

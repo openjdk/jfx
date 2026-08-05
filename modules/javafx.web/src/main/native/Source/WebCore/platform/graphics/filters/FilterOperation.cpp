@@ -35,7 +35,7 @@
 #include "FEGaussianBlur.h"
 #include "FilterEffect.h"
 #include "ImageBuffer.h"
-#include "LengthFunctions.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -368,25 +368,22 @@ RefPtr<FilterOperation> BlurFilterOperation::blend(const FilterOperation* from, 
     if (from && !from->isSameType(*this))
         return this;
 
-    LengthType lengthType = m_stdDeviation.type();
-
     if (blendToPassthrough)
-        return BlurFilterOperation::create(WebCore::blend(m_stdDeviation, Length(lengthType), context));
+        return BlurFilterOperation::create(std::max(0.0f, WebCore::blend(m_stdDeviation, 0.0f, context)));
 
     const BlurFilterOperation* fromOperation = downcast<BlurFilterOperation>(from);
-    Length fromLength = fromOperation ? fromOperation->m_stdDeviation : Length(lengthType);
-    return BlurFilterOperation::create(WebCore::blend(fromLength, m_stdDeviation, context, ValueRange::NonNegative));
+    auto fromStdDeviation = fromOperation ? fromOperation->m_stdDeviation : 0.0f;
+    return BlurFilterOperation::create(std::max(0.0f, WebCore::blend(fromStdDeviation, m_stdDeviation, context)));
 }
 
 bool BlurFilterOperation::isIdentity() const
 {
-    return floatValueForLength(m_stdDeviation, 0) <= 0;
+    return m_stdDeviation <= 0;
 }
 
 IntOutsets BlurFilterOperation::outsets() const
 {
-    float stdDeviation = floatValueForLength(m_stdDeviation, 0);
-    return FEGaussianBlur::calculateOutsets({ stdDeviation, stdDeviation });
+    return FEGaussianBlur::calculateOutsets({ m_stdDeviation, m_stdDeviation });
 }
 
 bool DropShadowFilterOperationBase::nonColorEqual(const DropShadowFilterOperationBase& other) const
@@ -412,11 +409,33 @@ bool DropShadowFilterOperation::operator==(const FilterOperation& operation) con
     return nonColorEqual(other) && m_color == other.m_color;
 }
 
-RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation*, const BlendingContext&, bool)
+RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation* from, const BlendingContext& context, bool blendToPassthrough)
 {
-    // Only DropShadowFilterOperationWithStyleColor gets blended.
-    ASSERT_NOT_REACHED();
-    return nullptr;
+#if PLATFORM(COCOA)
+    // This should only be called in the context of remote layer tree animations. In other situations,
+    // such as within the Web process, only DropShadowFilterOperationWithStyleColor should get blended.
+    ASSERT(!isInAuxiliaryProcess());
+#endif
+
+    // We should only ever be blending with null or similar operations.
+    ASSERT(!from || from->isSameType(*this));
+
+    if (blendToPassthrough) {
+        return DropShadowFilterOperation::create(
+            WebCore::blend(m_location, IntPoint(), context),
+            WebCore::blend(m_stdDeviation, 0, context),
+            WebCore::blend(m_color, Color::transparentBlack, context));
+    }
+
+    const DropShadowFilterOperation* fromOperation = downcast<DropShadowFilterOperation>(from);
+    IntPoint fromLocation = fromOperation ? fromOperation->location() : IntPoint();
+    int fromStdDeviation = fromOperation ? fromOperation->stdDeviation() : 0;
+    Color fromColor = fromOperation ? fromOperation->color() : Color::transparentBlack;
+
+    return DropShadowFilterOperation::create(
+        WebCore::blend(fromLocation, m_location, context),
+        std::max(WebCore::blend(fromStdDeviation, m_stdDeviation, context), 0),
+        WebCore::blend(fromColor, m_color, context));
 }
 
 void DropShadowFilterOperation::dump(TextStream& ts) const
@@ -477,7 +496,7 @@ TextStream& operator<<(TextStream& ts, const FilterOperation& filter)
     }
     case FilterOperation::Type::Blur: {
         const auto& blurFilter = downcast<BlurFilterOperation>(filter);
-        ts << "blur("_s << blurFilter.stdDeviation().value() << ')'; // FIXME: should call floatValueForLength() but that's outisde of platform/.
+        ts << "blur("_s << blurFilter.stdDeviation() << ')';
         break;
     }
     case FilterOperation::Type::DropShadow:

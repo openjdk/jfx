@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -42,6 +42,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -113,6 +114,8 @@ public class RichTextAreaDemoPane extends BorderPane {
                     if (v) {
                         cx.addStyle("-fx-border-color:LIGHTPINK;");
                         cx.addStyle("-fx-border-width:1;");
+                        // change the cursor in the Text node being styled
+                        cx.getNode().setCursor(Cursor.HAND);
                     }
                 });
                 return b.build();

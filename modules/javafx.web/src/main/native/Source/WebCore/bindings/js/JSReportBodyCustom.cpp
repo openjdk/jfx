@@ -45,28 +45,6 @@
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<ReportBody>&& reportBody)
-{
-    if (is<CSPViolationReportBody>(reportBody))
-        return createWrapper<CSPViolationReportBody>(globalObject, WTFMove(reportBody));
-    if (is<COEPInheritenceViolationReportBody>(reportBody))
-        return createWrapper<COEPInheritenceViolationReportBody>(globalObject, WTFMove(reportBody));
-    if (is<CORPViolationReportBody>(reportBody))
-        return createWrapper<CORPViolationReportBody>(globalObject, WTFMove(reportBody));
-    if (is<DeprecationReportBody>(reportBody))
-        return createWrapper<DeprecationReportBody>(globalObject, WTFMove(reportBody));
-    if (is<TestReportBody>(reportBody))
-        return createWrapper<TestReportBody>(globalObject, WTFMove(reportBody));
-    if (is<IntegrityPolicyViolationReportBody>(reportBody))
-        return createWrapper<IntegrityPolicyViolationReportBody>(globalObject, WTFMove(reportBody));
-    return createWrapper<ReportBody>(globalObject, WTFMove(reportBody));
-}
-
-JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, ReportBody& reportBody)
-{
-    return wrap(lexicalGlobalObject, globalObject, reportBody);
-}
-
 JSValue JSReportBody::toJSON(JSGlobalObject& lexicalGlobalObject, CallFrame& callFrame)
 {
     UNUSED_PARAM(lexicalGlobalObject);

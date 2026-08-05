@@ -44,10 +44,15 @@ public:
 
 private:
     static NavigatorPermissions& from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorPermissions"_s; }
+    bool isNavigatorPermissions() const final { return true; }
 
     const RefPtr<Permissions> m_permissions;
     const WTF::CheckedRef<Navigator> m_navigator;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorPermissions)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorPermissions(); }
+SPECIALIZE_TYPE_TRAITS_END()

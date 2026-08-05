@@ -23,7 +23,8 @@
  */
 
 [
-    Conditional=WEB_AUDIO
+    Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConvolverOptions : AudioNodeOptions {
     AudioBuffer? buffer;
     boolean disableNormalization = false;

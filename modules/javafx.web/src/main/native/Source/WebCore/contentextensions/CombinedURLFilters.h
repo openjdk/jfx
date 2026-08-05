@@ -27,9 +27,9 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "CombinedFiltersAlphabet.h"
-#include "ContentExtensionsDebugging.h"
-#include "NFA.h"
+#include <WebCore/CombinedFiltersAlphabet.h>
+#include <WebCore/ContentExtensionsDebugging.h>
+#include <WebCore/NFA.h>
 #include <wtf/Function.h>
 #include <wtf/Forward.h>
 

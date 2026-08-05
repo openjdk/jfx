@@ -60,8 +60,9 @@ static void accessWorkerScriptLoaderMap(CompletionHandler<void(HashMap<ScriptExe
     callback(map.get());
 }
 
-WorkerScriptLoader::WorkerScriptLoader()
+WorkerScriptLoader::WorkerScriptLoader(AlwaysUseUTF8 alwaysUseUTF8)
     : m_script(ScriptBuffer::empty())
+    , m_alwaysUseUTF8(alwaysUseUTF8 == AlwaysUseUTF8::Yes)
 {
 }
 
@@ -113,7 +114,7 @@ std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionCo
     options.contentSecurityPolicyEnforcement = contentSecurityPolicyEnforcement;
     options.destination = m_destination;
 
-    WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTFMove(*request), *this, options);
+    WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTF::move(*request), *this, options);
 
     // If the fetching attempt failed, throw a NetworkError exception and abort all these steps.
     if (failed())
@@ -140,11 +141,9 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
 
     ASSERT(scriptRequest.httpMethod() == "GET"_s);
 
-    auto request = makeUnique<ResourceRequest>(WTFMove(scriptRequest));
-    if (!request)
-        return;
+    auto request = makeUnique<ResourceRequest>(WTF::move(scriptRequest));
 
-    ThreadableLoaderOptions options { WTFMove(fetchOptions) };
+    ThreadableLoaderOptions options { WTF::move(fetchOptions) };
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = contentSecurityPolicyEnforcement;
     if (fetchOptions.destination == FetchOptions::Destination::Serviceworker)
@@ -168,7 +167,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
         if (request->url().protocolIsBlob() && scriptExecutionContext.activeServiceWorker())
             setControllingServiceWorker(ServiceWorkerData { scriptExecutionContext.activeServiceWorker()->data() });
         else {
-            accessWorkerScriptLoaderMap([clientIdentifier = *clientIdentifier, serviceWorkerDataManager = WTFMove(serviceWorkerDataManager)](auto& map) mutable {
+            accessWorkerScriptLoaderMap([clientIdentifier = *clientIdentifier, serviceWorkerDataManager = WTF::move(serviceWorkerDataManager)](auto& map) mutable {
                 map.add(clientIdentifier, serviceWorkerDataManager);
             });
             m_didAddToWorkerScriptLoaderMap = true;
@@ -181,7 +180,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
 
     // During create, callbacks may happen which remove the last reference to this object.
     Ref<WorkerScriptLoader> protectedThis(*this);
-    m_threadableLoader = ThreadableLoader::create(scriptExecutionContext, *this, WTFMove(*request), options, { }, WTFMove(taskMode));
+    m_threadableLoader = ThreadableLoader::create(scriptExecutionContext, *this, WTF::move(*request), options, { }, WTF::move(taskMode));
 }
 
 const URL& WorkerScriptLoader::responseURL() const
@@ -201,7 +200,7 @@ std::unique_ptr<ResourceRequest> WorkerScriptLoader::createResourceRequest(const
 static ResourceError constructJavaScriptMIMETypeError(const ResourceResponse& response)
 {
     auto message = makeString("Refused to execute "_s, response.url().stringCenterEllipsizedToLength(), " as script because "_s, response.mimeType(), " is not a script MIME type."_s);
-    return { errorDomainWebKitInternal, 0, response.url(), WTFMove(message), ResourceError::Type::AccessControl };
+    return { errorDomainWebKitInternal, 0, response.url(), WTF::move(message), ResourceError::Type::AccessControl };
 }
 
 ResourceError WorkerScriptLoader::validateWorkerResponse(const ResourceResponse& response, Source source, FetchOptions::Destination destination)
@@ -211,7 +210,7 @@ ResourceError WorkerScriptLoader::validateWorkerResponse(const ResourceResponse&
 
     if (!isScriptAllowedByNosniff(response)) {
         auto message = makeString("Refused to execute "_s, response.url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type."_s);
-        return { errorDomainWebKitInternal, 0, response.url(), WTFMove(message), ResourceError::Type::General };
+        return { errorDomainWebKitInternal, 0, response.url(), WTF::move(message), ResourceError::Type::General };
     }
 
     switch (source) {
@@ -259,23 +258,21 @@ void WorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mai
         m_isMatchingServiceWorkerRegistration = true;
         RefPtr worker = dynamicDowncast<WorkerGlobalScope>(*m_context);
         Ref swConnection = worker ? static_cast<SWClientConnection&>(worker->swClientConnection()) : ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        swConnection->matchRegistration(WTFMove(*m_topOriginForServiceWorkerRegistration), response.url(), [this, protectedThis = Ref { *this }, response, mainContext, identifier](auto&& registrationData) mutable {
+        swConnection->matchRegistration(WTF::move(*m_topOriginForServiceWorkerRegistration), response.url(), [this, protectedThis = Ref { *this }, response, mainContext, identifier](auto&& registrationData) mutable {
             m_isMatchingServiceWorkerRegistration = false;
             if (registrationData && registrationData->activeWorker)
-                setControllingServiceWorker(WTFMove(*registrationData->activeWorker));
+                setControllingServiceWorker(WTF::move(*registrationData->activeWorker));
 
-            if (!m_client)
-                return;
-
-            m_client->didReceiveResponse(mainContext, identifier, response);
-            if (m_client && m_finishing)
-                m_client->notifyFinished(mainContext);
+            if (RefPtr client = m_client.get())
+                client->didReceiveResponse(mainContext, identifier, response);
+            if (RefPtr client = m_client.get(); client && m_finishing)
+                client->notifyFinished(mainContext);
         });
         return;
     }
 
-    if (m_client)
-        m_client->didReceiveResponse(mainContext, identifier, response);
+    if (RefPtr client = m_client.get())
+        client->didReceiveResponse(mainContext, identifier, response);
 }
 
 void WorkerScriptLoader::didReceiveData(const SharedBuffer& buffer)
@@ -290,8 +287,13 @@ void WorkerScriptLoader::didReceiveData(const SharedBuffer& buffer)
     }
 #endif
 
-    if (!m_decoder)
-        lazyInitialize(m_decoder, TextResourceDecoder::create("text/javascript"_s, "UTF-8"_s));
+    if (!m_decoder) {
+        // FIXME: Share more code with CachedScript / CachedScriptSourceProvider.
+        Ref decoder = TextResourceDecoder::create("text/javascript"_s, "UTF-8"_s);
+        if (m_alwaysUseUTF8)
+            decoder->setAlwaysUseUTF8();
+        lazyInitialize(m_decoder, WTF::move(decoder));
+    }
 
     if (buffer.isEmpty())
         return;
@@ -330,14 +332,15 @@ void WorkerScriptLoader::notifyError(std::optional<ScriptExecutionContextIdentif
 void WorkerScriptLoader::notifyFinished(std::optional<ScriptExecutionContextIdentifier> mainContext)
 {
     m_threadableLoader = nullptr;
-    if (!m_client || m_finishing)
+    RefPtr client = m_client.get();
+    if (!client || m_finishing)
         return;
 
     m_finishing = true;
     if (m_isMatchingServiceWorkerRegistration)
         return;
 
-    m_client->notifyFinished(mainContext);
+    client->notifyFinished(mainContext);
 }
 
 void WorkerScriptLoader::cancel()
@@ -376,7 +379,7 @@ RefPtr<WorkerScriptLoader::ServiceWorkerDataManager> WorkerScriptLoader::service
 
 void WorkerScriptLoader::setControllingServiceWorker(ServiceWorkerData&& activeServiceWorkerData)
 {
-    Ref { *m_serviceWorkerDataManager }->setData(WTFMove(activeServiceWorkerData));
+    Ref { *m_serviceWorkerDataManager }->setData(WTF::move(activeServiceWorkerData));
 }
 
 WorkerScriptLoader::ServiceWorkerDataManager::~ServiceWorkerDataManager()
@@ -390,7 +393,7 @@ WorkerScriptLoader::ServiceWorkerDataManager::~ServiceWorkerDataManager()
 void WorkerScriptLoader::ServiceWorkerDataManager::setData(ServiceWorkerData&& data)
 {
     Locker lock(m_activeServiceWorkerDataLock);
-    m_activeServiceWorkerData = WTFMove(data).isolatedCopy();
+    m_activeServiceWorkerData = WTF::move(data).isolatedCopy();
 }
 
 std::optional<ServiceWorkerData> WorkerScriptLoader::ServiceWorkerDataManager::takeData()

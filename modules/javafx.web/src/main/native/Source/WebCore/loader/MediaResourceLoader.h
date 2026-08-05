@@ -28,12 +28,12 @@
 
 #if ENABLE(VIDEO)
 
-#include "CachedRawResourceClient.h"
-#include "CachedResourceHandle.h"
-#include "ContextDestructionObserver.h"
-#include "FetchOptions.h"
-#include "PlatformMediaResourceLoader.h"
-#include "ResourceResponse.h"
+#include <WebCore/CachedRawResourceClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/PlatformMediaResourceLoader.h>
+#include <WebCore/ResourceResponse.h>
 #include <wtf/Atomics.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
@@ -51,11 +51,15 @@ class WeakPtrImplWithEventTargetData;
 
 enum class LoadedFromOpaqueSource : bool;
 
-class MediaResourceLoader final : public PlatformMediaResourceLoader, public CanMakeWeakPtr<MediaResourceLoader>, public ContextDestructionObserver {
+class MediaResourceLoader final : public PlatformMediaResourceLoader, public ContextDestructionObserver {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(MediaResourceLoader, WEBCORE_EXPORT);
 public:
     static Ref<MediaResourceLoader> create(Document& document, Element& element, const String& crossOriginMode, FetchOptions::Destination destination) { return adoptRef(*new MediaResourceLoader(document, element, crossOriginMode, destination)); }
     WEBCORE_EXPORT virtual ~MediaResourceLoader();
+
+    // ContextDestructionObserver.
+    void ref() const final { PlatformMediaResourceLoader::ref(); }
+    void deref() const final { PlatformMediaResourceLoader::deref(); }
 
     RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) final;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) final;
@@ -106,6 +110,8 @@ public:
     bool didPassAccessControlCheck() const override { return m_didPassAccessControlCheck.load(); }
 
     // CachedRawResourceClient
+    void ref() const final { PlatformMediaResource::ref(); }
+    void deref() const final { PlatformMediaResource::deref(); }
     void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     bool shouldCacheResponse(CachedResource&, const ResourceResponse&) override;

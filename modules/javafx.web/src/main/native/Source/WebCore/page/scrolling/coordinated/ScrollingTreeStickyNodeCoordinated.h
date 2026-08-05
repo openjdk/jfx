@@ -41,7 +41,6 @@ public:
     static Ref<ScrollingTreeStickyNodeCoordinated> create(ScrollingTree&, ScrollingNodeID);
     virtual ~ScrollingTreeStickyNodeCoordinated() = default;
 
-
 private:
     ScrollingTreeStickyNodeCoordinated(ScrollingTree&, ScrollingNodeID);
 

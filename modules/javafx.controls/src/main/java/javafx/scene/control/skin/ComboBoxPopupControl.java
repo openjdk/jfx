@@ -47,11 +47,13 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
@@ -170,8 +172,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     // Fix for the regression noted in a comment in JDK-8115009.
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
+                    if (Utils.dispatchToNode(ke, textField)) {
+                        ke.consume();
+                    }
                 }
             }
         });
@@ -606,7 +609,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
             } else if (textField != null) {
-                textField.fireEvent(ke);
+                Utils.dispatchToNode(ke, textField);
             }
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // JDK-8115456: The TextField fires F10 and ESCAPE key events

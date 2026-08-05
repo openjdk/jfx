@@ -25,9 +25,14 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
 #include <cstddef>
 
 #if !BUSE(LIBPAS)
+
+#include "BAssert.h"
 
 namespace bmalloc {
 
@@ -80,3 +85,5 @@ inline bool Object::operator<=(const Object& other)
 }; // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

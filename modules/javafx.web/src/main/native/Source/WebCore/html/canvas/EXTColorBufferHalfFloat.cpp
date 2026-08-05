@@ -32,20 +32,20 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTColorBufferHalfFloat);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTColorBufferHalfFloat);
 
 EXTColorBufferHalfFloat::EXTColorBufferHalfFloat(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTColorBufferHalfFloat)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_color_buffer_half_float"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_color_buffer_half_float);
 }
 
 EXTColorBufferHalfFloat::~EXTColorBufferHalfFloat() = default;
 
 bool EXTColorBufferHalfFloat::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_texture_half_float"_s)
-        && context.supportsExtension("GL_EXT_color_buffer_half_float"_s);
+    return context.supportsExtension(GCGLExtension::OES_texture_half_float)
+        && context.supportsExtension(GCGLExtension::EXT_color_buffer_half_float);
 }
 
 } // namespace WebCore

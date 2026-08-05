@@ -29,17 +29,18 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFETileElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFETileElement);
 
 inline SVGFETileElement::SVGFETileElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feTileTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFETileElement::m_in1>();
-    });
+    }
 }
 
 Ref<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Document& document)

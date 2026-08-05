@@ -69,7 +69,7 @@ using namespace HTMLNames;
 
 bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
-    auto& node = jsCast<JSNode*>(handle.slot()->asCell())->wrapped();
+    SUPPRESS_UNCHECKED_LOCAL auto& node = jsCast<JSNode*>(handle.slot()->asCell())->wrapped();
     if (!node.isConnected()) {
         if (GCReachableRefMap::contains(node) || node.isInCustomElementReactionQueue()) {
             if (reason) [[unlikely]]
@@ -108,37 +108,37 @@ static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalOb
                 wrapper = createJSMathMLWrapper(globalObject, *mathmlElement);
 #endif
             else
-                wrapper = createWrapper<Element>(globalObject, WTFMove(node));
+                wrapper = createWrapper<Element>(globalObject, WTF::move(node));
             break;
         case Node::ATTRIBUTE_NODE:
-            wrapper = createWrapper<Attr>(globalObject, WTFMove(node));
+            wrapper = createWrapper<Attr>(globalObject, WTF::move(node));
             break;
         case Node::TEXT_NODE:
-            wrapper = createWrapper<Text>(globalObject, WTFMove(node));
+            wrapper = createWrapper<Text>(globalObject, WTF::move(node));
             break;
         case Node::CDATA_SECTION_NODE:
-            wrapper = createWrapper<CDATASection>(globalObject, WTFMove(node));
+            wrapper = createWrapper<CDATASection>(globalObject, WTF::move(node));
             break;
         case Node::PROCESSING_INSTRUCTION_NODE:
-            wrapper = createWrapper<ProcessingInstruction>(globalObject, WTFMove(node));
+            wrapper = createWrapper<ProcessingInstruction>(globalObject, WTF::move(node));
             break;
         case Node::COMMENT_NODE:
-            wrapper = createWrapper<Comment>(globalObject, WTFMove(node));
+            wrapper = createWrapper<Comment>(globalObject, WTF::move(node));
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
             return toJS(lexicalGlobalObject, globalObject, uncheckedDowncast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
-            wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
+            wrapper = createWrapper<DocumentType>(globalObject, WTF::move(node));
             break;
         case Node::DOCUMENT_FRAGMENT_NODE:
             if (node->isShadowRoot())
-                wrapper = createWrapper<ShadowRoot>(globalObject, WTFMove(node));
+                wrapper = createWrapper<ShadowRoot>(globalObject, WTF::move(node));
             else
-                wrapper = createWrapper<DocumentFragment>(globalObject, WTFMove(node));
+                wrapper = createWrapper<DocumentFragment>(globalObject, WTF::move(node));
             break;
         default:
-            wrapper = createWrapper<Node>(globalObject, WTFMove(node));
+            wrapper = createWrapper<Node>(globalObject, WTF::move(node));
     }
 
     return wrapper;
@@ -146,12 +146,12 @@ static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalOb
 
 JSValue createWrapper(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTF::move(node));
 }
 
 JSValue toJSNewlyCreated(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTF::move(node));
 }
 
 JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& node)

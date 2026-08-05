@@ -147,6 +147,90 @@ jobs:
           bash gradlew --info --continue -PTEST_ONLY=true test -x :web:test
 
 
+  linux_aarch64_build:
+    name: Linux aarch64
+    needs: validation
+    runs-on: "ubuntu-24.04-arm"
+
+    env:
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_SHA256 }}"
+      BOOT_JDK_VERSION: "25.0.1"
+      BOOT_JDK_FILENAME: "jdk-25.0.1_linux-aarch64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_linux-aarch64_bin.tar.gz"
+      # ANT_DIR: "apache-ant-1.10.5"
+      # ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      # ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: jfx
+
+      - name: Install dependencies
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install ant libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-14 g++-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14
+          mkdir -p "${HOME}/build-tools"
+          # wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
+          # tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
+
+# FIXME: enable cache for boot JDK
+#      - name: Restore boot JDK from cache
+#        id: bootjdk
+#        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+#        with:
+#          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
+#          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
+
+      - name: Download boot JDK
+        run: |
+          set -x
+          mkdir -p "${HOME}/bootjdk"
+          wget -O "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" "${BOOT_JDK_URL}"
+          # FIXME: sha256sum
+          tar -xf "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" -C "${HOME}/bootjdk"
+          # FIXME: enable cache for boot JDK
+
+      - name: Setup environment
+        run: |
+          set -x
+          export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}"
+          echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
+          # export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
+          # echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          env | sort
+          which java
+          java -version
+          which ant
+          ant -version
+          gcc -v
+
+      - name: Build JavaFX artifacts
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew --info all
+
+      - name: Run JavaFX headless tests
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew --info --continue -PTEST_ONLY=true test -x :web:test
+
   macos_x64_build:
     name: macOS x64
     needs: validation

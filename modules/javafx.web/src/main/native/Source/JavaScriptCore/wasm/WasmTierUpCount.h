@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
-#include "CompilationResult.h"
-#include "ExecutionCounter.h"
-#include "Options.h"
-#include "WasmOSREntryData.h"
+#include <JavaScriptCore/CompilationResult.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/WasmOSREntryData.h>
 #include <wtf/Atomics.h>
 #include <wtf/SegmentedVector.h>
 #include <wtf/StdLibExtras.h>

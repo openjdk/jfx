@@ -25,6 +25,7 @@
 
 [
     Conditional=APPLE_PAY&PAYMENT_REQUEST,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayModifier {
     ApplePayPaymentMethodType paymentMethodType;
     ApplePayLineItem total;

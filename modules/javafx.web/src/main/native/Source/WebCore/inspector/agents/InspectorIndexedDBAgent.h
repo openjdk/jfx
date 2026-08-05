@@ -64,6 +64,8 @@ public:
     void clearObjectStore(const String& securityOrigin, const String& databaseName, const String& objectStoreName, Ref<ClearObjectStoreCallback>&&);
 
 private:
+    Ref<Page> protectedInspectedPage() const;
+
     Inspector::InjectedScriptManager& m_injectedScriptManager;
     const Ref<Inspector::IndexedDBBackendDispatcher> m_backendDispatcher;
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "BufferMemoryHandle.h"
 
+#include "JSWebAssemblyInstance.h"
 #include "Options.h"
 #include "WasmFaultSignalHandler.h"
 #include <cstring>
@@ -77,17 +78,17 @@ BufferMemoryResult BufferMemoryManager::tryAllocateFastMemory()
     BufferMemoryResult result = [&] {
         Locker locker { m_lock };
         if (m_fastMemories.size() >= m_maxFastMemoryCount)
-            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+            return BufferMemoryResult(nullptr, BufferMemoryResult::Kind::SyncTryToReclaimMemory);
 
         void* result = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, BufferMemoryHandle::fastMappedBytes());
         if (!result)
-            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+            return BufferMemoryResult(nullptr, BufferMemoryResult::Kind::SyncTryToReclaimMemory);
 
         m_fastMemories.append(result);
 
         return BufferMemoryResult(
             result,
-            m_fastMemories.size() >= m_maxFastMemoryCount / 2 ? BufferMemoryResult::SuccessAndNotifyMemoryPressure : BufferMemoryResult::Success);
+            m_fastMemories.size() >= m_maxFastMemoryCount / 2 ? BufferMemoryResult::Kind::SuccessAndNotifyMemoryPressure : BufferMemoryResult::Kind::Success);
     }();
 
     dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
@@ -112,11 +113,11 @@ BufferMemoryResult BufferMemoryManager::tryAllocateGrowableBoundsCheckingMemory(
         Locker locker { m_lock };
         void* result = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, mappedCapacity);
         if (!result)
-            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+            return BufferMemoryResult(nullptr, BufferMemoryResult::Kind::SyncTryToReclaimMemory);
 
         m_growableBoundsCheckingMemories.insert(std::make_pair(std::bit_cast<uintptr_t>(result), mappedCapacity));
 
-        return BufferMemoryResult(result, BufferMemoryResult::Success);
+        return BufferMemoryResult(result, BufferMemoryResult::Kind::Success);
     }();
 
     dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
@@ -137,7 +138,7 @@ void BufferMemoryManager::freeGrowableBoundsCheckingMemory(void* basePtr, size_t
 
 bool BufferMemoryManager::isInGrowableOrFastMemory(void* address)
 {
-    // NOTE: This can be called from a signal handler, but only after we proved that we're in JIT code or WasmLLInt code.
+    // NOTE: This can be called from a signal handler, but only after we proved that we're in JIT code or IPInt code.
     Locker locker { m_lock };
     for (void* memory : m_fastMemories) {
         char* start = static_cast<char*>(memory);
@@ -164,14 +165,14 @@ BufferMemoryResult::Kind BufferMemoryManager::tryAllocatePhysicalBytes(size_t by
     BufferMemoryResult::Kind result = [&] {
         Locker locker { m_lock };
         if (m_physicalBytes + bytes > memoryLimit())
-            return BufferMemoryResult::SyncTryToReclaimMemory;
+            return BufferMemoryResult::Kind::SyncTryToReclaimMemory;
 
         m_physicalBytes += bytes;
 
         if (m_physicalBytes >= memoryLimit() / 2)
-            return BufferMemoryResult::SuccessAndNotifyMemoryPressure;
+            return BufferMemoryResult::Kind::SuccessAndNotifyMemoryPressure;
 
-        return BufferMemoryResult::Success;
+        return BufferMemoryResult::Kind::Success;
     }();
 
     dataLogLnIf(Options::logWasmMemory(), "Allocated physical: ", bytes, ", ", result, "; state: ", *this);
@@ -286,6 +287,24 @@ NEVER_INLINE void* BufferMemoryHandle::memory() const
     ASSERT(m_memory.getMayBeNull() == m_memory.getUnsafe());
     return m_memory.getMayBeNull();
 }
+
+#if ENABLE(WEBASSEMBLY)
+void BufferMemoryHandle::transferAnchors(BufferMemoryHandle& newHandle)
+{
+    RELEASE_ASSERT(sharingMode() == MemorySharingMode::Default); // This function should be usable only when this handle is not shared with the other thread.
+    std::scoped_lock locker(m_lock, newHandle.m_lock); // Locks are automatically ordered.
+    newHandle.m_anchors = std::exchange(m_anchors, { });
+}
+
+void BufferMemoryHandle::registerInstance(JSWebAssemblyInstance& instance)
+{
+    Locker locker { m_lock };
+    RefPtr anchor = instance.anchor();
+    RELEASE_ASSERT(anchor);
+    m_anchors.add(*anchor);
+    instance.updateCachedMemory();
+}
+#endif
 
 } // namespace JSC
 

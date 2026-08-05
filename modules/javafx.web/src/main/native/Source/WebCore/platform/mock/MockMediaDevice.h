@@ -29,15 +29,16 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "CaptureDevice.h"
-#include "RealtimeMediaSource.h"
-#include "VideoPreset.h"
+#include <WebCore/CaptureDevice.h>
+#include <WebCore/RealtimeMediaSource.h>
+#include <WebCore/VideoPreset.h>
 
 namespace WebCore {
 
 struct MockMicrophoneProperties {
     int defaultSampleRate { 44100 };
     std::optional<bool> echoCancellation;
+    uint32_t deviceID { 0 };
 };
 
 struct MockSpeakerProperties {

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBXR_LAYERS)
+#if ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)
 
 #include "GPUTexture.h"
 #include "GPUTextureViewDescriptor.h"
@@ -35,6 +35,8 @@
 
 #include <wtf/TZoneMalloc.h>
 
+
+
 namespace WebCore {
 
 class GPUTexture;
@@ -42,11 +44,11 @@ class IntRect;
 
 // https://github.com/immersive-web/WebXR-WebGPU-Binding/blob/main/explainer.md
 class XRGPUSubImage : public XRSubImage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRGPUSubImage);
+    WTF_MAKE_TZONE_ALLOCATED(XRGPUSubImage);
 public:
     static Ref<XRGPUSubImage> create(Ref<WebGPU::XRSubImage>&& backing, WebGPU::XREye eye, std::array<uint16_t, 2>&& physicalSize, WebCore::IntRect&& viewport, GPUDevice& device)
     {
-        return adoptRef(*new XRGPUSubImage(WTFMove(backing), eye, WTFMove(physicalSize), WTFMove(viewport), device));
+        return adoptRef(*new XRGPUSubImage(WTF::move(backing), eye, WTF::move(physicalSize), WTF::move(viewport), device));
     }
 
     const WebXRViewport& viewport() const final;
@@ -58,6 +60,8 @@ public:
 private:
     XRGPUSubImage(Ref<WebGPU::XRSubImage>&&, WebGPU::XREye, std::array<uint16_t, 2>&&, WebCore::IntRect&&, GPUDevice&);
 
+    bool isXRGPUSubImage() const final { return true; }
+
     const Ref<WebGPU::XRSubImage> m_backing;
     const Ref<GPUDevice> m_device;
     const GPUTextureViewDescriptor m_descriptor;
@@ -68,4 +72,8 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBXR_LAYERS)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XRGPUSubImage)
+    static bool isType(const WebCore::XRSubImage& image) { return image.isXRGPUSubImage(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)

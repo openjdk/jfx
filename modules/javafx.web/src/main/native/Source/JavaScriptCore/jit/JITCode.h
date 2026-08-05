@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "ArityCheckMode.h"
-#include "CallFrame.h"
-#include "CodeOrigin.h"
-#include "JSCJSValue.h"
-#include "MacroAssemblerCodeRef.h"
-#include "RegisterAtOffsetList.h"
-#include "RegisterSet.h"
+#include <JavaScriptCore/ArityCheckMode.h>
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/RegisterAtOffsetList.h>
+#include <JavaScriptCore/RegisterSet.h>
 
 
 namespace JSC {

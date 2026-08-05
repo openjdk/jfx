@@ -26,21 +26,27 @@
 #include "config.h"
 #include "InsertTextCommand.h"
 
+#include "CSSSerializationContext.h"
+#include "CSSValuePool.h"
 #include "Document.h"
 #include "Editing.h"
 #include "Editor.h"
+#include "FontAttributes.h"
 #include "HTMLElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInterchange.h"
 #include "LocalFrame.h"
+#include "MutableStyleProperties.h"
 #include "PositionInlines.h"
 #include "Text.h"
+#include "TextListParser.h"
 #include "VisibleUnits.h"
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
 InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, AllowPasswordEcho allowPasswordEcho, bool selectInsertedText, RebalanceType rebalanceType, EditAction editingAction)
-    : CompositeEditCommand(WTFMove(document), editingAction)
+    : CompositeEditCommand(WTF::move(document), editingAction)
     , m_text(text)
     , m_allowPasswordEcho(allowPasswordEcho)
     , m_selectInsertedText(selectInsertedText)
@@ -49,11 +55,11 @@ InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& tex
 }
 
 InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, Ref<TextInsertionMarkerSupplier>&& markerSupplier, EditAction editingAction)
-    : CompositeEditCommand(WTFMove(document), editingAction)
+    : CompositeEditCommand(WTF::move(document), editingAction)
     , m_text(text)
     , m_selectInsertedText(false)
     , m_rebalanceType(RebalanceLeadingAndTrailingWhitespaces)
-    , m_markerSupplier(WTFMove(markerSupplier))
+    , m_markerSupplier(WTF::move(markerSupplier))
 {
 }
 
@@ -131,6 +137,57 @@ bool InsertTextCommand::performOverwrite(const String& text, bool selectInserted
     return true;
 }
 
+#if PLATFORM(COCOA)
+bool InsertTextCommand::applySmartListsIfNeeded()
+{
+    if (!selectionAllowsSmartLists(m_text, endingSelection()))
+        return false;
+
+    auto lineStart = startOfLine(endingSelection().visibleBase());
+    if (lineStart.isNull() || lineStart.isOrphan()) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    // Get the range from the beginning of the line up until the current caret position,
+    // before `m_text` has been applied.
+    VisibleSelection line { lineStart, endingSelection().visibleExtent() };
+    auto range = line.firstRange();
+    if (!range) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    // First, convert the SimpleRange to a String, and then convert the String to a Style::ListStyleType
+    // (which itself is later converted to a CSSValue).
+
+    auto lineText = plainText(*range);
+    auto smartList = parseTextList(lineText);
+    if (!smartList) {
+        // The line content does not match the Smart List marker criteria.
+        return false;
+    }
+
+    Ref document = this->document();
+    auto listType = smartList->ordered ? InsertListCommand::Type::OrderedList : InsertListCommand::Type::UnorderedList;
+    applyCommandToComposite(InsertListCommand::create(document.copyRef(), listType), *range);
+
+    // This list is the one that was just created or modified.
+    RefPtr listElement = enclosingList(endingSelection().base().anchorNode());
+    if (!listElement) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    auto attributes = nodeAttributesForSmartList(*listElement, *smartList);
+    for (const auto& [attribute, value] : attributes)
+        setNodeAttribute(*listElement, attribute, value);
+
+    deleteSelection();
+    return true;
+}
+#endif // PLATFORM(COCOA)
+
 void InsertTextCommand::doApply()
 {
     ASSERT(m_text.find('\n') == notFound);
@@ -192,6 +249,22 @@ void InsertTextCommand::doApply()
         return;
 
     Position endPosition;
+
+#if PLATFORM(COCOA)
+    if (applySmartListsIfNeeded()) {
+        // This branch is evaluated if Smart Lists are available, enabled, and contextually applicable.
+        //
+        // A Smart List is generated if the current input is the space character preceded by an eligible
+        // marker such as "2.", "-", "*", etc, at the beginning of a line.
+        //
+        // The start of the line, up to and including the space, is deleted from the DOM, and the corresponding
+        // list type (<ul> or <ol>) is inserted in it place, with a list element <li> contained within for the subsequent text.
+        //
+        // Since the space character acts as a "trigger" for Smart Lists, it should not actually be inserted.
+
+        return;
+    }
+#endif // PLATFORM(COCOA)
 
     if (m_text == "\t"_s) {
         endPosition = insertTab(startPosition);
@@ -265,7 +338,7 @@ Position InsertTextCommand::insertTab(const Position& pos)
     if (parentTabSpanNode(node.get())) {
         Ref textNode = downcast<Text>(node.releaseNonNull());
         insertTextIntoNode(textNode, offset, "\t"_s);
-        return Position(WTFMove(textNode), offset + 1);
+        return Position(WTF::move(textNode), offset + 1);
     }
 
     // create new tab span

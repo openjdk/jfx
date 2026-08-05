@@ -27,8 +27,8 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayErrorCode.h"
-#include "ApplePayErrorContactField.h"
+#include <WebCore/ApplePayErrorCode.h>
+#include <WebCore/ApplePayErrorContactField.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -48,8 +48,6 @@ public:
         return adoptRef(*new ApplePayError(code, contactField, message, domain));
     }
 
-    ~ApplePayError() = default;
-
     ApplePayErrorCode code() const { return m_code; }
     void setCode(ApplePayErrorCode code) { m_code = code; }
 
@@ -57,7 +55,7 @@ public:
     void setContactField(std::optional<ApplePayErrorContactField> contactField) { m_contactField = contactField; }
 
     String message() const { return m_message; }
-    void setMessage(String&& message) { m_message = WTFMove(message); }
+    void setMessage(String&& message) { m_message = WTF::move(message); }
 
     std::optional<Domain> domain() const { return m_domain; }
     void setDomain(std::optional<Domain> domain) { m_domain = domain; }

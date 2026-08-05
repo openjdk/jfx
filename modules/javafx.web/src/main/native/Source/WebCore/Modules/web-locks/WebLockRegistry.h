@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "ProcessIdentifier.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "WebLockIdentifier.h"
-#include "WebLockMode.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/WebLockIdentifier.h>
+#include <WebCore/WebLockMode.h>
 #include <pal/SessionID.h>
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>

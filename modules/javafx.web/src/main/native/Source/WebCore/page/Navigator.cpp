@@ -30,30 +30,34 @@
 #include "DOMMimeTypeArray.h"
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "NavigatorUAData.h"
-#include "Page.h"
 #include "PermissionsPolicy.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
-#include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShareData.h"
 #include "ShareDataReader.h"
 #include "SharedBuffer.h"
+#include "UserAgentStringData.h"
+#include "UserAgentStringParser.h"
+#include "inspector/InspectorInstrumentation.h"
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <optional>
 #include <wtf/Language.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
@@ -62,7 +66,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Navigator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Navigator);
 
 Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
@@ -78,7 +82,7 @@ String Navigator::appVersion() const
     if (!frame)
         return String();
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
     return NavigatorBase::appVersion();
 }
 
@@ -88,7 +92,15 @@ const String& Navigator::userAgent() const
     if (!frame || !frame->page())
         return m_userAgent;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
+
+#if PLATFORM(IOS_FAMILY)
+    if (RefPtr document = frame->document(); document && document->quirks().needsChromeOSNavigatorUserAgentQuirk(*document)) {
+        static NeverDestroyed<String> chromeOSUserAgent = "Mozilla/5.0 (X11; CrOS x86_64 15917.71.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"_s;
+        return chromeOSUserAgent.get();
+    }
+#endif
+
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
     return m_userAgent;
@@ -186,16 +198,18 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         ShareDataOriginator::Web,
     };
     if (document.settings().webShareFileAPIEnabled() && !data.files.isEmpty()) {
-        if (m_loader)
-            m_loader->cancel();
+        RefPtr loader = m_loader;
+        if (loader)
+            loader->cancel();
 
-        m_loader = ShareDataReader::create([this, promise = WTFMove(promise)] (ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
-            showShareData(readData, WTFMove(promise));
+        loader = ShareDataReader::create([this, protectedThis = Ref { *this }, promise = WTF::move(promise)](ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
+            showShareData(readData, WTF::move(promise));
         });
-        m_loader->start(&document, WTFMove(shareData));
+        m_loader = loader.copyRef();
+        loader->start(&document, WTF::move(shareData));
         return;
     }
-    this->showShareData(shareData, WTFMove(promise));
+    this->showShareData(shareData, WTF::move(promise));
 }
 
 void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref<DeferredPromise>&& promise)
@@ -212,7 +226,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
     m_hasPendingShare = true;
 
     if (frame->page()->isControlledByAutomation()) {
-        RunLoop::mainSingleton().dispatch([promise = WTFMove(promise), weakThis = WeakPtr { *this }] {
+        RunLoop::mainSingleton().dispatch([promise = WTF::move(promise), weakThis = WeakPtr { *this }] {
             if (weakThis)
                 weakThis->m_hasPendingShare = false;
         promise->resolve();
@@ -222,7 +236,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
 
     auto shareData = readData.returnValue();
 
-    frame->page()->chrome().showShareSheet(WTFMove(shareData), [promise = WTFMove(promise), weakThis = WeakPtr { *this }] (bool completed) {
+    frame->page()->chrome().showShareSheet(WTF::move(shareData), [promise = WTF::move(promise), weakThis = WeakPtr { *this }](bool completed) {
         if (weakThis)
             weakThis->m_hasPendingShare = false;
         if (completed) {
@@ -256,7 +270,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
         return;
 
     RefPtr frame = this->frame();
-    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->document()->quirks().shouldNavigatorPluginsBeEmpty();
+    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->protectedDocument()->quirks().shouldNavigatorPluginsBeEmpty();
     if (!frame || !frame->page() || needsEmptyNavigatorPluginsQuirk) {
         if (needsEmptyNavigatorPluginsQuirk)
             frame->protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
@@ -274,7 +288,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
     // macOS uses a PDF Plugin (which may be disabled). Other ports handle PDF's through native
     // platform views outside the engine, or use pdf.js.
-    PluginInfo pdfPluginInfo = frame->page()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
+    PluginInfo pdfPluginInfo = frame->protectedPage()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
 
     Vector<Ref<DOMPlugin>> domPlugins;
     Vector<Ref<DOMMimeType>> domMimeTypes;
@@ -295,14 +309,14 @@ void Navigator::initializePluginAndMimeTypeArrays()
             domMimeTypes.appendVector(domPlugins.last()->mimeTypes());
     }
 
-    m_plugins = DOMPluginArray::create(*this, WTFMove(domPlugins));
-    m_mimeTypes = DOMMimeTypeArray::create(*this, WTFMove(domMimeTypes));
+    m_plugins = DOMPluginArray::create(*this, WTF::move(domPlugins));
+    m_mimeTypes = DOMMimeTypeArray::create(*this, WTF::move(domMimeTypes));
 }
 
 DOMPluginArray& Navigator::plugins()
 {
     if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
 
     initializePluginAndMimeTypeArrays();
     return *m_plugins;
@@ -311,7 +325,7 @@ DOMPluginArray& Navigator::plugins()
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
     if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
 
     initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
@@ -331,7 +345,7 @@ bool Navigator::cookieEnabled() const
         return false;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
 
     RefPtr page = frame->page();
     if (!page)
@@ -434,7 +448,7 @@ void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<Deferre
 
 void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 {
-    setAppBadge(0, WTFMove(promise));
+    setAppBadge(0, WTF::move(promise));
 }
 
 int Navigator::maxTouchPoints() const
@@ -448,20 +462,23 @@ int Navigator::maxTouchPoints() const
     return 0;
 }
 
-void Navigator::initializeNavigatorUAData() const
-{
-    if (m_navigatorUAData)
-        return;
-
-    // FIXME(296489): populate the data structure
-    return;
-}
-
 NavigatorUAData& Navigator::userAgentData() const
 {
-    if (!m_navigatorUAData)
-        initializeNavigatorUAData();
+    RefPtr frame = this->frame();
+    if (frame && frame->page()) {
+        RefPtr client = frame->loader().client();
+        if (client->hasCustomUserAgent() || (frame->document() && frame->protectedDocument()->quirks().needsCustomUserAgentData())) {
+            auto userAgentString = frame->loader().userAgent({ });
+            Ref parser = UserAgentStringParser::create(userAgentString);
+            std::optional userAgentStringData = parser->parse();
+            if (userAgentStringData) {
+                m_navigatorUAData = NavigatorUAData::create(WTF::move(*userAgentStringData));
+                return *m_navigatorUAData;
+            }
+        }
+    }
 
+    m_navigatorUAData = NavigatorUAData::create();
     return *m_navigatorUAData;
 };
 

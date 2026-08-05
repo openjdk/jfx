@@ -24,6 +24,7 @@
  */
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioNodeOptions {
     unsigned long channelCount;
     ChannelCountMode channelCountMode;

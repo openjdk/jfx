@@ -36,12 +36,12 @@ class GPUValidationError : public RefCounted<GPUValidationError> {
 public:
     static Ref<GPUValidationError> create(String&& message)
     {
-        return adoptRef(*new GPUValidationError(WTFMove(message)));
+        return adoptRef(*new GPUValidationError(WTF::move(message)));
     }
 
     static Ref<GPUValidationError> create(Ref<WebGPU::ValidationError>&& backing)
     {
-        return adoptRef(*new GPUValidationError(WTFMove(backing)));
+        return adoptRef(*new GPUValidationError(WTF::move(backing)));
     }
 
     const String& message() const;
@@ -52,12 +52,12 @@ public:
 
 private:
     GPUValidationError(String&& message)
-        : m_message(WTFMove(message))
+        : m_message(WTF::move(message))
     {
     }
 
     GPUValidationError(Ref<WebGPU::ValidationError>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "DOMPasteAccess.h"
+#include <WebCore/DOMPasteAccess.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
@@ -66,7 +66,7 @@ public:
 
     void addDestructionObserver(Function<void(UserGestureToken&)>&& observer)
     {
-        m_destructionObservers.append(WTFMove(observer));
+        m_destructionObservers.append(WTF::move(observer));
     }
 
     DOMPasteAccessPolicy domPasteAccessPolicy() const { return m_domPasteAccessPolicy; }
@@ -88,6 +88,7 @@ public:
     enum class GestureScope { All, MediaOnly };
     void setScope(GestureScope scope) { m_scope = scope; }
     void resetScope() { m_scope = GestureScope::All; }
+    GestureScope scope() const { return m_scope; }
 
     // Expand the following methods if more propagation sources are added later.
     enum class ShouldPropagateToMicroTask : bool { No, Yes };
@@ -130,6 +131,7 @@ class UserGestureIndicator {
     WTF_MAKE_NONCOPYABLE(UserGestureIndicator);
 public:
     WEBCORE_EXPORT static RefPtr<UserGestureToken> currentUserGesture();
+    static RefPtr<UserGestureToken> currentUserGestureForMainThread();
 
     WEBCORE_EXPORT static bool processingUserGesture(const Document* = nullptr);
     WEBCORE_EXPORT static bool processingUserGestureForMedia();

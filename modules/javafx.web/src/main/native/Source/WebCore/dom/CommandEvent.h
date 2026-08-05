@@ -35,7 +35,7 @@ class Element;
 class HTMLElement;
 
 class CommandEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CommandEvent);
+    WTF_MAKE_TZONE_ALLOCATED(CommandEvent);
 
 public:
     struct Init : EventInit {
@@ -54,9 +54,7 @@ private:
     CommandEvent();
     CommandEvent(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
 
-    bool isCommandEvent() const final;
-
-    RefPtr<Element> m_source;
+    const RefPtr<Element> m_source;
     String m_command;
 };
 

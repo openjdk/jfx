@@ -25,24 +25,25 @@
 
 #pragma once
 
-#include "CompositionUnderline.h"
-#include "EditAction.h"
-#include "EditingBehavior.h"
-#include "EditingStyle.h"
-#include "EditorInsertAction.h"
-#include "FindOptions.h"
-#include "FrameSelection.h"
-#include "LocalFrame.h"
-#include "PasteboardWriterData.h"
-#include <wtf/RobinHoodHashSet.h>
-#include "ScrollView.h"
-#include "Text.h"
-#include "TextChecking.h"
-#include "TextEventInputType.h"
-#include "TextIteratorBehavior.h"
-#include "VisibleSelection.h"
-#include "WritingDirection.h"
+#include <WebCore/CompositionUnderline.h>
+#include <WebCore/EditAction.h>
+#include <WebCore/EditingBehavior.h>
+#include <WebCore/EditingStyle.h>
+#include <WebCore/EditorInsertAction.h>
+#include <WebCore/FindOptions.h>
+#include <WebCore/FrameSelection.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/PasteboardWriterData.h>
+#include <WebCore/ScrollView.h>
+#include <WebCore/Text.h>
+#include <WebCore/TextChecking.h>
+#include <WebCore/TextEventInputType.h>
+#include <WebCore/TextIteratorBehavior.h>
+#include <WebCore/VisibleSelection.h>
+#include <WebCore/WritingDirection.h>
 #include <memory>
+#include <wtf/Platform.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
@@ -206,11 +207,12 @@ public:
     };
 
     WEBCORE_EXPORT EditorClient* client() const;
+    WEBCORE_EXPORT CheckedPtr<EditorClient> checkedClient() const;
     WEBCORE_EXPORT TextCheckerClient* textChecker() const;
 
     CompositeEditCommand* lastEditCommand() { return m_lastEditCommand.get(); }
 
-    Document& document() const { return m_document.get(); }
+    Document& document() const;
     Ref<Document> protectedDocument() const { return m_document.get(); }
 
     WEBCORE_EXPORT void ref() const;
@@ -314,7 +316,7 @@ public:
 #endif
 
     // Returns whether or not we should proceed with editing.
-    bool willApplyEditing(CompositeEditCommand&, Vector<RefPtr<StaticRange>>&&);
+    bool willApplyEditing(CompositeEditCommand&, Vector<Ref<StaticRange>>&&);
     bool willUnapplyEditing(const EditCommandComposition&) const;
     bool willReapplyEditing(const EditCommandComposition&) const;
 
@@ -440,6 +442,7 @@ public:
     WEBCORE_EXPORT bool cancelCompositionIfSelectionIsInvalid();
     WEBCORE_EXPORT std::optional<SimpleRange> compositionRange() const;
     WEBCORE_EXPORT bool getCompositionSelection(unsigned& selectionStart, unsigned& selectionEnd) const;
+    bool hasDeadKeyComposition() const;
 
     // getting international text input composition state (for use by LegacyInlineTextBox)
     Text* compositionNode() const { return m_compositionNode.get(); }
@@ -505,7 +508,7 @@ public:
 
     WEBCORE_EXPORT String selectedText() const;
     String selectedTextForDataTransfer() const;
-    WEBCORE_EXPORT bool findString(const String&, FindOptions);
+    WEBCORE_EXPORT std::optional<SimpleRange> findString(const String&, FindOptions);
 
     WEBCORE_EXPORT std::optional<SimpleRange> rangeOfString(const String&, const std::optional<SimpleRange>& searchRange, FindOptions);
 
@@ -572,6 +575,11 @@ public:
     WEBCORE_EXPORT bool isAutomaticSpellingCorrectionEnabled();
     WEBCORE_EXPORT void toggleAutomaticSpellingCorrection();
     WEBCORE_EXPORT bool canEnableAutomaticSpellingCorrection() const;
+    WEBCORE_EXPORT void toggleSmartLists();
+#endif
+
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT bool isSmartListsEnabled();
 #endif
 
     RefPtr<DocumentFragment> webContentFromPasteboard(Pasteboard&, const SimpleRange& context, bool allowPlainText, bool& chosePlainText);
@@ -684,6 +692,7 @@ private:
     void selectComposition();
     enum SetCompositionMode { ConfirmComposition, CancelComposition };
     void setComposition(const String&, SetCompositionMode);
+    String compositionText() const;
 
     void changeSelectionAfterCommand(const VisibleSelection& newSelection, OptionSet<FrameSelection::SetSelectionOption>);
 
@@ -770,7 +779,7 @@ private:
 
     bool m_isGettingDictionaryPopupInfo { false };
     bool m_hasHandledAnyEditing { false };
-    HashSet<RefPtr<HTMLImageElement>> m_imageElementsToLoadBeforeRevealingSelection;
+    HashSet<Ref<HTMLImageElement>> m_imageElementsToLoadBeforeRevealingSelection;
 };
 
 inline void Editor::setStartNewKillRingSequence(bool flag)

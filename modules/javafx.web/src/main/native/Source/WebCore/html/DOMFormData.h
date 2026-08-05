@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "File.h"
+#include <WebCore/File.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -52,6 +52,10 @@ public:
 
     static ExceptionOr<Ref<DOMFormData>> create(ScriptExecutionContext&, HTMLFormElement*, HTMLElement*);
     static Ref<DOMFormData> create(ScriptExecutionContext*, const PAL::TextEncoding&);
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const Vector<Item>& items() const { return m_items; }
     const PAL::TextEncoding& encoding() const { return m_encoding; }

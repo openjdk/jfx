@@ -41,7 +41,7 @@ Ref<ControlFactory> ControlFactory::create()
 }
 #endif
 
-ControlFactory& ControlFactory::shared()
+ControlFactory& ControlFactory::singleton()
 {
     static MainThreadNeverDestroyed<RefPtr<ControlFactory>> shared { create() };
     return *shared.get();

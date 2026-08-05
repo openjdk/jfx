@@ -90,7 +90,7 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
                 JSValue maxByteLengthValue = asObject(options)->get(globalObject, vm.propertyNames->maxByteLength);
                 RETURN_IF_EXCEPTION(scope, { });
                 if (!maxByteLengthValue.isUndefined()) {
-                    maxByteLength = maxByteLengthValue.toTypedArrayIndex(globalObject, "maxByteLength"_s);
+                maxByteLength = maxByteLengthValue.toIndex(globalObject, "maxByteLength"_s);
                     RETURN_IF_EXCEPTION(scope, { });
                 }
             }
@@ -110,7 +110,7 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
     size_t length = 0;
     if (hasArguments) {
         JSValue lengthDoubleValue = JSValue(JSValue::EncodeAsDouble, lengthDouble);
-        length = lengthDoubleValue.toTypedArrayIndex(globalObject, "length"_s);
+        length = lengthDoubleValue.toIndex(globalObject, "length"_s);
         RETURN_IF_EXCEPTION(scope, { });
     }
 
@@ -132,7 +132,7 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
 
     ASSERT(sharingMode == buffer->sharingMode());
 
-    return JSValue::encode(JSArrayBuffer::create(vm, structure, WTFMove(buffer)));
+    return JSValue::encode(JSArrayBuffer::create(vm, structure, WTF::move(buffer)));
 }
 
 template<ArrayBufferSharingMode sharingMode>
@@ -178,7 +178,7 @@ JSObject* constructArrayBufferWithSize(JSGlobalObject* globalObject, Structure* 
     if (structure == globalObject->arrayBufferStructureWithSharingMode<ArrayBufferSharingMode::Shared>())
         buffer->makeShared();
 
-    return JSArrayBuffer::create(vm, structure, WTFMove(buffer));
+    return JSArrayBuffer::create(vm, structure, WTF::move(buffer));
 }
 
 // ------------------------------ Functions --------------------------------

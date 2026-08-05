@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-dictionary PointerEventInit : MouseEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PointerEventInit : MouseEventInit {
     long pointerId = 0;
     double width = 1;
     double height = 1;

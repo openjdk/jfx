@@ -85,3 +85,4 @@ void* PreciseSubspace::allocate(VM& vm, size_t cellSize, GCDeferralContext* defe
 }
 
 } // namespace JSC
+

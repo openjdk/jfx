@@ -61,6 +61,7 @@ platform/java/ThemeJava.cpp
 platform/java/ModernMediaControlResource.cpp
 platform/java/ScrollbarThemeJava.cpp
 platform/java/SharedBufferJava.cpp
+platform/java/SharedMemoryJava.cpp
 platform/java/MainThreadSharedTimerJava.cpp
 platform/java/StringJava.cpp
 platform/java/TouchEventJava.cpp

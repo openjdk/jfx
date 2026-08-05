@@ -50,12 +50,17 @@ public:
 
     size_t inflightBeaconsCount() const { return m_inflightBeacons.size(); }
 
-    WEBCORE_EXPORT static NavigatorBeacon* from(Navigator&);
+    WEBCORE_EXPORT static Ref<NavigatorBeacon> from(Navigator&);
+
+    // CachedResourceClient.
+    WEBCORE_EXPORT void ref() const final;
+    WEBCORE_EXPORT void deref() const final;
 
 private:
     ExceptionOr<bool> sendBeacon(Document&, const String& url, std::optional<FetchBody::Init>&&);
 
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorBeacon"_s; }
+    bool isNavigatorBeacon() const final { return true; }
 
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void logError(const ResourceError&);
@@ -64,4 +69,8 @@ private:
     Vector<CachedResourceHandle<CachedRawResource>> m_inflightBeacons;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorBeacon)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorBeacon(); }
+SPECIALIZE_TYPE_TRAITS_END()

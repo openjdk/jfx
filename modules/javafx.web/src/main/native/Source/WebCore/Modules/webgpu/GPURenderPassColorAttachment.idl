@@ -30,12 +30,12 @@ typedef (sequence<double> or GPUColorDict) GPUColor;
 typedef [EnforceRange] unsigned long GPUIntegerCoordinate;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPURenderPassColorAttachment {
-    required GPUTextureView view;
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPURenderPassColorAttachment {
+    required (GPUTexture or GPUTextureView) view;
     GPUIntegerCoordinate depthSlice;
-    GPUTextureView resolveTarget;
+    (GPUTexture or GPUTextureView) resolveTarget;
 
     GPUColor clearValue;
     required GPULoadOp loadOp;

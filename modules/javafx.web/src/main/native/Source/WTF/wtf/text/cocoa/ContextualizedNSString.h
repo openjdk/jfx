@@ -25,9 +25,13 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
 #import <Foundation/Foundation.h>
 #import <wtf/text/StringView.h>
 
 @interface WTFContextualizedNSString : NSString
 - (instancetype)initWithContext:(StringView)context contents:(StringView)contents;
 @end
+
+#endif // __OBJC__

@@ -25,13 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
 
-#include "MediaPlaybackTargetContext.h"
-#include "MediaPlaybackTargetPicker.h"
-#include "MediaPlaybackTargetPickerMock.h"
-#include "MediaProducer.h"
-#include "PlaybackTargetClientContextIdentifier.h"
+#include <WebCore/MediaPlaybackTargetPicker.h>
+#include <WebCore/MediaPlaybackTargetPickerMock.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/PlaybackTargetClientContextIdentifier.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -43,6 +43,7 @@ struct ClientState;
 class IntRect;
 class WebMediaSessionLogger;
 class WebMediaSessionManagerClient;
+enum class MediaPlaybackTargetMockState : uint8_t;
 
 class WebMediaSessionManager : public MediaPlaybackTargetPicker::Client, public CanMakeCheckedPtr<WebMediaSessionManager> {
     WTF_MAKE_NONCOPYABLE(WebMediaSessionManager);
@@ -50,10 +51,10 @@ class WebMediaSessionManager : public MediaPlaybackTargetPicker::Client, public 
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebMediaSessionManager);
 public:
 
-    WEBCORE_EXPORT static WebMediaSessionManager& shared();
+    WEBCORE_EXPORT static WebMediaSessionManager& singleton();
 
     WEBCORE_EXPORT void setMockMediaPlaybackTargetPickerEnabled(bool);
-    WEBCORE_EXPORT void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetContext::MockState);
+    WEBCORE_EXPORT void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetMockState);
     WEBCORE_EXPORT void mockMediaPlaybackTargetPickerDismissPopup();
 
     WEBCORE_EXPORT std::optional<PlaybackTargetClientContextIdentifier> addPlaybackTargetPickerClient(WebMediaSessionManagerClient&, PlaybackTargetClientContextIdentifier);
@@ -83,7 +84,9 @@ protected:
 private:
 
     WebCore::MediaPlaybackTargetPicker& targetPicker();
+    CheckedRef<WebCore::MediaPlaybackTargetPicker> checkedTargetPicker();
     WebCore::MediaPlaybackTargetPickerMock& mockPicker();
+    CheckedRef<WebCore::MediaPlaybackTargetPickerMock> checkedMockPicker();
 
     // MediaPlaybackTargetPicker::Client
     void setPlaybackTarget(Ref<WebCore::MediaPlaybackTarget>&&) final;

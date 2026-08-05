@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSNumericValue.h"
+#include <WebCore/CSSNumericValue.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -38,3 +38,4 @@ struct TimelineRangeOffset {
 };
 
 } // namespace WebCore
+

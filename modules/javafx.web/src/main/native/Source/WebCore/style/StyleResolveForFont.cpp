@@ -42,11 +42,9 @@
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "FontCascadeDescription.h"
 #include "FontSelectionValueInlines.h"
-#include "LengthFunctions.h"
 #include "RenderStyle.h"
 #include "ScriptExecutionContext.h"
 #include "Settings.h"
@@ -80,38 +78,6 @@ FontSelectionValue fontWeightFromCSSValueDeprecated(const CSSValue& value)
         return boldWeightValue();
     case CSSValueLighter:
         return lightWeightValue();
-    default:
-        ASSERT_NOT_REACHED();
-        return normalWeightValue();
-    }
-}
-
-FontSelectionValue fontWeightFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
-    if (!primitiveValue)
-        return { };
-
-    auto& conversionData = builderState.cssToLengthConversionData();
-
-    if (primitiveValue->isNumber())
-        return FontSelectionValue(clampTo<float>(primitiveValue->resolveAsNumber(conversionData), 1, 1000));
-
-    ASSERT(primitiveValue->isValueID());
-    auto valueID = primitiveValue->valueID();
-
-    if (CSSPropertyParserHelpers::isSystemFontShorthand(valueID))
-        return SystemFontDatabase::singleton().systemFontShorthandWeight(CSSPropertyParserHelpers::lowerFontShorthand(valueID));
-
-    switch (valueID) {
-    case CSSValueNormal:
-        return normalWeightValue();
-    case CSSValueBold:
-        return boldWeightValue();
-    case CSSValueBolder:
-        return FontCascadeDescription::bolderWeight(conversionData.parentStyle()->fontDescription().weight());
-    case CSSValueLighter:
-        return FontCascadeDescription::lighterWeight(conversionData.parentStyle()->fontDescription().weight());
     default:
         ASSERT_NOT_REACHED();
         return normalWeightValue();
@@ -162,23 +128,6 @@ FontSelectionValue fontStretchFromCSSValueDeprecated(const CSSValue& value)
     return normalWidthValue();
 }
 
-FontSelectionValue fontStretchFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
-    if (!primitiveValue)
-        return { };
-
-    if (primitiveValue->isPercentage())
-        return FontSelectionValue::clampFloat(primitiveValue->resolveAsPercentage<float>(builderState.cssToLengthConversionData()));
-
-    ASSERT(primitiveValue->isValueID());
-    if (auto value = fontWidthValue(primitiveValue->valueID()))
-        return value.value();
-
-    ASSERT(CSSPropertyParserHelpers::isSystemFontShorthand(primitiveValue->valueID()));
-    return normalWidthValue();
-}
-
 // MARK: - 'font-style'
 
 FontSelectionValue fontStyleAngleFromCSSValueDeprecated(const CSSValue& value)
@@ -186,25 +135,11 @@ FontSelectionValue fontStyleAngleFromCSSValueDeprecated(const CSSValue& value)
     return normalizedFontItalicValue(downcast<CSSPrimitiveValue>(value).resolveAsAngleDeprecated<float>());
 }
 
-FontSelectionValue fontStyleAngleFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
-    if (!primitiveValue)
-        return { };
-
-    return normalizedFontItalicValue(primitiveValue->resolveAsAngle<float>(builderState.cssToLengthConversionData()));
-}
-
 std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValueDeprecated(const CSSFontStyleWithAngleValue& value)
 {
     if (requiresConversionData(value.obliqueAngle()))
         return { };
     return FontSelectionValue { narrowPrecisionToFloat(Style::toStyle(value.obliqueAngle(), NoConversionDataRequiredToken { }).value) };
-}
-
-std::optional<FontSelectionValue> fontStyleAngleFromCSSFontStyleWithAngleValue(BuilderState& builderState, const CSSFontStyleWithAngleValue& value)
-{
-    return FontSelectionValue { narrowPrecisionToFloat(Style::toStyle(value.obliqueAngle(), builderState.cssToLengthConversionData()).value) };
 }
 
 std::optional<FontSelectionValue> fontStyleFromCSSValueDeprecated(const CSSValue& value)
@@ -220,21 +155,8 @@ std::optional<FontSelectionValue> fontStyleFromCSSValueDeprecated(const CSSValue
     return italicValue();
 }
 
-std::optional<FontSelectionValue> fontStyleFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    if (RefPtr fontStyleValue = dynamicDowncast<CSSFontStyleWithAngleValue>(value))
-        return fontStyleAngleFromCSSFontStyleWithAngleValue(builderState, *fontStyleValue);
-
-    auto valueID = value.valueID();
-    if (valueID == CSSValueNormal)
-        return std::nullopt;
-
-    ASSERT(valueID == CSSValueItalic || valueID == CSSValueOblique);
-    return italicValue();
-}
-
 struct ResolvedFontStyle {
-    std::optional<FontSelectionValue> italic;
+    std::optional<FontSelectionValue> slope;
     FontStyleAxis axis;
 };
 
@@ -246,19 +168,19 @@ static ResolvedFontStyle fontStyleFromUnresolvedFontStyle(const CSSPropertyParse
             switch (ident) {
             case CSSValueNormal:
                 return {
-                    .italic = std::nullopt,
+                    .slope = std::nullopt,
                     .axis = FontStyleAxis::slnt
                 };
 
             case CSSValueItalic:
                 return {
-                    .italic = italicValue(),
+                    .slope = italicValue(),
                     .axis = FontStyleAxis::ital
                 };
 
             case CSSValueOblique:
                 return {
-                    .italic = FontSelectionValue(0.0f),
+                    .slope = FontSelectionValue(0.0f),
                     .axis = FontStyleAxis::slnt
                 };
 
@@ -267,15 +189,15 @@ static ResolvedFontStyle fontStyleFromUnresolvedFontStyle(const CSSPropertyParse
             }
 
             ASSERT_NOT_REACHED();
-            return { .italic = std::nullopt, .axis = FontStyleAxis::slnt };
+            return { .slope = std::nullopt, .axis = FontStyleAxis::slnt };
         },
         [](const CSSPropertyParserHelpers::UnresolvedFontStyleObliqueAngle& angle) -> ResolvedFontStyle {
             // FIXME: Figure out correct behavior when conversion data is required.
             if (requiresConversionData(angle))
-                return { .italic = std::nullopt, .axis = FontStyleAxis::slnt };
+                return { .slope = std::nullopt, .axis = FontStyleAxis::slnt };
 
             return {
-                .italic = FontSelectionValue::clampFloat(Style::toStyleNoConversionDataRequired(angle).value),
+                .slope = FontSelectionValue::clampFloat(Style::toStyleNoConversionDataRequired(angle).value),
                 .axis = FontStyleAxis::slnt
             };
         }
@@ -319,6 +241,12 @@ static ResolvedFontSize fontSizeFromUnresolvedFontSize(const CSSPropertyParserHe
                     .keyword = CSSValueInvalid
                 };
 
+            case CSSValueMath:
+                return {
+                    .size = 0.0f,
+                    .keyword = CSSValueInvalid
+                };
+
             default:
                 break;
             }
@@ -332,7 +260,7 @@ static ResolvedFontSize fontSizeFromUnresolvedFontSize(const CSSPropertyParserHe
                     return CSS::switchOnUnitType(lengthPercentage.unit,
                         [&](CSS::PercentageUnit) -> ResolvedFontSize {
                             return {
-                                .size = Style::evaluate(Style::Percentage<> { narrowPrecisionToFloat(lengthPercentage.value) }, parentSize),
+                                .size = Style::evaluate<float>(Style::Percentage<> { narrowPrecisionToFloat(lengthPercentage.value) }, parentSize),
                                 .keyword = CSSValueInvalid
                             };
                         },
@@ -349,7 +277,7 @@ static ResolvedFontSize fontSizeFromUnresolvedFontSize(const CSSPropertyParserHe
 
                             RefPtr document = dynamicDowncast<Document>(context);
                             return {
-                                .size = static_cast<float>(Style::computeUnzoomedNonCalcLengthDouble(lengthPercentage.value, lengthUnit, CSSPropertyFontSize, &fontCascade, document ? document->renderView() : nullptr)),
+                                .size = static_cast<float>(Style::computeUnzoomedNonCalcLengthDouble(lengthPercentage.value, lengthUnit, CSSPropertyFontSize, &fontCascade, CSS::RangeZoomOptions::Default, document ? document->renderView() : nullptr)),
                                 .keyword = CSSValueInvalid
                             };
                         }
@@ -361,7 +289,7 @@ static ResolvedFontSize fontSizeFromUnresolvedFontSize(const CSSPropertyParserHe
                         return { .size = 0.0f, .keyword = CSSValueInvalid };
 
                     return {
-                        .size = Style::evaluate(Style::toStyleNoConversionDataRequired(calc), parentSize),
+                        .size = Style::evaluate<float>(Style::toStyleNoConversionDataRequired(calc), parentSize, Style::ZoomNeeded { }),
                         .keyword = CSSValueInvalid
                     };
                 }
@@ -396,7 +324,7 @@ static ResolvedFontFamily fontFamilyFromUnresolvedFontFamily(const CSSPropertyPa
                     // FIXME: Treat system-ui like other generic font families
                     if (ident == CSSValueSystemUi)
                         return { nameString(CSSValueSystemUi), true };
-                    return { familyNamesData->at(CSSPropertyParserHelpers::genericFontFamilyIndex(ident)), true };
+                    return { *familyNamesData->at(CSSPropertyParserHelpers::genericFontFamilyIndex(ident)), true };
                 }
                 return { AtomString(context->settingsValues().fontGenericFamilies.standardFontFamily()), false };
             },
@@ -416,81 +344,10 @@ static ResolvedFontFamily fontFamilyFromUnresolvedFontFamily(const CSSPropertyPa
     });
 
     return {
-        .family = WTFMove(family),
+        .family = WTF::move(family),
         .isSpecifiedFont = isSpecifiedFont
     };
 }
-
-// MARK: 'font-feature-settings'
-
-FontFeatureSettings fontFeatureSettingsFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    if (is<CSSPrimitiveValue>(value)) {
-        ASSERT(value.valueID() == CSSValueNormal || CSSPropertyParserHelpers::isSystemFontShorthand(value.valueID()));
-        return { };
-    }
-
-    auto list = requiredListDowncast<CSSValueList, CSSFontFeatureValue>(builderState, value);
-    if (!list)
-        return { };
-
-    FontFeatureSettings settings;
-    for (Ref feature : *list)
-        settings.insert(FontFeature(feature->tag(), feature->value().resolveAsNumber<int>(builderState.cssToLengthConversionData())));
-    return settings;
-}
-
-// MARK: 'font-variation-settings'
-
-FontVariationSettings fontVariationSettingsFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    if (is<CSSPrimitiveValue>(value)) {
-        ASSERT(value.valueID() == CSSValueNormal || CSSPropertyParserHelpers::isSystemFontShorthand(value.valueID()));
-        return { };
-    }
-
-    auto list = requiredListDowncast<CSSValueList, CSSFontVariationValue>(builderState, value);
-    if (!list)
-        return { };
-
-    FontVariationSettings settings;
-    for (Ref feature : *list)
-        settings.insert({ feature->tag(), feature->value().resolveAsNumber<float>(builderState.cssToLengthConversionData()) });
-    return settings;
-}
-
-// MARK: 'font-size-adjust'
-
-FontSizeAdjust fontSizeAdjustFromCSSValue(BuilderState& builderState, const CSSValue& value)
-{
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
-        if (primitiveValue->valueID() == CSSValueNone
-            || CSSPropertyParserHelpers::isSystemFontShorthand(primitiveValue->valueID()))
-            return FontCascadeDescription::initialFontSizeAdjust();
-
-        auto defaultMetric = FontSizeAdjust::Metric::ExHeight;
-        if (primitiveValue->isNumber())
-            return { defaultMetric, FontSizeAdjust::ValueType::Number, primitiveValue->resolveAsNumber(builderState.cssToLengthConversionData()) };
-
-        ASSERT(primitiveValue->valueID() == CSSValueFromFont);
-        // We cannot determine the primary font here, so we defer resolving the
-        // aspect value for from-font to when the primary font is created.
-        // See FontCascadeFonts::primaryFont().
-        return { defaultMetric, FontSizeAdjust::ValueType::FromFont, std::nullopt };
-    }
-
-    auto pair = requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
-    if (!pair)
-        return { };
-
-    auto metric = fromCSSValueID<FontSizeAdjust::Metric>(pair->first->valueID());
-    if (pair->second->isNumber())
-        return { metric, FontSizeAdjust::ValueType::Number, pair->second->resolveAsNumber(builderState.cssToLengthConversionData()) };
-
-    ASSERT(pair->second->valueID() == CSSValueFromFont);
-    return { metric, FontSizeAdjust::ValueType::FromFont, std::nullopt };
-}
-
 
 // MARK: - Unresolved Font Shorthand Resolution
 
@@ -505,7 +362,7 @@ std::optional<FontCascade> resolveForUnresolvedFont(const CSSPropertyParserHelpe
 
     auto useFixedDefaultSize = [](const FontCascadeDescription& fontDescription) {
         return fontDescription.familyCount() == 1
-            && fontDescription.firstFamily() == familyNamesData->at(FamilyNamesIndex::MonospaceFamily);
+            && fontDescription.firstFamily() == *familyNamesData->at(FamilyNamesIndex::MonospaceFamily);
     };
 
     // Font family applied in the same way as StyleBuilderCustom::applyValueFontFamily
@@ -527,7 +384,7 @@ std::optional<FontCascade> resolveForUnresolvedFont(const CSSPropertyParserHelpe
     }
 
     auto resolvedFontStyle = fontStyleFromUnresolvedFontStyle(unresolvedFont.style);
-    fontDescription.setItalic(resolvedFontStyle.italic);
+    fontDescription.setFontStyleSlope(resolvedFontStyle.slope);
     fontDescription.setFontStyleAxis(resolvedFontStyle.axis);
 
     auto resolvedFontVariantCaps = fontVariantCapsFromUnresolvedFontVariantCaps(unresolvedFont.variantCaps);
@@ -546,7 +403,7 @@ std::optional<FontCascade> resolveForUnresolvedFont(const CSSPropertyParserHelpe
     // As there is no line-height on FontCascade, there's no need to resolve it, even
     // though there is line-height information on CSSPropertyParserHelpers::UnresolvedFont.
 
-    auto fontCascade = FontCascade(WTFMove(fontDescription));
+    auto fontCascade = FontCascade(WTF::move(fontDescription));
     fontCascade.update(protectedContext->cssFontSelector());
     return fontCascade;
 }

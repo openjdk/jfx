@@ -28,13 +28,15 @@
 
 #include "AlternativeTextController.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
+#include "DocumentMarkers.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
 #include "InsertParagraphSeparatorCommand.h"
 #include "InsertTextCommand.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
+#include "NodeDocument.h"
 #include "Text.h"
 
 namespace WebCore {
@@ -60,7 +62,7 @@ class DictationMarkerSupplier : public TextInsertionMarkerSupplier {
 public:
     static Ref<DictationMarkerSupplier> create(Vector<DictationAlternative>&& alternatives)
     {
-        return adoptRef(*new DictationMarkerSupplier(WTFMove(alternatives)));
+        return adoptRef(*new DictationMarkerSupplier(WTF::move(alternatives)));
     }
 
     void addMarkersToTextNode(Text& textNode, unsigned offsetOfInsertion, const String& textToBeInserted) override
@@ -69,14 +71,14 @@ public:
         auto& markerController = document->markers();
         for (auto& alternative : m_alternatives) {
             DocumentMarker::DictationData data { alternative.context, textToBeInserted.substring(alternative.range.location, alternative.range.length) };
-            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarkerType::DictationAlternatives, WTFMove(data));
+            markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarkerType::DictationAlternatives, WTF::move(data));
             markerController.addMarker(textNode, alternative.range.location + offsetOfInsertion, alternative.range.length, DocumentMarkerType::SpellCheckingExemption);
         }
     }
 
 protected:
     DictationMarkerSupplier(Vector<DictationAlternative>&& alternatives)
-        : m_alternatives(WTFMove(alternatives))
+        : m_alternatives(WTF::move(alternatives))
     {
     }
 private:
@@ -84,7 +86,7 @@ private:
 };
 
 DictationCommand::DictationCommand(Ref<Document>&& document, const String& text, const Vector<DictationAlternative>& alternatives)
-    : TextInsertionBaseCommand(WTFMove(document))
+    : TextInsertionBaseCommand(WTF::move(document))
     , m_textToInsert(text)
     , m_alternatives(alternatives)
 {
@@ -101,11 +103,11 @@ void DictationCommand::insertText(Ref<Document>&& document, const String& text, 
 
     RefPtr<DictationCommand> cmd;
     if (newText == text)
-        cmd = DictationCommand::create(WTFMove(document), newText, alternatives);
+        cmd = DictationCommand::create(WTF::move(document), newText, alternatives);
     else {
         // If the text was modified before insertion, the location of dictation alternatives
         // will not be valid anymore. We will just drop the alternatives.
-        cmd = DictationCommand::create(WTFMove(document), newText, Vector<DictationAlternative>());
+        cmd = DictationCommand::create(WTF::move(document), newText, Vector<DictationAlternative>());
     }
     applyTextInsertionCommand(frame.get(), *cmd, selectionForInsertion, currentSelection);
 }
@@ -121,8 +123,8 @@ void DictationCommand::insertTextRunWithoutNewlines(size_t lineStart, size_t lin
 {
     Vector<DictationAlternative> alternativesInLine;
     collectDictationAlternativesInRange(lineStart, lineLength, alternativesInLine);
-    auto command = InsertTextCommand::createWithMarkerSupplier(document(), m_textToInsert.substring(lineStart, lineLength), DictationMarkerSupplier::create(WTFMove(alternativesInLine)), EditAction::Dictation);
-    applyCommandToComposite(WTFMove(command), endingSelection());
+    auto command = InsertTextCommand::createWithMarkerSupplier(document(), m_textToInsert.substring(lineStart, lineLength), DictationMarkerSupplier::create(WTF::move(alternativesInLine)), EditAction::Dictation);
+    applyCommandToComposite(WTF::move(command), endingSelection());
 }
 
 void DictationCommand::insertParagraphSeparator()

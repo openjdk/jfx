@@ -25,15 +25,16 @@
 
 #pragma once
 
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "GenericTypedArrayViewInlines.h"
-#include "JSArrayBuffer.h"
-#include "JSArrayBufferViewInlines.h"
-#include "JSCellInlines.h"
-#include "JSGenericTypedArrayView.h"
-#include "TypeError.h"
-#include "TypedArrays.h"
+#include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/GenericTypedArrayViewInlines.h>
+#include <JavaScriptCore/JSArrayBuffer.h>
+#include <JavaScriptCore/JSArrayBufferViewInlines.h>
+#include <JavaScriptCore/JSCellInlines.h>
+#include <JavaScriptCore/JSGenericTypedArrayView.h>
+#include <JavaScriptCore/ToNativeFromValue.h>
+#include <JavaScriptCore/TypeError.h>
+#include <JavaScriptCore/TypedArrays.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/MakeString.h>
 
@@ -123,7 +124,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(JSGlo
         return nullptr;
     }
 
-    ConstructionContext context(vm, structure, WTFMove(buffer), byteOffset, length);
+    ConstructionContext context(vm, structure, WTF::move(buffer), byteOffset, length);
     ASSERT(context);
     JSGenericTypedArrayView* result =
         new (NotNull, allocateCell<JSGenericTypedArrayView>(vm))
@@ -153,13 +154,13 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::tryCreate(JS
         throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
         return nullptr;
     }
-    return create(vm, structure, WTFMove(impl));
+    return create(vm, structure, WTF::move(impl));
 }
 
 template<typename Adaptor>
 JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(Structure* structure, JSGlobalObject* globalObject, RefPtr<typename Adaptor::ViewType>&& impl)
 {
-    return create(globalObject->vm(), structure, WTFMove(impl));
+    return create(globalObject->vm(), structure, WTF::move(impl));
 }
 
 template<typename Adaptor>
@@ -692,7 +693,7 @@ bool JSGenericTypedArrayView<Adaptor>::deletePropertyByIndex(
 
 template<typename Adaptor>
 void JSGenericTypedArrayView<Adaptor>::getOwnPropertyNames(
-    JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& array, DontEnumPropertiesMode mode)
+    JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& array, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
@@ -793,7 +794,7 @@ template<typename Adaptor> inline typename Adaptor::Type* JSGenericTypedArrayVie
     return std::bit_cast<typename Adaptor::Type*>(vector());
 }
 
-template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::inBounds(size_t i) const
+template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::inBounds(uint64_t i) const
 {
     if (canUseRawFieldsDirectly()) [[likely]]
         return i < lengthRaw();

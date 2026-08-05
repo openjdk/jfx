@@ -39,9 +39,11 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderProgress.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+GettersInlines.h"
+#include "RenderStyle+SettersInlines.h"
+#include "StyleComputedStyle+InitialInlines.h"
 #include "StylePadding.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
@@ -74,7 +76,7 @@ RenderTheme& RenderTheme::singleton()
 
 RenderThemeAdwaita::~RenderThemeAdwaita() = default;
 
-bool RenderThemeAdwaita::canCreateControlPartForRenderer(const RenderObject& renderer) const
+bool RenderThemeAdwaita::canCreateControlPartForRenderer(const RenderElement& renderer) const
 {
     switch (renderer.style().usedAppearance()) {
     case StyleAppearance::Button:
@@ -99,7 +101,7 @@ bool RenderThemeAdwaita::canCreateControlPartForRenderer(const RenderObject& ren
     return false;
 }
 
-bool RenderThemeAdwaita::canCreateControlPartForBorderOnly(const RenderObject& renderer) const
+bool RenderThemeAdwaita::canCreateControlPartForBorderOnly(const RenderElement& renderer) const
 {
     switch (renderer.style().usedAppearance()) {
     case StyleAppearance::Listbox:
@@ -112,12 +114,12 @@ bool RenderThemeAdwaita::canCreateControlPartForBorderOnly(const RenderObject& r
     return false;
 }
 
-bool RenderThemeAdwaita::canCreateControlPartForDecorations(const RenderObject& renderer) const
+bool RenderThemeAdwaita::canCreateControlPartForDecorations(const RenderElement& renderer) const
 {
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
-bool RenderThemeAdwaita::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
+bool RenderThemeAdwaita::supportsFocusRing(const RenderElement&, const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::PushButton:
@@ -214,6 +216,25 @@ Vector<String, 2> RenderThemeAdwaita::mediaControlsStyleSheets(const HTMLMediaEl
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
     return { m_mediaControlsStyleSheet };
+}
+
+RefPtr<FragmentedSharedBuffer> RenderThemeAdwaita::mediaControlsImageDataForIconNameAndType(const String& iconName, const String& iconType)
+{
+#if USE(GLIB)
+    auto path = makeString("/org/webkit/media-controls/"_s, iconName, '.', iconType);
+    auto data = adoptGRef(g_resources_lookup_data(path.latin1().data(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
+    if (!data)
+        return nullptr;
+    return SharedBuffer::create(span(data));
+#elif PLATFORM(WIN)
+    auto path = webKitBundlePath(iconName, iconType, "media-controls"_s);
+    auto data = FileSystem::readEntireFile(path);
+    if (!data)
+        return nullptr;
+    return SharedBuffer::create(WTF::move(*data));
+#else
+    return nullptr;
+#endif
 }
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
@@ -318,7 +339,7 @@ void RenderThemeAdwaita::adjustSearchFieldStyle(RenderStyle& style, const Elemen
 void RenderThemeAdwaita::adjustMenuListStyle(RenderStyle& style, const Element* element) const
 {
     RenderTheme::adjustMenuListStyle(style, element);
-    style.setLineHeight(RenderStyle::initialLineHeight());
+    style.setLineHeight(Style::ComputedStyle::initialLineHeight());
 }
 
 void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Element* element) const
@@ -376,6 +397,7 @@ int RenderThemeAdwaita::sliderTickOffsetFromTrackCenter() const
 
 void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element*) const
 {
+    style.setLogicalWidth(16_css_px);
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
         style.setMarginRight(-2_css_px);
@@ -397,7 +419,7 @@ Style::PreferredSizePair RenderThemeAdwaita::controlSize(StyleAppearance appeara
             buttonSizeWidth = 12_css_px * zoomFactor;
         if (buttonSizeHeight.isIntrinsicOrLegacyIntrinsicOrAuto())
             buttonSizeHeight = 12_css_px * zoomFactor;
-        return { WTFMove(buttonSizeWidth), WTFMove(buttonSizeHeight) };
+        return { WTF::move(buttonSizeWidth), WTF::move(buttonSizeHeight) };
     }
     case StyleAppearance::InnerSpinButton: {
         auto spinButtonSizeWidth = zoomedSize.width();
@@ -406,7 +428,7 @@ Style::PreferredSizePair RenderThemeAdwaita::controlSize(StyleAppearance appeara
             spinButtonSizeWidth = Style::PreferredSize::Fixed { static_cast<float>(static_cast<int>(arrowSize * zoomFactor)) };
         if (spinButtonSizeHeight.isIntrinsicOrLegacyIntrinsicOrAuto() || fontCascade.size() > arrowSize)
             spinButtonSizeHeight = Style::PreferredSize::Fixed { fontCascade.size() };
-        return { WTFMove(spinButtonSizeWidth), WTFMove(spinButtonSizeHeight) };
+        return { WTF::move(spinButtonSizeWidth), WTF::move(spinButtonSizeHeight) };
     }
     default:
         break;
@@ -428,7 +450,7 @@ Style::MinimumSizePair RenderThemeAdwaita::minimumControlSize(StyleAppearance, c
     if (resultHeight.isIntrinsicOrLegacyIntrinsicOrAuto())
         resultHeight = 0_css_px;
 
-    return { WTFMove(resultWidth), WTFMove(resultHeight) };
+    return { WTF::move(resultWidth), WTF::move(resultHeight) };
 }
 
 Style::LineWidthBox RenderThemeAdwaita::controlBorder(StyleAppearance appearance, const FontCascade& font, const Style::LineWidthBox& zoomedBox, float zoomFactor, const Element* element) const

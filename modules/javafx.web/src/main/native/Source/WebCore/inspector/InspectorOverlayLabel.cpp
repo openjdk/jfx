@@ -33,8 +33,11 @@
 #include "FloatSize.h"
 #include "FontCascade.h"
 #include "FontCascadeDescription.h"
+#include "FontCascadeInlines.h"
+#include "FontSelector.h"
 #include "GraphicsContext.h"
 #include "Path.h"
+#include "TextRun.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -48,7 +51,7 @@ static constexpr float labelAdditionalLineSpacing = 1;
 static constexpr float labelContentDecorationBorderedLeadingAndTrailingPadding = 1;
 
 InspectorOverlayLabel::InspectorOverlayLabel(Vector<Content>&& contents, FloatPoint location, Color backgroundColor, Arrow arrow)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
     , m_location(location)
     , m_backgroundColor(backgroundColor)
     , m_arrow(arrow)
@@ -67,7 +70,7 @@ static FontCascade systemFont()
     fontDescription.setWeight(FontSelectionValue(500));
     fontDescription.setComputedSize(12);
 
-    FontCascade font(WTFMove(fontDescription));
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
     return font;
 }
@@ -350,7 +353,7 @@ Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidt
                 textPosition.y() + yOffset - lineHeight + lineDescent,
                 computedContentRun.computedWidth + (labelContentDecorationBorderedLeadingAndTrailingPadding * 2),
                 lineHeight,
-            }, FloatRoundedRect::Radii(2));
+            }, CornerRadii(2));
 
             Path backgroundPath;
             backgroundPath.addRoundedRect(backgroundRect);

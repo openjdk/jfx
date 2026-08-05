@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "Path.h"
-#include "StyleValueTypes.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/Path.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {

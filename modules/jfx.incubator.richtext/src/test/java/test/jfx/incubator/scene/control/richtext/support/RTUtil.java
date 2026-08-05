@@ -28,12 +28,15 @@ package test.jfx.incubator.scene.control.richtext.support;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.tk.Toolkit;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
@@ -107,5 +110,20 @@ public class RTUtil {
      */
     public static void firePulse() {
         Toolkit.getToolkit().firePulse();
+    }
+
+    /// Returns a 32x32 PNG image filled with red as byte array.
+    public static byte[] redPng32x32() {
+        String RED_PNG_32x32 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAALUlEQVR4Xu3OoQEAAAjDsP3/NPgdACaVVck8lx7XAQAAAAAAAAAAAAAAAAAALJf68OJSymrlAAAAAElFTkSuQmCC";
+        return Base64.getDecoder().decode(RED_PNG_32x32);
+    }
+
+    /// Returns an EmbeddedImage at the specified text position, or null.
+    public static EmbeddedImage embeddedImageAt(RichTextArea t, TextPos p) {
+        if (p != null) {
+            StyleAttributeMap a = t.getStyleAttributeMap(p, false);
+            return a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+        }
+        return null;
     }
 }

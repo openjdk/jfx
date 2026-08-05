@@ -49,18 +49,13 @@ UserActivation& NavigatorUserActivation::userActivation(Navigator& navigator)
 
 NavigatorUserActivation* NavigatorUserActivation::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorUserActivation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorUserActivation>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorUserActivation>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral NavigatorUserActivation::supplementName()
-{
-    return "NavigatorUserActivation"_s;
-}
-
-}
+} // namespace WebCore

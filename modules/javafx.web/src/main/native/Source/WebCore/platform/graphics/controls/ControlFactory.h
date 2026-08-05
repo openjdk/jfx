@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
@@ -52,13 +52,13 @@ class TextAreaPart;
 class TextFieldPart;
 class ToggleButtonPart;
 
-class ControlFactory : public RefCounted<ControlFactory> {
+class ControlFactory : public ThreadSafeRefCounted<ControlFactory> {
     WTF_MAKE_TZONE_ALLOCATED(ControlFactory);
 public:
     virtual ~ControlFactory() = default;
 
     WEBCORE_EXPORT static Ref<ControlFactory> create();
-    WEBCORE_EXPORT static ControlFactory& shared();
+    WEBCORE_EXPORT static ControlFactory& singleton();
 
 #if ENABLE(APPLE_PAY)
     virtual std::unique_ptr<PlatformControl> createPlatformApplePayButton(ApplePayButtonPart&) = 0;
@@ -83,6 +83,14 @@ public:
     virtual std::unique_ptr<PlatformControl> createPlatformTextArea(TextAreaPart&) = 0;
     virtual std::unique_ptr<PlatformControl> createPlatformTextField(TextFieldPart&) = 0;
     virtual std::unique_ptr<PlatformControl> createPlatformToggleButton(ToggleButtonPart&) = 0;
+
+    enum class Type : uint8_t {
+        Adwaita,
+        Empty,
+        IOS,
+        Mac,
+    };
+    virtual Type type() const = 0;
 
 protected:
     ControlFactory() = default;

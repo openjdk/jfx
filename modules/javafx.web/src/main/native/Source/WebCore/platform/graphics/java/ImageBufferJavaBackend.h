@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ImageBufferBackend.h"
-#include <wtf/IsoMalloc.h>
 #include "ImageBuffer.h"
 
 #include "PlatformImage.h"

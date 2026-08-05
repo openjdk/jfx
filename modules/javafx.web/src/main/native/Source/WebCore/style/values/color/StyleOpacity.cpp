@@ -42,7 +42,7 @@ auto CSSValueConversion<Opacity>::operator()(BuilderState& state, const CSSValue
         return 1.0f;
 
     auto opacity = primitiveValue->valueDividingBy100IfPercentage<float>(state.cssToLengthConversionData());
-    return CSS::clampToRange<Opacity::Number::range>(opacity);
+    return CSS::clampToRange<Opacity::Number::range, Opacity::Number::ResolvedValueType>(opacity);
 }
 
 } // namespace Style

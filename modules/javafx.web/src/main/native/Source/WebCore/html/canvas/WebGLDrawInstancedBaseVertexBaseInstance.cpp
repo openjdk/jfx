@@ -34,19 +34,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDrawInstancedBaseVertexBaseInstance);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLDrawInstancedBaseVertexBaseInstance);
 
 WebGLDrawInstancedBaseVertexBaseInstance::WebGLDrawInstancedBaseVertexBaseInstance(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLDrawInstancedBaseVertexBaseInstance)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_base_vertex_base_instance"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::ANGLE_base_vertex_base_instance);
 }
 
 WebGLDrawInstancedBaseVertexBaseInstance::~WebGLDrawInstancedBaseVertexBaseInstance() = default;
 
 bool WebGLDrawInstancedBaseVertexBaseInstance::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_ANGLE_base_vertex_base_instance"_s);
+    return context.supportsExtension(GCGLExtension::ANGLE_base_vertex_base_instance);
 }
 
 void WebGLDrawInstancedBaseVertexBaseInstance::drawArraysInstancedBaseInstanceWEBGL(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei instanceCount, GCGLuint baseInstance)
@@ -66,7 +66,7 @@ void WebGLDrawInstancedBaseVertexBaseInstance::drawArraysInstancedBaseInstanceWE
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context.get() };
 
-        context->protectedGraphicsContextGL()->drawArraysInstancedBaseInstanceANGLE(mode, first, count, instanceCount, baseInstance);
+        context->graphicsContextGL()->drawArraysInstancedBaseInstanceANGLE(mode, first, count, instanceCount, baseInstance);
     }
 
     context->markContextChangedAndNotifyCanvasObserver();
@@ -89,7 +89,7 @@ void WebGLDrawInstancedBaseVertexBaseInstance::drawElementsInstancedBaseVertexBa
     {
         ScopedInspectorShaderProgramHighlight scopedHighlight { context.get() };
 
-        context->protectedGraphicsContextGL()->drawElementsInstancedBaseVertexBaseInstanceANGLE(mode, count, type, offset, instanceCount, baseVertex, baseInstance);
+        context->graphicsContextGL()->drawElementsInstancedBaseVertexBaseInstanceANGLE(mode, count, type, offset, instanceCount, baseVertex, baseInstance);
     }
 
     context->markContextChangedAndNotifyCanvasObserver();

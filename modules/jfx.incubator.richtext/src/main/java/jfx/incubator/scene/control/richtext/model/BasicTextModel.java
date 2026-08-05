@@ -185,7 +185,7 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos, boolean forInsert) {
         return StyleAttributeMap.EMPTY;
     }
 

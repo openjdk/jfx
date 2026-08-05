@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)
 
 #include <functional>
 #include <wtf/Condition.h>
@@ -51,7 +51,7 @@ public:
     WEBCORE_EXPORT static void dispatchBarrier(Function<void ()>&&);
 
 private:
-    friend LazyNeverDestroyed<ScrollingThread>;
+    friend NeverDestroyed<ScrollingThread>;
 
     static ScrollingThread& singleton();
 
@@ -64,4 +64,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)

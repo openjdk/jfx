@@ -35,14 +35,15 @@
 
 namespace WebCore {
 
-Ref<LoadableModuleScript> LoadableModuleScript::create(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriority, const AtomString& crossOriginMode, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
+Ref<LoadableModuleScript> LoadableModuleScript::create(IsInline isInline, const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriority, const AtomString& crossOriginMode, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
 {
-    return adoptRef(*new LoadableModuleScript(nonce, integrity, policy, fetchPriority, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree));
+    return adoptRef(*new LoadableModuleScript(isInline, nonce, integrity, policy, fetchPriority, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree));
 }
 
-LoadableModuleScript::LoadableModuleScript(const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriority, const AtomString& crossOriginMode, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
+LoadableModuleScript::LoadableModuleScript(IsInline isInline, const AtomString& nonce, const AtomString& integrity, ReferrerPolicy policy, RequestPriority fetchPriority, const AtomString& crossOriginMode, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
     : LoadableScript(nonce, policy, fetchPriority, crossOriginMode, charset, initiatorType, isInUserAgentShadowTree)
     , m_parameters(ModuleFetchParameters::create(JSC::ScriptFetchParameters::Type::JavaScript, integrity, /* isTopLevelModule */ true))
+    , m_isInline(isInline == IsInline::Yes)
 {
 }
 
@@ -77,7 +78,7 @@ void LoadableModuleScript::notifyLoadCompleted(UniquedStringImpl& moduleKey)
 
 void LoadableModuleScript::notifyLoadFailed(LoadableScript::Error&& error)
 {
-    m_error = WTFMove(error);
+    m_error = WTF::move(error);
     m_isLoaded = true;
     notifyClientFinished();
 }

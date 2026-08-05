@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,11 +72,11 @@ bool MediaSourcePrivate::hasFutureTime(const MediaTime& currentTime, const Media
 }
 
 MediaSourcePrivate::MediaSourcePrivate(MediaSourcePrivateClient& client)
-    : MediaSourcePrivate(client, RunLoop::currentSingleton())
+    : MediaSourcePrivate(client, WorkQueue::mainSingleton())
 {
 }
 
-MediaSourcePrivate::MediaSourcePrivate(MediaSourcePrivateClient& client, GuaranteedSerialFunctionDispatcher& dispatcher)
+MediaSourcePrivate::MediaSourcePrivate(MediaSourcePrivateClient& client, WorkQueue& dispatcher)
     : m_readyState(MediaSourceReadyState::Closed)
     , m_dispatcher(dispatcher)
     , m_client(client)
@@ -104,30 +104,54 @@ Ref<MediaTimePromise> MediaSourcePrivate::waitForTarget(const SeekTarget& target
     return MediaTimePromise::createAndReject(PlatformMediaError::ClientDisconnected);
 }
 
-Ref<MediaPromise> MediaSourcePrivate::seekToTime(const MediaTime& time)
+void MediaSourcePrivate::seekToTime(const MediaTime& seekTime)
 {
-    if (RefPtr client = this->client())
-        return client->seekToTime(time);
-    return MediaPromise::createAndReject(PlatformMediaError::ClientDisconnected);
+    ensureOnDispatcher([weakThis = ThreadSafeWeakPtr { *this }, seekTime] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        assertIsCurrent(protectedThis->m_dispatcher.get());
+        for (RefPtr sourceBuffer : protectedThis->m_activeSourceBuffers)
+            sourceBuffer->seekToTime(seekTime);
+    });
 }
 
 void MediaSourcePrivate::removeSourceBuffer(SourceBufferPrivate& sourceBuffer)
 {
-    assertIsCurrent(m_dispatcher);
+    assertIsCurrent(m_dispatcher.get());
 
-    ASSERT(m_sourceBuffers.contains(&sourceBuffer));
+    if (auto it = m_bufferedRanges.find(&sourceBuffer); it != m_bufferedRanges.end()) {
+        m_bufferedRanges.remove(it);
+        updateBufferedRanges();
+    }
 
     size_t pos = m_activeSourceBuffers.find(&sourceBuffer);
     if (pos != notFound) {
         m_activeSourceBuffers.removeAt(pos);
         notifyActiveSourceBuffersChanged();
     }
+
+    m_tracksTypes.remove(&sourceBuffer);
+    updateTracksType();
+
+    {
+        Locker locker { m_lock };
+        ASSERT(m_sourceBuffers.contains(&sourceBuffer));
     m_sourceBuffers.removeFirst(&sourceBuffer);
+    }
+}
+
+Vector<Ref<SourceBufferPrivate>> MediaSourcePrivate::sourceBuffers() const
+{
+    Locker locker { m_lock };
+    return m_sourceBuffers.map([](auto& sourceBuffer) -> Ref<SourceBufferPrivate> {
+        return *sourceBuffer;
+    });
 }
 
 void MediaSourcePrivate::sourceBufferPrivateDidChangeActiveState(SourceBufferPrivate& sourceBuffer, bool active)
 {
-    assertIsCurrent(m_dispatcher);
+    assertIsCurrent(m_dispatcher.get());
 
     size_t position = m_activeSourceBuffers.find(&sourceBuffer);
     if (active && position == notFound) {
@@ -145,20 +169,38 @@ void MediaSourcePrivate::sourceBufferPrivateDidChangeActiveState(SourceBufferPri
 
 bool MediaSourcePrivate::hasAudio() const
 {
-    ASSERT(m_dispatcher->isCurrent() || Thread::mayBeGCThread());
-
-    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
-        return sourceBuffer->hasAudio();
-    });
+    return m_tracksCombinedTypes.load().contains(TrackInfoTrackType::Audio);
 }
 
 bool MediaSourcePrivate::hasVideo() const
 {
-    assertIsCurrent(m_dispatcher);
+    return m_tracksCombinedTypes.load().contains(TrackInfoTrackType::Video);
+}
 
-    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
-        return sourceBuffer->hasVideo();
+void MediaSourcePrivate::tracksTypeChanged(SourceBufferPrivate& sourceBuffer, TracksType type)
+{
+    assertIsCurrent(m_dispatcher.get());
+
+    m_tracksTypes.set(&sourceBuffer, type);
+    updateTracksType();
+}
+
+void MediaSourcePrivate::updateTracksType()
+{
+    assertIsCurrent(m_dispatcher.get());
+
+    TracksType tracksCombinedTypes;
+    for (auto type : m_tracksTypes.values())
+        tracksCombinedTypes |= type;
+    if (m_tracksCombinedTypes.exchange(tracksCombinedTypes) != tracksCombinedTypes) {
+        ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis)
+                return;
+            if (RefPtr player = protectedThis->player())
+                player->characteristicsFromMediaSourceChanged();
     });
+    }
 }
 
 void MediaSourcePrivate::durationChanged(const MediaTime& duration)
@@ -167,10 +209,8 @@ void MediaSourcePrivate::durationChanged(const MediaTime& duration)
         Locker locker { m_lock };
     m_duration = duration;
     }
-    ensureOnDispatcher([protectedThis = Ref { *this }, this, duration] {
-    for (auto& sourceBuffer : m_sourceBuffers)
+    for (Ref sourceBuffer : sourceBuffers())
         sourceBuffer->setMediaSourceDuration(duration);
-    });
 }
 
 void MediaSourcePrivate::bufferedChanged(const PlatformTimeRanges& buffered)
@@ -180,8 +220,28 @@ void MediaSourcePrivate::bufferedChanged(const PlatformTimeRanges& buffered)
     m_buffered = buffered;
 }
 
-void MediaSourcePrivate::trackBufferedChanged(SourceBufferPrivate&, Vector<PlatformTimeRanges>&&)
+void MediaSourcePrivate::trackBufferedChanged(SourceBufferPrivate& sourceBuffer, Vector<PlatformTimeRanges>&& ranges)
 {
+    assertIsCurrent(m_dispatcher);
+
+    auto it = m_bufferedRanges.find(&sourceBuffer);
+    if (it == m_bufferedRanges.end())
+        m_bufferedRanges.add(&sourceBuffer, WTF::move(ranges));
+    else
+        it->value = WTF::move(ranges);
+    updateBufferedRanges();
+}
+
+void MediaSourcePrivate::updateBufferedRanges()
+{
+    assertIsCurrent(m_dispatcher);
+
+    PlatformTimeRanges intersectionRange { MediaTime::zeroTime(), MediaTime::positiveInfiniteTime() };
+    for (auto& ranges : m_bufferedRanges.values()) {
+        for (auto& range : ranges)
+            intersectionRange.intersectWith(range);
+    }
+    bufferedChanged(intersectionRange);
 }
 
 PlatformTimeRanges MediaSourcePrivate::buffered() const
@@ -196,6 +256,40 @@ bool MediaSourcePrivate::hasBufferedData() const
     Locker locker { m_lock };
 
     return m_buffered.length();
+}
+
+MediaPlayer::ReadyState MediaSourcePrivate::mediaPlayerReadyState() const
+{
+    return m_mediaPlayerReadyState;
+}
+
+void MediaSourcePrivate::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
+{
+    if (m_mediaPlayerReadyState == readyState)
+        return;
+
+    m_mediaPlayerReadyState = readyState;
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        if (RefPtr player = protectedThis->player())
+            player->readyStateFromMediaSourceChanged();
+    });
+}
+
+void MediaSourcePrivate::markEndOfStream(EndOfStreamStatus status)
+{
+    m_isEnded = true;
+    if (status != EndOfStreamStatus::NoError)
+        return;
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        if (RefPtr player = protectedThis->player())
+            player->mediaSourceHasRetrievedAllData();
+    });
 }
 
 PlatformTimeRanges MediaSourcePrivate::seekable() const
@@ -269,16 +363,6 @@ const PlatformTimeRanges& MediaSourcePrivate::liveSeekableRange() const
     IGNORE_CLANG_WARNINGS_END
 }
 
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-void MediaSourcePrivate::setCDMSession(LegacyCDMSession* session)
-{
-    assertIsCurrent(m_dispatcher);
-
-    for (auto& sourceBuffer : m_sourceBuffers)
-        sourceBuffer->setCDMSession(session);
-}
-#endif
-
 void MediaSourcePrivate::ensureOnDispatcher(Function<void()>&& function) const
 {
     Ref dispatcher = m_dispatcher;
@@ -286,7 +370,15 @@ void MediaSourcePrivate::ensureOnDispatcher(Function<void()>&& function) const
         function();
         return;
     }
-    dispatcher->dispatch(WTFMove(function));
+    dispatcher->dispatch(WTF::move(function));
+}
+
+void MediaSourcePrivate::ensureOnDispatcherSync(NOESCAPE Function<void()>&& function) const
+{
+    if (m_dispatcher->isCurrent())
+        function();
+    else
+        m_dispatcher->dispatchSync(WTF::move(function));
 }
 
 MediaTime MediaSourcePrivate::currentTime() const

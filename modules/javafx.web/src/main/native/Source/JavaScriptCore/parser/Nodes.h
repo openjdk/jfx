@@ -1184,9 +1184,9 @@ namespace JSC {
         ExpressionNode* m_expr;
     };
 
-    class TypeOfResolveNode final : public ExpressionNode {
+    class TypeOfResolveNode final : public ExpressionNode, public ThrowableExpressionData {
     public:
-        TypeOfResolveNode(const JSTokenLocation&, const Identifier&);
+        TypeOfResolveNode(const JSTokenLocation&, const Identifier&, const JSTextPosition&, const JSTextPosition&, const JSTextPosition&);
 
         const Identifier& identifier() const { return m_ident; }
 
@@ -1969,6 +1969,7 @@ namespace JSC {
         bool usesSuperCall() const { return m_features & SuperCallFeature; }
         bool usesSuperProperty() const { return m_features & SuperPropertyFeature; }
         bool usesNewTarget() const { return m_features & NewTargetFeature; }
+        bool isAsyncFunctionWithoutAwait() const { return m_features & AsyncFunctionWithoutAwaitFeature; }
         bool needsActivation() const { return (hasCapturedVariables()) || (m_features & (EvalFeature | WithFeature)); }
         bool hasCapturedVariables() const { return m_varDeclarations.hasCapturedVariables(); }
         bool captures(UniquedStringImpl* uid) { return m_varDeclarations.captures(uid); }

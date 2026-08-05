@@ -1,4 +1,21 @@
 set(WebCore_PRIVATE_FRAMEWORK_HEADERS
+    Modules/Model/Implementation/DDMeshImpl.h
+
+    Modules/Model/InternalAPI/DDFloat3.h
+    Modules/Model/InternalAPI/DDFloat4x4.h
+    Modules/Model/InternalAPI/DDImageAsset.h
+    Modules/Model/InternalAPI/DDMaterialDescriptor.h
+    Modules/Model/InternalAPI/DDMesh.h
+    Modules/Model/InternalAPI/DDMeshDescriptor.h
+    Modules/Model/InternalAPI/DDMeshPart.h
+    Modules/Model/InternalAPI/DDModel.serialization.in
+    Modules/Model/InternalAPI/DDUpdateMaterialDescriptor.h
+    Modules/Model/InternalAPI/DDUpdateMeshDescriptor.h
+    Modules/Model/InternalAPI/DDUpdateTextureDescriptor.h
+    Modules/Model/InternalAPI/DDVertexAttributeFormat.h
+    Modules/Model/InternalAPI/DDVertexLayout.h
+    Modules/Model/InternalAPI/ModelObjectDescriptorBase.h
+
     Modules/ShapeDetection/Interfaces/BarcodeDetectorInterface.h
     Modules/ShapeDetection/Interfaces/BarcodeDetectorOptionsInterface.h
     Modules/ShapeDetection/Interfaces/BarcodeFormatInterface.h
@@ -156,6 +173,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webgpu/Implementation/WebGPUComputePassEncoderImpl.h
     Modules/webgpu/Implementation/WebGPUComputePipelineImpl.h
     Modules/webgpu/Implementation/WebGPUConvertToBackingContext.h
+    Modules/webgpu/Implementation/WebGPUCreateImpl.h
     Modules/webgpu/Implementation/WebGPUDeviceImpl.h
     Modules/webgpu/Implementation/WebGPUDowncastConvertToBackingContext.h
     Modules/webgpu/Implementation/WebGPUExternalTextureImpl.h
@@ -311,21 +329,63 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webgpu/InternalAPI/WebGPUVertexStepMode.h
     Modules/webgpu/InternalAPI/WebGPUXRBinding.h
     Modules/webgpu/InternalAPI/WebGPUXREye.h
+    Modules/webgpu/InternalAPI/WebGPUXRLayerBacking.h
     Modules/webgpu/InternalAPI/WebGPUXRProjectionLayer.h
     Modules/webgpu/InternalAPI/WebGPUXRSubImage.h
     Modules/webgpu/InternalAPI/WebGPUXRView.h
 
     Modules/airplay/PlaybackTargetClientContextIdentifier.h
+    Modules/airplay/WebMediaSessionManager.h
+    Modules/airplay/WebMediaSessionManagerClient.h
 
+    Modules/applepay/ApplePayAutomaticReloadPaymentRequest.h
+    Modules/applepay/ApplePayContactField.h
+    Modules/applepay/ApplePayCouponCodeUpdate.h
+    Modules/applepay/ApplePayDateComponents.h
+    Modules/applepay/ApplePayDateComponentsRange.h
+    Modules/applepay/ApplePayDeferredPaymentRequest.h
+    Modules/applepay/ApplePayDetailsUpdateBase.h
+    Modules/applepay/ApplePayDisbursementRequest.h
+    Modules/applepay/ApplePayError.h
+    Modules/applepay/ApplePayErrorCode.h
+    Modules/applepay/ApplePayErrorContactField.h
+    Modules/applepay/ApplePayFeature.h
+    Modules/applepay/ApplePayInstallmentConfigurationWebCore.h
+    Modules/applepay/ApplePayInstallmentItem.h
+    Modules/applepay/ApplePayInstallmentItemType.h
+    Modules/applepay/ApplePayInstallmentRetailChannel.h
+    Modules/applepay/ApplePayLaterAvailability.h
+    Modules/applepay/ApplePayLineItem.h
     Modules/applepay/ApplePayLogoSystemImage.h
+    Modules/applepay/ApplePayPaymentAuthorizationResult.h
+    Modules/applepay/ApplePayPaymentMethodUpdate.h
+    Modules/applepay/ApplePayPaymentOrderDetails.h
+    Modules/applepay/ApplePayPaymentTiming.h
+    Modules/applepay/ApplePayPaymentTokenContext.h
+    Modules/applepay/ApplePayRecurringPaymentDateUnit.h
+    Modules/applepay/ApplePayRecurringPaymentRequest.h
     Modules/applepay/ApplePaySessionPaymentRequest.h
+    Modules/applepay/ApplePaySetupConfiguration.h
+    Modules/applepay/ApplePaySetupFeatureTypeWebCore.h
+    Modules/applepay/ApplePaySetupFeatureWebCore.h
+    Modules/applepay/ApplePaySetupWebCore.h
+    Modules/applepay/ApplePayShippingContactEditingMode.h
+    Modules/applepay/ApplePayShippingContactUpdate.h
+    Modules/applepay/ApplePayShippingMethod.h
+    Modules/applepay/ApplePayShippingMethodUpdate.h
     Modules/applepay/Payment.h
     Modules/applepay/PaymentContact.h
     Modules/applepay/PaymentCoordinator.h
     Modules/applepay/PaymentCoordinatorClient.h
     Modules/applepay/PaymentHeaders.h
+    Modules/applepay/PaymentInstallmentConfigurationWebCore.h
     Modules/applepay/PaymentMerchantSession.h
     Modules/applepay/PaymentMethod.h
+    Modules/applepay/PaymentSession.h
+    Modules/applepay/PaymentSessionError.h
+    Modules/applepay/PaymentSummaryItems.h
+
+    Modules/applepay-ams-ui/ApplePayAMSUIRequest.h
 
     Modules/applicationmanifest/ApplicationManifest.h
     Modules/applicationmanifest/ApplicationManifestParser.h
@@ -349,22 +409,27 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/contact-picker/ContactInfo.h
     Modules/contact-picker/ContactProperty.h
     Modules/contact-picker/ContactsRequestData.h
+    Modules/contact-picker/ContactsSelectOptions.h
 
     Modules/cookie-consent/CookieConsentDecisionResult.h
 
     Modules/cookie-store/CookieChangeSubscription.h
     Modules/cookie-store/CookieStoreGetOptions.h
+    Modules/cookie-store/CookieStoreManager.h
 
+    Modules/credentialmanagement/BasicCredential.h
     Modules/credentialmanagement/CredentialRequestOptions.h
+    Modules/credentialmanagement/MediationRequirement.h
 
+    Modules/encryptedmedia/CDM.h
     Modules/encryptedmedia/CDMClient.h
     Modules/encryptedmedia/MediaKeySystemClient.h
     Modules/encryptedmedia/MediaKeySystemController.h
     Modules/encryptedmedia/MediaKeySystemRequest.h
     Modules/encryptedmedia/MediaKeySystemRequestIdentifier.h
-
     Modules/encryptedmedia/legacy/LegacyCDM.h
     Modules/encryptedmedia/legacy/LegacyCDMPrivate.h
+    Modules/encryptedmedia/legacy/LegacyCDMPrivateClearKey.h
 
     Modules/fetch/FetchBodyConsumer.h
     Modules/fetch/FetchBodySource.h
@@ -373,9 +438,15 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/fetch/FetchIdentifier.h
     Modules/fetch/FetchLoader.h
     Modules/fetch/FetchLoaderClient.h
+    Modules/fetch/FetchReferrerPolicy.h
+    Modules/fetch/FetchRequestCache.h
     Modules/fetch/FetchRequestCredentials.h
     Modules/fetch/FetchRequestDestination.h
+    Modules/fetch/FetchRequestInit.h
     Modules/fetch/FetchRequestMode.h
+    Modules/fetch/FetchRequestRedirect.h
+    Modules/fetch/FetchResponse.h
+    Modules/fetch/IPAddressSpace.h
     Modules/fetch/RequestPriority.h
 
     Modules/filesystem/FileSystemDirectoryHandle.h
@@ -399,6 +470,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/gamepad/GamepadHapticEffectType.h
     Modules/gamepad/NavigatorGamepad.h
 
+    Modules/geolocation/GeoNotifier.h
     Modules/geolocation/Geolocation.h
     Modules/geolocation/GeolocationClient.h
     Modules/geolocation/GeolocationController.h
@@ -412,6 +484,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/geolocation/PositionOptions.h
 
     Modules/highlight/AppHighlight.h
+    Modules/highlight/AppHighlightRangeData.h
+    Modules/highlight/AppHighlightStorage.h
     Modules/highlight/Highlight.h
     Modules/highlight/HighlightRegistry.h
     Modules/highlight/HighlightVisibility.h
@@ -419,15 +493,16 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/identity/CredentialRequestCoordinator.h
     Modules/identity/CredentialRequestCoordinatorClient.h
     Modules/identity/DigitalCredential.h
-    Modules/identity/DigitalCredentialRequest.h
+    Modules/identity/DigitalCredentialGetRequest.h
     Modules/identity/DigitalCredentialRequestOptions.h
     Modules/identity/DigitalCredentialsRequestData.h
     Modules/identity/DigitalCredentialsResponseData.h
     Modules/identity/IdentityCredentialProtocol.h
 
+    Modules/identity/dummy/DummyCredentialRequestCoordinatorClient.h
+
     Modules/identity/protocols/DigitalCredentialsProtocols.h
     Modules/identity/protocols/UnvalidatedDigitalCredentialRequest.h
-
     Modules/identity/protocols/ISO18013/ISO18013.h
     Modules/identity/protocols/ISO18013/ISO18013DocumentRequest.h
     Modules/identity/protocols/ISO18013/ISO18013DocumentRequestSet.h
@@ -436,21 +511,22 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/identity/protocols/ISO18013/MobileDocumentRequest.h
     Modules/identity/protocols/ISO18013/ValidatedMobileDocumentRequest.h
 
-    Modules/identity/protocols/openid/OpenID4VPRequest.h
-
-    Modules/identity/dummy/DummyCredentialRequestCoordinatorClient.h
-
     Modules/indexeddb/IDBActiveDOMObject.h
+    Modules/indexeddb/IDBActiveDOMObjectInlines.h
+    Modules/indexeddb/IDBCursor.h
+    Modules/indexeddb/IDBDatabase.h
     Modules/indexeddb/IDBDatabaseIdentifier.h
     Modules/indexeddb/IDBDatabaseNameAndVersionRequest.h
     Modules/indexeddb/IDBGetAllResult.h
     Modules/indexeddb/IDBGetResult.h
+    Modules/indexeddb/IDBIndex.h
     Modules/indexeddb/IDBIndexIdentifier.h
     Modules/indexeddb/IDBKey.h
     Modules/indexeddb/IDBKeyData.h
     Modules/indexeddb/IDBKeyPath.h
     Modules/indexeddb/IDBKeyRange.h
     Modules/indexeddb/IDBKeyRangeData.h
+    Modules/indexeddb/IDBObjectStore.h
     Modules/indexeddb/IDBObjectStoreIdentifier.h
     Modules/indexeddb/IDBOpenDBRequest.h
     Modules/indexeddb/IDBRequest.h
@@ -459,15 +535,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/indexeddb/IDBTransactionMode.h
     Modules/indexeddb/IDBValue.h
     Modules/indexeddb/IndexedDB.h
-
     Modules/indexeddb/client/IDBConnectionProxy.h
     Modules/indexeddb/client/IDBConnectionToServer.h
     Modules/indexeddb/client/IDBConnectionToServerDelegate.h
     Modules/indexeddb/client/TransactionOperation.h
-
     Modules/indexeddb/server/IDBBackingStore.h
     Modules/indexeddb/server/IDBConnectionToClient.h
     Modules/indexeddb/server/IDBConnectionToClientDelegate.h
+    Modules/indexeddb/server/IDBSerialization.h
     Modules/indexeddb/server/IDBServer.h
     Modules/indexeddb/server/IndexValueEntry.h
     Modules/indexeddb/server/IndexValueStore.h
@@ -480,8 +555,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/indexeddb/server/UniqueIDBDatabaseConnection.h
     Modules/indexeddb/server/UniqueIDBDatabaseManager.h
     Modules/indexeddb/server/UniqueIDBDatabaseTransaction.h
-
-    Modules/indexeddb/shared/IndexKey.h
     Modules/indexeddb/shared/IDBCursorInfo.h
     Modules/indexeddb/shared/IDBCursorRecord.h
     Modules/indexeddb/shared/IDBDatabaseConnectionIdentifier.h
@@ -498,21 +571,22 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/indexeddb/shared/IDBResourceIdentifier.h
     Modules/indexeddb/shared/IDBResultData.h
     Modules/indexeddb/shared/IDBTransactionInfo.h
+    Modules/indexeddb/shared/IndexKey.h
 
-    Modules/mediasession/NavigatorMediaSession.h
-    Modules/mediasession/MediaSession.h
     Modules/mediasession/MediaImage.h
     Modules/mediasession/MediaMetadata.h
-    Modules/mediasession/MediaSessionActionDetails.h
+    Modules/mediasession/MediaMetadataInit.h
     Modules/mediasession/MediaPositionState.h
+    Modules/mediasession/MediaSession.h
+    Modules/mediasession/MediaSessionAction.h
+    Modules/mediasession/MediaSessionActionDetails.h
     Modules/mediasession/MediaSessionActionHandler.h
-    Modules/mediasession/MediaSessionPlaybackState.h
+    Modules/mediasession/MediaSessionCoordinator.h
     Modules/mediasession/MediaSessionCoordinatorPrivate.h
     Modules/mediasession/MediaSessionCoordinatorState.h
+    Modules/mediasession/MediaSessionPlaybackState.h
     Modules/mediasession/MediaSessionReadyState.h
-    Modules/mediasession/MediaSessionCoordinator.h
-    Modules/mediasession/MediaMetadataInit.h
-    Modules/mediasession/MediaSessionAction.h
+    Modules/mediasession/NavigatorMediaSession.h
 
     Modules/mediasource/MediaSourceHandle.h
     Modules/mediasource/SampleMap.h
@@ -522,41 +596,62 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/mediastream/LongRange.h
     Modules/mediastream/MediaAccessDenialReason.h
     Modules/mediastream/MediaDeviceHashSalts.h
+    Modules/mediastream/MediaDeviceInfo.h
+    Modules/mediastream/MediaDevices.h
     Modules/mediastream/MediaStreamTrack.h
+    Modules/mediastream/MediaStreamTrackEvent.h
     Modules/mediastream/MediaTrackCapabilities.h
     Modules/mediastream/MediaTrackConstraints.h
     Modules/mediastream/RTCController.h
+    Modules/mediastream/RTCDTMFSender.h
+    Modules/mediastream/RTCDTMFToneChangeEvent.h
     Modules/mediastream/RTCDataChannel.h
+    Modules/mediastream/RTCDataChannelEvent.h
     Modules/mediastream/RTCDataChannelRemoteHandler.h
     Modules/mediastream/RTCDataChannelRemoteSource.h
     Modules/mediastream/RTCError.h
     Modules/mediastream/RTCErrorDetailType.h
+    Modules/mediastream/RTCIceCandidate.h
     Modules/mediastream/RTCIceCandidateFields.h
     Modules/mediastream/RTCIceCandidateType.h
     Modules/mediastream/RTCIceComponent.h
     Modules/mediastream/RTCIceProtocol.h
+    Modules/mediastream/RTCIceRole.h
+    Modules/mediastream/RTCIceServerTransportProtocol.h
     Modules/mediastream/RTCIceTcpCandidateType.h
     Modules/mediastream/RTCNetworkManager.h
+    Modules/mediastream/RTCPeerConnectionIceEvent.h
+    Modules/mediastream/RTCRtpSFrameTransformer.h
     Modules/mediastream/RTCRtpScriptTransformer.h
+    Modules/mediastream/RTCRtpTransceiver.h
     Modules/mediastream/RTCRtpTransformBackend.h
     Modules/mediastream/RTCRtpTransformableFrame.h
+    Modules/mediastream/RTCSessionDescription.h
+    Modules/mediastream/RTCStatsReport.h
+    Modules/mediastream/SFrameUtils.h
     Modules/mediastream/STUNMessageParsing.h
     Modules/mediastream/UserMediaClient.h
     Modules/mediastream/UserMediaController.h
     Modules/mediastream/UserMediaRequest.h
-
     Modules/mediastream/libwebrtc/LibWebRTCUtils.h
 
+    Modules/model-element/DDModelPlayer.h
     Modules/model-element/HTMLModelElement.h
     Modules/model-element/HTMLModelElementCamera.h
     Modules/model-element/ModelPlayer.h
+    Modules/model-element/ModelPlayerAccessibilityChildren.h
     Modules/model-element/ModelPlayerAnimationState.h
     Modules/model-element/ModelPlayerClient.h
+    Modules/model-element/ModelPlayerGraphicsLayerConfiguration.h
+    Modules/model-element/ModelPlayerIdentifier.h
     Modules/model-element/ModelPlayerProvider.h
     Modules/model-element/ModelPlayerTransformState.h
 
     Modules/model-element/dummy/DummyModelPlayer.h
     Modules/model-element/dummy/DummyModelPlayerProvider.h
+
+    Modules/model-element/scenekit/SceneKitModelLoaderClient.h
+    Modules/model-element/scenekit/SceneKitModelPlayer.h
 
     Modules/notifications/Notification.h
     Modules/notifications/NotificationClient.h
@@ -564,11 +659,15 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/notifications/NotificationData.h
     Modules/notifications/NotificationDirection.h
     Modules/notifications/NotificationEventType.h
+    Modules/notifications/NotificationOptions.h
     Modules/notifications/NotificationOptionsPayload.h
     Modules/notifications/NotificationPayload.h
     Modules/notifications/NotificationPermission.h
     Modules/notifications/NotificationPermissionCallback.h
     Modules/notifications/NotificationResources.h
+    Modules/notifications/NotificationResourcesLoader.h
+
+    Modules/paymentrequest/PaymentSessionBase.h
 
     Modules/permissions/MainThreadPermissionObserver.h
     Modules/permissions/MainThreadPermissionObserverIdentifier.h
@@ -577,8 +676,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/permissions/PermissionName.h
     Modules/permissions/PermissionObserver.h
     Modules/permissions/PermissionQuerySource.h
-    Modules/permissions/Permissions.h
     Modules/permissions/PermissionState.h
+    Modules/permissions/Permissions.h
+
+    Modules/pictureinpicture/DocumentPictureInPicture.h
+    Modules/pictureinpicture/HTMLVideoElementPictureInPicture.h
+    Modules/pictureinpicture/PictureInPictureEvent.h
+    Modules/pictureinpicture/PictureInPictureWindow.h
 
     Modules/plugins/PluginReplacement.h
     Modules/plugins/YouTubePluginReplacement.h
@@ -586,6 +690,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/push-api/PushCrypto.h
     Modules/push-api/PushDatabase.h
     Modules/push-api/PushEncryptionKeyName.h
+    Modules/push-api/PushEvent.h
+    Modules/push-api/PushEventInit.h
     Modules/push-api/PushManager.h
     Modules/push-api/PushMessageCrypto.h
     Modules/push-api/PushPermissionState.h
@@ -596,6 +702,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/push-api/PushSubscriptionJSON.h
     Modules/push-api/PushSubscriptionOptionsInit.h
     Modules/push-api/PushSubscriptionOwner.h
+
+    Modules/remoteplayback/RemotePlayback.h
 
     Modules/reporting/DeprecationReportBody.h
     Modules/reporting/Report.h
@@ -629,12 +737,16 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/storage/StorageProvider.h
     Modules/storage/WorkerStorageConnection.h
 
-    Modules/streams/ReadableStreamSink.h
     Modules/streams/ReadableStreamSource.h
+    Modules/streams/ReadableStreamToSharedBufferSink.h
     Modules/streams/WritableStream.h
     Modules/streams/WritableStreamSink.h
 
     Modules/system-preview/ARKitBadgeSystemImage.h
+
+    Modules/url-pattern/URLPattern.h
+    Modules/url-pattern/URLPatternComponent.h
+    Modules/url-pattern/URLPatternInit.h
 
     Modules/web-locks/WebLock.h
     Modules/web-locks/WebLockIdentifier.h
@@ -648,20 +760,33 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webauthn/AuthenticationExtensionsClientInputsJSON.h
     Modules/webauthn/AuthenticationExtensionsClientOutputs.h
     Modules/webauthn/AuthenticationExtensionsClientOutputsJSON.h
+    Modules/webauthn/AuthenticationResponseJSON.h
     Modules/webauthn/AuthenticatorAssertionResponse.h
+    Modules/webauthn/AuthenticatorAttachment.h
+    Modules/webauthn/AuthenticatorAttestationResponse.h
     Modules/webauthn/AuthenticatorCoordinator.h
     Modules/webauthn/AuthenticatorCoordinatorClient.h
+    Modules/webauthn/AuthenticatorResponse.h
     Modules/webauthn/AuthenticatorResponseData.h
+    Modules/webauthn/AuthenticatorSelectionCriteria.h
     Modules/webauthn/AuthenticatorTransport.h
+    Modules/webauthn/CredentialPropertiesOutput.h
     Modules/webauthn/CurrentUserDetailsOptions.h
+    Modules/webauthn/PublicKeyCredential.h
     Modules/webauthn/PublicKeyCredentialCreationOptions.h
     Modules/webauthn/PublicKeyCredentialCreationOptionsJSON.h
     Modules/webauthn/PublicKeyCredentialDescriptor.h
     Modules/webauthn/PublicKeyCredentialDescriptorJSON.h
+    Modules/webauthn/PublicKeyCredentialEntity.h
     Modules/webauthn/PublicKeyCredentialParameters.h
     Modules/webauthn/PublicKeyCredentialRequestOptions.h
     Modules/webauthn/PublicKeyCredentialRequestOptionsJSON.h
+    Modules/webauthn/PublicKeyCredentialRpEntity.h
     Modules/webauthn/PublicKeyCredentialType.h
+    Modules/webauthn/PublicKeyCredentialUserEntity.h
+    Modules/webauthn/PublicKeyCredentialUserEntityJSON.h
+    Modules/webauthn/RegistrationResponseJSON.h
+    Modules/webauthn/ResidentKeyRequirement.h
     Modules/webauthn/UnknownCredentialOptions.h
     Modules/webauthn/UserVerificationRequirement.h
     Modules/webauthn/WebAuthenticationConstants.h
@@ -681,10 +806,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webauthn/fido/FidoConstants.h
     Modules/webauthn/fido/FidoHidMessage.h
     Modules/webauthn/fido/FidoHidPacket.h
+    Modules/webauthn/fido/FidoParsingUtils.h
+    Modules/webauthn/fido/Pin.h
     Modules/webauthn/fido/U2fCommandConstructor.h
     Modules/webauthn/fido/U2fResponseConverter.h
 
     Modules/webcodecs/VideoColorSpaceInit.h
+    Modules/webcodecs/VideoMatrixCoefficients.h
     Modules/webcodecs/WebCodecsAlphaOption.h
     Modules/webcodecs/WebCodecsAudioData.h
     Modules/webcodecs/WebCodecsAudioInternalData.h
@@ -698,6 +826,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webcodecs/WebCodecsVideoFrame.h
     Modules/webcodecs/WebCodecsVideoFrameData.h
 
+    Modules/webdatabase/DatabaseContext.h
     Modules/webdatabase/DatabaseDetails.h
     Modules/webdatabase/DatabaseManager.h
     Modules/webdatabase/DatabaseManagerClient.h
@@ -705,6 +834,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webdatabase/OriginLock.h
 
     Modules/websockets/ThreadableWebSocketChannel.h
+    Modules/websockets/ThreadableWebSocketChannelClientWrapper.h
     Modules/websockets/WebSocketChannelClient.h
     Modules/websockets/WebSocketChannelInspector.h
     Modules/websockets/WebSocketDeflateFramer.h
@@ -712,81 +842,133 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/websockets/WebSocketExtensionDispatcher.h
     Modules/websockets/WebSocketExtensionProcessor.h
     Modules/websockets/WebSocketFrame.h
-    Modules/websockets/WebSocketIdentifier.h
     Modules/websockets/WebSocketHandshake.h
+    Modules/websockets/WebSocketIdentifier.h
+    Modules/websockets/WorkerThreadableWebSocketChannel.h
 
-    Modules/webtransport/WebTransportBidirectionalStreamConstructionParameters.h
+    Modules/webtransport/DatagramsReadableMode.h
+    Modules/webtransport/WebTransportCongestionControl.h
+    Modules/webtransport/WebTransportConnectionInfo.h
+    Modules/webtransport/WebTransportConnectionStats.h
+    Modules/webtransport/WebTransportDatagramStats.h
+    Modules/webtransport/WebTransportHash.h
+    Modules/webtransport/WebTransportOptions.h
     Modules/webtransport/WebTransportReceiveStreamStats.h
+    Modules/webtransport/WebTransportReliabilityMode.h
+    Modules/webtransport/WebTransportSendGroup.h
+    Modules/webtransport/WebTransportSendStreamSink.h
     Modules/webtransport/WebTransportSendStreamStats.h
     Modules/webtransport/WebTransportSession.h
     Modules/webtransport/WebTransportSessionClient.h
+    Modules/webtransport/WorkerWebTransportSession.h
+
+    Modules/webxr/XRCanvasConfiguration.h
+    Modules/webxr/XRGPUProjectionLayerInit.h
+    Modules/webxr/XRLayerBacking.h
+    Modules/webxr/XRHitTestTrackableType.h
 
     Scripts/generate-log-declarations.py
 
+    accessibility/AXAttributeCacheScope.h
+    accessibility/AXComputedObjectAttributeCache.h
     accessibility/AXCoreObject.h
     accessibility/AXGeometryManager.h
+    accessibility/AXID.h
+    accessibility/AXListHelpers.h
     accessibility/AXLogger.h
+    accessibility/AXLoggerBase.h
+    accessibility/AXNotifications.h
     accessibility/AXObjectCache.h
+    accessibility/AXObjectCacheInlines.h
+    accessibility/AXObjectRareData.h
     accessibility/AXSearchManager.h
+    accessibility/AXStitchGroup.h
+    accessibility/AXStitchUtilities.h
     accessibility/AXTextMarker.h
     accessibility/AXTextRun.h
     accessibility/AXTextStateChangeIntent.h
     accessibility/AXTreeStore.h
-    accessibility/AccessibilityListBox.h
+    accessibility/AXTreeStoreInlines.h
+    accessibility/AXUtilities.h
     accessibility/AccessibilityMenuListPopup.h
     accessibility/AccessibilityMockObject.h
     accessibility/AccessibilityNodeObject.h
     accessibility/AccessibilityObject.h
+    accessibility/AccessibilityObjectInlines.h
     accessibility/AccessibilityRenderObject.h
+    accessibility/AccessibilityRole.h
     accessibility/AccessibilityScrollView.h
     accessibility/ForcedAccessibilityValue.h
-
     accessibility/isolatedtree/AXIsolatedObject.h
     accessibility/isolatedtree/AXIsolatedTree.h
 
     animation/AcceleratedEffectStackUpdater.h
-    animation/AnimationMalloc.h
+    animation/AcceleratedTimelinesUpdater.h
+    animation/AnimationEffect.h
+    animation/AnimationEffectPhase.h
+    animation/AnimationEffectTiming.h
+    animation/AnimationEventBase.h
     animation/AnimationFrameRatePreset.h
+    animation/AnimationMalloc.h
+    animation/AnimationPlaybackEvent.h
+    animation/AnimationPlaybackEventInit.h
     animation/AnimationTimeline.h
     animation/AnimationTimelinesController.h
-    animation/CustomAnimationOptions.h
+    animation/BasicEffectTiming.h
+    animation/CSSAnimation.h
     animation/CompositeOperation.h
+    animation/CompositeOperationOrAuto.h
+    animation/ComputedEffectTiming.h
+    animation/CustomAnimationOptions.h
+    animation/DocumentTimeline.h
+    animation/DocumentTimelineOptions.h
     animation/EffectTiming.h
+    animation/ElementAnimationRareData.h
     animation/FillMode.h
     animation/FrameRateAligner.h
     animation/GetAnimationsOptions.h
     animation/IterationCompositeOperation.h
     animation/KeyframeAnimationOptions.h
+    animation/KeyframeEffect.h
     animation/KeyframeEffectOptions.h
+    animation/KeyframeEffectStack.h
     animation/KeyframeInterpolation.h
+    animation/OptionalEffectTiming.h
     animation/PlaybackDirection.h
     animation/ScrollAxis.h
     animation/ScrollTimeline.h
     animation/ScrollTimelineOptions.h
+    animation/StyleOriginatedAnimation.h
     animation/StyleOriginatedTimelinesController.h
-    animation/TimelineRange.h
     animation/TimelineRangeOffset.h
+    animation/TimelineRangeValue.h
     animation/ViewTimeline.h
     animation/ViewTimelineOptions.h
+    animation/WebAnimation.h
     animation/WebAnimationTime.h
     animation/WebAnimationTypes.h
+    animation/WebAnimationUtilities.h
 
     automation/AutomationInstrumentation.h
 
     bindings/IDLTypes.h
-
     bindings/js/BufferSource.h
+    bindings/js/CachedModuleScriptLoader.h
     bindings/js/CachedScriptFetcher.h
     bindings/js/CommonVM.h
     bindings/js/DOMPromiseProxy.h
     bindings/js/DOMWrapperWorld.h
     bindings/js/ExceptionDetails.h
-    bindings/js/GCController.h
+    bindings/js/GarbageCollectionController.h
     bindings/js/IDBBindingUtilities.h
     bindings/js/JSCSSRuleCustom.h
     bindings/js/JSCSSStyleDeclarationCustom.h
+    bindings/js/JSDOMAbstractOperations.h
+    bindings/js/JSDOMAsyncIterator.h
+    bindings/js/JSDOMAttribute.h
     bindings/js/JSDOMBinding.h
     bindings/js/JSDOMBindingSecurity.h
+    bindings/js/JSDOMBindingSecurityInlines.h
     bindings/js/JSDOMCastThisValue.h
     bindings/js/JSDOMConvert.h
     bindings/js/JSDOMConvertAny.h
@@ -805,6 +987,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/JSDOMConvertNullable.h
     bindings/js/JSDOMConvertNumbers.h
     bindings/js/JSDOMConvertObject.h
+    bindings/js/JSDOMConvertPromise.h
     bindings/js/JSDOMConvertRecord.h
     bindings/js/JSDOMConvertResult.h
     bindings/js/JSDOMConvertSequences.h
@@ -812,12 +995,16 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/JSDOMConvertStrings.h
     bindings/js/JSDOMConvertUndefined.h
     bindings/js/JSDOMConvertUnion.h
+    bindings/js/JSDOMConvertVariadic.h
     bindings/js/JSDOMConvertWebGL.h
     bindings/js/JSDOMConvertXPathNSResolver.h
     bindings/js/JSDOMExceptionHandling.h
     bindings/js/JSDOMGlobalObject.h
     bindings/js/JSDOMGuardedObject.h
+    bindings/js/JSDOMIterator.h
     bindings/js/JSDOMOperation.h
+    bindings/js/JSDOMOperationReturningPromise.h
+    bindings/js/JSDOMPromise.h
     bindings/js/JSDOMPromiseDeferred.h
     bindings/js/JSDOMPromiseDeferredForward.h
     bindings/js/JSDOMWindowBase.h
@@ -826,6 +1013,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/JSDocumentCustom.h
     bindings/js/JSElementCustom.h
     bindings/js/JSEventCustom.h
+    bindings/js/JSEventListener.h
     bindings/js/JSEventTargetCustom.h
     bindings/js/JSExecState.h
     bindings/js/JSMediaListCustom.h
@@ -837,8 +1025,12 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/JSStyleSheetCustom.h
     bindings/js/JSValueInWrappedObject.h
     bindings/js/JSWindowProxy.h
+    bindings/js/ModuleFetchFailureKind.h
+    bindings/js/ModuleScriptLoader.h
+    bindings/js/ModuleScriptLoaderClient.h
     bindings/js/ReadableStreamDefaultController.h
     bindings/js/RunJavaScriptParameters.h
+    bindings/js/ScheduledAction.h
     bindings/js/ScriptCachedFrameData.h
     bindings/js/ScriptController.h
     bindings/js/ScriptWrappable.h
@@ -855,11 +1047,12 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/js/WorkerScriptFetcher.h
 
     bridge/IdentifierRep.h
+
+    bridge/jsc/BridgeJSC.h
+
     bridge/runtime_method.h
     bridge/runtime_object.h
     bridge/runtime_root.h
-
-    bridge/jsc/BridgeJSC.h
 
     contentextensions/CombinedFiltersAlphabet.h
     contentextensions/CombinedURLFilters.h
@@ -874,12 +1067,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     contentextensions/ContentExtensionStyleSheet.h
     contentextensions/ContentExtensionsBackend.h
     contentextensions/ContentExtensionsDebugging.h
+    contentextensions/ContentRuleListMatchedRule.h
     contentextensions/ContentRuleListResults.h
     contentextensions/DFA.h
     contentextensions/DFABytecode.h
     contentextensions/DFABytecodeCompiler.h
     contentextensions/DFABytecodeInterpreter.h
     contentextensions/DFACombiner.h
+    contentextensions/DFAMinimizer.h
     contentextensions/DFANode.h
     contentextensions/ImmutableNFA.h
     contentextensions/ImmutableNFANodeBuilder.h
@@ -891,9 +1086,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     contentextensions/Term.h
     contentextensions/URLFilterParser.h
 
+    crypto/CommonCryptoUtilities.h
+    crypto/CryptoAlgorithm.h
     crypto/CryptoAlgorithmIdentifier.h
+    crypto/CryptoAlgorithmParameters.h
     crypto/CryptoKey.h
     crypto/CryptoKeyData.h
+    crypto/CryptoKeyFormat.h
+    crypto/CryptoKeyPair.h
     crypto/CryptoKeyType.h
     crypto/CryptoKeyUsage.h
     crypto/JsonWebKey.h
@@ -901,35 +1101,60 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     crypto/SerializedCryptoKeyWrap.h
     crypto/WrappedCryptoKey.h
 
+    crypto/algorithms/CryptoAlgorithmAESCBC.h
+    crypto/algorithms/CryptoAlgorithmECDH.h
+
     crypto/keys/CryptoAesKeyAlgorithm.h
     crypto/keys/CryptoEcKeyAlgorithm.h
     crypto/keys/CryptoHmacKeyAlgorithm.h
+    crypto/keys/CryptoKeyAES.h
     crypto/keys/CryptoKeyAlgorithm.h
+    crypto/keys/CryptoKeyEC.h
+    crypto/keys/CryptoKeyHMAC.h
+    crypto/keys/CryptoKeyOKP.h
+    crypto/keys/CryptoKeyRSAComponents.h
     crypto/keys/CryptoRsaHashedKeyAlgorithm.h
     crypto/keys/CryptoRsaKeyAlgorithm.h
 
+    crypto/parameters/CryptoAlgorithmAesCbcCfbParams.h
+
     css/CSSAttrValue.h
     css/CSSColorValue.h
+    css/CSSComputedStyleDeclaration.h
     css/CSSConditionRule.h
     css/CSSCounterStyle.h
     css/CSSCounterStyleDescriptors.h
     css/CSSCounterStyleRegistry.h
     css/CSSCounterStyleRule.h
     css/CSSCounterValue.h
+    css/CSSCursorImageValue.h
     css/CSSCustomPropertyValue.h
     css/CSSFontFaceDescriptors.h
     css/CSSFontFaceRule.h
+    css/CSSFontFeatureValue.h
     css/CSSFontPaletteValuesRule.h
+    css/CSSFunctionValue.h
+    css/CSSGradientValue.h
     css/CSSGridIntegerRepeatValue.h
     css/CSSGroupingRule.h
+    css/CSSImageSetValue.h
+    css/CSSImageValue.h
     css/CSSImportRule.h
     css/CSSMediaRule.h
+    css/CSSNamedImageValue.h
+    css/CSSNamespaceRule.h
+    css/CSSNestedDeclarations.h
+    css/CSSPageDescriptors.h
     css/CSSPageRule.h
+    css/CSSPositionTryDescriptors.h
     css/CSSPrimitiveValue.h
     css/CSSPrimitiveValueMappings.h
     css/CSSProperty.h
+    css/CSSPropertyInitialValues.h
+    css/CSSPropertySourceData.h
     css/CSSQuadValue.h
     css/CSSRectValue.h
+    css/CSSReflectValue.h
     css/CSSRegisteredCustomProperty.h
     css/CSSRule.h
     css/CSSRuleList.h
@@ -945,11 +1170,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSUnits.h
     css/CSSValue.h
     css/CSSValueList.h
+    css/CSSValuePair.h
+    css/CSSValuePool.h
     css/CSSVariableData.h
     css/CSSVariableReferenceValue.h
+    css/CSSViewValue.h
     css/CSSWideKeyword.h
-    css/CSSPageDescriptors.h
     css/ComputedStyleDependencies.h
+    css/DOMCSSPaintWorklet.h
     css/DeprecatedCSSOMCounter.h
     css/DeprecatedCSSOMPrimitiveValue.h
     css/DeprecatedCSSOMRGBColor.h
@@ -962,19 +1190,21 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/MediaList.h
     css/MediaQueryParserContext.h
     css/MutableStyleProperties.h
-    css/Quad.h
     css/PropertySetCSSDescriptors.h
+    css/Quad.h
     css/Rect.h
     css/RectBase.h
     css/ShorthandSerializer.h
     css/StyleProperties.h
     css/StylePropertiesInlines.h
     css/StyleRule.h
+    css/StyleRuleImport.h
     css/StyleRuleType.h
     css/StyleSheet.h
     css/StyleSheetContents.h
     css/StyleSheetList.h
 
+    css/calc/CSSCalcOperator.h
     css/calc/CSSCalcRandomCachingKey.h
     css/calc/CSSCalcRandomCachingKeyMap.h
     css/calc/CSSCalcSymbolTable.h
@@ -983,14 +1213,19 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/calc/CSSCalcType.h
     css/calc/CSSCalcValue.h
 
+    css/parser/CSSCustomPropertySyntax.h
     css/parser/CSSParser.h
     css/parser/CSSParserContext.h
     css/parser/CSSParserEnum.h
+    css/parser/CSSParserFastPaths.h
     css/parser/CSSParserIdioms.h
     css/parser/CSSParserMode.h
     css/parser/CSSParserToken.h
     css/parser/CSSParserTokenRange.h
+    css/parser/CSSPropertyParser.h
     css/parser/CSSPropertyParserConsumer+Color.h
+    css/parser/CSSPropertyParserResult.h
+    css/parser/CSSPropertyParserState.h
     css/parser/CSSSelectorParser.h
     css/parser/CSSSelectorParserContext.h
     css/parser/CSSTokenizer.h
@@ -1004,7 +1239,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/typedom/CSSKeywordValue.h
     css/typedom/CSSNumericValue.h
     css/typedom/CSSStyleValue.h
-
     css/typedom/numeric/CSSNumericBaseType.h
     css/typedom/numeric/CSSNumericType.h
 
@@ -1016,6 +1250,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     css/values/borders/CSSBorderRadius.h
     css/values/borders/CSSBoxShadow.h
+    css/values/borders/CSSBoxShadowProperty.h
+
+    css/values/color-adjust/CSSColorScheme.h
 
     css/values/color/CSSColor.h
     css/values/color/CSSColorDescriptors.h
@@ -1023,8 +1260,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/color/CSSHexColor.h
     css/values/color/CSSKeywordColor.h
     css/values/color/CSSResolvedColor.h
-
-    css/values/color-adjust/CSSColorScheme.h
 
     css/values/grid/CSSGridNamedAreaMap.h
     css/values/grid/CSSGridTemplateAreas.h
@@ -1037,6 +1272,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/values/primitives/CSSPrimitiveData.h
     css/values/primitives/CSSPrimitiveKeywordList.h
     css/values/primitives/CSSPrimitiveNumeric.h
+    css/values/primitives/CSSPrimitiveNumericCategory.h
     css/values/primitives/CSSPrimitiveNumericConcepts.h
     css/values/primitives/CSSPrimitiveNumericOrKeyword.h
     css/values/primitives/CSSPrimitiveNumericRange.h
@@ -1071,7 +1307,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ActiveDOMCallback.h
     dom/ActiveDOMObject.h
     dom/AddEventListenerOptions.h
+    dom/AddEventListenerOptionsInlines.h
     dom/AsyncNodeDeletionQueue.h
+    dom/AsyncNodeDeletionQueueInlines.h
     dom/Attr.h
     dom/Attribute.h
     dom/BoundaryPoint.h
@@ -1104,6 +1342,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/DOMRectInit.h
     dom/DOMRectList.h
     dom/DOMRectReadOnly.h
+    dom/DOMStringList.h
     dom/DataTransfer.h
     dom/DeviceOrientationClient.h
     dom/DeviceOrientationData.h
@@ -1111,16 +1350,27 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/Document.h
     dom/DocumentClasses.h
     dom/DocumentEnums.h
+    dom/DocumentEventLoop.h
     dom/DocumentEventTiming.h
     dom/DocumentFontLoader.h
     dom/DocumentFragment.h
     dom/DocumentFullscreen.h
+    dom/DocumentImmersive.h
     dom/DocumentInlines.h
     dom/DocumentMarker.h
     dom/DocumentMarkerController.h
+    dom/DocumentMarkers.h
+    dom/DocumentPage.h
     dom/DocumentParser.h
+    dom/DocumentQuirks.h
+    dom/DocumentResourceLoader.h
+    dom/DocumentSecurityOrigin.h
+    dom/DocumentSettingsValues.h
     dom/DocumentStorageAccess.h
     dom/DocumentType.h
+    dom/DocumentView.h
+    dom/DocumentWindow.h
+    dom/DragEvent.h
     dom/Element.h
     dom/ElementAncestorIterator.h
     dom/ElementAncestorIteratorInlines.h
@@ -1153,42 +1403,56 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ExtensionStyleSheets.h
     dom/FindRevealAlgorithms.h
     dom/FocusOptions.h
+    dom/FragmentDirectiveGenerator.h
     dom/FragmentDirectiveParser.h
     dom/FragmentDirectiveRangeFinder.h
     dom/FragmentDirectiveUtilities.h
+    dom/FullscreenOptions.h
     dom/GCReachableRef.h
     dom/GetHTMLOptions.h
+    dom/IdTargetObserver.h
+    dom/IdTargetObserverRegistry.h
     dom/ImageOverlay.h
     dom/ImportNodeOptions.h
+    dom/InlineClassicScript.h
     dom/InlineStyleSheetOwner.h
+    dom/InputEvent.h
     dom/KeyboardEvent.h
     dom/LiveNodeList.h
     dom/LiveNodeListInlines.h
+    dom/LoadableClassicScript.h
+    dom/LoadableModuleScript.h
+    dom/LoadableSpeculationRules.h
     dom/LoadableScript.h
+    dom/LoadableScriptClient.h
     dom/LoadableScriptError.h
     dom/MessagePort.h
     dom/MessagePortIdentifier.h
+    dom/Microtasks.h
+    dom/ModuleFetchParameters.h
     dom/MouseEvent.h
     dom/MouseEventInit.h
     dom/MouseEventTypes.h
     dom/MouseRelatedEvent.h
     dom/MutationEvent.h
     dom/MutationObserver.h
+    dom/MutationObserverOptions.h
     dom/NameNodeList.h
     dom/NamedNodeMap.h
     dom/NativeNodeFilter.h
     dom/Node.h
-    dom/NodeIdentifier.h
-    dom/NodeInlines.h
     dom/NodeConstants.h
+    dom/NodeDocument.h
     dom/NodeFilter.h
     dom/NodeFilterCondition.h
+    dom/NodeIdentifier.h
+    dom/NodeInlines.h
     dom/NodeIterator.h
     dom/NodeList.h
     dom/NodeRenderStyle.h
     dom/NodeTraversal.h
-    dom/OverflowEvent.h
     dom/ParserContentPolicy.h
+    dom/PendingScript.h
     dom/PointerEvent.h
     dom/PointerEventTypeNames.h
     dom/PointerLockOptions.h
@@ -1205,6 +1469,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/RangeBoundaryPoint.h
     dom/RangeBoundaryPointInlines.h
     dom/RegisteredEventListener.h
+    dom/RejectedPromiseTracker.h
     dom/RenderedDocumentMarker.h
     dom/SandboxFlags.h
     dom/ScriptDisallowedScope.h
@@ -1212,6 +1477,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ScriptElementCachedScriptFetcher.h
     dom/ScriptExecutionContext.h
     dom/ScriptExecutionContextInlines.h
+    dom/ScriptRunner.h
     dom/ScriptType.h
     dom/SecurityContext.h
     dom/SecurityPolicyViolationEvent.h
@@ -1226,6 +1492,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/SlotAssignmentMode.h
     dom/SpaceSplitString.h
     dom/SpatialBackdropSource.h
+    dom/SpeculationRulesMatcher.h
     dom/StartViewTransitionOptions.h
     dom/StaticRange.h
     dom/StyledElement.h
@@ -1255,12 +1522,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/ValidityStateFlags.h
     dom/ViewTransition.h
     dom/ViewTransitionTypeSet.h
-    dom/VisibilityAdjustment.h
     dom/ViewTransitionUpdateCallback.h
     dom/ViewportArguments.h
+    dom/VisibilityAdjustment.h
     dom/VisibilityChangeClient.h
     dom/VisibilityState.h
     dom/WheelEvent.h
+    dom/WindowEventLoop.h
+    dom/WritingSuggestionData.h
     dom/XMLDocument.h
 
     dom/messageports/MessagePortChannel.h
@@ -1268,6 +1537,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     dom/messageports/MessagePortChannelRegistry.h
     dom/messageports/MessageWithMessagePorts.h
     dom/messageports/TransferredMessagePort.h
+
+    domjit/DOMJITIDLConvert.h
+    domjit/DOMJITIDLType.h
+    domjit/DOMJITIDLTypeFilter.h
 
     editing/CharacterRange.h
     editing/ClipboardAccessPolicy.h
@@ -1277,12 +1550,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     editing/DictationContext.h
     editing/DictionaryPopupInfo.h
     editing/EditAction.h
+    editing/EditCommand.h
     editing/EditableLinkBehavior.h
     editing/Editing.h
-    editing/EditingInlines.h
     editing/EditingBehavior.h
     editing/EditingBehaviorType.h
     editing/EditingBoundary.h
+    editing/EditingInlines.h
     editing/EditingStyle.h
     editing/Editor.h
     editing/EditorDeleteAction.h
@@ -1300,6 +1574,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     editing/SmartReplace.h
     editing/SpellChecker.h
     editing/TextAffinity.h
+    editing/TextCheckingHelper.h
     editing/TextGranularity.h
     editing/TextIterator.h
     editing/TextIteratorBehavior.h
@@ -1319,6 +1594,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     fileapi/AsyncFileStream.h
     fileapi/Blob.h
+    fileapi/BlobLoader.h
     fileapi/BlobPropertyBag.h
     fileapi/BlobURL.h
     fileapi/EndingType.h
@@ -1350,6 +1626,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/CanvasBase.h
     html/CanvasNoiseInjection.h
     html/CanvasObserver.h
+    html/CaptionDisplaySettingsClient.h
+    html/CaptionDisplaySettingsOptions.h
     html/CollectionTraversal.h
     html/CollectionTraversalInlines.h
     html/CollectionType.h
@@ -1420,11 +1698,11 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/HTMLParagraphElement.h
     html/HTMLParamElement.h
     html/HTMLPlugInElement.h
-    html/HTMLPlugInImageElement.h
     html/HTMLPreElement.h
     html/HTMLQuoteElement.h
     html/HTMLScriptElement.h
     html/HTMLSelectElement.h
+    html/HTMLSelectedContentElement.h
     html/HTMLStyleElement.h
     html/HTMLSummaryElement.h
     html/HTMLTableCaptionElement.h
@@ -1442,23 +1720,30 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/HTMLVideoElement.h
     html/ImageBitmap.h
     html/ImageData.h
+    html/ImageDataArray.h
+    html/ImageDataPixelFormat.h
     html/ImageDataSettings.h
-    html/ImageDataStorageFormat.h
     html/ImageDocument.h
     html/InputMode.h
     html/InputType.h
     html/LinkIconCollector.h
     html/LinkIconType.h
     html/LinkRelAttribute.h
+    html/MediaController.h
     html/MediaControllerInterface.h
     html/MediaDocument.h
     html/MediaElementSession.h
+    html/MediaEncryptedEvent.h
+    html/MediaEncryptedEventInit.h
     html/MediaError.h
     html/OffscreenCanvas.h
+    html/Origin.h
     html/OwnerPermissionsPolicyData.h
     html/PDFDocument.h
     html/PermissionsPolicy.h
     html/PluginDocument.h
+    html/ResolvedCaptionDisplaySettingsOptions.h
+    html/ResolvedCaptionDisplaySettingsOptionsWrapper.h
     html/StepRange.h
     html/SwitchTrigger.h
     html/TimeRanges.h
@@ -1475,7 +1760,11 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/canvas/PredefinedColorSpace.h
     html/canvas/WebGLAny.h
     html/canvas/WebGLContextAttributes.h
+    html/canvas/WebGLExtension.h
     html/canvas/WebGLExtensionAny.h
+
+    html/closewatcher/CloseWatcher.h
+    html/closewatcher/CloseWatcherManager.h
 
     html/forms/FileIconLoader.h
 
@@ -1483,19 +1772,26 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     html/parser/HTMLParserIdioms.h
     html/parser/HTMLParserScriptingFlagPolicy.h
 
+    html/shadow/TextControlInnerElements.h
+    html/shadow/TextPlaceholderElement.h
+
     html/track/AudioTrack.h
     html/track/AudioTrackClient.h
+    html/track/BufferedLineReader.h
+    html/track/DataCue.h
     html/track/TextTrack.h
     html/track/TextTrackClient.h
     html/track/TextTrackCue.h
+    html/track/TextTrackCueGeneric.h
     html/track/TrackBase.h
     html/track/VTTCue.h
     html/track/VTTRegion.h
     html/track/VideoTrack.h
     html/track/VideoTrackClient.h
+    html/track/WebVTTParser.h
 
+    inspector/FrameInspectorController.h
     inspector/InspectorBackendClient.h
-    inspector/InspectorController.h
     inspector/InspectorDebuggableType.h
     inspector/InspectorFrontendAPIDispatcher.h
     inspector/InspectorFrontendClient.h
@@ -1503,45 +1799,103 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     inspector/InspectorFrontendHost.h
     inspector/InspectorInstrumentationPublic.h
     inspector/InspectorInstrumentationWebKit.h
+    inspector/InstrumentingAgents.h
     inspector/InspectorOverlay.h
     inspector/InspectorOverlayLabel.h
     inspector/InspectorWebAgentBase.h
+    inspector/LegacyWebSocketInspectorInstrumentation.h
     inspector/PageDebugger.h
+    inspector/PageInspectorController.h
 
     inspector/agents/InspectorPageAgent.h
 
     layout/FormattingState.h
+    layout/LayoutContext.h
     layout/LayoutState.h
     layout/LayoutUnits.h
     layout/MarginTypes.h
 
+    layout/floats/FloatAvoider.h
+    layout/floats/FloatingContext.h
     layout/floats/PlacedFloats.h
 
     layout/formattingContexts/FormattingConstraints.h
     layout/formattingContexts/FormattingContext.h
+    layout/formattingContexts/FormattingGeometry.h
+    layout/formattingContexts/FormattingQuirks.h
+
+    layout/formattingContexts/block/BlockFormattingContext.h
+    layout/formattingContexts/block/BlockFormattingGeometry.h
+    layout/formattingContexts/block/BlockFormattingQuirks.h
+    layout/formattingContexts/block/BlockFormattingState.h
+    layout/formattingContexts/block/BlockLayoutState.h
+    layout/formattingContexts/block/BlockMarginCollapse.h
+
+    layout/formattingContexts/block/tablewrapper/TableWrapperBlockFormattingContext.h
+    layout/formattingContexts/block/tablewrapper/TableWrapperBlockFormattingQuirks.h
 
     layout/formattingContexts/flex/FlexFormattingConstraints.h
+    layout/formattingContexts/flex/FlexFormattingContext.h
+    layout/formattingContexts/flex/FlexFormattingUtils.h
     layout/formattingContexts/flex/FlexLayout.h
+    layout/formattingContexts/flex/FlexRect.h
     layout/formattingContexts/flex/LogicalFlexItem.h
 
-    layout/formattingContexts/inline/InlineItem.h
-    layout/formattingContexts/inline/InlineLine.h
-    layout/formattingContexts/inline/InlineLineTypes.h
-    layout/formattingContexts/inline/InlineRect.h
-    layout/formattingContexts/inline/InlineTextItem.h
+    layout/formattingContexts/grid/GridAreaLines.h
+    layout/formattingContexts/grid/GridFormattingContext.h
+    layout/formattingContexts/grid/GridItemRect.h
+    layout/formattingContexts/grid/GridTypeAliases.h
 
-    layout/formattingContexts/inline/display/InlineDisplayContent.h
+    layout/formattingContexts/inline/AbstractLineBuilder.h
+    layout/formattingContexts/inline/AvailableLineWidthOverride.h
+    layout/formattingContexts/inline/InlineContentAligner.h
+    layout/formattingContexts/inline/InlineContentBreaker.h
+    layout/formattingContexts/inline/InlineContentCache.h
+    layout/formattingContexts/inline/InlineContentConstrainer.h
+    layout/formattingContexts/inline/InlineFormattingConstraints.h
+    layout/formattingContexts/inline/InlineFormattingContext.h
+    layout/formattingContexts/inline/InlineFormattingUtils.h
+    layout/formattingContexts/inline/InlineItem.h
+    layout/formattingContexts/inline/InlineLayoutState.h
+    layout/formattingContexts/inline/InlineLevelBox.h
+    layout/formattingContexts/inline/InlineLine.h
+    layout/formattingContexts/inline/InlineLineBox.h
+    layout/formattingContexts/inline/InlineLineBoxBuilder.h
+    layout/formattingContexts/inline/InlineLineBoxVerticalAligner.h
+    layout/formattingContexts/inline/InlineLineTypes.h
+    layout/formattingContexts/inline/InlineQuirks.h
+    layout/formattingContexts/inline/InlineRect.h
+    layout/formattingContexts/inline/InlineSoftLineBreakItem.h
+    layout/formattingContexts/inline/InlineTextItem.h
+    layout/formattingContexts/inline/IntrinsicWidthHandler.h
+    layout/formattingContexts/inline/LineLayoutResult.h
+    layout/formattingContexts/inline/TextOnlySimpleLineBuilder.h
+
     layout/formattingContexts/inline/display/InlineDisplayBox.h
+    layout/formattingContexts/inline/display/InlineDisplayContent.h
+    layout/formattingContexts/inline/display/InlineDisplayContentBuilder.h
     layout/formattingContexts/inline/display/InlineDisplayLine.h
+    layout/formattingContexts/inline/display/InlineDisplayLineBuilder.h
+
+    layout/formattingContexts/inline/invalidation/InlineDamage.h
+    layout/formattingContexts/inline/invalidation/InlineInvalidation.h
 
     layout/formattingContexts/inline/ruby/RubyFormattingContext.h
 
+    layout/formattingContexts/inline/text/TextBreakingPositionCache.h
+    layout/formattingContexts/inline/text/TextBreakingPositionContext.h
     layout/formattingContexts/inline/text/TextUtil.h
 
-    layout/integration/LayoutIntegrationBoxTreeUpdater.h
+    layout/formattingContexts/table/TableFormattingConstraints.h
+    layout/formattingContexts/table/TableFormattingGeometry.h
+    layout/formattingContexts/table/TableFormattingQuirks.h
 
+    layout/integration/LayoutIntegrationBoxGeometryUpdater.h
+    layout/integration/LayoutIntegrationBoxTreeUpdater.h
+    layout/integration/LayoutIntegrationUtils.h
     layout/integration/flex/LayoutIntegrationFlexLayout.h
 
+    layout/integration/grid/LayoutIntegrationGridLayout.h
     layout/integration/inline/InlineIteratorBox.h
     layout/integration/inline/InlineIteratorBoxLegacyPath.h
     layout/integration/inline/InlineIteratorBoxModernPath.h
@@ -1551,11 +1905,22 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     layout/integration/inline/InlineIteratorLogicalOrderTraversal.h
     layout/integration/inline/InlineIteratorTextBox.h
     layout/integration/inline/LayoutIntegrationInlineContent.h
+    layout/integration/inline/LayoutIntegrationInlineContentBuilder.h
+    layout/integration/inline/LayoutIntegrationInlineContentPainter.h
+    layout/integration/inline/LayoutIntegrationLineLayout.h
+    layout/integration/inline/LineSelection.h
 
     layout/layouttree/LayoutBox.h
+    layout/layouttree/LayoutBoxGeometry.h
+    layout/layouttree/LayoutChildIterator.h
+    layout/layouttree/LayoutContainingBlockChainIterator.h
+    layout/layouttree/LayoutDescendantIterator.h
     layout/layouttree/LayoutElementBox.h
+    layout/layouttree/LayoutGeometryRect.h
     layout/layouttree/LayoutInitialContainingBlock.h
     layout/layouttree/LayoutInlineTextBox.h
+    layout/layouttree/LayoutIterator.h
+    layout/layouttree/LayoutTreeBuilder.h
 
     loader/AttributionSecondsUntilSendData.h
     loader/AttributionTimeToSendData.h
@@ -1563,6 +1928,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/COEPInheritenceViolationReportBody.h
     loader/CORPViolationReportBody.h
     loader/CanvasActivityRecord.h
+    loader/ContentFilter.h
     loader/ContentFilterClient.h
     loader/CookieChangeListener.h
     loader/CookieJar.h
@@ -1573,6 +1939,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/CustomHeaderFields.h
     loader/DocumentLoadTiming.h
     loader/DocumentLoader.h
+    loader/DocumentPrefetcher.h
     loader/DocumentWriter.h
     loader/EmptyClients.h
     loader/EmptyFrameLoaderClient.h
@@ -1599,6 +1966,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/LinkHeader.h
     loader/LinkLoader.h
     loader/LinkLoaderClient.h
+    loader/LinkPreloadResourceClients.h
     loader/LoadSchedulingMode.h
     loader/LoadedFromOpaqueSource.h
     loader/LoaderMalloc.h
@@ -1636,6 +2004,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/ResourceMonitorThrottlerHolder.h
     loader/ResourceTimingInformation.h
     loader/ShouldTreatAsContinuingLoad.h
+    loader/SpeculationRules.h
     loader/SubframeLoader.h
     loader/SubresourceLoader.h
     loader/SubstituteData.h
@@ -1643,33 +2012,32 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     loader/TextResourceDecoder.h
     loader/ThreadableLoader.h
     loader/ThreadableLoaderClient.h
-
-    loader/appcache/ApplicationCache.h
-    loader/appcache/ApplicationCacheHost.h
-    loader/appcache/ApplicationCacheStorage.h
-
     loader/archive/Archive.h
     loader/archive/ArchiveError.h
     loader/archive/ArchiveResource.h
     loader/archive/ArchiveResourceCollection.h
-
     loader/archive/mhtml/MHTMLArchive.h
-
-    loader/cache/TrustedFonts.h
-    loader/cache/CachedFontLoadRequest.h
     loader/cache/CachePolicy.h
+    loader/cache/CachedApplicationManifest.h
+    loader/cache/CachedCSSStyleSheet.h
+    loader/cache/CachedFontLoadRequest.h
     loader/cache/CachedImage.h
     loader/cache/CachedImageClient.h
+    loader/cache/CachedRawResource.h
     loader/cache/CachedRawResourceClient.h
     loader/cache/CachedResource.h
     loader/cache/CachedResourceClient.h
     loader/cache/CachedResourceHandle.h
     loader/cache/CachedResourceLoader.h
     loader/cache/CachedResourceRequest.h
+    loader/cache/CachedResourceRequestInitiatorTypes.h
+    loader/cache/CachedSVGDocument.h
+    loader/cache/CachedSVGDocumentClient.h
     loader/cache/CachedSVGDocumentReference.h
     loader/cache/CachedStyleSheetClient.h
     loader/cache/KeepaliveRequestTracker.h
     loader/cache/MemoryCache.h
+    loader/cache/TrustedFonts.h
 
     page/ActivityState.h
     page/ActivityStateChangeObserver.h
@@ -1678,8 +2046,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/AttachmentElementClient.h
     page/AutoplayEvent.h
     page/AutoplayPolicy.h
+    page/AutoscrollController.h
     page/CacheStorageProvider.h
     page/CaptionUserPreferences.h
+    page/CaptionUserPreferencesMediaAF.h
     page/Chrome.h
     page/ChromeClient.h
     page/ClientOrigin.h
@@ -1698,6 +2068,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/DebugPageOverlays.h
     page/DeprecatedGlobalSettings.h
     page/DeviceClient.h
+    page/DeviceController.h
     page/DiagnosticLoggingClient.h
     page/DiagnosticLoggingDomain.h
     page/DiagnosticLoggingKeys.h
@@ -1706,20 +2077,25 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/DragActions.h
     page/DragClient.h
     page/DragController.h
+    page/DragState.h
     page/DummySpeechRecognitionProvider.h
     page/EditorClient.h
     page/ElementTargetingController.h
     page/ElementTargetingTypes.h
+    page/EmptyAttachmentElementClient.h
     page/EventHandler.h
+    page/EventTimingInteractionID.h
     page/FocusController.h
+    page/FocusControllerTypes.h
     page/FocusDirection.h
     page/FocusEventData.h
     page/FragmentDirective.h
     page/Frame.h
-    page/FrameInlines.h
+    page/FrameConsoleClient.h
     page/FrameDestructionObserver.h
     page/FrameDestructionObserverInlines.h
     page/FrameIdentifier.h
+    page/FrameInlines.h
     page/FrameSnapshotting.h
     page/FrameTree.h
     page/FrameView.h
@@ -1729,7 +2105,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/HandleUserInputEventResult.h
     page/ImageAnalysisQueue.h
     page/ImmediateActionStage.h
+    page/IntelligenceTextEffectsSupport.h
     page/InteractionRegion.h
+    page/IntersectionObserverMarginBox.h
     page/IsLoggedIn.h
     page/LayoutMilestone.h
     page/LinkDecorationFilteringData.h
@@ -1750,22 +2128,24 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/Navigator.h
     page/NavigatorBase.h
     page/NavigatorLoginStatus.h
+    page/NavigatorUAData.h
     page/OriginAccessPatterns.h
     page/Page.h
     page/PageColorSampler.h
     page/PageConfiguration.h
-    page/PageConsoleClient.h
     page/PageGroup.h
     page/PageInlines.h
     page/PageOverlay.h
     page/PageOverlayController.h
     page/PagePasteboardContext.h
     page/PartitionedSecurityOrigin.h
+    page/PerformanceEventTimingCandidate.h
     page/PerformanceLogging.h
     page/PerformanceLoggingClient.h
     page/PointerCaptureController.h
     page/PointerCharacteristics.h
     page/PointerLockController.h
+    page/PopupOpeningObserver.h
     page/PrewarmInformation.h
     page/PrintContext.h
     page/ProcessWarming.h
@@ -1795,8 +2175,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/ShadowRealmGlobalScope.h
     page/ShareData.h
     page/SocketProvider.h
+    page/SpatialNavigation.h
     page/SpeechRecognitionProvider.h
     page/SpeechSynthesisClient.h
+    page/StageModeOperations.h
     page/StorageBlockingPolicy.h
     page/StructuredSerializeOptions.h
     page/SystemPreviewInfo.h
@@ -1804,6 +2186,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/TextDirectionSubmenuInclusionBehavior.h
     page/TextIndicator.h
     page/TranslationContextMenuInfo.h
+    page/UADataValues.h
+    page/UALowEntropyJSON.h
     page/UndoManager.h
     page/UserContentController.h
     page/UserContentProvider.h
@@ -1823,15 +2207,18 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/ViewportConfiguration.h
     page/VisitedLinkStore.h
     page/WebCoreKeyboardUIMode.h
+    page/WebKitBuffer.h
+    page/WebKitJSHandle.h
     page/WebKitNamespace.h
-    page/WebKitNodeInfo.h
     page/WebKitSerializedNode.h
     page/WheelEventDeltaFilter.h
     page/WheelEventTestMonitor.h
     page/WindowFeatures.h
+    page/WindowFocusAllowedIndicator.h
     page/WindowOrWorkerGlobalScope.h
     page/WindowPostMessageOptions.h
     page/WorkerClient.h
+    page/WorkerNavigator.h
 
     page/csp/CSPViolationReportBody.h
     page/csp/ContentSecurityPolicy.h
@@ -1851,36 +2238,46 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/scrolling/ScrollingStateFrameHostingNode.h
     page/scrolling/ScrollingStateFrameScrollingNode.h
     page/scrolling/ScrollingStateNode.h
+    page/scrolling/ScrollingStateOverflowScrollProxyNode.h
     page/scrolling/ScrollingStateOverflowScrollingNode.h
+    page/scrolling/ScrollingStatePluginHostingNode.h
+    page/scrolling/ScrollingStatePluginScrollingNode.h
     page/scrolling/ScrollingStatePositionedNode.h
     page/scrolling/ScrollingStateScrollingNode.h
     page/scrolling/ScrollingStateStickyNode.h
     page/scrolling/ScrollingStateTree.h
     page/scrolling/ScrollingThread.h
     page/scrolling/ScrollingTree.h
+    page/scrolling/ScrollingTreeFixedNode.h
     page/scrolling/ScrollingTreeFrameHostingNode.h
     page/scrolling/ScrollingTreeFrameScrollingNode.h
     page/scrolling/ScrollingTreeGestureState.h
     page/scrolling/ScrollingTreeLatchingController.h
     page/scrolling/ScrollingTreeNode.h
+    page/scrolling/ScrollingTreeOverflowScrollProxyNode.h
     page/scrolling/ScrollingTreeOverflowScrollingNode.h
+    page/scrolling/ScrollingTreePluginHostingNode.h
+    page/scrolling/ScrollingTreePluginScrollingNode.h
+    page/scrolling/ScrollingTreePositionedNode.h
     page/scrolling/ScrollingTreeScrollingNode.h
     page/scrolling/ScrollingTreeScrollingNodeDelegate.h
     page/scrolling/ScrollingTreeStickyNode.h
     page/scrolling/ScrollingTreeViewportConstrainedNode.h
+    page/scrolling/ThreadedScrollingCoordinator.h
     page/scrolling/ThreadedScrollingTree.h
-
+    page/scrolling/ThreadedScrollingTreeScrollingNodeDelegate.h
     page/text-extraction/TextExtraction.h
     page/text-extraction/TextExtractionTypes.h
-
     page/writing-tools/WritingToolsTypes.h
 
     platform/AbortableTaskQueue.h
+    platform/AudioEncoderActiveConfiguration.h
     platform/AudioSampleFormat.h
     platform/BoxExtents.h
     platform/BoxSides.h
-    platform/CaretAnimator.h
     platform/CPUMonitor.h
+    platform/CaptionPreferencesDelegate.h
+    platform/CaretAnimator.h
     platform/ColorChooser.h
     platform/ColorChooserClient.h
     platform/CommonAtomStrings.h
@@ -1906,34 +2303,35 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/EventTrackingRegions.h
     platform/FileChooser.h
     platform/FileMonitor.h
+    platform/FileStream.h
     platform/FileStreamClient.h
     platform/FixedContainerEdges.h
     platform/FloatConversion.h
+    platform/FrameRateMonitor.h
     platform/GraphicsClient.h
     platform/HostWindow.h
-    platform/KeyboardScrollingAnimator.h
     platform/KeyboardScroll.h
+    platform/KeyboardScrollingAnimator.h
     platform/KeyedCoding.h
     platform/KeypressCommand.h
+    platform/LLVMProfiling.h
     platform/LayoutUnit.h
     platform/LegacySchemeRegistry.h
-    platform/Length.h
-    platform/LengthBox.h
-    platform/LengthFunctions.h
-    platform/LengthPoint.h
-    platform/LengthSize.h
     platform/LinkIcon.h
     platform/LocalizedStrings.h
+    platform/LogClient.h
     platform/LogInitialization.h
     platform/Logging.h
     platform/LowPowerModeNotifier.h
     platform/MIMETypeRegistry.h
+    platform/MainThreadSharedTimer.h
     platform/MediaCapabilitiesDecodingInfo.h
     platform/MediaCapabilitiesEncodingInfo.h
     platform/MediaCapabilitiesInfo.h
     platform/MediaDescription.h
     platform/MediaPromiseTypes.h
     platform/MediaSample.h
+    platform/MediaSamplesBlock.h
     platform/MediaSelectionOption.h
     platform/MediaSessionGroupIdentifier.h
     platform/MediaSessionIdentifier.h
@@ -1942,8 +2340,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/MessageClientForTesting.h
     platform/MessageForTesting.h
     platform/MessageTargetForTesting.h
-    platform/NowPlayingManager.h
     platform/NotImplemented.h
+    platform/NowPlayingManager.h
     platform/OrientationNotifier.h
     platform/PODInterval.h
     platform/PODIntervalTree.h
@@ -1955,7 +2353,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/PasteboardItemInfo.h
     platform/PasteboardStrategy.h
     platform/PasteboardWriterData.h
+    platform/PictureInPictureObserver.h
+    platform/PictureInPictureSupport.h
     platform/PlaneLayout.h
+    platform/PlatformContentFilter.h
     platform/PlatformEvent.h
     platform/PlatformExportMacros.h
     platform/PlatformKeyboardEvent.h
@@ -1974,6 +2375,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/PopupMenu.h
     platform/PopupMenuClient.h
     platform/PopupMenuStyle.h
+    platform/PreviewConverter.h
     platform/ProcessCapabilities.h
     platform/ProcessIdentifier.h
     platform/ProcessIdentity.h
@@ -1986,6 +2388,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ReferrerPolicy.h
     platform/RegistrableDomain.h
     platform/RemoteCommandListener.h
+    platform/RunLoopObserver.h
     platform/ScreenOrientationManager.h
     platform/ScreenProperties.h
     platform/ScriptExecutionContextIdentifier.h
@@ -1993,6 +2396,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ScrollAnimation.h
     platform/ScrollAnimationMomentum.h
     platform/ScrollAnimator.h
+    platform/ScrollExtents.h
     platform/ScrollSnapAnimatorState.h
     platform/ScrollTypes.h
     platform/ScrollView.h
@@ -2001,6 +2405,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ScrollbarMode.h
     platform/ScrollbarTheme.h
     platform/ScrollbarThemeComposite.h
+    platform/ScrollbarsController.h
+    platform/ScrollbarsControllerInlines.h
     platform/ScrollingEffectsController.h
     platform/SearchPopupMenu.h
     platform/SerializedPlatformDataCue.h
@@ -2010,18 +2416,23 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/SharedBufferChunkReader.h
     platform/SharedMemory.h
     platform/SharedStringHash.h
+    platform/SharedTimer.h
     platform/SimpleCaretAnimator.h
     platform/Site.h
     platform/SleepDisabler.h
     platform/SleepDisablerClient.h
     platform/SleepDisablerIdentifier.h
-    platform/SpatialVideoMetadata.h
+    platform/StaticPasteboard.h
+    platform/StringEntropyHelpers.h
     platform/StyleAppearance.h
     platform/SuddenTermination.h
     platform/Supplementable.h
     platform/SyntheticClickResult.h
     platform/SystemSoundDelegate.h
+    platform/SystemSoundManager.h
     platform/TextRecognitionOptions.h
+    platform/TextRecognitionResult.h
+    platform/Theme.h
     platform/ThemeTypes.h
     platform/ThermalMitigationNotifier.h
     platform/ThreadCheck.h
@@ -2030,10 +2441,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ThreadTimers.h
     platform/Timer.h
     platform/TouchAction.h
+    platform/TrackInfo.h
     platform/UserActivity.h
     platform/UserAgent.h
     platform/UserInterfaceLayoutDirection.h
     platform/ValidationBubble.h
+    platform/VideoDecoder.h
+    platform/VideoEncoder.h
+    platform/VideoEncoderActiveConfiguration.h
     platform/VideoEncoderScalabilityMode.h
     platform/VideoFrame.h
     platform/VideoFrameMetadata.h
@@ -2043,15 +2458,21 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/WebCorePersistentCoders.h
     platform/Widget.h
     platform/WindowsKeyboardCodes.h
-
     platform/animation/AcceleratedEffect.h
     platform/animation/AcceleratedEffectStack.h
     platform/animation/AcceleratedEffectValues.h
-    platform/animation/Animation.h
-    platform/animation/AnimationList.h
+    platform/animation/AcceleratedTimeline.h
     platform/animation/AnimationUtilities.h
+    platform/animation/ProgressResolutionData.h
+    platform/animation/TimelineIdentifier.h
     platform/animation/TimingFunction.h
-
+    platform/animation/values/AcceleratedEffectOffsetAnchor.h
+    platform/animation/values/AcceleratedEffectOffsetDistance.h
+    platform/animation/values/AcceleratedEffectOffsetPosition.h
+    platform/animation/values/AcceleratedEffectOffsetRotate.h
+    platform/animation/values/AcceleratedEffectOpacity.h
+    platform/animation/values/AcceleratedEffectTransformBox.h
+    platform/animation/values/AcceleratedEffectTransformOrigin.h
     platform/audio/AudioArray.h
     platform/audio/AudioBus.h
     platform/audio/AudioChannel.h
@@ -2076,18 +2497,14 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/audio/PushPullFIFO.h
     platform/audio/RealtimeAudioThread.h
     platform/audio/SharedAudioDestination.h
-
-    platform/calc/CalculationCategory.h
-    platform/calc/CalculationOperator.h
-    platform/calc/CalculationRange.h
-    platform/calc/CalculationTree.h
-    platform/calc/CalculationValue.h
+    platform/audio/SincResampler.h
 
     platform/encryptedmedia/CDMEncryptionScheme.h
     platform/encryptedmedia/CDMFactory.h
     platform/encryptedmedia/CDMInstance.h
     platform/encryptedmedia/CDMInstanceSession.h
     platform/encryptedmedia/CDMKeyGroupingStrategy.h
+    platform/encryptedmedia/CDMKeyID.h
     platform/encryptedmedia/CDMKeyStatus.h
     platform/encryptedmedia/CDMKeySystemConfiguration.h
     platform/encryptedmedia/CDMMediaCapability.h
@@ -2097,23 +2514,29 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/encryptedmedia/CDMRequirement.h
     platform/encryptedmedia/CDMRestrictions.h
     platform/encryptedmedia/CDMSessionType.h
+    platform/encryptedmedia/CDMTypesForward.h
     platform/encryptedmedia/CDMUtilities.h
 
     platform/gamepad/GamepadProvider.h
     platform/gamepad/GamepadProviderClient.h
     platform/gamepad/PlatformGamepad.h
     platform/gamepad/SharedGamepadValue.h
+    platform/gamepad/ShouldRequireExplicitConsentForGamepadAccess.h
 
+    platform/generic/ScrollbarsControllerGeneric.h
+
+    platform/graphics/AV1Utilities.h
     platform/graphics/AlphaPremultiplication.h
     platform/graphics/AnimationFrameRate.h
     platform/graphics/AudioTrackPrivate.h
     platform/graphics/AudioTrackPrivateClient.h
-    platform/graphics/CopyImageOptions.h
+    platform/graphics/AudioVideoRenderer.h
     platform/graphics/BifurcatedGraphicsContext.h
     platform/graphics/BitmapImage.h
     platform/graphics/ByteArrayPixelBuffer.h
     platform/graphics/CachedSubimage.h
     platform/graphics/Color.h
+    platform/graphics/ColorBlending.h
     platform/graphics/ColorComponents.h
     platform/graphics/ColorConversion.h
     platform/graphics/ColorHash.h
@@ -2129,27 +2552,33 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/ColorTypes.h
     platform/graphics/ColorUtilities.h
     platform/graphics/ComplexTextController.h
-    platform/graphics/ContentsFormat.h
     platform/graphics/ContentTypeUtilities.h
+    platform/graphics/ContentsFormat.h
+    platform/graphics/CopyImageOptions.h
+    platform/graphics/CornerRadii.h
     platform/graphics/Damage.h
     platform/graphics/DashArray.h
     platform/graphics/DecodingOptions.h
-    platform/graphics/DecomposedGlyphs.h
     platform/graphics/DestinationColorSpace.h
     platform/graphics/DisplayRefreshMonitor.h
     platform/graphics/DisplayRefreshMonitorClient.h
     platform/graphics/DisplayRefreshMonitorFactory.h
     platform/graphics/DisplayRefreshMonitorManager.h
     platform/graphics/DisplayUpdate.h
+    platform/graphics/DoublePoint.h
+    platform/graphics/DoubleRect.h
+    platform/graphics/DoubleSize.h
     platform/graphics/Float16ArrayPixelBuffer.h
     platform/graphics/FloatLine.h
     platform/graphics/FloatPoint.h
     platform/graphics/FloatPoint3D.h
+    platform/graphics/FloatPolygon.h
     platform/graphics/FloatQuad.h
     platform/graphics/FloatRect.h
     platform/graphics/FloatRoundedRect.h
     platform/graphics/FloatSegment.h
     platform/graphics/FloatSize.h
+    platform/graphics/FloatSizeHash.h
     platform/graphics/Font.h
     platform/graphics/FontBaseline.h
     platform/graphics/FontCache.h
@@ -2176,7 +2605,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/FontSizeAdjust.h
     platform/graphics/FontTaggedSettings.h
     platform/graphics/FourCC.h
+    platform/graphics/GCGLExtension.h
     platform/graphics/GCGLSpan.h
+    platform/graphics/GeneratedImage.h
     platform/graphics/GeometryUtilities.h
     platform/graphics/Glyph.h
     platform/graphics/GlyphBuffer.h
@@ -2186,22 +2617,32 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/Gradient.h
     platform/graphics/GradientColorStop.h
     platform/graphics/GradientColorStops.h
+    platform/graphics/GradientImage.h
     platform/graphics/GraphicsContext.h
     platform/graphics/GraphicsContextGL.h
     platform/graphics/GraphicsContextGLActiveInfo.h
     platform/graphics/GraphicsContextGLAttributes.h
     platform/graphics/GraphicsContextGLEnums.h
+    platform/graphics/GraphicsContextGLImageExtractor.h
     platform/graphics/GraphicsContextGLState.h
     platform/graphics/GraphicsContextState.h
     platform/graphics/GraphicsContextStateSaver.h
     platform/graphics/GraphicsLayer.h
+    platform/graphics/GraphicsLayerAnimation.h
+    platform/graphics/GraphicsLayerAnimationValue.h
     platform/graphics/GraphicsLayerClient.h
     platform/graphics/GraphicsLayerContentsDisplayDelegate.h
+    platform/graphics/GraphicsLayerEnums.h
     platform/graphics/GraphicsLayerFactory.h
+    platform/graphics/GraphicsLayerFilterAnimationValue.h
+    platform/graphics/GraphicsLayerFloatAnimationValue.h
+    platform/graphics/GraphicsLayerKeyframeValueList.h
     platform/graphics/GraphicsLayerTransform.h
+    platform/graphics/GraphicsLayerTransformAnimationValue.h
     platform/graphics/GraphicsStyle.h
     platform/graphics/GraphicsTypes.h
     platform/graphics/GraphicsTypesGL.h
+    platform/graphics/HEVCUtilities.h
     platform/graphics/HostingContext.h
     platform/graphics/Icon.h
     platform/graphics/Image.h
@@ -2213,7 +2654,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/ImageBufferBackendParameters.h
     platform/graphics/ImageBufferDisplayListBackend.h
     platform/graphics/ImageBufferFormat.h
-    platform/graphics/ImageBufferPixelFormat.h
     platform/graphics/ImageBufferPlatformBackend.h
     platform/graphics/ImageBufferResourceLimits.h
     platform/graphics/ImageDecoder.h
@@ -2224,6 +2664,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/ImagePaintingOptions.h
     platform/graphics/ImageSource.h
     platform/graphics/ImageTypes.h
+    platform/graphics/ImageUtilities.h
+    platform/graphics/ImmersiveVideoMetadata.h
     platform/graphics/InbandGenericCue.h
     platform/graphics/InbandGenericCueIdentifier.h
     platform/graphics/InbandTextTrackPrivate.h
@@ -2255,12 +2697,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/MediaPlayerPrivate.h
     platform/graphics/MediaReorderQueue.h
     platform/graphics/MediaResourceSniffer.h
+    platform/graphics/MediaSampleConverter.h
     platform/graphics/MediaSourceConfiguration.h
     platform/graphics/MediaSourcePrivate.h
     platform/graphics/MediaSourcePrivateClient.h
     platform/graphics/MediaUsageInfo.h
     platform/graphics/Model.h
-    platform/graphics/ModelPlayerIdentifier.h
+    platform/graphics/ModelContext.h
     platform/graphics/NativeImage.h
     platform/graphics/NullGraphicsContext.h
     platform/graphics/NullImageBufferBackend.h
@@ -2286,24 +2729,25 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/PlatformLayerIdentifier.h
     platform/graphics/PlatformMediaResourceLoader.h
     platform/graphics/PlatformPath.h
+    platform/graphics/PlatformPlaybackSessionInterface.h
     platform/graphics/PlatformTextTrack.h
     platform/graphics/PlatformTimeRanges.h
     platform/graphics/PlatformTrackConfiguration.h
     platform/graphics/PlatformVideoColorPrimaries.h
     platform/graphics/PlatformVideoColorSpace.h
     platform/graphics/PlatformVideoMatrixCoefficients.h
+    platform/graphics/PlatformVideoPresentationInterface.h
     platform/graphics/PlatformVideoTrackConfiguration.h
     platform/graphics/PlatformVideoTransferCharacteristics.h
     platform/graphics/Region.h
+    platform/graphics/RenderingMode.h
     platform/graphics/RenderingResource.h
     platform/graphics/RenderingResourceIdentifier.h
-    platform/graphics/RenderingMode.h
     platform/graphics/RotationDirection.h
     platform/graphics/ScreenDataOverrides.h
     platform/graphics/ShareableBitmap.h
     platform/graphics/ShareableBitmapHandle.h
     platform/graphics/ShouldLocalizeAxisNames.h
-    platform/graphics/SnapshotIdentifier.h
     platform/graphics/SourceBrush.h
     platform/graphics/SourceBrushLogicalGradient.h
     platform/graphics/SourceBufferPrivate.h
@@ -2311,9 +2755,11 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/SourceImage.h
     platform/graphics/StringTruncator.h
     platform/graphics/SystemFallbackFontCache.h
+    platform/graphics/SystemFontDatabase.h
     platform/graphics/SystemImage.h
     platform/graphics/TabSize.h
     platform/graphics/TextRun.h
+    platform/graphics/TextRunHash.h
     platform/graphics/TextTrackRepresentation.h
     platform/graphics/TileGridIdentifier.h
     platform/graphics/TiledBacking.h
@@ -2324,7 +2770,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/VelocityData.h
     platform/graphics/VideoLayerManager.h
     platform/graphics/VideoPlaybackQualityMetrics.h
-    platform/graphics/VideoProjectionMetadata.h
     platform/graphics/VideoTarget.h
     platform/graphics/VideoTrackPrivate.h
     platform/graphics/VideoTrackPrivateClient.h
@@ -2336,6 +2781,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/angle/ANGLEUtilities.h
     platform/graphics/angle/GraphicsContextGLANGLE.h
 
+    platform/graphics/controls/ApplePayButtonPart.h
     platform/graphics/controls/ButtonPart.h
     platform/graphics/controls/ColorWellPart.h
     platform/graphics/controls/ControlFactory.h
@@ -2359,13 +2805,21 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/controls/TextFieldPart.h
     platform/graphics/controls/ToggleButtonPart.h
 
+    platform/graphics/coretext/DrawGlyphsRecorder.h
+
+    platform/graphics/cv/CVUtilities.h
+    platform/graphics/cv/GraphicsContextGLCV.h
+    platform/graphics/cv/GraphicsContextGLCVCocoa.h
+    platform/graphics/cv/ImageRotationSessionVT.h
+    platform/graphics/cv/ImageTransferSessionVT.h
+    platform/graphics/cv/PixelBufferConformerCV.h
+    platform/graphics/cv/VideoFrameCV.h
+
     platform/graphics/displaylists/DisplayList.h
     platform/graphics/displaylists/DisplayListItem.h
     platform/graphics/displaylists/DisplayListItems.h
     platform/graphics/displaylists/DisplayListRecorder.h
     platform/graphics/displaylists/DisplayListRecorderImpl.h
-
-    platform/graphics/cv/ImageTransferSessionVT.h
 
     platform/graphics/egl/GLContext.h
     platform/graphics/egl/GLContextWrapper.h
@@ -2413,13 +2867,19 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/iso/ISOBox.h
     platform/graphics/iso/ISOOriginalFormatBox.h
     platform/graphics/iso/ISOProtectionSchemeInfoBox.h
+    platform/graphics/iso/ISOProtectionSystemSpecificHeaderBox.h
     platform/graphics/iso/ISOSchemeInformationBox.h
     platform/graphics/iso/ISOSchemeTypeBox.h
     platform/graphics/iso/ISOTrackEncryptionBox.h
     platform/graphics/iso/ISOVTTCue.h
 
+    platform/graphics/opentype/OpenTypeCG.h
     platform/graphics/opentype/OpenTypeMathData.h
+    platform/graphics/opentype/OpenTypeTypes.h
     platform/graphics/opentype/OpenTypeVerticalData.h
+
+    platform/graphics/re/DynamicContentScalingResourceCache.h
+    platform/graphics/re/DynamicContentScalingTypes.h
 
     platform/graphics/transforms/AffineTransform.h
     platform/graphics/transforms/IdentityTransformOperation.h
@@ -2436,6 +2896,9 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/transforms/TransformationMatrix.h
     platform/graphics/transforms/TranslateTransformOperation.h
 
+    platform/libwebrtc/LibWebRTCVPXVideoDecoder.h
+    platform/libwebrtc/LibWebRTCVPXVideoEncoder.h
+
     platform/mediacapabilities/AudioConfiguration.h
     platform/mediacapabilities/ColorGamut.h
     platform/mediacapabilities/HdrMetadataType.h
@@ -2449,7 +2912,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mediacapabilities/VideoConfiguration.h
 
     platform/mediarecorder/MediaRecorderPrivate.h
+    platform/mediarecorder/MediaRecorderPrivateAVFImpl.h
+    platform/mediarecorder/MediaRecorderPrivateEncoder.h
+    platform/mediarecorder/MediaRecorderPrivateOptions.h
+    platform/mediarecorder/MediaRecorderPrivateWriter.h
 
+    platform/mediastream/AudioMediaStreamTrackRenderer.h
+    platform/mediastream/AudioTrackPrivateMediaStream.h
     platform/mediastream/CaptureDevice.h
     platform/mediastream/CaptureDeviceManager.h
     platform/mediastream/CaptureDeviceWithCapabilities.h
@@ -2468,7 +2937,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mediastream/MeteringMode.h
     platform/mediastream/PhotoCapabilities.h
     platform/mediastream/PhotoSettings.h
-    platform/mediastream/RedEyeReduction.h
     platform/mediastream/RTCDataChannelHandler.h
     platform/mediastream/RTCDataChannelHandlerClient.h
     platform/mediastream/RTCDataChannelIdentifier.h
@@ -2476,9 +2944,16 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mediastream/RTCDataChannelRemoteHandlerConnection.h
     platform/mediastream/RTCDataChannelRemoteSourceConnection.h
     platform/mediastream/RTCDataChannelState.h
+    platform/mediastream/RTCIceCandidateDescriptor.h
+    platform/mediastream/RTCIceConnectionState.h
+    platform/mediastream/RTCPeerConnectionHandlerClient.h
     platform/mediastream/RTCPriorityType.h
     platform/mediastream/RTCRtpCapabilities.h
     platform/mediastream/RTCRtpCodecCapability.h
+    platform/mediastream/RTCSessionDescriptionDescriptor.h
+    platform/mediastream/RTCSessionDescriptionRequest.h
+    platform/mediastream/RTCVoidRequest.h
+    platform/mediastream/RealtimeIncomingVideoSource.h
     platform/mediastream/RealtimeMediaSource.h
     platform/mediastream/RealtimeMediaSourceCapabilities.h
     platform/mediastream/RealtimeMediaSourceCenter.h
@@ -2487,15 +2962,19 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mediastream/RealtimeMediaSourceSettings.h
     platform/mediastream/RealtimeMediaSourceSupportedConstraints.h
     platform/mediastream/RealtimeVideoCaptureSource.h
+    platform/mediastream/RedEyeReduction.h
     platform/mediastream/VideoPreset.h
+    platform/mediastream/VideoTrackPrivateMediaStream.h
     platform/mediastream/WebAudioSourceProvider.h
     platform/mediastream/WebRTCProvider.h
-
     platform/mediastream/libwebrtc/LibWebRTCAudioModule.h
+    platform/mediastream/libwebrtc/LibWebRTCDav1dDecoder.h
     platform/mediastream/libwebrtc/LibWebRTCMacros.h
     platform/mediastream/libwebrtc/LibWebRTCProvider.h
+    platform/mediastream/libwebrtc/LibWebRTCProviderCocoa.h
     platform/mediastream/libwebrtc/LibWebRTCRefWrappers.h
     platform/mediastream/libwebrtc/LibWebRTCSocketIdentifier.h
+    platform/mediastream/libwebrtc/VideoFrameLibWebRTC.h
 
     platform/mock/DeviceOrientationClientMock.h
     platform/mock/MediaPlaybackTargetMock.h
@@ -2504,6 +2983,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/mock/MockRealtimeAudioSource.h
     platform/mock/MockRealtimeMediaSourceCenter.h
     platform/mock/MockRealtimeVideoSource.h
+    platform/mock/ScrollbarsControllerMock.h
+
+    platform/mock/mediasource/MockMediaSourcePrivate.h
+    platform/mock/mediasource/MockSourceBufferPrivate.h
 
     platform/network/AdvancedPrivacyProtections.h
     platform/network/AuthenticationChallengeBase.h
@@ -2514,6 +2997,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/BlobRegistry.h
     platform/network/BlobRegistryImpl.h
     platform/network/BlobResourceHandle.h
+    platform/network/BlobResourceHandleBase.h
     platform/network/CacheValidation.h
     platform/network/CertificateSummary.h
     platform/network/CookieRequestHeaderFieldProxy.h
@@ -2527,12 +3011,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/FormData.h
     platform/network/HTTPCookieAcceptPolicy.h
     platform/network/HTTPHeaderMap.h
-    platform/network/HTTPHeaderNames.in
     platform/network/HTTPHeaderValues.h
     platform/network/HTTPParsers.h
     platform/network/HTTPSByDefaultMode.h
     platform/network/HTTPStatusCodes.h
-    platform/network/ShouldPartitionCookie.h
     platform/network/NetworkLoadInformation.h
     platform/network/NetworkLoadMetrics.h
     platform/network/NetworkStateNotifier.h
@@ -2553,6 +3035,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/ResourceRequestBase.h
     platform/network/ResourceResponseBase.h
     platform/network/SameSiteInfo.h
+    platform/network/ShouldPartitionCookie.h
     platform/network/ShouldRelaxThirdPartyCookieBlocking.h
     platform/network/SocketStreamError.h
     platform/network/StorageSessionProvider.h
@@ -2571,7 +3054,12 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/sql/SQLiteTransaction.h
 
     platform/text/BidiContext.h
+    platform/text/BidiResolver.h
+    platform/text/BidiRunList.h
+    platform/text/DateTimeFormat.h
+    platform/text/LocaleToScriptMapping.h
     platform/text/PlatformLocale.h
+    platform/text/SegmentedString.h
     platform/text/StringWithDirection.h
     platform/text/TextBoundaries.h
     platform/text/TextCheckerClient.h
@@ -2592,27 +3080,30 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     plugins/PluginViewBase.h
 
     rendering/AccessibilityRegionContext.h
-    rendering/BreakLines.h
-    rendering/CaretRectComputation.h
-    rendering/CSSFilter.h
+    rendering/BreakablePositions.h
+    rendering/CSSFilterRenderer.h
     rendering/CSSValueKey.h
+    rendering/CaretRectComputation.h
     rendering/ClipRect.h
+    rendering/EllipsisBoxPainter.h
     rendering/EventRegion.h
     rendering/FloatingObjects.h
     rendering/GapRects.h
     rendering/GlyphDisplayListCacheRemoval.h
+    rendering/GridLayoutState.h
     rendering/HitTestLocation.h
     rendering/HitTestRequest.h
     rendering/HitTestResult.h
     rendering/HitTestSource.h
-    rendering/LayoutRepainter.h
     rendering/LayerAncestorClippingStack.h
     rendering/LayerFragment.h
+    rendering/LayoutRepainter.h
     rendering/LegacyInlineBox.h
     rendering/LegacyInlineFlowBox.h
     rendering/LegacyInlineTextBox.h
     rendering/LegacyLineLayout.h
     rendering/LegacyRootInlineBox.h
+    rendering/LineClampUpdater.h
     rendering/MarkedText.h
     rendering/MotionPath.h
     rendering/OrderIterator.h
@@ -2622,6 +3113,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/PaintInfo.h
     rendering/PaintPhase.h
     rendering/PathOperation.h
+    rendering/PositionedLayoutConstraints.h
     rendering/RegionContext.h
     rendering/RenderAttachment.h
     rendering/RenderBlock.h
@@ -2632,6 +3124,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderBoxModelObjectInlines.h
     rendering/RenderElement.h
     rendering/RenderElementInlines.h
+    rendering/RenderElementStyleInlines.h
     rendering/RenderEmbeddedObject.h
     rendering/RenderFlexibleBox.h
     rendering/RenderFrame.h
@@ -2640,18 +3133,26 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderIFrame.h
     rendering/RenderImage.h
     rendering/RenderImageResource.h
+    rendering/RenderImageResourceStyleImage.h
     rendering/RenderInline.h
     rendering/RenderLayer.h
     rendering/RenderLayerBacking.h
     rendering/RenderLayerCompositor.h
     rendering/RenderLayerModelObject.h
     rendering/RenderLayerScrollableArea.h
+    rendering/RenderLayoutState.h
     rendering/RenderLineBoxList.h
+    rendering/RenderLineBreak.h
+    rendering/RenderListItem.h
     rendering/RenderMedia.h
+    rendering/RenderMediaInlines.h
     rendering/RenderModel.h
     rendering/RenderObject.h
+    rendering/RenderObjectDocument.h
     rendering/RenderObjectEnums.h
     rendering/RenderObjectInlines.h
+    rendering/RenderObjectNode.h
+    rendering/RenderObjectStyle.h
     rendering/RenderOverflow.h
     rendering/RenderPtr.h
     rendering/RenderReplaced.h
@@ -2662,66 +3163,50 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/RenderTextLineBoxes.h
     rendering/RenderTheme.h
     rendering/RenderTreeAsText.h
+    rendering/RenderTreeMutationDisallowedScope.h
     rendering/RenderVideo.h
+    rendering/RenderVideoInlines.h
     rendering/RenderView.h
+    rendering/RenderViewTransitionCapture.h
     rendering/RenderWidget.h
     rendering/RenderWidgetInlines.h
+    rendering/RepaintRectCalculation.h
     rendering/TextBoxSelectableRange.h
+    rendering/TextBoxTrimmer.h
     rendering/TransformOperationData.h
+    rendering/VisibleRectContext.h
 
     rendering/line/LineWidth.h
     rendering/line/TrailingObjects.h
 
+    rendering/shapes/BoxLayoutShape.h
     rendering/shapes/LayoutShape.h
+    rendering/shapes/PolygonLayoutShape.h
+    rendering/shapes/RasterLayoutShape.h
+    rendering/shapes/RectangleLayoutShape.h
+    rendering/shapes/ShapeInterval.h
     rendering/shapes/ShapeOutsideInfo.h
 
+    rendering/style/AutosizeStatus.h
     rendering/style/BorderData.h
     rendering/style/BorderValue.h
+    rendering/style/CollapsedBorderValue.h
     rendering/style/CounterDirectives.h
-    rendering/style/FillLayer.h
     rendering/style/GridArea.h
     rendering/style/GridSpan.h
-    rendering/style/LineClampValue.h
-    rendering/style/NameScope.h
-    rendering/style/NinePieceImage.h
     rendering/style/OutlineValue.h
-    rendering/style/PositionArea.h
-    rendering/style/PositionTryFallback.h
     rendering/style/PositionTryOrder.h
     rendering/style/RenderStyle.h
+    rendering/style/RenderStyle+GettersInlines.h
+    rendering/style/RenderStyleBase.h
+    rendering/style/RenderStyleBase+GettersInlines.h
     rendering/style/RenderStyleConstants.h
-    rendering/style/RenderStyleInlines.h
-    rendering/style/RenderStyleSetters.h
-    rendering/style/SVGRenderStyle.h
-    rendering/style/SVGRenderStyleDefs.h
-    rendering/style/StyleBackgroundData.h
-    rendering/style/StyleBoxData.h
+    rendering/style/StyleCachedImage.h
     rendering/style/StyleContentAlignmentData.h
-    rendering/style/StyleCustomPropertyData.h
-    rendering/style/StyleDeprecatedFlexibleBoxData.h
-    rendering/style/StyleFilterData.h
-    rendering/style/StyleFlexibleBoxData.h
-    rendering/style/StyleFontData.h
-    rendering/style/StyleGridData.h
-    rendering/style/StyleGridItemData.h
+    rendering/style/StyleGeneratedImage.h
     rendering/style/StyleImage.h
-    rendering/style/StyleInheritedData.h
-    rendering/style/StyleMarqueeData.h
-    rendering/style/StyleMiscNonInheritedData.h
-    rendering/style/StyleMultiColData.h
-    rendering/style/StyleNonInheritedData.h
-    rendering/style/StyleRareInheritedData.h
-    rendering/style/StyleRareNonInheritedData.h
-    rendering/style/StyleReflection.h
-    rendering/style/StyleScrollSnapPoints.h
     rendering/style/StyleSelfAlignmentData.h
-    rendering/style/StyleSurroundData.h
-    rendering/style/StyleTextEdge.h
-    rendering/style/StyleTransformData.h
-    rendering/style/StyleVisitedLinkColorData.h
-    rendering/style/WillChangeData.h
 
-    rendering/svg/legacy/LegacyRenderSVGModelObject.h
     rendering/svg/RenderSVGInlineText.h
     rendering/svg/RenderSVGModelObject.h
     rendering/svg/SVGBoundingBoxComputation.h
@@ -2729,6 +3214,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/svg/SVGRenderSupport.h
     rendering/svg/SVGTextLayoutAttributes.h
     rendering/svg/SVGTextMetrics.h
+
+    rendering/svg/legacy/LegacyRenderSVGModelObject.h
 
     storage/Storage.h
     storage/StorageArea.h
@@ -2744,20 +3231,111 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/ResolvedScopedName.h
     style/ScopedName.h
     style/StyleChange.h
+    style/StyleColorResolver.h
     style/StyleCustomProperty.h
+    style/StyleDifference.h
+    style/StyleForVisitedLink.h
     style/StyleInterpolationClient.h
+    style/StyleInterpolationContext.h
+    style/StyleNameScope.h
     style/StyleScope.h
     style/StyleScopeIdentifier.h
     style/StyleScopeOrdinal.h
+    style/StyleTreeResolver.h
     style/StyleUpdate.h
     style/StyleValidity.h
     style/Styleable.h
 
+    style/calc/StyleCalculationTree.h
+    style/calc/StyleCalculationValue.h
+
+    style/computed/StyleComputedStyle.h
+    style/computed/StyleComputedStyle+GettersInlines.h
+    style/computed/StyleComputedStyle+InitialInlines.h
+    style/computed/StyleComputedStyleBase.h
+    style/computed/StyleComputedStyleBase+GettersInlines.h
+    style/computed/StyleComputedStyleProperties+GettersCustomInlines.h
+    style/computed/StyleComputedStyleProperties+InitialCustomInlines.h
+
+    style/computed/data/StyleAppleColorFilterData.h
+    style/computed/data/StyleBackdropFilterData.h
+    style/computed/data/StyleBackgroundData.h
+    style/computed/data/StyleBorderImageData.h
+    style/computed/data/StyleBoxData.h
+    style/computed/data/StyleCustomPropertyData.h
+    style/computed/data/StyleDeprecatedFlexibleBoxData.h
+    style/computed/data/StyleFilterData.h
+    style/computed/data/StyleFlexibleBoxData.h
+    style/computed/data/StyleFontData.h
+    style/computed/data/StyleGridData.h
+    style/computed/data/StyleGridItemData.h
+    style/computed/data/StyleInheritedData.h
+    style/computed/data/StyleInheritedRareData.h
+    style/computed/data/StyleMarqueeData.h
+    style/computed/data/StyleMaskBorderData.h
+    style/computed/data/StyleMultiColumnData.h
+    style/computed/data/StyleNonInheritedData.h
+    style/computed/data/StyleNonInheritedMiscData.h
+    style/computed/data/StyleNonInheritedRareData.h
+    style/computed/data/StyleSurroundData.h
+    style/computed/data/StyleSVGData.h
+    style/computed/data/StyleSVGFillData.h
+    style/computed/data/StyleSVGLayoutData.h
+    style/computed/data/StyleSVGMarkerResourceData.h
+    style/computed/data/StyleSVGNonInheritedMiscData.h
+    style/computed/data/StyleSVGShadowData.h
+    style/computed/data/StyleSVGStopData.h
+    style/computed/data/StyleSVGStrokeData.h
+    style/computed/data/StyleTransformData.h
+    style/computed/data/StyleVisitedLinkColorData.h
+
+    style/values/StyleValueTypes.h
+
+    style/values/align/StyleAlignContent.h
+    style/values/align/StyleAlignItems.h
+    style/values/align/StyleAlignSelf.h
+    style/values/align/StyleBaselineAlignmentPreference.h
     style/values/align/StyleGapGutter.h
+    style/values/align/StyleJustifyContent.h
+    style/values/align/StyleJustifyItems.h
+    style/values/align/StyleJustifySelf.h
+    style/values/align/StyleLegacyPosition.h
+    style/values/align/StyleOverflowPosition.h
 
     style/values/anchor-position/StyleAnchorName.h
+    style/values/anchor-position/StylePositionAnchor.h
+    style/values/anchor-position/StylePositionArea.h
+    style/values/anchor-position/StylePositionAreaAxis.h
+    style/values/anchor-position/StylePositionAreaSelf.h
+    style/values/anchor-position/StylePositionAreaSpan.h
+    style/values/anchor-position/StylePositionAreaTrack.h
+    style/values/anchor-position/StylePositionTryFallback.h
+    style/values/anchor-position/StylePositionTryFallbackTactic.h
+    style/values/anchor-position/StylePositionTryFallbacks.h
+    style/values/anchor-position/StylePositionVisibility.h
 
+    style/values/animations/StyleAnimation.h
+    style/values/animations/StyleAnimations.h
+    style/values/animations/StyleSingleAnimationDelay.h
+    style/values/animations/StyleSingleAnimationDuration.h
+    style/values/animations/StyleSingleAnimationIterationCount.h
+    style/values/animations/StyleSingleAnimationName.h
+    style/values/animations/StyleSingleAnimationRange.h
+    style/values/animations/StyleSingleAnimationRangeName.h
+    style/values/animations/StyleSingleAnimationTimeline.h
+
+    style/values/backgrounds/StyleBackgroundLayer.h
+    style/values/backgrounds/StyleBackgroundLayers.h
+    style/values/backgrounds/StyleBackgroundSize.h
+    style/values/backgrounds/StyleBorderImage.h
+    style/values/backgrounds/StyleBorderImageOutset.h
+    style/values/backgrounds/StyleBorderImageRepeat.h
+    style/values/backgrounds/StyleBorderImageSlice.h
+    style/values/backgrounds/StyleBorderImageSource.h
+    style/values/backgrounds/StyleBorderImageWidth.h
+    style/values/backgrounds/StyleFillLayers.h
     style/values/backgrounds/StyleLineWidth.h
+    style/values/backgrounds/StyleRepeatStyle.h
 
     style/values/borders/StyleBorderRadius.h
     style/values/borders/StyleBoxShadow.h
@@ -2765,7 +3343,13 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/borders/StyleShadow.h
 
     style/values/box/StyleMargin.h
+    style/values/box/StyleMarginTrim.h
     style/values/box/StylePadding.h
+
+    style/values/break/StyleOrphans.h
+    style/values/break/StyleWidows.h
+
+    style/values/color-adjust/StyleColorScheme.h
 
     style/values/color/StyleColor.h
     style/values/color/StyleColorOptions.h
@@ -2775,8 +3359,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/color/StyleOpacity.h
     style/values/color/StyleResolvedColor.h
 
-    style/values/color-adjust/StyleColorScheme.h
-
+    style/values/contain/StyleContain.h
     style/values/contain/StyleContainerName.h
 
     style/values/content/StyleContent.h
@@ -2784,11 +3367,41 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     style/values/counter-styles/StyleCounterStyle.h
 
+    style/values/css2/StyleZIndex.h
+
+    style/values/display/StyleOrder.h
+
+    style/values/easing/StyleEasingFunction.h
+
     style/values/fill-stroke/StyleStrokeMiterlimit.h
     style/values/fill-stroke/StyleStrokeWidth.h
 
-    style/values/flexbox/StyleFlexBasis.h
+    style/values/filter-effects/StyleAppleColorFilter.h
+    style/values/filter-effects/StyleFilter.h
 
+    style/values/flexbox/StyleFlexBasis.h
+    style/values/flexbox/StyleFlexGrow.h
+    style/values/flexbox/StyleFlexShrink.h
+    style/values/flexbox/StyleWebKitBoxFlex.h
+    style/values/flexbox/StyleWebKitBoxFlexGroup.h
+    style/values/flexbox/StyleWebKitBoxOrdinalGroup.h
+
+    style/values/fonts/StyleFontFamily.h
+    style/values/fonts/StyleFontFamilyName.h
+    style/values/fonts/StyleFontFeatureSettings.h
+    style/values/fonts/StyleFontPalette.h
+    style/values/fonts/StyleFontSizeAdjust.h
+    style/values/fonts/StyleFontStyle.h
+    style/values/fonts/StyleFontVariantAlternates.h
+    style/values/fonts/StyleFontVariantEastAsian.h
+    style/values/fonts/StyleFontVariantLigatures.h
+    style/values/fonts/StyleFontVariantNumeric.h
+    style/values/fonts/StyleFontVariationSettings.h
+    style/values/fonts/StyleFontWeight.h
+    style/values/fonts/StyleFontWidth.h
+
+    style/values/grid/StyleFlowTolerance.h
+    style/values/grid/StyleGridAutoFlow.h
     style/values/grid/StyleGridNamedAreaMap.h
     style/values/grid/StyleGridNamedLinesMap.h
     style/values/grid/StyleGridOrderedNamedLinesMap.h
@@ -2803,27 +3416,57 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/grid/StyleGridTrackSizingDirection.h
 
     style/values/images/StyleGradient.h
+    style/values/images/StyleImageOrNone.h
+    style/values/images/StyleImageOrientation.h
     style/values/images/StyleImageWrapper.h
     style/values/images/StyleObjectPosition.h
 
-    style/values/inline/StyleLineBoxContain.h
+    style/values/inline/StyleLineFitEdge.h
+    style/values/inline/StyleLineHeight.h
+    style/values/inline/StyleTextBoxEdge.h
+    style/values/inline/StyleTextEdge.h
     style/values/inline/StyleVerticalAlign.h
+    style/values/inline/StyleWebKitInitialLetter.h
 
     style/values/line-grid/StyleWebKitLineGrid.h
 
+    style/values/lists/StyleCounterIncrement.h
+    style/values/lists/StyleCounterReset.h
+    style/values/lists/StyleCounterSet.h
     style/values/lists/StyleListStyleType.h
 
     style/values/masking/StyleClip.h
     style/values/masking/StyleClipPath.h
+    style/values/masking/StyleMaskBorder.h
+    style/values/masking/StyleMaskBorderOutset.h
+    style/values/masking/StyleMaskBorderRepeat.h
+    style/values/masking/StyleMaskBorderSlice.h
+    style/values/masking/StyleMaskBorderSource.h
+    style/values/masking/StyleMaskBorderWidth.h
+    style/values/masking/StyleMaskLayer.h
+    style/values/masking/StyleMaskLayers.h
+    style/values/masking/StyleMaskMode.h
 
-    style/values/motion/StyleOffsetDistance.h
+    style/values/math/StyleMathDepth.h
+
     style/values/motion/StyleOffsetAnchor.h
+    style/values/motion/StyleOffsetDistance.h
     style/values/motion/StyleOffsetPath.h
     style/values/motion/StyleOffsetPosition.h
     style/values/motion/StyleOffsetRotate.h
     style/values/motion/StyleRayFunction.h
 
+    style/values/multicol/StyleColumnCount.h
+    style/values/multicol/StyleColumnWidth.h
+
     style/values/non-standard/StyleWebKitBorderSpacing.h
+    style/values/non-standard/StyleWebKitBoxReflect.h
+    style/values/non-standard/StyleWebKitLineBoxContain.h
+    style/values/non-standard/StyleWebKitLineClamp.h
+    style/values/non-standard/StyleWebKitLocale.h
+    style/values/non-standard/StyleWebKitMarqueeIncrement.h
+    style/values/non-standard/StyleWebKitMarqueeRepetition.h
+    style/values/non-standard/StyleWebKitMarqueeSpeed.h
     style/values/non-standard/StyleWebKitOverflowScrolling.h
     style/values/non-standard/StyleWebKitTextStrokeWidth.h
     style/values/non-standard/StyleWebKitTouchCallout.h
@@ -2833,19 +3476,27 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/overflow/StyleScrollBehavior.h
     style/values/overflow/StyleScrollbarGutter.h
 
+    style/values/page/StylePageSize.h
+
+    style/values/pointerevents/StyleTouchAction.h
+
     style/values/position/StyleInset.h
 
+    style/values/primitives/StyleCoordinatedValueList.h
+    style/values/primitives/StyleCoordinatedValueListValue.h
+    style/values/primitives/StyleLengthWrapper+Blending.h
     style/values/primitives/StyleLengthWrapper.h
     style/values/primitives/StyleLengthWrapperData.h
     style/values/primitives/StylePosition.h
+    style/values/primitives/StylePrimitiveKeyword+CSSValueCreation.h
+    style/values/primitives/StylePrimitiveKeyword+Serialization.h
+    style/values/primitives/StylePrimitiveKeyword+ValueRepresentationNeeded.h
     style/values/primitives/StylePrimitiveNumeric+Forward.h
     style/values/primitives/StylePrimitiveNumeric.h
-    style/values/primitives/StylePrimitiveNumericAdaptors.h
     style/values/primitives/StylePrimitiveNumericConcepts.h
     style/values/primitives/StylePrimitiveNumericOrKeyword.h
     style/values/primitives/StylePrimitiveNumericTypes+Calculation.h
     style/values/primitives/StylePrimitiveNumericTypes+Evaluation.h
-    style/values/primitives/StylePrimitiveNumericTypes+Platform.h
     style/values/primitives/StylePrimitiveNumericTypes.h
     style/values/primitives/StyleRatio.h
     style/values/primitives/StyleURL.h
@@ -2855,14 +3506,19 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     style/values/scroll-animations/StyleProgressTimelineAxes.h
     style/values/scroll-animations/StyleProgressTimelineName.h
+    style/values/scroll-animations/StyleScrollFunction.h
     style/values/scroll-animations/StyleScrollTimelines.h
+    style/values/scroll-animations/StyleViewFunction.h
     style/values/scroll-animations/StyleViewTimelineInsets.h
     style/values/scroll-animations/StyleViewTimelines.h
 
     style/values/scroll-snap/StyleScrollMargin.h
     style/values/scroll-snap/StyleScrollPadding.h
+    style/values/scroll-snap/StyleScrollSnapAlign.h
+    style/values/scroll-snap/StyleScrollSnapType.h
 
     style/values/scrollbars/StyleScrollbarColor.h
+    style/values/scrollbars/StyleScrollbarWidth.h
 
     style/values/shapes/StyleBasicShape.h
     style/values/shapes/StyleCircleFunction.h
@@ -2874,6 +3530,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/shapes/StylePathOperationWrappers.h
     style/values/shapes/StylePolygonFunction.h
     style/values/shapes/StyleRectFunction.h
+    style/values/shapes/StyleShapeForward.h
     style/values/shapes/StyleShapeFunction.h
     style/values/shapes/StyleShapeImageThreshold.h
     style/values/shapes/StyleShapeMargin.h
@@ -2889,50 +3546,113 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     style/values/sizing/StyleMinimumSize.h
     style/values/sizing/StylePreferredSize.h
 
-    style/values/svg/StyleSVGPaint.h
+    style/values/speech/StyleSpeakAs.h
 
+    style/values/svg/StyleSVGBaselineShift.h
+    style/values/svg/StyleSVGCenterCoordinateComponent.h
+    style/values/svg/StyleSVGCoordinateComponent.h
+    style/values/svg/StyleSVGGlyphOrientationHorizontal.h
+    style/values/svg/StyleSVGGlyphOrientationVertical.h
+    style/values/svg/StyleSVGMarkerResource.h
+    style/values/svg/StyleSVGPaint.h
+    style/values/svg/StyleSVGPaintOrder.h
+    style/values/svg/StyleSVGPathData.h
+    style/values/svg/StyleSVGRadius.h
+    style/values/svg/StyleSVGRadiusComponent.h
+    style/values/svg/StyleSVGStrokeDasharray.h
+    style/values/svg/StyleSVGStrokeDashoffset.h
+
+    style/values/text/StyleHangingPunctuation.h
     style/values/text/StyleHyphenateCharacter.h
     style/values/text/StyleHyphenateLimitEdge.h
     style/values/text/StyleHyphenateLimitLines.h
+    style/values/text/StyleLetterSpacing.h
+    style/values/text/StyleTabSize.h
+    style/values/text/StyleTextAlign.h
+    style/values/text/StyleTextAlignLast.h
+    style/values/text/StyleTextAutospace.h
     style/values/text/StyleTextIndent.h
+    style/values/text/StyleTextSpacingTrim.h
+    style/values/text/StyleTextTransform.h
+    style/values/text/StyleWordSpacing.h
 
+    style/values/text-decoration/StyleTextDecorationLine.h
     style/values/text-decoration/StyleTextDecorationThickness.h
+    style/values/text-decoration/StyleTextEmphasisPosition.h
     style/values/text-decoration/StyleTextEmphasisStyle.h
     style/values/text-decoration/StyleTextShadow.h
     style/values/text-decoration/StyleTextUnderlineOffset.h
+    style/values/text-decoration/StyleTextUnderlinePosition.h
+
+    style/values/transforms/functions/StyleTransformFunctionWrapper.h
+    style/values/transforms/functions/StyleMatrix3DTransformFunction.h
+    style/values/transforms/functions/StyleMatrixTransformFunction.h
+    style/values/transforms/functions/StylePerspectiveTransformFunction.h
+    style/values/transforms/functions/StyleRotateTransformFunction.h
+    style/values/transforms/functions/StyleScaleTransformFunction.h
+    style/values/transforms/functions/StyleSkewTransformFunction.h
+    style/values/transforms/functions/StyleTransformFunctionBase.h
+    style/values/transforms/functions/StyleTransformFunctionWrapper.h
+    style/values/transforms/functions/StyleTranslateTransformFunction.h
 
     style/values/transforms/StylePerspective.h
     style/values/transforms/StylePerspectiveOrigin.h
     style/values/transforms/StyleRotate.h
     style/values/transforms/StyleScale.h
-    style/values/transforms/StyleTransformOperationWrapper.h
+    style/values/transforms/StyleTransform.h
+    style/values/transforms/StyleTransformFunction.h
+    style/values/transforms/StyleTransformList.h
     style/values/transforms/StyleTransformOrigin.h
     style/values/transforms/StyleTranslate.h
 
+    style/values/transitions/StyleSingleTransitionDelay.h
+    style/values/transitions/StyleSingleTransitionDuration.h
+    style/values/transitions/StyleSingleTransitionProperty.h
+    style/values/transitions/StyleTransition.h
+    style/values/transitions/StyleTransitions.h
+
+    style/values/ui/StyleAccentColor.h
+    style/values/ui/StyleCaretColor.h
     style/values/ui/StyleCursor.h
+    style/values/ui/StyleResize.h
 
     style/values/view-transitions/StyleViewTransitionClass.h
     style/values/view-transitions/StyleViewTransitionName.h
 
-    style/values/StyleValueTypes.h
+    style/values/viewport/StyleZoom.h
+    style/values/viewport/StyleZoomPrimitives.h
 
+    style/values/will-change/StyleWillChange.h
+
+    svg/SVGAngle.h
+    svg/SVGDocument.h
+    svg/SVGDocumentExtensions.h
     svg/SVGElement.h
     svg/SVGLengthContext.h
+    svg/SVGLengthList.h
     svg/SVGLengthValue.h
+    svg/SVGLocatable.h
+    svg/SVGNumberList.h
     svg/SVGParserUtilities.h
     svg/SVGParsingError.h
     svg/SVGPathByteStream.h
     svg/SVGPathConsumer.h
     svg/SVGPathUtilities.h
+    svg/SVGPreserveAspectRatio.h
     svg/SVGPreserveAspectRatioValue.h
     svg/SVGStringList.h
     svg/SVGTests.h
     svg/SVGUnitTypes.h
+    svg/SVGZoomAndPanType.h
 
+    svg/animation/SMILTime.h
+
+    svg/graphics/SVGImage.h
     svg/graphics/SVGImageCache.h
+    svg/graphics/SVGImageForContainer.h
 
-    svg/graphics/filters/SVGFilter.h
     svg/graphics/filters/SVGFilterExpression.h
+    svg/graphics/filters/SVGFilterRenderer.h
 
     svg/properties/SVGList.h
     svg/properties/SVGPrimitiveList.h
@@ -2940,8 +3660,15 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     svg/properties/SVGPropertyOwner.h
     svg/properties/SVGPropertyTraits.h
 
+    testing/MockContentFilter.h
+    testing/MockContentFilterManager.h
+    testing/MockContentFilterSettings.h
+    testing/MockContentFilterSettingsClient.h
     testing/MockGamepad.h
     testing/MockGamepadProvider.h
+    testing/MockWebAuthenticationConfiguration.h
+
+    testing/js/WebCoreTestSupport.h
 
     workers/FetchingWorkerIdentifier.h
     workers/ScriptBuffer.h
@@ -3022,8 +3749,10 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     workers/service/server/SWOriginStore.h
     workers/service/server/SWRegistrationDatabase.h
     workers/service/server/SWRegistrationStore.h
+    workers/service/server/SWScriptStorage.h
     workers/service/server/SWServer.h
     workers/service/server/SWServerDelegate.h
+    workers/service/server/SWServerJobQueue.h
     workers/service/server/SWServerRegistration.h
     workers/service/server/SWServerToContextConnection.h
     workers/service/server/SWServerWorker.h
@@ -3033,6 +3762,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     workers/shared/SharedWorkerObjectConnection.h
     workers/shared/SharedWorkerObjectIdentifier.h
     workers/shared/SharedWorkerProvider.h
+    workers/shared/SharedWorkerScriptLoader.h
 
     workers/shared/context/SharedWorkerContextManager.h
     workers/shared/context/SharedWorkerThread.h
@@ -3052,10 +3782,12 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     ${WebCore_DERIVED_SOURCES_DIR}/CSSValueKeywords.h
     ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSourceBuiltins.h
     ${WebCore_DERIVED_SOURCES_DIR}/DocumentSyncData.h
+    ${WebCore_DERIVED_SOURCES_DIR}/DocumentSyncClient.h
     ${WebCore_DERIVED_SOURCES_DIR}/EventInterfaces.h
     ${WebCore_DERIVED_SOURCES_DIR}/EventNames.h
     ${WebCore_DERIVED_SOURCES_DIR}/EventTargetInterfaces.h
     ${WebCore_DERIVED_SOURCES_DIR}/FrameTreeSyncData.h
+    ${WebCore_DERIVED_SOURCES_DIR}/FrameTreeSyncClient.h
     ${WebCore_DERIVED_SOURCES_DIR}/HTMLElementTypeHelpers.h
     ${WebCore_DERIVED_SOURCES_DIR}/HTMLNames.h
     ${WebCore_DERIVED_SOURCES_DIR}/HTTPHeaderNames.h
@@ -3090,23 +3822,29 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     ${WebCore_DERIVED_SOURCES_DIR}/JSStyleSheet.h
     ${WebCore_DERIVED_SOURCES_DIR}/JSStyleSheetList.h
     ${WebCore_DERIVED_SOURCES_DIR}/JSTreeWalker.h
-    ${WebCore_DERIVED_SOURCES_DIR}/JSWebKitNodeInfo.h
+    ${WebCore_DERIVED_SOURCES_DIR}/JSWebKitJSHandle.h
     ${WebCore_DERIVED_SOURCES_DIR}/JSWebKitSerializedNode.h
     ${WebCore_DERIVED_SOURCES_DIR}/JSXPathExpression.h
     ${WebCore_DERIVED_SOURCES_DIR}/JSXPathResult.h
+    ${WebCore_DERIVED_SOURCES_DIR}/MathMLNames.h
     ${WebCore_DERIVED_SOURCES_DIR}/Namespace.h
     ${WebCore_DERIVED_SOURCES_DIR}/NodeName.h
-    ${WebCore_DERIVED_SOURCES_DIR}/ProcessSyncClient.h
-    ${WebCore_DERIVED_SOURCES_DIR}/ProcessSyncData.h
-    ${WebCore_DERIVED_SOURCES_DIR}/ReadableByteStreamInternalsBuiltins.h
     ${WebCore_DERIVED_SOURCES_DIR}/ReadableStreamInternalsBuiltins.h
+    ${WebCore_DERIVED_SOURCES_DIR}/RenderStyleProperties.h
+    ${WebCore_DERIVED_SOURCES_DIR}/RenderStyleProperties+GettersInlines.h
+    ${WebCore_DERIVED_SOURCES_DIR}/SVGNames.h
     ${WebCore_DERIVED_SOURCES_DIR}/Settings.h
     ${WebCore_DERIVED_SOURCES_DIR}/StreamInternalsBuiltins.h
+    ${WebCore_DERIVED_SOURCES_DIR}/StyleComputedStyleProperties.h
+    ${WebCore_DERIVED_SOURCES_DIR}/StyleComputedStyleProperties+GettersInlines.h
+    ${WebCore_DERIVED_SOURCES_DIR}/StyleComputedStyleProperties+InitialInlines.h
     ${WebCore_DERIVED_SOURCES_DIR}/TagName.h
     ${WebCore_DERIVED_SOURCES_DIR}/TransformStreamInternalsBuiltins.h
     ${WebCore_DERIVED_SOURCES_DIR}/UserAgentParts.h
     ${WebCore_DERIVED_SOURCES_DIR}/UserAgentStyleSheets.h
     ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.h
+    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreLogDefinitions.h
+    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreVirtualLogFunctions.h
     ${WebCore_DERIVED_SOURCES_DIR}/WebKitFontFamilyNames.h
     ${WebCore_DERIVED_SOURCES_DIR}/WritableStreamInternalsBuiltins.h
 )

@@ -23,12 +23,12 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLFontElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFontElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFontElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFontElement);
 public:
     static Ref<HTMLFontElement> create(const QualifiedName&, Document&);

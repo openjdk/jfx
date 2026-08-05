@@ -24,10 +24,10 @@
  */
 
 #import "config.h"
-#import "UUID.h"
+#import <wtf/UUID.h>
 
-#import "RetainPtr.h"
-#import "TypeCastsCocoa.h"
+#import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {
 

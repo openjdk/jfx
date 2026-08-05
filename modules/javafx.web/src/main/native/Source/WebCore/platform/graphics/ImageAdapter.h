@@ -29,6 +29,7 @@
 OBJC_CLASS NSImage;
 #endif
 
+#include <wtf/Platform.h>
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 OBJC_CLASS NSAdaptiveImageGlyph;
 #endif
@@ -37,21 +38,13 @@ OBJC_CLASS NSAdaptiveImageGlyph;
 struct CGContext;
 #endif
 
-#if PLATFORM(GTK)
-#include <wtf/glib/GRefPtr.h>
-typedef struct _GdkPixbuf GdkPixbuf;
-#if USE(GTK4)
-typedef struct _GdkTexture GdkTexture;
-#endif
-#endif
-
 #if PLATFORM(WIN)
 typedef struct tagSIZE SIZE;
 typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
-#include "NativeImage.h"
+#include <WebCore/NativeImage.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -91,13 +84,6 @@ public:
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     NSAdaptiveImageGlyph *multiRepresentationHEIC();
-#endif
-
-#if PLATFORM(GTK)
-    GRefPtr<GdkPixbuf> gdkPixbuf();
-#if USE(GTK4)
-    GRefPtr<GdkTexture> gdkTexture();
-#endif
 #endif
 
 #if PLATFORM(WIN)
