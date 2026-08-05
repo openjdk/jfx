@@ -44,8 +44,7 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
     /// @param format the formatter/parser that will be used by the `toString()` and `fromString()` methods. Must not be
     ///        `null`.
     public FormatStringConverter(@NamedArg("format") Format format) {
-        Objects.requireNonNull(format);
-        this.format = format;
+        this.format = Objects.requireNonNull(format);
     }
 
     @Override
