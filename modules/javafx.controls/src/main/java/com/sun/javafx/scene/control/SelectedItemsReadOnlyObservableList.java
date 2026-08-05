@@ -28,7 +28,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListBase;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -38,7 +37,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
     // This is the actual observable list of selected indices used in the selection model
     private final ObservableList<Integer> selectedIndices;
     private final Supplier<Integer> modelSizeSupplier;
-    private final List<WeakReference<E>> itemsRefList;
+    private final List<WeakReferenceWrapper<E>> itemsRefList;
 
     public SelectedItemsReadOnlyObservableList(ObservableList<Integer> selectedIndices, Supplier<Integer> modelSizeSupplier) {
         this.modelSizeSupplier = modelSizeSupplier;
@@ -85,7 +84,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
             // FIXME we could make this more efficient by only making the reported changes to the list
             itemsRefList.clear();
             for (int selectedIndex : selectedIndices) {
-                itemsRefList.add(new WeakReference<>(getModelItem(selectedIndex)));
+                itemsRefList.add(new WeakReferenceWrapper<>(getModelItem(selectedIndex)));
             }
 
             endChange();

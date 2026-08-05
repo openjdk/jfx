@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.WeakReferenceWrapper;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         this.controlRef = new WeakReference<>(tableView);
 
         List<S> items = tableView != null ? tableView.getItems() : null;
-        this.itemRef = new WeakReference<>(
+        this.itemRef = new WeakReferenceWrapper<>(
                 items != null && row >= 0 && row < items.size() ? items.get(row) : null);
 
         nonFixedColumnIndex = tableView == null || tableColumn == null ? -1 : tableView.getVisibleLeafIndex(tableColumn);
@@ -86,7 +87,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      **************************************************************************/
 
     private final WeakReference<TableView<S>> controlRef;
-    private final WeakReference<S> itemRef;
+    private final WeakReferenceWrapper<S> itemRef;
     int fixedColumnIndex = -1;
     private final int nonFixedColumnIndex;
 

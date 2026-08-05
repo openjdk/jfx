@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.WeakReferenceWrapper;
 import javafx.css.PseudoClass;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.beans.InvalidationListener;
@@ -626,7 +627,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     private boolean isFirstRun = true;
 
-    private WeakReference<S> oldRowItemRef;
+    private WeakReferenceWrapper<S> oldRowItemRef;
 
     /*
      * This is called when we think that the data within this TreeTableCell may have
@@ -700,7 +701,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             updateItem(newValue, false);
         }
 
-        oldRowItemRef = new WeakReference<>(rowItem);
+        oldRowItemRef = new WeakReferenceWrapper<>(rowItem);
 
         if (currentObservableValue == null) {
             return;
