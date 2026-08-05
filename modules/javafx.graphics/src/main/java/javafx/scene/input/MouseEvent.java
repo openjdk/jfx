@@ -35,7 +35,6 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import javafx.scene.Node;
 
 /// An event originating by mouse buttons and movements. Mouse events can generally be categorized into button events,
 /// movement events, and drag events (resulting from the combination of the previous two). These are described below in
@@ -57,7 +56,7 @@ import javafx.scene.Node;
 ///
 /// ## Button events
 /// A mouse button can be [pressed][#MOUSE_PRESSED] and [released][#MOUSE_RELEASED]. A button [click][#MOUSE_CLICKED]
-/// occurs after these happen over the same node. Button events can still be produced during a drag gesture.
+/// occurs after press and release happen over the same node. Button events can still be produced during a drag gesture.
 ///
 /// Not all buttons on the mouse are supported, such as macro buttons or buttons that change the DPI.
 ///
