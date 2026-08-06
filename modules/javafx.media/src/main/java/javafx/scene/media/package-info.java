@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,6 +136,11 @@
  *     <th scope="row">JAR</th>
  *     <td>Representation of media entries in files accessible via the FILE, HTTP or HTTPS protocols</td>
  *     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</a></td>
+ * </tr>
+ * <tr>
+ *     <th scope="row">RESOURCE</th>
+ *     <td>Representation of media resources bundled in a statically linked application image</td>
+ *     <td><a href="https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/URLProtocols/">URL Protocols in Native Image</a></td>
  * </tr>
  * <tr>
  *     <th scope="row">HTTP Live Streaming (HLS)</th>
