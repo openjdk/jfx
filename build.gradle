@@ -2188,7 +2188,7 @@ allprojects {
     test {
         useJUnitPlatform();
 
-        // Tests are forced to rerun when they are *not* marked as up-to-date 
+        // Tests are forced to rerun when they are *not* marked as up-to-date
         outputs.upToDateWhen { !IS_FORCE_TESTS }
 
         executable = JAVA;
