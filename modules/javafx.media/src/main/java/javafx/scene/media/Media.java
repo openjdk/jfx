@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -336,7 +336,7 @@ public final class Media {
     /**
      * Constructs a <code>Media</code> instance.  This is the only way to
      * specify the media source. The source must represent a valid <code>URI</code>
-     * and is immutable. Only HTTP, HTTPS, FILE, and JAR <code>URL</code>s are supported. If the
+     * and is immutable. Only HTTP, HTTPS, FILE, JAR, and JRT <code>URL</code>s are supported. If the
      * provided URL is invalid then an exception will be thrown.  If an
      * asynchronous error occurs, the {@link #errorProperty error} property will be set. Listen
      * to this property to be notified of any such errors.
@@ -353,12 +353,13 @@ public final class Media {
      * <ul>
      * <li>The supplied URI must conform to RFC-2396 as required by
      * <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>.</li>
-     * <li>Only HTTP, HTTPS, FILE, and JAR URIs are supported.</li>
+     * <li>Only HTTP, HTTPS, FILE, JAR, and JRT URIs are supported.</li>
      * </ul>
      *
      * <p>See <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>
      * for more information about URI formatting in general.
      * JAR URL syntax is specified in <a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</A>.
+     * JRT URL syntax is specified in <a href="https://openjdk.org/jeps/220">JEP 220: Modular Run-Time Images</A>.
      *
      * @param source The URI of the source media.
      * @throws NullPointerException if the URI string is <code>null</code>.
