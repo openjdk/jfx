@@ -802,6 +802,18 @@ public enum AccessibleAttribute {
     VERTICAL_SCROLLBAR(Node.class),
 
     /**
+     * Returns the range of visible items in an indexed control.
+     * <ul>
+     * <li>Used by: ListView and TableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@code int[]} containing the first item index and the
+     *     number of visible items </li>
+     * <li>Parameters: </li>
+     * </ul>
+     */
+    VISIBLE_ITEM_RANGE(int[].class),
+
+    /**
      * Returns true if node is visible, otherwise false.
      * <ul>
      * <li>Used by: Node and ContextMenu </li>

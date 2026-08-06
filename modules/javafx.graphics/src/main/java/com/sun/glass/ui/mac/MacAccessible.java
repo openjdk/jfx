@@ -121,6 +121,7 @@ final class MacAccessible extends Accessible {
         AXMenuItemCmdGlyph(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemCmdModifiers(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemMarkChar(SELECTED, MacVariant::createNSString),
+        AXVisibleItemRange(VISIBLE_ITEM_RANGE, MacVariant::createNSValueForRange),
         AXDateTimeComponents(null, MacVariant::createNSNumberForInt),
 
         // NSAccessibilityMenuRole

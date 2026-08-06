@@ -25,6 +25,32 @@
 
 #import "JFXTableAccessibility.h"
 
+@interface JFXTableRowPlaceholder : NSAccessibilityElement
+@end
+
+@implementation JFXTableRowPlaceholder
+
+- (jobject)getJAccessible
+{
+    return nil;
+}
+
+@end
+
+static const NSInteger ACCESSIBILITY_ROW_WINDOW = 10;
+static JFXTableRowPlaceholder *rowPlaceholder;
+static dispatch_once_t rowPlaceholderOnce;
+
+static id getRowPlaceholder(void)
+{
+    dispatch_once(&rowPlaceholderOnce, ^{
+        rowPlaceholder = [[JFXTableRowPlaceholder alloc] init];
+        [rowPlaceholder setAccessibilityRole:NSAccessibilityUnknownRole];
+        [rowPlaceholder setAccessibilityElement:NO];
+    });
+    return rowPlaceholder;
+}
+
 @implementation JFXTableAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
@@ -90,7 +116,38 @@
 
 - (NSArray *)accessibilityRows
 {
-    return [self accessibilityArrayForAttribute:@"AXRows"];
+    NSInteger count = [self accessibilityArrayCountForAttribute:@"AXRows"];
+    if (count < 0) {
+        return nil;
+    }
+
+    NSMutableArray *rows = [NSMutableArray arrayWithCapacity:(NSUInteger)count];
+    id placeholder = getRowPlaceholder();
+    for (NSInteger index = 0; index < count; index++) {
+        [rows addObject:placeholder];
+    }
+
+    if (count > 0) {
+        NSInteger firstRequestedRow = 0;
+        NSInteger lastRequestedRow = MIN(count - 1, ACCESSIBILITY_ROW_WINDOW - 1);
+        NSRange visibleRange = [[self requestNodeAttribute:@"AXVisibleItemRange"] rangeValue];
+        if (visibleRange.length > 0 && visibleRange.location < (NSUInteger)count) {
+            NSInteger firstVisibleRow = (NSInteger)visibleRange.location;
+            NSInteger lastVisibleRow = MIN(count - 1,
+                    firstVisibleRow + (NSInteger)visibleRange.length - 1);
+            firstRequestedRow = MAX(0, firstVisibleRow - ACCESSIBILITY_ROW_WINDOW);
+            lastRequestedRow = MIN(count - 1, lastVisibleRow + ACCESSIBILITY_ROW_WINDOW);
+        }
+        NSUInteger requestedRowCount = (NSUInteger)(lastRequestedRow - firstRequestedRow + 1);
+        NSArray *requestedRows = [self requestNodeArrayAttribute:@"AXRows"
+                                                           index:(NSUInteger)firstRequestedRow
+                                                        maxCount:requestedRowCount];
+        for (NSUInteger index = 0; index < requestedRows.count; index++) {
+            [rows replaceObjectAtIndex:(NSUInteger)firstRequestedRow + index
+                             withObject:[requestedRows objectAtIndex:index]];
+        }
+    }
+    return rows;
 }
 
 - (NSArray *)accessibilitySelectedRows
