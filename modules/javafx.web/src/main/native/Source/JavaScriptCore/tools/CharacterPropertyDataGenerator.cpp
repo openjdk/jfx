@@ -37,7 +37,7 @@
 namespace JSC {
 
 //
-// Generate a line break pair table in `Source/WebCore/rendering/BreakLines.cpp`.
+// Generate a line break pair table in `Source/WebCore/rendering/BreakablePositions.cpp`.
 //
 // See [UAX14](https://unicode.org/reports/tr14/).
 //
@@ -155,7 +155,7 @@ private:
         dataLogLn(" */");
         dataLogLn("");
         dataLogLn("#include \"config.h\"");
-        dataLogLn("#include \"BreakLines.h\"");
+        dataLogLn("#include \"BreakablePositions.h\"");
         dataLogLn("");
         dataLogLn("#include <wtf/ASCIICType.h>");
         dataLogLn("#include <wtf/StdLibExtras.h>");
@@ -172,7 +172,7 @@ private:
         dataLogLn("    ((a) | ((b) << 1) | ((c) << 2) | ((d) << 3) | ((e) << 4) | ((f) << 5) | ((g) << 6) | ((h) << 7))");
         dataLogLn("");
 
-        dataLogLn("const uint8_t BreakLines::LineBreakTable::breakTable[", numChars, "][", numCharsRoundUp8 / 8, "] = {");
+        dataLogLn("const uint8_t BreakablePositions::LineBreakTable::breakTable[", numChars, "][", numCharsRoundUp8 / 8, "] = {");
 
         // Print the column comment.
         dataLog("           /*");

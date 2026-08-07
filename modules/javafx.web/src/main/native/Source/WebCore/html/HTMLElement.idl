@@ -72,11 +72,15 @@
     [Conditional=WRITING_SUGGESTIONS, CEReactions=Needed] attribute boolean writingsuggestions;
 };
 
-dictionary ShowPopoverOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ShowPopoverOptions {
     HTMLElement source;
 };
 
-dictionary TogglePopoverOptions : ShowPopoverOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary TogglePopoverOptions : ShowPopoverOptions {
     boolean force;
 };
 

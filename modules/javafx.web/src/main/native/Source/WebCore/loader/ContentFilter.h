@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,16 @@
 
 #if ENABLE(CONTENT_FILTERING)
 
-#include "CachedResourceHandle.h"
-#include "LoaderMalloc.h"
-#include "PlatformContentFilter.h"
-#include "ResourceError.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/PlatformContentFilter.h>
+#include <WebCore/ResourceError.h>
 #include <functional>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
+#include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
@@ -44,14 +47,13 @@ class ResourceRequest;
 class ResourceResponse;
 class SubstituteData;
 
-class ContentFilter : public CanMakeWeakPtr<ContentFilter>, public CanMakeCheckedPtr<ContentFilter> {
+class ContentFilter : public RefCounted<ContentFilter> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ContentFilter, Loader);
     WTF_MAKE_NONCOPYABLE(ContentFilter);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ContentFilter);
 public:
     template <typename T> static void addType() { types().append(type<T>()); }
 
-    WEBCORE_EXPORT static std::unique_ptr<ContentFilter> create(ContentFilterClient&);
+    WEBCORE_EXPORT static RefPtr<ContentFilter> create(ContentFilterClient&);
     WEBCORE_EXPORT ~ContentFilter();
 
     static constexpr ASCIILiteral urlScheme() { return "x-apple-content-filter"_s; }
@@ -61,6 +63,7 @@ public:
     WEBCORE_EXPORT void stopFilteringMainResource();
 
     WEBCORE_EXPORT bool continueAfterWillSendRequest(ResourceRequest&, const ResourceResponse&);
+    WEBCORE_EXPORT void continueAfterWillSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
     WEBCORE_EXPORT bool continueAfterResponseReceived(const ResourceResponse&);
     enum class FromDocumentLoader : bool { No, Yes };
     WEBCORE_EXPORT bool continueAfterDataReceived(const SharedBuffer&, FromDocumentLoader = FromDocumentLoader::No);
@@ -89,6 +92,24 @@ public:
 private:
     using State = PlatformContentFilter::State;
 
+    class ContentFilterCallbackAggregator : public ThreadSafeRefCounted<ContentFilterCallbackAggregator> {
+    public:
+        static auto create(ContentFilter& contentFilter, const ResourceRequest& request, CompletionHandler<void(ResourceRequest&&)>&& callback) { return adoptRef(*new ContentFilterCallbackAggregator(contentFilter, request, WTF::move(callback))); }
+
+        ~ContentFilterCallbackAggregator();
+
+        void didReceivePlatformContentFilterDecision(PlatformContentFilter&, String&&);
+
+    private:
+        ContentFilterCallbackAggregator(ContentFilter&, const ResourceRequest&, CompletionHandler<void(ResourceRequest&&)>&&);
+
+        RefPtr<ContentFilter> m_contentFilter;
+        ResourceRequest m_request;
+        CompletionHandler<void(ResourceRequest&&)> m_callback;
+        unsigned m_numberOfFiltersAllowed { 0 };
+        bool m_isBlocked { false };
+    };
+
     struct Type {
         Function<Ref<PlatformContentFilter>(const PlatformContentFilter::FilterParameters&)> create;
     };
@@ -96,7 +117,6 @@ private:
     WEBCORE_EXPORT static Vector<Type>& types();
 
     using Container = Vector<Ref<PlatformContentFilter>>;
-    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, ContentFilterClient&);
     ContentFilter(Container&&, ContentFilterClient&);
 
     template <typename Function> void forEachContentFilterUntilBlocked(Function&&);
@@ -109,7 +129,7 @@ private:
     URL url();
 
     Container m_contentFilters;
-    WeakRef<ContentFilterClient> m_client;
+    WeakPtr<ContentFilterClient> m_client;
     URL m_mainResourceURL;
     struct ResourceDataItem {
         RefPtr<const SharedBuffer> buffer;

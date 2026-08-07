@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServerRegistration);
 
 Ref<SWServerRegistration> SWServerRegistration::create(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
 {
-    return adoptRef(*new SWServerRegistration(server, key, updateViaCache, scopeURL, scriptURL, serviceWorkerPageIdentifier, WTFMove(navigationPreloadState)));
+    return adoptRef(*new SWServerRegistration(server, key, updateViaCache, scopeURL, scriptURL, serviceWorkerPageIdentifier, WTF::move(navigationPreloadState)));
 }
 
 SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
@@ -54,7 +54,7 @@ SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorker
     , m_server(server)
     , m_creationTime(MonotonicTime::now())
     , m_softUpdateTimer { *this, &SWServerRegistration::softUpdate }
-    , m_preloadState(WTFMove(navigationPreloadState))
+    , m_preloadState(WTF::move(navigationPreloadState))
 {
     m_scopeURL.removeFragmentIdentifier();
 }
@@ -162,7 +162,7 @@ ServiceWorkerRegistrationData SWServerRegistration::data() const
     if (m_activeWorker)
         activeWorkerData = m_activeWorker->data();
 
-    return { m_registrationKey, identifier(), m_scopeURL, m_updateViaCache, m_lastUpdateTime, WTFMove(installingWorkerData), WTFMove(waitingWorkerData), WTFMove(activeWorkerData) };
+    return { m_registrationKey, identifier(), m_scopeURL, m_updateViaCache, m_lastUpdateTime, WTF::move(installingWorkerData), WTF::move(waitingWorkerData), WTF::move(activeWorkerData) };
 }
 
 void SWServerRegistration::addClientServiceWorkerRegistration(SWServerConnectionIdentifier connectionIdentifier)
@@ -422,14 +422,14 @@ std::optional<ExceptionData> SWServerRegistration::setNavigationPreloadHeaderVal
     if (!activeWorker)
         return ExceptionData { ExceptionCode::InvalidStateError, "No active worker"_s };
 
-    m_preloadState.headerValue = WTFMove(headerValue);
+    m_preloadState.headerValue = WTF::move(headerValue);
     protectedServer()->storeRegistrationForWorker(*activeWorker);
     return { };
 }
 
 void SWServerRegistration::addCookieChangeSubscriptions(Vector<CookieChangeSubscription>&& subscriptions)
 {
-    m_cookieChangeSubscriptions.addAll(WTFMove(subscriptions));
+    m_cookieChangeSubscriptions.addAll(WTF::move(subscriptions));
 }
 
 void SWServerRegistration::removeCookieChangeSubscriptions(Vector<CookieChangeSubscription>&& subscriptions)

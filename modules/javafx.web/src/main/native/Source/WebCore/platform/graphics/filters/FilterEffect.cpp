@@ -63,7 +63,7 @@ FilterImageVector FilterEffect::takeImageInputs(FilterImageVector& stack) const
 
     size_t index = stack.size();
     FilterImageVector result(inputsSize, [&](size_t) -> Ref<FilterImage>&& {
-        return WTFMove(stack[--index]);
+        return WTF::move(stack[--index]);
     });
     stack.shrink(stack.size() - inputsSize);
     return result;
@@ -183,7 +183,7 @@ RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, std::span<const Re
 
     LOG_WITH_STREAM(Filters, stream
         << "FilterEffect " << filterName() << " " << this << " apply(): " << *this
-        << "\n  filterPrimitiveSubregion " << primitiveSubregion
+        << "  filterPrimitiveSubregion " << primitiveSubregion
         << "\n  absolutePaintRect " << absoluteImageRect
         << "\n  maxEffectRect " << filter.maxEffectRect(primitiveSubregion)
         << "\n  filter scale " << filter.filterScale());
@@ -206,7 +206,7 @@ FilterStyleVector FilterEffect::createFilterStyles(GraphicsContext& context, con
 
 FilterStyle FilterEffect::createFilterStyle(GraphicsContext& context, const Filter& filter, const FilterStyle& input, const std::optional<FilterEffectGeometry>& geometry) const
 {
-    ASSERT(supportedFilterRenderingModes().contains(FilterRenderingMode::GraphicsContext));
+    ASSERT(filter.filterRenderingModes().contains(FilterRenderingMode::GraphicsContext));
 
     auto primitiveSubregion = calculatePrimitiveSubregion(filter, { &input.primitiveSubregion, 1 }, geometry);
     auto imageRect = calculateImageRect(filter, { &input.imageRect, 1 }, primitiveSubregion);
@@ -223,7 +223,6 @@ TextStream& FilterEffect::externalRepresentation(TextStream& ts, FilterRepresent
     if (representation == FilterRepresentation::Debugging) {
         TextStream::IndentScope indentScope(ts);
         ts.dumpProperty("operating colorspace"_s, operatingColorSpace());
-        ts << '\n' << indent;
     }
     return ts;
 }

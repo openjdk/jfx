@@ -153,19 +153,19 @@ static bool canPowerEfficientlyEncodeMedia(const MediaEncodingConfiguration& con
 void MediaEngineConfigurationFactoryMock::createDecodingConfiguration(MediaDecodingConfiguration&& configuration, DecodingConfigurationCallback&& callback)
 {
     if (!canDecodeMedia(configuration)) {
-        callback({ { }, WTFMove(configuration) });
+        callback({ { }, WTF::move(configuration) });
         return;
     }
-    callback({{ true, canSmoothlyDecodeMedia(configuration), canPowerEfficientlyDecodeMedia(configuration) }, WTFMove(configuration)});
+    callback({{ true, canSmoothlyDecodeMedia(configuration), canPowerEfficientlyDecodeMedia(configuration) }, WTF::move(configuration)});
 }
 
 void MediaEngineConfigurationFactoryMock::createEncodingConfiguration(MediaEncodingConfiguration&& configuration, EncodingConfigurationCallback&& callback)
 {
     if (!canEncodeMedia(configuration)) {
-        callback({ { }, WTFMove(configuration) });
+        callback({ { }, WTF::move(configuration) });
         return;
     }
-    callback({{ true, canSmoothlyEncodeMedia(configuration), canPowerEfficientlyEncodeMedia(configuration) }, WTFMove(configuration)});
+    callback({{ true, canSmoothlyEncodeMedia(configuration), canPowerEfficientlyEncodeMedia(configuration) }, WTF::move(configuration)});
 }
 
 } // namespace WebCore

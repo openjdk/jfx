@@ -26,12 +26,14 @@
 
 #pragma once
 
-#include "InspectorFrontendRouter.h"
-#include "InspectorProtocolTypes.h"
+#include <JavaScriptCore/InspectorFrontendRouter.h>
+#include <JavaScriptCore/InspectorProtocolTypes.h>
 #include <functional>
 #include <wtf/Function.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -61,9 +63,9 @@ protected:
     const Ref<BackendDispatcher> m_backendDispatcher;
 };
 
-class BackendDispatcher : public RefCounted<BackendDispatcher> {
+class BackendDispatcher : public RefCountedAndCanMakeWeakPtr<BackendDispatcher> {
 public:
-    JS_EXPORT_PRIVATE static Ref<BackendDispatcher> create(Ref<FrontendRouter>&&);
+    JS_EXPORT_PRIVATE static Ref<BackendDispatcher> create(Ref<FrontendRouter>&&, BackendDispatcher* fallback = nullptr);
 
     class CallbackBase : public RefCounted<CallbackBase> {
     public:
@@ -119,7 +121,7 @@ public:
     JS_EXPORT_PRIVATE RefPtr<JSON::Array> getArray(JSON::Object*, const String& name, bool required);
 
 private:
-    BackendDispatcher(Ref<FrontendRouter>&&);
+    BackendDispatcher(Ref<FrontendRouter>&&, BackendDispatcher* fallback);
 
     template<typename T>
     WTF_INTERNAL T getPropertyValue(JSON::Object*, const String& name, bool required, std::function<T(JSON::Value&)> converter, ASCIILiteral typeName);
@@ -135,6 +137,8 @@ private:
     // For synchronously handled requests, avoid plumbing requestId through every
     // call that could potentially fail with a protocol error.
     std::optional<long> m_currentRequestId { std::nullopt };
+
+    WeakPtr<BackendDispatcher> m_fallbackDispatcher;
 };
 
 } // namespace Inspector

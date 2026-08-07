@@ -36,6 +36,7 @@
 #include "ContextMenuJava.h"
 #include "DragClientJava.h"
 #include "EditorClientJava.h"
+#include "GarbageCollectionController.h"
 #include "FrameLoaderClientJava.h"
 #include "InspectorClientJava.h"
 #include "PageStorageSessionProvider.h"
@@ -77,11 +78,10 @@
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameTree.h>
 #include <WebCore/FrameView.h>
-#include <WebCore/GCController.h>
 #include <WebCore/GeolocationClientMock.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayerTextureMapper.h>
-#include <WebCore/InspectorController.h>
+#include <WebCore/PageInspectorController.h>
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/NodeTraversal.h>
@@ -113,6 +113,11 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include "LocalDOMWindow.h"
+#include "DocumentView.h"
+#include "LocalFrameInlines.h"
+#include "DocumentPage.h"
+#include "NodeDocument.h"
 
 // FIXME: Move dependency of runtime_root to BridgeUtils
 #include <WebCore/runtime_root.h>
@@ -136,8 +141,9 @@
 
 namespace WebCore {
 
-WebPage::WebPage(std::unique_ptr<Page> page)
-    : m_page(WTFMove(page))
+WebPage::WebPage(RefPtr<Page> page)
+    : m_page(WTF::move(page))
+    , m_printContext(PrintContext::create(m_page->localMainFrame()))
 {
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     if(!NotificationController::from(m_page.get())) {
@@ -466,7 +472,7 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
     markForSync();
 }
 
-void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& inClip, OptionSet<GraphicsLayerPaintBehavior>)
+void WebPage::paintContents(const GraphicsLayer& glc, GraphicsContext& context, const FloatRect& inClip, OptionSet<GraphicsLayerPaintBehavior>)
 {
     context.save();
     context.clip(inClip);
@@ -747,8 +753,6 @@ int WebPage::beginPrinting(float width, float height)
         return 0;
     frame->document()->updateLayout();
 
-    ASSERT(!m_printContext);
-    m_printContext = std::unique_ptr<PrintContext>(new PrintContext(frame));
     m_printContext->begin(width, height);
     m_printContext->computePageRects(FloatRect(0, 0, width, height), 0, 0, 1, height);
     return m_printContext->pageCount();
@@ -761,7 +765,6 @@ void WebPage::endPrinting()
         return;
 
     m_printContext->end();
-    m_printContext.reset();
 }
 
 void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
@@ -816,13 +819,18 @@ void WebPage::disableWatchdog() {
 using namespace WebCore;
 using namespace WTF;
 
+extern "C" JNIEXPORT void WebPage_doJSCGarbageCollection()
+{
+    WebCore::GarbageCollectionController::singleton().garbageCollectNow();
+}
+
 class WebStorageNamespaceProviderJava final : public WebCore::StorageNamespaceProvider {
 public:
     void setLocalStorageDatabasePath(const String& path) {
-        m_localStorageDatabasePath = path;
+        m_localStorageDatabasePath = path.isNull() ? emptyString() : path;
     }
 private:
-    String m_localStorageDatabasePath;
+    String m_localStorageDatabasePath { emptyString() };
         WeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
 
         RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin& topLevelOrigin, Page& page, ShouldCreateNamespace shouldCreate) override{
@@ -919,8 +927,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     JLObject jlself(self, true);
 
     //utaTODO: history agent implementation
-
-    auto pc = pageConfigurationWithEmptyClients(std::nullopt,PAL::SessionID::defaultSessionID());
+    auto identifier = PageIdentifier::generate();
+    auto pc = pageConfigurationWithEmptyClients(identifier, PAL::SessionID::defaultSessionID());
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = makeUniqueRef<ChromeClientJava>(jlself);
@@ -944,14 +952,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
-    auto page = std::make_unique<Page>(WTFMove(pc));
+    auto page = Page::create(WTF::move(pc));
+
     // Associate PageSupplementJava instance which has WebPage java object.
     page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(self));
-    pageStorageSessionProvider->setPage(*page);
+    pageStorageSessionProvider->setPage(page);
 #if ENABLE(GEOLOCATION)
-    WebCore::provideGeolocationTo(page.get(), GeolocationClientMock::create());
+    WebCore::provideGeolocationTo(&page.get(), GeolocationClientMock::create());
 #endif
-    return ptr_to_jlong(new WebPage(WTFMove(page)));
+    return ptr_to_jlong(new WebPage(WTF::move(page)));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
@@ -972,6 +981,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setDefaultFontSize(16);
     settings.setContextMenuEnabled(true);
     settings.setInputTypeColorEnabled(true);
+    settings.setLocalStorageEnabled(true);
+    settings.setSessionStorageEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
     //settings.setXSSAuditorEnabled(true);
@@ -1193,7 +1204,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     FrameLoadRequest frameLoadRequest(
         *frame, ResourceRequest(URL(emptyParent, String(env, url))));
     frameLoadRequest.setIsRequestFromClientOrUserInput();
-    frame->loader().load(WTFMove(frameLoadRequest));
+    frame->loader().load(WTF::move(frameLoadRequest));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
@@ -1215,13 +1226,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
         *frame,
         ResourceRequest(URL({ }, ""_s)),
         SubstituteData(
-            WTFMove(buffer),
+            WTF::move(buffer),
             URL(),
-            WTFMove(response),
+            WTF::move(response),
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
     );
     frameLoadRequest.setIsRequestFromClientOrUserInput();
-    frame->loader().load(WTFMove(frameLoadRequest));
+    frame->loader().load(WTF::move(frameLoadRequest));
 
     env->ReleaseStringUTFChars(text, stringChars);
 }
@@ -1318,7 +1329,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
             opts.add(FindOption::Backwards);
         if (wrap)
             opts.add(FindOption::WrapAround);
-        return bool_to_jbool(page->findString(String(env, toFind), opts));
+
+        auto findResult = page->findString(String(env, toFind), opts);
+        bool found = findResult.range.has_value();
+        return bool_to_jbool(found);
     }
     return JNI_FALSE;
 }
@@ -1338,8 +1352,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInFrame
             opts.add(FindOption::Backwards);
         if (wrap)
             opts.add(FindOption::WrapAround);
-        return bool_to_jbool(frame->page()->findString(
-            String(env, toFind), opts | FindOption::StartInSelection));
+        auto result = frame->page()->findString(
+            String(env, toFind), opts | FindOption::StartInSelection);
+        return bool_to_jbool(result.range.has_value());
     }
     return JNI_FALSE;
 }
@@ -1423,6 +1438,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
 #endif
     } else if (nativePropertyName == "RequestIdleCallbackEnabled"_s) {
         settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "FontFaceSetConstructorEnabled"_s) {
+        settings.setFontFaceSetConstructorEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "ContactPickerAPIEnabled"_s) {
         settings.setContactPickerAPIEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "AttachmentElementEnabled"_s) {
@@ -1470,6 +1487,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
     settings.setRequestIdleCallbackEnabled(true);
+    settings.setFontFaceSetConstructorEnabled(false);
 
     // settings.setPrivateBrowsingEnabled(false);
     settings.setAllowTopNavigationToDataURLs(true);
@@ -1870,7 +1888,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       WallTime::fromRawSeconds(timestamp), ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
+                                                       MonotonicTime::fromRawSeconds(timestamp), ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
@@ -2263,15 +2281,15 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-            dc.dragExited(*localMainFrame,WTFMove(dragData));
+            dc.dragExited(*localMainFrame,WTF::move(dragData));
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTFMove(dragData))));
+            return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTF::move(dragData))));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc.performDragOperation(WTFMove(dragData)) ? 1 : 0;
+                int ret = dc.performDragOperation(WTF::move(dragData)) ? 1 : 0;
                 WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }
@@ -2291,7 +2309,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
                 : MouseButton::None,
             PlatformEvent::Type::MouseMoved,
             0,
-            { }, WallTime {}, ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
+            { }, MonotonicTime {}, ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:
@@ -2311,9 +2329,12 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 static Editor* getEditor(Page* page) {
     ASSERT(page);
     LocalFrame* framePtr = page->focusController().focusedOrMainFrame();
+    ASSERT(framePtr);
+
     if (framePtr) {
         return &framePtr->editor();
     }
+    return nullptr;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkExecuteCommand
@@ -2554,7 +2575,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
 {
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
-        InspectorController& ic = page->inspectorController();
+        PageInspectorController& ic = page->inspectorController();
         InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
         if (icj) {
             ic.connectFrontend(*icj, false);
@@ -2572,7 +2593,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
         return;
     }
 
-    InspectorController& ic = page->inspectorController();
+    PageInspectorController& ic = page->inspectorController();
     InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
     if (icj) {
         ic.disconnectFrontend(*icj);
@@ -2603,7 +2624,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkWorkerThreadCount
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
   (JNIEnv*, jclass)
 {
-    GCController::singleton().garbageCollectNow();
+    WebPage_doJSCGarbageCollection();
 }
 
 }

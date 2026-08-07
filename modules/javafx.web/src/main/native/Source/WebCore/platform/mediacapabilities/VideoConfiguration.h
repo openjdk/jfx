@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ColorGamut.h"
-#include "HdrMetadataType.h"
-#include "TransferFunction.h"
+#include <WebCore/ColorGamut.h>
+#include <WebCore/HdrMetadataType.h>
+#include <WebCore/TransferFunction.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -54,7 +54,7 @@ inline VideoConfiguration VideoConfiguration::isolatedCopy() const &
 
 inline VideoConfiguration VideoConfiguration::isolatedCopy() &&
 {
-    return { WTFMove(contentType).isolatedCopy(), width, height, bitrate, framerate, alphaChannel, colorGamut, hdrMetadataType, transferFunction };
+    return { WTF::move(contentType).isolatedCopy(), width, height, bitrate, framerate, alphaChannel, colorGamut, hdrMetadataType, transferFunction };
 }
 
 } // namespace WebCore

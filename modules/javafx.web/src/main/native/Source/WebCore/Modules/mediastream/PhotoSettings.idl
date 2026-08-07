@@ -27,7 +27,8 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary PhotoSettings {
     FillLightMode   fillLightMode;
     double          imageHeight;

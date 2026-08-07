@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OscillatorNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OscillatorNode);
 
 // Breakpoints where we deicde to do linear interoplation, 3-point interpolation or 5-point interpolation. See doInterpolation().
 constexpr float interpolate2Point = 0.3;
@@ -340,7 +340,8 @@ double OscillatorNode::processKRate(int n, std::span<float> destination, double 
 
 void OscillatorNode::process(size_t framesToProcess)
 {
-    auto& outputBus = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    auto& outputBus = firstOutput->bus();
 
     if (!isInitialized() || !outputBus.numberOfChannels()) {
         outputBus.zero();

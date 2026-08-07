@@ -37,12 +37,12 @@ public:
     }
 
     ResourceRequest(URL&& url)
-        : ResourceRequestBase(WTFMove(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+        : ResourceRequestBase(WTF::move(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
     }
 
     ResourceRequest(URL&& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
-        : ResourceRequestBase(WTFMove(url), policy)
+        : ResourceRequestBase(WTF::move(url), policy)
     {
         setHTTPReferrer(referrer);
     }

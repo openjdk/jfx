@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "IntSize.h"
+#include <WebCore/IntSize.h>
 #include <wtf/HashTraits.h>
 
 namespace WTF {

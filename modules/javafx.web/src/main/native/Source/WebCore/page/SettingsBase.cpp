@@ -29,14 +29,13 @@
 #include "AudioSession.h"
 #include "BackForwardCache.h"
 #include "BackForwardController.h"
-#include "CachedResourceLoader.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CookieStorage.h"
 #include "DOMTimer.h"
 #include "Database.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentView.h"
 #include "FontCache.h"
 #include "FrameTree.h"
 #include "HistoryItem.h"
@@ -54,9 +53,6 @@
 
 #if ENABLE(MEDIA_STREAM)
 #include "MockRealtimeMediaSourceCenter.h"
-#endif
-#if USE(MODERN_AVCONTENTKEYSESSION)
-#include "MediaSessionManagerCocoa.h"
 #endif
 
 namespace WebCore {
@@ -189,6 +185,18 @@ void SettingsBase::setPictographFontFamily(const String& family, UScriptCode scr
         invalidateAfterGenericFamilyChange(m_page.get());
 }
 
+const String& SettingsBase::mathFontFamily(UScriptCode script) const
+{
+    return fontGenericFamilies().mathFontFamily(script);
+}
+
+void SettingsBase::setMathFontFamily(const String& family, UScriptCode script)
+{
+    bool changes = fontGenericFamilies().setMathFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page.get());
+}
+
 void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)
 {
     auto oldTimerInterval = std::exchange(m_minimumDOMTimerInterval, interval);
@@ -228,7 +236,7 @@ void SettingsBase::setAllowedMediaContainerTypes(const String& types)
     for (auto type : StringView(types).split(','))
         newTypes.append(type.toString());
 
-    m_allowedMediaContainerTypes = WTFMove(newTypes);
+    m_allowedMediaContainerTypes = WTF::move(newTypes);
 }
 
 void SettingsBase::setAllowedMediaCodecTypes(const String& types)
@@ -242,7 +250,7 @@ void SettingsBase::setAllowedMediaCodecTypes(const String& types)
     for (auto type : StringView(types).split(','))
         newTypes.append(type.toString());
 
-    m_allowedMediaCodecTypes = WTFMove(newTypes);
+    m_allowedMediaCodecTypes = WTF::move(newTypes);
 }
 
 void SettingsBase::setAllowedMediaVideoCodecIDs(const String& types)
@@ -255,10 +263,10 @@ void SettingsBase::setAllowedMediaVideoCodecIDs(const String& types)
     Vector<FourCC> newTypes;
     for (auto type : StringView(types).split(',')) {
         if (auto fourCC = FourCC::fromString(type))
-            newTypes.append(WTFMove(*fourCC));
+            newTypes.append(WTF::move(*fourCC));
     }
 
-    m_allowedMediaVideoCodecIDs = WTFMove(newTypes);
+    m_allowedMediaVideoCodecIDs = WTF::move(newTypes);
 }
 
 void SettingsBase::setAllowedMediaAudioCodecIDs(const String& types)
@@ -271,10 +279,10 @@ void SettingsBase::setAllowedMediaAudioCodecIDs(const String& types)
     Vector<FourCC> newTypes;
     for (auto type : StringView(types).split(',')) {
         if (auto fourCC = FourCC::fromString(type))
-            newTypes.append(WTFMove(*fourCC));
+            newTypes.append(WTF::move(*fourCC));
     }
 
-    m_allowedMediaAudioCodecIDs = WTFMove(newTypes);
+    m_allowedMediaAudioCodecIDs = WTF::move(newTypes);
 }
 
 void SettingsBase::setAllowedMediaCaptionFormatTypes(const String& types)
@@ -287,10 +295,10 @@ void SettingsBase::setAllowedMediaCaptionFormatTypes(const String& types)
     Vector<FourCC> newTypes;
     for (auto type : StringView(types).split(',')) {
         if (auto fourCC = FourCC::fromString(type))
-            newTypes.append(WTFMove(*fourCC));
+            newTypes.append(WTF::move(*fourCC));
     }
 
-    m_allowedMediaCaptionFormatTypes = WTFMove(newTypes);
+    m_allowedMediaCaptionFormatTypes = WTF::move(newTypes);
 }
 
 void SettingsBase::resetToConsistentState()
@@ -524,14 +532,6 @@ void SettingsBase::resourceUsageOverlayVisibleChanged()
         m_page->setResourceUsageOverlayVisible(m_page->settings().resourceUsageOverlayVisible());
 #endif
 }
-
-#if USE(MODERN_AVCONTENTKEYSESSION)
-void SettingsBase::shouldUseModernAVContentKeySessionChanged()
-{
-    if (m_page)
-        MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(m_page->settings().shouldUseModernAVContentKeySession());
-}
-#endif
 
 void SettingsBase::useSystemAppearanceChanged()
 {

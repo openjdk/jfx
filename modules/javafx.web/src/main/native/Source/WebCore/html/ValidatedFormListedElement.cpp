@@ -32,10 +32,12 @@
 
 #include "AXObjectCache.h"
 #include "ContainerNodeInlines.h"
+#include "DocumentPage.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FormAssociatedElement.h"
 #include "FormController.h"
 #include "HTMLDataListElement.h"
@@ -118,7 +120,7 @@ void ValidatedFormListedElement::hideVisibleValidationMessage()
         m_validationMessage->requestToHideMessage();
 }
 
-bool ValidatedFormListedElement::checkValidity(Vector<RefPtr<ValidatedFormListedElement>>* unhandledInvalidControls)
+bool ValidatedFormListedElement::checkValidity(Vector<Ref<ValidatedFormListedElement>>* unhandledInvalidControls)
 {
     if (!willValidate() || isValidFormControlElement())
         return true;
@@ -129,13 +131,13 @@ bool ValidatedFormListedElement::checkValidity(Vector<RefPtr<ValidatedFormListed
     auto event = Event::create(eventNames().invalidEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
     element.dispatchEvent(event);
     if (!event->defaultPrevented() && unhandledInvalidControls && element.isConnected() && originalDocument.ptr() == &element.document())
-        unhandledInvalidControls->append(this);
+        unhandledInvalidControls->append(*this);
     return false;
 }
 
 bool ValidatedFormListedElement::reportValidity()
 {
-    Vector<RefPtr<ValidatedFormListedElement>> elements;
+    Vector<Ref<ValidatedFormListedElement>> elements;
     if (checkValidity(&elements))
         return true;
 

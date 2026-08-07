@@ -56,7 +56,7 @@ platform/graphics/skia/IntRectSkia.cpp
 platform/graphics/skia/NativeImageSkia.cpp
 platform/graphics/skia/PathSkia.cpp
 platform/graphics/skia/PatternSkia.cpp
-platform/graphics/skia/PlatformDisplaySkia.cpp
+platform/graphics/skia/PlatformDisplaySkia.cpp @no-unify
 platform/graphics/skia/ShareableBitmapSkia.cpp
 platform/graphics/skia/SkiaHarfBuzzFont.cpp
 platform/graphics/skia/SkiaHarfBuzzFontCache.cpp

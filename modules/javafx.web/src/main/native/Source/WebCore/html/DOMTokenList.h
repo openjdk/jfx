@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Element.h"
+#include <WebCore/Element.h>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMalloc.h>
 

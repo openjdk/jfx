@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "FetchOptions.h"
-#include "LoadSchedulingMode.h"
-#include "PageIdentifier.h"
-#include "ResourceLoadPriority.h"
-#include "ResourceLoaderIdentifier.h"
-#include "ResourceLoaderOptions.h"
-#include "StoredCredentialsPolicy.h"
+#include <WebCore/FetchOptions.h>
+#include <WebCore/LoadSchedulingMode.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ResourceLoadPriority.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/StoredCredentialsPolicy.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -56,7 +57,9 @@ class SubresourceLoader;
 
 struct FetchOptions;
 
-class WEBCORE_EXPORT LoaderStrategy {
+class WEBCORE_EXPORT LoaderStrategy : public CanMakeCheckedPtr<LoaderStrategy> {
+    WTF_MAKE_TZONE_ALLOCATED(LoaderStrategy);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LoaderStrategy);
 public:
     virtual void loadResource(LocalFrame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&) = 0;
     virtual void loadResourceSynchronously(FrameLoader&, ResourceLoaderIdentifier, const ResourceRequest&, ClientCredentialPolicy, const FetchOptions&, const HTTPHeaderMap&, ResourceError&, ResourceResponse&, Vector<uint8_t>& data) = 0;
@@ -72,7 +75,7 @@ public:
     virtual void resumePendingRequests() = 0;
 
     virtual void setResourceLoadSchedulingMode(Page&, LoadSchedulingMode);
-    virtual void prioritizeResourceLoads(const Vector<SubresourceLoader*>&);
+    virtual void prioritizeResourceLoads(const Vector<Ref<SubresourceLoader>>&);
 
     virtual bool usePingLoad() const { return true; }
     using PingLoadCompletionHandler = Function<void(const ResourceError&, const ResourceResponse&)>;

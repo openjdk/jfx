@@ -27,12 +27,12 @@
 #include "SpeechRecognition.h"
 
 #include "ClientOrigin.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
-#include "Page.h"
 #include "PermissionsPolicy.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionErrorEvent.h"
@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechRecognition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechRecognition);
 
 Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 {
@@ -178,18 +178,18 @@ void SpeechRecognition::didReceiveResult(Vector<SpeechRecognitionResultData>&& r
     auto firstChangedIndex = allResults.size();
     for (auto resultData : resultDatas) {
         auto alternatives = WTF::map(resultData.alternatives, [](auto& alternativeData) {
-            return SpeechRecognitionAlternative::create(WTFMove(alternativeData.transcript), alternativeData.confidence);
+            return SpeechRecognitionAlternative::create(WTF::move(alternativeData.transcript), alternativeData.confidence);
         });
 
-        auto newResult = SpeechRecognitionResult::create(WTFMove(alternatives), resultData.isFinal);
+        auto newResult = SpeechRecognitionResult::create(WTF::move(alternatives), resultData.isFinal);
         if (resultData.isFinal)
             m_finalResults.append(newResult);
 
-        allResults.append(WTFMove(newResult));
+        allResults.append(WTF::move(newResult));
     }
 
-    auto resultList = SpeechRecognitionResultList::create(WTFMove(allResults));
-    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTFMove(resultList)));
+    auto resultList = SpeechRecognitionResultList::create(WTF::move(allResults));
+    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTF::move(resultList)));
 }
 
 void SpeechRecognition::didError(const SpeechRecognitionError& error)
@@ -209,6 +209,11 @@ void SpeechRecognition::didEnd()
 }
 
 SpeechRecognition::~SpeechRecognition() = default;
+
+ScriptExecutionContext* SpeechRecognition::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
 
 bool SpeechRecognition::virtualHasPendingActivity() const
 {

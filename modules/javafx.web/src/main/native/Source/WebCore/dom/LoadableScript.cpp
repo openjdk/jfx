@@ -62,8 +62,8 @@ void LoadableScript::notifyClientFinished()
     auto clients = WTF::map(m_clients, [](auto& entry) -> WeakPtr<LoadableScriptClient> {
         return entry.key;
     });
-    for (auto& client : clients) {
-        if (client)
+    for (auto& weakClient : clients) {
+        if (RefPtr client = weakClient.get())
         client->notifyFinished(*this);
     }
 }

@@ -40,18 +40,4 @@ template<> unsigned weakRandomNumber<unsigned>()
     return s_weakRandom.getUint32();
 }
 
-#if PLATFORM(COCOA)
-
-// Older versions of Safari frameworks were using weakRandomUint32.
-// Remove this once we no longer need to support those.
-
-WTF_EXPORT_PRIVATE unsigned weakRandomUint32();
-
-unsigned weakRandomUint32()
-{
-    return random();
-}
-
-#endif
-
 }

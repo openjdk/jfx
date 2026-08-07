@@ -26,7 +26,7 @@
 #include "StyleTextUnderlineOffset.h"
 
 #include "AnimationUtilities.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleBuilderState.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 
@@ -40,25 +40,13 @@ float TextUnderlineOffset::resolve(const RenderStyle& style, float autoValue) co
             return autoValue;
         },
         [&](const Fixed& fixed) -> float {
-            return fixed.value;
+            return Style::evaluate<float>(fixed, style.usedZoomForLength());
         },
-        [&](const auto& percentage) -> float {
-            return Style::evaluate(percentage, style.computedFontSize());
-        }
-    );
-}
-
-float TextUnderlineOffset::resolve(float fontSize, float autoValue) const
-{
-    return WTF::switchOn(*this,
-        [&](const CSS::Keyword::Auto&) -> float {
-            return autoValue;
+        [&](const Calc& calc) -> float {
+            return Style::evaluate<float>(calc, style.computedFontSize(), style.usedZoomForLength());
         },
-        [&](const Fixed& fixed) -> float {
-            return fixed.value;
-        },
-        [&](const auto& percentage) -> float {
-            return Style::evaluate(percentage, fontSize);
+        [&](const Percentage& percentage) -> float {
+            return Style::evaluate<float>(percentage, style.computedFontSize());
         }
     );
 }

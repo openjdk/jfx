@@ -36,7 +36,7 @@ constexpr static int smallest_power_of_five = binary_format<double>::smallest_po
 constexpr static int largest_power_of_five = binary_format<double>::largest_power_of_ten();
 constexpr static int number_of_entries = 2 * (largest_power_of_five - smallest_power_of_five + 1);
 // Powers of five from 5^-342 all the way to 5^308 rounded toward one.
-constexpr static uint64_t power_of_five_128[number_of_entries] = {
+constexpr static std::array<uint64_t, number_of_entries> power_of_five_128 {
         0xeef453d6923bd65a,0x113faa2906a13b3f,
         0x9558b4661b6565f8,0x4ac7ca59a424c507,
         0xbaaee17fa23ebf76,0x5d79bcf00d2df649,
@@ -691,7 +691,7 @@ constexpr static uint64_t power_of_five_128[number_of_entries] = {
 };
 
 template <class unused>
-constexpr uint64_t powers_template<unused>::power_of_five_128[number_of_entries];
+constexpr std::array<uint64_t, powers_template<unused>::number_of_entries> powers_template<unused>::power_of_five_128;
 
 using powers = powers_template<>;
 

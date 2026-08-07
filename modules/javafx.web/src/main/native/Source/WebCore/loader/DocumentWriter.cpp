@@ -34,12 +34,16 @@
 #include "DOMImplementation.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "FrameLoader.h"
 #include "FrameLoaderStateMachine.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "MIMETypeRegistry.h"
@@ -62,9 +66,10 @@ namespace WebCore {
 
 static inline bool canReferToParentFrameEncoding(const LocalFrame* frame, const LocalFrame* parentFrame)
 {
-    if (is<XMLDocument>(frame->document()))
+    RefPtr document = frame->document();
+    if (is<XMLDocument>(document))
         return false;
-    return parentFrame && parentFrame->document()->protectedSecurityOrigin()->isSameOriginDomain(frame->document()->securityOrigin());
+    return parentFrame && parentFrame->protectedDocument()->protectedSecurityOrigin()->isSameOriginDomain(document->protectedSecurityOrigin());
 }
 
 // This is only called by ScriptController::executeIfJavaScriptURL
@@ -190,7 +195,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
             document->createDOMWindow();
     };
 
-    frameLoader->clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView, true, WTFMove(handleDOMWindowCreation));
+    frameLoader->clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView, true, WTF::move(handleDOMWindowCreation));
     clear();
 
     // frameLoader->clear() might fire unload event which could remove the view of the document.
@@ -210,7 +215,6 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         // |document| is the result of evaluating a JavaScript URL.
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOriginPolicy(ownerDocument->securityOriginPolicy());
-        document->setStrictMixedContentMode(ownerDocument->isStrictMixedContentMode());
         document->setCrossOriginEmbedderPolicy(ownerDocument->crossOriginEmbedderPolicy());
 
         document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
@@ -226,7 +230,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
             return document->loader() && document->loader()->substituteData().isValid();
         };
 
-        if (currentHistoryItem && currentHistoryItem->policyContainer()) {
+        if (triggeringAction && triggeringAction->type() == NavigationType::BackForward && currentHistoryItem && currentHistoryItem->policyContainer()) {
             const auto& policyContainerFromHistory = currentHistoryItem->policyContainer();
             ASSERT(policyContainerFromHistory);
             document->inheritPolicyContainerFrom(*policyContainerFromHistory);
@@ -234,7 +238,7 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
             RefPtr parentFrame = dynamicDowncast<LocalFrame>(frame->tree().parent());
             if (parentFrame && parentFrame->document()) {
                 document->inheritPolicyContainerFrom(parentFrame->document()->policyContainer());
-                document->checkedContentSecurityPolicy()->updateSourceSelf(parentFrame->document()->securityOrigin());
+                document->checkedContentSecurityPolicy()->updateSourceSelf(parentFrame->protectedDocument()->protectedSecurityOrigin());
             }
         } else if (triggeringAction && triggeringAction->requester() && !isLoadingBrowserControlledHTML()) {
             document->inheritPolicyContainerFrom(triggeringAction->requester()->policyContainer);
@@ -290,7 +294,7 @@ TextResourceDecoder& DocumentWriter::decoder()
             decoder->setEncoding(m_encoding,
                 m_encodingWasChosenByUser ? TextResourceDecoder::UserChosenEncoding : TextResourceDecoder::EncodingFromHTTPHeader);
         }
-        frame->protectedDocument()->setDecoder(WTFMove(decoder));
+        frame->protectedDocument()->setDecoder(WTF::move(decoder));
     }
     return *m_decoder;
 }

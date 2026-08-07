@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
+#include <WebCore/RenderStyleConstants.h>
 #include <wtf/EnumTraits.h>
 
 namespace WTF {
@@ -43,7 +43,7 @@ class StyleSelfAlignmentData {
 public:
     constexpr StyleSelfAlignmentData() = default;
 
-    // Style data for Self-Aligment and Default-Alignment properties: align-{self, items}, justify-{self, items}.
+    // Style data for Self-Alignment and Default-Alignment properties: align-{self, items}, justify-{self, items}.
     // [ <self-position> && <overflow-position>? ] | [ legacy && [ left | right | center ] ]
     constexpr StyleSelfAlignmentData(ItemPosition position, OverflowAlignment overflow = OverflowAlignment::Default, ItemPositionType positionType = ItemPositionType::NonLegacy)
         : m_position(enumToUnderlyingType(position))
@@ -59,6 +59,23 @@ public:
     ItemPosition position() const { return static_cast<ItemPosition>(m_position); }
     ItemPositionType positionType() const { return static_cast<ItemPositionType>(m_positionType); }
     OverflowAlignment overflow() const { return static_cast<OverflowAlignment>(m_overflow); }
+
+    bool isNormal() const
+    {
+        return position() == ItemPosition::Normal;
+    }
+
+    bool isStretch() const
+    {
+        return position() == ItemPosition::Stretch;
+    }
+
+    bool isStretchy(ItemPosition normal) const
+    {
+        if (isNormal())
+            return normal == ItemPosition::Stretch;
+        return position() == ItemPosition::Stretch;
+    }
 
     // Must resolve Auto before calling. Normal treated as Start.
     // Returns position adjustment from container's start edge.

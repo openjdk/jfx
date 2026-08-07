@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Sizes.h"
 
 #if !BUSE(LIBPAS)
@@ -47,3 +49,5 @@ static_assert(
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

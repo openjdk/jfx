@@ -36,8 +36,8 @@ class MathMLStyle: public RefCounted<MathMLStyle> {
 public:
     static Ref<MathMLStyle> create();
 
-    MathMLElement::MathVariant mathVariant() const { return m_mathVariant; }
-    void setMathVariant(MathMLElement::MathVariant mathvariant) { m_mathVariant = mathvariant; }
+    MathVariant mathVariant() const { return m_mathVariant; }
+    void setMathVariant(MathVariant mathvariant) { m_mathVariant = mathvariant; }
 
     void resolveMathMLStyle(RenderObject*);
     static void resolveMathMLStyleTree(RenderObject*);
@@ -45,9 +45,9 @@ public:
 private:
     const MathMLStyle* getMathMLStyle(RenderObject* renderer);
     RenderObject* getMathMLParentNode(RenderObject*);
-    void updateStyleIfNeeded(RenderObject*, MathMLElement::MathVariant);
+    void updateStyleIfNeeded(RenderObject*, MathVariant);
 
-    MathMLElement::MathVariant m_mathVariant { MathMLElement::MathVariant::None };
+    MathVariant m_mathVariant { MathVariant::None };
 };
 
 }

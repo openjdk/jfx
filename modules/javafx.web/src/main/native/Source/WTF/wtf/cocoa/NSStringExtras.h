@@ -28,6 +28,8 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
 #import <Foundation/Foundation.h>
 #import <wtf/StdLibExtras.h>
 
@@ -40,3 +42,5 @@ inline const char* safePrintfType(NSString *string) { return string.UTF8String; 
 }
 
 using WTF::span;
+
+#endif // __OBJC__

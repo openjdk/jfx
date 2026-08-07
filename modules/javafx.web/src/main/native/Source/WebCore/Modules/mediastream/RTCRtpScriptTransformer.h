@@ -27,10 +27,10 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ActiveDOMObject.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "RTCRtpTransformBackend.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/RTCRtpTransformBackend.h>
 #include <wtf/Deque.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/RefCounted.h>
@@ -40,24 +40,20 @@ namespace WebCore {
 
 class FrameRateMonitor;
 class MessagePort;
+class RTCEncodedStreamProducer;
+class RTCRtpTransformBackend;
 class ReadableStream;
 class ScriptExecutionContext;
-class RTCRtpTransformBackend;
 class SerializedScriptValue;
-class SimpleReadableStreamSource;
 class WritableStream;
 
 struct MessageWithMessagePorts;
 
 template<typename> class ExceptionOr;
 
-enum class RTCRtpScriptTransformerIdentifierType { };
-using RTCRtpScriptTransformerIdentifier = AtomicObjectIdentifier<RTCRtpScriptTransformerIdentifierType>;
-
 class RTCRtpScriptTransformer
     : public RefCounted<RTCRtpScriptTransformer>
-    , public ActiveDOMObject
-    , public CanMakeWeakPtr<RTCRtpScriptTransformer> {
+    , public ActiveDOMObject {
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -65,8 +61,8 @@ public:
     static ExceptionOr<Ref<RTCRtpScriptTransformer>> create(ScriptExecutionContext&, MessageWithMessagePorts&&);
     ~RTCRtpScriptTransformer();
 
-    ReadableStream& readable() { return m_readable; }
-    ExceptionOr<Ref<WritableStream>> writable();
+    ReadableStream& readable();
+    WritableStream& writable();
     JSC::JSValue options(JSC::JSGlobalObject&);
 
     void generateKeyFrame(const String&, Ref<DeferredPromise>&&);
@@ -79,35 +75,24 @@ public:
     void clear(ClearCallback);
 
 private:
-    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<Ref<MessagePort>>&&, Ref<ReadableStream>&&, Ref<SimpleReadableStreamSource>&&);
+    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<Ref<MessagePort>>&&, Ref<RTCEncodedStreamProducer>&&);
 
     // ActiveDOMObject.
     void stop() final { stopPendingActivity(); }
 
-    void stopPendingActivity() { auto pendingActivity = WTFMove(m_pendingActivity); }
+    void stopPendingActivity() { auto pendingActivity = WTF::move(m_pendingActivity); }
 
     void enqueueFrame(ScriptExecutionContext&, Ref<RTCRtpTransformableFrame>&&);
 
     const Ref<SerializedScriptValue> m_options;
     Vector<Ref<MessagePort>> m_ports;
 
-    const Ref<SimpleReadableStreamSource> m_readableSource;
-    const Ref<ReadableStream> m_readable;
-    RefPtr<WritableStream> m_writable;
+    const Ref<RTCEncodedStreamProducer> m_streamProducer;
 
     RefPtr<RTCRtpTransformBackend> m_backend;
     RefPtr<PendingActivity<RTCRtpScriptTransformer>> m_pendingActivity;
 
-    Deque<Ref<DeferredPromise>> m_pendingKeyFramePromises;
-    bool m_isVideo { false };
     bool m_isSender { false };
-
-#if !RELEASE_LOG_DISABLED
-    bool m_enableAdditionalLogging { false };
-    RTCRtpScriptTransformerIdentifier m_identifier;
-    std::unique_ptr<FrameRateMonitor> m_readableFrameRateMonitor;
-    std::unique_ptr<FrameRateMonitor> m_writableFrameRateMonitor;
-#endif
 };
 
 } // namespace WebCore

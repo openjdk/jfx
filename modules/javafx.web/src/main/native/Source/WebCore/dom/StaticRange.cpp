@@ -28,22 +28,21 @@
 
 #include "ContainerNodeInlines.h"
 #include "JSNode.h"
-#include "Text.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StaticRange);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StaticRange);
 
 StaticRange::StaticRange(SimpleRange&& range)
-    : SimpleRange(WTFMove(range))
+    : SimpleRange(WTF::move(range))
 {
 }
 
 Ref<StaticRange> StaticRange::create(SimpleRange&& range)
 {
-    return adoptRef(*new StaticRange(WTFMove(range)));
+    return adoptRef(*new StaticRange(WTF::move(range)));
 }
 
 Ref<StaticRange> StaticRange::create(const SimpleRange& range)
@@ -53,11 +52,6 @@ Ref<StaticRange> StaticRange::create(const SimpleRange& range)
 
 static bool isDocumentTypeOrAttr(Node& node)
 {
-    // Before calling nodeType, do two fast non-virtual checks that cover almost all normal nodes, but are false for DocumentType and Attr.
-    if (is<ContainerNode>(node) || is<Text>(node))
-        return false;
-
-    // Call nodeType explicitly and use a switch so we don't have to call it twice.
     switch (node.nodeType()) {
     case Node::ATTRIBUTE_NODE:
     case Node::DOCUMENT_TYPE_NODE:
@@ -84,17 +78,18 @@ void StaticRange::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) cons
 
 bool StaticRange::computeValidity() const
 {
-    Node& startContainer = this->startContainer();
-    Node& endContainer = this->endContainer();
+    Ref startContainer = this->startContainer();
+    Ref endContainer = this->endContainer();
 
-    if (!connectedInSameTreeScope(&startContainer.rootNode(), &endContainer.rootNode()))
+    if (startOffset() > startContainer->length())
         return false;
-    if (startOffset() > startContainer.length())
+    if (endOffset() > endContainer->length())
         return false;
-    if (endOffset() > endContainer.length())
-        return false;
-    if (&startContainer == &endContainer)
+    if (startContainer.ptr() == endContainer.ptr())
         return endOffset() > startOffset();
+    if (!connectedInSameTreeScope(startContainer->protectedRootNode().ptr(), endContainer->protectedRootNode().ptr()))
+        return false;
     return !is_gt(treeOrder<ComposedTree>(startContainer, endContainer));
 }
+
 } // namespace WebCore

@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PannerNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PannerNode);
 
 static void fixNANs(double &x)
 {
@@ -109,14 +109,16 @@ PannerNode::~PannerNode()
 
 void PannerNode::process(size_t framesToProcess)
 {
-    AudioBus& destination = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    AudioBus& destination = firstOutput->bus();
 
-    if (!isInitialized() || !input(0)->isConnected()) {
+    CheckedPtr firstInput = input(0);
+    if (!isInitialized() || !firstInput->isConnected()) {
         destination.zero();
         return;
     }
 
-    AudioBus& source = input(0)->bus();
+    AudioBus& source = firstInput->bus();
 
     // The audio thread can't block on this lock, so we use tryLock() instead.
     if (!m_processLock.tryLock()) {

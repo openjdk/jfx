@@ -25,10 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-#include "HTMLElement.h"
-#include "Image.h"
+#include <WebCore/HTMLElement.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ class ShadowRoot;
 class FragmentedSharedBuffer;
 
 class HTMLAttachmentElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAttachmentElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLAttachmentElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLAttachmentElement);
 public:
     static Ref<HTMLAttachmentElement> create(const QualifiedName&, Document&);
@@ -95,6 +96,16 @@ public:
     bool isWideLayout() const { return m_implementation == Implementation::WideLayout; }
     HTMLElement* wideLayoutShadowContainer() const { return m_containerElement.get(); }
     HTMLElement* wideLayoutImageElement() const;
+    WEBCORE_EXPORT static String shadowUserAgentStyleSheetText();
+
+    enum class HighlightState : uint8_t {
+        None, // The object is not selected.
+        Start, // The object either contains the start of a selection run or is the start of a run
+        Inside, // The object is fully encompassed by a selection run
+        End, // The object either contains the end of a selection run or is the end of a run
+        Both // The object contains an entire run or is the sole selected object in that run
+    };
+    void addSelectionClasses(HighlightState);
 
 private:
     friend class AttachmentSaveEventListener;
@@ -136,14 +147,14 @@ private:
 
     Vector<uint8_t> m_iconForWideLayout;
 
-    RefPtr<HTMLImageElement> m_imageElement;
-    RefPtr<HTMLElement> m_containerElement;
-    RefPtr<HTMLElement> m_placeholderElement;
-    RefPtr<HTMLElement> m_progressElement;
-    RefPtr<HTMLElement> m_informationBlock;
-    RefPtr<HTMLElement> m_actionTextElement;
-    RefPtr<HTMLElement> m_titleElement;
-    RefPtr<HTMLElement> m_subtitleElement;
+    const RefPtr<HTMLImageElement> m_imageElement;
+    const RefPtr<HTMLElement> m_containerElement;
+    const RefPtr<HTMLElement> m_placeholderElement;
+    const RefPtr<HTMLElement> m_progressElement;
+    const RefPtr<HTMLElement> m_informationBlock;
+    const RefPtr<HTMLElement> m_actionTextElement;
+    const RefPtr<HTMLElement> m_titleElement;
+    const RefPtr<HTMLElement> m_subtitleElement;
     RefPtr<HTMLElement> m_saveArea;
     RefPtr<HTMLElement> m_saveButton;
     mutable RefPtr<DOMRectReadOnly> m_saveButtonClientRect;

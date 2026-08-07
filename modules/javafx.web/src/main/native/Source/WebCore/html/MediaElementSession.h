@@ -25,26 +25,18 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "MediaPlayer.h"
-#include "MediaProducer.h"
-#include "MediaUsageInfo.h"
-#include "PlatformMediaSession.h"
-#include "Timer.h"
+#include <WebCore/MediaPlayer.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/MediaUsageInfo.h>
+#include <WebCore/PlatformMediaSession.h>
+#include <WebCore/Timer.h>
 #include <memory>
 #include <wtf/Markable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
-
-namespace WebCore {
-class MediaElementSession;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaElementSession> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -86,7 +78,7 @@ public:
     void unregisterWithDocument(Document&);
 
     void clientWillBeginAutoplaying() final;
-    bool clientWillBeginPlayback() final;
+    void clientWillBeginPlayback(CompletionHandler<void(bool)>&&) final;
     bool clientWillPausePlayback() final;
     void clientCharacteristicsChanged(bool) final;
 
@@ -114,6 +106,8 @@ public:
     bool isPlayingToWirelessPlaybackTarget() const override;
 
     void mediaStateDidChange(MediaProducerMediaStateFlags);
+
+    MediaPlaybackTargetType playbackTargetType() const;
 #endif
 
     bool requiresFullscreenForVideoPlayback() const;
@@ -263,7 +257,7 @@ private:
 
 #if ENABLE(MEDIA_SESSION)
     bool m_isScrubbing { false };
-    std::unique_ptr<MediaElementSessionObserver> m_observer;
+    RefPtr<MediaElementSessionObserver> m_observer;
 #endif
 };
 

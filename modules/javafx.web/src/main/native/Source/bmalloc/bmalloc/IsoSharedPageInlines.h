@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoPage.h"
@@ -32,6 +36,10 @@
 #include <bit>
 
 #if !BUSE(LIBPAS)
+
+#include "IsoHeapImpl.h"
+#include "IsoSharedHeap.h"
+#include "IsoSharedPage.h"
 
 namespace bmalloc {
 
@@ -77,3 +85,5 @@ inline void IsoSharedPage::stopAllocating(const LockHolder&)
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

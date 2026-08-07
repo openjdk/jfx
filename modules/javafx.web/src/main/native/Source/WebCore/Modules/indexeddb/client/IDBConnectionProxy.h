@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "IDBConnectionToServer.h"
-#include "IDBDatabaseNameAndVersionRequest.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "IndexKey.h"
-#include "TransactionOperation.h"
+#include <WebCore/IDBConnectionToServer.h>
+#include <WebCore/IDBDatabaseNameAndVersionRequest.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IndexKey.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/TransactionOperation.h>
 #include <pal/SessionID.h>
 #include <wtf/CrossThreadQueue.h>
 #include <wtf/CrossThreadTask.h>
@@ -64,7 +65,7 @@ namespace IDBClient {
 class IDBConnectionToServer;
 
 class IDBConnectionProxy final {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionProxy, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBConnectionProxy, WEBCORE_EXPORT);
 public:
     IDBConnectionProxy(IDBConnectionToServer&, PAL::SessionID);
 
@@ -128,7 +129,7 @@ public:
     void registerDatabaseConnection(IDBDatabase&, ScriptExecutionContextIdentifier);
     void unregisterDatabaseConnection(IDBDatabase&);
 
-    void forgetActiveOperations(const Vector<RefPtr<TransactionOperation>>&);
+    void forgetActiveOperations(const Vector<Ref<TransactionOperation>>&);
     void forgetTransaction(IDBTransaction&);
     void abortActivitiesForCurrentThread();
     void setContextSuspended(ScriptExecutionContext& currentContext, bool isContextSuspended);
@@ -155,7 +156,7 @@ private:
     void postMainThreadTask(Arguments&&... arguments)
     {
         auto task = createCrossThreadTask(arguments...);
-        m_mainThreadQueue.append(WTFMove(task));
+        m_mainThreadQueue.append(WTF::move(task));
 
         scheduleMainThreadTasks();
     }
@@ -178,15 +179,15 @@ private:
         std::optional<ScriptExecutionContextIdentifier> contextIdentifier;
     };
     HashMap<IDBDatabaseConnectionIdentifier, WeakIDBDatabase> m_databaseConnectionMap WTF_GUARDED_BY_LOCK(m_databaseConnectionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBOpenDBRequest>> m_openDBRequestMap WTF_GUARDED_BY_LOCK(m_openDBRequestMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_pendingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_committingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_abortingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<TransactionOperation>> m_activeOperations WTF_GUARDED_BY_LOCK(m_transactionOperationLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBOpenDBRequest>> m_openDBRequestMap WTF_GUARDED_BY_LOCK(m_openDBRequestMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_pendingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_committingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_abortingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<TransactionOperation>> m_activeOperations WTF_GUARDED_BY_LOCK(m_transactionOperationLock);
     HashMap<IDBResourceIdentifier, Ref<IDBDatabaseNameAndVersionRequest>> m_databaseInfoCallbacks WTF_GUARDED_BY_LOCK(m_databaseInfoMapLock);
 
     CrossThreadQueue<CrossThreadTask> m_mainThreadQueue;
-    RefPtr<IDBConnectionToServer> m_mainThreadProtector WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock);
+    bool m_hasScheduledMainThreadTasks WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock) { false };
     PAL::SessionID m_sessionID;
 };
 

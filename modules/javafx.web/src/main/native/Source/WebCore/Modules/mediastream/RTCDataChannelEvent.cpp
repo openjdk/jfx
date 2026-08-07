@@ -33,21 +33,21 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDataChannelEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDataChannelEvent);
 
 Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
 {
-    return adoptRef(*new RTCDataChannelEvent(type, canBubble, cancelable, WTFMove(channel)));
+    return adoptRef(*new RTCDataChannelEvent(type, canBubble, cancelable, WTF::move(channel)));
 }
 
 Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
 {
-    return adoptRef(*new RTCDataChannelEvent(type, WTFMove(initializer), isTrusted));
+    return adoptRef(*new RTCDataChannelEvent(type, WTF::move(initializer), isTrusted));
 }
 
 RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
     : Event(EventInterfaceType::RTCDataChannelEvent, type, canBubble, cancelable)
-    , m_channel(WTFMove(channel))
+    , m_channel(WTF::move(channel))
 {
 }
 

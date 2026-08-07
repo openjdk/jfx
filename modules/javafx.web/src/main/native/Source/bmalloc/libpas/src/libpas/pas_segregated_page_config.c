@@ -31,7 +31,6 @@
 
 #include "pas_config.h"
 #include "pas_page_malloc.h"
-#include "pas_segregated_page.h"
 
 bool pas_segregated_page_config_do_validate = false;
 

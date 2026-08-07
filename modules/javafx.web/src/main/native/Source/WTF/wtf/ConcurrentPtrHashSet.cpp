@@ -26,8 +26,6 @@
 #include "config.h"
 #include <wtf/ConcurrentPtrHashSet.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 
 ConcurrentPtrHashSet::ConcurrentPtrHashSet()
@@ -43,7 +41,7 @@ void ConcurrentPtrHashSet::deleteOldTables()
     // some bad crashes if we did make that mistake.
     Locker locker { m_lock };
 
-    ASSERT(m_table.loadRelaxed() != &m_stubTable);
+    ASSERT(m_table.loadRelaxed() != m_stubTable.get());
     m_allTables.removeAllMatching(
         [&] (std::unique_ptr<Table>& table) -> bool {
             return table.get() != m_table.loadRelaxed();
@@ -65,8 +63,9 @@ void ConcurrentPtrHashSet::initialize()
     constexpr unsigned initialSize = 32;
     std::unique_ptr<Table> table = Table::create(initialSize);
     m_table.storeRelaxed(table.get());
-    m_allTables.append(WTFMove(table));
-    m_stubTable.initializeStub();
+    m_allTables.append(WTF::move(table));
+
+    m_stubTable = Table::createStub();
 }
 
 bool ConcurrentPtrHashSet::addSlow(Table* table, unsigned mask, unsigned startIndex, unsigned index, void* ptr)
@@ -75,7 +74,7 @@ bool ConcurrentPtrHashSet::addSlow(Table* table, unsigned mask, unsigned startIn
         return resizeAndAdd(ptr);
 
     for (;;) {
-        void* oldEntry = table->array[index].compareExchangeStrong(nullptr, ptr);
+        void* oldEntry = table->at(index).compareExchangeStrong(nullptr, ptr);
         if (!oldEntry) {
             if (m_table.load() != table) {
                 // We added an entry to an old table! We need to reexecute the add on the new table.
@@ -93,14 +92,14 @@ bool ConcurrentPtrHashSet::addSlow(Table* table, unsigned mask, unsigned startIn
 bool ConcurrentPtrHashSet::containsImplSlow(void* ptr) const
 {
     Locker locker { m_lock };
-    ASSERT(m_table.loadRelaxed() != &m_stubTable);
+    ASSERT(m_table.loadRelaxed() != m_stubTable.get());
     return containsImpl(ptr);
 }
 
 size_t ConcurrentPtrHashSet::sizeSlow() const
 {
     Locker locker { m_lock };
-    ASSERT(m_table.loadRelaxed() != &m_stubTable);
+    ASSERT(m_table.loadRelaxed() != m_stubTable.get());
     return size();
 }
 
@@ -108,7 +107,7 @@ void ConcurrentPtrHashSet::resizeIfNecessary()
 {
     Locker locker { m_lock };
     Table* table = m_table.loadRelaxed();
-    ASSERT(table != &m_stubTable);
+    ASSERT(table != m_stubTable.get());
     if (table->load.loadRelaxed() < table->maxLoad())
         return;
 
@@ -125,20 +124,20 @@ void ConcurrentPtrHashSet::resizeIfNecessary()
     // because m_stubTable will tell addSlow() think that the table is out of
     // space and it needs to resize. NOTE: m_stubTable always says it is out of
     // space.
-    m_table.store(&m_stubTable);
+    m_table.store(m_stubTable.get());
 
     std::unique_ptr<Table> newTable = Table::create(table->size * 2);
     unsigned mask = newTable->mask;
     unsigned load = 0;
     for (unsigned i = 0; i < table->size; ++i) {
-        void* ptr = table->array[i].loadRelaxed();
+        void* ptr = table->at(i).loadRelaxed();
         if (!ptr)
             continue;
 
         unsigned startIndex = hash(ptr) & mask;
         unsigned index = startIndex;
         for (;;) {
-            Atomic<void*>& entryRef = newTable->array[index];
+            Atomic<void*>& entryRef = newTable->at(index);
             void* entry = entryRef.loadRelaxed();
             if (!entry) {
                 entryRef.storeRelaxed(ptr);
@@ -172,9 +171,9 @@ void ConcurrentPtrHashSet::resizeIfNecessary()
     // resize operations such that this will get to the point of overflowing.
     // However, since resizing is not in the fast path, let's just be pedantic
     // and reset it for correctness.
-    m_stubTable.load.store(Table::stubDefaultLoadValue);
+    m_stubTable->load.store(Table::stubDefaultLoadValue);
 
-    m_allTables.append(WTFMove(newTable));
+    m_allTables.append(WTF::move(newTable));
 }
 
 bool ConcurrentPtrHashSet::resizeAndAdd(void* ptr)
@@ -185,27 +184,30 @@ bool ConcurrentPtrHashSet::resizeAndAdd(void* ptr)
 
 std::unique_ptr<ConcurrentPtrHashSet::Table> ConcurrentPtrHashSet::Table::create(unsigned size)
 {
-    std::unique_ptr<ConcurrentPtrHashSet::Table> result(new (fastMalloc(OBJECT_OFFSETOF(Table, array) + sizeof(Atomic<void*>) * size)) Table());
+    std::unique_ptr<ConcurrentPtrHashSet::Table> result(new (fastMalloc(allocationSize(size))) Table(size));
     result->size = size;
     result->mask = size - 1;
     result->load.storeRelaxed(0);
     for (unsigned i = 0; i < size; ++i)
-        result->array[i].storeRelaxed(nullptr);
+        result->at(i).storeRelaxed(nullptr);
     return result;
 }
 
-void ConcurrentPtrHashSet::Table::initializeStub()
+std::unique_ptr<ConcurrentPtrHashSet::Table> ConcurrentPtrHashSet::Table::createStub()
 {
     // The stub table is set up to look like it is already filled up. This is
     // so that it can be used during resizing to force all attempts to add to
     // be routed to resizeAndAdd() where it will block until the resizing is
     // done.
-    size = 0;
-    mask = 0;
-    load.storeRelaxed(stubDefaultLoadValue);
-    array[0].storeRelaxed(nullptr);
+
+    // Despite being "full", the stub table allocates a single bucket to allow
+    // loading nullptr from bucket 0.
+    std::unique_ptr<ConcurrentPtrHashSet::Table> result(new (fastMalloc(allocationSize(1))) Table(1));
+    result->size = 0;
+    result->mask = 0;
+    result->load.storeRelaxed(stubDefaultLoadValue);
+    result->at(0).storeRelaxed(nullptr);
+    return result;
 }
 
 } // namespace WTF
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -27,6 +27,7 @@
 #include "AXCoreObject.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -78,8 +79,8 @@ enum class AccessibilitySearchKey {
 
 struct AccessibilitySearchCriteria {
     // FIXME: change the object pointers to object IDs.
-    AXCoreObject* anchorObject { nullptr };
-    AXCoreObject* startObject { nullptr };
+    WeakPtr<AXCoreObject> anchorObject { nullptr };
+    WeakPtr<AXCoreObject> startObject { nullptr };
     CharacterRange startRange;
     AccessibilitySearchDirection searchDirection { AccessibilitySearchDirection::Next };
     Vector<AccessibilitySearchKey> searchKeys;
@@ -100,9 +101,30 @@ private:
     bool match(Ref<AXCoreObject>, const AccessibilitySearchCriteria&);
     bool matchText(Ref<AXCoreObject>, const String&);
     bool matchForSearchKeyAtIndex(Ref<AXCoreObject>, const AccessibilitySearchCriteria&, size_t);
+    DidTimeout revealHiddenMatchWithTimeout(AXCoreObject&, Seconds);
+
+    bool lastRevealAttemptTimedOut()
+    {
+        if (isMainThread())
+            return false;
+        return m_lastRevealAttemptTimedOut;
+    }
+    void setLastRevealAttemptTimedOut(bool newValue)
+    {
+        AX_ASSERT(!isMainThread());
+        m_lastRevealAttemptTimedOut = newValue;
+    }
 
     // Keeps the ranges of misspellings for each object.
     HashMap<AXID, Vector<AXTextMarkerRange>> m_misspellingRanges;
+
+    // For certain types of searches, we may detect that an object matching the search is in a collapsed,
+    // but revealable / expandable container. We try to do this reveal synchronously from the accessibility thread
+    // to the main-thread, but with a timeout in case the main-thread is busy. If the main-thread is busy once,
+    // we don't want to try to synchronously reveal collapsed content again.
+    //
+    // This must only be read and written from the accessibility thread.
+    bool m_lastRevealAttemptTimedOut { false };
 };
 
 inline AXCoreObject::AccessibilityChildrenVector AXSearchManager::findMatchingObjects(AccessibilitySearchCriteria&& criteria)

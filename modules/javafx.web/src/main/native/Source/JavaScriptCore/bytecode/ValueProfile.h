@@ -28,10 +28,10 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "SpeculatedType.h"
-#include "Structure.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/SpeculatedType.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <span>
 #include <wtf/PrintStream.h>
 #include <wtf/StringPrintStream.h>
@@ -94,15 +94,6 @@ struct ValueProfileBase {
     }
 
     bool isSampledBefore() const { return m_prediction != SpecNone; }
-
-    bool isLive() const
-    {
-        for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
-            if (!!JSValue::decodeConcurrent(&m_buckets[i]))
-                return true;
-        }
-        return false;
-    }
 
     CString briefDescription(const ConcurrentJSLocker& locker)
     {

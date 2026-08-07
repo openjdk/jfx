@@ -32,7 +32,6 @@
 #include "CSSValuePool.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeInlines.h"
-#include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "HTMLFrameOwnerElement.h"
 #include "NodeRenderStyle.h"
@@ -163,17 +162,17 @@ static inline bool hasValidStyleForProperty(Element& element, CSSPropertyID prop
         return false;
 
     const auto* currentElement = &element;
-    for (auto& ancestor : composedTreeAncestors(element)) {
-        if (ancestor.styleValidity() != Style::Validity::Valid)
+    for (Ref ancestor : composedTreeAncestors(element)) {
+        if (ancestor->styleValidity() != Style::Validity::Valid)
             return false;
 
-        if (isQueryContainer(ancestor))
+        if (isQueryContainer(ancestor.get()))
             return false;
 
-        if (ancestor.directChildNeedsStyleRecalc() && currentElement->styleIsAffectedByPreviousSibling())
+        if (ancestor->directChildNeedsStyleRecalc() && currentElement->styleIsAffectedByPreviousSibling())
             return false;
 
-        currentElement = &ancestor;
+        currentElement = ancestor.ptr();
     }
 
     return true;
@@ -258,15 +257,16 @@ RefPtr<CSSValue> Extractor::customPropertyValue(const AtomString& propertyName) 
 String Extractor::customPropertyValueSerialization(const AtomString& propertyName, const CSS::SerializationContext& serializationContext) const
 {
     std::unique_ptr<RenderStyle> ownedStyle;
-    auto* style = computeStyleForCustomProperty(ownedStyle);
-    if (!style)
+    if (auto* style = computeStyleForCustomProperty(ownedStyle))
+        return customPropertyValueSerializationInStyle(*style, propertyName, serializationContext);
         return emptyString();
+}
 
-    RefPtr value = style->customPropertyValue(propertyName);
-    if (!value)
+String Extractor::customPropertyValueSerializationInStyle(const RenderStyle& style, const AtomString& propertyName, const CSS::SerializationContext& serializationContext) const
+{
+    if (RefPtr value = style.customPropertyValue(propertyName))
+        return value->propertyValueSerialization(serializationContext, style);
         return emptyString();
-
-    return value->propertyValueSerialization(serializationContext, *style);
 }
 
 static bool isLayoutDependent(CSSPropertyID propertyID, const RenderStyle* style, const RenderObject* renderer)
@@ -564,7 +564,7 @@ Ref<MutableStyleProperties> Extractor::copyProperties(std::span<const CSSPropert
             return CSSProperty(property, value.releaseNonNull());
         return std::nullopt;
     });
-    return MutableStyleProperties::create(WTFMove(vector));
+    return MutableStyleProperties::create(WTF::move(vector));
 }
 
 Ref<MutableStyleProperties> Extractor::copyProperties() const

@@ -28,7 +28,6 @@
 namespace WebCore {
 
 enum class IdentityCredentialProtocol : uint8_t {
-    Openid4vp,
     OrgIsoMdoc,
 };
 

@@ -35,7 +35,9 @@
     readonly attribute boolean matches;
 };
 
-dictionary MediaQueryListEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MediaQueryListEventInit : EventInit {
     DOMString media = "";
     boolean matches = false;
 };

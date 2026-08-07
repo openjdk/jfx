@@ -82,14 +82,15 @@ void UserContentProvider::unregisterForUserMessageHandlerInvalidation(UserConten
 
 void UserContentProvider::invalidateAllRegisteredUserMessageHandlerInvalidationClients()
 {
-    for (auto& client : m_userMessageHandlerInvalidationClients)
+    m_userMessageHandlerInvalidationClients.forEach([&](auto& client) {
         client.didInvalidate(*this);
+    });
 }
 
 void UserContentProvider::invalidateInjectedStyleSheetCacheInAllFramesInAllPages()
 {
-    for (auto& page : m_pages)
-        page.invalidateInjectedStyleSheetCacheInAllFrames();
+    for (Ref page : m_pages)
+        page->invalidateInjectedStyleSheetCacheInAllFrames();
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -147,7 +148,7 @@ static void applyLinkDecorationFilteringIfNeeded(ContentRuleListResults& results
         results.summary.redirectActions.append({ { ContentExtensions::RedirectAction::URLAction { adjustedURL.string() } }, adjustedURL });
 }
 
-ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
+ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom) const
 {
     auto results = userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom, ruleListFilter(initiatingDocumentLoader));
 

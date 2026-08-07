@@ -28,6 +28,7 @@
 #include "AnimationUtilities.h"
 #include "CSSPrimitiveValue.h"
 #include "StyleBuilderChecking.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StyleLengthWrapper+CSSValueConversion.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+CSSValueConversion.h"
@@ -70,9 +71,9 @@ auto Blending<SVGStrokeDasharray>::blend(const SVGStrokeDasharray& a, const SVGS
             resultLength = aLength * bLength;
     }
 
-    return { SVGStrokeDasharrayList::Container::createWithSizeFromGenerator(resultLength, [&](auto i) {
+    return SVGStrokeDasharrayList::createWithSizeFromGenerator(resultLength, [&](auto i) {
         return Style::blend(a[i % aLength], b[i % bLength], context);
-    }) };
+    });
 
 }
 

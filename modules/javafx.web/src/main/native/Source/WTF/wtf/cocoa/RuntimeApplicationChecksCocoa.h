@@ -25,8 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if PLATFORM(COCOA)
 
+#include <mach/message.h>
 #include <optional>
 #include <wtf/BitSet.h>
 #include <wtf/Forward.h>
@@ -65,6 +68,7 @@ enum class SDKAlignedBehavior {
     HTMLDocumentSupportedPropertyNames,
     InitializeWebKit2MainThreadAssertion,
     InspectableDefaultsToDisabled,
+    JavaScriptEvaluationResultWithoutSerializedScriptValue,
     LazyGestureRecognizerInstallation,
     LinkPreviewEnabledByDefault,
     MainThreadReleaseAssertionInWebPageProxy,
@@ -114,7 +118,6 @@ enum class SDKAlignedBehavior {
     ThrowIfCanDeclareGlobalFunctionFails,
     ThrowOnKVCInstanceVariableAccess,
     LaxCookieSameSiteAttribute,
-    BlockOptionallyBlockableMixedContent,
     UseCFNetworkNetworkLoader,
     AutoLayoutInWKWebView,
     BlockCrossOriginRedirectDownloads,
@@ -126,7 +129,12 @@ enum class SDKAlignedBehavior {
     BlobFileAccessEnforcement,
     SupportGameControllerEventInteractionAPI,
     DidFailProvisionalNavigationWithErrorForFileURLNavigation,
-
+    CrashWhenPreconnectingFromBackgroundThread,
+    ExecutionTimingChangeOfModuleScripts,
+    GetBoundingClientRectZoomed,
+    CrashWhenMutatingProcessAssertionsFromBackgroundThread,
+    NoFontFaceSetConstructor,
+    SuppressKeypressForModifierShortcuts,
     NumberOfBehaviors
 };
 
@@ -148,11 +156,18 @@ WTF_EXPORT_PRIVATE void setApplicationBundleIdentifierOverride(const String&);
 WTF_EXPORT_PRIVATE String applicationBundleIdentifier();
 WTF_EXPORT_PRIVATE void clearApplicationBundleIdentifierTestingOverride();
 
+#if USE(SOURCE_APPLICATION_AUDIT_DATA)
+WTF_EXPORT_PRIVATE void setApplicationAuditToken(audit_token_t);
+WTF_EXPORT_PRIVATE std::optional<audit_token_t> applicationAuditToken();
+#endif
+
 namespace CocoaApplication {
 
 WTF_EXPORT_PRIVATE bool isAppleApplication();
 WTF_EXPORT_PRIVATE bool isAppleBooks();
+WTF_EXPORT_PRIVATE bool isDumpRenderTree();
 WTF_EXPORT_PRIVATE bool isWebkitTestRunner();
+WTF_EXPORT_PRIVATE bool shouldOSFaultLogForAppleApplicationUsingWebKit1();
 
 }
 
@@ -165,6 +180,7 @@ WTF_EXPORT_PRIVATE bool isAppleMail();
 WTF_EXPORT_PRIVATE bool isMiniBrowser();
 WTF_EXPORT_PRIVATE bool isQuickenEssentials();
 WTF_EXPORT_PRIVATE bool isSafari();
+WTF_EXPORT_PRIVATE bool isSafariTechnologyPreview();
 WTF_EXPORT_PRIVATE bool isVersions();
 WTF_EXPORT_PRIVATE bool isHRBlock();
 WTF_EXPORT_PRIVATE bool isTurboTax();
@@ -182,7 +198,6 @@ namespace IOSApplication {
 WTF_EXPORT_PRIVATE bool isAmazon();
 WTF_EXPORT_PRIVATE bool isAppleWebApp();
 WTF_EXPORT_PRIVATE bool isDataActivation();
-WTF_EXPORT_PRIVATE bool isDumpRenderTree();
 WTF_EXPORT_PRIVATE bool isEssentialSkeleton();
 WTF_EXPORT_PRIVATE bool isFeedly();
 WTF_EXPORT_PRIVATE bool isHimalaya();
@@ -220,5 +235,10 @@ using WTF::setApplicationBundleIdentifier;
 using WTF::setApplicationBundleIdentifierOverride;
 using WTF::setProcessIsExtension;
 using WTF::setSDKAlignedBehaviors;
+
+#if USE(SOURCE_APPLICATION_AUDIT_DATA)
+using WTF::applicationAuditToken;
+using WTF::setApplicationAuditToken;
+#endif
 
 #endif // PLATFORM(COCOA)

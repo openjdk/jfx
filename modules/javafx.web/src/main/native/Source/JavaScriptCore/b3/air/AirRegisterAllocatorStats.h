@@ -39,13 +39,26 @@ namespace JSC { namespace B3 { namespace Air {
     macro(numFastTmps)                          \
     macro(numUnspillableTmps)                   \
     macro(numSpillTmps)                         \
-    macro(numSplitTmps)                         \
     macro(numTmpsOut)                           \
+    macro(numCoalescedPinned)                   \
+    macro(numSpilledTmps)                       \
     macro(numSpillStackSlots)                   \
     macro(numLoadSpill)                         \
     macro(numStoreSpill)                        \
+    macro(numInPlaceSpill)                      \
     macro(numMoveSpillSpillInsts)               \
     macro(numRematerializeConst)                \
+    macro(maxLiveRangeSize)                     \
+    macro(didSpill)                             \
+    macro(numSplitAroundClobbers)               \
+    macro(numSplitAroundClobberSpilled)         \
+    macro(numSplitIntraBlockNoCluster)          \
+    macro(numSplitIntraBlock)                   \
+    macro(numSplitIntraBlockClusterTmps)        \
+    macro(numSplitIntraBlockClusterTmpsSpilled) \
+    macro(numSplitIntraBlockLoad)               \
+    macro(numSplitIntraBlockStore)              \
+    macro(numInsts)        \
 
 class AirAllocateRegistersStats {
     WTF_MAKE_NONCOPYABLE(AirAllocateRegistersStats);

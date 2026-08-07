@@ -25,19 +25,21 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "JSCJSValue.h"
-#include "Reg.h"
-#include "RegisterSet.h"
-#include "ValueRecovery.h"
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Reg.h>
+#include <JavaScriptCore/RegisterSet.h>
+#include <JavaScriptCore/ValueRecovery.h>
 #include <wtf/PrintStream.h>
 #include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #if ENABLE(WEBASSEMBLY)
-#include "WasmValueLocation.h"
+#include <JavaScriptCore/WasmValueLocation.h>
 #endif
 
 namespace JSC {
@@ -45,6 +47,11 @@ namespace JSC {
 class AssemblyHelpers;
 
 namespace B3 {
+
+// ValueRep uses its own concept to avoid dependency on B3Value.h.
+// This has the same constraints as B3::IsLegalOffset (see B3Value.h).
+template<typename Int>
+concept IsLegalOffsetRep = std::signed_integral<Int> && sizeof(Int) <= sizeof(int32_t);
 
 // We use this class to describe value representations at stackmaps. It's used both to force a
 // representation and to get the representation. When the B3 client forces a representation, we say
@@ -54,6 +61,8 @@ namespace B3 {
 class ValueRep {
     WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(ValueRep);
 public:
+    using OffsetType = int32_t;
+
     enum Kind : uint8_t {
         // As an input representation, this means that B3 can pick any representation. As an output
         // representation, this means that we don't know. This will only arise as an output
@@ -189,7 +198,8 @@ public:
         return result;
     }
 
-    static ValueRep stack(intptr_t offsetFromFP)
+    template<IsLegalOffsetRep Int>
+    static ValueRep stack(Int offsetFromFP)
     {
         ValueRep result;
         result.m_kind = Stack;
@@ -197,7 +207,8 @@ public:
         return result;
     }
 
-    static ValueRep stackArgument(intptr_t offsetFromSP)
+    template<IsLegalOffsetRep Int>
+    static ValueRep stackArgument(Int offsetFromSP)
     {
         ValueRep result;
         result.m_kind = StackArgument;
@@ -280,7 +291,7 @@ public:
 
     bool isStack() const { return kind() == Stack; }
 
-    intptr_t offsetFromFP() const
+    OffsetType offsetFromFP() const
     {
         ASSERT(isStack());
         return u.offsetFromFP;
@@ -288,7 +299,7 @@ public:
 
     bool isStackArgument() const { return kind() == StackArgument; }
 
-    intptr_t offsetFromSP() const
+    OffsetType offsetFromSP() const
     {
         ASSERT(isStackArgument());
         return u.offsetFromSP;
@@ -312,17 +323,6 @@ public:
         return std::bit_cast<float>(static_cast<uint32_t>(static_cast<uint64_t>(value())));
     }
 
-    ValueRep withOffset(intptr_t offset) const
-    {
-        switch (kind()) {
-        case Stack:
-            return stack(offsetFromFP() + offset);
-        case StackArgument:
-            return stackArgument(offsetFromSP() + offset);
-        default:
-            return *this;
-        }
-    }
 
     void addUsedRegistersTo(bool isSIMDContext, RegisterSetBuilder&) const;
 
@@ -353,8 +353,8 @@ public:
 private:
     union U {
         Reg reg;
-        intptr_t offsetFromFP;
-        intptr_t offsetFromSP;
+        OffsetType offsetFromFP;
+        OffsetType offsetFromSP;
         int64_t value;
 
         struct RegisterPair {

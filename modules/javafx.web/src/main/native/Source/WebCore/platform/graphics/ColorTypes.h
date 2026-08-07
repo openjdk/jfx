@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "ColorComponents.h"
-#include "ColorMatrix.h"
-#include "ColorModels.h"
-#include "ColorTransferFunctions.h"
+#include <WebCore/ColorComponents.h>
+#include <WebCore/ColorMatrix.h>
+#include <WebCore/ColorModels.h>
+#include <WebCore/ColorTransferFunctions.h>
 #include <optional>
+#include <type_traits>
 
 namespace WebCore {
 

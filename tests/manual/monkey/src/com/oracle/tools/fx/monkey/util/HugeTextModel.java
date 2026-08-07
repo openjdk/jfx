@@ -55,7 +55,7 @@ public class HugeTextModel extends StyledTextModelViewOnlyBase {
     }
 
     @Override
-    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos, boolean forInsert) {
         return StyleAttributeMap.EMPTY;
     }
 

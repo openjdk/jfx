@@ -71,11 +71,11 @@ namespace {
 // CONSTANTS DEFINING THE FLOATING POINT FORMAT
 constexpr int64_t XSUM_MANTISSA_BITS = 52; // Bits in fp mantissa, excludes implict 1
 constexpr int64_t XSUM_EXP_BITS = 11; // Bits in fp exponent
-constexpr int64_t XSUM_MANTISSA_MASK = (static_cast<int64_t>(1) << XSUM_MANTISSA_BITS) - 1; // Mask for mantissa bits
+constexpr int64_t XSUM_MANTISSA_MASK = (1LL << XSUM_MANTISSA_BITS) - 1; // Mask for mantissa bits
 constexpr int64_t XSUM_EXP_MASK = (1 << XSUM_EXP_BITS) - 1; // Mask for exponent
 constexpr int64_t XSUM_EXP_BIAS = (1 << (XSUM_EXP_BITS - 1)) - 1; // Bias added to signed exponent
 constexpr int64_t XSUM_SIGN_BIT = XSUM_MANTISSA_BITS + XSUM_EXP_BITS; // Position of sign bit
-constexpr uint64_t XSUM_SIGN_MASK = static_cast<uint64_t>(1) << XSUM_SIGN_BIT; // Mask for sign bit
+constexpr uint64_t XSUM_SIGN_MASK = 1ULL << XSUM_SIGN_BIT; // Mask for sign bit
 
 // CONSTANTS DEFINING THE SMALL ACCUMULATOR FORMAT
 constexpr int64_t XSUM_SCHUNK_BITS = 64; // Bits in chunk of the small accumulator
@@ -84,7 +84,7 @@ constexpr int64_t XSUM_LOW_EXP_MASK = (1 << XSUM_LOW_EXP_BITS) - 1; // Mask for 
 constexpr int64_t XSUM_HIGH_EXP_BITS = XSUM_EXP_BITS - XSUM_LOW_EXP_BITS; // # of high exponent bits for index
 constexpr int64_t XSUM_SCHUNKS = (1 << XSUM_HIGH_EXP_BITS) + 3; // # of chunks in small accumulator
 constexpr int64_t XSUM_LOW_MANTISSA_BITS = 1 << XSUM_LOW_EXP_BITS; // Bits in low part of mantissa
-constexpr int64_t XSUM_LOW_MANTISSA_MASK = (static_cast<int64_t>(1) << XSUM_LOW_MANTISSA_BITS) - 1; // Mask for low bits
+constexpr int64_t XSUM_LOW_MANTISSA_MASK = (1LL << XSUM_LOW_MANTISSA_BITS) - 1; // Mask for low bits
 constexpr int64_t XSUM_SMALL_CARRY_BITS = (XSUM_SCHUNK_BITS - 1) - XSUM_MANTISSA_BITS; // Bits sums can carry into
 constexpr int64_t XSUM_SMALL_CARRY_TERMS = (1 << XSUM_SMALL_CARRY_BITS) - 1; // # terms can add before need prop.
 
@@ -105,7 +105,7 @@ SmallAccumulator::SmallAccumulator()
 SmallAccumulator::SmallAccumulator(
     Vector<int64_t> &&chunk, const int addsUntilPropagate, const int64_t inf, const int64_t nan,
     const size_t sizeCount, const bool hasPosNumber)
-: chunk(WTFMove(chunk)), addsUntilPropagate { addsUntilPropagate }, inf { inf }, nan { nan },
+: chunk(WTF::move(chunk)), addsUntilPropagate { addsUntilPropagate }, inf { inf }, nan { nan },
     sizeCount { sizeCount }, hasPosNumber { hasPosNumber } { }
 
 /*
@@ -117,7 +117,7 @@ to do so is defined at present). A nan with larger payload (seen as a
 being positive. This ensures that the order of summing nan values doesn't
 matter.
 */
-void SmallAccumulator::addInfNan(int64_t ivalue)
+COLD void SmallAccumulator::addInfNan(int64_t ivalue)
 {
     const int64_t mantissa = ivalue & XSUM_MANTISSA_MASK;
     if (!mantissa) {
@@ -191,7 +191,7 @@ int SmallAccumulator::carryPropagate()
             uix = i;
 
         chunk[i] = clow;
-        if (i + 1 >= XSUM_SCHUNKS) {
+        if (i + 1 >= XSUM_SCHUNKS) [[unlikely]] {
             this->addInfNan(
                 (static_cast<int64_t>(XSUM_EXP_MASK) << XSUM_MANTISSA_BITS) | XSUM_MANTISSA_MASK
             );
@@ -208,7 +208,7 @@ int SmallAccumulator::carryPropagate()
         }
 
     while (chunk[uix] == -1 && uix > 0) {
-        chunk[uix - 1] += -(static_cast<int64_t>(1) << XSUM_LOW_MANTISSA_BITS);
+        chunk[uix - 1] += -(1LL << XSUM_LOW_MANTISSA_BITS);
         chunk[uix] = 0;
         uix -= 1;
         }
@@ -231,11 +231,11 @@ inline void SmallAccumulator::add1NoCarry(double value)
         if (!mantissa)
             return;
         lowExp = 1;
-    } else if (exp == XSUM_EXP_MASK) {
+    } else if (exp == XSUM_EXP_MASK) [[unlikely]] {
         this->addInfNan(ivalue);
         return;
     } else
-        mantissa |= static_cast<int64_t>(1) << XSUM_MANTISSA_BITS;
+        mantissa |= 1LL << XSUM_MANTISSA_BITS;
 
     const std::array<int64_t, 2> splitMantissa {
         static_cast<int64_t>((static_cast<uint64_t>(mantissa) << lowExp) & XSUM_LOW_MANTISSA_MASK),
@@ -316,8 +316,8 @@ void LargeAccumulator::addLchunkToSmall(int_fast16_t ix)
     }
     chunk[ix] = 0;
     count[ix] = 1 << XSUM_LCOUNT_BITS;
-    chunksUsed[ix >> 6] |= static_cast<uint64_t>(1) << (ix & 0x3f);
-    usedUsed |= static_cast<uint64_t>(1) << (ix >> 6);
+    chunksUsed[ix >> 6] |= 1ULL << (ix & 0x3f);
+    usedUsed |= 1ULL << (ix >> 6);
 }
 
 /*
@@ -326,7 +326,7 @@ is called when the count for a chunk is negative after decrementing, which
 indicates either inf/nan, or that the chunk has not been initialized, or
 that the chunk needs to be transferred to the small accumulator.
 */
-void LargeAccumulator::largeAddValueInfNan(int_fast16_t ix, uint64_t uintv)
+COLD void LargeAccumulator::largeAddValueInfNan(int_fast16_t ix, uint64_t uintv)
 {
     if ((ix & XSUM_EXP_MASK) == XSUM_EXP_MASK)
         sacc.addInfNan(uintv);
@@ -416,7 +416,7 @@ XsumSmall::XsumSmall()
 
 XsumSmall::XsumSmall(SmallAccumulator sacc)
     : m_smallAccumulator {
-        WTFMove(sacc.chunk), sacc.addsUntilPropagate, sacc.inf, sacc.nan, sacc.sizeCount, sacc.hasPosNumber
+        WTF::move(sacc.chunk), sacc.addsUntilPropagate, sacc.inf, sacc.nan, sacc.sizeCount, sacc.hasPosNumber
     } { }
 
 /*
@@ -431,9 +431,8 @@ void XsumSmall::addList(const std::span<const double> vec)
     while (0 < n) {
         if (!m_smallAccumulator.addsUntilPropagate)
             m_smallAccumulator.carryPropagate();
-        size_t m = std::min(static_cast<int>(n), m_smallAccumulator.addsUntilPropagate);
-        for (size_t i = 0; i < m; i++) {
-            const double value = vec[offset + i];
+        size_t m = std::min(n, static_cast<size_t>(m_smallAccumulator.addsUntilPropagate));
+        for (const double value : vec.subspan(offset, m)) {
             m_smallAccumulator.incrementWhenValueAdded(value);
             m_smallAccumulator.add1NoCarry(value);
         }
@@ -483,13 +482,13 @@ double XsumSmall::compute()
                 intv |= XSUM_SIGN_MASK;
             return std::bit_cast<double>(intv);
     }
-        int64_t intv = ivalue * (static_cast<int64_t>(1) << (XSUM_LOW_MANTISSA_BITS - 1)) + (m_smallAccumulator.chunk[0] >> 1);
+        int64_t intv = ivalue * (1LL << (XSUM_LOW_MANTISSA_BITS - 1)) + (m_smallAccumulator.chunk[0] >> 1);
         if (intv < 0) {
-            if (intv > -(static_cast<int64_t>(1) << XSUM_MANTISSA_BITS)) {
+            if (intv > -(1LL << XSUM_MANTISSA_BITS)) {
                 intv = (-intv) | XSUM_SIGN_MASK;
                 return std::bit_cast<double>(intv);
             }
-        } else if (static_cast<uint64_t>(intv) < static_cast<uint64_t>(1) << XSUM_MANTISSA_BITS)
+        } else if (static_cast<uint64_t>(intv) < 1ULL << XSUM_MANTISSA_BITS)
             return std::bit_cast<double>(intv);
     }
 
@@ -498,7 +497,7 @@ double XsumSmall::compute()
     int e = (intv >> XSUM_MANTISSA_BITS) & XSUM_EXP_MASK;
     int more = 2 + XSUM_MANTISSA_BITS + XSUM_EXP_BIAS - e;
 
-    ivalue *= static_cast<int64_t>(1) << more;
+    ivalue *= 1LL << more;
     int j = i - 1;
     int64_t lower = m_smallAccumulator.chunk[j];
     if (more >= XSUM_LOW_MANTISSA_BITS) {
@@ -508,7 +507,7 @@ double XsumSmall::compute()
         lower = j < 0 ? 0 : m_smallAccumulator.chunk[j];
     }
     ivalue += lower >> (XSUM_LOW_MANTISSA_BITS - more);
-    lower &= (static_cast<int64_t>(1) << (XSUM_LOW_MANTISSA_BITS - more)) - 1;
+    lower &= (1LL << (XSUM_LOW_MANTISSA_BITS - more)) - 1;
 
     bool shouldRoundAwayFromZero = false;
     if (0 <= ivalue) {
@@ -536,8 +535,8 @@ double XsumSmall::compute()
                 shouldRoundAwayFromZero = true;
         }
     } else {
-        if (!((-ivalue) & (static_cast<int64_t>(1) << (XSUM_MANTISSA_BITS + 2)))) {
-            const int pos = static_cast<int64_t>(1) << (XSUM_LOW_MANTISSA_BITS - 1 - more);
+        if (!((-ivalue) & (1LL << (XSUM_MANTISSA_BITS + 2)))) {
+            const int pos = 1LL << (XSUM_LOW_MANTISSA_BITS - 1 - more);
             ivalue *= 2;
             if (lower & pos) {
                 ivalue += 1;
@@ -565,7 +564,7 @@ double XsumSmall::compute()
 
     if (shouldRoundAwayFromZero) {
         ivalue += 4;
-        if (ivalue & (static_cast<int64_t>(1) << (XSUM_MANTISSA_BITS + 3))) {
+        if (ivalue & (1LL << (XSUM_MANTISSA_BITS + 3))) {
             ivalue >>= 1;
             e += 1;
         }
@@ -606,7 +605,7 @@ void XsumLarge::add(double value)
 
     m_largeAccumulator.sacc.incrementWhenValueAdded(value);
 
-    if (count < 0)
+    if (count < 0) [[unlikely]]
         m_largeAccumulator.largeAddValueInfNan(ix, uintv);
     else {
         m_largeAccumulator.count[ix] = count;

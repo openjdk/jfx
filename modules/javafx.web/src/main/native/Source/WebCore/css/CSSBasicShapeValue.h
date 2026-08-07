@@ -39,7 +39,7 @@ class CSSBasicShapeValue final : public CSSValue {
 public:
     static Ref<CSSBasicShapeValue> create(CSS::BasicShape shape)
     {
-        return adoptRef(*new CSSBasicShapeValue(WTFMove(shape)));
+        return adoptRef(*new CSSBasicShapeValue(WTF::move(shape)));
     }
 
     const CSS::BasicShape& shape() const { return m_shape; }
@@ -52,7 +52,7 @@ public:
 private:
     CSSBasicShapeValue(CSS::BasicShape&& shape)
         : CSSValue(ClassType::BasicShape)
-        , m_shape { WTFMove(shape) }
+        , m_shape { WTF::move(shape) }
     {
     }
 

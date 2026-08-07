@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FetchRequestCredentials.h"
-#include "WorkerType.h"
+#include <WebCore/FetchRequestCredentials.h>
+#include <WebCore/WorkerType.h>
 
 namespace WebCore {
 

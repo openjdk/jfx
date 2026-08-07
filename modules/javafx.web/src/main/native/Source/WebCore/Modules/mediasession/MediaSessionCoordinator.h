@@ -27,12 +27,12 @@
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "MediaSession.h"
-#include "MediaSessionCoordinatorPrivate.h"
-#include "MediaSessionCoordinatorState.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MediaSession.h>
+#include <WebCore/MediaSessionCoordinatorPrivate.h>
+#include <WebCore/MediaSessionCoordinatorState.h>
 #include <wtf/Logger.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
@@ -60,7 +60,7 @@ public:
     ExceptionOr<void> leave();
     void close();
 
-    String identifier() const { return m_privateCoordinator ? m_privateCoordinator->identifier() : String(); }
+    String identifier() const { return m_privateCoordinator ? protectedPrivateCoordinator()->identifier() : String(); }
     MediaSessionCoordinatorState state() const { return m_state; }
 
     void seekTo(double, DOMPromiseDeferred<void>&&);
@@ -76,7 +76,7 @@ public:
         std::optional<double> atTime;
         std::optional<MonotonicTime> hostTime;
     };
-    std::optional<PlaySessionCommand> takeCurrentPlaySessionCommand() { return WTFMove(m_currentPlaySessionCommand); }
+    std::optional<PlaySessionCommand> takeCurrentPlaySessionCommand() { return WTF::move(m_currentPlaySessionCommand); }
 
 private:
     MediaSessionCoordinator(ScriptExecutionContext*);
@@ -85,7 +85,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaSessionCoordinator; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+        ScriptExecutionContext* scriptExecutionContext() const final;
     void eventListenersDidChange() final;
 
     // ActiveDOMObject.
@@ -112,6 +112,8 @@ private:
     static ASCIILiteral logClassName() { return "MediaSessionCoordinator"_s; }
     bool shouldFireEvents() const;
 
+    RefPtr<MediaSessionCoordinatorPrivate> protectedPrivateCoordinator() const { return m_privateCoordinator; }
+
     WeakPtr<MediaSession> m_session;
     RefPtr<MediaSessionCoordinatorPrivate> m_privateCoordinator;
     const Ref<const Logger> m_logger;
@@ -121,6 +123,8 @@ private:
     std::optional<PlaySessionCommand> m_currentPlaySessionCommand;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaSessionCoordinator)
 
 #endif // ENABLE(MEDIA_SESSION_COORDINATOR)

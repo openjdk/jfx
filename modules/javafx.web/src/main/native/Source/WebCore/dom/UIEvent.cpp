@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(UIEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UIEvent);
 
 UIEvent::UIEvent(enum EventInterfaceType eventInterface)
     : Event(eventInterface)
@@ -39,14 +39,14 @@ UIEvent::UIEvent(enum EventInterfaceType eventInterface)
 
 UIEvent::UIEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& viewArg, int detailArg)
     : Event(eventInterface, eventType, canBubble, isCancelable, isComposed)
-    , m_view(WTFMove(viewArg))
+    , m_view(WTF::move(viewArg))
     , m_detail(detailArg)
 {
 }
 
 UIEvent::UIEvent(enum EventInterfaceType eventInterface, const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&& viewArg, int detailArg, IsTrusted isTrusted)
     : Event(eventInterface, eventType, canBubble, isCancelable, isComposed, timestamp, isTrusted)
-    , m_view(WTFMove(viewArg))
+    , m_view(WTF::move(viewArg))
     , m_detail(detailArg)
 {
 }
@@ -71,11 +71,6 @@ void UIEvent::initUIEvent(const AtomString& typeArg, bool canBubbleArg, bool can
     m_detail = detailArg;
 }
 
-bool UIEvent::isUIEvent() const
-{
-    return true;
-}
-
 int UIEvent::layerX()
 {
     return 0;
@@ -86,17 +81,37 @@ int UIEvent::layerY()
     return 0;
 }
 
-int UIEvent::pageX() const
+double UIEvent::screenX() const
 {
     return 0;
 }
 
-int UIEvent::pageY() const
+double UIEvent::screenY() const
+{
+    return 0;
+}
+
+double UIEvent::pageX() const
+{
+    return 0;
+}
+
+double UIEvent::pageY() const
 {
     return 0;
 }
 
 unsigned UIEvent::which() const
+{
+    return 0;
+}
+
+double UIEvent::clientX() const
+{
+    return 0;
+}
+
+double UIEvent::clientY() const
 {
     return 0;
 }

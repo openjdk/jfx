@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Environment.h"
 #include "FailureAction.h"
 #include "Mutex.h"
@@ -61,10 +63,13 @@ public:
     void scavenge();
     void dump();
 
+    bool shouldSupplantBmalloc() { return Environment::get()->shouldBmallocAllocateThroughSystemHeap(); };
+
     static SystemHeap* tryGet();
+    static SystemHeap* tryGetIfShouldSupplantBmalloc();
     static SystemHeap* getExisting();
 
-#if BOS(DARWIN)
+#if BENABLE(MALLOC_HEAP_BREAKDOWN) || BOS(DARWIN)
     malloc_zone_t* zone() const { return m_zone; };
 #endif
 
@@ -100,6 +105,16 @@ BINLINE SystemHeap* SystemHeap::tryGet()
     return tryGetSlow();
 }
 
+BINLINE SystemHeap* SystemHeap::tryGetIfShouldSupplantBmalloc()
+{
+    SystemHeap* result = systemHeapCache;
+    if (result == systemHeapDisabled())
+        return nullptr;
+    if (!result)
+        result = tryGetSlow();
+    return result->shouldSupplantBmalloc() ? result : nullptr;
+}
+
 BINLINE SystemHeap* SystemHeap::getExisting()
 {
     SystemHeap* result = tryGet();
@@ -108,3 +123,5 @@ BINLINE SystemHeap* SystemHeap::getExisting()
 }
 
 } // namespace bmalloc
+
+#endif // __cplusplus
