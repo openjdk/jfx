@@ -548,11 +548,15 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             graphicHeight = graphic.getLayoutBounds().getHeight();
         }
 
+        // Have to do this just in case it needs to be recomputed
+        // This is especially important because it also recomputes the 'containsMnemonic' value,
+        // which is used by this method later on.
+        updateDisplayedText(w, h);
+
         if (ignoreText) {
             textWidth  = textHeight = 0;
             text.setText("");
         } else {
-            updateDisplayedText(w, h); // Have to do this just in case it needs to be recomputed
             textWidth  = snapSizeX(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
             textHeight = snapSizeY(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
         }

@@ -2092,6 +2092,60 @@ public class LabelSkinTest {
         assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
     }
 
+    @Test
+    public void testMnemonics_whenTextNotEmpty_noExceptionIsThrown() {
+        Toolkit tk = Toolkit.getToolkit();
+        StageLoader sl = new StageLoader(label);
+        tk.firePulse();
+
+        label.setMnemonicParsing(true);
+
+        label.setText("foo_bar");
+        tk.firePulse();
+        label.setText("xxx");
+        tk.firePulse();
+        label.setText("foo_bar");
+        tk.firePulse();
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testMnemonics_whenTextIsEmpty_noExceptionIsThrown() {
+        Toolkit tk = Toolkit.getToolkit();
+        StageLoader sl = new StageLoader(label);
+        tk.firePulse();
+
+        label.setMnemonicParsing(true);
+
+        label.setText("foo_bar");
+        tk.firePulse();
+        label.setText("");
+        tk.firePulse();
+        label.setText("foo_bar");
+        tk.firePulse();
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testMnemonics_whenTextIsNull_noExceptionIsThrown() {
+        Toolkit tk = Toolkit.getToolkit();
+        StageLoader sl = new StageLoader(label);
+        tk.firePulse();
+
+        label.setMnemonicParsing(true);
+
+        label.setText("foo_bar");
+        tk.firePulse();
+        label.setText(null);
+        tk.firePulse();
+        label.setText("foo_bar");
+        tk.firePulse();
+
+        sl.dispose();
+    }
+
     /*********************************************************************
      *
      * Tests for bug reports                                             *
