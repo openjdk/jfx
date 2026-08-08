@@ -12,6 +12,9 @@ testbin/
 **/nbproject/private/
 hs_err_pid*
 
+# JavaFX user-local properties for the build 
+gradle-local.properties
+
 # Ignore webrevs
 /webrev/
 /webrev.zip
