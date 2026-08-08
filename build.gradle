@@ -176,7 +176,7 @@ void loadLocalProperties(String sourceFileName) {
 
     def localProps = new Properties()
     propFile.withInputStream { localProps.load(it) }
-    
+
     localProps.forEach((name, value) -> {
         ext[name] = value
         logger.info("gradle-local.properties: defined $name=$value")
