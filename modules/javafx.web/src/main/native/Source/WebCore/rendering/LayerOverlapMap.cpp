@@ -90,7 +90,7 @@ public:
 
     String dump(unsigned) const;
 
-    const RenderLayer& scopeLayer() const { return m_scopeLayer; }
+    const RenderLayer& scopeLayer() const { return m_scopeLayer.get(); }
 
 private:
     struct ClippingScope {
@@ -100,7 +100,7 @@ private:
         }
 
         ClippingScope(const LayerOverlapMap::LayerAndBounds& layerAndBounds)
-            : layer(layerAndBounds.layer)
+            : layer(layerAndBounds.layer.get())
             , bounds(layerAndBounds.bounds)
         {
         }
@@ -108,7 +108,7 @@ private:
         ClippingScope* childWithLayer(const RenderLayer& layer) const
         {
             for (auto& child : children) {
-                if (&child.layer == &layer)
+                if (&child.layer.get() == &layer)
                     return const_cast<ClippingScope*>(&child);
             }
             return nullptr;
@@ -122,7 +122,7 @@ private:
 
         ClippingScope* addChild(const ClippingScope& child)
         {
-            ASSERT(&layer != &child.layer);
+            ASSERT(&layer.get() != &child.layer.get());
             children.append(child);
             return &children.last();
         }
@@ -132,7 +132,7 @@ private:
             rectList.append(bounds);
         }
 
-        const RenderLayer& layer;
+        const CheckedRef<const RenderLayer> layer;
         LayoutRect bounds; // Bounds of the composited clip.
         Vector<ClippingScope> children;
         RectList rectList;
@@ -141,7 +141,7 @@ private:
     static ClippingScope* clippingScopeContainingLayerChildRecursive(const ClippingScope& currNode, const RenderLayer& layer)
     {
         for (auto& child : currNode.children) {
-            if (&layer == &child.layer)
+            if (&layer == &child.layer.get())
                 return const_cast<ClippingScope*>(&currNode);
 
             if (auto* foundNode = clippingScopeContainingLayerChildRecursive(child, layer))
@@ -167,7 +167,7 @@ private:
     ClippingScope& rootScope() { return m_rootScope; }
 
     ClippingScope m_rootScope;
-    const RenderLayer& m_scopeLayer;
+    const CheckedRef<const RenderLayer> m_scopeLayer;
 };
 
 bool OverlapMapContainer::isEmpty() const
@@ -203,11 +203,11 @@ bool OverlapMapContainer::overlapsLayers(const RenderLayer&, const LayoutRect& b
 
 void OverlapMapContainer::mergeClippingScopesRecursive(const ClippingScope& sourceScope, ClippingScope& destScope)
 {
-    ASSERT(&sourceScope.layer == &destScope.layer);
+    ASSERT(&sourceScope.layer.get() == &destScope.layer.get());
     destScope.rectList.append(sourceScope.rectList);
 
     for (auto& sourceChildScope : sourceScope.children) {
-        ClippingScope* destChild = destScope.childWithLayer(sourceChildScope.layer);
+        ClippingScope* destChild = destScope.childWithLayer(sourceChildScope.layer.get());
         if (destChild)
             mergeClippingScopesRecursive(sourceChildScope, *destChild);
         else {
@@ -225,12 +225,12 @@ void OverlapMapContainer::append(std::unique_ptr<OverlapMapContainer>&& otherCon
 OverlapMapContainer::ClippingScope* OverlapMapContainer::ensureClippingScopeForLayers(const LayerOverlapMap::LayerAndBoundsVector& enclosingClippingLayers)
 {
     ASSERT(enclosingClippingLayers.size());
-    ASSERT(enclosingClippingLayers[0].layer.isRenderViewLayer());
+    ASSERT(enclosingClippingLayers[0].layer->isRenderViewLayer());
 
     auto* currScope = &m_rootScope;
     for (unsigned i = 1; i < enclosingClippingLayers.size(); ++i) {
         auto& scopeLayerAndBounds = enclosingClippingLayers[i];
-        auto* childScope = currScope->childWithLayer(scopeLayerAndBounds.layer);
+        auto* childScope = currScope->childWithLayer(scopeLayerAndBounds.layer.get());
         if (!childScope) {
             currScope = currScope->addChildWithLayerAndBounds(scopeLayerAndBounds);
             break;
@@ -245,12 +245,12 @@ OverlapMapContainer::ClippingScope* OverlapMapContainer::ensureClippingScopeForL
 OverlapMapContainer::ClippingScope* OverlapMapContainer::findClippingScopeForLayers(const LayerOverlapMap::LayerAndBoundsVector& enclosingClippingLayers) const
 {
     ASSERT(enclosingClippingLayers.size());
-    ASSERT(enclosingClippingLayers[0].layer.isRenderViewLayer());
+    ASSERT(enclosingClippingLayers[0].layer->isRenderViewLayer());
 
     const auto* currScope = &m_rootScope;
     for (unsigned i = 1; i < enclosingClippingLayers.size(); ++i) {
         auto& scopeLayerAndBounds = enclosingClippingLayers[i];
-        auto* childScope = currScope->childWithLayer(scopeLayerAndBounds.layer);
+        auto* childScope = currScope->childWithLayer(scopeLayerAndBounds.layer.get());
         if (!childScope)
             return nullptr;
 
@@ -262,7 +262,7 @@ OverlapMapContainer::ClippingScope* OverlapMapContainer::findClippingScopeForLay
 
 void OverlapMapContainer::recursiveOutputToStream(TextStream& ts, const ClippingScope& scope, unsigned depth) const
 {
-    ts << '\n' << indent << TextStream::Repeat { 2 * depth, ' ' } << " scope for layer "_s << &scope.layer << " rects "_s << scope.rectList;
+    ts << '\n' << indent << TextStream::Repeat { 2 * depth, ' ' } << " scope for layer "_s << &scope.layer.get() << " rects "_s << scope.rectList;
     for (auto& childScope : scope.children)
         recursiveOutputToStream(ts, childScope, depth + 1);
 }
@@ -271,7 +271,7 @@ String OverlapMapContainer::dump(unsigned indent) const
 {
     TextStream multilineStream;
     multilineStream.increaseIndent(indent);
-    multilineStream << "overlap container - root layer " <<  &m_rootScope.layer << " scope layer " << &m_scopeLayer << " rects " << m_rootScope.rectList;
+    multilineStream << "overlap container - root layer " <<  &m_rootScope.layer.get() << " scope layer " << &m_scopeLayer.get() << " rects " << m_rootScope.rectList;
 
     for (auto& childScope : m_rootScope.children)
         recursiveOutputToStream(multilineStream, childScope, 1);
@@ -320,13 +320,13 @@ bool LayerOverlapMap::overlapsLayers(const RenderLayer& layer, const LayoutRect&
 void LayerOverlapMap::pushCompositingContainer(const RenderLayer& layer)
 {
     confirmSpeculativeCompositingContainer();
-    m_overlapStack.append(makeUnique<OverlapMapContainer>(m_rootLayer, layer));
+    m_overlapStack.append(makeUnique<OverlapMapContainer>(m_rootLayer.get(), layer));
 }
 
 void LayerOverlapMap::popCompositingContainer(const RenderLayer& layer)
 {
     ASSERT_UNUSED(layer, &m_overlapStack.last()->scopeLayer() == &layer);
-    m_overlapStack[m_overlapStack.size() - 2]->append(WTFMove(m_overlapStack.last()));
+    m_overlapStack[m_overlapStack.size() - 2]->append(WTF::move(m_overlapStack.last()));
     m_overlapStack.removeLast();
 }
 
@@ -342,7 +342,7 @@ void LayerOverlapMap::pushSpeculativeCompositingContainer(const RenderLayer& lay
     confirmSpeculativeCompositingContainer();
     for (auto& container : m_overlapStack)
         m_speculativeOverlapStack.append(makeUnique<OverlapMapContainer>(*container));
-    m_speculativeOverlapStack.append(makeUnique<OverlapMapContainer>(m_rootLayer, layer));
+    m_speculativeOverlapStack.append(makeUnique<OverlapMapContainer>(m_rootLayer.get(), layer));
 }
 
 void LayerOverlapMap::confirmSpeculativeCompositingContainer()

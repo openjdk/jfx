@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "JSDOMConvertNullable.h"
 #include "SVGAnimatedPrimitiveProperty.h"
 
 namespace WebCore {

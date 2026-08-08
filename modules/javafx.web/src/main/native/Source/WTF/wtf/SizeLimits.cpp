@@ -80,9 +80,7 @@ template<typename T, unsigned inlineCapacity>
 struct SameSizeAsVectorWithInlineCapacity : SameSizeAsVectorWithInlineCapacityBase<T> {
     WTF_MAKE_NONCOPYABLE(SameSizeAsVectorWithInlineCapacity);
 public:
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type inlineBuffer[inlineCapacity];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    alignas(T) std::byte inlineBuffer[sizeof(T) * inlineCapacity];
 };
 
 static_assert(sizeof(Vector<int>) == sizeof(SameSizeAsVectorWithInlineCapacity<int>), "Vector should stay small!");

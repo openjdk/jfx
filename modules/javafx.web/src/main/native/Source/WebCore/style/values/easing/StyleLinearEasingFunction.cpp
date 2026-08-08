@@ -52,7 +52,7 @@ CSS::LinearEasingFunction toCSSLinearEasingFunction(const LinearTimingFunction& 
     };
 }
 
-template<typename Resolver> static Ref<TimingFunction> createTimingFunctionWithResolver(const CSS::LinearEasingFunction& function, Resolver&& resolver)
+template<typename Resolver> static Ref<TimingFunction> createTimingFunctionWithResolver(const CSS::LinearEasingFunction& function, NOESCAPE Resolver&& resolver)
 {
     // https://drafts.csswg.org/css-easing-2/#create-a-linear-easing-function
 
@@ -153,13 +153,13 @@ template<typename Resolver> static Ref<TimingFunction> createTimingFunctionWithR
     ASSERT(resolvedPoints.size() == points.size());
 
     // 6. Return function.
-    return LinearTimingFunction::create(WTFMove(resolvedPoints));
+    return LinearTimingFunction::create(WTF::move(resolvedPoints));
 }
 
-Ref<TimingFunction> createTimingFunction(const CSS::LinearEasingFunction& function, const CSSToLengthConversionData& conversionData)
+Ref<TimingFunction> createTimingFunction(const BuilderState& state, const CSS::LinearEasingFunction& function)
 {
     return createTimingFunctionWithResolver(function, [&](const auto& value) -> double {
-        return toStyle(value, conversionData).value;
+        return toStyle(value, state).value;
     });
 }
 

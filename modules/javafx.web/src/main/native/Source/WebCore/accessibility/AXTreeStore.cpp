@@ -25,8 +25,10 @@
 
 #include "config.h"
 #include "AXTreeStore.h"
+#include "AXTreeStoreInlines.h"
 
 #include "AXIsolatedTree.h"
+#include "AXObjectCache.h"
 
 namespace WebCore {
 
@@ -34,7 +36,7 @@ namespace WebCore {
 template<>
 void AXTreeStore<AXIsolatedTree>::applyPendingChangesForAllIsolatedTrees()
 {
-    ASSERT(!isMainThread());
+    AX_ASSERT(!isMainThread());
 
     Locker locker { AXTreeStore<AXIsolatedTree>::s_storeLock };
     auto& map = AXTreeStore<AXIsolatedTree>::isolatedTreeMap();

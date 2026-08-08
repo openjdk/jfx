@@ -114,9 +114,9 @@ public:
 
     void clear();
 
-    template<typename Predicate> iterator findIf(NOESCAPE const Predicate&);
-    template<typename Predicate> const_iterator findIf(NOESCAPE const Predicate&) const;
-    template<typename Predicate> bool containsIf(NOESCAPE const Predicate& predicate) const
+    template<typename Predicate> iterator findIf(NOESCAPE const Predicate&) LIFETIME_BOUND;
+    template<typename Predicate> const_iterator findIf(NOESCAPE const Predicate&) const LIFETIME_BOUND;
+    template<typename Predicate> bool containsIf(NOESCAPE const Predicate& predicate) const LIFETIME_BOUND
     {
         return findIf(predicate) != end();
     }
@@ -211,7 +211,7 @@ public:
     Iterator& operator--() { Base::decrement(); return *this; }
     // postfix -- intentionally omitted
 
-    // Only forwarding + unsigned is supported.
+    // Only forwarding + size_t is supported.
     Iterator& operator+=(size_t count) { Base::increment(count); return *this; }
     Iterator operator+(size_t count) const { Iterator result(*this); result += count; return result; }
 };
@@ -249,7 +249,7 @@ public:
     Iterator& operator--() { Base::decrement(); return *this; }
     // postfix -- intentionally omitted
 
-    // Only forwarding + unsigned is supported.
+    // Only forwarding + size_t is supported.
     Iterator& operator+=(size_t count) { Base::increment(count); return *this; }
     Iterator operator+(size_t count) const { Iterator result(*this); result += count; return result; }
 };
@@ -348,6 +348,9 @@ inline Deque<T, inlineCapacity>::Deque(Deque&& other)
 template<typename T, size_t inlineCapacity>
 inline auto Deque<T, inlineCapacity>::operator=(const Deque& other) -> Deque&
 {
+    if (&other == this)
+        return *this;
+
     // FIXME: This is inefficient if we're using an inline buffer and T is
     // expensive to copy since it will copy the buffer twice instead of once.
     Deque<T, inlineCapacity> copy(other);
@@ -388,6 +391,7 @@ inline void Deque<T, inlineCapacity>::swap(Deque<T, inlineCapacity>& other)
     checkValidity();
     other.checkValidity();
     invalidateIterators();
+    other.invalidateIterators();
     std::swap(m_start, other.m_start);
     std::swap(m_end, other.m_end);
     m_buffer.swap(other.m_buffer, 0, 0);
@@ -409,14 +413,14 @@ inline void Deque<T, inlineCapacity>::clear()
 
 template<typename T, size_t inlineCapacity>
 template<typename Predicate>
-inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) -> iterator
+inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) LIFETIME_BOUND -> iterator
 {
     return std::find_if(begin(), end(), predicate);
 }
 
 template<typename T, size_t inlineCapacity>
 template<typename Predicate>
-inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) const -> const_iterator
+inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) const LIFETIME_BOUND -> const_iterator
 {
     return std::find_if(begin(), end(), predicate);
 }
@@ -466,7 +470,7 @@ bool Deque<T, inlineCapacity>::contains(const U& searchValue) const
 template<typename T, size_t inlineCapacity>
 inline auto Deque<T, inlineCapacity>::takeFirst() -> T
 {
-    T oldFirst = WTFMove(first());
+    T oldFirst = WTF::move(first());
     removeFirst();
     return oldFirst;
 }
@@ -474,7 +478,7 @@ inline auto Deque<T, inlineCapacity>::takeFirst() -> T
 template<typename T, size_t inlineCapacity>
 inline auto Deque<T, inlineCapacity>::takeLast() -> T
 {
-    T oldLast = WTFMove(last());
+    T oldLast = WTF::move(last());
     removeLast();
     return oldLast;
 }
@@ -578,9 +582,9 @@ inline size_t Deque<T, inlineCapacity>::removeAllMatching(const Func& func)
     for (size_t i = 0; i < oldSize; ++i) {
         auto value = takeFirst();
         if (!func(value))
-            append(WTFMove(value));
+            append(WTF::move(value));
     }
-    return size() - oldSize;
+    return oldSize - size();
 }
 
 template<typename T, size_t inlineCapacity>
@@ -618,8 +622,8 @@ template<typename T, size_t inlineCapacity>
 template<typename Func>
 inline T Deque<T, inlineCapacity>::takeFirst(NOESCAPE const Func& func)
 {
-    unsigned count = 0;
-    unsigned size = this->size();
+    size_t count = 0;
+    size_t size = this->size();
     while (count < size) {
         T candidate = takeFirst();
         if (func(candidate)) {
@@ -627,8 +631,8 @@ inline T Deque<T, inlineCapacity>::takeFirst(NOESCAPE const Func& func)
                 prepend(takeLast());
             return candidate;
         }
-        count++;
-        append(WTFMove(candidate));
+        ++count;
+        append(WTF::move(candidate));
     }
     return T();
 }
@@ -637,8 +641,8 @@ template<typename T, size_t inlineCapacity>
 template<typename Func>
 inline T Deque<T, inlineCapacity>::takeLast(NOESCAPE const Func& func)
 {
-    unsigned count = 0;
-    unsigned size = this->size();
+    size_t count = 0;
+    size_t size = this->size();
     while (count < size) {
         T candidate = takeLast();
         if (func(candidate)) {
@@ -646,8 +650,8 @@ inline T Deque<T, inlineCapacity>::takeLast(NOESCAPE const Func& func)
                 append(takeFirst());
             return candidate;
         }
-        count++;
-        prepend(WTFMove(candidate));
+        ++count;
+        prepend(WTF::move(candidate));
     }
     return T();
 }

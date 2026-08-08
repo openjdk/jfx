@@ -296,11 +296,13 @@ GDateTime *             g_date_time_to_local                            (GDateTi
 GLIB_AVAILABLE_IN_ALL
 GDateTime *             g_date_time_to_utc                              (GDateTime      *datetime);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar *                 g_date_time_format                              (GDateTime      *datetime,
                                                                          const gchar    *format) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_2_62
 gchar *                 g_date_time_format_iso8601                      (GDateTime      *datetime) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 
 G_END_DECLS
 

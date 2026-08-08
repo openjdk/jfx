@@ -31,7 +31,9 @@
 #include "NetworkResourcesData.h"
 
 #include "CachedResource.h"
+#include "CertificateInfo.h"
 #include "InspectorNetworkAgent.h"
+#include "InspectorResourceUtilities.h"
 #include "ResourceResponse.h"
 #include "TextResourceDecoder.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -102,7 +104,7 @@ void NetworkResourcesData::ResourceData::decodeDataToContent()
 {
     ASSERT(!hasContent());
 
-    auto buffer = m_dataBuffer.takeAsContiguous();
+    auto buffer = m_dataBuffer.takeBufferAsContiguous();
 
     if (m_decoder) {
         m_base64Encoded = false;
@@ -123,13 +125,13 @@ NetworkResourcesData::~NetworkResourcesData()
     clear();
 }
 
-void NetworkResourcesData::resourceCreated(const String& requestId, const String& loaderId, InspectorPageAgent::ResourceType type)
+void NetworkResourcesData::resourceCreated(const String& requestId, const String& loaderId, Inspector::ResourceType type)
 {
     ensureNoDataForRequestId(requestId);
 
     auto resourceData = makeUnique<ResourceData>(requestId, loaderId);
     resourceData->setType(type);
-    m_requestIdToResourceDataMap.set(requestId, WTFMove(resourceData));
+    m_requestIdToResourceDataMap.set(requestId, WTF::move(resourceData));
 }
 
 void NetworkResourcesData::resourceCreated(const String& requestId, const String& loaderId, CachedResource& cachedResource)
@@ -138,10 +140,10 @@ void NetworkResourcesData::resourceCreated(const String& requestId, const String
 
     auto resourceData = makeUnique<ResourceData>(requestId, loaderId);
     resourceData->setCachedResource(&cachedResource);
-    m_requestIdToResourceDataMap.set(requestId, WTFMove(resourceData));
+    m_requestIdToResourceDataMap.set(requestId, WTF::move(resourceData));
 }
 
-void NetworkResourcesData::responseReceived(const String& requestId, const String& frameId, const ResourceResponse& response, InspectorPageAgent::ResourceType type, bool forceBufferData)
+void NetworkResourcesData::responseReceived(const String& requestId, const String& frameId, const ResourceResponse& response, Inspector::ResourceType type, bool forceBufferData)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
@@ -156,8 +158,8 @@ void NetworkResourcesData::responseReceived(const String& requestId, const Strin
     resourceData->setMIMEType(response.mimeType());
     resourceData->setResponseTimestamp(WallTime::now());
 
-    if (InspectorNetworkAgent::shouldTreatAsText(response.mimeType()))
-        resourceData->setDecoder(InspectorNetworkAgent::createTextDecoder(response.mimeType(), response.textEncodingName()));
+    if (ResourceUtilities::shouldTreatAsText(response.mimeType()))
+        resourceData->setDecoder(ResourceUtilities::createTextDecoder(response.mimeType(), response.textEncodingName()));
 
     if (m_settings.supportsShowingCertificate) {
     if (auto& certificateInfo = response.certificateInfo())
@@ -165,7 +167,7 @@ void NetworkResourcesData::responseReceived(const String& requestId, const Strin
     }
 }
 
-void NetworkResourcesData::setResourceType(const String& requestId, InspectorPageAgent::ResourceType type)
+void NetworkResourcesData::setResourceType(const String& requestId, Inspector::ResourceType type)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
@@ -173,11 +175,11 @@ void NetworkResourcesData::setResourceType(const String& requestId, InspectorPag
     resourceData->setType(type);
 }
 
-InspectorPageAgent::ResourceType NetworkResourcesData::resourceType(const String& requestId)
+Inspector::ResourceType NetworkResourcesData::resourceType(const String& requestId)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
-        return InspectorPageAgent::OtherResource;
+        return ResourceType::Other;
     return resourceData->type();
 }
 
@@ -280,7 +282,7 @@ void NetworkResourcesData::addResourceSharedBuffer(const String& requestId, RefP
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
         return;
-    resourceData->setBuffer(WTFMove(buffer));
+    resourceData->setBuffer(WTF::move(buffer));
     resourceData->setTextEncodingName(textEncodingName);
 }
 

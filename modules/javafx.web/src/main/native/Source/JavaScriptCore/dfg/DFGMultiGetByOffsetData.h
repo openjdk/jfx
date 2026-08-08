@@ -104,6 +104,7 @@ public:
         ASSERT(kind() == Constant);
         u.constant = value;
     }
+
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;
 

@@ -72,6 +72,7 @@ const char* GLContext::lastErrorString()
     return errorString(eglGetError());
 }
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
 bool GLContext::getEGLConfig(EGLDisplay display, EGLConfig* config, int surfaceType)
 {
     std::array<EGLint, 4> rgbaSize = { 8, 8, 8, 8 };
@@ -127,6 +128,7 @@ bool GLContext::getEGLConfig(EGLDisplay display, EGLConfig* config, int surfaceT
     RELEASE_LOG_INFO(Compositing, "Could not find suitable EGL configuration out of %zu checked.", configs.size());
     return false;
 }
+IGNORE_CLANG_WARNINGS_END
 
 std::unique_ptr<GLContext> GLContext::createWindowContext(GLDisplay& display, Target target, GLNativeWindowType window, EGLContext sharingContext)
 {
@@ -358,7 +360,6 @@ EGLContext GLContext::createContextForEGLVersion(EGLDisplay eglDisplay, EGLConfi
 {
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib / Windows ports.
     static EGLint contextAttributes[3];
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     static bool contextAttributesInitialized = false;
 
     if (!contextAttributesInitialized) {
@@ -370,6 +371,7 @@ EGLContext GLContext::createContextForEGLVersion(EGLDisplay eglDisplay, EGLConfi
     }
 
     return eglCreateContext(eglDisplay, config, sharingContext, contextAttributes);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 bool GLContext::makeCurrentImpl()
@@ -453,6 +455,7 @@ GCGLContext GLContext::platformContext() const
     return m_context;
 }
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
 bool GLContext::isExtensionSupported(const char* extensionList, const char* extension)
 {
     if (!extensionList)
@@ -462,14 +465,15 @@ bool GLContext::isExtensionSupported(const char* extensionList, const char* exte
     int extensionLen = strlen(extension);
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib / Windows ports.
     const char* extensionListPtr = extensionList;
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     while ((extensionListPtr = strstr(extensionListPtr, extension))) {
         if (extensionListPtr[extensionLen] == ' ' || extensionListPtr[extensionLen] == '\0')
             return true;
         extensionListPtr += extensionLen;
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return false;
 }
+IGNORE_CLANG_WARNINGS_END
 
 unsigned GLContext::versionFromString(const char* versionStringAsChar)
 {
@@ -515,7 +519,7 @@ const GLContext::GLExtensions& GLContext::glExtensions() const
 }
 
 GLContext::ScopedGLContext::ScopedGLContext(std::unique_ptr<GLContext>&& context)
-    : m_context(WTFMove(context))
+    : m_context(WTF::move(context))
 {
     auto eglContext = eglGetCurrentContext();
     m_previous.glContext = GLContext::current();

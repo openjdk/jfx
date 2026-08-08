@@ -294,10 +294,10 @@ GST_API
 GType        gst_segment_get_type            (void);
 
 GST_API
-GstSegment * gst_segment_new                 (void) G_GNUC_MALLOC;
+GstSegment * gst_segment_new                 (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstSegment * gst_segment_copy                (const GstSegment *segment) G_GNUC_MALLOC;
+GstSegment * gst_segment_copy                (const GstSegment *segment) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void         gst_segment_copy_into           (const GstSegment *src, GstSegment *dest);

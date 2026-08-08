@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "CollectionType.h"
-#include "ElementChildIterator.h"
-#include "TypedElementDescendantIterator.h"
+#include <WebCore/CollectionType.h>
+#include <WebCore/ElementChildIterator.h>
+#include <WebCore/TypedElementDescendantIterator.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class ContainerNode;
+class WeakPtrImplWithEventTargetData;
 
 template <CollectionTraversalType traversalType>
 struct CollectionTraversal { };
@@ -39,6 +41,23 @@ struct CollectionTraversal { };
 template <>
 struct CollectionTraversal<CollectionTraversalType::Descendants> {
     using Iterator = ElementDescendantIterator<Element>;
+
+    template <typename CollectionClass>
+    static inline Iterator begin(const CollectionClass&, ContainerNode& rootNode);
+
+    template <typename CollectionClass>
+    static inline Iterator last(const CollectionClass&, ContainerNode& rootNode);
+
+    template <typename CollectionClass>
+    static inline void traverseForward(const CollectionClass&, Iterator& current, unsigned count, unsigned& traversedCount);
+
+    template <typename CollectionClass>
+    static inline void traverseBackward(const CollectionClass&, Iterator& current, unsigned count);
+};
+
+template <>
+struct CollectionTraversal<CollectionTraversalType::WeakPtrDescendants> {
+    using Iterator = WeakPtr<Element, WeakPtrImplWithEventTargetData>;
 
     template <typename CollectionClass>
     static inline Iterator begin(const CollectionClass&, ContainerNode& rootNode);
@@ -89,5 +108,10 @@ struct CollectionTraversal<CollectionTraversalType::CustomForwardOnly> {
     static inline void traverseBackward(const CollectionClass&, Element*&, unsigned count);
 };
 
-
 } // namespace WebCore
+
+namespace std {
+
+template<> struct iterator_traits<WeakPtr<WebCore::Element, WebCore::WeakPtrImplWithEventTargetData>> { using value_type = WebCore::Element; };
+
+}

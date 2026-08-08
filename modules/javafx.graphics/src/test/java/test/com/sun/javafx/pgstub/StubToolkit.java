@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
+
+import com.sun.javafx.util.Utils;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
@@ -779,7 +781,7 @@ public class StubToolkit extends Toolkit {
         return false;
     }
 
-    private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
+    private KeyCode platformShortcutKey;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {
         this.platformShortcutKey = platformShortcutKey;
@@ -787,6 +789,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        if (platformShortcutKey == null) {
+            return Utils.isMac() ? KeyCode.META : KeyCode.CONTROL;
+        }
+
         return platformShortcutKey;
     }
 

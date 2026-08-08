@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSDestructibleObject.h"
-#include "StackFrame.h"
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/StackFrame.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -43,11 +43,11 @@ public:
         return &vm.exceptionSpace();
     }
 
-    enum StackCaptureAction {
+    enum class StackCaptureAction {
         CaptureStack,
         DoNotCaptureStack
     };
-    JS_EXPORT_PRIVATE static Exception* create(VM&, JSValue thrownValue, StackCaptureAction = CaptureStack);
+    JS_EXPORT_PRIVATE static Exception* create(VM&, JSValue thrownValue, StackCaptureAction = StackCaptureAction::CaptureStack);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
@@ -67,6 +67,7 @@ public:
     void setDidNotifyInspectorOfThrow() { m_didNotifyInspectorOfThrow = true; }
 
 #if ENABLE(WEBASSEMBLY)
+    void tryUnwrapValueForJSTag(VM&);
     void wrapValueForJSTag(JSGlobalObject*);
 #endif
 

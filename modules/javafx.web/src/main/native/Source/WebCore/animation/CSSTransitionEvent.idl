@@ -35,7 +35,9 @@
     readonly attribute DOMString pseudoElement;
 };
 
-dictionary TransitionEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary TransitionEventInit : EventInit {
     DOMString propertyName = "";
     double elapsedTime = 0.0;
     DOMString pseudoElement = "";

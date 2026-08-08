@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GradientColorStop.h"
+#include <WebCore/GradientColorStop.h>
 #include <algorithm>
 #include <optional>
 #include <ranges>
@@ -48,13 +48,13 @@ public:
     }
 
     GradientColorStops(StopVector stops)
-        : m_stops { WTFMove(stops) }
+        : m_stops { WTF::move(stops) }
         , m_isSorted { false }
     {
     }
 
     GradientColorStops(Sorted sortedStops)
-        : m_stops { WTFMove(sortedStops.stops) }
+        : m_stops { WTF::move(sortedStops.stops) }
         , m_isSorted { true }
     {
         ASSERT(validateIsSorted());
@@ -64,7 +64,7 @@ public:
     {
         if (!m_stops.isEmpty() && m_stops.last().offset > stop.offset)
             m_isSorted = false;
-        m_stops.append(WTFMove(stop));
+        m_stops.append(WTF::move(stop));
     }
 
     void sort()
@@ -102,7 +102,7 @@ public:
 
 private:
     GradientColorStops(StopVector stops, bool isSorted)
-        : m_stops { WTFMove(stops) }
+        : m_stops { WTF::move(stops) }
         , m_isSorted { isSorted }
     {
     }

@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ChannelSplitterNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChannelSplitterNode);
 
 ExceptionOr<Ref<ChannelSplitterNode>> ChannelSplitterNode::create(BaseAudioContext& context, const ChannelSplitterOptions& options)
 {
@@ -66,19 +66,21 @@ ChannelSplitterNode::ChannelSplitterNode(BaseAudioContext& context, unsigned num
 
 void ChannelSplitterNode::process(size_t framesToProcess)
 {
-    AudioBus& source = input(0)->bus();
+    CheckedPtr firstInput = input(0);
+    AudioBus& source = firstInput->bus();
     ASSERT_UNUSED(framesToProcess, framesToProcess == source.length());
 
     unsigned numberOfSourceChannels = source.numberOfChannels();
 
     for (unsigned i = 0; i < numberOfOutputs(); ++i) {
-        AudioBus& destination = output(i)->bus();
+        CheckedPtr currentOutput = output(i);
+        AudioBus& destination = currentOutput->bus();
 
         if (i < numberOfSourceChannels) {
             // Split the channel out if it exists in the source.
             // It would be nice to avoid the copy and simply pass along pointers, but this becomes extremely difficult with fanout and fanin.
             destination.channel(0)->copyFrom(source.channel(i));
-        } else if (output(i)->renderingFanOutCount() > 0) {
+        } else if (currentOutput->renderingFanOutCount() > 0) {
             // Only bother zeroing out the destination if it's connected to anything
             destination.zero();
         }

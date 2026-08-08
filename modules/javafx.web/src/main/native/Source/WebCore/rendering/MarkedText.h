@@ -27,6 +27,7 @@
 
 #include <wtf/CheckedPtr.h>
 #include <wtf/Hasher.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,7 +39,7 @@ class RenderedDocumentMarker;
 struct TextBoxSelectableRange;
 enum class DocumentMarkerType : uint32_t;
 
-struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorEqual::Yes> {
+struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorEqual::Yes, WTF::CheckedPtrDeleteCheckException::Yes> {
     WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(MarkedText);
     WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(MarkedText);
 
@@ -55,6 +56,7 @@ struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorE
         DictationAlternatives,
         Highlight,
         FragmentHighlight,
+        TextExtractionHighlight,
 #if ENABLE(APP_HIGHLIGHTS)
         AppHighlight,
 #endif
@@ -84,6 +86,7 @@ struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorE
 
     bool isEmpty() const { return endOffset <= startOffset; }
     bool isHashTableDeletedValue() const { return startOffset == std::numeric_limits<unsigned>::max(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     bool operator==(const MarkedText& other) const = default;
 
     WEBCORE_EXPORT static Vector<MarkedText> subdivide(const Vector<MarkedText>&, OverlapStrategy = OverlapStrategy::None);
@@ -113,18 +116,5 @@ template<> struct HashTraits<WebCore::MarkedText> : public GenericHashTraits<Web
     static bool isDeletedValue(const WebCore::MarkedText& slot) { return slot.isHashTableDeletedValue(); }
 };
 
-template<> struct DefaultHash<WebCore::MarkedText> {
-    static unsigned hash(const WebCore::MarkedText& key)
-    {
-        return computeHash(key);
-    }
-
-    static bool equal(const WebCore::MarkedText& a, const WebCore::MarkedText& b)
-    {
-        return a == b;
-    }
-
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 } // namespace WTF
 

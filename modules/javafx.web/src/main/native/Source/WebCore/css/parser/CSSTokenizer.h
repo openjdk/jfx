@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include "CSSParserToken.h"
-#include "CSSTokenizerInputStream.h"
+#include <WebCore/CSSParserToken.h>
+#include <WebCore/CSSTokenizerInputStream.h>
 #include <climits>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -58,7 +58,7 @@ public:
     static bool isWhitespace(CSSParserTokenType);
     static bool isNewline(char16_t);
 
-    Vector<String>&& escapedStringsForAdoption() { return WTFMove(m_stringPool); }
+    Vector<String>&& escapedStringsForAdoption() { return WTF::move(m_stringPool); }
 
 private:
     CSSTokenizer(const String&, CSSParserObserverWrapper*, bool* constructionSuccess);

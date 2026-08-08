@@ -25,7 +25,9 @@
 
 // https://wicg.github.io/cookie-store/#dictdef-cookiestoredeleteoptions
 
-dictionary CookieStoreDeleteOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CookieStoreDeleteOptions {
     required USVString name;
     USVString? domain = null;
     USVString path = "/";

@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "ScopedName.h"
-#include "StyleValueTypes.h"
+#include <WebCore/ScopedName.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {

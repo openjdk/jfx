@@ -56,7 +56,7 @@ typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
 typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
 typedef struct _QtDemuxGaplessAudioInfo QtDemuxGaplessAudioInfo;
 
-typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf);
+typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration, gboolean round_up_duration);
 
 enum QtDemuxState
 {
@@ -172,7 +172,9 @@ struct _GstQTDemux {
 
   GstTagList *tag_list;
 
-  /* configured playback region */
+  /* configured playback region. Note that this is a seek segment, not to be
+   * confused with an edit list segment. Seeks are done for global time (i.e.
+   * with edit lists applied). */
   GstSegment segment;
 
   /* State for key_units trickmode */
@@ -226,8 +228,8 @@ struct _GstQTDemux {
    * ALL VARIABLES BELOW ARE ONLY USED IN PUSH-BASED MODE
    */
   GstAdapter *adapter;
-  guint neededbytes;
-  guint todrop;
+  guint64 neededbytes;
+  guint64 todrop;
   /* Used to store data if [mdat] is before the headers */
   GstBuffer *mdatbuffer;
   /* Amount of bytes left to read in the current [mdat] */
@@ -363,10 +365,10 @@ struct _QtDemuxStreamStsdEntry
 struct _QtDemuxSample
 {
   guint32 size;
-  gint32 pts_offset;            /* Add this value to timestamp to get the pts */
-  guint64 offset;
-  guint64 timestamp;            /* DTS In mov time */
-  guint32 duration;             /* In mov time */
+  gint32 pts_offset;            /* PTS-DTS in track timescale, media time */
+  guint64 offset;               /* Position of frame payload in the byte stream */
+  guint64 timestamp;            /* DTS in track timescale, media time */
+  guint32 duration;             /* In track timescale, media time */
   gboolean keyframe;            /* TRUE when this packet is a keyframe */
 };
 
@@ -389,10 +391,6 @@ struct _QtDemuxStream
                                  * for MSS and fragmented streams */
 
   gboolean new_stream;          /* signals that a stream_start is required */
-  gboolean on_keyframe;         /* if this stream last pushed buffer was a
-                                 * keyframe. This is important to identify
-                                 * where to stop pushing buffers after a
-                                 * segment stop time */
 
   /* if the stream has a redirect URI in its headers, we store it here */
   gchar *redirect_uri;
@@ -404,8 +402,8 @@ struct _QtDemuxStream
 #endif // GSTREAMER_LITE
 
   /* duration/scale */
-  guint64 duration;             /* in timescale units */
-  guint32 timescale;
+  guint64 duration;             /* in track timescale units */
+  guint32 timescale;            /* track timescale */
 
   /* language */
   gchar lang_id[4];             /* ISO 639-2T language code */
@@ -427,6 +425,8 @@ struct _QtDemuxStream
                                  * Currently only set for raw audio streams*/
   guint32 max_buffer_size;      /* Maximum allowed size for output buffers.
                                  * Currently only set for raw audio streams*/
+  guint64 trun_next_dts;        /* DTS in track units that would be used by the
+                                 * first sample of the next trun box. */
 
   /* video info */
   GstVideoInfo info;
@@ -461,10 +461,16 @@ struct _QtDemuxStream
   /* buffer needs potentially be split, e.g. CEA608 subtitles */
   gboolean need_split;
 
+  /* buffer need reordering in reverse playback mode, e.g. raw streams */
+  gboolean need_reorder;
+  GQueue reorder_queue;
+
   /* current position */
   guint32 segment_index;
   guint32 sample_index;
-  GstClockTime time_position;   /* in gst time */
+  /* PTS in global time of the last frame demuxed (i.e. after edit lists).
+   * Used for deciding what track to schedule in the pull-mode loop. */
+  GstClockTime cur_global_pts;
   guint64 accumulated_base;
 
   /* the Gst segment we are processing out, used for clipping */
@@ -546,6 +552,10 @@ struct _QtDemuxStream
    * DTS/PTS can be inferred directly without ending up with PTS>DTS.
    *
    * See 14496-12 6.4
+   *
+   * Buffer PTS has cslg_shift applied so that buffer PTS >= buffer DTS.
+   * The cslg_shift is accounted by the GstSegment so it can be reverted by
+   * calculating stream time PTS.
    */
   guint64 cslg_shift;
 
@@ -570,7 +580,7 @@ struct _QtDemuxStream
   GQueue protection_scheme_event_queue;
 
   /* KEY_UNITS trickmode with an interval */
-  GstClockTime last_keyframe_dts;
+  GstClockTime last_keyframe_pts;
 
   gint ref_count;               /* atomic */
 };

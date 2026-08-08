@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "MediaConfiguration.h"
-#include "MediaDecodingType.h"
-#include "PageIdentifier.h"
+#include <WebCore/MediaConfiguration.h>
+#include <WebCore/MediaDecodingType.h>
+#include <WebCore/PageIdentifier.h>
 
 namespace WebCore {
 
@@ -47,3 +47,4 @@ inline MediaDecodingConfiguration MediaDecodingConfiguration::isolatedCopy() con
 }
 
 } // namespace WebCore
+

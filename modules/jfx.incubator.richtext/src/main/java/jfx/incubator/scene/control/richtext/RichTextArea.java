@@ -36,6 +36,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -47,6 +49,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.InsetsConverter;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
@@ -71,6 +75,7 @@ import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.skin.CellContext;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
@@ -302,6 +307,8 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
     private ReadOnlyBooleanWrapper redoable;
+    private ReadOnlyObjectWrapper<Bounds> documentArea;
+    private ReadOnlyObjectWrapper<TextPos> dropTarget;
     // styleables
     private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
     private SimpleStyleableObjectProperty<Insets> contentPadding;
@@ -321,6 +328,11 @@ public class RichTextArea extends Control {
             @Override
             public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
                 return t.getText(start, end, sb, limit);
+            }
+
+            @Override
+            public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+                t.setDocumentArea(minX, minY, width, height);
             }
         });
     }
@@ -508,6 +520,54 @@ public class RichTextArea extends Control {
 
     public final boolean isDisplayCaret() {
         return displayCaret == null ? Params.DEFAULT_DISPLAY_CARET : displayCaret.get();
+    }
+
+    /**
+     * This property indicates the target text position during drag-and-drop operations.
+     *
+     * @return the drop target property
+     * @defaultValue null
+     * @since 27
+     */
+    public final ReadOnlyProperty<TextPos> dropTargetProperty() {
+        return dropTarget().getReadOnlyProperty();
+    }
+
+    public final TextPos getDropTarget() {
+        return (dropTarget == null) ? null : dropTarget.get();
+    }
+
+    /**
+     * Attempts to set the drop target position at the specified screen coordinates.
+     * If the drop target is visible, the value of the
+     * {@link #dropTargetProperty() dropTarget} property will be updated to reflect the insertion point in the model,
+     * otherwise it will be set to {@code null}.
+     *
+     * @param screenX the screen x coordinate
+     * @param screenY the screen y coordinate
+     * @since 27
+     */
+    public final void setDropTarget(double screenX, double screenY) {
+        TextPos p = getTextPosition(screenX, screenY);
+        dropTarget().set(p);
+    }
+
+    /**
+     * Sets the value of the {@link #dropTargetProperty() dropTarget} property to {@code null}.
+     * @since 27
+     */
+    public final void clearDropTarget() {
+        if (dropTarget != null) {
+            dropTarget.set(null);
+        }
+    }
+
+    private ReadOnlyObjectWrapper<TextPos> dropTarget() {
+        // TODO always called by the skin, so can be instantiated in the constructor
+        if (dropTarget == null) {
+            dropTarget = new ReadOnlyObjectWrapper();
+        }
+        return dropTarget;
     }
 
     /**
@@ -1407,8 +1467,35 @@ public class RichTextArea extends Control {
      * @return the non-null {@code StyleAttributeMap} instance
      */
     public final StyleAttributeMap getActiveStyleAttributeMap() {
+        SelectionSegment sel = getSelection();
+        if (sel != null) {
+            TextPos pos = sel.getMax();
+            StyleResolver r = resolver();
+            return getModelStyleAttrs(r, pos, true);
+        }
+        return StyleAttributeMap.EMPTY;
+    }
+
+    /**
+     * Returns the {@link StyleAttributeMap} of the character at the specified position's {@code charIndex}.
+     * <p>
+     * When the position points to the boundary between two text segments with different attributes,
+     * the value of {@code forInsert} determines which segment will be used: when {@code true}, the preceding
+     * segment's attributes will be returned so inserted/typed text has the same style as
+     * preceding text.  When {@code forInsert} is {@code false}, the returned attributes correspond exactly
+     * to the symbol indicated by the specified position.
+     * <p>
+     * This method returns the attributes of the last character at the end of the document.
+     * An empty {@code StyleAttributeMap} is returned for a {@code null} model.
+     *
+     * @param pos the text position
+     * @param forInsert whether to pick preceding style at the segment boundary
+     * @return the style attributes, never null
+     * @since 27
+     */
+    public final StyleAttributeMap getStyleAttributeMap(TextPos pos, boolean forInsert) {
         StyleResolver r = resolver();
-        return getModelStyleAttrs(r);
+        return getModelStyleAttrs(r, pos, forInsert);
     }
 
     /**
@@ -2340,14 +2427,10 @@ public class RichTextArea extends Control {
         return null;
     }
 
-    private StyleAttributeMap getModelStyleAttrs(StyleResolver r) {
+    private StyleAttributeMap getModelStyleAttrs(StyleResolver r, TextPos pos, boolean forInsert) {
         StyledTextModel m = getModel();
         if (m != null) {
-            SelectionSegment sel = getSelection();
-            if (sel != null) {
-                TextPos pos = sel.getMax();
-                return m.getStyleAttributeMap(r, pos);
-            }
+            return m.getStyleAttributeMap(r, pos, forInsert);
         }
         return StyleAttributeMap.EMPTY;
     }
@@ -2440,9 +2523,57 @@ public class RichTextArea extends Control {
             cx.addStyle("-fx-fill:" + color + ";");
         });
 
+        b.setSegHandler(StyleAttributeMap.TEXT_HIGHLIGHT_1, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.TEXT_HIGHLIGHT_1, CellContext.RunDecor.HIGHLIGHT, Params.STYLE_TEXT_HIGHLIGHT_1);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.TEXT_HIGHLIGHT_2, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.TEXT_HIGHLIGHT_2, CellContext.RunDecor.HIGHLIGHT, Params.STYLE_TEXT_HIGHLIGHT_2);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.TEXT_HIGHLIGHT_3, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.TEXT_HIGHLIGHT_3, CellContext.RunDecor.HIGHLIGHT, Params.STYLE_TEXT_HIGHLIGHT_3);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.TEXT_HIGHLIGHT_4, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.TEXT_HIGHLIGHT_4, CellContext.RunDecor.HIGHLIGHT, Params.STYLE_TEXT_HIGHLIGHT_4);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.TEXT_HIGHLIGHT_5, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.TEXT_HIGHLIGHT_5, CellContext.RunDecor.HIGHLIGHT, Params.STYLE_TEXT_HIGHLIGHT_5);
+            }
+        });
+
         b.setSegHandler(StyleAttributeMap.UNDERLINE, (cc, cx, v) -> {
             if (v) {
                 cx.addStyle("-fx-underline:true;");
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_1, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_1, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_1);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_2, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_2, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_2);
+            }
+        });
+
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_3, (cc, cx, v) -> {
+            if (v) {
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_3, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_3);
             }
         });
 
@@ -2523,6 +2654,41 @@ public class RichTextArea extends Control {
             return accessibilityHelper().caretOffset();
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    /**
+     * Provides the bounds to the document area in local coordinates.
+     * The bounds are determined by the skin, and may be {@code null}.
+     *
+     * @return the document area
+     * @defaultValue null
+     * @since 27
+     */
+    public final ReadOnlyObjectProperty<Bounds> documentAreaProperty() {
+        return documentAreaPropertyImpl().getReadOnlyProperty();
+    }
+
+    private final ReadOnlyObjectWrapper<Bounds> documentAreaPropertyImpl() {
+        if (documentArea == null) {
+            VFlow f = vflow();
+            Bounds v = (f == null) ? null : f.documentArea();
+            documentArea = new ReadOnlyObjectWrapper<>(this, "documentArea", v);
+        }
+        return documentArea;
+    }
+
+    public final Bounds getDocumentArea() {
+        if (documentArea == null) {
+            return null;
+        }
+        return documentArea.get();
+    }
+
+    private final void setDocumentArea(double minX, double minY, double width, double height) {
+        if (documentArea != null) {
+            BoundingBox b = new BoundingBox(minX, minY, width, height);
+            documentAreaPropertyImpl().set(b);
         }
     }
 }

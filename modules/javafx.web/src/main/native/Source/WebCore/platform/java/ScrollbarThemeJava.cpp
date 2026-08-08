@@ -37,6 +37,7 @@
 #include "ScrollbarThemeJava.h"
 #include "ScrollView.h"
 #include "NotImplemented.h"
+#include "DocumentPage.h"
 
 #include "PlatformJavaClasses.h"
 #include "com_sun_webkit_graphics_ScrollBarTheme.h"
@@ -219,7 +220,7 @@ IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
     return getPartRect(scrollbar, TrackBGPart);
 }
 
-int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth, ScrollbarExpansionState, OverlayScrollbarSizeRelevancy)
+int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth width, OverlayScrollbarSizeRelevancy relevancy)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

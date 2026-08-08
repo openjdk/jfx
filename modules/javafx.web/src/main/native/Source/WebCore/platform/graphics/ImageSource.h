@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ImageFrame.h"
-#include "ImageOrientation.h"
-#include "ImageTypes.h"
+#include <WebCore/ImageFrame.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/ImageTypes.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
@@ -98,6 +98,10 @@ public:
 
 #if ENABLE(SPATIAL_IMAGE_DETECTION)
     virtual bool isSpatial() const { return false; }
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    virtual bool isMaybePanoramic() const { return false; }
 #endif
 
     // ImageFrame Metadata

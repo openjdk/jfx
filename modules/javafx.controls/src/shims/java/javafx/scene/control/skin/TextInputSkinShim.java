@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -37,15 +38,6 @@ import javafx.scene.text.Text;
 public class TextInputSkinShim {
 
 //------------ TextField
-
-    /**
-     * Returns the promptNode from the textField's skin. The skin must be of type
-     * TextFieldSkin.
-     */
-    public static Text getPromptNode(TextField textField) {
-        TextFieldSkin skin = (TextFieldSkin) textField.getSkin();
-        return skin.getPromptNode();
-    }
 
     /**
      * Returns the textNode from the textField's skin. The skin must be of type
@@ -66,15 +58,6 @@ public class TextInputSkinShim {
     }
 
 //----------- TextArea
-
-    /**
-     * Returns the promptNode from the textField's skin. The skin must be of type
-     * TextFieldSkin.
-     */
-    public static Text getPromptNode(TextArea textArea) {
-        TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
-        return skin.getPromptNode();
-    }
 
     public static Text getTextNode(TextArea textArea) {
         TextAreaSkin skin = (TextAreaSkin) textArea.getSkin();
@@ -100,6 +83,21 @@ public class TextInputSkinShim {
     public static boolean isCaretBlinking(TextInputControl control) {
         TextInputControlSkin<?> skin = (TextInputControlSkin<?>) control.getSkin();
         return skin.isCaretBlinking();
+    }
+
+    /**
+     * Returns the promptNode from the control's skin. The skin must be of type
+     * TextFieldSkin or TextAreaSkin.
+     */
+    public static Text getPromptNode(TextInputControl control) {
+        Skin<?> skin = control.getSkin();
+
+        if (skin instanceof TextFieldSkin textFieldSkin) {
+            return textFieldSkin.getPromptNode();
+        } else if (skin instanceof TextAreaSkin textAreaSkin) {
+            return textAreaSkin.getPromptNode();
+        }
+        throw new IllegalArgumentException("Unsupported skin: " + skin);
     }
 
     private TextInputSkinShim() {}

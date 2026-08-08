@@ -25,9 +25,9 @@
 
 #include "ContainerNodeInlines.h"
 #include "DOMPoint.h"
-#include "DocumentInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGShape.h"
+#include "NodeDocument.h"
 #include "RenderSVGShape.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGPathUtilities.h"
@@ -37,56 +37,66 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGGeometryElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGGeometryElement);
 
 SVGGeometryElement::SVGGeometryElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
-    : SVGGraphicsElement(tagName, document, WTFMove(propertyRegistry))
+    : SVGGraphicsElement(tagName, document, WTF::move(propertyRegistry))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::pathLengthAttr, &SVGGeometryElement::m_pathLength>();
-    });
+    }
 }
 
-float SVGGeometryElement::getTotalLength() const
+float SVGGeometryElement::calculateTotalLength() const
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
-
-    auto* renderer = this->renderer();
+    CheckedPtr renderer = this->renderer();
     if (!renderer)
         return 0;
 
-    if (CheckedPtr renderSVGShape = dynamicDowncast<LegacyRenderSVGShape>(renderer))
+    if (CheckedPtr renderSVGShape = dynamicDowncast<LegacyRenderSVGShape>(*renderer))
         return renderSVGShape->getTotalLength();
 
-    if (CheckedPtr renderSVGShape = dynamicDowncast<RenderSVGShape>(renderer))
+    if (CheckedPtr renderSVGShape = dynamicDowncast<RenderSVGShape>(*renderer))
         return renderSVGShape->getTotalLength();
 
     ASSERT_NOT_REACHED();
     return 0;
 }
 
-ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) const
+float SVGGeometryElement::getTotalLength() const
 {
     protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
+    return calculateTotalLength();
+}
 
-    auto* renderer = this->renderer();
+ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::calculatePointAtLength(float distance) const
+{
+    CheckedPtr renderer = this->renderer();
     // Spec: If current element is a non-rendered element, throw an InvalidStateError.
     if (!renderer)
         return Exception { ExceptionCode::InvalidStateError };
 
-    // Spec: Clamp distance to [0, length].
-    distance = clampTo<float>(distance, 0, getTotalLength());
-
     // Spec: Return a newly created, detached SVGPoint object.
-    if (CheckedPtr renderSVGShape = dynamicDowncast<LegacyRenderSVGShape>(renderer))
+    if (CheckedPtr renderSVGShape = dynamicDowncast<LegacyRenderSVGShape>(*renderer))
         return SVGPoint::create(renderSVGShape->getPointAtLength(distance));
 
-    if (CheckedPtr renderSVGShape = dynamicDowncast<RenderSVGShape>(renderer))
+    if (CheckedPtr renderSVGShape = dynamicDowncast<RenderSVGShape>(*renderer))
         return SVGPoint::create(renderSVGShape->getPointAtLength(distance));
 
     ASSERT_NOT_REACHED();
     return Exception { ExceptionCode::InvalidStateError };
+}
+
+ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) const
+{
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
+
+    // Spec: Clamp distance to [0, length].
+    distance = clampTo<float>(distance, 0, calculateTotalLength());
+
+    return calculatePointAtLength(distance);
 }
 
 bool SVGGeometryElement::isPointInFill(DOMPointInit&& pointInit)

@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "ScrollOptions.h"
+#include <WebCore/ScrollOptions.h>
 #include <cmath>
 
 namespace WebCore {

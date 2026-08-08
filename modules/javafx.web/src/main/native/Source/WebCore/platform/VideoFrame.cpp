@@ -42,7 +42,7 @@ VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rot
     : m_presentationTime(presentationTime)
     , m_isMirrored(isMirrored)
     , m_rotation(rotation)
-    , m_colorSpace(WTFMove(colorSpace))
+    , m_colorSpace(WTF::move(colorSpace))
 {
 }
 
@@ -112,9 +112,10 @@ void VideoFrame::copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPla
     callback({ });
 }
 
-void VideoFrame::draw(GraphicsContext&, const FloatRect&, ImageOrientation, bool)
+RefPtr<NativeImage> VideoFrame::copyNativeImage() const
 {
     // FIXME: Add support.
+    return nullptr;
 }
 #endif // !PLATFORM(COCOA)
 

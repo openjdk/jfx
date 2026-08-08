@@ -65,52 +65,52 @@ GST_API
 gboolean          gst_is_caps_features (gconstpointer obj);
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_empty (void);
+GstCapsFeatures * gst_caps_features_new_empty (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_any (void);
+GstCapsFeatures * gst_caps_features_new_any (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_single (const gchar *feature) G_GNUC_MALLOC;
+GstCapsFeatures * gst_caps_features_new_single (const gchar *feature) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_single_static_str (const gchar *feature) G_GNUC_MALLOC;
+GstCapsFeatures * gst_caps_features_new_single_static_str (const gchar *feature) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED;
+GstCapsFeatures * gst_caps_features_new (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_static_str (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED;
+GstCapsFeatures * gst_caps_features_new_static_str (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_valist (const gchar *feature1, va_list varargs);
+GstCapsFeatures * gst_caps_features_new_valist (const gchar *feature1, va_list varargs) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_static_str_valist (const gchar *feature1, va_list varargs);
+GstCapsFeatures * gst_caps_features_new_static_str_valist (const gchar *feature1, va_list varargs) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_DEPRECATED_FOR(gst_caps_features_new_id_str)
-GstCapsFeatures * gst_caps_features_new_id (GQuark feature1, ...);
+GstCapsFeatures * gst_caps_features_new_id (GQuark feature1, ...) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_DEPRECATED_FOR(gst_caps_features_new_id_str_valist)
-GstCapsFeatures * gst_caps_features_new_id_valist (GQuark feature1, va_list varargs);
+GstCapsFeatures * gst_caps_features_new_id_valist (GQuark feature1, va_list varargs) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_id_str (const GstIdStr * feature1, ...);
+GstCapsFeatures * gst_caps_features_new_id_str (const GstIdStr * feature1, ...) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCapsFeatures * gst_caps_features_new_id_str_valist (const GstIdStr * feature1, va_list varargs);
+GstCapsFeatures * gst_caps_features_new_id_str_valist (const GstIdStr * feature1, va_list varargs) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean          gst_caps_features_set_parent_refcount  (GstCapsFeatures *features, gint * refcount);
 
 GST_API
-GstCapsFeatures * gst_caps_features_copy (const GstCapsFeatures * features);
+GstCapsFeatures * gst_caps_features_copy (const GstCapsFeatures * features) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void              gst_caps_features_free (GstCapsFeatures * features);
 
 GST_API
-gchar *           gst_caps_features_to_string (const GstCapsFeatures * features);
+gchar *           gst_caps_features_to_string (const GstCapsFeatures * features) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstCapsFeatures * gst_caps_features_from_string (const gchar * features);

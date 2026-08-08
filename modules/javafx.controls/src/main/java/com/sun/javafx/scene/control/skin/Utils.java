@@ -49,10 +49,12 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -66,6 +68,7 @@ import javafx.scene.text.TextBoundsType;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
@@ -86,15 +89,16 @@ public class Utils {
     private static final TextBoundsType DEFAULT_BOUNDS_TYPE = textInstance.getBoundsType();
     private static final AtomicBoolean helperGuard = new AtomicBoolean(false);
 
-    /* Using TextLayout directly for simple text measurement.
+    /**
+     * Using TextLayout directly for a simple text measurement.
      * Instead of restoring the TextLayout attributes to default values
      * (each renders the TextLayout unable to efficiently cache layout data).
      * It always sets all the attributes pertinent to calculation being performed.
      * Note that lineSpacing and boundsType are important when computing the height
      * but irrelevant when computing the width.
-     *
-     * Note: This code assumes that TextBoundsType#VISUAL is never used by controls.
-     * */
+     * <br>
+     * Note: This code assumes that the callers never use TextBoundsType#VISUAL.
+     */
     private static final TextLayout layoutInstance = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
     private static final AtomicBoolean layoutGuard = new AtomicBoolean(false);
 
@@ -167,6 +171,8 @@ public class Utils {
         try {
             layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
             layout.setWrapWidth((float)wrappingWidth);
+            layout.setLineSpacing(0);
+            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
             return layout.getBounds().getWidth();
         } finally {
             release(layout);
@@ -988,5 +994,15 @@ public class Utils {
 
     public static URL getResource(String str) {
         return Utils.class.getResource(str);
+    }
+
+    // Dispatches the event only to the Node's dispatcher, not its entire
+    // dispatch chain. Returns true if the event was consumed.
+    public static boolean dispatchToNode(Event event, Node node) {
+        var dispatcher = node.getEventDispatcher();
+        if (dispatcher == null) return false;
+        var chain = new EventDispatchChainImpl();
+        chain.append(dispatcher);
+        return (chain.dispatchEvent(event.copyFor(node, node)) == null);
     }
 }

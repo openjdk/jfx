@@ -42,7 +42,7 @@ static constexpr unsigned defaultNumberOfOutputChannels = 2;
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DynamicsCompressorNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressorNode);
 
 ExceptionOr<Ref<DynamicsCompressorNode>> DynamicsCompressorNode::create(BaseAudioContext& context, const DynamicsCompressorOptions& options)
 {
@@ -76,7 +76,8 @@ DynamicsCompressorNode::~DynamicsCompressorNode()
 
 void DynamicsCompressorNode::process(size_t framesToProcess)
 {
-    AudioBus& outputBus = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    AudioBus& outputBus = firstOutput->bus();
 
     float threshold = m_threshold->finalValue();
     float knee = m_knee->finalValue();
@@ -90,7 +91,7 @@ void DynamicsCompressorNode::process(size_t framesToProcess)
     m_dynamicsCompressor->setParameterValue(DynamicsCompressor::ParamAttack, attack);
     m_dynamicsCompressor->setParameterValue(DynamicsCompressor::ParamRelease, release);
 
-    m_dynamicsCompressor->process(input(0)->bus(), outputBus, framesToProcess);
+    m_dynamicsCompressor->process(checkedInput(0)->bus(), outputBus, framesToProcess);
 
     setReduction(m_dynamicsCompressor->parameterValue(DynamicsCompressor::ParamReduction));
 }

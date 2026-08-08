@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "pas_config.h"
 #include "pas_log.h"
+#include "pas_mte.h"
 #include "pas_page_base_inlines.h"
 #include "pas_segregated_deallocation_mode.h"
 #include "pas_segregated_exclusive_view_inlines.h"
@@ -37,6 +38,9 @@
 #include "pas_segregated_shared_handle.h"
 #include "pas_segregated_shared_handle_inlines.h"
 #include "pas_thread_local_cache_node.h"
+#include "pas_zero_memory.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -371,7 +375,7 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
 #if !PAS_ARM && !PAS_RISCV
         new_word = word;
 
-        asm volatile (
+        __asm__ volatile (
             "btrl %1, %0\n\t"
             "jc 0f\n\t"
             "movq %2, %%rdi\n\t"
@@ -464,6 +468,7 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
         }
 
     PAS_PROFILE(SEGREGATED_PAGE_DEALLOCATION, page_config, begin, object_size);
+    PAS_MTE_HANDLE(SEGREGATED_PAGE_DEALLOCATION, page_config, begin, object_size);
 
     if (page_config.base.page_size > page_config.base.granule_size) {
         /* This is the partial decommit case. It's intended for medium pages. It requires doing
@@ -640,5 +645,5 @@ static PAS_ALWAYS_INLINE void pas_segregated_page_log_or_deallocate(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_PAGE_INLINES_H */
-

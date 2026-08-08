@@ -25,7 +25,8 @@
 // https://w3c.github.io/pointerlock/#pointerlockoptions-dictionary
 [
     Conditional=POINTER_LOCK,
-    EnabledBySetting=PointerLockEnabled&PointerLockOptionsEnabled
+    EnabledBySetting=PointerLockEnabled&PointerLockOptionsEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary PointerLockOptions {
     boolean unadjustedMovement = false;
 };

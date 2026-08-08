@@ -34,7 +34,7 @@
 namespace WebCore {
 
 RTCEncodedFrame::RTCEncodedFrame(Ref<RTCRtpTransformableFrame>&& frame)
-    : m_frame(WTFMove(frame))
+    : m_frame(WTF::move(frame))
 {
 }
 

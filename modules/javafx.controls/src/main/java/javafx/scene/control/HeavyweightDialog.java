@@ -52,7 +52,7 @@ class HeavyweightDialog extends FXDialog {
     final Stage stage = new Stage() {
         @Override public void centerOnScreen() {
             Window owner = HeavyweightDialog.this.getOwner();
-            if (owner != null) {
+            if (owner != null && owner.getScene() != null && owner.isShowing() && (!(owner instanceof Stage ownerStage) || !ownerStage.isIconified())) {
                 positionStage();
             } else {
                 if (getWidth() > 0 && getHeight() > 0) {
@@ -309,27 +309,25 @@ class HeavyweightDialog extends FXDialog {
     private void updateStageBindings(Window oldOwner, Window newOwner) {
         final Scene dialogScene = stage.getScene();
 
-        if (oldOwner != null && oldOwner instanceof Stage) {
-            Stage oldStage = (Stage) oldOwner;
+        if (oldOwner instanceof Stage oldStage) {
             Bindings.unbindContent(stage.getIcons(), oldStage.getIcons());
             stage.renderScaleXProperty().unbind();
             stage.renderScaleYProperty().unbind();
 
             Scene oldScene = oldStage.getScene();
-            if (scene != null && dialogScene != null) {
+            if (oldScene != null && dialogScene != null) {
                 Bindings.unbindContent(dialogScene.getStylesheets(), oldScene.getStylesheets());
             }
         }
 
         // put the icons and stylesheets of the owner window into the dialog
-        if (newOwner instanceof Stage) {
-            Stage newStage = (Stage) newOwner;
+        if (newOwner instanceof Stage newStage) {
             Bindings.bindContent(stage.getIcons(), newStage.getIcons());
             stage.renderScaleXProperty().bind(newStage.renderScaleXProperty());
             stage.renderScaleYProperty().bind(newStage.renderScaleYProperty());
 
             Scene newScene = newStage.getScene();
-            if (scene != null && dialogScene != null) {
+            if (newScene != null && dialogScene != null) {
                 Bindings.bindContent(dialogScene.getStylesheets(), newScene.getStylesheets());
             }
         }

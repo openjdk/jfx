@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ScrollOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ScrollOptions {
     ScrollBehavior behavior = "auto";
 };

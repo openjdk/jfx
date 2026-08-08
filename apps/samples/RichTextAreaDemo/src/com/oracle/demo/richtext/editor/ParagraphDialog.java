@@ -41,18 +41,15 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.Separator;
 import javafx.scene.control.ToggleGroup;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import com.oracle.demo.richtext.util.FX;
+import com.oracle.demo.richtext.util.Utils;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
@@ -80,6 +77,7 @@ public class ParagraphDialog extends Stage {
         this.editor = editor;
         initOwner(FX.getParentWindow(editor));
         initModality(Modality.APPLICATION_MODAL);
+        FX.name(this, "ParagraphDialog");
 
         // FIX cannot set <null> value
         background = new ColorPicker();
@@ -105,18 +103,14 @@ public class ParagraphDialog extends Stage {
             "‣"
         );
 
-        beforeText = combo();
-        afterText = combo();
-        spaceAbove = combo();
-        spaceBelow = combo();
+        beforeText = Utils.numberField();
+        afterText = Utils.numberField();
+        spaceAbove = Utils.numberField();
+        spaceBelow = Utils.numberField();
 
         ltrButton = new RadioButton("Left-to-right");
         rtlButton = new RadioButton("Right-to-left");
         new ToggleGroup().getToggles().setAll(ltrButton, rtlButton);
-
-        Button tabsButton = new Button("Tabs...");
-        tabsButton.setDisable(true); // TODO
-        ButtonBar.setButtonData(tabsButton, ButtonData.LEFT);
 
         Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction((_) -> hide());
@@ -137,7 +131,7 @@ public class ParagraphDialog extends Stage {
         g.setVgap(10);
         g.setMaxWidth(Double.MAX_VALUE);
         int r = 0;
-        g.add(heading("General"), 0, r, 3, 1);
+        g.add(Utils.heading("General"), 0, r, 3, 1);
         r++;
         g.add(new Label("Background:"), 1, r);
         g.add(background, 2, r);
@@ -151,9 +145,9 @@ public class ParagraphDialog extends Stage {
         g.add(new Label("Direction:"), 1, r);
         g.add(new HBox(10, ltrButton, rtlButton), 2, r);
         r++;
-        g.add(separator(), 0, r, 3, 1);
+        g.add(Utils.separator(), 0, r, 3, 1);
         r++;
-        g.add(heading("Indentation"), 0, r, 3, 1);
+        g.add(Utils.heading("Indentation"), 0, r, 3, 1);
         r++;
         g.add(new Label("Before Text:"), 1, r);
         g.add(beforeText, 2, r);
@@ -161,9 +155,9 @@ public class ParagraphDialog extends Stage {
         g.add(new Label("After Text:"), 1, r);
         g.add(afterText, 2, r);
         r++;
-        g.add(separator(), 0, r, 3, 1);
+        g.add(Utils.separator(), 0, r, 3, 1);
         r++;
-        g.add(heading("Spacing"), 0, r, 3, 1);
+        g.add(Utils.heading("Spacing"), 0, r, 3, 1);
         r++;
         g.add(new Label("Before:"), 1, r);
         g.add(spaceAbove, 2, r);
@@ -172,11 +166,7 @@ public class ParagraphDialog extends Stage {
         g.add(spaceBelow, 2, r);
 
         ButtonBar bb = new ButtonBar();
-        bb.getButtons().setAll(
-            tabsButton,
-            cancelButton,
-            okButton
-        );
+        bb.getButtons().setAll(cancelButton, okButton);
 
         BorderPane bp = new BorderPane();
         bp.setPadding(new Insets(10));
@@ -185,13 +175,8 @@ public class ParagraphDialog extends Stage {
 
         setScene(new Scene(bp, 400, 500));
         setTitle("Paragraph");
-        addEventHandler(KeyEvent.KEY_PRESSED, (ev) -> {
-            if (ev.getCode() == KeyCode.ESCAPE) {
-                hide();
-            }
-        });
-
-        // TODO center in window
+        Utils.closeOnEscape(this);
+        Utils.centerInWindow(this);
 
         load();
     }
@@ -206,35 +191,6 @@ public class ParagraphDialog extends Stage {
         case LEFT -> "Left";
         case RIGHT -> "Right";
         };
-    }
-
-    private static Label heading(String text) {
-        Label n = new Label(text);
-        n.setStyle("-fx-font-weight:bold;");
-        n.setMaxWidth(Double.MAX_VALUE);
-        GridPane.setHgrow(n, Priority.ALWAYS);
-        return n;
-    }
-
-    private static Separator separator() {
-        Separator n = new Separator();
-        n.setMaxWidth(Double.MAX_VALUE);
-        GridPane.setHgrow(n, Priority.ALWAYS);
-        return n;
-    }
-
-    private static ComboBox<Double> combo() {
-        ComboBox<Double> c = new ComboBox<>();
-        c.getItems().setAll(
-            null,
-            0.0,
-            10.0,
-            50.0,
-            100.0
-        );
-        c.setEditable(true);
-        c.setConverter(FX.numberConverter());
-        return c;
     }
 
     private void load() {

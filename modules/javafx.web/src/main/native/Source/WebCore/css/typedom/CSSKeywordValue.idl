@@ -26,7 +26,6 @@
 // https://drafts.css-houdini.org/css-typed-om/#csskeywordvalue
 [
     Exposed=(Window,Worker,PaintWorklet),
-    JSGenerateToJSObject,
     JSGenerateToNativeObject,
 ] interface CSSKeywordValue : CSSStyleValue {
     constructor(USVString value);

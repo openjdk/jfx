@@ -26,9 +26,6 @@
 #pragma once
 
 #include "Cookie.h"
-#include "CookieSameSite.h"
-#include "DOMHighResTimeStamp.h"
-#include <optional>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -37,37 +34,12 @@ struct CookieListItem {
     CookieListItem() = default;
 
     CookieListItem(Cookie&& cookie)
-        : name(WTFMove(cookie.name))
-        , value(WTFMove(cookie.value))
-        , domain(WTFMove(cookie.domain))
-        , path(WTFMove(cookie.path))
-        , expires(cookie.expires)
-    {
-        switch (cookie.sameSite) {
-        case Cookie::SameSitePolicy::Strict:
-            sameSite = CookieSameSite::Strict;
-            break;
-        case Cookie::SameSitePolicy::Lax:
-            sameSite = CookieSameSite::Lax;
-            break;
-        case Cookie::SameSitePolicy::None:
-            sameSite = CookieSameSite::None;
-            break;
-        }
-
-        // Due to how CFNetwork handles host-only cookies, we may need to prepend a '.' to the domain when
-        // setting a cookie (see CookieStore::set). So we must strip this '.' when returning the cookie.
-        if (domain.startsWith('.'))
-            domain = domain.substring(1, domain.length() - 1);
-    }
+        : name(WTF::move(cookie.name))
+        , value(WTF::move(cookie.value))
+    { }
 
     String name;
     String value;
-    String domain;
-    String path;
-    std::optional<DOMHighResTimeStamp> expires;
-    bool secure { true };
-    CookieSameSite sameSite { CookieSameSite::Strict };
 };
 
 }

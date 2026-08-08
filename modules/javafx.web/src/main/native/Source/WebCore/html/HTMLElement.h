@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "HTMLNames.h"
-#include "StyledElement.h"
+#include <WebCore/HTMLNames.h>
+#include <WebCore/StyledElement.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -55,7 +56,7 @@ enum class FireEvents : bool { No, Yes };
 enum class FocusPreviousElement : bool { No, Yes };
 
 class HTMLElement : public StyledElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLElement);
 public:
     static Ref<HTMLElement> create(const QualifiedName& tagName, Document&);
@@ -96,6 +97,7 @@ public:
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
+    virtual bool isDataListButtonElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
@@ -235,4 +237,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLElement)
     }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#include "HTMLElementTypeHelpers.h"
+#include <WebCore/HTMLElementTypeHelpers.h>

@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
-#include "LinkBuffer.h"
+#include <JavaScriptCore/LinkBuffer.h>
 #include <stdio.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>

@@ -26,7 +26,11 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
@@ -37,14 +41,19 @@ import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
 import com.sun.javafx.css.media.expression.LessExpression;
 import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
+import com.sun.javafx.scene.SceneContext;
 import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -337,6 +346,123 @@ public class CssParser_mediaQuery_Test {
     }
 
     @Test
+    void parsePlatformQuery(){
+        Map<String, BooleanSupplier> oldPlatforms = MediaFeaturesShim.getPlatforms();
+
+        try {
+            MediaFeaturesShim.setPlatforms(Map.of(
+                "windows", () -> true,
+                "linux", () -> true,
+                "macos", () -> false
+            ));
+
+            Stylesheet stylesheet = new CssParser().parse("""
+                @media (-fx-platform: WINdows),
+                       (-fx-platform: linUX),
+                       not (-fx-platform: Macos) {
+                    .foo { bar: baz; }
+                }
+                """);
+
+            var context = new SceneContext(new Scene(new Group()));
+            var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+            assertEquals(3, mediaRule.getQueries().size());
+
+            MediaQuery expected = FunctionExpression.of("-fx-platform", "windows", _ -> null, true);
+            MediaQuery actual = mediaRule.getQueries().get(0);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = FunctionExpression.of("-fx-platform", "linux", _ -> null, true);
+            actual = mediaRule.getQueries().get(1);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = NegationExpression.of(FunctionExpression.of("-fx-platform", "macos", _ -> null, true));
+            actual = mediaRule.getQueries().get(2);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+        } finally {
+            MediaFeaturesShim.setPlatforms(oldPlatforms);
+        }
+    }
+
+    @Test
+    void parseSupportsConditionalFeature() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (-fx-supports-conditional-feature: ScEnE3D),
+                   (-fx-supports-conditional-feature: transparent-window),
+                   (-fx-supports-conditional-feature: media) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var context = new SceneContext(new Scene(new Group()));
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(3, mediaRule.getQueries().size());
+
+        var expected = FunctionExpression.of("-fx-supports-conditional-feature", "scene3d", _ -> null, true);
+        var actual = mediaRule.getQueries().get(0);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "transparent-window", _ -> null, true);
+        actual = mediaRule.getQueries().get(1);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "media", _ -> null, true);
+        actual = mediaRule.getQueries().get(2);
+        assertEquals(expected, actual);
+        assertEquals(TriState.FALSE, actual.evaluate());
+        assertFalse(expected.evaluate(context));
+    }
+
+    @Test
+    void invalidConditionalFeatureValueEvaluatesToFalse() {
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature: invalid-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void supportsConditionalFeatureCannotBeUsedInBooleanContext() {
+        assertThrows(IllegalArgumentException.class,
+            () -> MediaFeatures.discreteQueryExpression("-fx-supports-conditional-feature", null));
+
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
     void emptyMediaQuery() {
         Stylesheet stylesheet = new CssParser().parse("""
             @media {
@@ -446,6 +572,115 @@ public class CssParser_mediaQuery_Test {
 
         stylesheet = new CssParser().parse(stylesheetText);
         assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void missingCommaBetweenMediaQueriesEvaluatesToFalse() {
+        String stylesheetText = """
+            @media (prefers-color-scheme: dark)
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void parserRecoversFromMissingCommaBetweenMediaQueries() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark)
+                   (prefers-reduced-motion: reduce),
+                   (prefers-reduced-transparency: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-transparency", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnexpectedCommaInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark),,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnexpectedTokenInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), 100px,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void leadingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media , (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void trailingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false)
+            ),
+            mediaRule.getQueries());
     }
 
     @Test

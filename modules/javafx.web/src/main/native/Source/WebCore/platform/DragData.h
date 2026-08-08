@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "Color.h"
-#include "DragActions.h"
-#include "IntPoint.h"
-#include "PageIdentifier.h"
+#include <WebCore/Color.h>
+#include <WebCore/DragActions.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/PageIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -91,7 +92,7 @@ public:
         const IntPoint& clientPosition, const IntPoint& globalPosition, OptionSet<DragOperation>, OptionSet<DragApplicationFlags> = { }, OptionSet<DragDestinationAction> = anyDragDestinationAction(), std::optional<PageIdentifier> pageID = std::nullopt);
 
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT DragData(const String& dragStorageName, const IntPoint& clientPosition, const IntPoint& globalPosition, const Vector<String>&, OptionSet<DragOperation>, OptionSet<DragApplicationFlags> = { }, OptionSet<DragDestinationAction> = anyDragDestinationAction(), std::optional<PageIdentifier> pageID = std::nullopt);
+    WEBCORE_EXPORT DragData(const String& dragStorageName, const IntPoint& clientPosition, const IntPoint& globalPosition, const Vector<String>&, Vector<String>&& /* promisedFileMIMETypes */, OptionSet<DragOperation>, OptionSet<DragApplicationFlags> = { }, OptionSet<DragDestinationAction> = anyDragDestinationAction(), std::optional<PageIdentifier> pageID = std::nullopt);
 #endif
     // This constructor should used only by WebKit2 IPC because DragData
     // is initialized by the decoder and not in the constructor.
@@ -120,8 +121,10 @@ public:
     bool containsFiles() const;
     unsigned numberOfFiles() const;
     OptionSet<DragDestinationAction> dragDestinationActionMask() const { return m_dragDestinationActionMask; }
-    void setFileNames(Vector<String>& fileNames) { m_fileNames = WTFMove(fileNames); }
+    void setFileNames(Vector<String>& fileNames) { m_fileNames = WTF::move(fileNames); }
     const Vector<String>& fileNames() const { return m_fileNames; }
+    void setPromisedFileMIMETypes(Vector<String>&& types) { m_promisedFileMIMETypes = WTF::move(types); }
+    const Vector<String>& promisedFileMIMETypes() const { return m_promisedFileMIMETypes; }
     void disallowFileAccess();
 #if PLATFORM(COCOA)
     const String& pasteboardName() const { return m_pasteboardName; }
@@ -142,6 +145,7 @@ private:
     OptionSet<DragOperation> m_draggingSourceOperationMask;
     OptionSet<DragApplicationFlags> m_applicationFlags;
     Vector<String> m_fileNames;
+    Vector<String> m_promisedFileMIMETypes;
     OptionSet<DragDestinationAction> m_dragDestinationActionMask;
     std::optional<PageIdentifier> m_pageID;
 #if PLATFORM(COCOA)

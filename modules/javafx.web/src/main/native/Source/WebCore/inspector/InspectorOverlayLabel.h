@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatPoint.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatPoint.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -100,7 +100,7 @@ public:
     static FloatSize expectedSize(const String&, Arrow::Direction);
 
 private:
-    friend struct IPC::ArgumentCoder<InspectorOverlayLabel, void>;
+    friend struct IPC::ArgumentCoder<InspectorOverlayLabel>;
     Vector<Content> m_contents;
     FloatPoint m_location;
     Color m_backgroundColor;

@@ -36,11 +36,11 @@ namespace WebCore {
 class HTMLTableRowElement;
 
 class HTMLTableRowsCollection final : public CachedHTMLCollection<HTMLTableRowsCollection, CollectionTypeTraits<CollectionType::TableRows>::traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableRowsCollection);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTableRowsCollection);
 public:
     static Ref<HTMLTableRowsCollection> create(HTMLTableElement&, CollectionType);
 
-    HTMLTableElement& tableElement() const { return downcast<HTMLTableElement>(ownerNode()); }
+    Ref<HTMLTableElement> protectedTableElement() const { return downcast<HTMLTableElement>(ownerNode()); }
 
     static HTMLTableRowElement* rowAfter(HTMLTableElement&, HTMLTableRowElement*);
     static HTMLTableRowElement* lastRow(HTMLTableElement&);

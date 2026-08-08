@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
+#include <WebCore/ClientOrigin.h>
 
 namespace WebCore {
 
@@ -45,12 +45,6 @@ inline void add(Hasher& hasher, const SharedWorkerKey& key)
 } // namespace WebCore
 
 namespace WTF {
-
-template<> struct DefaultHash<WebCore::SharedWorkerKey> {
-    static unsigned hash(const WebCore::SharedWorkerKey& key) { return computeHash(key); }
-    static bool equal(const WebCore::SharedWorkerKey& a, const WebCore::SharedWorkerKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 template<> struct HashTraits<WebCore::SharedWorkerKey> : GenericHashTraits<WebCore::SharedWorkerKey> {
     static constexpr bool emptyValueIsZero = false;

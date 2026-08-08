@@ -32,16 +32,16 @@
 #include "CSSToLengthConversionData.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
+#include "NodeDocument.h"
 #include "Quirks.h"
 #include "RenderSearchField.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -54,18 +54,17 @@
 #include "TextEventInputType.h"
 #include "UserAgentParts.h"
 #include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerContainer);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerElement);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerTextElement);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextControlInnerContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextControlInnerElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextControlInnerTextElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextControlPlaceholderElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
 
 using namespace CSS::Literals;
 using namespace HTMLNames;
@@ -82,7 +81,7 @@ Ref<TextControlInnerContainer> TextControlInnerContainer::create(Document& docum
 
 RenderPtr<RenderElement> TextControlInnerContainer::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextControlInnerContainer>(*this, WTFMove(style));
+    return createRenderer<RenderTextControlInnerContainer>(*this, WTF::move(style));
 }
 
 static inline bool isStrongPasswordTextField(const Element* element)
@@ -154,7 +153,7 @@ std::optional<Style::UnadjustedStyle> TextControlInnerElement::resolveCustomStyl
         newStyle->setFlexBasis(Style::FlexBasis::Fixed { static_cast<float>(pixels) });
     }
 
-    return Style::UnadjustedStyle { WTFMove(newStyle) };
+    return Style::UnadjustedStyle { WTF::move(newStyle) };
 }
 
 // MARK: TextControlInnerTextElement
@@ -203,7 +202,7 @@ void TextControlInnerTextElement::defaultEventHandler(Event& event)
 
 RenderPtr<RenderElement> TextControlInnerTextElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextControlInnerBlock>(*this, WTFMove(style));
+    return createRenderer<RenderTextControlInnerBlock>(*this, WTF::move(style));
 }
 
 RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
@@ -219,7 +218,7 @@ std::optional<Style::UnadjustedStyle> TextControlInnerTextElement::resolveCustom
     if (shadowHostStyle)
         RenderTheme::singleton().adjustTextControlInnerTextStyle(style, *shadowHostStyle, shadowHost.ptr());
 
-    return Style::UnadjustedStyle { makeUnique<RenderStyle>(WTFMove(style)) };
+    return Style::UnadjustedStyle { makeUnique<RenderStyle>(WTF::move(style)) };
 }
 
 // MARK: TextControlPlaceholderElement

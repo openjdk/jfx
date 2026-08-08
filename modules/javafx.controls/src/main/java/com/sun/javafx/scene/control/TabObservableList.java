@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,13 +71,24 @@ public class TabObservableList<E> extends ObservableListWrapper<E> {
         // Update selected tab & index.
         fromTab.getTabPane().getSelectionModel().select(fromTab);
 
-        // Fire permutation change event.
+        firePermutationEvent(fromIndex, toIndex, direction);
+    }
+
+    private void firePermutationEvent(int fromIndex, int toIndex, int direction) {
         int permSize = Math.abs(toIndex - fromIndex) + 1;
         int[] perm = new int[permSize];
         int from = direction > 0 ? fromIndex : toIndex;
         int to = direction < 0 ? fromIndex : toIndex;
-        for (int i = 0; i < permSize; ++i) {
-            perm[i] = i + from;
+        if (direction > 0) {
+            perm[0] = to;
+            for (int i = 1; i < permSize; ++i) {
+                perm[i] = from + i - 1;
+            }
+        } else {
+            for (int i = 0; i < permSize - 1; ++i) {
+                perm[i] = from + i + 1;
+            }
+            perm[permSize - 1] = from;
         }
         fireChange(new NonIterableChange.SimplePermutationChange<>(from, to + 1, perm, this));
     }

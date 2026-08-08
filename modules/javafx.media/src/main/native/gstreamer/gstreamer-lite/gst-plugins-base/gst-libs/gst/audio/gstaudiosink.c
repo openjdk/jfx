@@ -202,7 +202,7 @@ typedef gint (*WriteFunc) (GstAudioSink * sink, gpointer data, guint length);
  * pointer.
  * The start/stop methods control the thread.
  */
-static void
+static gpointer
 audioringbuffer_thread_func (GstAudioRingBuffer * buf)
 {
   GstAudioSink *sink;
@@ -306,13 +306,13 @@ audioringbuffer_thread_func (GstAudioRingBuffer * buf)
 
   /* Will never be reached */
   g_assert_not_reached ();
-  return;
+  return NULL;
 
   /* ERROR */
 no_function:
   {
     GST_DEBUG_OBJECT (sink, "no write function, exit thread");
-    return;
+    return NULL;
   }
 stop_running:
   {
@@ -329,7 +329,7 @@ stop_running:
 
     if (G_UNLIKELY (!__gst_audio_restore_thread_priority (handle)))
       GST_WARNING_OBJECT (sink, "failed to restore thread priority");
-    return;
+    return NULL;
   }
 }
 

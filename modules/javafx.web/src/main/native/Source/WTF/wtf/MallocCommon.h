@@ -35,7 +35,7 @@ public:
     TryMallocReturnValue(void*);
     TryMallocReturnValue(TryMallocReturnValue&&);
     ~TryMallocReturnValue();
-    template<typename T> bool getValue(T*&) WARN_UNUSED_RETURN;
+    template<typename T> [[nodiscard]] bool getValue(T*&);
 private:
     void operator=(TryMallocReturnValue&&) = delete;
     mutable void* m_data;
@@ -71,7 +71,7 @@ public:
     WTF_EXPORT_PRIVATE ~ForbidMallocUseForCurrentThreadScope();
 #else
     ForbidMallocUseForCurrentThreadScope() = default;
-    ~ForbidMallocUseForCurrentThreadScope() { }
+    ALWAYS_INLINE ~ForbidMallocUseForCurrentThreadScope() { }
 #endif
 
     ForbidMallocUseForCurrentThreadScope(const ForbidMallocUseForCurrentThreadScope&) = delete;

@@ -20,21 +20,22 @@
 
 #pragma once
 
-#include "Font.h"
-#include "FontCascadeDescription.h"
-#include "FontRanges.h"
-#include "FontSelector.h"
-#include "GlyphPage.h"
-#include "WidthCache.h"
+#include <WebCore/Font.h>
+#include <WebCore/FontCascadeDescription.h>
+#include <WebCore/FontRanges.h>
+#include <WebCore/FontSelector.h>
+#include <WebCore/GlyphPage.h>
+#include <WebCore/WidthCache.h>
 #include <wtf/EnumeratedArray.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/MainThread.h>
+#include <wtf/Platform.h>
 #include <wtf/TriState.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "WebCoreThread.h"
+#include <WebCore/WebCoreThread.h>
 #endif
 
 namespace WTF {
@@ -114,7 +115,7 @@ private:
 
     EnumeratedArray<ResolvedEmojiPolicy, HashMap<unsigned, GlyphPageCacheEntry, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>, ResolvedEmojiPolicy::RequireEmoji> m_cachedPages;
 
-    HashSet<RefPtr<Font>> m_systemFallbackFontSet;
+    HashSet<Ref<Font>> m_systemFallbackFontSet;
 
     SingleThreadWeakPtr<const Font> m_cachedPrimaryFont;
 
@@ -158,7 +159,7 @@ inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& d
                     break;
                 WeakPtr font = localRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Forbid).font.get();
                 if (font && !font->isInterstitial()) {
-                    m_cachedPrimaryFont = WTFMove(font);
+                    m_cachedPrimaryFont = WTF::move(font);
                     break;
                 }
             }

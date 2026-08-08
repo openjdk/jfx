@@ -69,7 +69,7 @@ public:
 private:
     UnaryExpression(SourceSpan span, Expression::Ref&& expression, UnaryOperation operation)
         : Expression(span)
-        , m_expression(WTFMove(expression))
+        , m_expression(WTF::move(expression))
         , m_operation(operation)
     { }
 

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CaretAnimator.h"
 
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "GraphicsContext.h"
 #include "PageInlines.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -53,7 +53,7 @@ bool CaretAnimator::determinePrefersNonBlinkingCursor() const
 
 Page* CaretAnimator::page() const
 {
-    if (auto* document = m_client.document())
+    if (RefPtr document = m_client.document())
         return document->page();
 
     return nullptr;

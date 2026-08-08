@@ -55,6 +55,9 @@ public:
     bool typeMismatch() const final;
     bool hasBadInput() const final;
 
+    void ref() const final { InputType::ref(); }
+    void deref() const final { InputType::deref(); }
+
 protected:
     enum class DateTimeFormatValidationResults : uint8_t {
         HasYear = 1 << 0,
@@ -65,6 +68,18 @@ protected:
         HasMinute = 1 << 5,
         HasSecond = 1 << 6,
         HasMeridiem = 1 << 7,
+    };
+    class DateTimeFormatValidator final : public DateTimeFormat::TokenHandler {
+    public:
+        DateTimeFormatValidator() { }
+
+        void visitField(DateTimeFormat::FieldType, int);
+        void visitLiteral(const String&) { }
+
+        bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
+
+    private:
+        OptionSet<DateTimeFormatValidationResults> m_results;
     };
 
     BaseDateAndTimeInputType(Type type, HTMLInputElement& element)
@@ -83,18 +98,6 @@ protected:
     bool shouldHaveMillisecondField(const DateComponents&) const;
 
 private:
-    class DateTimeFormatValidator final : public DateTimeFormat::TokenHandler {
-    public:
-        DateTimeFormatValidator() { }
-
-        void visitField(DateTimeFormat::FieldType, int);
-        void visitLiteral(const String&) { }
-
-        bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
-
-    private:
-        OptionSet<DateTimeFormatValidationResults> m_results;
-    };
 
     virtual std::optional<DateComponents> parseToDateComponents(StringView) const = 0;
     virtual std::optional<DateComponents> setMillisecondToDateComponents(double) const = 0;
@@ -113,18 +116,19 @@ private:
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     Decimal defaultValueForStepUp() const override;
     String localizeValue(const String&) const final;
-    bool supportsReadOnly() const final;
-    bool shouldRespectListAttribute() final;
+    bool supportsReadOnly() const final { return true; }
+    bool shouldRespectListAttribute() final { return false; }
     bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
 
     void handleDOMActivateEvent(Event&) override;
+    void handleAccessibilityActivation() final;
     void createShadowSubtree() final;
     void removeShadowSubtree() final;
     void updateInnerTextValue() final;
     bool hasCustomFocusLogic() const final;
     void attributeChanged(const QualifiedName&) final;
-    bool isPresentingAttachedView() const final;
+    bool isPresentingAttachedView() const final { return m_popupIsVisible; }
     void elementDidBlur() final;
     void detach() final;
 
@@ -137,15 +141,20 @@ private:
     // DateTimeEditElementEditControlOwner functions:
     void didBlurFromControl() final;
     void didChangeValueFromControl() final;
+    void didReceiveSpaceKeyFromControl() final;
     bool isEditControlOwnerDisabled() const final;
     bool isEditControlOwnerReadOnly() const final;
+    bool didEditControlOwnerTransferFocusToPicker() final { return m_didTransferFocusToPicker; }
+    void didSuppressBlurDueToPickerFocusTransfer() final { m_didTransferFocusToPicker = false; }
     AtomString localeIdentifier() const final;
 
     // DateTimeChooserClient functions:
     void didChooseValue(StringView) final;
-    void didEndChooser() final { m_dateTimeChooser = nullptr; }
+    void didEndChooser() final;
 
     bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
+    void showDateTimeChooser(const DateTimeChooserParameters&);
+    void setPopupIsVisible(bool);
     void closeDateTimeChooser();
 
     void showPicker() override;
@@ -154,6 +163,10 @@ private:
 
     RefPtr<DateTimeChooser> m_dateTimeChooser;
     RefPtr<DateTimeEditElement> m_dateTimeEditElement;
+
+    bool m_popupIsVisible { false };
+    bool m_didTransferFocusToPicker { false };
+    bool m_pickerWasActivatedByKeyboard { false };
 };
 
 } // namespace WebCore

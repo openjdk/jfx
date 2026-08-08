@@ -34,7 +34,7 @@ namespace WebCore {
 class CSSNumericArray;
 
 class CSSMathSum final : public CSSMathValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSMathSum);
+    WTF_MAKE_TZONE_ALLOCATED(CSSMathSum);
 public:
     static ExceptionOr<Ref<CSSMathSum>> create(FixedVector<CSSNumberish>);
     static ExceptionOr<Ref<CSSMathSum>> create(Vector<Ref<CSSNumericValue>>);
@@ -44,7 +44,7 @@ public:
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Sum; }
-    CSSStyleValueType getType() const override { return CSSStyleValueType::CSSMathSum; }
+    CSSStyleValueType styleValueType() const override { return CSSStyleValueType::CSSMathSum; }
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
     std::optional<SumValue> toSumValue() const final;
     bool equals(const CSSNumericValue& other) const final { return equalsImpl<CSSMathSum>(other); }
@@ -56,7 +56,7 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathSum)
-static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSMathSum; }
-static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathSum; }
-static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathSum; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathSum; }
+static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathSum; }
+static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathSum; }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -29,7 +29,8 @@
 
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "TableFormattingGeometry.h"
 #include <ranges>
 
@@ -330,24 +331,20 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
 TableFormattingContext::TableLayout::DistributedSpaces TableFormattingContext::TableLayout::distributedHorizontalSpace(LayoutUnit availableHorizontalSpace)
 {
     auto hasEnoughAvailableSpaceForMaximumWidth = availableHorizontalSpace >= m_grid.widthConstraints()->maximum;
-    return distributeAvailableSpace<ColumnSpan>(m_grid, availableHorizontalSpace, [&] (const TableGrid::Slot& slot, size_t columnIndex) {
+    return distributeAvailableSpace<ColumnSpan>(m_grid, availableHorizontalSpace, [&](const TableGrid::Slot& slot, size_t columnIndex) {
         auto& column = m_grid.columns().list()[columnIndex];
-        auto columnWidth = std::optional<float> { };
-        auto type = GridSpace::Type::Auto;
 
-        auto& computedLogicalWidth = column.computedLogicalWidth();
-        switch (computedLogicalWidth.type()) {
-        case LengthType::Fixed:
-            columnWidth = computedLogicalWidth.value();
-            type = GridSpace::Type::Fixed;
-            break;
-        case LengthType::Percent:
-            columnWidth = computedLogicalWidth.value() * availableHorizontalSpace / 100.0f;
-            type = GridSpace::Type::Percent;
-            break;
-        default:
-            break;
+        auto [columnWidth, type] = WTF::switchOn(column.computedLogicalWidth(),
+            [&](const CSS::Keyword::Auto&) -> std::pair<std::optional<float>, GridSpace::Type> {
+                return { std::nullopt, GridSpace::Type::Auto };
+            },
+            [&](const Style::Length<CSS::Nonnegative, float>& fixed) -> std::pair<std::optional<float>, GridSpace::Type> {
+                return { fixed.resolveZoom(Style::ZoomNeeded { }), GridSpace::Type::Fixed };
+            },
+            [&](const Style::Percentage<CSS::Nonnegative, float>& percentage) -> std::pair<std::optional<float>, GridSpace::Type> {
+                return { Style::evaluate<float>(percentage, availableHorizontalSpace), GridSpace::Type::Percent };
         }
+        );
 
         float minimumContentWidth = slot.widthConstraints().minimum;
         float maximumContentWidth = slot.widthConstraints().maximum;

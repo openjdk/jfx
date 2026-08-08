@@ -54,7 +54,7 @@ void BytecodeRewriter::applyModification()
 
 void BytecodeRewriter::execute()
 {
-    WTF::bubbleSort(m_insertions.begin(), m_insertions.end(), [] (const Insertion& lhs, const Insertion& rhs) {
+    WTF::bubbleSort(m_insertions.mutableSpan(), [] (const Insertion& lhs, const Insertion& rhs) {
         return lhs.index < rhs.index;
     });
 
@@ -82,7 +82,7 @@ void BytecodeRewriter::insertImpl(InsertionPoint insertionPoint, IncludeBranch i
         Insertion::Type::Insert,
         includeBranch,
         0,
-        WTFMove(writer)
+        WTF::move(writer)
     });
 }
 
