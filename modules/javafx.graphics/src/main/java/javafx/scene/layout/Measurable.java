@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,10 +61,10 @@ import javafx.geometry.Orientation;
 public interface Measurable {
 
     /**
-     * This is a special value that might be returned by {@link #getBaselineOffset()}.
+     * A special value that might be returned by {@link #getBaselineOffset()}.
      * Indicates that the height of this element should be used as its baseline.
      */
-    static final double BASELINE_OFFSET_SAME_AS_HEIGHT = Double.NEGATIVE_INFINITY;
+    double BASELINE_OFFSET_SAME_AS_HEIGHT = Double.NEGATIVE_INFINITY;
 
     /**
      * Returns the minimum width for use in layout calculations.
