@@ -41,7 +41,27 @@ Recreate the dependency verification file as follows:
    This configures Gradle to trust automatically all sources.
    See also: https://docs.gradle.org/current/userguide/dependency_verification.html#sec:skipping-javadocs
 
-7. Commit the final version of the file to the repository.
+7. Resolve metadata used only during IDE imports.
+
+   Some artifacts cannot be discovered by Gradle automatically. For example,
+   IDEs like IntelliJ may request .module and .bom metadata for the Groovy
+   libraries bundled with Gradle.
+
+   In order to add the artifact entries for those dependencies, temporarily
+   add the following setting to gradle.properties:
+
+   org.gradle.dependency.verification=lenient
+
+   Reload the Gradle project in IntelliJ with source downloading enabled.
+   Inspect the dependency verification report under:
+
+   build/reports/dependency-verification/
+
+   After adding the artifact entries, remove the temporary lenient setting
+   and reload the Gradle project again to verify that dependency verification
+   succeeds in strict mode.
+
+8. Commit the final version of the file to the repository.
 
 These commands will cause Gradle to compute the requested checksums
 directly from the newly downloaded artifacts and add them to the file.
