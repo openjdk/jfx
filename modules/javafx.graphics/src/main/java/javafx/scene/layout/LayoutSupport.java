@@ -34,7 +34,6 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.util.Callback;
 
 /**
@@ -42,15 +41,15 @@ import javafx.util.Callback;
  */
 final class LayoutSupport {
 
-    static double computeChildMinAreaWidth(Snapper snapper, Layoutable child, Insets margin) {
+    static double computeChildMinAreaWidth(Snapper snapper, Measurable child, Insets margin) {
         return computeChildMinAreaWidth(snapper, child, -1, margin, -1, false);
     }
 
-    static double computeChildMinAreaWidth(Snapper snapper, Layoutable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+    static double computeChildMinAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double left = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double right = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+        if (availableHeight != -1 && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             double top = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
             double bottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
             double bo = child.getBaselineOffset();
@@ -62,16 +61,16 @@ final class LayoutSupport {
         return left + snapper.snapSizeX(child.minWidth(alt)) + right;
     }
 
-    static double computeChildMinAreaHeight(Snapper snapper, Layoutable child, Insets margin) {
+    static double computeChildMinAreaHeight(Snapper snapper, Measurable child, Insets margin) {
         return computeChildMinAreaHeight(snapper, child, -1, margin, -1, false);
     }
 
-    static double computeChildMinAreaHeight(Snapper snapper, Layoutable child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+    static double computeChildMinAreaHeight(Snapper snapper, Measurable child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double top = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
         double bottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
 
         double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+        if (availableWidth != -1 && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             double contentWidth = computeContentWidth(snapper, margin, availableWidth);
 
             alt = computedBoundedWidth(snapper, child, fillWidth, contentWidth);
@@ -80,7 +79,7 @@ final class LayoutSupport {
         // For explanation, see computeChildPrefAreaHeight
         if (minBaselineComplement != -1) {
             double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
+            if (baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 return top + snapper.snapSizeY(child.minHeight(alt)) + bottom
                         + minBaselineComplement;
             }
@@ -91,15 +90,15 @@ final class LayoutSupport {
         return top + snapper.snapSizeY(child.minHeight(alt)) + bottom;
     }
 
-    static double computeChildPrefAreaWidth(Snapper snapper, Layoutable child, Insets margin) {
+    static double computeChildPrefAreaWidth(Snapper snapper, Measurable child, Insets margin) {
         return computeChildPrefAreaWidth(snapper, child, -1, margin, -1, false);
     }
 
-    static double computeChildPrefAreaWidth(Snapper snapper, Layoutable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+    static double computeChildPrefAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double left = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double right = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) {
+        if (availableHeight != -1 && child.getContentBias() == Orientation.VERTICAL) {
             double top = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
             double bottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
             double bo = child.getBaselineOffset();
@@ -111,16 +110,16 @@ final class LayoutSupport {
         return left + snapper.snapSizeX(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
-    static double computeChildPrefAreaHeight(Snapper snapper, Layoutable child, Insets margin) {
+    static double computeChildPrefAreaHeight(Snapper snapper, Measurable child, Insets margin) {
         return computeChildPrefAreaHeight(snapper, child, -1, margin, -1, false);
     }
 
-    static double computeChildPrefAreaHeight(Snapper snapper, Layoutable child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+    static double computeChildPrefAreaHeight(Snapper snapper, Measurable child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double top = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
         double bottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
 
         double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) {
+        if (availableWidth != -1 && child.getContentBias() == Orientation.HORIZONTAL) {
             double contentWidth = computeContentWidth(snapper, margin, availableWidth);
 
             alt = computedBoundedWidth(snapper, child, fillWidth, contentWidth);
@@ -128,7 +127,7 @@ final class LayoutSupport {
 
         if (prefBaselineComplement != -1) {
             double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
+            if (baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 // When baseline is same as height, the preferred height of the node will be above the baseline, so we need to add
                 // the preferred complement to it
                 return top + snapper.snapSizeY(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom
@@ -143,7 +142,7 @@ final class LayoutSupport {
         return top + snapper.snapSizeY(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
     }
 
-    static double computeChildMaxAreaWidth(Snapper snapper, Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+    static double computeChildMaxAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double max = child.maxWidth(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -151,7 +150,7 @@ final class LayoutSupport {
         double left = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double right = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+        if (availableHeight != -1 && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             double top = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
             double bottom = (margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0);
             double bo = child.getBaselineOffset();
@@ -166,7 +165,7 @@ final class LayoutSupport {
         return left + snapper.snapSizeX(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE)) + right;
     }
 
-    static double computeChildMaxAreaHeight(Snapper snapper, Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+    static double computeChildMaxAreaHeight(Snapper snapper, Measurable child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double max = child.maxHeight(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -174,7 +173,7 @@ final class LayoutSupport {
         double top = margin != null? snapper.snapSpaceY(margin.getTop()) : 0;
         double bottom = margin != null? snapper.snapSpaceY(margin.getBottom()) : 0;
         double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+        if (availableWidth != -1 && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             double contentWidth = computeContentWidth(snapper, margin, availableWidth);
 
             alt = computedBoundedWidth(snapper, child, fillWidth, contentWidth);
@@ -183,7 +182,7 @@ final class LayoutSupport {
         // For explanation, see computeChildPrefAreaHeight
         if (maxBaselineComplement != -1) {
             double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
+            if (baseline == Measurable.BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 return top + snapper.snapSizeY(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE)) + bottom
                         + maxBaselineComplement;
             }
@@ -223,7 +222,7 @@ final class LayoutSupport {
      * controls whether the content width or the child's preferred width is used to compute
      * the bounded width.
      */
-    private static double computedBoundedWidth(Snapper snapper, Layoutable child, boolean fill, double contentWidth) {
+    private static double computedBoundedWidth(Snapper snapper, Measurable child, boolean fill, double contentWidth) {
         double min = child.minWidth(-1);
         double max = child.maxWidth(-1);
 
@@ -239,7 +238,7 @@ final class LayoutSupport {
      * controls whether the content height or the child's preferred height is used to compute
      * the bounded height.
      */
-    private static double computedBoundedHeight(Snapper snapper, Layoutable child, boolean fill, double contentHeight) {
+    private static double computedBoundedHeight(Snapper snapper, Measurable child, boolean fill, double contentHeight) {
         double min = child.minHeight(-1);
         double max = child.maxHeight(-1);
 
