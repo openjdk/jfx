@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.Region;
 import javafx.util.Duration;
 
-import com.sun.javafx.tk.Toolkit;
-
 /**
  * TableRowSkinBase is the base skin class used by controls such as
  * {@link javafx.scene.control.TableRow} and {@link javafx.scene.control.TreeTableRow}
@@ -72,14 +70,7 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    // There appears to be a memory leak when using the stub toolkit. Therefore,
-    // to prevent tests from failing we disable the animations below when the
-    // stub toolkit is being used.
-    // Filed as JDK-8120657.
-    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit().toString().contains("StubToolkit");
-
-    // lets save the CPU and not do animations when on embedded platforms
-    private static boolean DO_ANIMATIONS = ! IS_STUB_TOOLKIT && ! PlatformUtil.isEmbedded();
+    private static boolean DO_ANIMATIONS = PlatformUtil.isDoAnimations();
 
     private static final Duration FADE_DURATION = Duration.millis(200);
 

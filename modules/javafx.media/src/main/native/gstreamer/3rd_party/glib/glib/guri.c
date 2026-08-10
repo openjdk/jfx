@@ -211,6 +211,7 @@ struct _GUri {
   GUriFlags  flags;
 };
 
+#ifndef GSTREAMER_LITE
 /**
  * g_uri_ref: (skip)
  * @uri: a #GUri
@@ -261,6 +262,7 @@ g_uri_unref (GUri *uri)
 
   g_atomic_rc_box_release_full (uri, (GDestroyNotify)g_uri_clear);
 }
+#endif // GSTREAMER_LITE
 
 static gboolean
 g_uri_char_is_unreserved (gchar ch)
@@ -449,6 +451,7 @@ _uri_encoder (GString      *out,
     }
 }
 
+#ifndef GSTREAMER_LITE
 /* Parse the IP-literal construction from RFC 6874 (which extends RFC 3986 to
  * support IPv6 zone identifiers.
  *
@@ -800,6 +803,8 @@ normalize_port (const char *scheme,
   return port;
 }
 
+#endif // GSTREAMER_LITE
+
 int
 g_uri_get_default_scheme_port (const char *scheme)
 {
@@ -818,6 +823,7 @@ g_uri_get_default_scheme_port (const char *scheme)
   return -1;
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 g_uri_split_internal (const gchar  *uri_string,
                       GUriFlags     flags,
@@ -2597,6 +2603,7 @@ g_uri_get_flags (GUri *uri)
 
   return uri->flags;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_uri_unescape_segment:
@@ -2722,6 +2729,7 @@ g_uri_escape_string (const gchar *unescaped,
   return g_string_free (s, FALSE);
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_uri_unescape_bytes:
  * @escaped_string: A URI-escaped string
@@ -2903,5 +2911,6 @@ g_uri_peek_scheme (const gchar *uri)
 
   return scheme;
 }
+#endif // GSTREAMER_LITE
 
 G_DEFINE_QUARK (g-uri-quark, g_uri_error)
