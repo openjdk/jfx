@@ -177,7 +177,12 @@ void loadLocalProperties(String sourceFileName) {
     def localProps = new Properties()
     propFile.withInputStream { localProps.load(it) }
 
+    def cliProps = gradle.startParameter.projectProperties
     localProps.forEach((name, value) -> {
+        if (cliProps.containsKey(name)) {
+            logger.info("gradle-local.properties: $name overriden by CLI arg")
+            return
+        }
         ext[name] = value
         logger.info("gradle-local.properties: defined $name=$value")
     })
