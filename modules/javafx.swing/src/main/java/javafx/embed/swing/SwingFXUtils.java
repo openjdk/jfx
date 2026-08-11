@@ -205,8 +205,7 @@ public class SwingFXUtils {
 
     private static boolean checkFXImageOpaque(PixelReader pr, int iw, int ih) {
         int[] pixels = new int[iw];
-        WritablePixelFormat<IntBuffer> format =
-                PixelFormat.getIntArgbPreInstance();
+        WritablePixelFormat<IntBuffer> format = PixelFormat.getIntArgbPreInstance();
         for (int y = 0; y < ih; y++) {
             pr.getPixels(0, y, iw, 1, format, pixels, 0, iw);
             for (int pixel : pixels) {
@@ -256,14 +255,15 @@ public class SwingFXUtils {
         int ih = (int) img.getHeight();
         PixelFormat<?> fxFormat = pr.getPixelFormat();
         boolean srcPixelsAreOpaque = false;
-        boolean opacityMatters = bimg == null ||
-                bimg.getType() == BufferedImage.TYPE_INT_BGR ||
-                bimg.getType() == BufferedImage.TYPE_INT_RGB;
         switch (fxFormat.getType()) {
             case INT_ARGB_PRE:
             case INT_ARGB:
             case BYTE_BGRA_PRE:
+            case BYTE_BGRA:
             case BYTE_INDEXED:
+                boolean opacityMatters = bimg == null ||
+                        bimg.getType() == BufferedImage.TYPE_INT_BGR ||
+                        bimg.getType() == BufferedImage.TYPE_INT_RGB;
                 if (opacityMatters) {
                     srcPixelsAreOpaque = checkFXImageOpaque(pr, iw, ih);
                 }
