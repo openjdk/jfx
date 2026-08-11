@@ -31,6 +31,7 @@ import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.tk.Toolkit;
 
 import javafx.beans.NamedArg;
+import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -144,14 +145,14 @@ import javafx.scene.Scene;
 /// distinguish between these two cases, the event target can be tested on equality with the node.
 ///
 /// Since `MOUSE_ENTERED`/`MOUSE_EXITED` are subtypes of `MOUSE_ENTERED_TARGET`/`MOUSE_EXITED_TARGET`, they are also
-/// handled by `MOUSE_ENTERED_TARGET`/`MOUSE_EXITED_TARGET` event handlers. In fact, a single even changes its type
+/// handled by `MOUSE_ENTERED_TARGET`/`MOUSE_EXITED_TARGET` event handlers. In fact, a single event changes its type
 /// during its lifetime in the following way:
-/// 1. During capturing phase, `MOUSE_ENTERED_TARGET` is delivered to the parents.
+/// 1. During capturing phase, the event is delivered to the parents with the `MOUSE_ENTERED_TARGET` type.
 /// 2. When the event is delivered to the event target (the node that was entered), its type is switched to
 /// `MOUSE_ENTERED`.
 /// 3. During the bubbling phase, its type is switched back to `MOUSE_ENTERED_TARGET`.
 ///
-/// If the event is filtered or consumed, it affects both event types.
+/// If the event is mutated or [consumed][Event#consume()], it affects both event types.
 ///
 /// @see ContextMenuEvent ContextMenuEvent for triggering context menus
 /// @since JavaFX 2.0
