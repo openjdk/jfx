@@ -35,6 +35,8 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 
 /// An event originating by mouse buttons and movements. Mouse events can generally be categorized into button events,
 /// movement events, and drag events (resulting from the combination of the previous two). These are described below in
@@ -52,7 +54,7 @@ import javafx.geometry.Point3D;
 ///
 /// When a mouse event occurs, the top-most node under the cursor is [picked][#getPickResult()] and the event is
 /// delivered to it through the capturing and bubbling phases described in [EventDispatcher]. Nodes that have
-/// [mouseTransparent][javafx.scene.Node#mouseTransparentProperty()] set to `true` do not receive mouse events.
+/// [mouseTransparent][Node#mouseTransparentProperty()] set to `true` do not receive mouse events.
 ///
 /// ## Button events
 /// A mouse button can be [pressed][#MOUSE_PRESSED] and [released][#MOUSE_RELEASED]. A button [click][#MOUSE_CLICKED]
@@ -61,34 +63,38 @@ import javafx.geometry.Point3D;
 /// Not all buttons on the mouse are supported, such as macro buttons or buttons that change the DPI.
 ///
 /// ## Dragging gestures
-/// Dragging occurs when the mouse moves outside of its [hysteresis][#isStillSincePress()] area while a button is
-/// pressed, at which point a [#DRAG_DETECTED] event is dispatched to the source node. Dragging ends when a mouse button
-/// is released. Dragging a finger over touch screens produces both drag events and scroll events. The [#isSynthesized()]
-/// method can be used to differentiate between these events.
+/// There are 3 types of drag gestures that can occur:
 ///
-/// There are 3 types of drag gestures that can be chosen from within the `DRAG_DETECTED` handler:
+/// 1. **Simple press-drag-release (PDR)**. When a node receives a `MOUSE_PRESSED` event and then the mouse is moved,
+/// it starts receiving [#MOUSE_DRAGGED] events (instead of [#MOUSE_MOVED] events). The node receives all the
+/// `MouseEvent`s during this gesture, including button events, even if they occur over other nodes.
+/// PDR is best used for actions that don't interact with other nodes, such as changing the size of a shape, dragging it,
+/// rotating it etc.
 ///
-/// 1. Simple press-drag-release (PDR), in which the source (picked) node receives all the events in the PDR gesture,
-/// including click events even when they occur over other nodes.
-/// During the gesture, [#MOUSE_DRAGGED] events are delivered.
-/// PDR is best used to allow changing the size of a shape, dragging it around etc.
-/// This gesture starts when no designated method is invoked within the event handler.
+/// If the mouse is dragged outside of its [hysteresis][#isStillSincePress()] area, a [#DRAG_DETECTED] event is
+/// dispatched to the source node. The other 2 drag gesture types can be started in its
+/// [handler][Node#onDragDetectedProperty()].
 ///
-/// 2. Full PDR, in which nodes other than the source node are involved. Nodes receive events when they are picked
-/// according to the cursor location.
-/// Full PDR is best used for connecting nodes by "wires", dragging nodes to other nodes etc.
-/// This gesture starts when the [startFullDrag][javafx.scene.Node#startFullDrag()] method of a node (or a
-/// [scene][javafx.scene.Scene#startFullDrag()]) is invoked.
-/// See [MouseDragEvent] for more details on full PDR.
+/// 2. **Full PDR**. This gesture starts when the [startFullDrag][Node#startFullDrag()] method of a node (or a
+/// [scene][Scene#startFullDrag()]) is invoked in the `DRAG_DETECTED` handler. During this gestures, nodes other than
+/// the source node receive [MouseDragEvent]s when they are picked according to the cursor location.
+/// Full PDR is best used for actions that require interactions between nodes, such as connecting nodes by "wires",
+/// dragging nodes to other nodes etc.
+/// Note that a simple PDR gesture continues alongside this gesture. If `node1` starts a full PDR while its simple PDR
+/// is ongoing, and then the mouse moves over `node2`, then `node1` will continue receiving `MOUSE_DRAGGED` events while
+/// `node2` will receive `MOUSE_DRAG_OVER` events.
 ///
-/// 3. Drag-and-drop (DnD), in which both nodes in the FX application and other operating system applications are
-/// involved.
-/// DnD serves best to transfer data and works between applications, for example, to move/copy text between a `TextArea`
-/// and a notepad.
-/// This gestures starts when the [startDragAndDrop][javafx.scene.Node#startDragAndDrop(TransferMode...)] method of a
-/// node (or a [scene][javafx.scene.Scene#startDragAndDrop(TransferMode...)]) is invoked.
-/// See [DragEvent] for more details on DnD. Note that `DragEvent` is not a `MouseEvent` and can be started without a
-/// mouse (for example, with a touch screen).
+/// 3. **Drag-and-drop (DnD)**. This gestures starts when the [startDragAndDrop][Node#startDragAndDrop(TransferMode...)]
+/// method of a node (or a [scene][Scene#startDragAndDrop(TransferMode...)]) is invoked in the `DRAG_DETECTED` handler.
+/// This is the platform-supported drag-and-drop. This gesture interacts with both operating system applications and FX
+/// applications. During this gestures, nodes in all FX applications receive [DragEvent]s.
+/// DnD serves best to transfer data between applications, such as to move/copy text between a `TextArea` and a system's
+/// notepad, to transfer files between applications etc.
+/// A DnD gesture does not allow PDR or full PDR gestures to run alongside it; it takes precedence over full-PDR if
+/// both `startFullDrag` and `startFullDrag` are called.
+///
+/// Dragging ends when a mouse button is released. Dragging a finger over touch screens produces both drag events and
+/// scroll events. The [#isSynthesized()] method can be used to differentiate between these events.
 ///
 /// The following flow diagram shows the stages of event delivery depending on the type of drag gesture:
 ///
@@ -122,7 +128,7 @@ import javafx.geometry.Point3D;
 ///   <tr>
 ///     <th scope="row">DnD</th>
 ///     <td>Any node/scene and OS applications</td>
-///     <td>Copy/move text between applications</td>
+///     <td>Copy/move text or files between applications</td>
 ///     <td>{@code startDragAndDrop}</td>
 ///     <td>{@code DragEvent}</td>
 ///   </tr>
