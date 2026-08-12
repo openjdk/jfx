@@ -136,4 +136,9 @@ Issue Key | Summary | Subcomponent
 
 Issue Key | Summary | Subcomponent
 --------- | ------- | ------------
-JDK-nnnnnnn (not public) | TITLE | SUBCOMPONENT
+JDK-8373527 (not public) | Improve Graphics playback | graphics
+JDK-8379207 (not public) | Improve audio conversion | media
+JDK-8383129 (not public) | Better Handling of MP4 Files | media
+JDK-8383143 (not public) | Enhance Playlist Loading | media
+JDK-8378277 (not public) | Improve Editor selection | web
+JDK-8383092 (not public) | Enhance WebView Resource Loading | web
