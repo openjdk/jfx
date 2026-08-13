@@ -121,7 +121,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8377099](https://bugs.openjdk.org/browse/JDK-8377099) | Additional WebKit 623.1 fixes from WebKitGTK 2.50.4 | web
 [JDK-8377930](https://bugs.openjdk.org/browse/JDK-8377930) | Additional WebKit 623.1 fixes from WebKitGTK 2.50.5 | web
 [JDK-8378226](https://bugs.openjdk.org/browse/JDK-8378226) | Animated GIFs do not animate after WebKit 620.1 update | web
-[JDK-8379336](https://bugs.openjdk.org/browse/JDK-8379336) | Update libxml2 to 2.15.2 | web
 [JDK-8380557](https://bugs.openjdk.org/browse/JDK-8380557) | Additional WebKit 623.1 fixes from WebKitGTK 2.50.6 | web
 [JDK-8384522](https://bugs.openjdk.org/browse/JDK-8384522) | Update libxml2 to 2.15.3 | web
 [JDK-8263959](https://bugs.openjdk.org/browse/JDK-8263959) | Unexpected disable behaviour on macOS MenuBar | window-toolkit
