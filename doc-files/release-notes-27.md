@@ -20,27 +20,32 @@ Metal is now the default rendering pipeline on macOS, replacing the OpenGL-based
 
 See [JDK-8373091](https://bugs.openjdk.org/browse/JDK-8373091) for more information.
 
-## List of Enhancements
+## List of New Features
+
+Issue Key | Summary | Subcomponent
+--------- | ------- | ------------
+[JDK-8356042](https://bugs.openjdk.org/browse/JDK-8356042) ([CSR](https://bugs.openjdk.org/browse/JDK-8382308)) | RichTextArea: tab stops attributes | controls
+[JDK-8366198](https://bugs.openjdk.org/browse/JDK-8366198) ([CSR](https://bugs.openjdk.org/browse/JDK-8388059)) | RichTextArea: embedded image, text background, wavy underline attributes | controls
+[JDK-8364149](https://bugs.openjdk.org/browse/JDK-8364149) ([CSR](https://bugs.openjdk.org/browse/JDK-8374976)) | Conditional stylesheet imports | graphics
+[JDK-8373091](https://bugs.openjdk.org/browse/JDK-8373091) ([CSR](https://bugs.openjdk.org/browse/JDK-8376147)) | Make Metal the default JavaFX rendering pipeline for macOS | graphics
+[JDK-8374804](https://bugs.openjdk.org/browse/JDK-8374804) ([CSR](https://bugs.openjdk.org/browse/JDK-8384139)) | ConditionalFeature media queries | graphics
+[JDK-8374822](https://bugs.openjdk.org/browse/JDK-8374822) ([CSR](https://bugs.openjdk.org/browse/JDK-8386998)) | Platform media query | graphics
+[JDK-8386617](https://bugs.openjdk.org/browse/JDK-8386617) ([CSR](https://bugs.openjdk.org/browse/JDK-8387000)) | JavaFX controls in the title bar | graphics
+
+## List of Other Enhancements
 
 Issue Key | Summary | Subcomponent
 --------- | ------- | ------------
 [JDK-8343133](https://bugs.openjdk.org/browse/JDK-8343133) | Create implementation of NSAccessibilityNavigableStaticText protocol | accessibility
 [JDK-8379150](https://bugs.openjdk.org/browse/JDK-8379150) | [macos] [a11y] Create implementation of accessibility protocol for hyperlink | accessibility
 [JDK-8376601](https://bugs.openjdk.org/browse/JDK-8376601) ([CSR](https://bugs.openjdk.org/browse/JDK-8376603)) | Bump minimum JDK version for JavaFX to JDK 25 | build
-[JDK-8356042](https://bugs.openjdk.org/browse/JDK-8356042) ([CSR](https://bugs.openjdk.org/browse/JDK-8382308)) | RichTextArea: tab stops attributes | controls
-[JDK-8366198](https://bugs.openjdk.org/browse/JDK-8366198) ([CSR](https://bugs.openjdk.org/browse/JDK-8388059)) | RichTextArea: embedded image, text background, wavy underline attributes | controls
 [JDK-8370902](https://bugs.openjdk.org/browse/JDK-8370902) | RichTextArea: migrate to new text APIs | controls
 [JDK-8374809](https://bugs.openjdk.org/browse/JDK-8374809) | [RichTextArea] accessibility | controls
 [JDK-8380933](https://bugs.openjdk.org/browse/JDK-8380933) | TableView sorting very slow when many cells selected | controls
 [JDK-8385533](https://bugs.openjdk.org/browse/JDK-8385533) | Cell "focused" PseudoClass handling is unnecessary | controls
-[JDK-8364149](https://bugs.openjdk.org/browse/JDK-8364149) ([CSR](https://bugs.openjdk.org/browse/JDK-8374976)) | Conditional stylesheet imports | graphics
-[JDK-8373091](https://bugs.openjdk.org/browse/JDK-8373091) ([CSR](https://bugs.openjdk.org/browse/JDK-8376147)) | Make Metal the default JavaFX rendering pipeline for macOS | graphics
-[JDK-8374804](https://bugs.openjdk.org/browse/JDK-8374804) ([CSR](https://bugs.openjdk.org/browse/JDK-8384139)) | ConditionalFeature media queries | graphics
-[JDK-8374822](https://bugs.openjdk.org/browse/JDK-8374822) ([CSR](https://bugs.openjdk.org/browse/JDK-8386998)) | Platform media query | graphics
 [JDK-8377904](https://bugs.openjdk.org/browse/JDK-8377904) | Replace Double.parseDouble() with CssNumberParser | graphics
 [JDK-8378895](https://bugs.openjdk.org/browse/JDK-8378895) | Reduce object allocations in Renderer.getPeerInstance() | graphics
 [JDK-8378970](https://bugs.openjdk.org/browse/JDK-8378970) | Don't use exceptions for flow control in CssParser.colorValueOfString() | graphics
-[JDK-8386617](https://bugs.openjdk.org/browse/JDK-8386617) ([CSR](https://bugs.openjdk.org/browse/JDK-8387000)) | JavaFX controls in the title bar | graphics
 [JDK-8385459](https://bugs.openjdk.org/browse/JDK-8385459) | Animations should respect reducedMotion preference | other
 [JDK-8386698](https://bugs.openjdk.org/browse/JDK-8386698) | PlatformUtil has unused fields and methods | other
 [JDK-8389371](https://bugs.openjdk.org/browse/JDK-8389371) | cssref: explain font properties | other
