@@ -47,7 +47,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8378895](https://bugs.openjdk.org/browse/JDK-8378895) | Reduce object allocations in Renderer.getPeerInstance() | graphics
 [JDK-8378970](https://bugs.openjdk.org/browse/JDK-8378970) | Don't use exceptions for flow control in CssParser.colorValueOfString() | graphics
 [JDK-8385459](https://bugs.openjdk.org/browse/JDK-8385459) | Animations should respect reducedMotion preference | other
-[JDK-8386698](https://bugs.openjdk.org/browse/JDK-8386698) | PlatformUtil has unused fields and methods | other
 [JDK-8389371](https://bugs.openjdk.org/browse/JDK-8389371) | cssref: explain font properties | other
 [JDK-8377427](https://bugs.openjdk.org/browse/JDK-8377427) | Reduce substring allocations in Color.web(String, double) | scenegraph
 [JDK-8358823](https://bugs.openjdk.org/browse/JDK-8358823) | Improve documentation of custom header bars | window-toolkit
@@ -66,7 +65,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8237868](https://bugs.openjdk.org/browse/JDK-8237868) | java.lang.IndexOutOfBoundsException in FilteredList | base
 [JDK-8359020](https://bugs.openjdk.org/browse/JDK-8359020) | TabObservableList.reorder changes content of filtered list | base
 [JDK-8387655](https://bugs.openjdk.org/browse/JDK-8387655) | java.lang.NullPointerException: Cannot invoke "java.lang.Boolean.booleanValue()" because "newValue" is null | base
-[JDK-8382886](https://bugs.openjdk.org/browse/JDK-8382886) | Running a JavaFX build may not work due to duplicate entries of swt-debug.jar in the gradle cache | build
 [JDK-8181411](https://bugs.openjdk.org/browse/JDK-8181411) | Performance problem with TreeTableView selectAll() | controls
 [JDK-8202066](https://bugs.openjdk.org/browse/JDK-8202066) | ListView with large number of rows is extremly slow when changing current multiple selection to a subset  | controls
 [JDK-8256142](https://bugs.openjdk.org/browse/JDK-8256142) | TreeView: initial focused item incorrect | controls
@@ -86,7 +84,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8380308](https://bugs.openjdk.org/browse/JDK-8380308) | TreeView: selection of many rows is slow | controls
 [JDK-8380926](https://bugs.openjdk.org/browse/JDK-8380926) | HeavyweightDialog does not check for a valid stage | controls
 [JDK-8380935](https://bugs.openjdk.org/browse/JDK-8380935) | TextFieldSkin caret width calculation is broken | controls
-[JDK-8382256](https://bugs.openjdk.org/browse/JDK-8382256) | Unused method in TreeUtil can be cleaned up | controls
 [JDK-8384006](https://bugs.openjdk.org/browse/JDK-8384006) | ComboBox text does not update on String converter update | controls
 [JDK-8384806](https://bugs.openjdk.org/browse/JDK-8384806) | ComboBox converter does not properly update contained null values | controls
 [JDK-8385666](https://bugs.openjdk.org/browse/JDK-8385666) | Fix for JDK-8384806 broke combo box cell graphics | controls
@@ -99,7 +96,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8375363](https://bugs.openjdk.org/browse/JDK-8375363) | StyleHelper.resetToInitialValues() interrupts animated properties | graphics
 [JDK-8375561](https://bugs.openjdk.org/browse/JDK-8375561) | Class NGGroup is in need of some cleanup | graphics
 [JDK-8377153](https://bugs.openjdk.org/browse/JDK-8377153) | JavaFX FlowPane layout causing improper wrapping of TextFlow nodes with max-width styling | graphics
-[JDK-8377185](https://bugs.openjdk.org/browse/JDK-8377185) | [iOS] Native code compiler warnings and error building libprism_es2 | graphics
 [JDK-8379209](https://bugs.openjdk.org/browse/JDK-8379209) | Uninitialised variable in pathApplierFunctionFast of coretext.c | graphics
 [JDK-8379211](https://bugs.openjdk.org/browse/JDK-8379211) | Uninitialised memory in Java_com_sun_javafx_font_freetype_OSFreetype_FT_1Outline_1Decompose | graphics
 [JDK-8379257](https://bugs.openjdk.org/browse/JDK-8379257) | Update JPEG Image Decoding Software to 10 | graphics
