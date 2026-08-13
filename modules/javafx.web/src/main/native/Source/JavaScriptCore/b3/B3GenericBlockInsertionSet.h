@@ -49,7 +49,7 @@ public:
 
     void insert(BlockInsertion&& insertion)
     {
-        m_insertions.append(WTFMove(insertion));
+        m_insertions.append(WTF::move(insertion));
     }
 
     // Insert a new block at a given index.
@@ -57,7 +57,7 @@ public:
     {
         std::unique_ptr<BasicBlock> block(new BasicBlock(BasicBlock::uninsertedIndex, frequency));
         BasicBlock* result = block.get();
-        insert(BlockInsertion(index, WTFMove(block)));
+        insert(BlockInsertion(index, WTF::move(block)));
         return result;
     }
 
@@ -83,7 +83,7 @@ public:
         // We allow insertions to be given to us in any order. So, we need to sort them before
         // running WTF::executeInsertions. We strongly prefer a stable sort and we want it to be
         // fast, so we use bubble sort.
-        bubbleSort(m_insertions.begin(), m_insertions.end());
+        bubbleSort(m_insertions.mutableSpan());
 
         executeInsertions(m_blocks, m_insertions);
 

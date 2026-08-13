@@ -72,7 +72,6 @@ GetOptions('include=s@' => \@idlDirectories,
            'idlAttributesFile=s' => \$idlAttributesFile,
            'idlFileNamesList=s' => \$idlFileNamesList);
 
-
 die('Must specify input file.') unless @ARGV;
 die('Must specify generator') unless defined($generator);
 die('Must specify output directory.') unless defined($outputDirectory);
@@ -134,4 +133,3 @@ sub generateBindings
     my $codeGen = CodeGenerator->new($generator, $outputDirectory, $outputHeadersDirectory, $preprocessor, $writeDependencies, $verbose, $targetIdlFile, $idlAttributes, \%supplementalDependencies, $idlFileNamesList);
     $codeGen->ProcessDocument($targetDocument, $defines);
 }
-

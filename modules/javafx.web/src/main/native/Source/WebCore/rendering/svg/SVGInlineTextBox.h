@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "LegacyInlineTextBox.h"
+#include <WebCore/LegacyInlineTextBox.h>
 
 namespace WebCore {
 
@@ -31,7 +31,7 @@ class SVGRootInlineBox;
 struct SVGTextFragment;
 
 class SVGInlineTextBox final : public LegacyInlineTextBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGInlineTextBox);
+    WTF_MAKE_TZONE_ALLOCATED(SVGInlineTextBox);
 public:
     explicit SVGInlineTextBox(RenderSVGInlineText&);
 

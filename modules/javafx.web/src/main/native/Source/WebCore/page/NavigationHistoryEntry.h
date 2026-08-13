@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "EventHandler.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "HistoryItem.h"
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContextIdentifier.h"
@@ -44,15 +45,17 @@ class Navigation;
 class SerializedScriptValue;
 
 class NavigationHistoryEntry final : public RefCounted<NavigationHistoryEntry>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationHistoryEntry);
+    WTF_MAKE_TZONE_ALLOCATED(NavigationHistoryEntry);
 public:
     static Ref<NavigationHistoryEntry> create(Navigation&, Ref<HistoryItem>&&);
     static Ref<NavigationHistoryEntry> create(Navigation&, const NavigationHistoryEntry&);
 
     ~NavigationHistoryEntry();
 
+    // ContextDestructionObserver.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const String& url() const;
     String key() const;
@@ -84,6 +87,7 @@ private:
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
@@ -100,3 +104,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(NavigationHistoryEntry)

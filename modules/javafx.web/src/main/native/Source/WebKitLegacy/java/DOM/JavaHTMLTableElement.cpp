@@ -30,6 +30,7 @@
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLElement.h>
+#include "HTMLTableRowElement.h"
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTableCaptionElement.h>
 #include <WebCore/HTMLTableElement.h>

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,10 +19,11 @@
 
 #pragma once
 
-#include "RenderBox.h"
-#include "RenderBoxModelObjectInlines.h"
-#include "RenderElementInlines.h"
-#include "RenderObjectInlines.h"
+#include <WebCore/DocumentView.h>
+#include <WebCore/RenderBlock.h>
+#include <WebCore/RenderBox.h>
+#include <WebCore/RenderBoxModelObjectInlines.h>
+#include <WebCore/RenderElementInlines.h>
 
 namespace WebCore {
 
@@ -46,6 +47,7 @@ inline LayoutUnit RenderBox::contentBoxWidth() const { return std::max(0_lu, pad
 inline std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerLogicalHeight() const { return writingMode().isHorizontal() ? explicitIntrinsicInnerHeight() : explicitIntrinsicInnerWidth(); }
 inline std::optional<LayoutUnit> RenderBox::explicitIntrinsicInnerLogicalWidth() const { return writingMode().isHorizontal() ? explicitIntrinsicInnerWidth() : explicitIntrinsicInnerHeight(); }
 inline bool RenderBox::hasHorizontalOverflow() const { return scrollWidth() != roundToInt(paddingBoxWidth()); }
+inline bool RenderBox::hasScrollableOverflow() const { return hasScrollableOverflowX() || hasScrollableOverflowY(); }
 inline bool RenderBox::hasScrollableOverflowX() const { return scrollsOverflowX() && hasHorizontalOverflow(); }
 inline bool RenderBox::hasScrollableOverflowY() const { return scrollsOverflowY() && hasVerticalOverflow(); }
 inline bool RenderBox::hasVerticalOverflow() const { return scrollHeight() != roundToInt(paddingBoxHeight()); }
@@ -67,9 +69,34 @@ inline int RenderBox::scrollbarLogicalHeight() const { return writingMode().isHo
 inline int RenderBox::scrollbarLogicalWidth() const { return writingMode().isHorizontal() ? verticalScrollbarWidth() : horizontalScrollbarHeight(); }
 inline void RenderBox::setLogicalLocation(LayoutPoint location) { setLocation(writingMode().isHorizontal() ? location : location.transposedPoint()); }
 inline void RenderBox::setLogicalSize(LayoutSize size) { setSize(writingMode().isHorizontal() ? size : size.transposedSize()); }
-inline bool RenderBox::shouldTrimChildMargin(MarginTrimType type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
+inline bool RenderBox::shouldTrimChildMargin(Style::MarginTrimSide type, const RenderBox& child) const { return style().marginTrim().contains(type) && isChildEligibleForMarginTrim(type, child); }
 inline bool RenderBox::stretchesToViewport() const { return document().inQuirksMode() && style().logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isDocumentElementRenderer() || isBody()) && !shouldComputeLogicalHeightFromAspectRatio() && !isInline(); }
 inline bool RenderBox::isColumnSpanner() const { return style().columnSpan() == ColumnSpan::All; }
+
+inline bool RenderBox::scrollsOverflow() const
+{
+    return scrollsOverflowX() || scrollsOverflowY();
+}
+
+inline bool RenderBox::scrollsOverflowX() const
+{
+    return hasNonVisibleOverflow() && (style().overflowX() == Overflow::Scroll || style().overflowX() == Overflow::Auto);
+}
+
+inline bool RenderBox::scrollsOverflowY() const
+{
+    return hasNonVisibleOverflow() && (style().overflowY() == Overflow::Scroll || style().overflowY() == Overflow::Auto);
+}
+
+inline bool RenderBox::isScrollContainerX() const
+{
+    return style().overflowX() == Overflow::Scroll || style().overflowX() == Overflow::Hidden || style().overflowX() == Overflow::Auto;
+}
+
+inline bool RenderBox::isScrollContainerY() const
+{
+    return style().overflowY() == Overflow::Scroll || style().overflowY() == Overflow::Hidden || style().overflowY() == Overflow::Auto;
+}
 
 inline LayoutPoint RenderBox::topLeftLocation() const
 {
@@ -128,12 +155,26 @@ inline LayoutRect RenderBox::contentBoxRect() const
     return { location, size };
 }
 
+inline LayoutRect RenderBox::flippedContentBoxRect() const
+{
+    auto rect = flippedClientBoxRect();
+    auto padding = this->padding();
+    if (!padding.isZero()) {
+        if (writingMode().isBlockFlipped())
+            padding = padding.blockFlippedCopy(writingMode());
+        rect.contract(padding);
+        rect.floorSize();
+    }
+    return rect;
+}
+
 inline LayoutRect RenderBox::marginBoxRect() const
 {
-    auto left = resolveLengthPercentageUsingContainerLogicalWidth(style().marginLeft());
-    auto right = resolveLengthPercentageUsingContainerLogicalWidth(style().marginRight());
-    auto top = resolveLengthPercentageUsingContainerLogicalWidth(style().marginTop());
-    auto bottom = resolveLengthPercentageUsingContainerLogicalWidth(style().marginBottom());
+    auto zoomFactor = style().usedZoomForLength();
+    auto left = resolveLengthPercentageUsingContainerLogicalWidth(style().marginLeft(), zoomFactor);
+    auto right = resolveLengthPercentageUsingContainerLogicalWidth(style().marginRight(), zoomFactor);
+    auto top = resolveLengthPercentageUsingContainerLogicalWidth(style().marginTop(), zoomFactor);
+    auto bottom = resolveLengthPercentageUsingContainerLogicalWidth(style().marginBottom(), zoomFactor);
     return { -left, -top, size().width() + left + right, size().height() + top + bottom };
 }
 
@@ -168,6 +209,31 @@ inline void RenderBox::setLogicalWidth(LayoutUnit size)
     else
         setHeight(size);
 }
+
+inline bool RenderBox::hasStretchedLogicalHeight(StretchingMode mode) const
+{
+    CheckedPtr containingBlock = this->containingBlock();
+    if (!containingBlock)
+        return false;
+
+    auto containingAxis = writingMode().isOrthogonal(containingBlock->writingMode())
+        ? LogicalBoxAxis::Inline : LogicalBoxAxis::Block;
+
+    return containingBlock->willStretchItem(*this, containingAxis, mode);
+}
+
+inline bool RenderBox::hasStretchedLogicalWidth(StretchingMode mode) const
+{
+    CheckedPtr containingBlock = this->containingBlock();
+    if (!containingBlock)
+        return false;
+
+    auto containingAxis = writingMode().isOrthogonal(containingBlock->writingMode())
+        ? LogicalBoxAxis::Block : LogicalBoxAxis::Inline;
+
+    return containingBlock->willStretchItem(*this, containingAxis, mode);
+}
+
 
 inline LayoutUnit resolveHeightForRatio(LayoutUnit borderAndPaddingLogicalWidth, LayoutUnit borderAndPaddingLogicalHeight, LayoutUnit logicalWidth, double aspectRatio, BoxSizing boxSizing)
 {

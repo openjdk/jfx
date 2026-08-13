@@ -144,6 +144,9 @@ for my $file (sort @files) {
 
     my $previousToken = "";
 
+    my $inRawString = 0;
+    my $rawStringDelimiter = "";
+
     while (<SOURCE>) {
         chomp;
 
@@ -153,6 +156,16 @@ for my $file (sort @files) {
             $inComment = 0;
         }
 
+        # Handle continued multi-line raw string literal.
+        if ($inRawString) {
+            if (s-^.*?\)$rawStringDelimiter"--) {
+                $inRawString = 0;
+                $rawStringDelimiter = "";
+            } else {
+                next;
+            }
+        }
+
         next unless defined $nestingLevel or /(\"|\/\*)/;
 
         # Handle all the tokens in the line.
@@ -160,6 +173,19 @@ for my $file (sort @files) {
             my $token = $1;
 
             if ($token eq "@" and $expected and $expected eq "a quoted string") {
+                next;
+            }
+
+            # Skip C++ raw string literals: R"delimiter(...)delimiter" or @R"(...)"
+            if ($token eq "R" and s-^"([^(]*)\(--) {
+                my $delimiter = $1;
+                if (!s-^(.*?)\)$delimiter"--s) {
+                    # Raw string continues to next line
+                    $inRawString = 1;
+                    $rawStringDelimiter = $delimiter;
+                    $_ = "";
+                }
+                $previousToken = $token;
                 next;
             }
 

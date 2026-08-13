@@ -28,18 +28,18 @@
 #include "LegacyRenderSVGEllipse.h"
 
 #include "LegacyRenderSVGShapeInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGCircleElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
-#include "SVGRenderStyle.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGEllipse);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGEllipse);
 
 LegacyRenderSVGEllipse::LegacyRenderSVGEllipse(SVGGraphicsElement& element, RenderStyle&& style)
-    : LegacyRenderSVGShape(Type::LegacySVGEllipse, element, WTFMove(style))
+    : LegacyRenderSVGShape(Type::LegacySVGEllipse, element, WTF::move(style))
 {
 }
 
@@ -76,7 +76,7 @@ void LegacyRenderSVGEllipse::updateShapeFromElement()
 
     m_fillBoundingBox = FloatRect(m_center.x() - m_radii.width(), m_center.y() - m_radii.height(), 2 * m_radii.width(), 2 * m_radii.height());
     m_strokeBoundingBox = m_fillBoundingBox;
-    if (style().svgStyle().hasStroke())
+    if (style().hasStroke())
         m_strokeBoundingBox->inflate(strokeWidth() / 2);
 }
 
@@ -85,21 +85,21 @@ void LegacyRenderSVGEllipse::calculateRadiiAndCenter()
     Ref graphicsElement = this->graphicsElement();
     SVGLengthContext lengthContext(graphicsElement.ptr());
     m_center = FloatPoint(
-        lengthContext.valueForLength(style().svgStyle().cx(), SVGLengthMode::Width),
-        lengthContext.valueForLength(style().svgStyle().cy(), SVGLengthMode::Height));
+        lengthContext.valueForLength(style().cx(), Style::ZoomNeeded { }, SVGLengthMode::Width),
+        lengthContext.valueForLength(style().cy(), Style::ZoomNeeded { }, SVGLengthMode::Height));
     if (is<SVGCircleElement>(graphicsElement)) {
-        float radius = lengthContext.valueForLength(style().svgStyle().r());
+        float radius = lengthContext.valueForLength(style().r(), Style::ZoomNeeded { });
         m_radii = FloatSize(radius, radius);
         return;
     }
 
     ASSERT(is<SVGEllipseElement>(graphicsElement));
 
-    auto& rx = style().svgStyle().rx();
-    auto& ry = style().svgStyle().ry();
+    auto& rx = style().rx();
+    auto& ry = style().ry();
     m_radii = FloatSize(
-        lengthContext.valueForLength(rx.isAuto() ? ry : rx, SVGLengthMode::Width),
-        lengthContext.valueForLength(ry.isAuto() ? rx : ry, SVGLengthMode::Height));
+        lengthContext.valueForLength(rx.isAuto() ? ry : rx, Style::ZoomNeeded { }, SVGLengthMode::Width),
+        lengthContext.valueForLength(ry.isAuto() ? rx : ry, Style::ZoomNeeded { }, SVGLengthMode::Height));
     if (rx.isAuto())
         m_radii.setWidth(m_radii.height());
     else if (ry.isAuto())
@@ -117,7 +117,7 @@ void LegacyRenderSVGEllipse::fillShape(GraphicsContext& context) const
 
 void LegacyRenderSVGEllipse::strokeShape(GraphicsContext& context) const
 {
-    if (!style().hasVisibleStroke())
+    if (!style().hasStroke() || !style().strokeWidth().isPossiblyPositive())
         return;
     if (hasPath()) {
         LegacyRenderSVGShape::strokeShape(context);
@@ -134,7 +134,7 @@ bool LegacyRenderSVGEllipse::canUseStrokeHitTestFastPath() const
 
     // We can compute intersections with continuous strokes on circles
     // without using a Path.
-    return m_shapeType == ShapeType::Circle && style().svgStyle().strokeDashArray().isNone();
+    return m_shapeType == ShapeType::Circle && style().strokeDashArray().isNone();
 }
 
 bool LegacyRenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)

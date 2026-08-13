@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CryptoKeyUsage.h"
-#include "RsaOtherPrimesInfo.h"
+#include <WebCore/CryptoKeyUsage.h>
+#include <WebCore/RsaOtherPrimesInfo.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(WEB_CRYPTO)
@@ -35,25 +35,25 @@ namespace WebCore {
 struct JsonWebKey {
     JsonWebKey isolatedCopy() && {
         return {
-            crossThreadCopy(WTFMove(kty)),
-            crossThreadCopy(WTFMove(use)),
+            crossThreadCopy(WTF::move(kty)),
+            crossThreadCopy(WTF::move(use)),
             key_ops,
             usages,
-            crossThreadCopy(WTFMove(alg)),
+            crossThreadCopy(WTF::move(alg)),
             ext,
-            crossThreadCopy(WTFMove(crv)),
-            crossThreadCopy(WTFMove(x)),
-            crossThreadCopy(WTFMove(y)),
-            crossThreadCopy(WTFMove(d)),
-            crossThreadCopy(WTFMove(n)),
-            crossThreadCopy(WTFMove(e)),
-            crossThreadCopy(WTFMove(p)),
-            crossThreadCopy(WTFMove(q)),
-            crossThreadCopy(WTFMove(dp)),
-            crossThreadCopy(WTFMove(dq)),
-            crossThreadCopy(WTFMove(qi)),
-            crossThreadCopy(WTFMove(oth)),
-            crossThreadCopy(WTFMove(k))
+            crossThreadCopy(WTF::move(crv)),
+            crossThreadCopy(WTF::move(x)),
+            crossThreadCopy(WTF::move(y)),
+            crossThreadCopy(WTF::move(d)),
+            crossThreadCopy(WTF::move(n)),
+            crossThreadCopy(WTF::move(e)),
+            crossThreadCopy(WTF::move(p)),
+            crossThreadCopy(WTF::move(q)),
+            crossThreadCopy(WTF::move(dp)),
+            crossThreadCopy(WTF::move(dq)),
+            crossThreadCopy(WTF::move(qi)),
+            crossThreadCopy(WTF::move(oth)),
+            crossThreadCopy(WTF::move(k))
         };
     }
 

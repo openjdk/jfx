@@ -26,16 +26,24 @@
 
 #pragma once
 
-#include "TimelineRange.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
+
+#if ENABLE(THREADED_ANIMATIONS)
+#include <WebCore/AcceleratedTimeline.h>
+#include <WebCore/TimelineIdentifier.h>
+#endif
 
 namespace WebCore {
 
 class AnimationTimelinesController;
 class WebAnimation;
+
+namespace Style {
+struct SingleAnimationRange;
+}
 
 class AnimationTimeline : public RefCountedAndCanMakeWeakPtr<AnimationTimeline> {
 public:
@@ -67,15 +75,36 @@ public:
 
     virtual AnimationTimelinesController* controller() const { return nullptr; }
 
-    virtual TimelineRange defaultRange() const { return { }; }
+    virtual Style::SingleAnimationRange defaultRange() const;
+
     static void updateGlobalPosition(WebAnimation&);
+
+#if ENABLE(THREADED_ANIMATIONS)
+    bool canBeAccelerated() const { return m_canBeAccelerated; }
+    virtual bool computeCanBeAccelerated() const { return false; }
+    Ref<AcceleratedTimeline> acceleratedRepresentation();
+    void runPostRenderingUpdateTasks();
+    const TimelineIdentifier& acceleratedTimelineIdentifier() const { return m_acceleratedTimelineIdentifier; }
+#endif
+
 protected:
     AnimationTimeline(std::optional<WebAnimationTime> = std::nullopt);
 
+#if ENABLE(THREADED_ANIMATIONS)
+    WeakPtr<AcceleratedTimeline> m_acceleratedRepresentation;
+    virtual Ref<AcceleratedTimeline> createAcceleratedRepresentation() const;
+#endif
+
     AnimationCollection m_animations;
 
-private:
+#if ENABLE(THREADED_ANIMATIONS)
+    TimelineIdentifier m_acceleratedTimelineIdentifier;
+#endif
 
+private:
+#if ENABLE(THREADED_ANIMATIONS)
+    bool m_canBeAccelerated { false };
+#endif
     std::optional<WebAnimationTime> m_currentTime;
     std::optional<WebAnimationTime> m_duration;
 };

@@ -53,7 +53,7 @@ using namespace JSC;
 using namespace WebCore;
 
 JavaInstance::JavaInstance(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
-    : Instance(WTFMove(rootObject))
+    : Instance(WTF::move(rootObject))
 {
     m_instance = JobjectWrapper::create(instance);
     m_class = 0;

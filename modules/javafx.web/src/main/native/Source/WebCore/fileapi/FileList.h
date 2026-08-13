@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "File.h"
-#include "ScriptWrappable.h"
+#include <WebCore/File.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class FileList final : public ScriptWrappable, public RefCounted<FileList> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(FileList, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FileList, WEBCORE_EXPORT);
 public:
     static Ref<FileList> create()
     {
@@ -44,8 +44,10 @@ public:
 
     static Ref<FileList> create(Vector<Ref<File>>&& files)
     {
-        return adoptRef(*new FileList(WTFMove(files)));
+        return adoptRef(*new FileList(WTF::move(files)));
     }
+
+    WEBCORE_EXPORT ~FileList();
 
     unsigned length() const { return m_files.size(); }
     WEBCORE_EXPORT File* item(unsigned index) const;
@@ -60,14 +62,14 @@ public:
 private:
     FileList() = default;
     FileList(Vector<Ref<File>>&& files)
-        : m_files(WTFMove(files))
+        : m_files(WTF::move(files))
     {
     }
 
     // FileLists can only be changed by their owners.
     friend class DataTransfer;
     friend class FileInputType;
-    void append(Ref<File>&& file) { m_files.append(WTFMove(file)); }
+    void append(Ref<File>&& file) { m_files.append(WTF::move(file)); }
     void clear() { m_files.clear(); }
 
     Vector<Ref<File>> m_files;

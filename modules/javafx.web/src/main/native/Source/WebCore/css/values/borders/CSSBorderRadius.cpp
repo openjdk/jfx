@@ -64,7 +64,7 @@ static std::pair<SpaceSeparatedVector<LengthPercentage<Nonnegative>, 4>, bool> g
         isDefaultValue = result[0] == 0_css_px;
     }
 
-    return { { WTFMove(result) }, isDefaultValue };
+    return { { WTF::move(result) }, isDefaultValue };
 }
 
 void Serialize<BorderRadius>::operator()(StringBuilder& builder, const SerializationContext& context, const BorderRadius& borderRadius)

@@ -26,7 +26,9 @@
 
 #pragma once
 
-#include "Reg.h"
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Reg.h>
 
 #if ENABLE(JIT)
 

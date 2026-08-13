@@ -32,31 +32,35 @@
 #include "ChromeClient.h"
 #include "ContainerNodeInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentView.h"
 #include "Element.h"
 #include "ElementInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "HTMLDialogElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLVideoElement.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Logging.h"
 #include "NodeInlines.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "QualifiedName.h"
-#include "Quirks.h"
 #include "RenderBlock.h"
-#include "RenderVideo.h"
+#include "RenderVideoInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
+#include <ranges>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -66,6 +70,22 @@
 #endif
 
 namespace WebCore {
+
+class DocumentFullscreen::CompletionHandlerScope final {
+public:
+    CompletionHandlerScope(CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+        : m_completionHandler(WTF::move(completionHandler)) { }
+    CompletionHandlerScope(CompletionHandlerScope&&) = default;
+    CompletionHandlerScope& operator=(CompletionHandlerScope&&) = default;
+    ~CompletionHandlerScope()
+    {
+        if (m_completionHandler)
+            m_completionHandler({ });
+    }
+    CompletionHandler<void(ExceptionOr<void>)> release() { return WTF::move(m_completionHandler); }
+private:
+    CompletionHandler<void(ExceptionOr<void>)> m_completionHandler;
+};
 
 // MARK: - Constructor.
 
@@ -84,9 +104,9 @@ DocumentFullscreen::DocumentFullscreen(Document& document)
 
 Element* DocumentFullscreen::fullscreenElement() const
 {
-    for (Ref element : makeReversedRange(document().topLayerElements())) {
+    for (Ref element : document().topLayerElements() | std::views::reverse) {
         if (element->hasFullscreenFlag())
-            return element.ptr();
+            return element.unsafePtr();
     }
 
     return nullptr;
@@ -180,7 +200,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
             return completionHandler(Exception { ExceptionCode::TypeError, message });
         ERROR_LOG_WITH_THIS(protectedThis, identifier, message);
         if (emitErrorEvent == EmitErrorEvent::Yes) {
-            protectedThis->m_pendingEvents.append(std::pair { EventType::Error, WTFMove(element) });
+            protectedThis->m_pendingEvents.append(std::pair { EventType::Error, WTF::move(element) });
             protectedThis->protectedDocument()->scheduleRenderingUpdate(RenderingUpdateStep::Fullscreen);
         }
         completionHandler(Exception { ExceptionCode::TypeError, message });
@@ -188,7 +208,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
 
     // If pendingDoc is not fully active, then reject promise with a TypeError exception and return promise.
     if (!protectedDocument()->isFullyActive())
-        return handleError("Cannot request fullscreen on a document that is not fully active."_s, EmitErrorEvent::No, WTFMove(completionHandler));
+        return handleError("Cannot request fullscreen on a document that is not fully active."_s, EmitErrorEvent::No, WTF::move(completionHandler));
 
     auto isElementTypeAllowedForFullscreen = [] (const auto& element) {
         if (is<HTMLElement>(element) || is<SVGSVGElement>(element))
@@ -204,24 +224,24 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
     // an event named fullscreenerror with its bubbles attribute set to true on the context object's
     // node document:
     if (!isElementTypeAllowedForFullscreen(element))
-        return handleError("Cannot request fullscreen on a non-HTML element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError("Cannot request fullscreen on a non-HTML element."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     if (is<HTMLDialogElement>(element))
-        return handleError("Cannot request fullscreen on a <dialog> element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError("Cannot request fullscreen on a <dialog> element."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     if (auto error = fullscreenElementReadyCheck(checkType, element))
-        return handleError(error, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError(error, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     if (RefPtr window = document().window(); !window || !window->consumeTransientActivation())
-        return handleError("Cannot request fullscreen without transient activation."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError("Cannot request fullscreen without transient activation."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     if (UserGestureIndicator::processingUserGesture() && UserGestureIndicator::currentUserGesture()->gestureType() == UserGestureType::EscapeKey)
-        return handleError("Cannot request fullscreen with Escape key as current gesture."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError("Cannot request fullscreen with Escape key as current gesture."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     // There is a previously-established user preference, security risk, or platform limitation.
     RefPtr page = this->page();
     if (!page || !page->isDocumentFullscreenEnabled())
-        return handleError("Fullscreen API is disabled."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+        return handleError("Fullscreen API is disabled."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
     bool hasKeyboardAccess = true;
     if (!page->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess)) {
@@ -230,14 +250,14 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
         hasKeyboardAccess = false;
 
         if (!page->chrome().client().supportsFullScreenForElement(element, hasKeyboardAccess))
-            return handleError("Cannot request fullscreen with unsupported element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Cannot request fullscreen with unsupported element."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
     }
 
     INFO_LOG(identifier);
 
     m_pendingFullscreenElement = element.ptr();
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, element = WTFMove(element), scope = CompletionHandlerScope(WTFMove(completionHandler)), hasKeyboardAccess, checkType, handleError, identifier, mode]() mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, element = WTF::move(element), scope = CompletionHandlerScope(WTF::move(completionHandler)), hasKeyboardAccess, checkType, handleError, identifier, mode]() mutable {
         auto completionHandler = scope.release();
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -246,24 +266,24 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
         // Don't allow fullscreen if it has been cancelled or a different fullscreen elementAdd commentMore actions
         // has requested fullscreen.
         if (protectedThis->m_pendingFullscreenElement != element.ptr())
-            return handleError("Fullscreen request aborted by a fullscreen request for another element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Fullscreen request aborted by a fullscreen request for another element."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // Don't allow fullscreen if we're inside an exitFullscreen operation.
         if (protectedThis->m_pendingExitFullscreen)
-            return handleError("Fullscreen request aborted by a request to exit fullscreen."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Fullscreen request aborted by a request to exit fullscreen."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // Don't allow fullscreen if document is hidden.
         Ref document = protectedThis->document();
         if ((document->hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModeInWindow) || protectedThis->m_pendingFullscreenElement != element.ptr())
-            return handleError("Cannot request fullscreen in a hidden document."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Cannot request fullscreen in a hidden document."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // Fullscreen element ready check.
         if (auto error = fullscreenElementReadyCheck(checkType, element))
-            return handleError(error, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError(error, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // Don't allow if element changed document.
         if (&element->document() != document.ptr())
-            return handleError("Cannot request fullscreen because the associated document has changed."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Cannot request fullscreen because the associated document has changed."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // A descendant browsing context's document has a non-empty fullscreen element stack.
         bool descendantHasNonEmptyStack = false;
@@ -277,7 +297,7 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
             }
         }
         if (descendantHasNonEmptyStack)
-            return handleError("Cannot request fullscreen because a descendant document already has a fullscreen element."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Cannot request fullscreen because a descendant document already has a fullscreen element."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         // 5. Return, and run the remaining steps asynchronously.
         // 6. Optionally, perform some animation.
@@ -285,11 +305,11 @@ void DocumentFullscreen::requestFullscreen(Ref<Element>&& element, FullscreenChe
 
         RefPtr page = protectedThis->page();
         if (!page)
-            return handleError("Invalid state when requesting fullscreen."_s, EmitErrorEvent::Yes, WTFMove(completionHandler));
+            return handleError("Invalid state when requesting fullscreen."_s, EmitErrorEvent::Yes, WTF::move(completionHandler));
 
         INFO_LOG_WITH_THIS(protectedThis, identifier, "task - success");
 
-        page->chrome().client().enterFullScreenForElement(element, mode, WTFMove(completionHandler), [weakThis = WTFMove(weakThis)](bool success) {
+        page->chrome().client().enterFullScreenForElement(element, mode, WTF::move(completionHandler), [weakThis = WTF::move(weakThis)](bool success) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || !success)
                 return true;
@@ -358,7 +378,7 @@ ExceptionOr<void> DocumentFullscreen::willEnterFullscreen(Element& element, HTML
     }
 
     bool elementWasFullscreen = &element == element.protectedDocument()->protectedFullscreen()->fullscreenElement();
-    for (auto ancestor : makeReversedRange(ancestors))
+    for (auto ancestor : ancestors | std::views::reverse)
         elementEnterFullscreen(ancestor);
 
     if (RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(element); iframe && !elementWasFullscreen)
@@ -427,6 +447,11 @@ bool DocumentFullscreen::isSimpleFullscreenDocument() const
     return foundFullscreenFlag;
 }
 
+Page* DocumentFullscreen::page() const
+{
+    return document().page();
+}
+
 // MARK: - Simple helper to get document frame
 LocalFrame* DocumentFullscreen::frame() const
 {
@@ -469,15 +494,13 @@ static void clearFullscreenFlags(Element& element)
 // MARK: - Exit fullscreen.
 // https://fullscreen.spec.whatwg.org/#exit-fullscreen
 
-void DocumentFullscreen::exitFullscreen(Document& document, RefPtr<DeferredPromise>&& promise)
+void DocumentFullscreen::exitFullscreen(Document& document, Ref<DeferredPromise>&& promise)
 {
     if (!document.isFullyActive() || !document.protectedFullscreen()->fullscreenElement()) {
         promise->reject(Exception { ExceptionCode::TypeError, "Not in fullscreen"_s });
         return;
     }
-    document.protectedFullscreen()->exitFullscreen([promise = WTFMove(promise)] (auto result) {
-        if (!promise)
-            return;
+    document.protectedFullscreen()->exitFullscreen([promise = WTF::move(promise)](auto result) {
         if (result.hasException())
             promise->reject(result.releaseException());
         else
@@ -525,7 +548,7 @@ void DocumentFullscreen::exitFullscreen(CompletionHandler<void(ExceptionOr<void>
     }
 
     // Return promise, and run the remaining steps in parallel.
-    exitingDocument->eventLoop().queueTask(TaskSource::MediaElement, [scope = CompletionHandlerScope(WTFMove(completionHandler)), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope), weakThis = WeakPtr { *this }, mode, identifier = LOGIDENTIFIER]() mutable {
+    exitingDocument->eventLoop().queueTask(TaskSource::MediaElement, [scope = CompletionHandlerScope(WTF::move(completionHandler)), resetPendingExitFullscreenScope = WTF::move(resetPendingExitFullscreenScope), weakThis = WeakPtr { *this }, mode, identifier = LOGIDENTIFIER]() mutable {
         auto completionHandler = scope.release();
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -549,11 +572,11 @@ void DocumentFullscreen::exitFullscreen(CompletionHandler<void(ExceptionOr<void>
 
         // Notify the chrome of the new full screen element.
         if (mode == ExitMode::Resize) {
-            page->chrome().client().exitFullScreenForElement(exitedFullscreenElement.get(), [weakThis = WTFMove(weakThis), completionHandler = WTFMove(completionHandler), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope)] mutable {
+            page->chrome().client().exitFullScreenForElement(exitedFullscreenElement.get(), [weakThis = WTF::move(weakThis), completionHandler = WTF::move(completionHandler), resetPendingExitFullscreenScope = WTF::move(resetPendingExitFullscreenScope)] mutable {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return completionHandler({ });
-                protectedThis->didExitFullscreen(WTFMove(completionHandler));
+                protectedThis->didExitFullscreen(WTF::move(completionHandler));
             });
         } else {
             if (RefPtr frame = protectedThis->document().frame())
@@ -562,7 +585,7 @@ void DocumentFullscreen::exitFullscreen(CompletionHandler<void(ExceptionOr<void>
             // We just popped off one fullscreen element out of the top layer, query the new one.
             protectedThis->m_pendingFullscreenElement = protectedThis->fullscreenElement();
             if (protectedThis->m_pendingFullscreenElement) {
-                page->chrome().client().enterFullScreenForElement(Ref { *protectedThis->m_pendingFullscreenElement }, HTMLMediaElementEnums::VideoFullscreenModeStandard, WTFMove(completionHandler), [weakThis = WTFMove(weakThis), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope)](bool success) mutable {
+                page->chrome().client().enterFullScreenForElement(Ref { *protectedThis->m_pendingFullscreenElement }, HTMLMediaElementEnums::VideoFullscreenModeStandard, WTF::move(completionHandler), [weakThis = WTF::move(weakThis), resetPendingExitFullscreenScope = WTF::move(resetPendingExitFullscreenScope)](bool success) mutable {
                     RefPtr protectedThis = weakThis.get();
                     if (!protectedThis || !success)
                         return true;
@@ -614,7 +637,7 @@ void DocumentFullscreen::finishExitFullscreen(Frame& currentFrame, ExitMode mode
         }
     }
 
-    for (Ref descendantDocument : makeReversedRange(descendantDocuments)) {
+    for (Ref descendantDocument : descendantDocuments | std::views::reverse) {
         queueFullscreenChangeEventForDocument(descendantDocument);
         unfullscreenDocument(descendantDocument);
     }
@@ -700,7 +723,7 @@ void DocumentFullscreen::fullyExitFullscreen()
             protectedThis->m_pendingExitFullscreen = false;
     });
 
-    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope), rootFrameDocument = WTFMove(rootFrameDocument), identifier = LOGIDENTIFIER] mutable {
+    protectedDocument()->eventLoop().queueTask(TaskSource::MediaElement, [weakThis = WeakPtr { *this }, resetPendingExitFullscreenScope = WTF::move(resetPendingExitFullscreenScope), rootFrameDocument = WTF::move(rootFrameDocument), identifier = LOGIDENTIFIER] mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -712,7 +735,7 @@ void DocumentFullscreen::fullyExitFullscreen()
 
         // This triggers finishExitFullscreen with ExitMode::Resize, which fully exits the document.
         if (RefPtr fullscreenElement = rootFrameDocument->protectedFullscreen()->fullscreenElement()) {
-            rootFrameDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get(), [weakThis = WTFMove(weakThis), resetPendingExitFullscreenScope = WTFMove(resetPendingExitFullscreenScope)] mutable {
+            rootFrameDocument->page()->chrome().client().exitFullScreenForElement(fullscreenElement.get(), [weakThis = WTF::move(weakThis), resetPendingExitFullscreenScope = WTF::move(resetPendingExitFullscreenScope)] mutable {
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;

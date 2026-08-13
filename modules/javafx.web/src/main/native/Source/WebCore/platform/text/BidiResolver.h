@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "BidiContext.h"
-#include "BidiRunList.h"
-#include "WritingMode.h"
+#include <WebCore/BidiContext.h>
+#include <WebCore/BidiRunList.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -98,7 +98,7 @@ struct BidiStatus {
         : eor(eor)
         , lastStrong(lastStrong)
         , last(last)
-        , context(WTFMove(context))
+        , context(WTF::move(context))
     {
     }
 
@@ -152,9 +152,9 @@ public:
     ~BidiCharacterRun()
     {
         // Delete the linked list in a loop to prevent destructor recursion.
-        auto next = WTFMove(m_next);
+        auto next = WTF::move(m_next);
         while (next)
-            next = WTFMove(next->m_next);
+            next = WTF::move(next->m_next);
     }
 
     unsigned start() const { return m_start; }
@@ -164,8 +164,8 @@ public:
     bool dirOverride(bool visuallyOrdered) { return m_override || visuallyOrdered; }
 
     BidiCharacterRun* next() const { return m_next.get(); }
-    std::unique_ptr<BidiCharacterRun> takeNext() { return WTFMove(m_next); }
-    void setNext(std::unique_ptr<BidiCharacterRun>&& next) { m_next = WTFMove(next); }
+    std::unique_ptr<BidiCharacterRun> takeNext() { return WTF::move(m_next); }
+    void setNext(std::unique_ptr<BidiCharacterRun>&& next) { m_next = WTF::move(next); }
 
 private:
     std::unique_ptr<BidiCharacterRun> m_next;
@@ -199,7 +199,7 @@ public:
     void increment() { static_cast<DerivedClass&>(*this).incrementInternal(); }
 
     BidiContext* context() const { return m_status.context.get(); }
-    void setContext(RefPtr<BidiContext>&& context) { m_status.context = WTFMove(context); }
+    void setContext(RefPtr<BidiContext>&& context) { m_status.context = WTF::move(context); }
 
     void setLastDir(UCharDirection lastDir) { m_status.last = lastDir; }
     void setLastStrongDir(UCharDirection lastStrongDir) { m_status.lastStrong = lastStrongDir; }
@@ -460,7 +460,7 @@ bool BidiResolverBase<Iterator, Run, DerivedClass>::commitExplicitEmbedding()
     else if (toLevel < fromLevel)
         lowerExplicitEmbeddingLevel(fromLevel % 2 ? U_RIGHT_TO_LEFT : U_LEFT_TO_RIGHT);
 
-    setContext(WTFMove(toContext));
+    setContext(WTF::move(toContext));
 
     m_currentExplicitEmbeddingSequence.clear();
 

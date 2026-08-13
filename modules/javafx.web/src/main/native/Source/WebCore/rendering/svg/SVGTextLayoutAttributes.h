@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "SVGTextMetrics.h"
+#include <WebCore/SVGTextMetrics.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>

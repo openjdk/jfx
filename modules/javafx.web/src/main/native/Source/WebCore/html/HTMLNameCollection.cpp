@@ -42,8 +42,8 @@ using namespace HTMLNames;
 template HTMLNameCollection<WindowNameCollection, CollectionTraversalType::Descendants>::~HTMLNameCollection();
 template HTMLNameCollection<DocumentNameCollection, CollectionTraversalType::Descendants>::~HTMLNameCollection();
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WindowNameCollection);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentNameCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WindowNameCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DocumentNameCollection);
 
 bool WindowNameCollection::elementMatchesIfNameAttributeMatch(const Element& element)
 {

@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "CodeSpecializationKind.h"
-#include "JSDestructibleObject.h"
+#include <JavaScriptCore/CodeSpecializationKind.h>
+#include <JavaScriptCore/JSDestructibleObject.h>
 
 namespace JSC {
 

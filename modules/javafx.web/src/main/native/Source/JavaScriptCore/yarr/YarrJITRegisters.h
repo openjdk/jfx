@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(YARR_JIT)
 
-#include "GPRInfo.h"
+#include <JavaScriptCore/GPRInfo.h>
 
 namespace JSC {
 
@@ -63,8 +65,7 @@ public:
     static constexpr GPRReg length = ARM64Registers::x2;
     static constexpr GPRReg output = ARM64Registers::x3;
     static constexpr GPRReg matchingContext = ARM64Registers::x4;
-    static constexpr GPRReg freelistRegister = ARM64Registers::x4; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = ARM64Registers::x5; // Only used during initialization.
+    static constexpr GPRReg freelistRegister = ARM64Registers::x13;
 
     // Scratch registers
     static constexpr GPRReg regT0 = ARM64Registers::x6;
@@ -75,15 +76,7 @@ public:
     static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
 
-#if ENABLE(YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP)
     static constexpr GPRReg firstCharacterAdditionalReadSize { ARM64Registers::x12 };
-#else
-    static constexpr GPRReg firstCharacterAdditionalReadSize { InvalidGPRReg };
-#endif
-
-#define HAVE_YARR_SURROGATE_REGISTERS 1
-    static constexpr GPRReg surrogateTagMask = ARM64Registers::x13;
-    static constexpr GPRReg surrogatePairTags = ARM64Registers::x14;
     static constexpr GPRReg endOfStringAddress = ARM64Registers::x15;
 
     static constexpr GPRReg returnRegister = ARM64Registers::x0;
@@ -95,8 +88,7 @@ public:
     static constexpr GPRReg length = X86Registers::edx;
     static constexpr GPRReg output = X86Registers::ecx;
     static constexpr GPRReg matchingContext = X86Registers::r8;
-    static constexpr GPRReg freelistRegister = X86Registers::r8; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = X86Registers::r9; // Only used during initialization.
+    static constexpr GPRReg freelistRegister = InvalidGPRReg;
 
     // Scratch registers
     static constexpr GPRReg regT0 = X86Registers::eax;
@@ -111,9 +103,6 @@ public:
 
     static constexpr GPRReg returnRegister = X86Registers::eax;
     static constexpr GPRReg returnRegister2 = X86Registers::edx;
-
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xdc00dc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogatePairTags = MacroAssembler::TrustedImm32(0xdc00d800);
 #elif CPU(RISCV64)
     // Argument registers
     static constexpr GPRReg input = RISCV64Registers::x10;
@@ -121,8 +110,7 @@ public:
     static constexpr GPRReg length = RISCV64Registers::x12;
     static constexpr GPRReg output = RISCV64Registers::x13;
     static constexpr GPRReg matchingContext = RISCV64Registers::x14;
-    static constexpr GPRReg freelistRegister = RISCV64Registers::x14; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = RISCV64Registers::x15; // Only used during initialization.
+    static constexpr GPRReg freelistRegister = InvalidGPRReg;
 
     // Scratch registers
     static constexpr GPRReg regT0 = RISCV64Registers::x16;
@@ -136,9 +124,6 @@ public:
 
     static constexpr GPRReg returnRegister = RISCV64Registers::x10;
     static constexpr GPRReg returnRegister2 = RISCV64Registers::x11;
-
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xdc00dc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogatePairTags = MacroAssembler::TrustedImm32(0xdc00d800);
 #endif
 };
 
@@ -175,7 +160,6 @@ public:
 
     GPRReg matchingContext { InvalidGPRReg };
     GPRReg freelistRegister { InvalidGPRReg };
-    GPRReg freelistSizeRegister { InvalidGPRReg };
 
     GPRReg returnRegister { InvalidGPRReg };
     GPRReg returnRegister2 { InvalidGPRReg };

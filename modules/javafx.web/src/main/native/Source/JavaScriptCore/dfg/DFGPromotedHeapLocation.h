@@ -112,6 +112,8 @@ public:
         return m_kind == InvalidPromotedLocationKind && m_info;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // These are the locations / values that are strictly needed to allocate the object. When
     // object allocation sinking is breaking cycles for materialization, edges marked
     // !neededForMaterialization are prioritized.
@@ -135,12 +137,6 @@ public:
 private:
     PromotedLocationKind m_kind;
     unsigned m_info;
-};
-
-struct PromotedLocationDescriptorHash {
-    static unsigned hash(const PromotedLocationDescriptor& key) { return key.hash(); }
-    static bool equal(const PromotedLocationDescriptor& a, const PromotedLocationDescriptor& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 class PromotedHeapLocation {
@@ -192,6 +188,8 @@ public:
         return m_meta.isHashTableDeletedValue();
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream& out) const;
 
 private:
@@ -199,26 +197,14 @@ private:
     PromotedLocationDescriptor m_meta;
 };
 
-struct PromotedHeapLocationHash {
-    static unsigned hash(const PromotedHeapLocation& key) { return key.hash(); }
-    static bool equal(const PromotedHeapLocation& a, const PromotedHeapLocation& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PromotedHeapLocation> : JSC::DFG::PromotedHeapLocationHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PromotedHeapLocation> : SimpleClassHashTraits<JSC::DFG::PromotedHeapLocation> {
     static constexpr bool emptyValueIsZero = false;
 };
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PromotedLocationDescriptor> : JSC::DFG::PromotedLocationDescriptorHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PromotedLocationDescriptor> : SimpleClassHashTraits<JSC::DFG::PromotedLocationDescriptor> {

@@ -85,17 +85,30 @@ void Exception::finishCreation(VM& vm, StackCaptureAction action)
     Vector<StackFrame> stackTrace;
     if (action == StackCaptureAction::CaptureStack)
         vm.interpreter.getStackTrace(this, stackTrace, 0, Options::exceptionStackTraceLimit());
-    m_stack = WTFMove(stackTrace);
+    m_stack = WTF::move(stackTrace);
     vm.heap.reportExtraMemoryAllocated(this, m_stack.sizeInBytes());
 }
 
 #if ENABLE(WEBASSEMBLY)
 
+void Exception::tryUnwrapValueForJSTag(VM& vm)
+{
+    if (!m_value)
+        return;
+
+    if (auto* exception = jsDynamicCast<JSWebAssemblyException*>(m_value.get())) {
+        if (&exception->tag() == &Wasm::Tag::jsExceptionTag()) {
+            m_value.set(vm, this, JSValue::decode(exception->payload().at(0)));
+            return;
+        }
+    }
+}
+
 void Exception::wrapValueForJSTag(JSGlobalObject* globalObject)
 {
     VM& vm = globalObject->vm();
     FixedVector<uint64_t> payload { static_cast<uint64_t>(JSValue::encode(m_value.get())) };
-    auto* wrapper = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), Wasm::Tag::jsExceptionTag(), WTFMove(payload));
+    auto* wrapper = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), Wasm::Tag::jsExceptionTag(), WTF::move(payload));
     m_value.set(vm, this, wrapper);
 }
 

@@ -42,7 +42,7 @@ class MediaQueryEvaluator;
 
 namespace Style {
 
-enum class CascadeLevel : uint8_t;
+enum class DeclarationOrigin : uint8_t;
 class InspectorCSSOMWrappers;
 class Resolver;
 
@@ -69,7 +69,7 @@ public:
     RuleSet* dynamicViewTransitionsStyle() const;
     RuleSet& authorStyle() const { return *m_authorStyle; }
     RuleSet* userStyle() const;
-    RuleSet* styleForCascadeLevel(CascadeLevel);
+    RuleSet* styleForDeclarationOrigin(DeclarationOrigin);
 
     const RuleFeatureSet& features() const;
     RuleSet* scopeBreakingHasPseudoClassInvalidationRuleSet() const { return m_scopeBreakingHasPseudoClassInvalidationRuleSet.get(); }
@@ -88,7 +88,7 @@ public:
     void initializeUserStyle();
 
     void resetAuthorStyle();
-    void appendAuthorStyleSheets(std::span<const RefPtr<CSSStyleSheet>>, MQ::MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
+    void appendAuthorStyleSheets(std::span<const Ref<CSSStyleSheet>>, MQ::MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
 
     void resetUserAgentMediaQueryStyle();
 
@@ -113,7 +113,7 @@ public:
 
 private:
     void collectFeatures() const;
-    void collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, RuleSet& userStyle, const MQ::MediaQueryEvaluator&);
+    void collectRulesFromUserStyleSheets(const Vector<Ref<CSSStyleSheet>>&, RuleSet& userStyle, const MQ::MediaQueryEvaluator&);
     void updateUserAgentMediaQueryStyleIfNeeded() const;
 
     RefPtr<RuleSet> m_authorStyle;

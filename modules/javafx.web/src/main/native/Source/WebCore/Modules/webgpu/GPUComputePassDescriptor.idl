@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepassdescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUComputePassDescriptor : GPUObjectDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUComputePassDescriptor : GPUObjectDescriptorBase {
     GPUComputePassTimestampWrites timestampWrites;
 };

@@ -38,9 +38,9 @@
 
 namespace WebCore {
 
-Vector<CDMFactory*>& CDMFactory::registeredFactories()
+Vector<WeakRef<CDMFactory>>& CDMFactory::registeredFactories()
 {
-    static NeverDestroyed<Vector<CDMFactory*>> factories;
+    static NeverDestroyed<Vector<WeakRef<CDMFactory>>> factories;
     static std::once_flag once;
     std::call_once(once, [&] {
         platformRegisterFactories(factories);
@@ -51,18 +51,18 @@ Vector<CDMFactory*>& CDMFactory::registeredFactories()
 
 void CDMFactory::registerFactory(CDMFactory& factory)
 {
-    ASSERT(!registeredFactories().contains(&factory));
-    registeredFactories().append(&factory);
+    ASSERT(!registeredFactories().containsIf([&](auto& item) { return item.ptr() == &factory; }));
+    registeredFactories().append(factory);
 }
 
 void CDMFactory::unregisterFactory(CDMFactory& factory)
 {
-    ASSERT(registeredFactories().contains(&factory));
-    registeredFactories().removeAll(&factory);
+    ASSERT(registeredFactories().containsIf([&](auto& item) { return item.ptr() == &factory; }));
+    registeredFactories().removeAllMatching([&](auto& item) { return item.ptr() == &factory; });
 }
 
 #if !USE(GSTREAMER) && !USE(AVFOUNDATION)
-void CDMFactory::platformRegisterFactories(Vector<CDMFactory*>&)
+void CDMFactory::platformRegisterFactories(Vector<WeakRef<CDMFactory>>&)
 {
 }
 #endif

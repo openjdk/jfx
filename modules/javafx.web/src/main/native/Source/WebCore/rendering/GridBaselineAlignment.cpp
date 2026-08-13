@@ -59,15 +59,11 @@ LayoutUnit GridBaselineAlignment::logicalAscentForGridItem(const RenderBox& grid
 
 LayoutUnit GridBaselineAlignment::ascentForGridItem(const RenderBox& gridItem, Style::GridTrackSizingDirection alignmentContextType, ItemPosition position) const
 {
-    static const LayoutUnit noValidBaseline = LayoutUnit(-1);
-
     ASSERT(position == ItemPosition::Baseline || position == ItemPosition::LastBaseline);
-    auto baseline = 0_lu;
-    auto gridItemMargin = alignmentContextType == Style::GridTrackSizingDirection::Rows
-        ? gridItem.marginBefore(m_writingMode)
-        : gridItem.marginStart(m_writingMode);
+    auto gridItemMargin = alignmentContextType == Style::GridTrackSizingDirection::Rows ? gridItem.marginBefore(m_writingMode) : gridItem.marginStart(m_writingMode);
     auto& gridStyle = gridItem.parent()->style();
 
+    auto baseline = 0_lu;
     if (alignmentContextType == Style::GridTrackSizingDirection::Rows) {
         auto alignmentContextDirection = [&] {
             return gridStyle.writingMode().isHorizontal() ? LineDirection::Horizontal : LineDirection::Vertical;
@@ -84,12 +80,14 @@ LayoutUnit GridBaselineAlignment::ascentForGridItem(const RenderBox& gridItem, S
             return gridItemMargin + BaselineAlignmentState::synthesizedBaseline(gridItem, BaselineAlignmentState::dominantBaseline(gridWritingMode),
                 gridWritingMode, alignmentContextDirection(), BaselineSynthesisEdge::BorderBox);
         }
-        baseline = ascent.value();
+        baseline = *ascent;
     } else {
-        auto computedBaselineValue = position == ItemPosition::Baseline ? gridItem.firstLineBaseline() : gridItem.lastLineBaseline();
-        baseline = isParallelToAlignmentAxisForGridItem(gridItem, alignmentContextType) ? computedBaselineValue.value_or(noValidBaseline) : noValidBaseline;
+        auto firstOrLastLineBaseline = std::optional<LayoutUnit> { };
+        if (isParallelToAlignmentAxisForGridItem(gridItem, alignmentContextType))
+            firstOrLastLineBaseline = position == ItemPosition::Baseline ? gridItem.firstLineBaseline() : gridItem.lastLineBaseline();
+
     // We take border-box's under edge if no valid baseline.
-        if (baseline == noValidBaseline) {
+        if (!firstOrLastLineBaseline) {
             ASSERT(!gridItem.needsLayout());
             if (isVerticalAlignmentContext(alignmentContextType))
                 return m_writingMode.isBlockFlipped() ? gridItemMargin + gridItem.size().width().toInt() : gridItemMargin;
@@ -97,6 +95,7 @@ LayoutUnit GridBaselineAlignment::ascentForGridItem(const RenderBox& gridItem, S
             return gridItemMargin + BaselineAlignmentState::synthesizedBaseline(gridItem, BaselineAlignmentState::dominantBaseline(gridWritingMode),
                 gridWritingMode, LineDirection::Horizontal, BaselineSynthesisEdge::BorderBox);
     }
+        baseline = *firstOrLastLineBaseline;
     }
 
     return gridItemMargin + baseline;

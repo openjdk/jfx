@@ -33,11 +33,12 @@
 #include "RTCDTMFToneChangeEvent.h"
 #include "RTCRtpSender.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDTMFSender);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDTMFSender);
 
 static const size_t minToneDurationMs = 40;
 static const size_t maxToneDurationMs = 6000;
@@ -45,7 +46,7 @@ static const size_t minInterToneGapMs = 30;
 
 Ref<RTCDTMFSender> RTCDTMFSender::create(ScriptExecutionContext& context, RTCRtpSender& sender, std::unique_ptr<RTCDTMFSenderBackend>&& backend)
 {
-    auto result = adoptRef(*new RTCDTMFSender(context, sender, WTFMove(backend)));
+    auto result = adoptRef(*new RTCDTMFSender(context, sender, WTF::move(backend)));
     result->suspendIfNeeded();
     return result;
 }
@@ -54,7 +55,7 @@ RTCDTMFSender::RTCDTMFSender(ScriptExecutionContext& context, RTCRtpSender& send
     : ActiveDOMObject(&context)
     , m_toneTimer(*this, &RTCDTMFSender::toneTimerFired)
     , m_sender(sender)
-    , m_backend(WTFMove(backend))
+    , m_backend(WTF::move(backend))
 {
     m_backend->onTonePlayed([this] {
         onTonePlayed();
@@ -100,7 +101,7 @@ ExceptionOr<void> RTCDTMFSender::insertDTMF(const String& tones, size_t duration
     if (normalizedTones.find(isToneCharacterInvalid) != notFound)
         return Exception { ExceptionCode::InvalidCharacterError, "Tones are not valid"_s };
 
-    m_tones = WTFMove(normalizedTones);
+    m_tones = WTF::move(normalizedTones);
     m_duration = clampTo(duration, minToneDurationMs, maxToneDurationMs);
     m_interToneGap = std::max(interToneGap, minInterToneGapMs);
 
@@ -108,10 +109,15 @@ ExceptionOr<void> RTCDTMFSender::insertDTMF(const String& tones, size_t duration
         return { };
 
     m_isPendingPlayoutTask = true;
-    scriptExecutionContext()->postTask([protectedThis = Ref { *this }](auto&) {
+    protectedScriptExecutionContext()->postTask([protectedThis = Ref { *this }](auto&) {
         protectedThis->playNextTone();
     });
     return { };
+}
+
+ScriptExecutionContext* RTCDTMFSender::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void RTCDTMFSender::playNextTone()

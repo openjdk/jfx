@@ -37,6 +37,8 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DragClientJava);
+
 DragClientJava::DragClientJava(const JLObject &webPage)
     : m_webPage(webPage)
 {

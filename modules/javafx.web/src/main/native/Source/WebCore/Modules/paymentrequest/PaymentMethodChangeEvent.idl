@@ -38,6 +38,7 @@
 
 [
     Conditional=PAYMENT_REQUEST,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary PaymentMethodChangeEventInit : PaymentRequestUpdateEventInit {
     DOMString methodName = "";
     object? methodDetails;

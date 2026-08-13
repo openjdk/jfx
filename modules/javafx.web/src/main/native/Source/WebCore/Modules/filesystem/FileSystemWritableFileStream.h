@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Blob.h"
-#include "FileSystemWriteCommandType.h"
-#include "WritableStream.h"
 #include <JavaScriptCore/ArrayBufferView.h>
+#include <WebCore/Blob.h>
+#include <WebCore/FileSystemWriteCommandType.h>
+#include <WebCore/WritableStream.h>
 
 namespace WebCore {
 

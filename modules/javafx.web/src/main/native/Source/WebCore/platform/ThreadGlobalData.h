@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <pal/ThreadGlobalData.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -33,7 +34,6 @@
 
 namespace JSC {
 class CallFrame;
-class JSGlobalObject;
 }
 
 namespace WebCore {
@@ -129,7 +129,7 @@ private:
 
     bool m_isInRemoveAllEventListeners { false };
 
-    friend ThreadGlobalData& threadGlobalData();
+    friend ThreadGlobalData& threadGlobalDataSingleton();
 };
 
 
@@ -139,22 +139,30 @@ WEBCORE_EXPORT ThreadGlobalData& threadGlobalDataSlow();
 WEBCORE_EXPORT ThreadGlobalData& threadGlobalDataSlow() PURE_FUNCTION;
 #endif
 
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ThreadGlobalData)
+    static bool isType(const WTF::Thread::ClientData& data) { return data.type() == PAL::ThreadGlobalData::Type::WebCoreThreadGlobalData; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebCore {
+
 #if USE(WEB_THREAD)
-inline ThreadGlobalData& threadGlobalData()
+inline ThreadGlobalData& threadGlobalDataSingleton()
 #else
-inline PURE_FUNCTION ThreadGlobalData& threadGlobalData()
+inline PURE_FUNCTION ThreadGlobalData& threadGlobalDataSingleton()
 #endif
 {
 #if HAVE(FAST_TLS)
     if (auto* thread = Thread::currentMayBeNull(); thread) [[likely]] {
-        if (auto* clientData = thread->m_clientData.get(); clientData) [[likely]]
-            return *static_cast<ThreadGlobalData*>(clientData);
+        // No need to ref the clientData as we're simply returning it right away.
+        SUPPRESS_UNCOUNTED_LOCAL if (auto* clientData = thread->m_clientData.get(); clientData) [[likely]]
+            return downcast<ThreadGlobalData>(*clientData);
     }
 #else
-    auto& thread = Thread::currentSingleton();
-    auto* clientData = thread.m_clientData.get();
-    if (clientData) [[likely]]
-        return *static_cast<ThreadGlobalData*>(clientData);
+    // No need to ref the clientData as we're simply returning it right away.
+    SUPPRESS_UNCOUNTED_LOCAL if (auto* clientData = Thread::currentSingleton().m_clientData.get()) [[likely]]
+        return downcast<ThreadGlobalData>(*clientData);
 #endif
     return threadGlobalDataSlow();
 }

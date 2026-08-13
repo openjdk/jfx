@@ -21,16 +21,17 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
-#include "JSWindowProxy.h"
-#include "LoadableScript.h"
-#include "SerializedScriptValue.h"
-#include "WindowProxy.h"
 #include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/ScriptFetchParameters.h>
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/JSWindowProxy.h>
+#include <WebCore/LoadableScript.h>
+#include <WebCore/SerializedScriptValue.h>
+#include <WebCore/WindowProxy.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -58,6 +59,7 @@ namespace WebCore {
 
 class CachedScriptFetcher;
 class HTMLDocument;
+class Node;
 class HTMLPlugInElement;
 class LoadableModuleScript;
 class LocalFrame;
@@ -134,7 +136,7 @@ public:
     void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement);
 
     static bool canAccessFromCurrentOrigin(LocalFrame*, Document& accessingDocument);
-    WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);
+    WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts, DOMWrapperWorld* = nullptr);
 
     void setPaused(bool b) { m_paused = b; }
     bool isPaused() const { return m_paused; }
@@ -175,6 +177,7 @@ public:
     void reportExceptionFromScriptError(LoadableScript::Error, bool);
 
     void registerImportMap(const ScriptSourceCode&, const URL& baseURL);
+    bool registerSpeculationRules(Node&, const ScriptSourceCode&, const URL& baseURL);
 
 private:
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);

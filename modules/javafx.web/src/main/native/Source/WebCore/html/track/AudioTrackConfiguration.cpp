@@ -42,6 +42,7 @@ Ref<JSON::Object> AudioTrackConfiguration::toJSON() const
     json->setInteger("sampleRate"_s, sampleRate());
     json->setInteger("numberOfChannels"_s, numberOfChannels());
     json->setInteger("bitrate"_s, bitrate());
+    json->setBoolean("isProtected"_s, isProtected());
     return json;
 }
 

@@ -53,7 +53,7 @@ using NativeResizeObserverCallback = void (*)(const Vector<Ref<ResizeObserverEnt
 using JSOrNativeResizeObserverCallback = Variant<RefPtr<ResizeObserverCallback>, NativeResizeObserverCallback>;
 
 class ResizeObserver : public RefCountedAndCanMakeWeakPtr<ResizeObserver> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ResizeObserver);
+    WTF_MAKE_TZONE_ALLOCATED(ResizeObserver);
 public:
     static Ref<ResizeObserver> create(Document&, Ref<ResizeObserverCallback>&&);
     static Ref<ResizeObserver> createNativeObserver(Document&, NativeResizeObserverCallback&&);

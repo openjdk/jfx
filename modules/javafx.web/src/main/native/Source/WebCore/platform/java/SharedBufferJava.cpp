@@ -44,7 +44,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
   (JNIEnv*, jclass)
 {
    auto buffer = SharedBuffer::create();
-   return ptr_to_jlong(new SharedBufferBuilder(WTFMove(buffer)));
+   return ptr_to_jlong(new SharedBufferBuilder(WTF::move(buffer)));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize

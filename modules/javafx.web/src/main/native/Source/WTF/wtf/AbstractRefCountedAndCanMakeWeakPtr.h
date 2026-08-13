@@ -30,16 +30,16 @@
 
 namespace WTF {
 
-template<typename T>
-class AbstractRefCountedAndCanMakeWeakPtr : public AbstractRefCounted, public CanMakeWeakPtr<T> {
+template<typename T, WeakPtrFactoryInitialization initializationMode = WeakPtrFactoryInitialization::Lazy>
+class AbstractRefCountedAndCanMakeWeakPtr : public AbstractRefCounted, public CanMakeWeakPtr<T, initializationMode> {
 public:
     // FIXME: Remove this workaround for false negatives in clang static analyezr.
     virtual void ref() const = 0;
     virtual void deref() const = 0;
 };
 
-template<typename T>
-class AbstractRefCountedAndCanMakeSingleThreadWeakPtr : public AbstractRefCounted, public CanMakeSingleThreadWeakPtr<T> {
+template<typename T, WeakPtrFactoryInitialization initializationMode = WeakPtrFactoryInitialization::Lazy>
+class AbstractRefCountedAndCanMakeSingleThreadWeakPtr : public AbstractRefCounted, public CanMakeSingleThreadWeakPtr<T, initializationMode> {
 public:
     // FIXME: Remove this workaround for false negatives in clang static analyezr.
     virtual void ref() const = 0;

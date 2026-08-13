@@ -34,7 +34,8 @@
 };
 
 [
-    Conditional=MEDIA_STREAM&WEB_CODECS
+    Conditional=MEDIA_STREAM&WEB_CODECS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaStreamTrackProcessorInit {
     required MediaStreamTrack track;
     [EnforceRange] unsigned short maxBufferSize;

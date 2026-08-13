@@ -26,11 +26,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "Reg.h"
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Reg.h>
 #include <wtf/PrintStream.h>
 #include <wtf/TZoneMalloc.h>
 

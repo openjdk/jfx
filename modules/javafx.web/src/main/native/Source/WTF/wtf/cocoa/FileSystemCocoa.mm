@@ -34,14 +34,13 @@
 #import <wtf/SoftLinking.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/spi/cocoa/BOMSPI.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/StringCommon.h>
 
 #if HAVE(APFS_CACHEDELETE_PURGEABLE)
 #import <apfs/apfs_fsctl.h>
 #endif
-
-typedef struct _BOMCopier* BOMCopier;
 
 SOFT_LINK_PRIVATE_FRAMEWORK(Bom)
 SOFT_LINK(Bom, BOMCopierNew, BOMCopier, (), ())
@@ -133,14 +132,22 @@ String extractTemporaryZipArchive(const String& path)
     return temporaryDirectory;
 }
 
-std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix, const String& temporaryDirectory)
 {
     Vector<char> temporaryFilePath(PATH_MAX);
+    if (temporaryDirectory.isEmpty()) {
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.mutableSpan().data(), temporaryFilePath.size()))
         return { String(), FileHandle() };
-
     // Shrink the vector.
     temporaryFilePath.shrink(strlenSpan(temporaryFilePath.span()));
+    } else {
+        const auto temporaryDirectoryUtf8 = temporaryDirectory.utf8();
+        memcpySpan(temporaryFilePath.mutableSpan(), temporaryDirectoryUtf8.span());
+        // Shrink the vector.
+        temporaryFilePath.shrink(temporaryDirectoryUtf8.length());
+        if (temporaryDirectoryUtf8.span().back() != '/')
+            temporaryFilePath.append('/');
+    }
 
     ASSERT(temporaryFilePath.last() == '/');
 
@@ -156,7 +163,7 @@ std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView su
     if (!fileHandle)
         return { nullString(), FileHandle() };
 
-    return { String::fromUTF8(temporaryFilePath.span().data()), WTFMove(fileHandle) };
+    return { String::fromUTF8(temporaryFilePath.span().data()), WTF::move(fileHandle) };
 }
 
 NSString *createTemporaryDirectory(NSString *directoryPrefix)
@@ -193,7 +200,7 @@ std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& dire
     auto templatePath = pathByAppendingComponents(directory, { { makeString("XXXXXX"_s, suffix) } });
     auto fsTemplatePath = fileSystemRepresentation(templatePath);
     auto fileHandle = FileHandle::adopt(mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length()));
-    return { WTFMove(fileHandle), WTFMove(fsTemplatePath) };
+    return { WTF::move(fileHandle), WTF::move(fsTemplatePath) };
 }
 
 #ifdef IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES

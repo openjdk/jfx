@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "ContainerQuery.h"
 #include "ContainerQueryEvaluator.h"
 #include "HasSelectorFilter.h"
 #include "SelectorFilter.h"
+#include <WebCore/ContainerQuery.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore::Style {

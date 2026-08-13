@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <stdio.h>
-#include <wtf/FilePrintStream.h>
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMalloc.h>
@@ -38,6 +40,7 @@ namespace JSC {
 
 #define JSC_PROFILER_SUPPORT_CATEGORY(macro) \
     macro(JSGlobalObjectSignpost) \
+    macro(WebKitPerformanceSignpost) \
 
 class ProfilerSupport {
     WTF_MAKE_TZONE_ALLOCATED(ProfilerSupport);
@@ -54,9 +57,10 @@ public:
     static constexpr unsigned numberOfCategories = 0 JSC_PROFILER_SUPPORT_CATEGORY(JSC_COUNT_CATEGORY);
 #undef JSC_COUNT_CATEGORY
 
-    static void markStart(const void*, Category, CString&&);
-    static void markEnd(const void*, Category, CString&&);
-    static void mark(const void*, Category, CString&&);
+    JS_EXPORT_PRIVATE static void markStart(const void*, Category, CString&&);
+    JS_EXPORT_PRIVATE static void markEnd(const void*, Category, CString&&);
+    JS_EXPORT_PRIVATE static void mark(const void*, Category, CString&&);
+    JS_EXPORT_PRIVATE static void markInterval(const void*, Category, MonotonicTime, MonotonicTime, CString&&);
 
     WorkQueue& queue() { return m_queue.get(); }
 
@@ -64,15 +68,19 @@ public:
 
     static ProfilerSupport& singleton();
 
+    static void dumpIonGraphFunction(const String& functionName, Ref<JSON::Object>&&);
+
+    static uint32_t getCurrentThreadID();
+
 private:
     ProfilerSupport();
 
     void write(const AbstractLocker&, uint64_t start, uint64_t end, const CString& message) WTF_REQUIRES_LOCK(m_lock);
 
     const Ref<WorkQueue> m_queue;
-    std::unique_ptr<FilePrintStream> m_fileStream;
     std::array<HashMap<const void*, uint64_t>, numberOfCategories> m_markers;
-    int m_fd { -1 };
+    WTF::FileSystemImpl::FileHandle m_file { };
+        int m_fd { -1 };
     Lock m_tableLock;
     Lock m_lock;
 };

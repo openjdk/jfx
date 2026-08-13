@@ -132,7 +132,7 @@ void ScrollingTreeFrameScrollingNodeCoordinated::repositionRelatedLayers()
         FloatPoint insetClipPosition;
         {
             Locker locker { m_insetClipLayer->lock() };
-            insetClipPosition = LocalFrameView::positionForInsetClipLayer(scrollPosition, contentInsets);
+            insetClipPosition = LocalFrameView::insetClipLayerRect(scrollPosition, contentInsets, sizeForVisibleContent()).location();
         }
         m_insetClipLayer->setPositionForScrolling(insetClipPosition);
         auto rootContentsPosition = LocalFrameView::positionForRootContentLayer(scrollPosition, scrollOrigin(), contentInsets, headerHeight());

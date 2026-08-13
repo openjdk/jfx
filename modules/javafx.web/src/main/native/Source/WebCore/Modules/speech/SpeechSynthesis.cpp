@@ -29,11 +29,10 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "ContextDestructionObserverInlines.h"
-#include "Document.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
-#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "PlatformSpeechSynthesisVoice.h"
@@ -48,7 +47,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechSynthesis);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechSynthesis);
 
 Ref<SpeechSynthesis> SpeechSynthesis::create(ScriptExecutionContext& context)
 {
@@ -128,7 +127,7 @@ const Vector<Ref<SpeechSynthesisVoice>>& SpeechSynthesis::getVoices()
     RefPtr speechSynthesisClient = m_speechSynthesisClient.get();
     auto& voiceList = speechSynthesisClient ? speechSynthesisClient->voiceList() : ensureProtectedPlatformSpeechSynthesizer()->voiceList();
     m_voiceList = voiceList.map([](auto& voice) {
-        return SpeechSynthesisVoice::create(Ref { *voice }.get());
+        return SpeechSynthesisVoice::create(Ref { voice });
     });
 
     return *m_voiceList;
@@ -188,7 +187,7 @@ void SpeechSynthesis::cancel()
     RefPtr current = protectedCurrentSpeechUtterance();
     // Clear m_utteranceQueue before calling cancel to avoid picking up new utterances
     // on completion callback
-    auto utteranceQueue = WTFMove(m_utteranceQueue);
+    auto utteranceQueue = WTF::move(m_utteranceQueue);
     if (RefPtr speechSynthesisClient = m_speechSynthesisClient.get()) {
         speechSynthesisClient->cancel();
         // If we wait for cancel to callback speakingErrorOccurred, then m_currentSpeechUtterance will be null
@@ -197,14 +196,6 @@ void SpeechSynthesis::cancel()
         m_currentSpeechUtterance = nullptr;
     } else if (RefPtr platformSpeechSynthesizer = m_platformSpeechSynthesizer)
         platformSpeechSynthesizer->cancel();
-
-    // Trigger canceled events for queued utterances
-    while (!utteranceQueue.isEmpty()) {
-        const auto utterance = utteranceQueue.takeFirst();
-        // Current utterance is handled in platform cancel()
-        if (current.get() != utterance.ptr())
-            utterance.get().errorEventOccurred(eventNames().errorEvent, SpeechSynthesisErrorCode::Canceled);
-    }
 
     // Trigger canceled events for queued utterances
     while (!utteranceQueue.isEmpty()) {
@@ -264,15 +255,14 @@ void SpeechSynthesis::boundaryEventOccurred(PlatformSpeechSynthesisUtterance& pl
     static NeverDestroyed<const String> wordBoundaryString(MAKE_STATIC_STRING_IMPL("word"));
     static NeverDestroyed<const String> sentenceBoundaryString(MAKE_STATIC_STRING_IMPL("sentence"));
 
-    ASSERT(platformUtterance.client());
-
-    RefPtr utterance = static_cast<SpeechSynthesisUtterance*>(platformUtterance.client());
+    RefPtr client = platformUtterance.client();
+    ASSERT(client);
     switch (boundary) {
     case SpeechBoundary::SpeechWordBoundary:
-        utterance->eventOccurred(eventNames().boundaryEvent, charIndex, charLength, wordBoundaryString);
+        client->eventOccurred(eventNames().boundaryEvent, charIndex, charLength, wordBoundaryString);
         break;
     case SpeechBoundary::SpeechSentenceBoundary:
-        utterance->eventOccurred(eventNames().boundaryEvent, charIndex, charLength, sentenceBoundaryString);
+        client->eventOccurred(eventNames().boundaryEvent, charIndex, charLength, sentenceBoundaryString);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -329,33 +319,33 @@ void SpeechSynthesis::voicesChanged()
 void SpeechSynthesis::didStartSpeaking(PlatformSpeechSynthesisUtterance& utterance)
 {
     if (utterance.client())
-        static_cast<SpeechSynthesisUtterance&>(*utterance.client()).eventOccurred(eventNames().startEvent, 0, 0, String());
+        downcast<SpeechSynthesisUtterance>(*utterance.client()).eventOccurred(eventNames().startEvent, 0, 0, String());
 }
 
 void SpeechSynthesis::didPauseSpeaking(PlatformSpeechSynthesisUtterance& utterance)
 {
     m_isPaused = true;
     if (utterance.client())
-        static_cast<SpeechSynthesisUtterance&>(*utterance.client()).eventOccurred(eventNames().pauseEvent, 0, 0, String());
+        downcast<SpeechSynthesisUtterance>(*utterance.client()).eventOccurred(eventNames().pauseEvent, 0, 0, String());
 }
 
 void SpeechSynthesis::didResumeSpeaking(PlatformSpeechSynthesisUtterance& utterance)
 {
     m_isPaused = false;
     if (utterance.client())
-        static_cast<SpeechSynthesisUtterance&>(*utterance.client()).eventOccurred(eventNames().resumeEvent, 0, 0, String());
+        downcast<SpeechSynthesisUtterance>(*utterance.client()).eventOccurred(eventNames().resumeEvent, 0, 0, String());
 }
 
 void SpeechSynthesis::didFinishSpeaking(PlatformSpeechSynthesisUtterance& utterance)
 {
     if (utterance.client())
-        handleSpeakingCompleted(static_cast<SpeechSynthesisUtterance&>(*utterance.client()), false);
+        handleSpeakingCompleted(downcast<SpeechSynthesisUtterance>(*utterance.client()), false);
 }
 
 void SpeechSynthesis::speakingErrorOccurred(PlatformSpeechSynthesisUtterance& utterance)
 {
     if (utterance.client())
-        handleSpeakingCompleted(static_cast<SpeechSynthesisUtterance&>(*utterance.client()), true);
+        handleSpeakingCompleted(downcast<SpeechSynthesisUtterance>(*utterance.client()), true);
 }
 
 RefPtr<SpeechSynthesisUtterance> SpeechSynthesis::protectedCurrentSpeechUtterance()
@@ -374,9 +364,26 @@ void SpeechSynthesis::simulateVoicesListChange()
         voicesDidChange();
 }
 
+void SpeechSynthesis::suspend(ReasonForSuspension)
+{
+    if (speaking())
+        cancel();
+}
+
+void SpeechSynthesis::stop()
+{
+    if (speaking())
+        cancel();
+}
+
 bool SpeechSynthesis::virtualHasPendingActivity() const
 {
     return m_voiceList && m_hasEventListener;
+}
+
+ScriptExecutionContext* SpeechSynthesis::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void SpeechSynthesis::eventListenersDidChange()

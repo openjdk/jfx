@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include "Compiler.h"
-#include "DataLog.h"
-#include "HashMap.h"
-#include "Lock.h"
-#include "StackShot.h"
-#include "StackTrace.h"
+#include <wtf/Compiler.h>
+#include <wtf/DataLog.h>
+#include <wtf/HashMap.h>
+#include <wtf/Lock.h>
+#include <wtf/StackShot.h>
+#include <wtf/StackTrace.h>
 
 #include <atomic>
 
@@ -50,9 +50,6 @@ struct RefTrackerLoggingDisabledScope {
 struct RefTracker {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RefTracker);
 public:
-    RefTracker() = default;
-    ~RefTracker() = default;
-
     // NEVER_INLINE to make skipping frames more predictable.
     WTF_EXPORT_PRIVATE void reportLive(void*);
     WTF_EXPORT_PRIVATE void reportDead(void*);

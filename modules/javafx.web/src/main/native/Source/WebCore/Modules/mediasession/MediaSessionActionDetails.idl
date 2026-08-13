@@ -28,6 +28,7 @@
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaSessionActionDetails {
     required MediaSessionAction action;
     double? seekOffset;

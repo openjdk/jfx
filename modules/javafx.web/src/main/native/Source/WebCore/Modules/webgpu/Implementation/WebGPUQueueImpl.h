@@ -42,7 +42,7 @@ class QueueImpl final : public Queue {
 public:
     static Ref<QueueImpl> create(WebGPUPtr<WGPUQueue>&& queue, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new QueueImpl(WTFMove(queue), convertToBackingContext));
+        return adoptRef(*new QueueImpl(WTF::move(queue), convertToBackingContext));
     }
 
     virtual ~QueueImpl();
@@ -58,6 +58,7 @@ private:
     QueueImpl& operator=(QueueImpl&&) = delete;
 
     WGPUQueue backing() const { return m_backing.get(); }
+    bool isQueueImpl() const final { return true; }
 
     void submit(Vector<Ref<WebGPU::CommandBuffer>>&&) final;
 
@@ -102,5 +103,9 @@ private:
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::QueueImpl)
+    static bool isType(const WebCore::WebGPU::Queue& queue) { return queue.isQueueImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

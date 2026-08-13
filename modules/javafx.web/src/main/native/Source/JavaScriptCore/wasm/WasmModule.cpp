@@ -28,8 +28,11 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "JSWebAssemblyInstance.h"
+#include "WasmDebugServer.h"
 #include "WasmIPIntPlan.h"
-#include "WasmLLIntPlan.h"
+#include "WasmInstanceAnchor.h"
+#include "WasmMergedProfile.h"
 #include "WasmModuleInformation.h"
 #include "WasmWorklist.h"
 
@@ -37,35 +40,24 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace Wasm {
 
-Module::Module(LLIntPlan& plan)
-    : m_moduleInformation(plan.takeModuleInformation())
-    , m_llintCallees(LLIntCallees::createFromVector(plan.takeCallees()))
-    , m_ipintCallees(IPIntCallees::create(0))
-    , m_wasmToJSExitStubs(plan.takeWasmToJSExitStubs())
-{
-}
-
 Module::Module(IPIntPlan& plan)
     : m_moduleInformation(plan.takeModuleInformation())
-    , m_llintCallees(LLIntCallees::create(0))
     , m_ipintCallees(IPIntCallees::createFromVector(plan.takeCallees()))
     , m_wasmToJSExitStubs(plan.takeWasmToJSExitStubs())
 {
+    if (Options::enableWasmDebugger()) [[unlikely]]
+        Wasm::DebugServer::singleton().trackModule(*this);
 }
 
-Module::~Module() = default;
+Module::~Module()
+{
+    if (Options::enableWasmDebugger()) [[unlikely]]
+        Wasm::DebugServer::singleton().untrackModule(*this);
+}
 
 Wasm::TypeIndex Module::typeIndexFromFunctionIndexSpace(FunctionSpaceIndex functionIndexSpace) const
 {
     return m_moduleInformation->typeIndexFromFunctionIndexSpace(functionIndexSpace);
-}
-
-static Module::ValidationResult makeValidationResult(LLIntPlan& plan)
-{
-    ASSERT(!plan.hasWork());
-    if (plan.failed())
-        return Unexpected<String>(plan.errorMessage());
-    return Module::ValidationResult(Module::create(plan));
 }
 
 static Module::ValidationResult makeValidationResult(IPIntPlan& plan)
@@ -78,24 +70,15 @@ static Module::ValidationResult makeValidationResult(IPIntPlan& plan)
 
 static Plan::CompletionTask makeValidationCallback(Module::AsyncValidationCallback&& callback)
 {
-    return createSharedTask<Plan::CallbackType>([callback = WTFMove(callback)] (Plan& plan) {
+    return createSharedTask<Plan::CallbackType>([callback = WTF::move(callback)] (Plan& plan) {
         ASSERT(!plan.hasWork());
-        if (Options::useWasmIPInt())
             callback->run(makeValidationResult(static_cast<IPIntPlan&>(plan)));
-        else
-        callback->run(makeValidationResult(static_cast<LLIntPlan&>(plan)));
     });
 }
 
 Module::ValidationResult Module::validateSync(VM& vm, Vector<uint8_t>&& source)
 {
-    if (Options::useWasmIPInt()) {
-        Ref<IPIntPlan> plan = adoptRef(*new IPIntPlan(vm, WTFMove(source), CompilerMode::Validation, Plan::dontFinalize()));
-        Wasm::ensureWorklist().enqueue(plan.get());
-        plan->waitForCompletion();
-        return makeValidationResult(plan.get());
-    }
-    Ref<LLIntPlan> plan = adoptRef(*new LLIntPlan(vm, WTFMove(source), CompilerMode::Validation, Plan::dontFinalize()));
+    Ref<IPIntPlan> plan = adoptRef(*new IPIntPlan(vm, WTF::move(source), CompilerMode::Validation, Plan::dontFinalize()));
     Wasm::ensureWorklist().enqueue(plan.get());
     plan->waitForCompletion();
     return makeValidationResult(plan.get());
@@ -103,13 +86,8 @@ Module::ValidationResult Module::validateSync(VM& vm, Vector<uint8_t>&& source)
 
 void Module::validateAsync(VM& vm, Vector<uint8_t>&& source, Module::AsyncValidationCallback&& callback)
 {
-    if (Options::useWasmIPInt()) {
-        Ref<Plan> plan = adoptRef(*new IPIntPlan(vm, WTFMove(source), CompilerMode::Validation, makeValidationCallback(WTFMove(callback))));
-        Wasm::ensureWorklist().enqueue(WTFMove(plan));
-    } else {
-    Ref<Plan> plan = adoptRef(*new LLIntPlan(vm, WTFMove(source), CompilerMode::Validation, makeValidationCallback(WTFMove(callback))));
-    Wasm::ensureWorklist().enqueue(WTFMove(plan));
-    }
+    Ref<Plan> plan = adoptRef(*new IPIntPlan(vm, WTF::move(source), CompilerMode::Validation, makeValidationCallback(WTF::move(callback))));
+    Wasm::ensureWorklist().enqueue(WTF::move(plan));
 }
 
 Ref<CalleeGroup> Module::getOrCreateCalleeGroup(VM& vm, MemoryMode mode)
@@ -123,12 +101,14 @@ Ref<CalleeGroup> Module::getOrCreateCalleeGroup(VM& vm, MemoryMode mode)
     // FIXME: We might want to back off retrying at some point:
     // https://bugs.webkit.org/show_bug.cgi?id=170607
     if (!calleeGroup || (calleeGroup->compilationFinished() && !calleeGroup->runnable())) {
-        if (Options::useWasmIPInt())
             m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromIPInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), m_ipintCallees.copyRef());
-        else
-            m_calleeGroups[static_cast<uint8_t>(mode)] = calleeGroup = CalleeGroup::createFromLLInt(vm, mode, const_cast<ModuleInformation&>(moduleInformation()), m_llintCallees.copyRef());
     }
     return calleeGroup.releaseNonNull();
+}
+
+void Module::applyCompileOptions(const WebAssemblyCompileOptions& options)
+{
+    m_moduleInformation->applyCompileOptions(options);
 }
 
 Ref<CalleeGroup> Module::compileSync(VM& vm, MemoryMode mode)
@@ -141,7 +121,7 @@ Ref<CalleeGroup> Module::compileSync(VM& vm, MemoryMode mode)
 void Module::compileAsync(VM& vm, MemoryMode mode, CalleeGroup::AsyncCompilationCallback&& task)
 {
     Ref<CalleeGroup> calleeGroup = getOrCreateCalleeGroup(vm, mode);
-    calleeGroup->compileAsync(vm, WTFMove(task));
+    calleeGroup->compileAsync(vm, WTF::move(task));
 }
 
 void Module::copyInitialCalleeGroupToAllMemoryModes(MemoryMode initialMode)
@@ -158,6 +138,35 @@ void Module::copyInitialCalleeGroupToAllMemoryModes(MemoryMode initialMode)
             group = CalleeGroup::createFromExisting(static_cast<MemoryMode>(i), initialBlock);
     }
 }
+
+
+Ref<Wasm::InstanceAnchor> Module::registerAnchor(JSWebAssemblyInstance* instance)
+{
+    auto anchor = Wasm::InstanceAnchor::create(*this, instance);
+    WTF::storeStoreFence();
+    m_anchors.add(anchor.get());
+    return anchor;
+}
+
+std::unique_ptr<MergedProfile> Module::createMergedProfile(const IPIntCallee& callee)
+{
+    auto result = makeUnique<MergedProfile>(callee);
+    for (Ref anchor : m_anchors) {
+        RefPtr<BaselineData> data;
+        {
+            Locker locker { anchor->m_lock };
+            if (JSWebAssemblyInstance* instance = anchor->instance())
+                data = instance->baselineData(callee.functionIndex());
+        }
+        if (!data)
+            continue;
+        result->merge(*this, callee, *data);
+    }
+    return result;
+}
+
+uint32_t Module::debugId() const { return m_moduleInformation->debugInfo->id; }
+void Module::setDebugId(uint32_t id) { m_moduleInformation->debugInfo->id = id; }
 
 } } // namespace JSC::Wasm
 

@@ -428,6 +428,22 @@ public:
                 validateFence(value);
                 validateStackAccess(value);
                 break;
+            case MemoryCopy:
+                VALIDATE(!value->kind().isChill(), ("At ", *value));
+                VALIDATE(value->numChildren() == 3, ("At ", *value));
+                VALIDATE(value->child(0)->type() == pointerType(), ("At ", *value));
+                VALIDATE(value->child(1)->type() == pointerType(), ("At ", *value));
+                VALIDATE(value->child(2)->type() == pointerType(), ("At ", *value));
+                VALIDATE(value->type() == Void, ("At ", *value));
+                break;
+            case MemoryFill:
+                VALIDATE(!value->kind().isChill(), ("At ", *value));
+                VALIDATE(value->numChildren() == 3, ("At ", *value));
+                VALIDATE(value->child(0)->type() == pointerType(), ("At ", *value));
+                VALIDATE(value->child(1)->type() == Int32, ("At ", *value));
+                VALIDATE(value->child(2)->type() == pointerType(), ("At ", *value));
+                VALIDATE(value->type() == Void, ("At ", *value));
+                break;
             case AtomicWeakCAS:
                 VALIDATE(!value->kind().isChill(), ("At ", *value));
                 VALIDATE(value->numChildren() == 3, ("At ", *value));
@@ -865,7 +881,7 @@ public:
 
                 // Check that there are no duplicate cases.
                 Vector<int64_t> caseValues = value->as<SwitchValue>()->caseValues();
-                std::sort(caseValues.begin(), caseValues.end());
+                std::ranges::sort(caseValues);
                 for (unsigned i = 1; i < caseValues.size(); ++i)
                     VALIDATE(caseValues[i - 1] != caseValues[i], ("At ", *value, ", caseValue = ", caseValues[i]));
                 break;

@@ -36,7 +36,7 @@ class Tag final : public ThreadSafeRefCounted<Tag> {
     WTF_MAKE_TZONE_ALLOCATED(Tag);
     WTF_MAKE_NONCOPYABLE(Tag);
 public:
-    static Ref<Tag> create(Ref<const TypeDefinition>&& type) { return adoptRef(*new Tag(WTFMove(type))); }
+    static Ref<Tag> create(Ref<const TypeDefinition>&& type) { return adoptRef(*new Tag(WTF::move(type))); }
 
     FunctionArgCount parameterCount() const { return m_type->as<FunctionSignature>()->argumentCount(); }
 
@@ -61,11 +61,13 @@ public:
 
 private:
     Tag(Ref<const TypeDefinition>&& type)
-        : m_type(WTFMove(type))
+        : m_typeDependencies(type)
+        , m_type(WTF::move(type))
     {
         ASSERT(m_type->is<FunctionSignature>());
     }
 
+    WebAssemblyGCTypeDependencies m_typeDependencies;
     Ref<const TypeDefinition> m_type;
 };
 

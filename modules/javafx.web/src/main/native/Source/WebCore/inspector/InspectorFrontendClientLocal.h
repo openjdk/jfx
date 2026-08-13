@@ -31,8 +31,8 @@
 
 #pragma once
 
-#include "InspectorFrontendAPIDispatcher.h"
-#include "InspectorFrontendClient.h"
+#include <WebCore/InspectorFrontendAPIDispatcher.h>
+#include <WebCore/InspectorFrontendClient.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
@@ -43,11 +43,11 @@ namespace WebCore {
 
 class Color;
 class FloatRect;
-class InspectorController;
 class InspectorBackendDispatchTask;
 class InspectorFrontendHost;
 class LocalFrame;
 class Page;
+class PageInspectorController;
 
 class InspectorFrontendClientLocal : public InspectorFrontendClient {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(InspectorFrontendClientLocal, WEBCORE_EXPORT);
@@ -63,7 +63,9 @@ public:
         virtual void deleteProperty(const String& name);
     };
 
-    WEBCORE_EXPORT InspectorFrontendClientLocal(InspectorController* inspectedPageController, Page* frontendPage, std::unique_ptr<Settings>);
+    enum class DispatchBackendTarget { Page, MainFrame };
+
+    WEBCORE_EXPORT InspectorFrontendClientLocal(PageInspectorController* inspectedPageController, Page* frontendPage, std::unique_ptr<Settings>, DispatchBackendTarget = DispatchBackendTarget::Page);
     WEBCORE_EXPORT ~InspectorFrontendClientLocal() override;
 
     WEBCORE_EXPORT void resetState() override;
@@ -97,7 +99,7 @@ public:
     virtual void attachWindow(DockSide) = 0;
     virtual void detachWindow() = 0;
 
-    WEBCORE_EXPORT void sendMessageToBackend(const String& message) final;
+    WEBCORE_EXPORT void sendMessageToBackend(const String& message) override;
 
     WEBCORE_EXPORT bool isUnderTest() final;
     bool isRemote() const final { return false; }
@@ -145,9 +147,10 @@ private:
     friend class FrontendMenuProvider;
     std::optional<bool> evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult);
 
-    RefPtr<InspectorController> protectedInspectedPageController() const;
+    RefPtr<Page> protectedFrontendPage() const;
+    RefPtr<PageInspectorController> protectedInspectedPageController() const;
 
-    WeakPtr<InspectorController> m_inspectedPageController;
+    WeakPtr<PageInspectorController> m_inspectedPageController;
     WeakPtr<Page> m_frontendPage;
     // TODO(yurys): this ref shouldn't be needed.
     RefPtr<InspectorFrontendHost> m_frontendHost;
