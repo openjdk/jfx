@@ -810,6 +810,8 @@ public enum AccessibleAttribute {
      *     number of visible items </li>
      * <li>Parameters: </li>
      * </ul>
+     *
+     * @since 28
      */
     VISIBLE_ITEM_RANGE(int[].class),
 
