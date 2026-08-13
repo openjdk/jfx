@@ -25,6 +25,7 @@
 
 package com.sun.jfx.incubator.scene.control.richtext.util;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -434,16 +435,20 @@ public final class RichUtils {
         return sb.toString();
     }
 
-
     private static byte[] writeImage(Image im, String format) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        // using disk cache slows things down
-        boolean old = ImageIO.getUseCache();
-        ImageIO.setUseCache(false);
         try {
-            ImageIO.write(ImgUtil.fromFXImage(im, null), format, out);
+            // using disk cache slows things down
+            boolean old = ImageIO.getUseCache();
+            ImageIO.setUseCache(false);
+            try {
+                BufferedImage bi = ImgUtil.fromFXImage(im, null);
+                ImageIO.write(bi, format, out);
+            } finally {
+                ImageIO.setUseCache(old);
+            }
         } finally {
-            ImageIO.setUseCache(old);
+            out.close();
         }
         return out.toByteArray();
     }
