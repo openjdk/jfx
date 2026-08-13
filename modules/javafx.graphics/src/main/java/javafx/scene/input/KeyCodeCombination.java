@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import javafx.beans.NamedArg;
  */
 public final class KeyCodeCombination extends KeyCombination {
     /** The key code associated with this key combination. */
-    private KeyCode code;
+    private final KeyCode code;
 
     /**
      * Gets the key code associated with this key combination.
@@ -145,8 +145,8 @@ public final class KeyCodeCombination extends KeyCombination {
         sb.append(super.getDisplayText());
         final int initialLength = sb.length();
 
-        char c = getSingleChar(code);
-        if (c != 0) {
+        String c = getSingleChar(code);
+        if (c != null) {
             sb.append(c);
             return sb.toString();
         }
@@ -218,59 +218,67 @@ public final class KeyCodeCombination extends KeyCombination {
         }
     }
 
-    /** Compute a single suitable char summarizing the code, if any, and 0 otherwise. */
-    private static char getSingleChar(KeyCode code) {
+    // Returns a suitable string representation of the key code or null
+    private static String getSingleChar(KeyCode code) {
         switch (code) {
-            case ENTER: return '\u21B5';
-            case LEFT: return '\u2190';
-            case UP: return '\u2191';
-            case RIGHT: return '\u2192';
-            case DOWN: return '\u2193';
-            case COMMA: return ',';
-            case MINUS: return '-';
-            case PERIOD: return '.';
-            case SLASH: return '/';
-            case SEMICOLON: return ';';
-            case EQUALS: return '=';
-            case OPEN_BRACKET: return '[';
-            case BACK_SLASH: return '\\';
-            case CLOSE_BRACKET: return ']';
-            case MULTIPLY: return '*';
-            case ADD: return '+';
-            case SUBTRACT: return '-';
-            case DECIMAL: return '.';
-            case DIVIDE: return '/';
-            case BACK_QUOTE: return '`';
-            case QUOTE: return '"';
-            case AMPERSAND: return '&';
-            case ASTERISK: return '*';
-            case LESS: return '<';
-            case GREATER: return '>';
-            case BRACELEFT: return '{';
-            case BRACERIGHT: return '}';
-            case AT: return '@';
-            case COLON: return ':';
-            case CIRCUMFLEX: return '^';
-            case DOLLAR: return '$';
-            case EURO_SIGN: return '\u20AC';
-            case EXCLAMATION_MARK: return '!';
-            case LEFT_PARENTHESIS: return '(';
-            case NUMBER_SIGN: return '#';
-            case PLUS: return '+';
-            case RIGHT_PARENTHESIS: return ')';
-            case UNDERSCORE: return '_';
-            case DIGIT0: return '0';
-            case DIGIT1: return '1';
-            case DIGIT2: return '2';
-            case DIGIT3: return '3';
-            case DIGIT4: return '4';
-            case DIGIT5: return '5';
-            case DIGIT6: return '6';
-            case DIGIT7: return '7';
-            case DIGIT8: return '8';
-            case DIGIT9: return '9';
-            default:
-                break;
+            case ENTER: return "\u21B5";
+            case LEFT: return "\u2190";
+            case UP: return "\u2191";
+            case RIGHT: return "\u2192";
+            case DOWN: return "\u2193";
+            case COMMA: return ",";
+            case MINUS: return "-";
+            case PERIOD: return ".";
+            case SLASH: return "/";
+            case SEMICOLON: return ";";
+            case EQUALS: return "=";
+            case OPEN_BRACKET: return "[";
+            case BACK_SLASH: return "\\";
+            case CLOSE_BRACKET: return "]";
+            case MULTIPLY: return "NumPad *";
+            case ADD: return "NumPad +";
+            case SUBTRACT: return "NumPad -";
+            case DECIMAL: return "NumPad .";
+            case DIVIDE: return "NumPad /";
+            case BACK_QUOTE: return "`";
+            case QUOTE: return "\"";
+            case AMPERSAND: return "&";
+            case ASTERISK: return "*";
+            case LESS: return "<";
+            case GREATER: return ">";
+            case BRACELEFT: return "{";
+            case BRACERIGHT: return "}";
+            case AT: return "@";
+            case COLON: return ":";
+            case CIRCUMFLEX: return "^";
+            case DOLLAR: return "$";
+            case EURO_SIGN: return "\u20AC";
+            case EXCLAMATION_MARK: return "!";
+            case LEFT_PARENTHESIS: return "(";
+            case NUMBER_SIGN: return "#";
+            case PLUS: return "+";
+            case RIGHT_PARENTHESIS: return ")";
+            case UNDERSCORE: return "_";
+            case DIGIT0: return "0";
+            case DIGIT1: return "1";
+            case DIGIT2: return "2";
+            case DIGIT3: return "3";
+            case DIGIT4: return "4";
+            case DIGIT5: return "5";
+            case DIGIT6: return "6";
+            case DIGIT7: return "7";
+            case DIGIT8: return "8";
+            case DIGIT9: return "9";
+            case NUMPAD0: return "NumPad 0";
+            case NUMPAD1: return "NumPad 1";
+            case NUMPAD2: return "NumPad 2";
+            case NUMPAD3: return "NumPad 3";
+            case NUMPAD4: return "NumPad 4";
+            case NUMPAD5: return "NumPad 5";
+            case NUMPAD6: return "NumPad 6";
+            case NUMPAD7: return "NumPad 7";
+            case NUMPAD8: return "NumPad 8";
+            case NUMPAD9: return "NumPad 9";
         }
 
         /*
@@ -279,13 +287,11 @@ public final class KeyCodeCombination extends KeyCombination {
         */
         if (com.sun.javafx.PlatformUtil.isMac()) {
             switch (code) {
-                case BACK_SPACE: return '\u232B';
-                case ESCAPE: return '\u238B';
-                case DELETE: return '\u2326';
-                default:
-                    break;
+                case BACK_SPACE: return "\u232B";
+                case ESCAPE: return "\u238B";
+                case DELETE: return "\u2326";
             }
         }
-        return 0;
+        return null;
     }
 }
