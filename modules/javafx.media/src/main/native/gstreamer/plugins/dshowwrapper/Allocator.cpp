@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,26 +55,29 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
     if (FAILED(hr))
         return hr;
 
+    pSample = (CSample*)*ppBuffer;
+
     if (m_pBuffer == NULL)
     {
         if (GetGstBuffer != NULL)
             GetGstBuffer(&m_pBuffer, m_lSize, &m_UserData);
 
         if (m_pBuffer == NULL)
+        {
+            pSample->Release();
+            *ppBuffer = NULL;
             return E_FAIL;
+        }
     }
 
-    pSample = (CSample*)*ppBuffer;
-    if (!gst_buffer_map(m_pBuffer, &m_MapInfo, GST_MAP_WRITE))
-        return hr;
-
-    pSample->m_pGstBuffer = m_pBuffer;
-    pSample->m_GstMapInfo = m_MapInfo;
-
-    hr = pSample->SetPointer(m_MapInfo.data, m_MapInfo.size);
+    hr = pSample->SetGstBuffer(m_pBuffer);
     m_pBuffer = NULL;
     if (FAILED(hr))
+    {
+        pSample->Release();
+        *ppBuffer = NULL;
         return hr;
+    }
 
     return S_OK;
 }
@@ -86,9 +89,11 @@ HRESULT CAllocator::ReleaseBuffer(IMediaSample *pBuffer)
     CSample *pSample = (CSample*)pBuffer;
     if (ReleaseSample != NULL)
     {
-        gst_buffer_unmap(pSample->m_pGstBuffer, &pSample->m_GstMapInfo);
-        ReleaseSample(pSample->m_pGstBuffer, &m_UserData);
-        pSample->m_pGstBuffer = NULL;
+        GstBuffer *pGstBuffer = pSample->TakeGstBuffer();
+        if (NULL != pGstBuffer)
+        {
+            ReleaseSample(pGstBuffer, &m_UserData);
+        }
     }
 
     hr = CBaseAllocator::ReleaseBuffer(pBuffer);
@@ -181,4 +186,34 @@ STDMETHODIMP CAllocator::SetProperties(ALLOCATOR_PROPERTIES* pRequest, ALLOCATOR
     pActual->cbPrefix = m_lPrefix = pRequest->cbPrefix;
 
     return S_OK;
+}
+
+HRESULT CSample::SetGstBuffer(GstBuffer *pGstBuffer)
+{
+    if (NULL == pGstBuffer)
+    {
+        return E_FAIL;
+    }
+
+    m_pGstBuffer = pGstBuffer;
+
+    if (!gst_buffer_map(pGstBuffer, &m_GstMapInfo, GST_MAP_WRITE))
+    {
+        return E_FAIL;
+    }
+    m_bGstBufferMapped = true;
+
+    return SetPointer(m_GstMapInfo.data, m_GstMapInfo.size);
+}
+
+GstBuffer *CSample::TakeGstBuffer()
+{
+    GstBuffer *ret = m_pGstBuffer;
+    if (NULL != m_pGstBuffer && m_bGstBufferMapped)
+    {
+        gst_buffer_unmap(m_pGstBuffer, &m_GstMapInfo);
+    }
+    m_pGstBuffer = NULL;
+    m_bGstBufferMapped = false;
+    return ret;
 }
