@@ -34,7 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import javafx.event.Event;
@@ -607,9 +609,9 @@ public class KeyCombinationTest {
 
     private static Stream platformSpecificCombinations() {
         return Stream.of(
-            Arguments.of("Back Space", "\u232B", KeyCode.BACK_SPACE), // Back Space?? it's Backspace on my keyboard
+            Arguments.of("Backspace", "\u232B", KeyCode.BACK_SPACE),
             Arguments.of("Delete", "\u2326", KeyCode.DELETE),
-            Arguments.of("Escape", "\u238B", KeyCode.ESCAPE)
+            Arguments.of("Esc", "\u238B", KeyCode.ESCAPE)
         );
     }
 
@@ -623,31 +625,54 @@ public class KeyCombinationTest {
         assertPlatformEquals(win, mac, k.getDisplayText());
     }
 
-    private static Stream numPadCombinations() {
-        return Stream.of(
-            Arguments.of("NumPad 0", KeyCode.NUMPAD0),
-            Arguments.of("NumPad 1", KeyCode.NUMPAD1),
-            Arguments.of("NumPad 2", KeyCode.NUMPAD2),
-            Arguments.of("NumPad 3", KeyCode.NUMPAD3),
-            Arguments.of("NumPad 4", KeyCode.NUMPAD4),
-            Arguments.of("NumPad 5", KeyCode.NUMPAD5),
-            Arguments.of("NumPad 6", KeyCode.NUMPAD6),
-            Arguments.of("NumPad 7", KeyCode.NUMPAD7),
-            Arguments.of("NumPad 8", KeyCode.NUMPAD8),
-            Arguments.of("NumPad 9", KeyCode.NUMPAD9),
-            Arguments.of("NumPad *", KeyCode.MULTIPLY),
-            Arguments.of("NumPad +", KeyCode.ADD),
-            Arguments.of("NumPad -", KeyCode.SUBTRACT),
-            Arguments.of("NumPad .", KeyCode.DECIMAL),
-            Arguments.of("NumPad /", KeyCode.DIVIDE)
+    private static List<Arguments> commonCombinations() {
+        return toArgumentsList(
+            2,
+            "NumPad 0", KeyCode.NUMPAD0,
+            "NumPad 1", KeyCode.NUMPAD1,
+            "NumPad 2", KeyCode.NUMPAD2,
+            "NumPad 3", KeyCode.NUMPAD3,
+            "NumPad 4", KeyCode.NUMPAD4,
+            "NumPad 5", KeyCode.NUMPAD5,
+            "NumPad 6", KeyCode.NUMPAD6,
+            "NumPad 7", KeyCode.NUMPAD7,
+            "NumPad 8", KeyCode.NUMPAD8,
+            "NumPad 9", KeyCode.NUMPAD9,
+            "NumPad *", KeyCode.MULTIPLY,
+            "NumPad +", KeyCode.ADD,
+            "NumPad -", KeyCode.SUBTRACT,
+            "NumPad .", KeyCode.DECIMAL,
+            "NumPad /", KeyCode.DIVIDE,
+            "PgDn", KeyCode.PAGE_DOWN,
+            "PgUp", KeyCode.PAGE_UP
         );
+    }
+
+    // converts an array into a Stream<Arguments> with the specified arity (number of arguments)
+    // this should be a standard function in junit5
+    private static List<Arguments> toArgumentsList(int arity, Object... items) {
+        if (arity <= 0) {
+            throw new IllegalArgumentException("arity must be > 0");
+        }
+        if ((items.length % arity) != 0) {
+            throw new IllegalArgumentException("wrong number of items for arity=" + arity);
+        }
+        ArrayList<Arguments> a = new ArrayList<>();
+        for (int i = 0; i < items.length;) {
+            Object[] v = new Object[arity];
+            for (int j = 0; j < arity; ) {
+                v[j++] = items[i++];
+            }
+            a.add(Arguments.of(v));
+        }
+        return a;
     }
 
     /**
      * Checks numeric pad keys
      */
     @ParameterizedTest
-    @MethodSource("numPadCombinations")
+    @MethodSource("commonCombinations")
     public void numPadSymbols(String expected, KeyCode code) {
         KeyCodeCombination k = new KeyCodeCombination(code);
         assertEquals(expected, k.getDisplayText());

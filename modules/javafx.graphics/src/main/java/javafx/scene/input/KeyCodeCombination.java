@@ -220,6 +220,16 @@ public final class KeyCodeCombination extends KeyCombination {
 
     // Returns a suitable string representation of the key code or null
     private static String getSingleChar(KeyCode code) {
+        // On Mac we display these unicode symbols,
+        // otherwise we default to the Text version of the char.
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            switch (code) {
+                case BACK_SPACE: return "\u232B";
+                case ESCAPE: return "\u238B";
+                case DELETE: return "\u2326";
+            }
+        }
+
         switch (code) {
             case ENTER: return "\u21B5";
             case LEFT: return "\u2190";
@@ -279,19 +289,12 @@ public final class KeyCodeCombination extends KeyCombination {
             case NUMPAD7: return "NumPad 7";
             case NUMPAD8: return "NumPad 8";
             case NUMPAD9: return "NumPad 9";
+            case BACK_SPACE: return "Backspace";
+            case ESCAPE: return "Esc";
+            case PAGE_DOWN: return "PgDn";
+            case PAGE_UP: return "PgUp";
         }
 
-        /*
-        ** On Mac we display these unicode symbols,
-        ** otherwise we default to the Text version of the char.
-        */
-        if (com.sun.javafx.PlatformUtil.isMac()) {
-            switch (code) {
-                case BACK_SPACE: return "\u232B";
-                case ESCAPE: return "\u238B";
-                case DELETE: return "\u2326";
-            }
-        }
         return null;
     }
 }
