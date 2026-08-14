@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package jfx.incubator.scene.control.input;
 
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -31,6 +31,7 @@ import javafx.event.EventType;
  * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers.
  *
  * @param <T> the type of the event
+ * @since 999 TODO
  */
 public interface EventCriteria<T extends Event> {
     /**
