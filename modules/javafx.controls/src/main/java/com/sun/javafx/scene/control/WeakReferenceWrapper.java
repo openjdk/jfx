@@ -33,7 +33,7 @@ import java.util.Objects;
 /**
  * Wrapper class that holds a reference to an object with or without identity.
  * If the object is non-null and has identity, a weak reference is created and
- * stored; otherwise it holds a reference to the object itself,
+ * stored; otherwise it holds a reference to the object itself.
  * <p>
  * In the case of a value object, the referent is never collected, so it is only
  * suitable for uses that do not rely on the object being placed onto a reference
@@ -50,7 +50,7 @@ public class WeakReferenceWrapper<T> {
     static {
         Method meth;
         try {
-            meth = Objects.class.getDeclaredMethod("hasIdentity", Object.class);
+            meth = Objects.class.getMethod("hasIdentity", Object.class);
         } catch (NoSuchMethodException ex) {
             meth = null;
         }
@@ -59,12 +59,13 @@ public class WeakReferenceWrapper<T> {
     }
 
     /**
-     * Helper function that calls Object.hasIdentity via reflection.
-     * If `obj` is null, treat is as having no identity (matching JDK 28's
-     * behavior with or without --enable-preview) and return false.
-     * If `obj` is not null, check whether Objects.hasIdentity exists: if the
-     * method doesn't exist or cannot be invoked, return true; otherwise, call
-     * Objects.hasIdentity(obj) reflectively and return its value.
+     * Helper method that reflectively calls Objects.hasIdentity to determine
+     * whether we should create and hold a weak reference to the given object.
+     * If {@code obj} is null, treat it as having no identity (matching JDK 28's
+     * behavior with or without {@code --enable-preview}) and return false.
+     * If {@code obj} is not null, check whether {@code Objects.hasIdentity} exists:
+     * if the method doesn't exist or cannot be invoked, return true; otherwise,
+     * call {@code Objects.hasIdentity(obj)} reflectively and return its value.
      */
     private static boolean useWeakRef(Object obj) {
         if (obj == null) {
@@ -86,7 +87,9 @@ public class WeakReferenceWrapper<T> {
     /**
      * Creates a new reference that refers to the given object.
      * If the object is non-null and has identity, a weak reference is created and
-     * stored; otherwise it holds a reference to the object itself,
+     * stored; otherwise it holds a reference to the object itself.
+     *
+     * @param obj the object this reference will refer to
      */
     public WeakReferenceWrapper(T obj) {
         if (useWeakRef(obj)) {
