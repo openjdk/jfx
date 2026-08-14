@@ -2444,9 +2444,9 @@ project(":graphics") {
 
         classpath = configurations.compileClasspath
 
-        source = project.sourceSets.main.java.srcDirs
-        source += "$buildDir/gensrc/java"
-        source += project.sourceSets.shaders.output
+        source project.sourceSets.main.java.srcDirs
+        source "$buildDir/gensrc/java"
+        source project.sourceSets.shaders.output
 
         destinationDirectory = project.sourceSets.main.java.destinationDirectory
         options.compilerArgs.addAll([
