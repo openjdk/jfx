@@ -55,7 +55,6 @@ public class WeakReferenceWrapper<T> {
             meth = null;
         }
         hasIdentityMethod = meth;
-        System.err.println("hasIdentityMethod = " + hasIdentityMethod);
     }
 
     /**
@@ -69,14 +68,11 @@ public class WeakReferenceWrapper<T> {
      */
     private static boolean useWeakRef(Object obj) {
         if (obj == null) {
-            System.err.println("[1] null");
             return false;
         } else if (hasIdentityMethod == null) {
-            System.err.println("[2] hasIdentityMethod == null");
             return true;
         } else {
             try {
-                System.err.println("[3] Calling Objects.hasIdentityMethod(obj)");
                 return (Boolean)hasIdentityMethod.invoke(null, obj);
             } catch (IllegalAccessException | InvocationTargetException ex) {
                 return true;
@@ -93,16 +89,12 @@ public class WeakReferenceWrapper<T> {
      */
     public WeakReferenceWrapper(T obj) {
         if (useWeakRef(obj)) {
-            System.err.println("obj has identity : " + obj);
             this.obj = null;
             this.ref = new WeakReference<>(obj);
         } else {
-            System.err.println("obj is a value object : " + obj);
             this.obj = obj;
             this.ref = null;
         }
-
-        System.err.println("WeakReferenceWrapper: this.obj = " + this.obj + ", this.ref = " + this.ref);
     }
 
     /**
