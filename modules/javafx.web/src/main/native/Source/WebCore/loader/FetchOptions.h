@@ -28,14 +28,14 @@
 
 #pragma once
 
-#include "FetchOptionsCache.h"
-#include "FetchOptionsCredentials.h"
-#include "FetchOptionsDestination.h"
-#include "FetchOptionsMode.h"
-#include "FetchOptionsRedirect.h"
-#include "ProcessQualified.h"
-#include "ReferrerPolicy.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/FetchOptionsCache.h>
+#include <WebCore/FetchOptionsCredentials.h>
+#include <WebCore/FetchOptionsDestination.h>
+#include <WebCore/FetchOptionsMode.h>
+#include <WebCore/FetchOptionsRedirect.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/Markable.h>
 #include <wtf/text/WTFString.h>
 
@@ -51,10 +51,10 @@ struct FetchOptions {
     FetchOptions() = default;
     FetchOptions(Destination, Mode, Credentials, Cache, Redirect, ReferrerPolicy, bool, String&&, Markable<WTF::UUID>, Markable<WTF::UUID>);
     FetchOptions isolatedCopy() const & { return { destination, mode, credentials, cache, redirect, referrerPolicy, keepAlive, integrity.isolatedCopy(), clientIdentifier, resultingClientIdentifier }; }
-    FetchOptions isolatedCopy() && { return { destination, mode, credentials, cache, redirect, referrerPolicy, keepAlive, WTFMove(integrity).isolatedCopy(), clientIdentifier, resultingClientIdentifier }; }
+    FetchOptions isolatedCopy() && { return { destination, mode, credentials, cache, redirect, referrerPolicy, keepAlive, WTF::move(integrity).isolatedCopy(), clientIdentifier, resultingClientIdentifier }; }
 
     template<class Encoder> void encodePersistent(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decodePersistent(Decoder&, FetchOptions&);
+    template<class Decoder> [[nodiscard]] static bool decodePersistent(Decoder&, FetchOptions&);
 
     Destination destination { Destination::EmptyString };
     Mode mode { Mode::NoCors };
@@ -76,7 +76,7 @@ inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credential
     , redirect(redirect)
     , referrerPolicy(referrerPolicy)
     , keepAlive(keepAlive)
-    , integrity(WTFMove(integrity))
+    , integrity(WTF::move(integrity))
     , clientIdentifier(clientIdentifier)
     , resultingClientIdentifier(resultingClientIdentifier)
 {
@@ -108,10 +108,15 @@ inline bool isNonSubresourceRequest(FetchOptions::Destination destination)
         || destination == FetchOptions::Destination::Worker;
 }
 
-inline bool isScriptLikeDestination(FetchOptions::Destination destination)
+inline bool isWorkletDestination(FetchOptions::Destination destination)
 {
     return destination == FetchOptions::Destination::Audioworklet
-        || destination == FetchOptions::Destination::Paintworklet
+        || destination == FetchOptions::Destination::Paintworklet;
+}
+
+inline bool isScriptLikeDestination(FetchOptions::Destination destination)
+{
+    return isWorkletDestination(destination)
         || destination == FetchOptions::Destination::Script
         || destination == FetchOptions::Destination::Serviceworker
         || destination == FetchOptions::Destination::Sharedworker
@@ -142,6 +147,7 @@ template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Destination> {
         WebCore::FetchOptions::Destination::Script,
         WebCore::FetchOptions::Destination::Serviceworker,
         WebCore::FetchOptions::Destination::Sharedworker,
+        WebCore::FetchOptions::Destination::Speculationrules,
         WebCore::FetchOptions::Destination::Style,
         WebCore::FetchOptions::Destination::Track,
         WebCore::FetchOptions::Destination::Video,
@@ -258,7 +264,7 @@ inline bool FetchOptions::decodePersistent(Decoder& decoder, FetchOptions& optio
     options.cache = *cache;
     options.redirect = *redirect;
     options.referrerPolicy = *referrerPolicy;
-    options.integrity = WTFMove(*integrity);
+    options.integrity = WTF::move(*integrity);
     options.keepAlive = *keepAlive;
 
     return true;

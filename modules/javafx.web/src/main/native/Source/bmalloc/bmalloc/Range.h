@@ -25,6 +25,9 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
 #include <algorithm>
 #include <cstddef>
 
@@ -72,3 +75,5 @@ inline Range merge(const Range& a, const Range& b)
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

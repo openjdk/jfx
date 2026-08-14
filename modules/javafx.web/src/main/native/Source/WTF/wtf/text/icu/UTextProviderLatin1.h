@@ -26,7 +26,9 @@
 #pragma once
 
 #include <unicode/utext.h>
-#include <wtf/text/LChar.h>
+#include <wtf/ExportMacros.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/text/Latin1Character.h>
 
 namespace WTF {
 
@@ -38,7 +40,7 @@ struct UTextWithBuffer {
     char16_t buffer[UTextWithBufferInlineCapacity];
 };
 
-UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, UErrorCode* status);
-WTF_EXPORT_PRIVATE UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, std::span<const char16_t> priorContext, UErrorCode* status);
+UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const Latin1Character> string, UErrorCode* status);
+WTF_EXPORT_PRIVATE UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const Latin1Character> string, std::span<const char16_t> priorContext, UErrorCode* status);
 
 } // namespace WTF

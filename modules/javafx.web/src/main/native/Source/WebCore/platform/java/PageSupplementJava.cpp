@@ -28,6 +28,8 @@
 #include "PageSupplementJava.h"
 #include "Page.h"
 #include "Frame.h"
+#include "DocumentPage.h"
+
 #include <wtf/java/JavaEnv.h>
 
 namespace WebCore {

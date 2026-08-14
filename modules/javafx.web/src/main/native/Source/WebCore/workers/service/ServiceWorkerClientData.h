@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "PageIdentifier.h"
-#include "ProcessQualified.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerClientType.h"
-#include "ServiceWorkerTypes.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerClientType.h>
+#include <WebCore/ServiceWorkerTypes.h>
 #include <wtf/URL.h>
 
 namespace WebCore {

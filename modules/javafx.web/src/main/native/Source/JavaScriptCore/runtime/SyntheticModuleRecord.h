@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AbstractModuleRecord.h"
-#include "ArgList.h"
-#include "SourceCode.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/SourceCode.h>
 
 namespace JSC {
 

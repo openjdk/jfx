@@ -21,25 +21,26 @@
 #include "DOMPluginArray.h"
 
 #include "DOMPlugin.h"
-#include "FrameInlines.h"
+#include "DocumentPage.h"
 #include "LocalFrameInlines.h"
 #include "Page.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMPluginArray);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMPluginArray);
 
 Ref<DOMPluginArray> DOMPluginArray::create(Navigator& navigator, Vector<Ref<DOMPlugin>>&& publiclyVisiblePlugins, Vector<Ref<DOMPlugin>>&& additionalWebVisibilePlugins)
 {
-    return adoptRef(*new DOMPluginArray(navigator, WTFMove(publiclyVisiblePlugins), WTFMove(additionalWebVisibilePlugins)));
+    return adoptRef(*new DOMPluginArray(navigator, WTF::move(publiclyVisiblePlugins), WTF::move(additionalWebVisibilePlugins)));
 }
 
 DOMPluginArray::DOMPluginArray(Navigator& navigator, Vector<Ref<DOMPlugin>>&& publiclyVisiblePlugins, Vector<Ref<DOMPlugin>>&& additionalWebVisibilePlugins)
     : m_navigator(navigator)
-    , m_publiclyVisiblePlugins(WTFMove(publiclyVisiblePlugins))
-    , m_additionalWebVisibilePlugins(WTFMove(additionalWebVisibilePlugins))
+    , m_publiclyVisiblePlugins(WTF::move(publiclyVisiblePlugins))
+    , m_additionalWebVisibilePlugins(WTF::move(additionalWebVisibilePlugins))
 {
 }
 

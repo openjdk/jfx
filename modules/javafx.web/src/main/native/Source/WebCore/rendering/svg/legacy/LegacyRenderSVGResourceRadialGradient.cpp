@@ -27,10 +27,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceRadialGradient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGResourceRadialGradient);
 
 LegacyRenderSVGResourceRadialGradient::LegacyRenderSVGResourceRadialGradient(SVGRadialGradientElement& element, RenderStyle&& style)
-    : LegacyRenderSVGResourceGradient(Type::LegacySVGResourceRadialGradient, element, WTFMove(style))
+    : LegacyRenderSVGResourceGradient(Type::LegacySVGResourceRadialGradient, element, WTF::move(style))
 {
 }
 
@@ -69,8 +69,7 @@ Ref<Gradient> LegacyRenderSVGResourceRadialGradient::buildGradient(const RenderS
         { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied },
         platformSpreadMethodFromSVGType(m_attributes.spreadMethod()),
         stopsByApplyingColorFilter(m_attributes.stops(), style),
-        RenderingResourceIdentifier::generate()
-    );
+        false);
 }
 
 }

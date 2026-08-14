@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "Operands.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/Operands.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SegmentedVector.h>
@@ -85,25 +85,17 @@ public:
     {
         return !m_operand.isValid() && m_bytecodeIndex.isHashTableDeletedValue();
     }
+
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 private:
     BytecodeIndex m_bytecodeIndex;
     Operand m_operand;
 };
 
-struct LazyOperandValueProfileKeyHash {
-    static unsigned hash(const LazyOperandValueProfileKey& key) { return key.hash(); }
-    static bool equal(
-        const LazyOperandValueProfileKey& a,
-        const LazyOperandValueProfileKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::LazyOperandValueProfileKey> : JSC::LazyOperandValueProfileKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::LazyOperandValueProfileKey> : public GenericHashTraits<JSC::LazyOperandValueProfileKey> {

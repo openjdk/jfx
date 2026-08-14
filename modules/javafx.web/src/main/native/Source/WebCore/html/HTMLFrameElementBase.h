@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
-#include "HTMLFrameOwnerElement.h"
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/HTMLFrameOwnerElement.h>
 
 namespace JSC {
 class CallFrame;
@@ -33,7 +33,7 @@ class CallFrame;
 namespace WebCore {
 
 class HTMLFrameElementBase : public HTMLFrameOwnerElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameElementBase);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFrameElementBase);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameElementBase);
 public:
     void setLocation(JSC::JSGlobalObject&, const String&);

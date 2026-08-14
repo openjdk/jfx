@@ -565,7 +565,7 @@ class PropertyData:
                 output += codePoint
             else:
                 output += "\\x{:x}".format(ord(codePoint))
-        file.write("{{ std::span {{ const_cast<char32_t*>(U\"{}\"), {} }}}}".format(output, len(utf32String)))
+        file.write("{{ std::span {{ U\"{}\", {} }}}}".format(output, len(utf32String)))
 
     def dump(self, file, commaAfter):
         file.write("static std::unique_ptr<CharacterClass> {}()\n{{\n".format(self.getCreateFuncName()))

@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "CollectionIndexCache.h"
-#include "Element.h"
-#include "HTMLNames.h"
-#include "LiveNodeList.h"
+#include <WebCore/CollectionIndexCache.h>
+#include <WebCore/Element.h>
+#include <WebCore/HTMLNames.h>
+#include <WebCore/LiveNodeList.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -60,7 +60,7 @@ private:
 
 // HTMLCollection subclasses NodeList to maintain legacy ObjC API compatibility.
 class HTMLCollection : public NodeList {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLCollection, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(HTMLCollection, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT virtual ~HTMLCollection();
 
@@ -77,7 +77,8 @@ public:
     inline bool isRootedAtTreeScope() const;
     inline NodeListInvalidationType invalidationType() const;
     inline CollectionType type() const;
-    inline ContainerNode& ownerNode() const;
+    ContainerNode& ownerNode() const { return m_ownerNode; }
+    Ref<ContainerNode> protectedOwnerNode() const { return m_ownerNode; }
     inline ContainerNode& rootNode() const;
     inline void invalidateCacheForAttribute(const QualifiedName& attributeName);
     WEBCORE_EXPORT virtual void invalidateCacheForDocument(Document&);
@@ -124,9 +125,9 @@ inline size_t CollectionNamedElementCache::memoryCost() const
     return (m_idMap.size() + m_nameMap.size()) * sizeof(Element*) + m_propertyNames.size() * sizeof(AtomString);
 }
 
-inline ContainerNode& HTMLCollection::ownerNode() const
+inline CollectionType HTMLCollection::type() const
 {
-    return m_ownerNode;
+    return static_cast<CollectionType>(m_collectionType);
 }
 
 } // namespace WebCore

@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 #if CPU(ARM64E)
 #include <ptrauth.h>
 #endif
@@ -35,16 +38,19 @@ namespace WTF {
 
 #if COMPILER_HAS_CLANG_BUILTIN(__builtin_get_vtable_pointer)
 
-template<typename T, typename = std::enable_if_t<std::is_polymorphic_v<T>>>
+template<typename T>
+    requires (std::is_polymorphic_v<T>)
 ALWAYS_INLINE const void* getVTablePointer(const T* o) { return __builtin_get_vtable_pointer(o); }
 
 #else // not COMPILER_HAS_CLANG_BUILTIN(__builtin_get_vtable_pointer)
 
 #if CPU(ARM64E)
-template<typename T, typename = std::enable_if_t<std::is_polymorphic_v<T>>>
+template<typename T>
+    requires (std::is_polymorphic_v<T>)
 ALWAYS_INLINE const void* getVTablePointer(const T* o) { return __builtin_ptrauth_auth(*(reinterpret_cast<const void* const*>(o)), ptrauth_key_cxx_vtable_pointer, 0); }
 #else // not CPU(ARM64E)
-template<typename T, typename = std::enable_if_t<std::is_polymorphic_v<T>>>
+template<typename T>
+    requires (std::is_polymorphic_v<T>)
 ALWAYS_INLINE const void* getVTablePointer(const T* o) { return (*(reinterpret_cast<const void* const*>(o))); }
 #endif // not CPU(ARM64E)
 

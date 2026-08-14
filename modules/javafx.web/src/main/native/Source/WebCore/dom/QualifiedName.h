@@ -33,14 +33,14 @@ enum class Namespace : uint8_t;
 enum class NodeName : uint16_t;
 
 struct QualifiedNameComponents {
-    AtomStringImpl* m_prefix;
-    AtomStringImpl* m_localName;
-    AtomStringImpl* m_namespaceURI;
+    RefPtr<AtomStringImpl> m_prefix;
+    RefPtr<AtomStringImpl> m_localName;
+    RefPtr<AtomStringImpl> m_namespaceURI;
 };
 
 inline void add(Hasher& hasher, const QualifiedNameComponents& components)
 {
-    add(hasher, components.m_prefix, components.m_localName, components.m_namespaceURI);
+    add(hasher, components.m_prefix.get(), components.m_localName.get(), components.m_namespaceURI.get());
 }
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedName);

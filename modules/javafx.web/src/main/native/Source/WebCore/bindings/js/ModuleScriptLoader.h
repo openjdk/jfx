@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "JSDOMPromiseDeferred.h"
-#include "ModuleFetchParameters.h"
 #include <JavaScriptCore/ScriptFetcher.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
+#include <WebCore/ModuleFetchParameters.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -47,19 +47,22 @@ public:
     JSC::ScriptFetcher& scriptFetcher() { return m_scriptFetcher.get(); }
     JSC::ScriptFetchParameters* parameters() { return m_parameters.get(); }
 
+    virtual bool isCachedModuleScriptLoader() const { return false; }
+    virtual bool isWorkerModuleScriptLoader() const { return false; }
+
 protected:
     ModuleScriptLoader(ModuleScriptLoaderClient& client, DeferredPromise& promise, JSC::ScriptFetcher& scriptFetcher, RefPtr<JSC::ScriptFetchParameters>&& parameters)
         : m_client(&client)
         , m_promise(&promise)
         , m_scriptFetcher(scriptFetcher)
-        , m_parameters(WTFMove(parameters))
+        , m_parameters(WTF::move(parameters))
     {
     }
 
     ModuleScriptLoaderClient* m_client;
     RefPtr<DeferredPromise> m_promise;
     const Ref<JSC::ScriptFetcher> m_scriptFetcher;
-    RefPtr<JSC::ScriptFetchParameters> m_parameters;
+    const RefPtr<JSC::ScriptFetchParameters> m_parameters;
 };
 
 } // namespace WebCore

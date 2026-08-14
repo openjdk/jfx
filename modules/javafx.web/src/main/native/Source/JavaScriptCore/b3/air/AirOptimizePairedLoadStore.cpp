@@ -241,14 +241,14 @@ static bool tryStorePair(Code& code, BasicBlock* block, unsigned current, Inst& 
             int64_t targetOffsetFromFP = targetOffset - code.frameSize();
 
             if (isValidOffset(instOffsetFromFP) && targetOffsetFromFP == (instOffsetFromFP + bytesForWidth(instWidth))) {
-                Inst newInst(pairOpcode, target.origin, inst.args[0], target.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), instOffsetFromFP));
+                Inst newInst(pairOpcode, target.origin, inst.args[0], target.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), static_cast<int32_t>(instOffsetFromFP)));
                 logFound(newInst);
                 target = newInst;
                 return true;
             }
 
             if (isValidOffset(targetOffsetFromFP) && (targetOffsetFromFP + bytesForWidth(instWidth)) == instOffsetFromFP) {
-                Inst newInst(pairOpcode, target.origin, target.args[0], inst.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), targetOffsetFromFP));
+                Inst newInst(pairOpcode, target.origin, target.args[0], inst.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), static_cast<int32_t>(targetOffsetFromFP)));
                 logFound(newInst);
                 target = newInst;
                 return true;

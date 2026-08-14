@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CCallHelpers.h"
+#include <JavaScriptCore/CCallHelpers.h>
 
 namespace JSC {
 

@@ -80,7 +80,7 @@ static const URLSchemesMap& allBuiltinSchemes()
         };
 
         // Other misc schemes that the LegacySchemeRegistry doesn't know about.
-        static constexpr ASCIILiteral otherSchemes[] = {
+        static constexpr auto otherSchemes = std::to_array<ASCIILiteral>({
             "webkit-fake-url"_s,
 #if PLATFORM(MAC)
             "safari-extension"_s,
@@ -91,7 +91,7 @@ static const URLSchemesMap& allBuiltinSchemes()
 #if ENABLE(CONTENT_FILTERING)
             ContentFilter::urlScheme(),
 #endif
-        };
+        });
 
         URLSchemesMap set;
         {
@@ -144,6 +144,9 @@ static std::span<const ASCIILiteral> builtinSecureSchemes()
         "about"_s,
         "data"_s,
         "wss"_s,
+#if ENABLE(SWIFT_DEMO_URI_SCHEME)
+        "x-swift-demo"_s,
+#endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         "resource"_s,
 #endif

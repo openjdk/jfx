@@ -25,6 +25,7 @@
 
 [
     Conditional=APPLE_PAY,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayRequestBase {
     sequence<ApplePayFeature> features;
 
@@ -51,4 +52,6 @@
     [Conditional=APPLE_PAY_LATER_AVAILABILITY] ApplePayLaterAvailability applePayLaterAvailability;
 
     [Conditional=APPLE_PAY_MERCHANT_CATEGORY_CODE] DOMString merchantCategoryCode;
+
+    [Conditional=APPLE_PAY_DELEGATED_REQUEST] boolean isDelegatedRequest;
 };

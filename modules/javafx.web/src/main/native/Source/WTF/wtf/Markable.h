@@ -131,7 +131,7 @@ public:
     { }
 
     constexpr Markable(T&& value)
-        : m_value(WTFMove(value))
+        : m_value(WTF::move(value))
     { }
 
     constexpr Markable(const T& value)
@@ -148,7 +148,7 @@ public:
     { }
 
     constexpr Markable(std::optional<T>&& value)
-        : m_value(bool(value) ? WTFMove(*value) : Traits::emptyValue())
+        : m_value(bool(value) ? WTF::move(*value) : Traits::emptyValue())
     { }
 
     constexpr explicit operator bool() const { return !Traits::isEmptyValue(m_value); }
@@ -157,11 +157,11 @@ public:
 
     constexpr const T& value() const& { RELEASE_ASSERT(bool(*this)); return m_value; }
     constexpr T& value() & { RELEASE_ASSERT(bool(*this)); return m_value; }
-    constexpr T&& value() && { RELEASE_ASSERT(bool(*this)); return WTFMove(m_value); }
+    constexpr T&& value() && { RELEASE_ASSERT(bool(*this)); return WTF::move(m_value); }
 
     constexpr const T& unsafeValue() const& { return m_value; }
     constexpr T& unsafeValue() & { return m_value; }
-    constexpr T&& unsafeValue() && { return WTFMove(m_value); }
+    constexpr T&& unsafeValue() && { return WTF::move(m_value); }
 
     constexpr const T* operator->() const { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
     constexpr T* operator->() { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
@@ -179,7 +179,7 @@ public:
     operator std::optional<T>() &&
     {
         if (bool(*this))
-            return WTFMove(m_value);
+            return WTF::move(m_value);
         return std::nullopt;
     }
 

@@ -56,7 +56,7 @@ static uint32_t getDimension(auto& extent3D)
 }
 
 GPUTexture::GPUTexture(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
     , m_format(descriptor.format)
     , m_width(getDimension<0>(descriptor.size))
     , m_height(getDimension<1>(descriptor.size))
@@ -78,31 +78,22 @@ String GPUTexture::label() const
 
 void GPUTexture::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 static WebGPU::TextureViewDescriptor convertToBacking(const std::optional<GPUTextureViewDescriptor>& textureViewDescriptor)
 {
-    if (!textureViewDescriptor) {
-        return {
-            { },
-            std::nullopt,
-            std::nullopt,
-            WebGPU::TextureAspect::All,
-            0,
-            std::nullopt,
-            0,
-            std::nullopt
-        };
-    }
+    if (!textureViewDescriptor)
+        return WebGPU::TextureViewDescriptor { };
+
     return textureViewDescriptor->convertToBacking();
 }
 
 ExceptionOr<Ref<GPUTextureView>> GPUTexture::createView(const std::optional<GPUTextureViewDescriptor>& textureViewDescriptor) const
 {
     if (textureViewDescriptor.has_value() && textureViewDescriptor->format.has_value()) {
-        if (!m_device->isSupportedFormat(*textureViewDescriptor->format))
-            return Exception { ExceptionCode::TypeError, "GPUTexture.createView: Unsupported texture format."_s };
+        if (auto error = m_device->errorValidatingSupportedFormat(*textureViewDescriptor->format))
+            return Exception { ExceptionCode::TypeError, makeString("GPUTexture.createView: Unsupported texture format: "_s, *error) };
     }
     RefPtr view = m_backing->createView(convertToBacking(textureViewDescriptor));
     if (!view)
@@ -199,6 +190,8 @@ uint32_t GPUTexture::texelBlockSize(GPUTextureFormat format)
     case GPUTextureFormat::R8uint:
     case GPUTextureFormat::R8sint:
         return 1;
+    case GPUTextureFormat::R16unorm:
+    case GPUTextureFormat::R16snorm:
     case GPUTextureFormat::R16uint:
     case GPUTextureFormat::R16sint:
     case GPUTextureFormat::R16float:
@@ -210,6 +203,8 @@ uint32_t GPUTexture::texelBlockSize(GPUTextureFormat format)
     case GPUTextureFormat::R32float:
     case GPUTextureFormat::R32uint:
     case GPUTextureFormat::R32sint:
+    case GPUTextureFormat::Rg16unorm:
+    case GPUTextureFormat::Rg16snorm:
     case GPUTextureFormat::Rg16uint:
     case GPUTextureFormat::Rg16sint:
     case GPUTextureFormat::Rg16float:
@@ -228,6 +223,8 @@ uint32_t GPUTexture::texelBlockSize(GPUTextureFormat format)
     case GPUTextureFormat::Rg32float:
     case GPUTextureFormat::Rg32uint:
     case GPUTextureFormat::Rg32sint:
+    case GPUTextureFormat::Rgba16unorm:
+    case GPUTextureFormat::Rgba16snorm:
     case GPUTextureFormat::Rgba16uint:
     case GPUTextureFormat::Rgba16sint:
     case GPUTextureFormat::Rgba16float:
@@ -243,12 +240,10 @@ uint32_t GPUTexture::texelBlockSize(GPUTextureFormat format)
     case GPUTextureFormat::Depth24plus:
         return 4;
     case GPUTextureFormat::Depth24plusStencil8:
-        ASSERT_NOT_REACHED();
         return 0;
     case GPUTextureFormat::Depth32float:
         return 4;
     case GPUTextureFormat::Depth32floatStencil8:
-        ASSERT_NOT_REACHED();
         return 0;
     case GPUTextureFormat::Bc1RgbaUnorm:
     case GPUTextureFormat::Bc1RgbaUnormSRGB:
@@ -383,6 +378,8 @@ uint32_t GPUTexture::texelBlockWidth(GPUTextureFormat format)
     case GPUTextureFormat::R8snorm:
     case GPUTextureFormat::R8uint:
     case GPUTextureFormat::R8sint:
+    case GPUTextureFormat::R16unorm:
+    case GPUTextureFormat::R16snorm:
     case GPUTextureFormat::R16uint:
     case GPUTextureFormat::R16sint:
     case GPUTextureFormat::R16float:
@@ -393,6 +390,8 @@ uint32_t GPUTexture::texelBlockWidth(GPUTextureFormat format)
     case GPUTextureFormat::R32float:
     case GPUTextureFormat::R32uint:
     case GPUTextureFormat::R32sint:
+    case GPUTextureFormat::Rg16unorm:
+    case GPUTextureFormat::Rg16snorm:
     case GPUTextureFormat::Rg16uint:
     case GPUTextureFormat::Rg16sint:
     case GPUTextureFormat::Rg16float:
@@ -410,6 +409,8 @@ uint32_t GPUTexture::texelBlockWidth(GPUTextureFormat format)
     case GPUTextureFormat::Rg32float:
     case GPUTextureFormat::Rg32uint:
     case GPUTextureFormat::Rg32sint:
+    case GPUTextureFormat::Rgba16unorm:
+    case GPUTextureFormat::Rgba16snorm:
     case GPUTextureFormat::Rgba16uint:
     case GPUTextureFormat::Rgba16sint:
     case GPUTextureFormat::Rgba16float:
@@ -498,6 +499,8 @@ uint32_t GPUTexture::texelBlockHeight(GPUTextureFormat format)
     case GPUTextureFormat::R8snorm:
     case GPUTextureFormat::R8uint:
     case GPUTextureFormat::R8sint:
+    case GPUTextureFormat::R16unorm:
+    case GPUTextureFormat::R16snorm:
     case GPUTextureFormat::R16uint:
     case GPUTextureFormat::R16sint:
     case GPUTextureFormat::R16float:
@@ -508,6 +511,8 @@ uint32_t GPUTexture::texelBlockHeight(GPUTextureFormat format)
     case GPUTextureFormat::R32float:
     case GPUTextureFormat::R32uint:
     case GPUTextureFormat::R32sint:
+    case GPUTextureFormat::Rg16unorm:
+    case GPUTextureFormat::Rg16snorm:
     case GPUTextureFormat::Rg16uint:
     case GPUTextureFormat::Rg16sint:
     case GPUTextureFormat::Rg16float:
@@ -525,6 +530,8 @@ uint32_t GPUTexture::texelBlockHeight(GPUTextureFormat format)
     case GPUTextureFormat::Rg32float:
     case GPUTextureFormat::Rg32uint:
     case GPUTextureFormat::Rg32sint:
+    case GPUTextureFormat::Rgba16unorm:
+    case GPUTextureFormat::Rgba16snorm:
     case GPUTextureFormat::Rgba16uint:
     case GPUTextureFormat::Rgba16sint:
     case GPUTextureFormat::Rgba16float:

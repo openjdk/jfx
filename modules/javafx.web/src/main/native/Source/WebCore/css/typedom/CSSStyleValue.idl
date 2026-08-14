@@ -26,7 +26,6 @@
 // https://drafts.css-houdini.org/css-typed-om/#cssstylevalue
 [
     InterfaceName=CSSStyleValue,
-    CustomToJSObject,
     Exposed=(Window,Worker,PaintWorklet),
     SkipVTableValidation
 ] interface CSSStyleValue {

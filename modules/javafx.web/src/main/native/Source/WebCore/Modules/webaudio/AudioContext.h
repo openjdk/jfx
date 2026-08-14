@@ -49,8 +49,11 @@ class AudioContext final
     , public MediaProducer
     , public MediaCanStartListener
     , private PlatformMediaSessionClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioContext);
+    WTF_MAKE_TZONE_ALLOCATED(AudioContext);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioContext);
 public:
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     // Create an AudioContext for rendering to the audio hardware.
     static ExceptionOr<Ref<AudioContext>> create(Document&, AudioContextOptions&&);
     virtual ~AudioContext();
@@ -109,7 +112,7 @@ public:
 private:
     AudioContext(Document&, const AudioContextOptions&);
 
-    bool willBeginPlayback();
+    void willBeginPlayback(CompletionHandler<void(bool)>&&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
@@ -144,8 +147,6 @@ private:
     bool supportsSeeking() const final { return false; }
     bool canProduceAudio() const final { return true; }
     std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const final;
-    void isActiveNowPlayingSessionChanged() final;
-    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final;
     bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final;
     bool isSuspended() const final;
     bool isPlaying() const final;

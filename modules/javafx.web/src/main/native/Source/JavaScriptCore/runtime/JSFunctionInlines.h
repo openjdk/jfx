@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "ExecutableBaseInlines.h"
-#include "FunctionExecutable.h"
-#include "JSBoundFunction.h"
-#include "JSFunction.h"
-#include "JSRemoteFunction.h"
-#include "NativeExecutable.h"
+#include <JavaScriptCore/ExecutableBaseInlines.h>
+#include <JavaScriptCore/FunctionExecutable.h>
+#include <JavaScriptCore/JSBoundFunction.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSRemoteFunction.h>
+#include <JavaScriptCore/NativeExecutable.h>
+#include <JavaScriptCore/WebAssemblyFunction.h>
 #include <wtf/text/MakeString.h>
 
 namespace JSC {
@@ -208,7 +209,7 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
         name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Setter "_s, "set "_s, name);
         RETURN_IF_EXCEPTION(scope, { });
     }
-    return jsString(vm, WTFMove(name));
+    return jsString(vm, WTF::move(name));
 }
 
 inline bool JSFunction::canAssumeNameAndLengthAreOriginal(VM&)
@@ -270,6 +271,59 @@ inline JSString* JSFunction::asStringConcurrently() const
     if (isHostFunction())
         return static_cast<NativeExecutable*>(executable())->asStringConcurrently();
     return jsExecutable()->asStringConcurrently();
+}
+
+inline CallData JSFunction::getCallDataInline(JSCell* cell)
+{
+    // Keep this function OK for invocation from concurrent compilers.
+    CallData callData;
+
+    JSFunction* thisObject = jsCast<JSFunction*>(cell);
+    if (thisObject->isHostFunction()) {
+        callData.type = CallData::Type::Native;
+        callData.native.function = thisObject->nativeFunction();
+        callData.native.isBoundFunction = thisObject->inherits<JSBoundFunction>();
+        callData.native.isWasm = false;
+#if ENABLE(WEBASSEMBLY)
+        callData.native.isWasm = thisObject->inherits<WebAssemblyFunction>();
+#endif
+    } else {
+        callData.type = CallData::Type::JS;
+        callData.js.functionExecutable = thisObject->jsExecutable();
+        callData.js.scope = thisObject->scope();
+    }
+
+    return callData;
+}
+
+inline CallData JSFunction::getConstructDataInline(JSCell* cell)
+{
+    // Keep this function OK for invocation from concurrent compilers.
+    CallData constructData;
+
+    JSFunction* thisObject = jsCast<JSFunction*>(cell);
+    if (thisObject->isHostFunction()) {
+        if (thisObject->inherits<JSBoundFunction>()) {
+            if (jsCast<JSBoundFunction*>(thisObject)->canConstruct()) {
+                constructData.type = CallData::Type::Native;
+                constructData.native.function = thisObject->nativeConstructor();
+                constructData.native.isBoundFunction = true;
+                constructData.native.isWasm = false;
+            }
+        } else if (thisObject->nativeConstructor() != callHostFunctionAsConstructor) {
+            constructData.type = CallData::Type::Native;
+            constructData.native.function = thisObject->nativeConstructor();
+        }
+    } else {
+        FunctionExecutable* functionExecutable = thisObject->jsExecutable();
+        if (functionExecutable->constructAbility() != ConstructAbility::CannotConstruct) {
+            constructData.type = CallData::Type::JS;
+            constructData.js.functionExecutable = functionExecutable;
+            constructData.js.scope = thisObject->scope();
+        }
+    }
+
+    return constructData;
 }
 
 } // namespace JSC

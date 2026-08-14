@@ -516,7 +516,7 @@ JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef grou
     if (jsonData.isNull()) [[unlikely]]
         return nullptr;
 
-    return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();
+    return OpaqueJSString::tryCreate(WTF::move(jsonData)).leakRef();
 #else
     return nullptr;
 #endif

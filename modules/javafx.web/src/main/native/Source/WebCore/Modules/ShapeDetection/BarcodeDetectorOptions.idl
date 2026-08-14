@@ -26,8 +26,8 @@
 // https://wicg.github.io/shape-detection-api/#dictdef-barcodedetectoroptions
 
 [
-    EnabledBySetting=ShapeDetection
-]
-dictionary BarcodeDetectorOptions {
+    EnabledBySetting=ShapeDetection,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BarcodeDetectorOptions {
     sequence<BarcodeFormat> formats;
 };

@@ -32,9 +32,9 @@
 
 #include "URLParser.h"
 #include <mutex>
+#include <ranges>
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
-#include <wtf/IteratorRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
@@ -376,7 +376,7 @@ void addScriptToIDNAllowedScriptList(const char* scriptName)
 
 void initializeDefaultIDNAllowedScriptList()
 {
-    constexpr UScriptCode scripts[] = {
+    constexpr auto scripts = std::to_array<UScriptCode>({
         USCRIPT_COMMON,
         USCRIPT_INHERITED,
         USCRIPT_ARABIC,
@@ -397,7 +397,7 @@ void initializeDefaultIDNAllowedScriptList()
         USCRIPT_TAMIL,
         USCRIPT_THAI,
         USCRIPT_YI,
-    };
+    });
     for (auto script : scripts)
         addScriptToIDNAllowedScriptList(script);
 }
@@ -440,7 +440,7 @@ static inline bool isSecondLevelDomainNameAllowedByTLDRules(std::span<const char
 {
     ASSERT(!buffer.empty());
 
-    for (auto ch : makeReversedRange(buffer)) {
+    for (auto ch : buffer | std::views::reverse) {
         if (characterIsAllowed(ch))
             continue;
 
@@ -882,7 +882,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
         i += characterLength;
     }
 
-    return String::adopt(WTFMove(outBuffer));
+    return String::adopt(WTF::move(outBuffer));
 }
 
 String userVisibleURL(const CString& url)

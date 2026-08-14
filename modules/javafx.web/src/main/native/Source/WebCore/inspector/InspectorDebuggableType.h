@@ -33,6 +33,10 @@ enum class DebuggableType : uint8_t {
     Page,          // WebCore::Page
     ServiceWorker, // WebCore::ServiceWorkerThreadProxy
     WebPage,       // WebKit::WebPageProxy
+    // This is specifically for the JSC Wasm Debugger server, which is a standalone
+    // debugging target for WebAssembly execution. This is NOT used by regular Web Inspector
+    // when debugging WebAssembly inside web pages.
+    WasmDebugger,  // JSC::Wasm::DebugServer
 };
 
 } // namespace Inspector

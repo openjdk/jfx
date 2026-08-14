@@ -25,21 +25,13 @@
 #include "WebCoreBuiltinNames.h"
 #include "WebCoreJSBuiltins.h"
 #include "WorkerThreadType.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class JSVMClientDataClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::JSVMClientDataClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -114,7 +106,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
 
-class JSVMClientDataClient : public CanMakeWeakPtr<JSVMClientDataClient> {
+class JSVMClientDataClient : public AbstractRefCountedAndCanMakeWeakPtr<JSVMClientDataClient> {
 public:
     virtual ~JSVMClientDataClient() = default;
     virtual void willDestroyVM() = 0;
@@ -238,7 +230,7 @@ ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, ASCIILite
                 uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, heap.cellHeapCellType, T, name);
         }
         space = uniqueSubspace.get();
-        setServer(subspaces, WTFMove(uniqueSubspace));
+        setServer(subspaces, WTF::move(uniqueSubspace));
 
 IGNORE_WARNINGS_BEGIN("unreachable-code")
 IGNORE_WARNINGS_BEGIN("tautological-compare")
@@ -252,7 +244,7 @@ IGNORE_WARNINGS_END
 
     auto uniqueClientSubspace = makeUnique<JSC::GCClient::IsoSubspace>(*space);
     auto* clientSpace = uniqueClientSubspace.get();
-    setClient(clientSubspaces, WTFMove(uniqueClientSubspace));
+    setClient(clientSubspaces, WTF::move(uniqueClientSubspace));
     return clientSpace;
 }
 

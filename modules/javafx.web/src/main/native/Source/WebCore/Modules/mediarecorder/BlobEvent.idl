@@ -36,7 +36,9 @@ typedef double DOMHighResTimeStamp;
     readonly attribute DOMHighResTimeStamp timecode;
 };
 
-dictionary BlobEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BlobEventInit : EventInit {
     required Blob data;
     DOMHighResTimeStamp timecode;
 };

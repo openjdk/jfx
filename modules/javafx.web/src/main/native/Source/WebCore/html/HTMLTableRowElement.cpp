@@ -32,14 +32,16 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableElement.h"
 #include "HTMLTableSectionElement.h"
+#include "NodeDocument.h"
 #include "NodeList.h"
 #include "NodeRareData.h"
+#include "NodeInlines.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableRowElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableRowElement);
 
 using namespace HTMLNames;
 
@@ -90,9 +92,9 @@ int HTMLTableRowElement::rowIndex() const
 static inline RefPtr<HTMLCollection> findRows(const HTMLTableRowElement& row)
 {
     RefPtr parent = row.parentNode();
-    if (auto* section = dynamicDowncast<HTMLTableSectionElement>(parent.get()))
+    if (RefPtr section = dynamicDowncast<HTMLTableSectionElement>(parent))
         return section->rows();
-    if (auto* table = dynamicDowncast<HTMLTableElement>(parent.get()))
+    if (RefPtr table = dynamicDowncast<HTMLTableElement>(parent))
         return table->rows();
     return nullptr;
 }
@@ -120,7 +122,7 @@ ExceptionOr<Ref<HTMLTableCellElement>> HTMLTableRowElement::insertCell(int index
     int numCells = children->length();
     if (index > numCells)
         return Exception { ExceptionCode::IndexSizeError };
-    auto cell = HTMLTableCellElement::create(tdTag, document());
+    Ref cell = HTMLTableCellElement::create(tdTag, protectedDocument());
     ExceptionOr<void> result;
     if (numCells == index || index == -1)
         result = appendChild(cell);
@@ -142,7 +144,7 @@ ExceptionOr<void> HTMLTableRowElement::deleteCell(int index)
     }
     if (index < 0 || index >= numCells)
         return Exception { ExceptionCode::IndexSizeError };
-    return removeChild(*children->item(index));
+    return removeChild(Ref { *children->item(index) });
 }
 
 Ref<HTMLCollection> HTMLTableRowElement::cells()

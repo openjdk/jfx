@@ -42,8 +42,8 @@ SimpleRange::SimpleRange(const BoundaryPoint& start, const BoundaryPoint& end)
 }
 
 SimpleRange::SimpleRange(BoundaryPoint&& start, BoundaryPoint&& end)
-    : start(WTFMove(start))
-    , end(WTFMove(end))
+    : start(WTF::move(start))
+    , end(WTF::move(end))
 {
 }
 
@@ -59,8 +59,8 @@ WeakSimpleRange::WeakSimpleRange(const WeakBoundaryPoint& start, const WeakBound
 }
 
 WeakSimpleRange::WeakSimpleRange(WeakBoundaryPoint&& start, WeakBoundaryPoint&& end)
-    : start(WTFMove(start))
-    , end(WTFMove(end))
+    : start(WTF::move(start))
+    , end(WTF::move(end))
 {
 }
 

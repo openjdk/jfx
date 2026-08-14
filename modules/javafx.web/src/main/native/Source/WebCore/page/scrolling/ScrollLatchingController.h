@@ -28,6 +28,7 @@
 #include "FloatSize.h"
 #include "ScrollTypes.h"
 #include "Timer.h"
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -47,7 +48,7 @@ class PlatformWheelEvent;
 class ScrollableArea;
 class WeakPtrImplWithEventTargetData;
 
-class ScrollLatchingController {
+class ScrollLatchingController : public CanMakeWeakPtr<ScrollLatchingController> {
     WTF_MAKE_TZONE_ALLOCATED(ScrollLatchingController);
 public:
     explicit ScrollLatchingController(Page&);
@@ -78,7 +79,7 @@ private:
     struct FrameState {
         WeakPtr<Element, WeakPtrImplWithEventTargetData> wheelEventElement;
         WeakPtr<ScrollableArea> scrollableArea;
-        LocalFrame* frame { nullptr };
+        WeakPtr<LocalFrame> frame;
         bool isOverWidget { false };
     };
 
@@ -102,3 +103,4 @@ WTF::TextStream& operator<<(WTF::TextStream&, const ScrollLatchingController&);
 } // namespace WebCore
 
 #endif // ENABLE(WHEEL_EVENT_LATCHING)
+

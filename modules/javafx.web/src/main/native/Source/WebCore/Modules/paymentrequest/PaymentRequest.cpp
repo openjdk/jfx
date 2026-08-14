@@ -29,6 +29,7 @@
 #if ENABLE(PAYMENT_REQUEST)
 
 #include "ApplePayPaymentHandler.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
@@ -62,7 +63,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaymentRequest);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PaymentRequest);
 
 // Implements the IsWellFormedCurrencyCode abstract operation from ECMA 402
 // https://tc39.github.io/ecma402/#sec-iswellformedcurrencycode
@@ -85,7 +86,7 @@ static ExceptionOr<String> checkAndCanonicalizeData(ScriptExecutionContext& cont
             return Exception { ExceptionCode::ExistingExceptionError };
         value.data.clear();
     }
-    return { WTFMove(serializedData) };
+    return { WTF::move(serializedData) };
 }
 
 // Implements the "check and canonicalize amount" validity checker
@@ -188,7 +189,7 @@ std::optional<PaymentRequest::MethodIdentifier> convertAndValidatePaymentMethodI
     }
 
     if (isValidURLBasedPaymentMethodIdentifier(url))
-        return { WTFMove(url) };
+        return { WTF::move(url) };
 
     return std::nullopt;
 }
@@ -271,12 +272,12 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
 
                 serializedData = dataResult.releaseReturnValue();
             }
-            serializedModifierData.append(WTFMove(serializedData));
+            serializedModifierData.append(WTF::move(serializedData));
         }
     } else if (isUpdate == IsUpdate::No)
         details.modifiers = { { } };
 
-    return std::make_tuple(WTFMove(selectedShippingOption), WTFMove(serializedModifierData));
+    return std::make_tuple(WTF::move(selectedShippingOption), WTF::move(serializedModifierData));
 }
 
 static ExceptionOr<JSC::JSValue> parse(ScriptExecutionContext& context, const String& string)
@@ -336,7 +337,7 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
             if (exception.hasException())
                 return exception.releaseException();
         }
-        serializedMethodData.append({ WTFMove(*identifier), WTFMove(serializedData) });
+        serializedMethodData.append({ WTF::move(*identifier), WTF::move(serializedData) });
     }
 
     auto totalResult = checkAndCanonicalizeTotal(details.total);
@@ -348,18 +349,18 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
         return detailsResult.releaseException();
 
     auto shippingOptionAndModifierData = detailsResult.releaseReturnValue();
-    auto request = adoptRef(*new PaymentRequest(document, WTFMove(options), WTFMove(details), WTFMove(std::get<1>(shippingOptionAndModifierData)), WTFMove(serializedMethodData), WTFMove(std::get<0>(shippingOptionAndModifierData))));
+    auto request = adoptRef(*new PaymentRequest(document, WTF::move(options), WTF::move(details), WTF::move(std::get<1>(shippingOptionAndModifierData)), WTF::move(serializedMethodData), WTF::move(std::get<0>(shippingOptionAndModifierData))));
     request->suspendIfNeeded();
     return request;
 }
 
 PaymentRequest::PaymentRequest(Document& document, PaymentOptions&& options, PaymentDetailsInit&& details, Vector<String>&& serializedModifierData, Vector<Method>&& serializedMethodData, String&& selectedShippingOption)
     : ActiveDOMObject { document }
-    , m_options { WTFMove(options) }
-    , m_details { WTFMove(details) }
-    , m_serializedModifierData { WTFMove(serializedModifierData) }
-    , m_serializedMethodData { WTFMove(serializedMethodData) }
-    , m_shippingOption { WTFMove(selectedShippingOption) }
+    , m_options { WTF::move(options) }
+    , m_details { WTF::move(details) }
+    , m_serializedModifierData { WTF::move(serializedModifierData) }
+    , m_serializedMethodData { WTF::move(serializedMethodData) }
+    , m_shippingOption { WTF::move(selectedShippingOption) }
 {
 }
 
@@ -397,7 +398,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
 
     m_state = State::Interactive;
     ASSERT(!m_showPromise);
-    m_showPromise = makeUnique<ShowPromise>(WTFMove(promise));
+    m_showPromise = makeUnique<ShowPromise>(WTF::move(promise));
 
     RefPtr<PaymentHandler> selectedPaymentHandler;
     for (auto& paymentMethod : m_serializedMethodData) {
@@ -418,7 +419,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
         }
 
         if (!selectedPaymentHandler)
-            selectedPaymentHandler = WTFMove(handler);
+            selectedPaymentHandler = WTF::move(handler);
     }
 
     if (!selectedPaymentHandler) {
@@ -452,9 +453,9 @@ void PaymentRequest::abortWithException(Exception&& exception)
     closeActivePaymentHandler();
 
     if (RefPtr response = m_response)
-        response->abortWithException(WTFMove(exception));
+        response->abortWithException(WTF::move(exception));
     else
-        settleShowPromise(WTFMove(exception));
+        settleShowPromise(WTF::move(exception));
 }
 
 RefPtr<PaymentHandler> PaymentRequest::protectedActivePaymentHandler()
@@ -465,7 +466,7 @@ RefPtr<PaymentHandler> PaymentRequest::protectedActivePaymentHandler()
 void PaymentRequest::settleShowPromise(ExceptionOr<PaymentResponse&>&& result)
 {
     if (auto showPromise = std::exchange(m_showPromise, nullptr))
-        showPromise->settle(WTFMove(result));
+        showPromise->settle(WTF::move(result));
 }
 
 void PaymentRequest::closeActivePaymentHandler()
@@ -497,6 +498,11 @@ void PaymentRequest::suspend(ReasonForSuspension reason)
     }
 
     stop();
+}
+
+ScriptExecutionContext* PaymentRequest::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 RefPtr<ScriptExecutionContext> PaymentRequest::protectedScriptExecutionContext() const
@@ -539,7 +545,7 @@ void PaymentRequest::canMakePayment(Document& document, CanMakePaymentPromise&& 
         if (!handler)
             continue;
 
-        handler->canMakePayment(document, [promise = WTFMove(promise)](bool canMakePayment) mutable {
+        handler->canMakePayment(document, [promise = WTF::move(promise)](bool canMakePayment) mutable {
             promise.resolve(canMakePayment);
         });
         return;
@@ -562,8 +568,8 @@ std::optional<PaymentShippingType> PaymentRequest::shippingType() const
 
 void PaymentRequest::shippingAddressChanged(Ref<PaymentAddress>&& shippingAddress)
 {
-    whenDetailsSettled([protectedThis = Ref { *this }, shippingAddress = WTFMove(shippingAddress)]() mutable {
-        protectedThis->m_shippingAddress = WTFMove(shippingAddress);
+    whenDetailsSettled([protectedThis = Ref { *this }, shippingAddress = WTF::move(shippingAddress)]() mutable {
+        protectedThis->m_shippingAddress = WTF::move(shippingAddress);
         protectedThis->dispatchAndCheckUpdateEvent(PaymentRequestUpdateEvent::create(eventNames().shippingaddresschangeEvent));
     });
 }
@@ -578,10 +584,10 @@ void PaymentRequest::shippingOptionChanged(const String& shippingOption)
 
 void PaymentRequest::paymentMethodChanged(const String& methodName, PaymentMethodChangeEvent::MethodDetailsFunction&& methodDetailsFunction)
 {
-    whenDetailsSettled([protectedThis = Ref { *this }, methodName, methodDetailsFunction = WTFMove(methodDetailsFunction)]() mutable {
+    whenDetailsSettled([protectedThis = Ref { *this }, methodName, methodDetailsFunction = WTF::move(methodDetailsFunction)]() mutable {
         auto& eventName = eventNames().paymentmethodchangeEvent;
         if (protectedThis->hasEventListeners(eventName)) {
-            protectedThis->dispatchAndCheckUpdateEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTFMove(methodDetailsFunction)));
+            protectedThis->dispatchAndCheckUpdateEvent(PaymentMethodChangeEvent::create(eventName, methodName, WTF::move(methodDetailsFunction)));
             return;
         }
 
@@ -694,19 +700,19 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
     auto shippingOptionAndModifierData = detailsResult.releaseReturnValue();
 
     if (detailsUpdate.total)
-        m_details.total = WTFMove(*detailsUpdate.total);
+        m_details.total = WTF::move(*detailsUpdate.total);
     if (detailsUpdate.displayItems)
-        m_details.displayItems = WTFMove(*detailsUpdate.displayItems);
+        m_details.displayItems = WTF::move(*detailsUpdate.displayItems);
     if (detailsUpdate.shippingOptions && m_options.requestShipping) {
-        m_details.shippingOptions = WTFMove(detailsUpdate.shippingOptions);
-        m_shippingOption = WTFMove(std::get<0>(shippingOptionAndModifierData));
+        m_details.shippingOptions = WTF::move(detailsUpdate.shippingOptions);
+        m_shippingOption = WTF::move(std::get<0>(shippingOptionAndModifierData));
     }
     if (detailsUpdate.modifiers) {
-        m_details.modifiers = WTFMove(*detailsUpdate.modifiers);
-        m_serializedModifierData = WTFMove(std::get<1>(shippingOptionAndModifierData));
+        m_details.modifiers = WTF::move(*detailsUpdate.modifiers);
+        m_serializedModifierData = WTF::move(std::get<1>(shippingOptionAndModifierData));
     }
 
-    auto result = activePaymentHandler->detailsUpdated(reason, WTFMove(detailsUpdate.error), WTFMove(detailsUpdate.shippingAddressErrors), WTFMove(detailsUpdate.payerErrors), detailsUpdate.paymentMethodErrors.get());
+    auto result = activePaymentHandler->detailsUpdated(reason, WTF::move(detailsUpdate.error), WTF::move(detailsUpdate.shippingAddressErrors), WTF::move(detailsUpdate.payerErrors), detailsUpdate.paymentMethodErrors.get());
     if (result.hasException()) {
         abortWithException(result.releaseException());
         return;
@@ -715,7 +721,7 @@ void PaymentRequest::settleDetailsPromise(UpdateReason reason)
 
 void PaymentRequest::whenDetailsSettled(std::function<void()>&& callback)
 {
-    auto whenSettledFunction = [protectedThis = Ref { *this }, callback = WTFMove(callback)] {
+    auto whenSettledFunction = [protectedThis = Ref { *this }, callback = WTF::move(callback)] {
         ASSERT(protectedThis->m_state == State::Interactive);
         ASSERT(!protectedThis->m_isUpdating);
         ASSERT(!protectedThis->m_isCancelPending);
@@ -729,7 +735,7 @@ void PaymentRequest::whenDetailsSettled(std::function<void()>&& callback)
         return;
     }
 
-    detailsPromise->whenSettled([protectedThis = Ref { *this }, whenSettledFunction = WTFMove(whenSettledFunction)] {
+    detailsPromise->whenSettled([protectedThis = Ref { *this }, whenSettledFunction = WTF::move(whenSettledFunction)] {
         if (protectedThis->m_state == State::Interactive)
             whenSettledFunction();
     });
@@ -749,7 +755,7 @@ void PaymentRequest::accept(const String& methodName, PaymentResponse::DetailsFu
     }
 
     response->setMethodName(methodName);
-    response->setDetailsFunction(WTFMove(detailsFunction));
+    response->setDetailsFunction(WTF::move(detailsFunction));
     response->setShippingAddress(nullptr);
     response->setShippingOption(nullString());
     response->setPayerName(nullString());
@@ -780,7 +786,7 @@ void PaymentRequest::accept(const String& methodName, PaymentResponse::DetailsFu
     }
 
     response->setMethodName(methodName);
-    response->setDetailsFunction(WTFMove(detailsFunction));
+    response->setDetailsFunction(WTF::move(detailsFunction));
     response->setShippingAddress(m_options.requestShipping ? shippingAddress.ptr() : nullptr);
     response->setShippingOption(m_options.requestShipping ? m_shippingOption : String { });
     response->setPayerName(m_options.requestPayerName ? payerName : String { });
@@ -799,7 +805,7 @@ void PaymentRequest::accept(const String& methodName, PaymentResponse::DetailsFu
 
 void PaymentRequest::reject(Exception&& exception)
 {
-    abortWithException(WTFMove(exception));
+    abortWithException(WTF::move(exception));
 }
 
 ExceptionOr<void> PaymentRequest::complete(Document& document, std::optional<PaymentComplete>&& result, String&& serializedData)
@@ -809,7 +815,7 @@ ExceptionOr<void> PaymentRequest::complete(Document& document, std::optional<Pay
         return Exception { ExceptionCode::AbortError };
 
     Ref activePaymentHandler = *this->activePaymentHandler();
-    auto exception = activePaymentHandler->complete(document, WTFMove(result), WTFMove(serializedData));
+    auto exception = activePaymentHandler->complete(document, WTF::move(result), WTF::move(serializedData));
     if (exception.hasException())
         return exception.releaseException();
 
@@ -826,7 +832,7 @@ ExceptionOr<void> PaymentRequest::retry(PaymentValidationErrors&& errors)
     m_state = State::Interactive;
 
     Ref activePaymentHandler = *this->activePaymentHandler();
-    return activePaymentHandler->retry(WTFMove(errors));
+    return activePaymentHandler->retry(WTF::move(errors));
 }
 
 void PaymentRequest::cancel()

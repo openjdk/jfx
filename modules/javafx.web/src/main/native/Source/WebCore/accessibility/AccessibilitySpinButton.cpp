@@ -26,7 +26,9 @@
 #include "config.h"
 #include "AccessibilitySpinButton.h"
 
+#include "AXLoggerBase.h"
 #include "AXObjectCache.h"
+#include "AccessibilityObjectInlines.h"
 #include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 
@@ -61,21 +63,21 @@ AccessibilitySpinButton::~AccessibilitySpinButton() = default;
 
 AccessibilitySpinButtonPart* AccessibilitySpinButton::incrementButton()
 {
-    ASSERT(m_childrenInitialized);
+    AX_ASSERT(m_childrenInitialized);
     RELEASE_ASSERT(m_children.size() == 2);
     return &downcast<AccessibilitySpinButtonPart>(m_children[0].get());
 }
 
 AccessibilitySpinButtonPart* AccessibilitySpinButton::decrementButton()
 {
-    ASSERT(m_childrenInitialized);
+    AX_ASSERT(m_childrenInitialized);
     RELEASE_ASSERT(m_children.size() == 2);
     return &downcast<AccessibilitySpinButtonPart>(m_children[1].get());
 }
 
 LayoutRect AccessibilitySpinButton::elementRect() const
 {
-    ASSERT(m_spinButtonElement);
+    AX_ASSERT(m_spinButtonElement);
 
     CheckedPtr renderer = m_spinButtonElement ? m_spinButtonElement->renderer() : nullptr;
     if (!renderer)
@@ -90,16 +92,16 @@ void AccessibilitySpinButton::addChildren()
 {
     // This class sets its children once in the create function, and should never
     // have dirty or uninitialized children afterwards.
-    ASSERT(m_childrenInitialized);
-    ASSERT(!m_subtreeDirty);
-    ASSERT(!m_childrenDirty);
+    AX_ASSERT(m_childrenInitialized);
+    AX_ASSERT(!m_subtreeDirty);
+    AX_ASSERT(!m_childrenDirty);
 }
 
 void AccessibilitySpinButton::step(int amount)
 {
-    ASSERT(m_spinButtonElement);
-    if (m_spinButtonElement)
-    m_spinButtonElement->step(amount);
+    AX_ASSERT(m_spinButtonElement);
+    if (RefPtr element = m_spinButtonElement.get())
+        element->step(amount);
 }
 
 } // namespace WebCore

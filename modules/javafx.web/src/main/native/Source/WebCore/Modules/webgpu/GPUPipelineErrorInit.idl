@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#gpupipelineerror
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUPipelineErrorInit {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUPipelineErrorInit {
     required GPUPipelineErrorReason reason;
 };

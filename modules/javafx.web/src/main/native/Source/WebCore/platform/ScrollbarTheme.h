@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "GraphicsContext.h"
-#include "IntRect.h"
-#include "ScrollTypes.h"
+#include <WebCore/GraphicsContext.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -53,7 +53,7 @@ public:
     virtual bool paint(Scrollbar&, GraphicsContext&, const IntRect& /*damageRect*/) { return false; }
     virtual ScrollbarPart hitTest(Scrollbar&, const IntPoint&) { return NoPart; }
 
-    virtual int scrollbarThickness(ScrollbarWidth = ScrollbarWidth::Auto, ScrollbarExpansionState = ScrollbarExpansionState::Expanded, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize) { return 0; }
+    virtual int scrollbarThickness(ScrollbarWidth = ScrollbarWidth::Auto, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize) { return 0; }
 
     virtual ScrollbarButtonsPlacement buttonsPlacement() const { return ScrollbarButtonsSingle; }
 
@@ -111,6 +111,9 @@ public:
 
     virtual bool isMockTheme() const { return false; }
     virtual bool isScrollbarThemeMac() const { return false; }
+#if USE(THEME_ADWAITA)
+    virtual bool isScrollbarThemeAdwaita() const { return false; }
+#endif
 
     WEBCORE_EXPORT static ScrollbarTheme& theme();
 

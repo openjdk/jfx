@@ -26,6 +26,9 @@
 #include "config.h"
 #include "StyleRayFunction.h"
 
+#include "GeometryUtilities.h"
+#include "Path.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "StylePrimitiveNumericTypes+Serialization.h"
 
 namespace WebCore {

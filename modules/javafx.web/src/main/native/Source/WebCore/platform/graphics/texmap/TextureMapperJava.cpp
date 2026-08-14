@@ -36,7 +36,7 @@
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
-static const int s_maximumAllowedImageBufferDimension = 256;
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapperJava);
 
 TextureMapperJava::TextureMapperJava()
 {
@@ -44,7 +44,7 @@ TextureMapperJava::TextureMapperJava()
 
 IntSize TextureMapperJava::maxTextureSize() const
 {
-    return IntSize(s_maximumAllowedImageBufferDimension, s_maximumAllowedImageBufferDimension);
+    return IntSize(maximumAllowedImageBufferDimension, maximumAllowedImageBufferDimension);
 }
 
 void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const FloatRoundedRect& rect)

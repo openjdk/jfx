@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(KHRParallelShaderCompile);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(KHRParallelShaderCompile);
 
 KHRParallelShaderCompile::KHRParallelShaderCompile(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::KHRParallelShaderCompile)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_KHR_parallel_shader_compile"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::KHR_parallel_shader_compile);
 }
 
 KHRParallelShaderCompile::~KHRParallelShaderCompile() = default;
 
 bool KHRParallelShaderCompile::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_KHR_parallel_shader_compile"_s);
+    return context.supportsExtension(GCGLExtension::KHR_parallel_shader_compile);
 }
 
 } // namespace WebCore

@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "IDBDatabaseInfo.h"
-#include "IDBResourceIdentifier.h"
-#include "IDBTransactionDurability.h"
-#include "IDBTransactionMode.h"
-#include "IndexedDB.h"
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IDBTransactionDurability.h>
+#include <WebCore/IDBTransactionMode.h>
+#include <WebCore/IndexedDB.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -73,8 +73,8 @@ public:
         , m_mode(mode)
         , m_durability(durability)
         , m_newVersion(newVersion)
-        , m_objectStores(WTFMove(objectStores))
-        , m_originalDatabaseInfo(WTFMove(originalDatabaseInfo)) { }
+        , m_objectStores(WTF::move(objectStores))
+        , m_originalDatabaseInfo(WTF::move(originalDatabaseInfo)) { }
 
 #if !LOG_DISABLED
     String loggingString() const;

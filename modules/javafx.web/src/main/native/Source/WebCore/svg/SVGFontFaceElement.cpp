@@ -30,7 +30,6 @@
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
-#include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "FontCascade.h"
@@ -51,7 +50,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFontFaceElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFontFaceElement);
 
 using namespace SVGNames;
 

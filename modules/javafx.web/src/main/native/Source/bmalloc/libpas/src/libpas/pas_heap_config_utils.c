@@ -35,6 +35,7 @@
 #include "pas_large_heap_physical_page_sharing_cache.h"
 #include "pas_root.h"
 #include "pas_segregated_page.h"
+#include "pas_zero_memory.h"
 
 void pas_heap_config_utils_null_activate(void)
 {

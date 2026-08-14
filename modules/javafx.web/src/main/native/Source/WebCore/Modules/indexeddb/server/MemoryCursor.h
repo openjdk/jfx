@@ -27,6 +27,9 @@
 
 #include "IDBCursorInfo.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#if PLATFORM(JAVA)
+#include "MemoryBackingStoreTransaction.h"
+#endif
 
 namespace WebCore {
 

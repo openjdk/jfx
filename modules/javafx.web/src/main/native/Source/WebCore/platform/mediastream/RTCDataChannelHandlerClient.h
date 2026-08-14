@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,24 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCDataChannelState.h"
+#include <WebCore/RTCDataChannelIdentifier.h>
+#include <WebCore/RTCDataChannelState.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
-
-namespace WebCore {
-class RTCDataChannelHandlerClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCDataChannelHandlerClient> : std::true_type { };
-}
 
 namespace WebCore {
 
 class RTCError;
 
-class RTCDataChannelHandlerClient : public CanMakeWeakPtr<RTCDataChannelHandlerClient, WeakPtrFactoryInitialization::Eager> {
+class RTCDataChannelHandlerClient : public AbstractRefCountedAndCanMakeWeakPtr<RTCDataChannelHandlerClient, WeakPtrFactoryInitialization::Eager> {
 public:
-    virtual ~RTCDataChannelHandlerClient() = default;
+    static void peerConnectionIsClosing(RTCDataChannelIdentifier);
+    virtual ~RTCDataChannelHandlerClient();
+
+    RTCDataChannelIdentifier identifier() const { return m_identifier; }
+    void willDetach() { unregister(); }
 
     virtual void didChangeReadyState(RTCDataChannelState) = 0;
     virtual void didReceiveStringData(const String&) = 0;
@@ -55,6 +52,17 @@ public:
     virtual void didDetectError(Ref<RTCError>&&) = 0;
     virtual void bufferedAmountIsDecreasing(size_t) = 0;
     virtual size_t bufferedAmount() const { return 0; }
+
+    virtual void peerConnectionIsClosing() = 0;
+
+protected:
+    RTCDataChannelHandlerClient(std::optional<ScriptExecutionContextIdentifier>, RTCDataChannelIdentifier);
+
+private:
+    void unregister();
+
+    const RTCDataChannelIdentifier m_identifier;
+    bool m_isUnregistered { false };
 };
 
 } // namespace WebCore

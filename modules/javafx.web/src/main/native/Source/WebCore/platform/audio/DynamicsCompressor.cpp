@@ -177,8 +177,8 @@ void DynamicsCompressor::reset()
 
 void DynamicsCompressor::setNumberOfChannels(unsigned numberOfChannels)
 {
-    m_sourceChannels = makeUniqueArray<std::span<const float>>(numberOfChannels);
-    m_destinationChannels = makeUniqueArray<std::span<float>>(numberOfChannels);
+    m_sourceChannels = FixedVector<std::span<const float>>(numberOfChannels);
+    m_destinationChannels = FixedVector<std::span<float>>(numberOfChannels);
 
     m_compressor.setNumberOfChannels(numberOfChannels);
     m_numberOfChannels = numberOfChannels;

@@ -45,10 +45,10 @@ public:
     }
 
 private:
-    void setFromAndToValues(SVGElement&, const String& from, const String& to) final
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) final
     {
-        auto pairFrom = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(from);
-        auto pairTo = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(to);
+        auto pairFrom = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(targetElement, from);
+        auto pairTo = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(targetElement, to);
 
         m_animatedPropertyAnimator1->m_function.m_from = pairFrom.first;
         m_animatedPropertyAnimator1->m_function.m_to = pairTo.first;
@@ -90,7 +90,7 @@ private:
         }
 
         // auto, auto-start-reverse, or unknown.
-        m_animatedPropertyAnimator1->m_animated->animVal()->value().setValue(0);
+        m_animatedPropertyAnimator1->m_animated->animVal().value().setValue(0);
 
         if (m_animatedPropertyAnimator2->m_function.m_from == SVGMarkerOrientAuto || m_animatedPropertyAnimator2->m_function.m_from == SVGMarkerOrientAutoStartReverse)
             m_animatedPropertyAnimator2->m_animated->setAnimVal(m_animatedPropertyAnimator2->m_function.m_from);
@@ -119,10 +119,10 @@ public:
     }
 
 private:
-    void setFromAndToValues(SVGElement&, const String& from, const String& to) final
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) final
     {
-        auto pairFrom = SVGPropertyTraits<std::pair<int, int>>::fromString(from);
-        auto pairTo = SVGPropertyTraits<std::pair<int, int>>::fromString(to);
+        auto pairFrom = SVGPropertyTraits<std::pair<int, int>>::fromString(targetElement, from);
+        auto pairTo = SVGPropertyTraits<std::pair<int, int>>::fromString(targetElement, to);
 
         m_animatedPropertyAnimator1->m_function.m_from = pairFrom.first;
         m_animatedPropertyAnimator1->m_function.m_to = pairTo.first;
@@ -131,10 +131,10 @@ private:
         m_animatedPropertyAnimator2->m_function.m_to = pairTo.second;
     }
 
-    void setFromAndByValues(SVGElement&, const String& from, const String& by) final
+    void setFromAndByValues(SVGElement& targetElement, const String& from, const String& by) final
     {
-        auto pairFrom = SVGPropertyTraits<std::pair<int, int>>::fromString(from);
-        auto pairBy = SVGPropertyTraits<std::pair<int, int>>::fromString(by);
+        auto pairFrom = SVGPropertyTraits<std::pair<int, int>>::fromString(targetElement, from);
+        auto pairBy = SVGPropertyTraits<std::pair<int, int>>::fromString(targetElement, by);
 
         m_animatedPropertyAnimator1->m_function.m_from = pairFrom.first;
         m_animatedPropertyAnimator1->m_function.m_to = pairFrom.first + pairBy.first;
@@ -143,9 +143,9 @@ private:
         m_animatedPropertyAnimator2->m_function.m_to = pairFrom.second + pairBy.second;
     }
 
-    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) final
+    void setToAtEndOfDurationValue(SVGElement& targetElement, const String& toAtEndOfDuration) final
     {
-        auto pairToAtEndOfDuration = SVGPropertyTraits<std::pair<int, int>>::fromString(toAtEndOfDuration);
+        auto pairToAtEndOfDuration = SVGPropertyTraits<std::pair<int, int>>::fromString(targetElement, toAtEndOfDuration);
         m_animatedPropertyAnimator1->m_function.m_toAtEndOfDuration = pairToAtEndOfDuration.first;
         m_animatedPropertyAnimator2->m_function.m_toAtEndOfDuration = pairToAtEndOfDuration.second;
     }
@@ -163,10 +163,10 @@ public:
     }
 
 private:
-    void setFromAndToValues(SVGElement&, const String& from, const String& to) final
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) final
     {
-        auto pairFrom = SVGPropertyTraits<std::pair<float, float>>::fromString(from);
-        auto pairTo = SVGPropertyTraits<std::pair<float, float>>::fromString(to);
+        auto pairFrom = SVGPropertyTraits<std::pair<float, float>>::fromString(targetElement, from);
+        auto pairTo = SVGPropertyTraits<std::pair<float, float>>::fromString(targetElement, to);
 
         m_animatedPropertyAnimator1->m_function.m_from = pairFrom.first;
         m_animatedPropertyAnimator1->m_function.m_to = pairTo.first;
@@ -175,10 +175,10 @@ private:
         m_animatedPropertyAnimator2->m_function.m_to = pairTo.second;
     }
 
-    void setFromAndByValues(SVGElement&, const String& from, const String& by) final
+    void setFromAndByValues(SVGElement& targetElement, const String& from, const String& by) final
     {
-        auto pairFrom = SVGPropertyTraits<std::pair<float, float>>::fromString(from);
-        auto pairBy = SVGPropertyTraits<std::pair<float, float>>::fromString(by);
+        auto pairFrom = SVGPropertyTraits<std::pair<float, float>>::fromString(targetElement, from);
+        auto pairBy = SVGPropertyTraits<std::pair<float, float>>::fromString(targetElement, by);
 
         m_animatedPropertyAnimator1->m_function.m_from = pairFrom.first;
         m_animatedPropertyAnimator1->m_function.m_to = pairFrom.first + pairBy.first;
@@ -187,9 +187,9 @@ private:
         m_animatedPropertyAnimator2->m_function.m_to = pairFrom.second + pairBy.second;
     }
 
-    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) final
+    void setToAtEndOfDurationValue(SVGElement& targetElement, const String& toAtEndOfDuration) final
     {
-        auto pairToAtEndOfDuration = SVGPropertyTraits<std::pair<float, float>>::fromString(toAtEndOfDuration);
+        auto pairToAtEndOfDuration = SVGPropertyTraits<std::pair<float, float>>::fromString(targetElement, toAtEndOfDuration);
         m_animatedPropertyAnimator1->m_function.m_toAtEndOfDuration = pairToAtEndOfDuration.first;
         m_animatedPropertyAnimator2->m_function.m_toAtEndOfDuration = pairToAtEndOfDuration.second;
     }
