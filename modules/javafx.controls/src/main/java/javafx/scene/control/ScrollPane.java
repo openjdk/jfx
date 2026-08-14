@@ -353,7 +353,7 @@ public class ScrollPane extends Control {
         return vmax;
     }
     /**
-     * If true and if the contained node is {@link Node#isResizable resizable}, then the node will be
+     * If true and if the contained node is {@linkplain Node#isResizable resizable}, then the node will be
      * kept resized to match the width of the ScrollPane's viewport. If the
      * contained node is not resizable, this value is ignored.
      */
@@ -390,7 +390,7 @@ public class ScrollPane extends Control {
         return fitToWidth;
     }
     /**
-     * If true and if the contained node is {@link Node#isResizable resizable}, then the node will be
+     * If true and if the contained node is {@linkplain Node#isResizable resizable}, then the node will be
      * kept resized to match the height of the ScrollPane's viewport. If the
      * contained node is not resizable, this value is ignored.
      */
