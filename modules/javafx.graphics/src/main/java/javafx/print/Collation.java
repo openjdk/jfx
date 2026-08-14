@@ -36,14 +36,14 @@ public enum Collation {
 
     /**
      * The same numbered pages are consecutive in the output.
-     * For example, 2 copies of a document with 2 pages is printed:
+     * For example, 2 copies of a document with 2 pages are printed:
      * Page 1, Page 1, Page 2, Page 2.
      */
     UNCOLLATED,
 
     /**
      * Each copy of a document is printed together.
-     * For example, 2 copies of a document with 2 pages is printed:
+     * For example, 2 copies of a document with 2 pages are printed:
      * Page 1, Page 2, Page 1, Page 2.
      */
     COLLATED
