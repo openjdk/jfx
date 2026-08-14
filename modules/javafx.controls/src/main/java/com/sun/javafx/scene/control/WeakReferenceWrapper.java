@@ -26,15 +26,20 @@
 package com.sun.javafx.scene.control;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
 /**
- * Wrapper class for weak references.
- * TODO: describe the purpose of this class.
+ * Wrapper class that holds a reference to an object with or without identity.
+ * If the object is non-null and has identity, a weak reference is created and
+ * stored; otherwise it holds a reference to the object itself,
+ * <p>
+ * In the case of a value object, the referent is never collected, so it is only
+ * suitable for uses that do not rely on the object being placed onto a reference
+ * queue.
  *
- * NOTE: In the case of value objects, the referent is never going to be
- * collected!
+ * @param <T> the type of the referent
  */
 public class WeakReferenceWrapper<T> {
 
@@ -59,9 +64,9 @@ public class WeakReferenceWrapper<T> {
      * behavior with or without --enable-preview) and return false.
      * If `obj` is not null, check whether Objects.hasIdentity exists: if the
      * method doesn't exist or cannot be invoked, return true; otherwise, call
-     * Objects.hasIdentity(obj) reflectively and return its value
+     * Objects.hasIdentity(obj) reflectively and return its value.
      */
-    private static boolean hasIdentity(Object obj) {
+    private static boolean useWeakRef(Object obj) {
         if (obj == null) {
             System.err.println("[1] null");
             return false;
@@ -72,14 +77,19 @@ public class WeakReferenceWrapper<T> {
             try {
                 System.err.println("[3] Calling Objects.hasIdentityMethod(obj)");
                 return (Boolean)hasIdentityMethod.invoke(null, obj);
-            } catch (Exception ex) {
+            } catch (IllegalAccessException | InvocationTargetException ex) {
                 return true;
             }
         }
     }
 
+    /**
+     * Creates a new reference that refers to the given object.
+     * If the object is non-null and has identity, a weak reference is created and
+     * stored; otherwise it holds a reference to the object itself,
+     */
     public WeakReferenceWrapper(T obj) {
-        if (hasIdentity(obj)) {
+        if (useWeakRef(obj)) {
             System.err.println("obj has identity : " + obj);
             this.obj = null;
             this.ref = new WeakReference<>(obj);
@@ -92,6 +102,13 @@ public class WeakReferenceWrapper<T> {
         System.err.println("WeakReferenceWrapper: this.obj = " + this.obj + ", this.ref = " + this.ref);
     }
 
+    /**
+     * Returns this reference object's referent. If the referent is held in a weak reference,
+     * and this reference object has been cleared by the garbage collector, then this method
+     * returns null.
+     *
+     * @return the object to which this reference refers, or null if this reference object has been cleared
+     */
     public T get() {
         return ref != null ? ref.get() : obj;
     }
