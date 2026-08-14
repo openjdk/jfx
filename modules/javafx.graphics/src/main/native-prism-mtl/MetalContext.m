@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,6 @@
         nonLinearSamplerDict = [[NSMutableDictionary alloc] init];
         compositeMode = com_sun_prism_mtl_MTLContext_MTL_COMPMODE_SRCOVER; //default
 
-        currentBufferIndex = 0;
         commandQueue = [device newCommandQueue];
         commandQueue.label = @"The only MTLCommandQueue";
         pipelineManager = [MetalPipelineManager alloc];
@@ -358,11 +357,6 @@
         [currentRenderEncoder release];
         currentRenderEncoder = nil;
     }
-}
-
-- (NSUInteger) getCurrentBufferIndex
-{
-    return currentBufferIndex;
 }
 
 - (id<MTLRenderPipelineState>) getPhongPipelineStateWithNumLights:(int)numLights
