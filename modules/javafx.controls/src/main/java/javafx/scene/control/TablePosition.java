@@ -25,9 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.WeakReferenceWrapper;
 import java.lang.ref.WeakReference;
-import java.util.List;
 
 import javafx.beans.NamedArg;
 
@@ -71,10 +69,6 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(tableView);
 
-        List<S> items = tableView != null ? tableView.getItems() : null;
-        this.itemRef = new WeakReferenceWrapper<>(
-                items != null && row >= 0 && row < items.size() ? items.get(row) : null);
-
         nonFixedColumnIndex = tableView == null || tableColumn == null ? -1 : tableView.getVisibleLeafIndex(tableColumn);
     }
 
@@ -87,7 +81,6 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      **************************************************************************/
 
     private final WeakReference<TableView<S>> controlRef;
-    private final WeakReferenceWrapper<S> itemRef;
     int fixedColumnIndex = -1;
     private final int nonFixedColumnIndex;
 
@@ -122,14 +115,6 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     @Override public final TableColumn<S,T> getTableColumn() {
         // Forcing the return type to be TableColumn<S,T>, not TableColumnBase<S,T>
         return super.getTableColumn();
-    }
-
-    /**
-     * Returns the item that backs the {@link #getRow()} row}, at the point
-     * in time when this TablePosition was created.
-     */
-    final S getItem() {
-        return itemRef == null ? null : itemRef.get();
     }
 
     /**
