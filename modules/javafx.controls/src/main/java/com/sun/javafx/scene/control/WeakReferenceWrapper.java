@@ -70,7 +70,7 @@ public class WeakReferenceWrapper<T> {
             return true;
         } else {
             try {
-                System.err.println("[3] Calling Ojbects.hasIdentityMethod(obj)");
+                System.err.println("[3] Calling Objects.hasIdentityMethod(obj)");
                 return (Boolean)hasIdentityMethod.invoke(null, obj);
             } catch (Exception ex) {
                 return true;
