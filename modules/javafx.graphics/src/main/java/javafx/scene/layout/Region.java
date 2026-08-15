@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2168,11 +2168,15 @@ public class Region extends Parent {
      * @param areaHeight the height of the bounding area where the node is going to be placed
      * @param fillWidth if Node should try to fill the area width
      * @param fillHeight if Node should try to fill the area height
+     * @param isSnapToPixel whether to snap size to pixels
+     * @param snapScaleX the horizontal scale to use when snapping
+     * @param snapScaleY the vertical scale to use when snapping
      * @param result Vec2d object for the result or null if new one should be created
      * @return Vec2d object with width(x parameter) and height (y parameter)
      */
     static Vec2d boundedNodeSizeWithBias(Node node, double areaWidth, double areaHeight,
-            boolean fillWidth, boolean fillHeight, Vec2d result) {
+            boolean fillWidth, boolean fillHeight, boolean isSnapToPixel,
+            double snapScaleX, double snapScaleY, Vec2d result) {
         if (result == null) {
             result = new Vec2d();
         }
@@ -2183,34 +2187,34 @@ public class Region extends Parent {
         double childHeight = 0;
 
         if (bias == null) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
 
         } else if (bias == Orientation.HORIZONTAL) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(childWidth), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(childWidth)),
-                    node.maxHeight(childWidth));
+                    node.maxHeight(childWidth)), isSnapToPixel, snapScaleY);
 
         } else { // bias == VERTICAL
-            childHeight = boundedSize(
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
-            childWidth = boundedSize(
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
+            childWidth = snapSize(boundedSize(
                     node.minWidth(childHeight), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(childHeight)),
-                    node.maxWidth(childHeight));
+                    node.maxWidth(childHeight)), isSnapToPixel, snapScaleX);
         }
 
         result.set(childWidth, childHeight);
@@ -2602,9 +2606,8 @@ public class Region extends Parent {
 
         if (child.isResizable()) {
             Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
-                    fillWidth, fillHeight, TEMP_VEC2D);
-            child.resize(snapSize(size.x, isSnapToPixel, snapScaleX),
-                         snapSize(size.y, isSnapToPixel, snapScaleY));
+                    fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            child.resize(size.x, size.y);
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment, isSnapToPixel);
