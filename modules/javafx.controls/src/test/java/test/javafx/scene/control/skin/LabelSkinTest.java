@@ -2093,53 +2093,59 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void testMnemonics_whenTextNotEmpty_noExceptionIsThrown() {
+    public void testMnemonics_noExceptionIsThrown() {
+        label.setMnemonicParsing(true);
+        checkMnemonics();
+
+        label.setMnemonicParsing(false);
+        checkMnemonics();
+    }
+
+    @Test
+    public void testMnemonics_whenContentDisplay_GRAPHIC_ONLY_noExceptionIsThrown() {
+        label.setMnemonicParsing(true);
+        label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+
+        checkMnemonics();
+    }
+
+    @Test
+    public void testMnemonics_whenContentDisplay_TEXT_ONLY_noExceptionIsThrown() {
+        label.setMnemonicParsing(true);
+        label.setContentDisplay(ContentDisplay.TEXT_ONLY);
+
+        checkMnemonics();
+    }
+
+    private void checkMnemonics() {
         Toolkit tk = Toolkit.getToolkit();
         StageLoader sl = new StageLoader(label);
         tk.firePulse();
 
-        label.setMnemonicParsing(true);
-
         label.setText("foo_bar");
         tk.firePulse();
+
+        // mnemonic -> text
         label.setText("xxx");
         tk.firePulse();
+
+        // text -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
 
-        sl.dispose();
-    }
-
-    @Test
-    public void testMnemonics_whenTextIsEmpty_noExceptionIsThrown() {
-        Toolkit tk = Toolkit.getToolkit();
-        StageLoader sl = new StageLoader(label);
-        tk.firePulse();
-
-        label.setMnemonicParsing(true);
-
-        label.setText("foo_bar");
-        tk.firePulse();
+        // mnemonic -> empty
         label.setText("");
         tk.firePulse();
+
+        // empty -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
 
-        sl.dispose();
-    }
-
-    @Test
-    public void testMnemonics_whenTextIsNull_noExceptionIsThrown() {
-        Toolkit tk = Toolkit.getToolkit();
-        StageLoader sl = new StageLoader(label);
-        tk.firePulse();
-
-        label.setMnemonicParsing(true);
-
-        label.setText("foo_bar");
-        tk.firePulse();
+        // mnemonic -> null
         label.setText(null);
         tk.firePulse();
+
+        // null -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
 
