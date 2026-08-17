@@ -77,18 +77,13 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
-// Custom event that is emitted by AWT to let libraries like JavaFX
-// know that it is ready to receive embedded events. Until this event is
-// emitted libraries should buffer the already received events.
-static NSString* awtEmbeddedEventReady = @"AWTEmbeddedEventReady";
+// Specifies whether awt is initialized to receive embedded events.
+static bool awtInitialized = false;
 
 // Custom event that is provided by AWT to allow libraries like
 // JavaFX to forward native events to AWT even if AWT runs in
 // embedded mode.
 static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
-
-// Set to true once AWT has emitted the embedded ready event.
-static BOOL awtEmbeddedEventReadyReceived = false;
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -197,13 +192,6 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
         {
             [GlassHelper SetGlassClassLoader:classLoader withEnv:env];
         }
-
-        self->bufferedURLs = [NSMutableArray array];
-
-        // register AWT embedded event ready listener
-        NSNotificationCenter *ctr = [NSNotificationCenter defaultCenter];
-        Class clz = [GlassApplication class];
-        [ctr addObserver:clz selector:@selector(_embeddedEventReady:) name:awtEmbeddedEventReady object:nil];
     }
     return self;
 }
@@ -217,19 +205,26 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     [super dealloc];
 }
 
-+ (void)_embeddedEventReady:(NSNotification *)notification {
-    awtEmbeddedEventReadyReceived = true;
-    id delegate = [NSApp delegate];
-
-    if ([delegate isKindOfClass:[GlassApplication class]]) {
-        GlassApplication* glassApplication = (GlassApplication *)delegate;
-
-        [glassApplication application:NSApp openURLs:glassApplication->bufferedURLs];
-        [glassApplication->bufferedURLs removeAllObjects];
-    }
-}
-
 #pragma mark --- delegate methods
+
+- (void)_initAwt {
+    LOG("_initAwt");
+
+    if (awtInitialized) {
+        return;
+    }
+
+    JNIEnv *env = jEnv;
+    jclass awt = [GlassHelper ClassForName:"java.awt.Toolkit" withEnv:env];
+    jmethodID method = (*env)->GetMethodID(env, awt, "getDefaultToolkit", "()V");
+
+    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+        return;
+    }
+
+    (*env)->CallVoidMethod(env, awt, method);
+    awtInitialized = true;
+}
 
 - (void)GlassApplicationDidChangeScreenParameters
 {
@@ -531,20 +526,18 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
 - (void)application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
 {
-    for (NSURL* url in urls) {
-        if (awtEmbeddedEventReadyReceived) {
-                NSDictionary *userInfo = @{
-                    @"name": @"openURL",
-                    @"url": url.absoluteString
-                };
+    [self _initAwt];
 
-                [[NSNotificationCenter defaultCenter]
-                        postNotificationName:awtEmbeddedEvent
-                        object:nil
-                        userInfo:userInfo];
-        } else {
-            [self->bufferedURLs addObject:url];
-        }
+    for (NSURL* url in urls) {
+        NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
     }
 }
 
