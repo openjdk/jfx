@@ -309,12 +309,13 @@
  * inset and padding; custom controls should normally use these methods instead of snapping
  * {@linkplain javafx.scene.layout.Region#getInsets() raw insets} manually.
  *
- * <h3>Who controls snapping?</h3>
+ * <h3>Why snapped content can still look blurry</h3>
  *
- * The {@link javafx.scene.layout.Region#snapToPixelProperty() snapToPixel} property controls layout calculations
- * <em>performed by that region only</em>; it is not inherited from the parent and does not affect whether children
- * snap their contents. A region owns the position and size it allocates to a child; the child owns the layout of
- * its own descendants.
+ * Enabling pixel snapping on a region does not guarantee that the region or its descendants will be rendered on
+ * pixel boundaries. The {@link javafx.scene.layout.Region#snapToPixelProperty() snapToPixel} property controls
+ * layout calculations <em>performed by that region only</em>; it is not inherited from the parent and does not
+ * affect whether children snap their contents. A region owns the position and size it allocates to a child;
+ * the child owns the layout of its own descendants.
  * <p>
  * For example, setting only the child's property does not repair a fractional position assigned by its parent:
  * {@snippet :
@@ -335,6 +336,9 @@
  * child.relocate(snapPositionX(10), snapPositionY(20));
  * child.setTranslateX(0.5); // The rendered X coordinate is now between pixels
  * }
+ * <p>
+ * Therefore, if content appears blurry despite pixel snapping being enabled, check both how its ancestors position
+ * and size it and whether transforms affect its final rendered position.
  *
  * <h3>Why snapping is difficult</h3>
  *
