@@ -303,7 +303,6 @@
  *     <li>A position is rounded to the nearest pixel so that an edge stays close to its requested coordinate.
  *     <li>Sizes use ceiling so that snapping itself does not reduce the measured content allocation.
  *     <li>Empty space can usually become slightly smaller without losing content.
- *     <li>{@code snapSpaceX/Y} can also be used to remove floating-point drift from the result of a computation.
  * </ul>
  *
  * The {@linkplain javafx.scene.layout.Region#snappedTopInset() snapped inset} methods return the combined border
@@ -344,8 +343,8 @@
  * combined sum of such elements, each semantic role can require a different decision:
  * <ul>
  *     <li>Snapping too early can lose precision, while snapping too late can introduce errors.
- *     <li>Snapping several children independently can avoid clipping, but at the same time risk exceeding
- *         the content size defined by the region.
+ *     <li>Snapping several children independently can avoid clipping, but the region's measurement and layout
+ *         methods must use consistent calculations so that the computed content size includes those allocations.
  * </ul>
  *
  * Additionally, adding or subtracting already-snapped values can introduce floating-point drift that may cause a
@@ -391,29 +390,52 @@
  *         // Incorrect: a 0.1-unit gap becomes a full pixel
  *         double gap = snapSizeX(0.1);
  *         }
+ *     <li><b>Re-snap after calculations, using the meaning of the result.</b><br>
+ *         Addition and subtraction of already-snapped values can leave the result a few floating-point units away
+ *         from a pixel boundary. After calculating a final value from snapped terms, re-snap a coordinate with
+ *         {@code snapPositionX/Y}, and re-snap a gap or other empty space with {@code snapSpaceX/Y}. Also use
+ *         {@code snapSpaceX/Y} to re-snap a final allocated span composed of independently snapped sizes and spaces:
+ *         {@snippet :
+ *         double firstWidth = snapSizeX(firstChildWidth);
+ *         double gapWidth = snapSpaceX(getGap());
+ *         double secondWidth = snapSizeX(secondChildWidth);
+ *
+ *         // Correct: re-snap the final allocated span with snapSpaceX after arithmetic
+ *         double allocatedWidth = snapSpaceX(firstWidth + gapWidth + secondWidth);
+ *
+ *         // Correct: coordinate calculated from snapped values is re-snapped as a position
+ *         double childX = snapPositionX(snappedLeftInset() + allocatedWidth);
+ *
+ *         // Incorrect: snapSizeX can turn floating-point noise into an extra pixel
+ *         double allocatedWidth = snapSizeX(firstWidth + gapWidth + secondWidth);
+ *
+ *         // Incorrect: the sum of snapped values can add floating-point drift
+ *         double allocatedWidth = firstWidth + gapWidth + secondWidth;
+ *         }
+ *         Using {@code snapSpaceX/Y} for the allocated span does not mean that the span is empty space, it merely
+ *         selects nearest-pixel rounding for the final arithmetic result.
  *     <li><b>Snap independent allocations independently.</b><br>
  *         If two independent pieces of content each need their own pixels, snapping only their sum can under-allocate
  *         layout space. At scale {@code 1.0}, two content widths of {@code 0.4} <em>each</em> require one pixel, while
- *         their combined raw width of {@code 0.8} would be ceiled to only one pixel:
+ *         their combined raw width of {@code 0.8} would be rounded to only one pixel:
  *         {@snippet :
  *         // Correct: each content item receives an independent allocation
  *         double total = snapSpaceX(snapSizeX(firstWidth) + snapSizeX(secondWidth)); // 2.0
  *
- *         // Incorrect: 0.4 + 0.4 is treated as one content allocation
- *         double total = snapSizeX(firstWidth + secondWidth); // 1.0
+ *         // Incorrect: the raw sum is treated as one allocation
+ *         double total = snapSpaceX(firstWidth + secondWidth); // 1.0
  *         }
- *         In the correct example, {@code snapSizeX} is used to create each child's size allocation independently.
- *         Then, both size allocations are added and {@code snapSpaceX} removes floating-point drift.
- *         The same rule applies to distinct margins and gaps: snap each one with {@code snapSpaceX/Y}, then re-snap
- *         the final sum with {@code snapSpaceX/Y} again. For more information, refer to <em>Re-snap after
- *         calculations, using the meaning of the result</em>.
+ *         Only the correct example gives each child its own snapped allocation before adding them; the outer
+ *         {@code snapSpaceX} follows the preceding re-snapping rule. This independent allocation rule also
+ *         applies to distinct margins and gaps.
  *         <p>
  *         Note that this only applies to <em>independent</em> allocations. If several children must fit within a
  *         fixed allocated space, the algorithm must consider all children together and coordinate rounding children
  *         up or down so that their sum does not exceed the allocated space.
- *     <li><b>Do not repeatedly ceil the same semantic size.</b><br>
- *         Preserve precision while refining a measurement and call {@code snapSizeX/Y} only after the refinement.
- *         For example, if an adjustment is part of the same content measurement:
+ *     <li><b>Do not repeatedly snap the same semantic value.</b><br>
+ *         Preserve precision while refining a value and call the appropriate snapping method only after the
+ *         refinement. Repeated snapping is especially dangerous for content sizes because {@code snapSizeX/Y}
+ *         uses ceiling. For example, if an adjustment is part of the same content measurement:
  *         {@snippet :
  *         // Correct: compute all terms first, then allocate the width once
  *         double width = snapSizeX(measuredWidth + measurementAdjustment);
@@ -425,42 +447,6 @@
  *         (incorrect) form returns {@code 2.0}. This rule does not conflict with the preceding rule: two independent
  *         pieces of content are two allocations, while two intermediate terms describing one piece of content are
  *         one allocation.
- *     <li><b>Re-snap after calculations, using the meaning of the result.</b><br>
- *         Addition and subtraction of snapped values can leave the result a few floating-point units away from a
- *         pixel boundary. Re-snap a final coordinate as a <em>position</em> and the allocated span as a <em>space</em>:
- *         {@snippet :
- *         // Correct:
- *         double firstWidth = snapSizeX(firstChildWidth);
- *         double gapWidth = snapSpaceX(getGap());
- *         double secondWidth = snapSizeX(secondChildWidth);
- *         double allocatedWidth = snapSpaceX(firstWidth + gapWidth + secondWidth);
- *
- *         // Incorrect: arithmetic can add floating-point noise to snapped values
- *         double allocatedWidth = firstWidth + gapWidth + secondWidth;
- *
- *         // Incorrect: snapSizeX can turn floating-point noise into an extra pixel
- *         double allocatedWidth = snapSizeX(firstWidth + gapWidth + secondWidth);
- *         }
- *         In this example, {@code firstWidth} and {@code secondWidth} are content sizes, so they use {@code snapSizeX}.
- *         On the other hand, {@code gap} is empty space, so it uses {@code snapSpaceX}. Since all terms are snapped,
- *         the addition of these terms produces the final allocated width, but it can introduce floating-point error.
- *         The final {@code snapSpaceX} does not mean that the allocated width is empty space, it merely uses
- *         the snapping method to remove a tiny amount of floating-point drift.
- *         <p>
- *         The same principle applies to coordinates: after calculating a final coordinate from snapped values, use
- *         {@code snapPositionX/Y} to remove potential floating-point drift.
- *     <li><b>Deliberately apply the snapping policy to values determined by the parent.</b><br>
- *         Since a region's position and allocated size are determined by its parent (and the {@code isSnapToPixel}
- *         policy of its parent), it must not reposition or resize itself. If the allocated width or height is not
- *         aligned, the region cannot both preserve the exact allocation and make its complete bounds pixel-aligned.
- *         Apply the snapping policy of the region deliberately:
- *         {@snippet :
- *         double rawAvailableWidth = getWidth();
- *         double rawAvailableHeight = getHeight();
- *
- *         // Depending on this region's fitting and overflow policy, snap this region's
- *         // raw position and raw allocated size to lay out its children.
- *         }
  *     <li><b>Use the same snapped dependent dimension for measurement and layout.</b><br>
  *         Content-biased nodes have an order dependency between width and height. For example, for a
  *         horizontally-biased child, height depends on width. Establish the snapped width first and pass
@@ -476,23 +462,44 @@
  *             child.minWidth(-1),
  *             child.maxWidth(-1));
  *
- *         // Snap the width the child will actually receive
+ *         // Correct:
+ *         // 1. Snap the width the child will actually receive
  *         double snappedChildWidth = snapSizeX(rawChildWidth);
  *
- *         // Use the snapped width for every dependent height measurement
+ *         // 2. Use the snapped width for every dependent height measurement
  *         double rawChildHeight = boundedSize(
  *             child.prefHeight(snappedChildWidth),
  *             child.minHeight(snappedChildWidth),
  *             child.maxHeight(snappedChildWidth));
  *
- *         // Snap the height the child will receive
+ *         // 3. Snap the height the child will receive
  *         double snappedChildHeight = snapSizeY(rawChildHeight);
  *
- *         // Incorrect: height is measured for rawChildWidth
- *         double snappedChildHeight = snapSizeY(boundedSize(
+ *         // Incorrect:
+ *         // 1. The dependent height is measured for rawChildWidth
+ *         double rawChildHeight = boundedSize(
  *             child.prefHeight(rawChildWidth),
  *             child.minHeight(rawChildWidth),
- *             child.maxHeight(rawChildWidth)));
+ *             child.maxHeight(rawChildWidth));
+ *
+ *          // 2. rawChildHeight was measured for a width that the child might not
+ *          //    actually receive, which makes the snapped value potentially wrong
+ *          double snappedChildHeight = snapSizeY(rawChildHeight);
+ *         }
+ *     <li><b>Deliberately apply the snapping policy to values determined by the parent.</b><br>
+ *         Since a region's position and allocated size are determined by its parent (and the {@code isSnapToPixel}
+ *         policy of its parent), it must not reposition or resize itself. If the allocated width or height is not
+ *         pixel-aligned, the region cannot both preserve the exact allocation and make its complete bounds
+ *         pixel-aligned. The region must choose how to lay out its children according to its fitting and overflow
+ *         policy. For example, a fill policy that accepts a slight underflow or overflow can round the available
+ *         span to the nearest pixel before laying out a resizable child:
+ *         {@snippet :
+ *         // Snap own width and height to determine the content rectangle for children
+ *         double availableWidth = snapSpaceX(getWidth());
+ *         double availableHeight = snapSpaceY(getHeight());
+ *
+ *         // Assumes a completely unconstrained, resizable child
+ *         child.resizeRelocate(0, 0, availableWidth, availableHeight);
  *         }
  *     <li><b>Property values should not be snapped when set, only when they are consumed.</b><br>
  *         The setter of a geometric property should not snap the value, and the getter should return the
