@@ -2172,7 +2172,8 @@ public class Region extends Parent {
      * @param snapScaleX the horizontal scale to use when snapping
      * @param snapScaleY the vertical scale to use when snapping
      * @param result Vec2d object for the result or null if new one should be created
-     * @return Vec2d object with width(x parameter) and height (y parameter)
+     * @return Vec2d object with width(x parameter) and height (y parameter), both snapped if
+     *               {@code isSnapToPixel} is {@code true}
      */
     static Vec2d boundedNodeSizeWithBias(Node node, double areaWidth, double areaHeight,
             boolean fillWidth, boolean fillHeight, boolean isSnapToPixel,
