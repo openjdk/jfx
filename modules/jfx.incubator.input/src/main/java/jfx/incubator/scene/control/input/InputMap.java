@@ -388,7 +388,7 @@ public final class InputMap {
      * {@link javafx.scene.control.Skin#install() Skin.install()}
      * method.
      * <p>
-     * This method removes all the mappings from the previous skin input map, if any.
+     * This method removes all the mappings added by the previous skin input map, if any.
      *
      * @param m the skin input map
      * @since 999 TODO

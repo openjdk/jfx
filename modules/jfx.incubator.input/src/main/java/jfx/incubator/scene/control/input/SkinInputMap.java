@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -42,11 +43,11 @@ import com.sun.jfx.incubator.scene.control.input.PHList;
 /**
  * The Input Map for use by the Skin.
  * <p>
- * Skins whose behavior encapsulates state information must use a Stateful variant obtained with
+ * Skins whose behavior encapsulates state information must use a {@code Stateful} variant obtained with
  * the {@link #create()} factory method.
  * <p>
- * Skins whose behavior requires no state, or when state is fully encapsulated by the Control itself,
- * could use a Stateless variant obtained with the {@link #createStateless()} method.
+ * Skins whose behavior requires no state, or when the state is fully encapsulated by the Control itself,
+ * could use the {@code Stateless} variant obtained with the {@link #createStateless()} method.
  *
  * @since 999 TODO
  */
@@ -113,10 +114,11 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     /**
      * Maps a key binding to the specified function tag.
      *
-     * @param k the key binding
+     * @param k the key binding, cannot be null
      * @param tag the function tag
      */
     public final void registerKey(KeyBinding k, FunctionTag tag) {
+        Objects.nonNull(k);
         map.put(k, tag);
         kmapper.addType(k);
     }
