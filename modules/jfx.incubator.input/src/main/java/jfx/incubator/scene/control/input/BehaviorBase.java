@@ -243,15 +243,15 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node above the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#UP}.
      */
     public final void traverseUp() {
         control.requestFocusTraversal(TraversalDirection.UP);
     }
 
     /**
-     * Calls {@link Control#requestFocusTraversal(TraversalDirection)
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
      * with direction {@link TraversalDirection#DOWN}.
      */
     public final void traverseDown() {
@@ -259,7 +259,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Calls {@link Control#requestFocusTraversal(TraversalDirection)
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
      * with direction {@link TraversalDirection#LEFT}.
      */
     public final void traverseLeft() {
@@ -267,7 +267,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Calls {@link Control#requestFocusTraversal(TraversalDirection)
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
      * with direction {@link TraversalDirection#RIGHT}.
      */
     public final void traverseRight() {
@@ -275,7 +275,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Calls {@link Control#requestFocusTraversal(TraversalDirection)
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
      * with direction {@link TraversalDirection#NEXT}.
      */
     public final void traverseNext() {
@@ -283,7 +283,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Calls {@link Control#requestFocusTraversal(TraversalDirection)
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
      * with direction {@link TraversalDirection#PREVIOUS}.
      */
     public final void traversePrevious() {
