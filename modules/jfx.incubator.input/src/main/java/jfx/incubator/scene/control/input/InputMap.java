@@ -389,11 +389,12 @@ public final class InputMap {
      * method.
      * <p>
      * This method removes all the mappings from the previous skin input map, if any.
+     *
      * @param m the skin input map
+     * @since 999 TODO
      */
-    // TODO change to public once SkinInputMap is public
-    // or add getSkinInputMap() to Skin.
-    private void setSkinInputMap(SkinInputMap m) {
+    // alternatively, we could add Skin.getSkinInputMap()
+    public void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -442,12 +443,6 @@ public final class InputMap {
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
-            }
-
-            // TODO will be unnecessary once SkinInputMap is public
-            @Override
-            public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-                inputMap.setSkinInputMap(sm);
             }
         });
     }

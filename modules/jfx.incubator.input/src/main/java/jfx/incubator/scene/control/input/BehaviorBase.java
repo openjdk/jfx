@@ -185,6 +185,7 @@ public abstract class BehaviorBase<C extends Control> {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(KeyBinding.of(code), tag);
     }
+    // do we need protected final void **register**(FunctionTag, KeyCode, BooleanSupplier) ?
 
     /**
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.

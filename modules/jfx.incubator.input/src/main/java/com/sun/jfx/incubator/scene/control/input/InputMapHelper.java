@@ -37,7 +37,6 @@ public class InputMapHelper {
     public interface Accessor {
         public void execute(Object source, InputMap inputMap, FunctionTag tag);
         public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
-        public void setSkinInputMap(InputMap inputMap, SkinInputMap sm);
     }
 
     static {
@@ -59,9 +58,5 @@ public class InputMapHelper {
 
     public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
         accessor.executeDefault(source, inputMap, tag);
-    }
-
-    public static void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-        accessor.setSkinInputMap(inputMap, sm);
     }
 }
