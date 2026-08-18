@@ -400,7 +400,6 @@
  *         to be slightly off the pixel grid. In this situation, the fractional remainder is <em>known</em> to
  *         be arithmetic drift rather than an intentional offset, so re-snap the final result using nearest-pixel
  *         rounding before returning it or using it in another layout calculation:
- *         <p>
  *         <ul>
  *             <li>Re-snap a coordinate with {@code snapPositionX/Y}.
  *             <li>Re-snap empty space (gaps, margins, padding) or an allocated content span with {@code snapSpaceX/Y}.
