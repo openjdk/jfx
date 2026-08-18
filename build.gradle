@@ -2354,9 +2354,10 @@ project(":graphics") {
         stub
     }
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         antlr group: "org.antlr", name: "antlr4", version: "${antlr4Version}", classifier: "complete"
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
         implementation project(':base')
     }
 
@@ -2895,9 +2896,11 @@ project(":controls") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(':base')
         implementation project(':graphics')
     }
@@ -2993,10 +2996,13 @@ project(":incubator.input") {
         'incubator.input'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
@@ -3051,11 +3057,15 @@ project(":incubator.richtext") {
         'incubator.richtext'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def inputTestOutput = project(":incubator.input").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":incubator.input").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
+        testImplementation inputTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
@@ -3237,9 +3247,11 @@ project(":fxml") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'fxml' ])
 
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(":base")
         implementation project(":graphics")
     }
@@ -3924,6 +3936,7 @@ project(":web") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         if (IS_COMPILE_WEBKIT) {
             def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
@@ -3933,7 +3946,7 @@ project(":web") {
         implementation project(":graphics")
         implementation project(":controls")
         implementation project(":media")
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -4251,11 +4264,15 @@ project(":systemTests") {
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def swingTestOutput = project(":swing").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":swing").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
+        testImplementation controlsTestOutput
+        testImplementation swingTestOutput
     }
 
     def dependentProjects = [
