@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
-#include "B3Type.h"
-#include "B3ValueRep.h"
-#include "WasmFormat.h"
+#include <JavaScriptCore/B3Type.h>
+#include <JavaScriptCore/B3ValueRep.h>
+#include <JavaScriptCore/WasmFormat.h>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -57,7 +59,7 @@ public:
     OSREntryData(FunctionCodeIndex functionIndex, uint32_t loopIndex, StackMap&& stackMap)
         : m_functionIndex(functionIndex)
         , m_loopIndex(loopIndex)
-        , m_values(WTFMove(stackMap))
+        , m_values(WTF::move(stackMap))
     {
     }
 

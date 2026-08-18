@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "HTTPHeaderNames.h"
+#include <WebCore/HTTPHeaderNames.h>
 #include <utility>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -42,7 +42,7 @@ public:
         String value;
 
         CommonHeader isolatedCopy() const & { return { key , value.isolatedCopy() }; }
-        CommonHeader isolatedCopy() && { return { key , WTFMove(value).isolatedCopy() }; }
+        CommonHeader isolatedCopy() && { return { key , WTF::move(value).isolatedCopy() }; }
 
         friend bool operator==(const CommonHeader&, const CommonHeader&) = default;
     };
@@ -52,7 +52,7 @@ public:
         String value;
 
         UncommonHeader isolatedCopy() const & { return { key.isolatedCopy() , value.isolatedCopy() }; }
-        UncommonHeader isolatedCopy() && { return { WTFMove(key).isolatedCopy() , WTFMove(value).isolatedCopy() }; }
+        UncommonHeader isolatedCopy() && { return { WTF::move(key).isolatedCopy() , WTF::move(value).isolatedCopy() }; }
 
         friend bool operator==(const UncommonHeader&, const UncommonHeader&) = default;
     };
@@ -180,6 +180,18 @@ public:
     bool addIfNotPresent(HTTPHeaderName, const String&);
     WEBCORE_EXPORT bool contains(HTTPHeaderName) const;
     WEBCORE_EXPORT bool remove(HTTPHeaderName);
+
+    // https://fetch.spec.whatwg.org/#request-body-header-name
+    // Content-Length is not a request-body-header name per spec, but is included
+    // here since in practice the body is always nulled alongside this call.
+    void removeRequestBodyHeaders()
+    {
+        remove(HTTPHeaderName::ContentEncoding);
+        remove(HTTPHeaderName::ContentLanguage);
+        remove(HTTPHeaderName::ContentLength);
+        remove(HTTPHeaderName::ContentLocation);
+        remove(HTTPHeaderName::ContentType);
+    }
 
     // Instead of passing a string literal to any of these functions, just use a HTTPHeaderName instead.
     template<size_t length> String get(ASCIILiteral) const = delete;

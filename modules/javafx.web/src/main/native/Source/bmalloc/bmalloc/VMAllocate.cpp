@@ -25,6 +25,10 @@
 
 #include "VMAllocate.h"
 
+#if BUSE(LIBPAS)
+#include "pas_mte_config.h"
+#endif
+
 namespace bmalloc {
 
 #if BMALLOC_USE_MADV_ZERO
@@ -55,5 +59,35 @@ bool isMadvZeroSupported()
     return madvZeroSupported;
 }
 #endif
+
+#if BENABLE(MTE) && BOS(DARWIN)
+bool tryVmZeroAndPurgeMTECase(void* p, size_t vmSize, VMTag usage)
+{
+    if (!BMALLOC_USE_MTE)
+        return false;
+    const vm_inherit_t childProcessInheritance = VM_INHERIT_DEFAULT;
+    const bool copy = false;
+    const int tag = static_cast<int>(usage);
+    /* We would much prefer to use mach_vm_behavior_set here, as it
+       always preserves the page's current VM flags. However, it's
+       currently blocked by an unknown security policy, so until that
+       blocker is resolved we can use this instead without much loss. */
+    kern_return_t vmMapResult = mach_vm_map(mach_task_self(),
+        (mach_vm_address_t*)&p,
+        vmSize,
+        0,
+        VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | BMALLOC_VM_MTE | tag,
+        MEMORY_OBJECT_NULL,
+        0,
+        copy,
+        VM_PROT_DEFAULT,
+        VM_PROT_ALL,
+        childProcessInheritance);
+    if (vmMapResult != KERN_SUCCESS)
+        errno = 0;
+    RELEASE_BASSERT(vmMapResult == KERN_SUCCESS);
+    return true;
+}
+#endif // BENABLE(MTE) && BOS(DARWIN)
 
 } // namespace bmalloc

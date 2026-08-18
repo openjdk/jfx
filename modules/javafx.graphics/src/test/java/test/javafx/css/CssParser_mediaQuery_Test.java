@@ -27,6 +27,8 @@ package test.javafx.css;
 
 import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.SizeQueryType;
 import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
@@ -49,7 +51,9 @@ import javafx.css.Stylesheet;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -339,6 +343,51 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             FunctionExpression.of("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parsePlatformQuery(){
+        Map<String, BooleanSupplier> oldPlatforms = MediaFeaturesShim.getPlatforms();
+
+        try {
+            MediaFeaturesShim.setPlatforms(Map.of(
+                "windows", () -> true,
+                "linux", () -> true,
+                "macos", () -> false
+            ));
+
+            Stylesheet stylesheet = new CssParser().parse("""
+                @media (-fx-platform: WINdows),
+                       (-fx-platform: linUX),
+                       not (-fx-platform: Macos) {
+                    .foo { bar: baz; }
+                }
+                """);
+
+            var context = new SceneContext(new Scene(new Group()));
+            var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+            assertEquals(3, mediaRule.getQueries().size());
+
+            MediaQuery expected = FunctionExpression.of("-fx-platform", "windows", _ -> null, true);
+            MediaQuery actual = mediaRule.getQueries().get(0);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = FunctionExpression.of("-fx-platform", "linux", _ -> null, true);
+            actual = mediaRule.getQueries().get(1);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = NegationExpression.of(FunctionExpression.of("-fx-platform", "macos", _ -> null, true));
+            actual = mediaRule.getQueries().get(2);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+        } finally {
+            MediaFeaturesShim.setPlatforms(oldPlatforms);
+        }
     }
 
     @Test

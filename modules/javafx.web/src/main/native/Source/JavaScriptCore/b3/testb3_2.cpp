@@ -2567,6 +2567,192 @@ void testUModArgsInt64(uint64_t a, uint64_t b)
     CHECK_EQ(compileAndRun<uint64_t>(proc, a, b), a % b);
 }
 
+void testUDivByConstantInt32(uint32_t a, uint32_t divisor)
+{
+    if (!divisor)
+        return;
+
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+
+    Value* argument1 = arguments[0];
+    Value* result = root->appendNew<Value>(
+        proc, UDiv, Origin(), argument1,
+        root->appendNew<Const32Value>(proc, Origin(), divisor));
+    root->appendNew<Value>(proc, Return, Origin(), result);
+
+    CHECK_EQ(compileAndRun<uint32_t>(proc, a), a / divisor);
+}
+
+void testUDivByConstantInt32PowerOf2(uint32_t a)
+{
+    // Test power of 2 divisors - should become a right shift
+    auto testDivisor = [&](uint32_t divisor) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+
+        Value* argument1 = arguments[0];
+        Value* result = root->appendNew<Value>(
+            proc, UDiv, Origin(), argument1,
+            root->appendNew<Const32Value>(proc, Origin(), divisor));
+        root->appendNew<Value>(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<uint32_t>(proc, a), a / divisor);
+    };
+
+    testDivisor(1);
+    testDivisor(2);
+    testDivisor(4);
+    testDivisor(8);
+    testDivisor(16);
+    testDivisor(32);
+    testDivisor(64);
+    testDivisor(128);
+    testDivisor(256);
+    testDivisor(512);
+    testDivisor(1024);
+    testDivisor(0x80000000U); // 2^31
+}
+
+void testUDivByConstantInt32NonPowerOf2(uint32_t a)
+{
+    // Test non-power of 2 divisors - should use magic number multiplication
+    auto testDivisor = [&](uint32_t divisor) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+
+        Value* argument1 = arguments[0];
+        Value* result = root->appendNew<Value>(
+            proc, UDiv, Origin(), argument1,
+            root->appendNew<Const32Value>(proc, Origin(), divisor));
+        root->appendNew<Value>(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<uint32_t>(proc, a), a / divisor);
+    };
+
+    testDivisor(3);
+    testDivisor(5);
+    testDivisor(6);
+    testDivisor(7);
+    testDivisor(9);
+    testDivisor(10);
+    testDivisor(11);
+    testDivisor(12);
+    testDivisor(13);
+    testDivisor(15);
+    testDivisor(17);
+    testDivisor(25);
+    testDivisor(100);
+    testDivisor(255);
+    testDivisor(1000);
+    testDivisor(10000);
+    testDivisor(0x7FFFFFFFU); // Large prime-like number
+
+    // These divisors are known to trigger the "add" variant (round down algorithm)
+    // when the magic multiplier >= 2^31
+    testDivisor(7);
+    testDivisor(14);
+    testDivisor(21);
+}
+
+void testUDivByConstantInt32EvenDivisors(uint32_t a)
+{
+    // Test even divisors that benefit from preShift optimization
+    // These divisors would trigger the "add" path but the even divisor optimization
+    // shifts them to avoid it
+    auto testDivisor = [&](uint32_t divisor) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+
+        Value* argument1 = arguments[0];
+        Value* result = root->appendNew<Value>(
+            proc, UDiv, Origin(), argument1,
+            root->appendNew<Const32Value>(proc, Origin(), divisor));
+        root->appendNew<Value>(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<uint32_t>(proc, a), a / divisor);
+    };
+
+    // Even divisors that would trigger add path without preShift optimization
+    testDivisor(6); // 2 * 3
+    testDivisor(10); // 2 * 5
+    testDivisor(14); // 2 * 7
+    testDivisor(18); // 2 * 9
+    testDivisor(20); // 4 * 5
+    testDivisor(22); // 2 * 11
+    testDivisor(26); // 2 * 13
+    testDivisor(28); // 4 * 7
+    testDivisor(30); // 2 * 15
+    testDivisor(42); // 2 * 21
+    testDivisor(56); // 8 * 7
+    testDivisor(100); // 4 * 25
+    testDivisor(126); // 2 * 63
+    testDivisor(254); // 2 * 127
+    testDivisor(1000); // 8 * 125
+    testDivisor(2000); // 16 * 125
+    testDivisor(10000); // 16 * 625
+
+    // Highly composite even numbers
+    testDivisor(12); // 4 * 3
+    testDivisor(24); // 8 * 3
+    testDivisor(48); // 16 * 3
+    testDivisor(60); // 4 * 15
+    testDivisor(120); // 8 * 15
+    testDivisor(240); // 16 * 15
+}
+
+void testUDivByConstantInt32EdgeCases(uint32_t a)
+{
+    auto testDivisor = [&](uint32_t divisor) {
+        if (!divisor)
+            return;
+
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+
+        Value* argument1 = arguments[0];
+        Value* result = root->appendNew<Value>(
+            proc, UDiv, Origin(), argument1,
+            root->appendNew<Const32Value>(proc, Origin(), divisor));
+        root->appendNew<Value>(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<uint32_t>(proc, a), a / divisor);
+    };
+
+    // Large odd primes
+    testDivisor(2147483647U); // 2^31 - 1 (max signed int32)
+    testDivisor(2147483629U); // Large prime near 2^31
+    testDivisor(2147483587U); // Another large prime
+
+    // Large even numbers
+    testDivisor(2147483646U); // 2 * (2^31 - 1)
+    testDivisor(2147483644U); // 4 * (2^30 - 1)
+
+    // Powers of 2 minus 1 (Mersenne-like numbers)
+    testDivisor(3U); // 2^2 - 1
+    testDivisor(7U); // 2^3 - 1
+    testDivisor(15U); // 2^4 - 1
+    testDivisor(31U); // 2^5 - 1
+    testDivisor(63U); // 2^6 - 1
+    testDivisor(127U); // 2^7 - 1
+    testDivisor(255U); // 2^8 - 1
+    testDivisor(511U); // 2^9 - 1
+    testDivisor(1023U); // 2^10 - 1
+
+    // Special dividend/divisor combinations
+    // Test with a == 0xFFFFFFFF
+    if (a == 0xFFFFFFFFU) {
+        testDivisor(0xFFFFFFFFU); // Should return 1
+        testDivisor(0x80000000U); // Should return 1
+        testDivisor(0x7FFFFFFFU); // Should return 2
+    }
+}
+
 void testSubArg(int64_t a)
 {
     Procedure proc;

@@ -27,6 +27,7 @@
 
 #include <WebCore/DragClient.h>
 #include <WebCore/PlatformJavaClasses.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class Image;
 class HTMLImageElement;
 
 class DragClientJava final : public DragClient {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DragClientJava);
+    WTF_MAKE_TZONE_ALLOCATED(DragClientJava);
 public:
     DragClientJava(const JLObject &webPage);
     ~DragClientJava() override;

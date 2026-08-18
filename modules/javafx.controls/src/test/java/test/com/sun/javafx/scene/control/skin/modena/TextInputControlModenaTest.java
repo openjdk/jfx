@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,15 +35,22 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
+import javafx.application.Application;
+import javafx.scene.paint.Color;
+import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Collection;
 import java.util.List;
 
+import static javafx.scene.control.skin.TextInputSkinShim.getPromptNode;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  *
@@ -53,6 +60,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 public class TextInputControlModenaTest {
+    private static String userAgentStylesheet;
+    private Stage stage;
 
     private static Collection<Class> parameters() {
         return List.of(
@@ -62,36 +71,32 @@ public class TextInputControlModenaTest {
         );
     }
 
-    private TextInputControl textInput;
+    @BeforeAll
+    public static void setup() {
+        userAgentStylesheet = Application.getUserAgentStylesheet();
+        Application.setUserAgentStylesheet(Application.STYLESHEET_MODENA);
+    }
 
-    //@BeforeEach
-    // junit5 does not support parameterized class-level tests yet
-    public void setup(Class<?> type) {
-        setUncaughtExceptionHandler();
-        try {
-            textInput = (TextInputControl)type.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            fail(e);
-        }
+    @AfterAll
+    public static void cleanup() {
+        Application.setUserAgentStylesheet(userAgentStylesheet);
     }
 
     @AfterEach
-    public void cleanup() {
-        removeUncaughtExceptionHandler();
+    public void cleanupTest() {
+        if (stage != null) {
+            stage.hide();
+            stage = null;
+        }
     }
 
-    private void setUncaughtExceptionHandler() {
-        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
-            if (throwable instanceof RuntimeException) {
-                throw (RuntimeException)throwable;
-            } else {
-                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
-            }
-        });
-    }
-
-    private void removeUncaughtExceptionHandler() {
-        Thread.currentThread().setUncaughtExceptionHandler(null);
+    private TextInputControl createTextInput(Class<?> type) {
+        try {
+            return (TextInputControl) type.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            fail(e);
+            return null;
+        }
     }
 
     /******************************************************
@@ -114,13 +119,13 @@ public class TextInputControlModenaTest {
     })
     public void testHighlightTextInput(String accentColor, String expectedTextColor) {
         for (Class<?> type : parameters()) {
-            setup(type);
+            TextInputControl textInput = createTextInput(type);
             textInput.setText("This is a text");
             textInput.selectAll();
 
             StackPane root = new StackPane(textInput);
             Scene scene = new Scene(root, 400, 200);
-            Stage stage = new Stage();
+            stage = new Stage();
             stage.setScene(scene);
             stage.show();
 
@@ -136,4 +141,27 @@ public class TextInputControlModenaTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void promptTextIsVisibleWhenEmptyFocusedTextInput(Class<? extends TextInputControl> type)
+            throws Exception {
+
+        TextInputControl control = type.getDeclaredConstructor().newInstance();
+        control.setPromptText("Prompt text");
+        StackPane root = new StackPane(control);
+        Scene scene = new Scene(root, 400, 200);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        control.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(control.isFocused(), type.getSimpleName() + " should be focused");
+
+        Text promptNode = getPromptNode(control);
+        assertNotNull(promptNode, type.getSimpleName() + " should have a prompt node");
+        assertTrue(promptNode.isVisible(), type.getSimpleName() + " prompt text should be visible");
+        assertNotEquals(Color.TRANSPARENT, promptNode.getFill(),
+                type.getSimpleName() + " prompt text fill should not be transparent");
+    }
 }

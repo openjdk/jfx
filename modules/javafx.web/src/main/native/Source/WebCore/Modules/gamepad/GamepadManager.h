@@ -46,6 +46,10 @@ class GamepadManager : public GamepadProviderClient {
 public:
     static GamepadManager& singleton();
 
+    // Do nothing since this is a singleton.
+    void ref() const final { }
+    void deref() const final { }
+
     void platformGamepadConnected(PlatformGamepad&, EventMakesGamepadsVisible) final;
     void platformGamepadDisconnected(PlatformGamepad&) final;
     void platformGamepadInputActivity(EventMakesGamepadsVisible) final;

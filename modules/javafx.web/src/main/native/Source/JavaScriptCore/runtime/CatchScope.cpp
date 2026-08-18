@@ -26,6 +26,9 @@
 #include "config.h"
 #include "CatchScope.h"
 
+#include "JSCellInlines.h"
+#include "StructureInlines.h"
+
 namespace JSC {
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)

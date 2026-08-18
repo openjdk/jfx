@@ -29,6 +29,8 @@
 
 #include "CSSPrimitiveValue.h"
 #include "StyleBuilderChecking.h"
+#include "StyleValueTypes.h"
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 namespace Style {
@@ -86,6 +88,11 @@ bool ListStyleType::isCircle() const
     return m_type == Type::CounterStyle && m_identifier == nameString(CSSValueCircle);
 }
 
+bool ListStyleType::isDecimal() const
+{
+    return m_type == Type::CounterStyle && m_identifier == nameString(CSSValueDecimal);
+}
+
 bool ListStyleType::isDisc() const
 {
     return m_type == Type::CounterStyle && m_identifier == nameString(CSSValueDisc);
@@ -113,6 +120,15 @@ auto CSSValueConversion<ListStyleType>::operator()(BuilderState& state, const CS
         return CounterStyle { { AtomString { primitiveValue->stringValue() } } };
 
     return AtomString { primitiveValue->stringValue() };
+}
+
+auto CSSValueCreation<ListStyleType>::operator()(CSSValuePool& pool, const RenderStyle& style, const ListStyleType& value) -> Ref<CSSValue>
+{
+    return WTF::switchOn(value,
+        [&](const CSS::Keyword::None& none) { return Style::createCSSValue(pool, style, none); }, // none
+        [&](const CounterStyle& counterStyle) { return Style::createCSSValue(pool, style, counterStyle.identifier); }, // custom-ident
+        [&](const AtomString& identifier) { return Style::createCSSValue(pool, style, identifier); } // string
+    );
 }
 
 } // namespace Style

@@ -38,19 +38,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCSctpTransport);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCSctpTransport);
 
 Ref<RTCSctpTransport> RTCSctpTransport::create(ScriptExecutionContext& context, UniqueRef<RTCSctpTransportBackend>&& backend, Ref<RTCDtlsTransport>&& transport)
 {
-    auto result = adoptRef(*new RTCSctpTransport(context, WTFMove(backend), WTFMove(transport)));
+    auto result = adoptRef(*new RTCSctpTransport(context, WTF::move(backend), WTF::move(transport)));
     result->suspendIfNeeded();
     return result;
 }
 
 RTCSctpTransport::RTCSctpTransport(ScriptExecutionContext& context, UniqueRef<RTCSctpTransportBackend>&& backend, Ref<RTCDtlsTransport >&& transport)
     : ActiveDOMObject(&context)
-    , m_backend(WTFMove(backend))
-    , m_transport(WTFMove(transport))
+    , m_backend(WTF::move(backend))
+    , m_transport(WTF::move(transport))
 {
     m_backend->registerClient(*this);
 }
@@ -58,6 +58,11 @@ RTCSctpTransport::RTCSctpTransport(ScriptExecutionContext& context, UniqueRef<RT
 RTCSctpTransport::~RTCSctpTransport()
 {
     m_backend->unregisterClient();
+}
+
+ScriptExecutionContext* RTCSctpTransport::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void RTCSctpTransport::stop()

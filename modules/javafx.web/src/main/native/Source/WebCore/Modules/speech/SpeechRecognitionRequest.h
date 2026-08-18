@@ -25,25 +25,18 @@
 
 #pragma once
 
-#include "SpeechRecognitionConnectionClientIdentifier.h"
-#include "SpeechRecognitionRequestInfo.h"
+#include <WebCore/SpeechRecognitionConnectionClientIdentifier.h>
+#include <WebCore/SpeechRecognitionRequestInfo.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
-class SpeechRecognitionRequest;
-}
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SpeechRecognitionRequest> : std::true_type { };
-}
-
-namespace WebCore {
-
-class SpeechRecognitionRequest : public CanMakeWeakPtr<SpeechRecognitionRequest> {
+class SpeechRecognitionRequest : public RefCountedAndCanMakeWeakPtr<SpeechRecognitionRequest> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(SpeechRecognitionRequest, WEBCORE_EXPORT);
 public:
-    WEBCORE_EXPORT explicit SpeechRecognitionRequest(SpeechRecognitionRequestInfo&&);
+    WEBCORE_EXPORT static Ref<SpeechRecognitionRequest> create(SpeechRecognitionRequestInfo&&);
+    WEBCORE_EXPORT ~SpeechRecognitionRequest();
 
     SpeechRecognitionConnectionClientIdentifier clientIdentifier() const { return m_info.clientIdentifier; }
     const String& lang() const { return m_info.lang; }
@@ -54,6 +47,8 @@ public:
     FrameIdentifier mainFrameIdentifier() const { return m_info.mainFrameIdentifier; }
 
 private:
+    explicit SpeechRecognitionRequest(SpeechRecognitionRequestInfo&&);
+
     const SpeechRecognitionRequestInfo m_info;
 };
 

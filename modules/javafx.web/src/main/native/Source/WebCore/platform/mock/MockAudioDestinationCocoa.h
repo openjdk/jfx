@@ -28,6 +28,7 @@
 #if ENABLE(WEB_AUDIO) && PLATFORM(COCOA)
 
 #include "AudioDestinationCocoa.h"
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WorkQueue.h>
@@ -36,7 +37,7 @@ namespace WebCore {
 
 class AudioIOCallback;
 
-class MockAudioDestinationCocoa final : public AudioDestinationCocoa {
+class MockAudioDestinationCocoa final : public AudioDestinationCocoa, public CanMakeWeakPtr<MockAudioDestinationCocoa> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(MockAudioDestinationCocoa, WEBCORE_EXPORT);
 public:
     static Ref<AudioDestination> create(const CreationOptions& options)

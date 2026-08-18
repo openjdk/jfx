@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSNumericValue.h"
+#include <WebCore/CSSNumericValue.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
@@ -39,7 +39,7 @@ public:
     WebAnimationTime(const CSSNumberish&);
 
     static WebAnimationTime fromMilliseconds(double);
-    static WebAnimationTime fromPercentage(double);
+    WEBCORE_EXPORT static WebAnimationTime fromPercentage(double);
 
     WEBCORE_EXPORT std::optional<Seconds> time() const;
     WEBCORE_EXPORT std::optional<double> percentage() const;

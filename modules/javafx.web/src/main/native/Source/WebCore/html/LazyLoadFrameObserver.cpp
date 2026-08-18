@@ -26,11 +26,11 @@
 #include "config.h"
 #include "LazyLoadFrameObserver.h"
 
-#include "DocumentInlines.h"
 #include "HTMLIFrameElement.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include "RenderStyle.h"
 
 #include <limits>
@@ -110,7 +110,7 @@ IntersectionObserver* LazyLoadFrameObserver::intersectionObserver(Document& docu
     if (!m_observer) {
         auto callback = LazyFrameLoadIntersectionObserverCallback::create(document);
         IntersectionObserver::Init options { std::nullopt, emptyString(), emptyString(), { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        auto observer = IntersectionObserver::create(document, WTF::move(callback), WTF::move(options));
         if (observer.hasException())
             return nullptr;
         m_observer = observer.releaseReturnValue();

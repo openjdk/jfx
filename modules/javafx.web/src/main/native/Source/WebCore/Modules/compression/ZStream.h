@@ -44,8 +44,9 @@ public:
 private:
 #if !PLATFORM(JAVA) //extra lib dependency
     z_stream m_stream;
-#endif
+    Operation m_operation { Operation::Compression };
     bool m_isInitialized { false };
+#endif
 };
 
 }

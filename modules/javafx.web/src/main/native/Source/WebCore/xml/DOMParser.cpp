@@ -20,9 +20,9 @@
 #include "DOMParser.h"
 
 #include "CommonAtomStrings.h"
-#include "DocumentInlines.h"
 #include "ExceptionOr.h"
 #include "HTMLDocument.h"
+#include "NodeInlines.h"
 #include "SVGDocument.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
@@ -46,7 +46,7 @@ Ref<DOMParser> DOMParser::create(Document& contextDocument)
 
 ExceptionOr<Ref<Document>> DOMParser::parseFromString(Variant<RefPtr<TrustedHTML>, String>&& string, const AtomString& contentType)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*protectedContextDocument()->protectedScriptExecutionContext().get(), WTFMove(string), "DOMParser parseFromString"_s);
+    auto stringValueHolder = trustedTypeCompliantString(protectedContextDocument()->protectedContextDocument(), WTF::move(string), "DOMParser parseFromString"_s);
 
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();

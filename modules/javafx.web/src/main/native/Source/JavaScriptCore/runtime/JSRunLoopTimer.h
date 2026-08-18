@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
@@ -44,9 +46,10 @@ public:
     typedef void TimerNotificationType();
     using TimerNotificationCallback = RefPtr<WTF::SharedTask<TimerNotificationType>>;
 
-    class Manager {
+    class Manager final : public CanMakeThreadSafeCheckedPtr<Manager> {
         WTF_MAKE_NONCOPYABLE(Manager);
         WTF_MAKE_TZONE_ALLOCATED(Manager);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Manager);
         void timerDidFireCallback();
 
         Manager() = default;
@@ -55,6 +58,7 @@ public:
 
     public:
         static Manager& singleton();
+
         void registerVM(VM&);
         void unregisterVM(VM&);
         void scheduleTimer(JSRunLoopTimer&, Seconds nextFireTime);

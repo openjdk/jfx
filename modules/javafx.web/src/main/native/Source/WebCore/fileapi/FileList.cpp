@@ -25,12 +25,13 @@
 
 #include "config.h"
 #include "FileList.h"
+#include "ScriptWrappableInlines.h"
 
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileList);
 
 File* FileList::item(unsigned index) const
 {
@@ -45,5 +46,7 @@ Vector<String> FileList::paths() const
         return file->path();
     });
 }
+
+FileList::~FileList() = default;
 
 } // namespace WebCore

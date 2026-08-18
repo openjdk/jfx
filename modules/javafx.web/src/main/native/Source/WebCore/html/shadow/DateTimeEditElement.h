@@ -28,35 +28,28 @@
 
 #include "DateComponents.h"
 #include "DateTimeFieldElement.h"
-
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class DateTimeEditElementEditControlOwner;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DateTimeEditElementEditControlOwner> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class Locale;
 
-class DateTimeEditElementEditControlOwner : public CanMakeWeakPtr<DateTimeEditElementEditControlOwner> {
+class DateTimeEditElementEditControlOwner : public AbstractRefCountedAndCanMakeWeakPtr<DateTimeEditElementEditControlOwner> {
 public:
     virtual ~DateTimeEditElementEditControlOwner();
         virtual void didBlurFromControl() = 0;
         virtual void didChangeValueFromControl() = 0;
+    virtual void didReceiveSpaceKeyFromControl() = 0;
         virtual String formatDateTimeFieldsState(const DateTimeFieldsState&) const = 0;
         virtual bool isEditControlOwnerDisabled() const = 0;
         virtual bool isEditControlOwnerReadOnly() const = 0;
+    virtual bool didEditControlOwnerTransferFocusToPicker() = 0;
+    virtual void didSuppressBlurDueToPickerFocusTransfer() = 0;
         virtual AtomString localeIdentifier() const = 0;
 };
 
 class DateTimeEditElement final : public HTMLDivElement, public DateTimeFieldElementFieldOwner {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeEditElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeEditElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeEditElement);
 public:
     struct LayoutParameters {
@@ -104,6 +97,8 @@ private:
     void layout(const LayoutParameters&);
     DateTimeFieldsState valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue = DateTimePlaceholderIfNoValue::No) const;
 
+    void defaultEventHandler(Event&) final;
+
     bool focusOnNextFocusableField(size_t startIndex);
 
     // DateTimeFieldElementFieldOwner functions:
@@ -114,6 +109,8 @@ private:
     bool isFieldOwnerDisabled() const final;
     bool isFieldOwnerReadOnly() const final;
     bool isFieldOwnerHorizontal() const final;
+    bool didFieldOwnerTransferFocusToPicker() final;
+    void didSuppressBlurDueToPickerFocusTransfer() final;
     AtomString localeIdentifier() const final;
     const GregorianDateTime& placeholderDate() const final;
 

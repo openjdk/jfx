@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.stage;
 
 import com.sun.javafx.util.Utils;
-import javafx.beans.value.ObservableValue;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -72,16 +71,8 @@ public class StageHelper extends WindowHelper {
         stageAccessor.setImportant(stage, important);
     }
 
-    public static void setPrefHeaderButtonHeight(Stage stage, double height) {
-        stageAccessor.setPrefHeaderButtonHeight(stage, height);
-    }
-
-    public static double getPrefHeaderButtonHeight(Stage stage) {
-        return stageAccessor.getPrefHeaderButtonHeight(stage);
-    }
-
-    public static ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
-        return stageAccessor.getHeaderButtonMetrics(stage);
+    public static ExtendedStageProperties getExtendedProperties(Stage stage) {
+        return stageAccessor.getExtendedProperties(stage);
     }
 
     public static void setStageAccessor(StageAccessor a) {
@@ -101,8 +92,6 @@ public class StageHelper extends WindowHelper {
         void doVisibleChanged(Window window, boolean visible);
         void setPrimary(Stage stage,  boolean primary);
         void setImportant(Stage stage,  boolean important);
-        void setPrefHeaderButtonHeight(Stage stage, double height);
-        double getPrefHeaderButtonHeight(Stage stage);
-        ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage);
+        ExtendedStageProperties getExtendedProperties(Stage stage);
     }
 }

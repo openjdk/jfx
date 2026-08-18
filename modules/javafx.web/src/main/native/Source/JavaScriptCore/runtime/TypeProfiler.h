@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "SourceID.h"
-#include "TypeLocation.h"
-#include "TypeLocationCache.h"
+#include <JavaScriptCore/SourceID.h>
+#include <JavaScriptCore/TypeLocation.h>
+#include <JavaScriptCore/TypeLocationCache.h>
 #include <wtf/Bag.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -71,6 +71,8 @@ struct QueryKey {
             && m_searchDescriptor == TypeProfilerSearchDescriptorFunctionReturn;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     friend bool operator==(const QueryKey&, const QueryKey&) = default;
 
     unsigned hash() const
@@ -84,18 +86,9 @@ struct QueryKey {
     TypeProfilerSearchDescriptor m_searchDescriptor;
 };
 
-struct QueryKeyHash {
-    static unsigned hash(const QueryKey& key) { return key.hash(); }
-    static bool equal(const QueryKey& a, const QueryKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::QueryKey> : JSC::QueryKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::QueryKey> : SimpleClassHashTraits<JSC::QueryKey> {

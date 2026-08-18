@@ -32,6 +32,7 @@
 #include "JSWebAssemblyCompileError.h"
 #include "JSWebAssemblyLinkError.h"
 #include "WasmBinding.h"
+#include "WasmDebugServer.h"
 #include "WasmFormat.h"
 #include "WasmModule.h"
 #include "WasmModuleInformation.h"
@@ -44,7 +45,7 @@ const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module"_s, &Base::s
 
 JSWebAssemblyModule* JSWebAssemblyModule::create(VM& vm, Structure* structure, Ref<Wasm::Module>&& result)
 {
-    auto* module = new (NotNull, allocateCell<JSWebAssemblyModule>(vm)) JSWebAssemblyModule(vm, structure, WTFMove(result));
+    auto* module = new (NotNull, allocateCell<JSWebAssemblyModule>(vm)) JSWebAssemblyModule(vm, structure, WTF::move(result));
     module->finishCreation(vm);
     return module;
 }
@@ -57,7 +58,7 @@ Structure* JSWebAssemblyModule::createStructure(VM& vm, JSGlobalObject* globalOb
 
 JSWebAssemblyModule::JSWebAssemblyModule(VM& vm, Structure* structure, Ref<Wasm::Module>&& module)
     : Base(vm, structure)
-    , m_module(WTFMove(module))
+    , m_module(WTF::move(module))
 {
 }
 

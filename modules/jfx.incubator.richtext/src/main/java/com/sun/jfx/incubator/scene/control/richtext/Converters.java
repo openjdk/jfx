@@ -25,10 +25,15 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
+import java.util.ArrayList;
+import java.util.Base64;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * Converters used to serialize/deserialize text attributes.
@@ -74,6 +79,20 @@ public class Converters {
             @Override
             public ParagraphDirection fromString(String s) {
                 return toParagraphDirection(s);
+            }
+        };
+    }
+
+    public static StringConverter<TabStops> tabStopsConverter() {
+        return new StringConverter<>() {
+            @Override
+            public String toString(TabStops v) {
+                return fromTabStops(v);
+            }
+
+            @Override
+            public TabStops fromString(String s) {
+                return toTabStops(s);
             }
         };
     }
@@ -167,6 +186,35 @@ public class Converters {
         throw new IllegalArgumentException("not a hex char:" + ch);
     }
 
+    private static String fromTabStops(TabStops ts) {
+        StringBuilder sb = new StringBuilder();
+        boolean sep = false;
+        for (TabStop t : ts) {
+            if (sep) {
+                sb.append(",");
+            } else {
+                sep = true;
+            }
+            sb.append(t.getPosition());
+        }
+        return sb.toString();
+    }
+
+    private static TabStops toTabStops(String text) {
+        if (text.length() == 0) {
+            return null;
+        }
+        String[] ss = text.split(",");
+        int sz = ss.length;
+        ArrayList<TabStop> ts = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            String s = ss[i];
+            double v = Double.parseDouble(s);
+            ts.add(new TabStop(v));
+        }
+        return new TabStops(ts);
+    }
+
     private static String fromTextAlignment(TextAlignment a) {
         switch (a) {
         case CENTER:
@@ -214,5 +262,64 @@ public class Converters {
         default:
             return ParagraphDirection.LEFT_TO_RIGHT;
         }
+    }
+
+    /// Embedded Image StringConverter.
+    public static StringConverter<EmbeddedImage> imageConverter() {
+        return new StringConverter<EmbeddedImage>() {
+            @Override
+            public String toString(EmbeddedImage em) {
+                byte[] b = EmbeddedImageHelper.getBytes(em);
+                return
+                    "w," + em.getWidth() +
+                    ",h," + em.getHeight() +
+                    ",tw," + em.getTargetWidth() +
+                    ",th," + em.getTargetHeight() +
+                    ",a," + em.isKeepAspectRatio() +
+                    ",b," + Base64.getEncoder().encodeToString(b);
+            }
+
+            @Override
+            public EmbeddedImage fromString(String s) {
+                String[] ss = s.split(",");
+                byte[] b = null;
+                double w = Double.NaN;
+                double h = Double.NaN;
+                double tw = EmbeddedImage.FIT_WIDTH;
+                double th = EmbeddedImage.AUTO;
+                boolean aspect = true;
+                for (int i = 0; i < ss.length;) {
+                    String k = ss[i++];
+                    String v = ss[i++];
+                    switch (k) {
+                    case "a":
+                        aspect = "true".equals(v);
+                        break;
+                    case "b":
+                        b = Base64.getDecoder().decode(v);
+                        break;
+                    case "h":
+                        h = Double.parseDouble(v);
+                        break;
+                    case "tw":
+                        tw = Double.parseDouble(v);
+                        break;
+                    case "th":
+                        th = Double.parseDouble(v);
+                        break;
+                    case "w":
+                        w = Double.parseDouble(v);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("unknown field " + k);
+                    }
+                }
+                if ((b == null) || Double.isNaN(w) || Double.isNaN(h)) {
+                    // exception could include first N characters for debugging purposes
+                    throw new IllegalArgumentException("failed to parse EmbeddedImage");
+                }
+                return EmbeddedImageHelper.create(b, w, h, tw, th, aspect);
+            }
+        };
     }
 }

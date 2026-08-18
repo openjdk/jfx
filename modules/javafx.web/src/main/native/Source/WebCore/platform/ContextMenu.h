@@ -28,9 +28,8 @@
 
 #if ENABLE(CONTEXT_MENUS)
 
+#include <WebCore/ContextMenuItem.h>
 #include <wtf/Noncopyable.h>
-
-#include "ContextMenuItem.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 

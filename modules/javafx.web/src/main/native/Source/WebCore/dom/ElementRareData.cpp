@@ -42,8 +42,9 @@ struct SameSizeAsElementRareData : NodeRareData {
     HashMap<std::optional<Style::PseudoElementIdentifier>, AtomString> viewTransitionCapture;
     void* pointers[18];
     void* intersectionObserverData;
-    void* typedOMData[2];
     void* resizeObserverData;
+    void* largestContentfulPaintData;
+    void* typedOMData[2];
     Markable<LayoutUnit> lastRemembedSize[2];
     ExplicitlySetAttrElementsMap explicitlySetAttrElementsMap;
     uint8_t visibilityAdjustment;

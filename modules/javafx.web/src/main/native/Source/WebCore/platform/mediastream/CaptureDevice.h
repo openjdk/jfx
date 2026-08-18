@@ -93,6 +93,11 @@ public:
         return m_type == DeviceType::Microphone || m_type == DeviceType::Camera;
     }
 
+    bool isSpeakerDevice() const
+    {
+        return m_type == DeviceType::Speaker;
+    }
+
     explicit operator bool() const { return m_type != DeviceType::Unknown; }
 
     CaptureDevice isolatedCopy() &&;
@@ -131,20 +136,15 @@ inline bool haveDevicesChanged(const Vector<CaptureDevice>& oldDevices, const Ve
 inline CaptureDevice CaptureDevice::isolatedCopy() &&
 {
     return {
-        WTFMove(m_persistentId).isolatedCopy(),
+        WTF::move(m_persistentId).isolatedCopy(),
         m_type,
-        WTFMove(m_label).isolatedCopy(),
-        WTFMove(m_groupId).isolatedCopy(),
+        WTF::move(m_label).isolatedCopy(),
+        WTF::move(m_groupId).isolatedCopy(),
         m_enabled,
         m_default,
         m_isMockDevice,
         m_isEphemeral
     };
 }
-
-
-
-
-
 
 } // namespace WebCore

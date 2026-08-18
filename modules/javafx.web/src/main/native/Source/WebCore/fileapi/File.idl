@@ -28,7 +28,6 @@ typedef (BufferSource or Blob or USVString) BlobPart;
 [
     ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),
-    JSGenerateToJSObject,
     JSGenerateToNativeObject,
 ] interface File : Blob {
     [CallWith=CurrentScriptExecutionContext] constructor(sequence<BlobPart> fileBits, USVString fileName, optional FilePropertyBag options);
@@ -40,6 +39,8 @@ typedef (BufferSource or Blob or USVString) BlobPart;
     [EnabledBySetting=DirectoryUploadEnabled, ImplementedAs=relativePath] readonly attribute USVString webkitRelativePath;
 };
 
-dictionary FilePropertyBag : BlobPropertyBag {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FilePropertyBag : BlobPropertyBag {
     long long lastModified;
 };

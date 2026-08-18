@@ -41,8 +41,10 @@ public:
     void suspend(Function<void()>&& suspendFunction, CompletionHandler<void()>&& suspensionCompletionHandler);
     void resume();
     void dispatch(Function<void()>&&) final;
+    void dispatchWithQOS(Function<void()>&&, QOS);
     void dispatchAfter(Seconds, Function<void()>&&) final;
     void dispatchSync(Function<void()>&&) final;
+    bool isSuspended() const;
 
 private:
     SuspendableWorkQueue(ASCIILiteral name, QOS, ShouldLog);
@@ -56,7 +58,7 @@ private:
     enum class State : uint8_t { Running, WillSuspend, Suspended };
     static ASCIILiteral stateString(State);
 
-    Lock m_suspensionLock;
+    mutable Lock m_suspensionLock;
     Condition m_suspensionCondition;
     State m_state WTF_GUARDED_BY_LOCK(m_suspensionLock) { State::Running };
     Function<void()> m_suspendFunction WTF_GUARDED_BY_LOCK(m_suspensionLock);

@@ -46,7 +46,8 @@
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ListenerEntry {
     required object listener;
     required boolean useCapture;

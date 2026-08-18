@@ -29,11 +29,12 @@
 #include "CSSSelector.h"
 #include "Element.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomStateSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CustomStateSet);
 
 bool CustomStateSet::addToSetLike(const AtomString& state)
 {
@@ -66,5 +67,7 @@ bool CustomStateSet::has(const AtomString& state) const
 {
     return m_states.contains(state);
 }
+
+CustomStateSet::~CustomStateSet() = default;
 
 } // namespace WebCore

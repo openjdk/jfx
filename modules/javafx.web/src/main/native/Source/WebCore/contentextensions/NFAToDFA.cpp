@@ -317,7 +317,7 @@ static ALWAYS_INLINE unsigned getOrCreateDFANode(const NodeIdSet& nfaNodeSet, co
 
 std::optional<DFA> NFAToDFA::convert(NFA&& nfa)
 {
-    auto serializedNFA = SerializedNFA::serialize(WTFMove(nfa));
+    auto serializedNFA = SerializedNFA::serialize(WTF::move(nfa));
     if (!serializedNFA)
         return std::nullopt;
 

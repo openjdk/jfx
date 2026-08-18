@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-namespace Calculation {
+namespace CSS {
 enum class Category : uint8_t;
 }
 
@@ -115,7 +115,7 @@ struct Type {
     static constexpr Type makePercent() { return { .percent = 1 }; }
 
     static Type determineType(CSSUnitType);
-    static PercentHintValue determinePercentHint(Calculation::Category);
+    static PercentHintValue determinePercentHint(CSS::Category);
 
     static std::optional<Type> add(Type, Type);
     static std::optional<Type> add(std::optional<Type> a, Type b) { if (!a) return a; return add(*a, b); }
@@ -155,10 +155,10 @@ struct Type {
     };
     template<Match...> constexpr bool matchesAny(MatchingContext = { .allowsPercentHint = false }) const;
 
-    bool matches(Calculation::Category) const;
+    bool matches(CSS::Category) const;
 
-    // Returns the Calculation::Category for Type, if there is one.
-    std::optional<Calculation::Category> calculationCategory() const;
+    // Returns the CSS::Category for Type, if there is one.
+    std::optional<CSS::Category> calculationCategory() const;
 };
 
 static_assert(sizeof(Type) == 8);

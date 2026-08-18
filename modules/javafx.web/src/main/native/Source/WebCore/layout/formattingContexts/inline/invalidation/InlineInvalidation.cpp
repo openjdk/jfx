@@ -30,7 +30,7 @@
 #include "InlineSoftLineBreakItem.h"
 #include "LayoutElementBox.h"
 #include "LayoutUnit.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TextBreakingPositionContext.h"
 #include "WritingMode.h"
 #include <wtf/Range.h>
@@ -39,7 +39,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineDamage);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InlineDamage);
 
 InlineInvalidation::InlineInvalidation(InlineDamage& inlineDamage, const InlineItemList& inlineItemList, const InlineDisplay::Content& displayContent)
     : m_inlineDamage(inlineDamage)
@@ -64,8 +64,8 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
         if (!oldStyle.fontCascadeEqual(newStyle))
             return true;
 
-        auto* newFirstLineStyle = newStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
-        auto* oldFirstLineStyle = oldStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
+        auto* newFirstLineStyle = newStyle.getCachedPseudoStyle({ PseudoElementType::FirstLine });
+        auto* oldFirstLineStyle = oldStyle.getCachedPseudoStyle({ PseudoElementType::FirstLine });
         if (newFirstLineStyle && oldFirstLineStyle && !oldFirstLineStyle->fontCascadeEqual(*newFirstLineStyle))
             return true;
 
@@ -84,9 +84,9 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
     return true;
 }
 
-bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle, StyleDifference diff)
+bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle, Style::Difference diff)
 {
-    if (diff == StyleDifference::Layout) {
+    if (diff == Style::DifferenceResult::Layout) {
         m_inlineDamage.resetLayoutPosition();
     m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
     }
@@ -443,7 +443,7 @@ bool InlineInvalidation::updateInlineDamage(const InvalidatedLine& invalidatedLi
     };
 
     m_inlineDamage.setDamageReason(reason);
-    m_inlineDamage.setLayoutStartPosition(WTFMove(layoutStartPosition));
+    m_inlineDamage.setLayoutStartPosition(WTF::move(layoutStartPosition));
 
     if (shouldApplyRangeLayout == ShouldApplyRangeLayout::Yes)
         m_inlineDamage.setTrailingDisplayBoxes(trailingDisplayBoxesAfterDamagedLine(invalidatedLine.index, m_displayContent));

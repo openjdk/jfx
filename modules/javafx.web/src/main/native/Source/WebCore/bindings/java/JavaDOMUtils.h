@@ -140,7 +140,7 @@ public:
         if (JNI_TRUE == m_env->ExceptionCheck())
             return 0L;
         //paired deref() call are in dispose Java method.
-        return ptr_to_jlong(WTFMove(m_returnValue).leakRef());
+        return ptr_to_jlong(WTF::move(m_returnValue).leakRef());
     }
 };
 

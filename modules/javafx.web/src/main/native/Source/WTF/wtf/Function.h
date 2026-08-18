@@ -28,14 +28,20 @@
 #include <memory>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/SwiftBridging.h>
 
 namespace WTF {
 
 namespace Detail {
 
+class CallableWrapperAllocatorBase {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CallableWrapperAllocatorBase);
+public:
+    virtual ~CallableWrapperAllocatorBase() { }
+};
+
 template<typename Out, typename... In>
-class CallableWrapperBase {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CallableWrapperBase);
+class CallableWrapperBase : public CallableWrapperAllocatorBase {
 public:
     virtual ~CallableWrapperBase() { }
     virtual Out call(In...) = 0;
@@ -47,7 +53,7 @@ template<typename CallableType, typename Out, typename... In>
 class CallableWrapper : public CallableWrapperBase<Out, In...> {
 public:
     explicit CallableWrapper(CallableType&& callable)
-        : m_callable(WTFMove(callable)) { }
+        : m_callable(WTF::move(callable)) { }
     CallableWrapper(const CallableWrapper&) = delete;
     CallableWrapper& operator=(const CallableWrapper&) = delete;
     Out call(In... in) final { return m_callable(std::forward<In>(in)...); }
@@ -68,13 +74,28 @@ public:
     Function() = default;
     Function(std::nullptr_t) { }
 
-    template<typename CallableType, class = typename std::enable_if<!(std::is_pointer<CallableType>::value && std::is_function<typename std::remove_pointer<CallableType>::type>::value) && std::is_rvalue_reference<CallableType&&>::value>::type>
+    template<typename CallableType>
+        requires (!(std::is_pointer_v<CallableType> && std::is_function_v<typename std::remove_pointer_t<CallableType>>) && std::is_rvalue_reference_v<CallableType&&>)
     Function(CallableType&& callable)
         : m_callableWrapper(makeUnique<Detail::CallableWrapper<CallableType, Out, In...>>(std::forward<CallableType>(callable))) { }
 
-    template<typename FunctionType, class = typename std::enable_if<std::is_pointer<FunctionType>::value && std::is_function<typename std::remove_pointer<FunctionType>::type>::value>::type>
+    template<typename FunctionType>
+        requires (std::is_pointer_v<FunctionType> && std::is_function_v<typename std::remove_pointer_t<FunctionType>>)
     Function(FunctionType f)
         : m_callableWrapper(makeUnique<Detail::CallableWrapper<FunctionType, Out, In...>>(std::forward<FunctionType>(f))) { }
+
+#if defined(__APPLE__)
+    // Always use C++ lambdas to create a WTF::Function in Objective-C++.
+    // Always use Swift closures (implicitly as Objective-C blocks) to create a WTF::Function in Swift.
+#ifndef __swift__
+    Function(Out (^block)(In... args)) = delete;
+#else
+    Function(Out (^block)(In... args))
+        : m_callableWrapper(makeUnique<Detail::CallableWrapper<Out (^)(In...), Out, In...>>(std::forward<Out (^)(In...)>(block)))
+    {
+    }
+#endif
+#endif // defined(__APPLE__)
 
     Out operator()(In... in) const
     {
@@ -84,14 +105,16 @@ public:
 
     explicit operator bool() const { return !!m_callableWrapper; }
 
-    template<typename CallableType, class = typename std::enable_if<!(std::is_pointer<CallableType>::value && std::is_function<typename std::remove_pointer<CallableType>::type>::value) && std::is_rvalue_reference<CallableType&&>::value>::type>
+    template<typename CallableType>
+        requires (!(std::is_pointer_v<CallableType> && std::is_function_v<typename std::remove_pointer_t<CallableType>>) && std::is_rvalue_reference_v<CallableType&&>)
     Function& operator=(CallableType&& callable)
     {
         m_callableWrapper = makeUnique<Detail::CallableWrapper<CallableType, Out, In...>>(std::forward<CallableType>(callable));
         return *this;
     }
 
-    template<typename FunctionType, class = typename std::enable_if<std::is_pointer<FunctionType>::value && std::is_function<typename std::remove_pointer<FunctionType>::type>::value>::type>
+    template<typename FunctionType>
+        requires (std::is_pointer_v<FunctionType> && std::is_function_v<typename std::remove_pointer_t<FunctionType>>)
     Function& operator=(FunctionType f)
     {
         m_callableWrapper = makeUnique<Detail::CallableWrapper<FunctionType, Out, In...>>(std::forward<FunctionType>(f));
@@ -104,7 +127,7 @@ public:
         return *this;
     }
 
-    Impl* leak()
+    [[nodiscard]] Impl* leak()
     {
         return m_callableWrapper.release();
     }
@@ -119,7 +142,7 @@ private:
     friend Function adopt<Out, In...>(Impl*);
 
     std::unique_ptr<Impl> m_callableWrapper;
-};
+} SWIFT_ESCAPABLE;
 
 template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>* impl)
 {

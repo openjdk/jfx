@@ -39,11 +39,11 @@ class DeferredPromise;
 class ScriptExecutionContext;
 
 class InstallEvent final : public ExtendableEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InstallEvent);
+    WTF_MAKE_TZONE_ALLOCATED(InstallEvent);
 public:
     static Ref<InstallEvent> create(const AtomString& type, ExtendableEventInit&& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
-        return adoptRef(*new InstallEvent(type, WTFMove(initializer), isTrusted));
+        return adoptRef(*new InstallEvent(type, WTF::move(initializer), isTrusted));
     }
     ~InstallEvent();
 
@@ -54,3 +54,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(InstallEvent)

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "WeakGCHashTable.h"
-#include "WeakInlines.h"
+#include <JavaScriptCore/WeakGCHashTable.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -36,8 +36,8 @@ namespace JSC {
 
 template<typename T>
 struct WeakGCSetHashTraits : HashTraits<Weak<T>> {
-    static constexpr bool hasIsReleasedWeakValueFunction = true;
-    static bool isReleasedWeakValue(const Weak<T>& value)
+    static constexpr bool hasIsWeakNullValueFunction = true;
+    static bool isWeakNullValue(const Weak<T>& value)
     {
         return !value.isHashTableDeletedValue() && !value.isHashTableEmptyValue() && !value;
     }
@@ -68,8 +68,8 @@ public:
     using iterator = typename HashSetType::iterator;
     using const_iterator = typename HashSetType::const_iterator;
 
-    inline explicit WeakGCSet(VM&);
-    inline ~WeakGCSet() final;
+    explicit WeakGCSet(VM&);
+    ~WeakGCSet() final;
 
     void clear()
     {

@@ -345,6 +345,11 @@ inline void FEGaussianBlurSoftwareApplier::boxBlurGeneric(PixelBuffer& ioBuffer,
     }
 #endif
 
+    // boxBlurAlphaOnly() fills the alpha channel only. Make
+    // sure the other channels are initialized in this case.
+    if (isAlphaImage)
+        tempBuffer.zeroFill();
+
     boxBlurUnaccelerated(ioBuffer, tempBuffer, kernelSizeX, kernelSizeY, stride, paintSize, isAlphaImage, edgeMode);
 }
 
@@ -432,14 +437,14 @@ inline void FEGaussianBlurSoftwareApplier::applyPlatform(PixelBuffer& ioBuffer, 
 
 bool FEGaussianBlurSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
+    input->copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
     if (!m_effect->stdDeviationX() && !m_effect->stdDeviationY())
         return true;
 

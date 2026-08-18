@@ -396,10 +396,10 @@ void BifurcatedGraphicsContext::setMiterLimit(float miterLimit)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawNativeImageInternal(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void BifurcatedGraphicsContext::drawNativeImage(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    m_primaryContext.drawNativeImageInternal(nativeImage, destRect, srcRect, options);
-    m_secondaryContext.drawNativeImageInternal(nativeImage, destRect, srcRect, options);
+    m_primaryContext.drawNativeImage(nativeImage, destRect, srcRect, options);
+    m_secondaryContext.drawNativeImage(nativeImage, destRect, srcRect, options);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -459,7 +459,7 @@ ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const Fl
 }
 
 #if ENABLE(VIDEO)
-void BifurcatedGraphicsContext::drawVideoFrame(VideoFrame& videoFrame, const FloatRect& destination, WebCore::ImageOrientation orientation, bool shouldDiscardAlpha)
+void BifurcatedGraphicsContext::drawVideoFrame(const VideoFrame& videoFrame, const FloatRect& destination, WebCore::ImageOrientation orientation, bool shouldDiscardAlpha)
 {
     m_primaryContext.drawVideoFrame(videoFrame, destination, orientation, shouldDiscardAlpha);
     m_secondaryContext.drawVideoFrame(videoFrame, destination, orientation, shouldDiscardAlpha);
@@ -547,14 +547,6 @@ void BifurcatedGraphicsContext::drawGlyphs(const Font& font, std::span<const Gly
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
-{
-    m_primaryContext.drawDecomposedGlyphs(font, decomposedGlyphs);
-    m_secondaryContext.drawDecomposedGlyphs(font, decomposedGlyphs);
-
-    VERIFY_STATE_SYNCHRONIZATION();
-}
-
 void BifurcatedGraphicsContext::drawEmphasisMarks(const FontCascade& cascade, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
 {
     m_primaryContext.drawEmphasisMarks(cascade, run, mark, point, from, to);
@@ -587,10 +579,10 @@ void BifurcatedGraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect,
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::beginPage(const IntSize& pageSize)
+void BifurcatedGraphicsContext::beginPage(const FloatRect& pageRect)
 {
-    m_primaryContext.beginPage(pageSize);
-    m_secondaryContext.beginPage(pageSize);
+    m_primaryContext.beginPage(pageRect);
+    m_secondaryContext.beginPage(pageRect);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }

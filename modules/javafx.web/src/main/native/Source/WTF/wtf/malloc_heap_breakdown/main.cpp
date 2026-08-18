@@ -33,6 +33,21 @@
 #include <set>
 #include <thread>
 #include <unistd.h>
+#include <vector>
+
+#if USE_SYSPROF_CAPTURE
+#include <sysprof-capture.h>
+#endif
+
+static std::string currentExecutablePath()
+{
+    // Adapted from FileSystemGlib.cpp.
+    static char readLinkBuffer[PATH_MAX];
+    ssize_t result = readlink("/proc/self/exe", readLinkBuffer, PATH_MAX);
+    if (result == -1)
+        return "";
+    return readLinkBuffer;
+}
 
 class MallocZoneHeapManager {
 public:
@@ -94,8 +109,13 @@ public:
             zoneFree(zone, memory);
             return nullptr;
         }
-        m_zoneAllocations[zone][memory] = size;
-        return realloc(memory, size);
+        void* ptr = realloc(memory, size);
+        if (ptr) {
+            if (ptr != memory)
+                m_zoneAllocations[zone].erase(memory);
+            m_zoneAllocations[zone][ptr] = size;
+        }
+        return ptr;
     }
     void* zoneMemalign(malloc_zone_t* zone, size_t alignment, size_t size)
     {
@@ -119,7 +139,7 @@ private:
     MallocZoneHeapManager()
         : m_monitorInterval(std::atoi(std::getenv("WEBKIT_MALLOC_HEAP_BREAKDOWN_LOG_INTERVAL") ?: "3"))
     {
-        std::printf("MallocZoneHeapManager created for PID:%d\n", getpid());
+        std::printf("MallocZoneHeapManager created for PID:%d(%s)\n", getpid(), currentExecutablePath().c_str());
         m_zoneAllocations.emplace(&m_defaultZone, std::map<void*, size_t>());
         m_zoneNames.emplace(&m_defaultZone, "Default Zone");
 
@@ -130,17 +150,40 @@ private:
     ~MallocZoneHeapManager()
     {
         m_forceThreadExit = true;
+        if (m_monitorThread)
         m_monitorThread->join();
     }
+
+    struct SysprofContext {
+        std::map<malloc_zone_t*, unsigned> zoneCounterIds;
+        std::string processName;
+    };
 
     void monitoringThreadMain()
     {
         srand((unsigned)time(0));
         std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 3000));
 
+        std::optional<SysprofContext> sysprofContext;
+#if USE_SYSPROF_CAPTURE
+        if (getenv("SYSPROF_CONTROL_FD")) {
+            sysprof_collector_init();
+
+            // Temporary workaround for libsysprof-capture providing conflicting IDs to threads.
+            sysprof_collector_request_counters(1000);
+
+            sysprofContext = std::make_optional<SysprofContext>();
+            const auto processName = currentExecutablePath();
+            sysprofContext->processName = processName.find("WebProcess") != std::string::npos
+                ? "WebKit (Web)"
+                : (processName.find("NetworkProcess") != std::string::npos ? "WebKit (Net)" : "WebKit (UI)");
+        }
+#endif
+
         while (!m_forceThreadExit) {
             {
                 const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+                if (!sysprofContext) {
                 std::printf("%d Malloc Heap Breakdown: | PID | \"Zone name\" | Number of allocated chunks | Total bytes allocated | {\n", getpid());
                 size_t grandTotalBytesAllocated = 0;
                 for (const auto &[zonePtr, zoneName] : m_zoneNames) {
@@ -151,6 +194,48 @@ private:
                     std::printf("%d \"%s\" %zu %zu\n", getpid(), zoneName.c_str(), m_zoneAllocations[zonePtr].size(), totalBytesAllocated);
                 }
                 std::printf("%d } Malloc Heap Breakdown: grand total bytes allocated: %zu\n", getpid(), grandTotalBytesAllocated);
+            }
+#if USE_SYSPROF_CAPTURE
+                else {
+                    std::vector<unsigned> counterIdsToSet;
+                    std::vector<SysprofCaptureCounterValue> counterValuesToSet;
+                    std::vector<SysprofCaptureCounter> countersToDefine;
+                    auto setCounter = [&](malloc_zone_t* zone, const char* name, unsigned value) {
+                        if (auto zoneCounterIdsIterator = sysprofContext->zoneCounterIds.find(zone); zoneCounterIdsIterator != sysprofContext->zoneCounterIds.end()) {
+                            SysprofCaptureCounterValue counterValue;
+                            counterValue.v64 = value;
+                            unsigned id = zoneCounterIdsIterator->second;
+                            counterIdsToSet.emplace_back(id);
+                            counterValuesToSet.push_back(counterValue);
+                        } else {
+                            unsigned newId = sysprof_collector_request_counters(1);
+                            SysprofCaptureCounter counter = { };
+                            counter.id = newId;
+                            counter.type = SYSPROF_CAPTURE_COUNTER_INT64;
+                            counter.value.v64 = value;
+                            sprintf(counter.category, "%s", sysprofContext->processName.c_str());
+                            sprintf(counter.name, "%s", name);
+                            countersToDefine.push_back(counter);
+                            sysprofContext->zoneCounterIds.emplace(zone, newId);
+                        }
+                    };
+
+                    size_t grandTotalBytesAllocated = 0;
+                    for (const auto &[zonePtr, zoneName] : m_zoneNames) {
+                        size_t totalBytesAllocated = 0;
+                        for (const auto &[memoryPtr, bytesAllocated] : m_zoneAllocations[zonePtr])
+                            totalBytesAllocated += bytesAllocated;
+                        grandTotalBytesAllocated += totalBytesAllocated;
+                        setCounter(zonePtr, zoneName.c_str(), totalBytesAllocated);
+                    }
+                    setCounter(nullptr, "Total bytes", grandTotalBytesAllocated);
+
+                    if (!counterIdsToSet.empty())
+                        sysprof_collector_set_counters(counterIdsToSet.data(), counterValuesToSet.data(), counterIdsToSet.size());
+                    if (!countersToDefine.empty())
+                        sysprof_collector_define_counters(countersToDefine.data(), countersToDefine.size());
+                }
+#endif
             }
             std::this_thread::sleep_for(m_monitorInterval);
         }
@@ -211,6 +296,6 @@ size_t malloc_zone_pressure_relief(malloc_zone_t*, size_t)
     return 0;
 }
 
-void malloc_zone_print(malloc_zone_t*, boolean_t)
+void malloc_zone_print(malloc_zone_t*, bool)
 {
 }

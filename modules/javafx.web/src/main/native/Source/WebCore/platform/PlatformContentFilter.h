@@ -26,22 +26,13 @@
 #ifndef PlatformContentFilter_h
 #define PlatformContentFilter_h
 
-#include "SharedBuffer.h"
+#include <WebCore/SharedBuffer.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
-
-namespace WebCore {
-class PlatformContentFilter;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PlatformContentFilter> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -65,9 +56,12 @@ public:
 
     bool needsMoreData() const { return m_state == State::Filtering; }
     bool didBlockData() const { return m_state == State::Blocked; }
+    bool isAllowed() const { return m_state == State::Allowed; }
 
     virtual ~PlatformContentFilter() = default;
+    virtual bool isEnabled() const { return true; }
     virtual void willSendRequest(ResourceRequest&, const ResourceResponse&) = 0;
+    virtual void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(String&&)>&&) = 0;
     virtual void responseReceived(const ResourceResponse&) = 0;
     virtual void addData(const SharedBuffer&) = 0;
     virtual void finishedAddingData() = 0;
@@ -83,9 +77,6 @@ public:
 #endif
 
     struct FilterParameters {
-#if HAVE(WEBCONTENTRESTRICTIONS)
-        bool usesWebContentRestrictions { false };
-#endif
 #if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
         String webContentRestrictionsConfigurationPath { };
 #endif

@@ -241,7 +241,7 @@ inline void AtomHTMLToken::initializeAttributes(const HTMLToken::AttributeList& 
         return std::nullopt;
         }
 
-        return Attribute(WTFMove(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value));
+        return Attribute(WTF::move(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value));
     });
 }
 
@@ -286,7 +286,7 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, const AtomString& name, Vector<Attribute>&& attributes)
     : m_name(name)
-    , m_attributes(WTFMove(attributes))
+    , m_attributes(WTF::move(attributes))
     , m_type(type)
     , m_tagName(tagName)
 {
@@ -295,7 +295,7 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, const
 }
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, Vector<Attribute>&& attributes)
-    : m_attributes(WTFMove(attributes))
+    : m_attributes(WTF::move(attributes))
     , m_type(type)
     , m_tagName(tagName)
 {

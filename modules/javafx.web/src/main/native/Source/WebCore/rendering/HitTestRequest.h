@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "HitTestSource.h"
+#include <WebCore/HitTestSource.h>
 #include <wtf/Assertions.h>
 #include <wtf/OptionSet.h>
 
@@ -52,6 +52,7 @@ public:
         IncludeAllElementsUnderPoint = 1 << 16,
         PenEvent = 1 << 17,
         ForFixedContainerSampling = 1 << 18,
+        SkipTransformToRootFrameCoordinates = 1 << 19,
     };
 
     static constexpr OptionSet defaultTypes = { Type::ReadOnly, Type::Active, Type::DisallowUserAgentShadowContent };

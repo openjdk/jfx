@@ -30,12 +30,12 @@
 #include "config.h"
 #include "CSSStyleValueFactory.h"
 
-#include "CSSAppleColorFilterPropertyValue.h"
+#include "CSSAppleColorFilterValue.h"
 #include "CSSBoxShadowPropertyValue.h"
 #include "CSSCalcValue.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSEasingFunctionValue.h"
-#include "CSSFilterPropertyValue.h"
+#include "CSSFilterValue.h"
 #include "CSSKeywordValue.h"
 #include "CSSNumericFactory.h"
 #include "CSSParser.h"
@@ -57,6 +57,7 @@
 #include "CSSVariableReferenceValue.h"
 #include "ExceptionOr.h"
 #include "RenderStyle.h"
+#include "ScriptWrappableInlines.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include "StyleURL.h"
@@ -147,8 +148,8 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(Do
         // https://drafts.css-houdini.org/css-typed-om/#subdivide-into-iterations
         if (CSSProperty::isListValuedProperty(propertyID)) {
             if (auto* values = dynamicDowncast<CSSValueContainingVector>(*cssValue)) {
-                for (auto& value : *values)
-                    cssValues.append(Ref { const_cast<CSSValue&>(value) });
+                for (Ref value : *values)
+                    cssValues.append(Ref { const_cast<CSSValue&>(value.get()) });
         }
     }
         if (cssValues.isEmpty())
@@ -158,7 +159,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(Do
     Vector<Ref<CSSStyleValue>> results;
 
     for (auto& cssValue : cssValues) {
-        auto reifiedValue = reifyValue(document, WTFMove(cssValue), propertyID);
+        auto reifiedValue = reifyValue(document, WTF::move(cssValue), propertyID);
         if (reifiedValue.hasException())
             return reifiedValue.releaseException();
 
@@ -186,13 +187,12 @@ static bool mayConvertCSSValueListToSingleValue(std::optional<CSSPropertyID> pro
 
 ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& document, const CSSValue& cssValue, std::optional<CSSPropertyID> propertyID)
 {
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue)) {
-        if (primitiveValue->isCalculated()) {
-            auto* calcValue = primitiveValue->cssCalcValue();
+    if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue)) {
+        if (RefPtr calcValue = primitiveValue->cssCalcValue()) {
             auto result = CSSNumericValue::reifyMathExpression(calcValue->tree());
             if (result.hasException())
                 return result.releaseException();
-            return static_reference_cast<CSSStyleValue>(result.releaseReturnValue());
+            return upcast<CSSStyleValue>(result.releaseReturnValue());
         }
         switch (primitiveValue->primitiveType()) {
         case CSSUnitType::CSS_NUMBER:
@@ -285,7 +285,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
             // Per the specification, the CSSKeywordValue's value slot should be set to the serialization
             // of the identifier. As a result, the identifier will be lowercase:
             // https://drafts.css-houdini.org/css-typed-om-1/#reify-ident
-            return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(primitiveValue->cssText(CSS::defaultSerializationContext())));
+            return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(primitiveValue->cssText(CSS::defaultSerializationContext())));
         default:
             break;
         }
@@ -296,7 +296,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
     } else if (auto* substitutionValue = dynamicDowncast<CSSPendingSubstitutionValue>(cssValue)) {
         return Ref<CSSStyleValue> { CSSUnparsedValue::create(substitutionValue->shorthandValue().data().tokenRange()) };
     } else if (auto* customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(cssValue)) {
-        // FIXME: remove CSSStyleValue::create(WTFMove(cssValue)), add reification control flow
+        // FIXME: remove CSSStyleValue::create(WTF::move(cssValue)), add reification control flow
         return WTF::switchOn(customPropertyValue->value(),
             [&](const Ref<CSSVariableReferenceValue>& value) {
                 return reifyValue(document, value, propertyID);
@@ -313,19 +313,19 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
         if (transformValue.hasException())
             return transformValue.releaseException();
         return Ref<CSSStyleValue> { transformValue.releaseReturnValue() };
-    } else if (RefPtr property = dynamicDowncast<CSSFilterPropertyValue>(cssValue)) {
+    } else if (RefPtr property = dynamicDowncast<CSSFilterValue>(cssValue)) {
         return WTF::switchOn(property->filter(),
             [&](CSS::Keyword::None) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
+                return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
             }
         );
-    } else if (RefPtr property = dynamicDowncast<CSSAppleColorFilterPropertyValue>(cssValue)) {
+    } else if (RefPtr property = dynamicDowncast<CSSAppleColorFilterValue>(cssValue)) {
         return WTF::switchOn(property->filter(),
             [&](CSS::Keyword::None) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
+                return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
@@ -334,7 +334,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
     } else if (RefPtr property = dynamicDowncast<CSSBoxShadowPropertyValue>(cssValue)) {
         return WTF::switchOn(property->shadow(),
             [&](CSS::Keyword::None) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
+                return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
@@ -343,7 +343,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
     } else if (RefPtr property = dynamicDowncast<CSSTextShadowPropertyValue>(cssValue)) {
         return WTF::switchOn(property->shadow(),
             [&](CSS::Keyword::None) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
+                return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueNone)));
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
@@ -352,7 +352,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
     } else if (RefPtr property = dynamicDowncast<CSSEasingFunctionValue>(cssValue)) {
         return WTF::switchOn(property->easingFunction(),
             [&]<CSSValueID keyword>(Constant<keyword>) -> ExceptionOr<Ref<CSSStyleValue>> {
-                return static_reference_cast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(keyword)));
+                return upcast<CSSStyleValue>(CSSKeywordValue::rectifyKeywordish(nameLiteral(keyword)));
             },
             [&](const auto&) -> ExceptionOr<Ref<CSSStyleValue>> {
                 return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
@@ -374,9 +374,9 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& docum
 ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleValuesOrStrings(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     Vector<Ref<CSSStyleValue>> styleValues;
-    for (auto&& value : WTFMove(values)) {
+    for (auto&& value : WTF::move(values)) {
         std::optional<Exception> exception;
-        switchOn(WTFMove(value), [&](RefPtr<CSSStyleValue>&& styleValue) {
+        switchOn(WTF::move(value), [&](RefPtr<CSSStyleValue>&& styleValue) {
             ASSERT(styleValue);
             styleValues.append(styleValue.releaseNonNull());
         }, [&](String&& string) {
@@ -389,9 +389,11 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleVal
             styleValues.appendVector(result.releaseReturnValue());
         });
         if (exception)
-            return { WTFMove(*exception) };
+            return { WTF::move(*exception) };
     }
-    return { WTFMove(styleValues) };
+    return { WTF::move(styleValues) };
 }
+
+CSSStyleValueFactory::~CSSStyleValueFactory() = default;
 
 } // namespace WebCore

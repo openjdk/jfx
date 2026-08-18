@@ -47,7 +47,7 @@ public:
     bool canTakeFocus(FocusDirection) const override;
     void takeFocus(FocusDirection) override;
 
-    void focusedElementChanged(Element*) override;
+    void focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement) override;
     void focusedFrameChanged(Frame*) override;
     void rootFrameAdded(const LocalFrame&) override;
     void rootFrameRemoved(const LocalFrame&) override;
@@ -78,7 +78,7 @@ public:
 
     void setResizable(bool) override;
 
-    void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) override;
+    void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) override;
     bool canRunBeforeUnloadConfirmPanel() override;
     bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame& Frame) override;
 
@@ -116,7 +116,7 @@ public:
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
-    void setTextIndicator(const TextIndicatorData&) const override {}
+    void setTextIndicator(RefPtr<TextIndicator>&&) const override {}
     // End methods used by HostWindow.
 
     void contentsSizeChanged(LocalFrame&, const IntSize&) const override;
@@ -143,7 +143,6 @@ public:
     // storage, in bytes, needed to store the new cache along with all of the
     // other existing caches for the origin that would not be replaced by
     // the new cache.
-    void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t totalSpaceNeeded) override;
 
 #if ENABLE(INPUT_TYPE_COLOR)
     RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) override;
@@ -170,7 +169,7 @@ public:
     void triggerRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) override;
     void wheelEventHandlersChanged(bool hasHandlers) override { }
-    void updateTextIndicator(const TextIndicatorData&) const override  {};
+    void updateTextIndicator(RefPtr<TextIndicator>&&) const override  {};
 
 #if ENABLE(TOUCH_EVENTS)
     void needTouchEvents(bool) override {};
@@ -184,6 +183,7 @@ public:
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;
     void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) override;
+    bool hasAccessoryMousePointingDevice() const override { return false; }
 
 private:
     void repaint(const IntRect&);

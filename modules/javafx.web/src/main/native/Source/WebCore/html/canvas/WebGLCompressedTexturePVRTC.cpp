@@ -32,12 +32,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLCompressedTexturePVRTC);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLCompressedTexturePVRTC);
 
 WebGLCompressedTexturePVRTC::WebGLCompressedTexturePVRTC(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLCompressedTexturePVRTC)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_IMG_texture_compression_pvrtc"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::IMG_texture_compression_pvrtc);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGB_PVRTC_4BPPV1_IMG);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGB_PVRTC_2BPPV1_IMG);
@@ -49,7 +49,7 @@ WebGLCompressedTexturePVRTC::~WebGLCompressedTexturePVRTC() = default;
 
 bool WebGLCompressedTexturePVRTC::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_IMG_texture_compression_pvrtc"_s);
+    return context.supportsExtension(GCGLExtension::IMG_texture_compression_pvrtc);
 }
 
 } // namespace WebCore

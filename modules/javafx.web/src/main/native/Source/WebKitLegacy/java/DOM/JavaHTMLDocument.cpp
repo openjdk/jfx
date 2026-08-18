@@ -173,7 +173,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl(JNIEnv
 {
     WebCore::JSMainThreadNullState state;
     WTF::FixedVector<String> textVector { String(env, text) };
-    IMPL->write(nullptr, WTFMove(textVector));
+    IMPL->write(nullptr, WTF::move(textVector));
 }
 
 
@@ -182,7 +182,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl(JNIE
 {
     WebCore::JSMainThreadNullState state;
     WTF::FixedVector<String> textVector { String(env, text) };
-    IMPL->writeln(nullptr, WTFMove(textVector));
+    IMPL->writeln(nullptr, WTF::move(textVector));
 }
 
 

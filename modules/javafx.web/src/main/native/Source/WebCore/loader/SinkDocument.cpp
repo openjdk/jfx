@@ -26,13 +26,13 @@
 #include "config.h"
 #include "SinkDocument.h"
 
-#include "DocumentInlines.h"
+#include "LocalFrame.h"
 #include "RawDataDocumentParser.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SinkDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SinkDocument);
 
 class SinkDocumentParser final : public RawDataDocumentParser {
 public:

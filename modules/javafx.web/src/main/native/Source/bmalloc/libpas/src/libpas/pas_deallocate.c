@@ -128,7 +128,7 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
 
     if (verbose)
         pas_log("Trying to deallocate %p.\n", ptr);
-    if (PAS_UNLIKELY(pas_system_heap_is_enabled(config_ptr->kind))) {
+    if (PAS_UNLIKELY(pas_system_heap_should_supplant_bmalloc(config_ptr->kind))) {
         if (verbose)
             pas_log("Deallocating %p with system heap.\n", ptr);
         PAS_ASSERT(deallocation_mode == pas_deallocate_mode);

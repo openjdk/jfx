@@ -83,8 +83,8 @@ public:
 private:
     BinaryExpression(SourceSpan span, Expression::Ref&& lhs, Expression::Ref&& rhs, BinaryOperation operation)
         : Expression(span)
-        , m_lhs(WTFMove(lhs))
-        , m_rhs(WTFMove(rhs))
+        , m_lhs(WTF::move(lhs))
+        , m_rhs(WTF::move(rhs))
         , m_operation(operation)
     { }
 

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Event.h"
-#include "SecurityPolicyViolationEventDisposition.h"
+#include <WebCore/Event.h>
+#include <WebCore/SecurityPolicyViolationEventDisposition.h>
 
 namespace WebCore {
 
@@ -49,7 +49,7 @@ struct SecurityPolicyViolationEventInit : EventInit {
 };
 
 class SecurityPolicyViolationEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SecurityPolicyViolationEvent);
+    WTF_MAKE_TZONE_ALLOCATED(SecurityPolicyViolationEvent);
 public:
     using Disposition = SecurityPolicyViolationEventDisposition;
     using Init = SecurityPolicyViolationEventInit;

@@ -40,6 +40,9 @@
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/Widget.h>
+#include "NodeDocument.h"
+#include "FrameDestructionObserverInlines.h"
+#include "LocalFrameInlines.h"
 
 #include <wtf/Assertions.h>
 //#include <wtf/text/ASCIILiteral.h>
@@ -51,6 +54,7 @@ using namespace std;
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EditorClientJava);
 
 EditorClientJava::EditorClientJava(const JLObject &webPage)
     : m_webPage(webPage)
@@ -492,7 +496,7 @@ bool EditorClientJava::canRedo() const
 void EditorClientJava::undo()
 {
     if (canUndo()) {
-        Ref<WebCore::UndoStep> step = WTFMove(*(--m_undoStack.end()));
+        Ref<WebCore::UndoStep> step = WTF::move(*(--m_undoStack.end()));
         m_undoStack.remove(--m_undoStack.end());
         // unapply will call us back to push this command onto the redo stack.
         step->unapply();
@@ -502,7 +506,7 @@ void EditorClientJava::undo()
 void EditorClientJava::redo()
 {
     if (canRedo()) {
-        Ref<WebCore::UndoStep> step = WTFMove(*(--m_redoStack.end()));
+        Ref<WebCore::UndoStep> step = WTF::move(*(--m_redoStack.end()));
         m_redoStack.remove(--m_redoStack.end());
 
         ASSERT(!m_isInRedo);
@@ -727,6 +731,11 @@ void EditorClientJava::getGuessesForWord(const String&, const String&, const Vis
 }
 
 void EditorClientJava::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
+{
+    notImplemented();
+}
+
+void EditorClientJava::requestExtendedCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection)
 {
     notImplemented();
 }

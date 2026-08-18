@@ -20,34 +20,33 @@
 
 #pragma once
 
-#include "Identifier.h"
+#include <JavaScriptCore/EnumerationMode.h>
+#include <JavaScriptCore/Identifier.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
 
-// FIXME: Rename to PropertyNameArray.
-class PropertyNameArrayData : public RefCounted<PropertyNameArrayData> {
+class PropertyNameArray : public RefCounted<PropertyNameArray> {
 public:
     typedef Vector<Identifier, 20> PropertyNameVector;
 
-    static Ref<PropertyNameArrayData> create() { return adoptRef(*new PropertyNameArrayData); }
+    static Ref<PropertyNameArray> create() { return adoptRef(*new PropertyNameArray); }
 
     PropertyNameVector& propertyNameVector() { return m_propertyNameVector; }
 
 private:
-    PropertyNameArrayData()
+    PropertyNameArray()
     {
     }
 
     PropertyNameVector m_propertyNameVector;
 };
 
-// FIXME: Rename to PropertyNameArrayBuilder.
-class PropertyNameArray {
+class PropertyNameArrayBuilder {
 public:
-    PropertyNameArray(VM& vm, PropertyNameMode propertyNameMode, PrivateSymbolMode privateSymbolMode)
-        : m_data(PropertyNameArrayData::create())
+    PropertyNameArrayBuilder(VM& vm, PropertyNameMode propertyNameMode, PrivateSymbolMode privateSymbolMode)
+        : m_data(PropertyNameArray::create())
         , m_vm(vm)
         , m_propertyNameMode(propertyNameMode)
         , m_privateSymbolMode(privateSymbolMode)
@@ -68,12 +67,12 @@ public:
     Identifier& operator[](unsigned i) { return m_data->propertyNameVector()[i]; }
     const Identifier& operator[](unsigned i) const { return m_data->propertyNameVector()[i]; }
 
-    PropertyNameArrayData* data() { return m_data.get(); }
-    RefPtr<PropertyNameArrayData> releaseData() { return WTFMove(m_data); }
+    PropertyNameArray* data() { return m_data.get(); }
+    RefPtr<PropertyNameArray> releaseData() { return WTF::move(m_data); }
 
     // FIXME: Remove these functions.
     bool canAddKnownUniqueForStructure() const { return m_data->propertyNameVector().isEmpty(); }
-    typedef PropertyNameArrayData::PropertyNameVector::const_iterator const_iterator;
+    typedef PropertyNameArray::PropertyNameVector::const_iterator const_iterator;
     size_t size() const { return m_data->propertyNameVector().size(); }
     const_iterator begin() const { return m_data->propertyNameVector().begin(); }
     const_iterator end() const { return m_data->propertyNameVector().end(); }
@@ -88,31 +87,31 @@ private:
     void addUncheckedInternal(UniquedStringImpl*);
     bool isUidMatchedToTypeMode(UniquedStringImpl* identifier);
 
-    RefPtr<PropertyNameArrayData> m_data;
+    RefPtr<PropertyNameArray> m_data;
     UncheckedKeyHashSet<UniquedStringImpl*> m_set;
     VM& m_vm;
     PropertyNameMode m_propertyNameMode;
     PrivateSymbolMode m_privateSymbolMode;
 };
 
-ALWAYS_INLINE void PropertyNameArray::add(const Identifier& identifier)
+ALWAYS_INLINE void PropertyNameArrayBuilder::add(const Identifier& identifier)
 {
     add(identifier.impl());
 }
 
-ALWAYS_INLINE void PropertyNameArray::addUncheckedInternal(UniquedStringImpl* identifier)
+ALWAYS_INLINE void PropertyNameArrayBuilder::addUncheckedInternal(UniquedStringImpl* identifier)
 {
     m_data->propertyNameVector().append(Identifier::fromUid(m_vm, identifier));
 }
 
-ALWAYS_INLINE void PropertyNameArray::addUnchecked(UniquedStringImpl* identifier)
+ALWAYS_INLINE void PropertyNameArrayBuilder::addUnchecked(UniquedStringImpl* identifier)
 {
     if (!isUidMatchedToTypeMode(identifier))
         return;
     addUncheckedInternal(identifier);
 }
 
-ALWAYS_INLINE void PropertyNameArray::add(UniquedStringImpl* identifier)
+ALWAYS_INLINE void PropertyNameArrayBuilder::add(UniquedStringImpl* identifier)
 {
     static constexpr unsigned setThreshold = 20;
 
@@ -136,7 +135,7 @@ ALWAYS_INLINE void PropertyNameArray::add(UniquedStringImpl* identifier)
     addUncheckedInternal(identifier);
 }
 
-ALWAYS_INLINE bool PropertyNameArray::isUidMatchedToTypeMode(UniquedStringImpl* identifier)
+ALWAYS_INLINE bool PropertyNameArrayBuilder::isUidMatchedToTypeMode(UniquedStringImpl* identifier)
 {
     if (identifier->isSymbol()) {
         if (!includeSymbolProperties())
@@ -148,12 +147,12 @@ ALWAYS_INLINE bool PropertyNameArray::isUidMatchedToTypeMode(UniquedStringImpl* 
     return includeStringProperties();
 }
 
-ALWAYS_INLINE bool PropertyNameArray::includeSymbolProperties() const
+ALWAYS_INLINE bool PropertyNameArrayBuilder::includeSymbolProperties() const
 {
     return static_cast<std::underlying_type<PropertyNameMode>::type>(m_propertyNameMode) & static_cast<std::underlying_type<PropertyNameMode>::type>(PropertyNameMode::Symbols);
 }
 
-ALWAYS_INLINE bool PropertyNameArray::includeStringProperties() const
+ALWAYS_INLINE bool PropertyNameArrayBuilder::includeStringProperties() const
 {
     return static_cast<std::underlying_type<PropertyNameMode>::type>(m_propertyNameMode) & static_cast<std::underlying_type<PropertyNameMode>::type>(PropertyNameMode::Strings);
 }

@@ -38,6 +38,9 @@ class XRView : public RefCountedAndCanMakeWeakPtr<XRView> {
 public:
     virtual ~XRView() = default;
 
+    virtual bool isRemoteXRViewProxy() const { return false; }
+    virtual bool isXRViewImpl() const { return false; }
+
 protected:
     XRView() = default;
 

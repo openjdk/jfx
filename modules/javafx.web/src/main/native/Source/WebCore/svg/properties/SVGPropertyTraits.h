@@ -21,17 +21,22 @@
 
 #pragma once
 
-#include "CSSPropertyParserConsumer+Color.h"
-#include "Color.h"
-#include "ColorSerialization.h"
-#include "CommonAtomStrings.h"
-#include "FloatPoint.h"
-#include "FloatRect.h"
-#include "QualifiedName.h"
-#include "SVGParserUtilities.h"
+#include <WebCore/CSSPropertyParserConsumer+Color.h>
+#include <WebCore/Color.h>
+#include <WebCore/CommonAtomStrings.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/SVGParserUtilities.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+class SVGElement;
+
+namespace Style {
+struct Color;
+}
 
 template<typename PropertyType>
 struct SVGPropertyTraits { };
@@ -39,7 +44,7 @@ struct SVGPropertyTraits { };
 template<>
 struct SVGPropertyTraits<bool> {
     static bool initialValue() { return false; }
-    static bool fromString(const String& string) { return string == "true"_s; }
+    static bool fromString(SVGElement&, const String& string) { return string == "true"_s; }
     static std::optional<bool> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(bool type) { return type ? trueAtom() : falseAtom(); }
 };
@@ -47,15 +52,8 @@ struct SVGPropertyTraits<bool> {
 template<>
 struct SVGPropertyTraits<Color> {
     static Color initialValue() { return Color(); }
-    static Color fromString(const String& string) { return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(string.trim(deprecatedIsSpaceOrNewline)); }
-    static std::optional<Color> parse(const QualifiedName&, const String& string)
-    {
-        auto color = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(string.trim(deprecatedIsSpaceOrNewline));
-        if (!color.isValid())
-            return std::nullopt;
-        return color;
-    }
-    static String toString(const Color& type) { return serializationForHTML(type); }
+    static Color fromString(SVGElement&, const String&);
+    static String toString(const Color&);
 };
 
 template<>
@@ -68,7 +66,7 @@ struct SVGPropertyTraits<unsigned> {
 template<>
 struct SVGPropertyTraits<int> {
     static int initialValue() { return 0; }
-    static int fromString(const String&);
+    static int fromString(SVGElement&, const String&);
     static std::optional<int> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(int type) { return String::number(type); }
 };
@@ -76,7 +74,7 @@ struct SVGPropertyTraits<int> {
 template<>
 struct SVGPropertyTraits<std::pair<int, int>> {
     static std::pair<int, int> initialValue() { return { }; }
-    static std::pair<int, int> fromString(const String& string)
+    static std::pair<int, int> fromString(SVGElement&, const String& string)
     {
         auto result = parseNumberOptionalNumber(string);
         if (!result)
@@ -90,7 +88,7 @@ struct SVGPropertyTraits<std::pair<int, int>> {
 template<>
 struct SVGPropertyTraits<float> {
     static float initialValue() { return 0; }
-    static float fromString(const String& string)
+    static float fromString(SVGElement&, const String& string)
     {
         return parseNumber(string).value_or(0);
     }
@@ -104,7 +102,7 @@ struct SVGPropertyTraits<float> {
 template<>
 struct SVGPropertyTraits<std::pair<float, float>> {
     static std::pair<float, float> initialValue() { return { }; }
-    static std::pair<float, float> fromString(const String& string)
+    static std::pair<float, float> fromString(SVGElement&, const String& string)
     {
         return valueOrDefault(parseNumberOptionalNumber(string));
     }
@@ -115,7 +113,7 @@ struct SVGPropertyTraits<std::pair<float, float>> {
 template<>
 struct SVGPropertyTraits<FloatPoint> {
     static FloatPoint initialValue() { return FloatPoint(); }
-    static FloatPoint fromString(const String& string)
+    static FloatPoint fromString(SVGElement&, const String& string)
     {
         return valueOrDefault(parsePoint(string));
     }
@@ -132,7 +130,7 @@ struct SVGPropertyTraits<FloatPoint> {
 template<>
 struct SVGPropertyTraits<FloatRect> {
     static FloatRect initialValue() { return FloatRect(); }
-    static FloatRect fromString(const String& string)
+    static FloatRect fromString(SVGElement&, const String& string)
     {
         return valueOrDefault(parseRect(string));
     }
@@ -149,15 +147,9 @@ struct SVGPropertyTraits<FloatRect> {
 template<>
 struct SVGPropertyTraits<String> {
     static String initialValue() { return String(); }
-    static String fromString(const String& string) { return string; }
+    static String fromString(SVGElement&, const String& string) { return string; }
     static std::optional<String> parse(const QualifiedName&, const String& string) { return string; }
     static String toString(const String& string) { return string; }
-};
-
-template<typename EnumType>
-struct SVGIDLEnumLimits {
-    // Specialize this function for a particular enumeration to limit the values that are exposed through the DOM.
-    static unsigned highestExposedEnumValue() { return SVGPropertyTraits<EnumType>::highestEnumValue(); }
 };
 
 } // namespace WebCore

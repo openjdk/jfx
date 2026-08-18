@@ -45,11 +45,12 @@
 #include "ContainerNodeInlines.h"
 #include "CustomElementRegistry.h"
 #include "DeprecatedGlobalSettings.h"
-#include "Document.h"
 #include "DocumentFragment.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
 #include "DocumentType.h"
+#include "DocumentView.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
@@ -73,18 +74,19 @@
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MarkupAccumulator.h"
 #include "MutableStyleProperties.h"
+#include "NodeInlines.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "PasteboardItemInfo.h"
 #include "PositionInlines.h"
-#include "Quirks.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectStyle.h"
 #include "ScriptWrappableInlines.h"
 #include "Settings.h"
 #include "SocketProvider.h"
@@ -95,6 +97,7 @@
 #include "VisibleSelection.h"
 #include "VisibleUnits.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
+#include <ranges>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 #include <wtf/URLParser.h>
@@ -119,9 +122,9 @@ public:
     }
 
     AttributeChange(RefPtr<Element>&& element, QualifiedName&& name, AtomString&& value)
-        : m_element(WTFMove(element))
-        , m_name(WTFMove(name))
-        , m_value(WTFMove(value))
+        : m_element(WTF::move(element))
+        , m_name(WTF::move(name))
+        , m_value(WTF::move(value))
     {
     }
 
@@ -166,7 +169,7 @@ void replaceSubresourceURLs(Ref<DocumentFragment>&& fragment, HashMap<AtomString
             if (element->attributeContainsURL(attribute) && !attribute.value().isEmpty()) {
                 auto replacement = replacementMap.get(attribute.value());
                 if (!replacement.isNull())
-                    changes.append({ element.copyRef(), QualifiedName { attribute.name() }, WTFMove(replacement) });
+                    changes.append({ element.copyRef(), QualifiedName { attribute.name() }, WTF::move(replacement) });
             }
         }
     }
@@ -197,11 +200,31 @@ void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, Function<b
         element->removeAttribute(attribute);
 }
 
-Ref<Page> createPageForSanitizingWebContent()
+Ref<Page> createPageForSanitizingWebContent(Document* destinationDocument)
 {
+    bool useDarkAppearance = false;
+    bool useElevatedUserInterfaceLevel = false;
+    std::optional<FontGenericFamilies> fontGenericFamilies;
+
+    if (destinationDocument) {
+        if (RefPtr destinationPage = destinationDocument->page()) {
+            bool documentNeedsDarkAppearance = [&] {
+                if (RefPtr destinationFrameView = destinationDocument->view())
+                    return destinationFrameView->useDarkAppearance();
+
+                return false;
+            }();
+
+            useDarkAppearance = documentNeedsDarkAppearance && destinationPage->useDarkAppearance();
+            useElevatedUserInterfaceLevel = destinationPage->useElevatedUserInterfaceLevel();
+            fontGenericFamilies = destinationPage->settings().fontGenericFamilies();
+        }
+    }
+
     auto pageConfiguration = pageConfigurationWithEmptyClients(std::nullopt, PAL::SessionID::defaultSessionID());
 
-    Ref page = Page::create(WTFMove(pageConfiguration));
+    Ref page = Page::create(WTF::move(pageConfiguration));
+    page->setUseColorAppearance(useDarkAppearance, useElevatedUserInterfaceLevel);
 #if ENABLE(VIDEO)
     page->settings().setMediaEnabled(false);
 #endif
@@ -209,6 +232,9 @@ Ref<Page> createPageForSanitizingWebContent()
     page->settings().setHTMLParserScriptingFlagPolicy(HTMLParserScriptingFlagPolicy::Enabled);
     page->settings().setAcceleratedCompositingEnabled(false);
     page->settings().setLinkPreloadEnabled(false);
+
+    if (fontGenericFamilies)
+        page->settings().fontGenericFamilies() = *fontGenericFamilies;
 
     RefPtr frame = page->localMainFrame();
     if (!frame)
@@ -218,7 +244,7 @@ Ref<Page> createPageForSanitizingWebContent()
     frame->init();
 
     FrameLoader& loader = frame->loader();
-    static constexpr ASCIILiteral markup = "<!DOCTYPE html><html><body></body></html>"_s;
+    static constexpr ASCIILiteral markup = "<!DOCTYPE html><html><head><meta name='color-scheme' content='light dark'/></head><body></body></html>"_s;
     RefPtr activeDocumentLoader = loader.activeDocumentLoader();
     ASSERT(activeDocumentLoader);
     auto& writer = activeDocumentLoader->writer();
@@ -231,9 +257,9 @@ Ref<Page> createPageForSanitizingWebContent()
     return page;
 }
 
-String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer)
+String sanitizeMarkup(const String& rawHTML, Document* destinationDocument, MSOListQuirks msoListQuirks, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer)
 {
-    Ref page = createPageForSanitizingWebContent();
+    Ref page = createPageForSanitizingWebContent(destinationDocument);
     RefPtr stagingDocument = page->localTopDocument();
     if (!stagingDocument)
         return String();
@@ -243,7 +269,7 @@ String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::o
     if (fragmentSanitizer)
         (*fragmentSanitizer)(fragment);
 
-    return sanitizedMarkupForFragmentInDocument(WTFMove(fragment), *stagingDocument, msoListQuirks, rawHTML);
+    return sanitizedMarkupForFragmentInDocument(WTF::move(fragment), *stagingDocument, msoListQuirks, rawHTML);
 }
 
 UserSelectNoneStateCache::UserSelectNoneStateCache(TreeType treeType)
@@ -291,11 +317,11 @@ auto UserSelectNoneStateCache::computeState(Node& targetNode) -> State
             foundMixed = true;
         }
         if (RefPtr child = firstChild(*currentNode); child && !foundMixed)
-            currentNode = WTFMove(child);
+            currentNode = WTF::move(child);
         else if (currentNode == &targetNode)
             break;
         else if (RefPtr sibling = nextSibling(*currentNode); sibling && !foundMixed)
-            currentNode = WTFMove(sibling);
+            currentNode = WTF::move(sibling);
         else {
             RefPtr<Node> ancestor;
             for (ancestor = parentNode(*currentNode); ancestor; ancestor = parentNode(*ancestor)) {
@@ -305,7 +331,7 @@ auto UserSelectNoneStateCache::computeState(Node& targetNode) -> State
                     break;
                 }
                 if (RefPtr sibling = nextSibling(*ancestor); sibling && !foundMixed) {
-                    currentNode = WTFMove(sibling);
+                    currentNode = WTF::move(sibling);
                     break;
                 }
             }
@@ -561,7 +587,7 @@ String StyledMarkupAccumulator::takeResults()
         length += string.length();
     StringBuilder result;
     result.reserveCapacity(length);
-    for (auto& string : makeReversedRange(m_reversedPrecedingMarkup))
+    for (auto& string : m_reversedPrecedingMarkup | std::views::reverse)
         result.append(string);
     result.append(takeMarkup());
     // Remove '\0' characters because they are not visibly rendered to the user.
@@ -576,8 +602,8 @@ void StyledMarkupAccumulator::appendText(StringBuilder& out, const Text& text)
         auto wrappingStyle = m_wrappingStyle->copy();
         // FIXME: <rdar://problem/5371536> Style rules that match pasted content can change it's appearance
         // Make sure spans are inline style in paste side e.g. span { display: block }.
-        wrappingStyle->forceInline();
-        // FIXME: Should this be included in forceInline?
+        wrappingStyle->forceDisplayInline();
+        // FIXME: Should this be included in forceDisplayInline?
         wrappingStyle->style()->setProperty(CSSPropertyFloat, CSSValueNone);
 
         appendStyleNodeOpenTag(out, wrappingStyle->style(), false, [&] -> std::optional<TextDirection> {
@@ -755,7 +781,7 @@ void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& 
                 newInlineStyle->mergeStyleFromRulesForSerialization(downcast<HTMLElement>(*const_cast<Element*>(&element)), m_standardFontFamilySerializationMode);
 
             if (addDisplayInline)
-                newInlineStyle->forceInline();
+                newInlineStyle->forceDisplayInline();
 
             if (m_needsPositionStyleConversion) {
                 m_needRelativeStyleWrapper |= newInlineStyle->convertPositionStyle();
@@ -857,25 +883,25 @@ RefPtr<Node> StyledMarkupAccumulator::traverseNodesForSerialization(Node& startN
     RefPtr<Node> next;
     for (RefPtr n = startNode; n != pastEnd; lastNode = n, n = next) {
 
-        Vector<RefPtr<Node>, 8> exitedAncestors;
+        Vector<Ref<Node>, 8> exitedAncestors;
         next = nullptr;
 
         auto advanceToAncestorSibling = [&]() {
             if (RefPtr sibling = nextSibling(*n)) {
-                next = WTFMove(sibling);
+                next = WTF::move(sibling);
                 return;
             }
             for (RefPtr ancestor = parentNode(*n); ancestor; ancestor = parentNode(*ancestor)) {
-                exitedAncestors.append(ancestor);
+                exitedAncestors.append(*ancestor);
                 if (RefPtr sibling = nextSibling(*ancestor)) {
-                    next = WTFMove(sibling);
+                    next = WTF::move(sibling);
                     return;
             }
         }
         };
 
         if (RefPtr child = firstChild(*n))
-            next = WTFMove(child);
+            next = WTF::move(child);
         else
             advanceToAncestorSibling();
 
@@ -902,7 +928,7 @@ RefPtr<Node> StyledMarkupAccumulator::traverseNodesForSerialization(Node& startN
         for (auto& ancestor : exitedAncestors) {
             if (!depth && next == pastEnd)
                 break;
-            exitNode(*ancestor);
+            exitNode(ancestor);
         }
     }
 
@@ -1029,14 +1055,14 @@ static RefPtr<Node> highestAncestorToWrapMarkup(const Position& start, const Pos
 
         // Retain the Mail quote level by including all ancestor mail block quotes.
         if (RefPtr highestMailBlockquote = highestEnclosingNodeOfType(start, isMailBlockquote, CanCrossEditingBoundary))
-            specialCommonAncestor = WTFMove(highestMailBlockquote);
+            specialCommonAncestor = WTF::move(highestMailBlockquote);
     }
 
     RefPtr checkAncestor = specialCommonAncestor ? specialCommonAncestor : RefPtr { &commonAncestor };
     if (checkAncestor->renderer() && checkAncestor->renderer()->containingBlock()) {
         RefPtr newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor.get()), &isElementPresentational, CanCrossEditingBoundary, checkAncestor->renderer()->containingBlock()->protectedElement().get());
         if (newSpecialCommonAncestor)
-            specialCommonAncestor = WTFMove(newSpecialCommonAncestor);
+            specialCommonAncestor = WTF::move(newSpecialCommonAncestor);
     }
 
     // If a single tab is selected, commonAncestor will be a text node inside a tab span.
@@ -1049,10 +1075,10 @@ static RefPtr<Node> highestAncestorToWrapMarkup(const Position& start, const Pos
         specialCommonAncestor = commonAncestor;
 
     if (RefPtr enclosingAnchor = enclosingElementWithTag(firstPositionInNode(specialCommonAncestor ? specialCommonAncestor.get() : &commonAncestor), aTag))
-        specialCommonAncestor = WTFMove(enclosingAnchor);
+        specialCommonAncestor = WTF::move(enclosingAnchor);
 
     if (RefPtr enclosingPicture = enclosingElementWithTag(firstPositionInNode(specialCommonAncestor ? specialCommonAncestor.get() : &commonAncestor), pictureTag))
-        specialCommonAncestor = WTFMove(enclosingPicture);
+        specialCommonAncestor = WTF::move(enclosingPicture);
 
     return specialCommonAncestor;
 }
@@ -1120,8 +1146,12 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
                     // Reset the CSS properties to avoid an assertion error in addStyleMarkup().
                     // This assertion is caused at least when we select all text of a <body> element whose
                     // 'text-decoration' property is "inherit", and copy it.
-                    if (!propertyMissingOrEqualToNone(fullySelectedRootStyle->style(), CSSPropertyTextDecorationLine))
+                    if (!propertyMissingOrEqualToNone(fullySelectedRootStyle->style(), CSSPropertyTextDecorationLine)) {
                         fullySelectedRootStyle->style()->setProperty(CSSPropertyTextDecorationLine, CSSValueNone);
+                        fullySelectedRootStyle->style()->setProperty(CSSPropertyTextDecorationThickness, CSSValueAuto);
+                        fullySelectedRootStyle->style()->setProperty(CSSPropertyTextDecorationStyle, CSSValueSolid);
+                        fullySelectedRootStyle->style()->setProperty(CSSPropertyTextDecorationColor, CSSValueCurrentcolor);
+                    }
                     if (!propertyMissingOrEqualToNone(fullySelectedRootStyle->style(), CSSPropertyWebkitTextDecorationsInEffect))
                         fullySelectedRootStyle->style()->setProperty(CSSPropertyWebkitTextDecorationsInEffect, CSSValueNone);
                     accumulator.wrapWithStyleNode(fullySelectedRootStyle->style(), true);
@@ -1220,7 +1250,7 @@ static void restoreAttachmentElementsInFragment(DocumentFragment& fragment)
     // When creating a fragment we must strip the webkit-attachment-path attribute after restoring the File object.
     Vector<Ref<HTMLAttachmentElement>> attachments;
     for (Ref attachment : descendantsOfType<HTMLAttachmentElement>(fragment))
-        attachments.append(WTFMove(attachment));
+        attachments.append(WTF::move(attachment));
 
     for (Ref attachment : attachments) {
         attachment->setUniqueIdentifier(attachment->attributeWithoutSynchronization(webkitattachmentidAttr));
@@ -1241,10 +1271,10 @@ static void restoreAttachmentElementsInFragment(DocumentFragment& fragment)
     Vector<Ref<AttachmentAssociatedElement>> attachmentAssociatedElements;
 
     for (Ref image : descendantsOfType<HTMLImageElement>(fragment))
-        attachmentAssociatedElements.append(WTFMove(image));
+        attachmentAssociatedElements.append(WTF::move(image));
 
     for (Ref source : descendantsOfType<HTMLSourceElement>(fragment))
-        attachmentAssociatedElements.append(WTFMove(source));
+        attachmentAssociatedElements.append(WTF::move(source));
 
     for (Ref attachmentAssociatedElement : attachmentAssociatedElements) {
         Ref element = attachmentAssociatedElement->asHTMLElement();
@@ -1255,7 +1285,7 @@ static void restoreAttachmentElementsInFragment(DocumentFragment& fragment)
 
         Ref attachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, *ownerDocument);
         attachment->setUniqueIdentifier(attachmentIdentifier);
-        attachmentAssociatedElement->setAttachmentElement(WTFMove(attachment));
+        attachmentAssociatedElement->setAttachmentElement(WTF::move(attachment));
         element->removeAttribute(webkitattachmentidAttr);
     }
 #else
@@ -1282,7 +1312,7 @@ String serializeFragment(const Node& node, SerializedNodes root, Vector<Ref<Node
     if (!serializationSyntax)
         serializationSyntax = MarkupAccumulator::serializationSyntax(node.document());
 
-    MarkupAccumulator accumulator(nodes, resolveURLs, *serializationSyntax, serializeShadowRoots, WTFMove(explicitShadowRoots), exclusionRules);
+    MarkupAccumulator accumulator(nodes, resolveURLs, *serializationSyntax, serializeShadowRoots, WTF::move(explicitShadowRoots), exclusionRules);
     return accumulator.serializeNodes(const_cast<Node&>(node), root);
 }
 
@@ -1291,8 +1321,8 @@ String serializeFragmentWithURLReplacement(const Node& node, SerializedNodes roo
     if (!serializationSyntax)
         serializationSyntax = MarkupAccumulator::serializationSyntax(node.document());
 
-    MarkupAccumulator accumulator(nodes, resolveURLs, *serializationSyntax, serializeShadowRoots, WTFMove(explicitShadowRoots), exclusionRules);
-    accumulator.enableURLReplacement(WTFMove(replacementURLStrings), WTFMove(replacementURLStringsForCSSStyleSheet));
+    MarkupAccumulator accumulator(nodes, resolveURLs, *serializationSyntax, serializeShadowRoots, WTF::move(explicitShadowRoots), exclusionRules);
+    accumulator.enableURLReplacement(WTF::move(replacementURLStrings), WTF::move(replacementURLStringsForCSSStyleSheet));
     return accumulator.serializeNodes(const_cast<Node&>(node), root);
 }
 
@@ -1380,7 +1410,7 @@ Ref<DocumentFragment> createFragmentFromText(const SimpleRange& context, const S
 
     if (contextPreservesNewline(context)) {
         bool endsWithNewLine = string.endsWith('\n');
-        fragment->appendChild(document->createTextNode(WTFMove(string)));
+        fragment->appendChild(document->createTextNode(WTF::move(string)));
         if (endsWithNewLine) {
             fragment->appendChild(createHTMLBRElement());
         }
@@ -1483,11 +1513,11 @@ RefPtr<DocumentFragment> createFragmentForTransformToFragment(Document& outputDo
         // Unfortunately, that's an implementation detail of the parser.
         // We achieve that effect here by passing in a fake body element as context for the fragment.
         auto fakeBody = HTMLBodyElement::create(outputDoc);
-        fragment->parseHTML(WTFMove(sourceString), fakeBody, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::DoNotMarkAlreadyStarted });
+        fragment->parseHTML(WTF::move(sourceString), fakeBody, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::DoNotMarkAlreadyStarted });
     } else if (sourceMIMEType == textPlainContentTypeAtom())
-        fragment->parserAppendChild(Text::create(outputDoc, WTFMove(sourceString)));
+        fragment->parserAppendChild(Text::create(outputDoc, WTF::move(sourceString)));
     else {
-        bool successfulParse = fragment->parseXML(WTFMove(sourceString), nullptr, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::DoNotMarkAlreadyStarted });
+        bool successfulParse = fragment->parseXML(WTF::move(sourceString), nullptr, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::DoNotMarkAlreadyStarted });
         if (!successfulParse)
             return nullptr;
     }
@@ -1517,11 +1547,11 @@ static Vector<Ref<HTMLElement>> collectElementsToRemoveFromFragment(ContainerNod
     for (Ref element : childrenOfType<HTMLElement>(container)) {
         if (is<HTMLHtmlElement>(element)) {
             toRemove.append(element);
-            collectElementsToRemoveFromFragment(WTFMove(element));
+            collectElementsToRemoveFromFragment(WTF::move(element));
             continue;
         }
         if (is<HTMLHeadElement>(element) || is<HTMLBodyElement>(element))
-            toRemove.append(WTFMove(element));
+            toRemove.append(WTF::move(element));
     }
     return toRemove;
 }

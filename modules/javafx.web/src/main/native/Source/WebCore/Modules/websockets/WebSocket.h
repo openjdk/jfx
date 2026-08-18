@@ -32,7 +32,9 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "WebSocketChannelClient.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/URL.h>
@@ -45,15 +47,14 @@ class ArrayBufferView;
 namespace WebCore {
 
 class Blob;
+class SecurityOrigin;
 class ThreadableWebSocketChannel;
 template<typename> class ExceptionOr;
 
-class WebSocket final : public RefCounted<WebSocket>, public EventTarget, public ActiveDOMObject, private WebSocketChannelClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebSocket);
+class WebSocket final : public RefCounted<WebSocket>, public EventTarget, public ActiveDOMObject, public CanMakeThreadSafeCheckedPtr<WebSocket>, private WebSocketChannelClient {
+    WTF_MAKE_TZONE_ALLOCATED(WebSocket);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebSocket);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static ASCIILiteral subprotocolSeparator();
 
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url);
@@ -61,7 +62,12 @@ public:
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url, const Vector<String>& protocols);
     virtual ~WebSocket();
 
-    static HashSet<WebSocket*>& allActiveWebSockets() WTF_REQUIRES_LOCK(s_allActiveWebSocketsLock);
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
+    static HashSet<CheckedPtr<WebSocket>>& allActiveWebSockets() WTF_REQUIRES_LOCK(s_allActiveWebSocketsLock);
     static Lock& allActiveWebSocketsLock() WTF_RETURNS_LOCK(s_allActiveWebSocketsLock);
 
     enum State {
@@ -96,6 +102,7 @@ public:
     void setBinaryType(BinaryType);
 
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
 private:
     explicit WebSocket(ScriptExecutionContext&);
@@ -132,6 +139,7 @@ private:
 
     State m_state { CONNECTING };
     URL m_url;
+    const RefPtr<SecurityOrigin> m_origin;
     unsigned m_bufferedAmount { 0 };
     unsigned m_bufferedAmountAfterClose { 0 };
     BinaryType m_binaryType { BinaryType::Blob };
@@ -143,3 +151,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebSocket)

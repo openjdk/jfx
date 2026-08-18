@@ -27,22 +27,13 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCSctpTransportState.h"
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class RTCSctpTransportBackendClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCSctpTransportBackendClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class RTCDtlsTransportBackend;
 
-class RTCSctpTransportBackendClient : public CanMakeWeakPtr<RTCSctpTransportBackendClient> {
+class RTCSctpTransportBackendClient : public AbstractRefCountedAndCanMakeWeakPtr<RTCSctpTransportBackendClient> {
 public:
     virtual ~RTCSctpTransportBackendClient() = default;
     virtual void onStateChanged(RTCSctpTransportState, std::optional<double>, std::optional<unsigned short>) = 0;

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "JSCInlines.h"
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/JSCInlines.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>

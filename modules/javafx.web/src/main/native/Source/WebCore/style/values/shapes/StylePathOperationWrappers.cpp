@@ -34,6 +34,7 @@
 #include "CSSValueList.h"
 #include "StyleBuilderState.h"
 #include "StylePrimitiveKeyword+CSSValueCreation.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveKeyword+Serialization.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Logging.h"
@@ -64,7 +65,7 @@ RefPtr<PathOperation> CSSValueConversion<RefPtr<PathOperation>>::operator()(Buil
         }();
         auto target = SVGURIReference::targetElementFromIRIString(styleURL, treeScope);
 
-        return ReferencePathOperation::create(WTFMove(styleURL), fragment, dynamicDowncast<SVGElement>(target.element.get()));
+        return ReferencePathOperation::create(WTF::move(styleURL), fragment, dynamicDowncast<SVGElement>(target.element.get()));
     }
 
     if (RefPtr ray = dynamicDowncast<CSSRayValue>(value)) {

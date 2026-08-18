@@ -27,7 +27,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionsBackend.h"
+#include <WebCore/ContentExtensionsBackend.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>

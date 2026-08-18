@@ -34,11 +34,12 @@
 #include "HTTPParsers.h"
 #include "MathMLNames.h"
 #include "RenderMathMLToken.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLTokenElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLTokenElement);
 
 using namespace MathMLNames;
 
@@ -70,24 +71,13 @@ RenderPtr<RenderElement> MathMLTokenElement::createElementRenderer(RenderStyle&&
 {
     ASSERT(hasTagName(MathMLNames::miTag) || hasTagName(MathMLNames::mnTag) || hasTagName(MathMLNames::msTag) || hasTagName(MathMLNames::mtextTag));
 
-    return createRenderer<RenderMathMLToken>(RenderObject::Type::MathMLToken, *this, WTFMove(style));
+    return createRenderer<RenderMathMLToken>(RenderObject::Type::MathMLToken, *this, WTF::move(style));
 }
 
 bool MathMLTokenElement::childShouldCreateRenderer(const Node& child) const
 {
     // The HTML specification defines <mi>, <mo>, <mn>, <ms> and <mtext> as insertion points.
     return StyledElement::childShouldCreateRenderer(child);
-}
-
-std::optional<char32_t> MathMLTokenElement::convertToSingleCodePoint(StringView string)
-{
-    auto codePoints = string.trim(isASCIIWhitespaceWithoutFF<char16_t>).codePoints();
-    auto iterator = codePoints.begin();
-    if (iterator == codePoints.end())
-        return std::nullopt;
-    std::optional<char32_t> character = *iterator;
-    ++iterator;
-    return iterator == codePoints.end() ? character : std::nullopt;
 }
 
 }

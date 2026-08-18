@@ -150,7 +150,7 @@ TextCodecICU::~TextCodecICU()
 {
     if (m_converter) {
         ucnv_reset(m_converter.get());
-        threadGlobalData().cachedConverterICU().converter = WTFMove(m_converter);
+        threadGlobalDataSingleton().cachedConverterICU().converter = WTF::move(m_converter);
     }
 }
 
@@ -158,12 +158,12 @@ void TextCodecICU::createICUConverter() const
 {
     ASSERT(!m_converter);
 
-    auto& cachedConverter = threadGlobalData().cachedConverterICU().converter;
+    auto& cachedConverter = threadGlobalDataSingleton().cachedConverterICU().converter;
     if (cachedConverter) {
         UErrorCode error = U_ZERO_ERROR;
         const char* cachedConverterName = ucnv_getName(cachedConverter.get(), &error);
         if (U_SUCCESS(error) && m_canonicalConverterName == cachedConverterName) {
-            m_converter = WTFMove(cachedConverter);
+            m_converter = WTF::move(cachedConverter);
             return;
         }
     }
@@ -241,8 +241,8 @@ String TextCodecICU::decode(std::span<const uint8_t> source, bool flush, bool st
     UErrorCode err = U_ZERO_ERROR;
 
     do {
-        size_t ucharsDecoded = decodeToBuffer(target, source, offsets, flush, err);
-        result.append(target.first(ucharsDecoded));
+        size_t count = decodeToBuffer(target, source, offsets, flush, err);
+        result.append(target.first(count));
     } while (needsToGrowToProduceBuffer(err));
 
     if (U_FAILURE(err)) {

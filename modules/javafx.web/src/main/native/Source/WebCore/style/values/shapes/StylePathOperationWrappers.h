@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "PathOperation.h"
+#include <WebCore/PathOperation.h>
 
 namespace WebCore {
 namespace Style {
@@ -38,7 +38,7 @@ enum SupportRayPathOperation : bool { No, Yes };
 
 // <ray-path> = <ray()> || <coord-box>
 struct RayPath {
-    explicit RayPath(Ref<RayPathOperation>&& operation) : operation { WTFMove(operation) } { }
+    explicit RayPath(Ref<RayPathOperation>&& operation) : operation { WTF::move(operation) } { }
     explicit RayPath(const Ref<RayPathOperation>& operation) : operation { operation } { }
 
     ALWAYS_INLINE const RayFunction& ray() const { return operation->ray(); }
@@ -69,7 +69,7 @@ private:
 
 // <reference-path> = <url> || <coord-box>
 struct ReferencePath {
-    explicit ReferencePath(Ref<ReferencePathOperation>&& operation) : operation { WTFMove(operation) } { }
+    explicit ReferencePath(Ref<ReferencePathOperation>&& operation) : operation { WTF::move(operation) } { }
     explicit ReferencePath(const Ref<ReferencePathOperation>& operation) : operation { operation } { }
 
     ALWAYS_INLINE const URL& url() const { return operation->url(); }
@@ -101,7 +101,7 @@ private:
 
 // <basic-shape-path> = <basic-shape> || <coord-box>
 struct BasicShapePath {
-    explicit BasicShapePath(Ref<ShapePathOperation>&& operation) : operation { WTFMove(operation) } { }
+    explicit BasicShapePath(Ref<ShapePathOperation>&& operation) : operation { WTF::move(operation) } { }
     explicit BasicShapePath(const Ref<ShapePathOperation>& operation) : operation { operation } { }
 
     ALWAYS_INLINE const BasicShape& shape() const { return operation->shape(); }
@@ -132,7 +132,7 @@ private:
 
 // <box-path> = <coord-box>
 struct BoxPath {
-    explicit BoxPath(Ref<BoxPathOperation>&& operation) : operation { WTFMove(operation) } { }
+    explicit BoxPath(Ref<BoxPathOperation>&& operation) : operation { WTF::move(operation) } { }
     explicit BoxPath(const Ref<BoxPathOperation>& operation) : operation { operation } { }
 
     ALWAYS_INLINE CSSBoxType referenceBox() const { return operation->referenceBox(); }

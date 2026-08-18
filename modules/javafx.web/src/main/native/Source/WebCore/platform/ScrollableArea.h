@@ -25,15 +25,17 @@
 
 #pragma once
 
-#include "KeyboardScroll.h"
-#include "RectEdges.h"
-#include "ScrollAlignment.h"
-#include "ScrollAnchoringController.h"
-#include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
-#include "Scrollbar.h"
+#include <WebCore/KeyboardScroll.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/ScrollAlignment.h>
+#include <WebCore/ScrollAnchoringController.h>
+#include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/Scrollbar.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -71,15 +73,9 @@ inline int offsetForOrientation(ScrollOffset offset, ScrollbarOrientation orient
     return 0;
 }
 
-class ScrollableArea : public CanMakeWeakPtr<ScrollableArea> {
+class ScrollableArea : public CanMakeWeakPtr<ScrollableArea>, public AbstractCanMakeCheckedPtr {
     WTF_MAKE_TZONE_ALLOCATED(ScrollableArea);
 public:
-    // CheckedPtr interface
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
-
     virtual bool isScrollView() const { return false; }
     virtual bool isRenderLayer() const { return false; }
     virtual bool isListBox() const { return false; }
@@ -159,6 +155,7 @@ public:
     WEBCORE_EXPORT virtual Color scrollbarTrackColorStyle() const;
     WEBCORE_EXPORT virtual Style::ScrollbarGutter scrollbarGutterStyle() const;
     virtual ScrollbarWidth scrollbarWidthStyle() const { return ScrollbarWidth::Auto; }
+    virtual std::optional<ScrollbarColor> scrollbarColorStyle() const { return { }; }
 
     WEBCORE_EXPORT bool allowsHorizontalScrolling() const;
     WEBCORE_EXPORT bool allowsVerticalScrolling() const;
@@ -170,6 +167,7 @@ public:
     WEBCORE_EXPORT virtual void willStartLiveResize();
     WEBCORE_EXPORT virtual void willEndLiveResize();
 
+    WEBCORE_EXPORT void scrollbarColorDidChange(std::optional<ScrollbarColor>);
     WEBCORE_EXPORT void contentAreaWillPaint() const;
     WEBCORE_EXPORT void mouseEnteredContentArea() const;
     WEBCORE_EXPORT void mouseExitedContentArea() const;
@@ -251,7 +249,9 @@ public:
     WEBCORE_EXPORT IntSize scrollbarIntrusion() const;
 
     virtual Scrollbar* horizontalScrollbar() const { return nullptr; }
+    RefPtr<Scrollbar> protectedHorizontalScrollbar() const { return horizontalScrollbar(); }
     virtual Scrollbar* verticalScrollbar() const { return nullptr; }
+    RefPtr<Scrollbar> protectedVerticalScrollbar() const { return verticalScrollbar(); }
     virtual void scrollbarFrameRectChanged(const Scrollbar&) const { };
 
     Scrollbar* scrollbarForDirection(ScrollDirection direction) const
@@ -369,6 +369,10 @@ public:
     virtual bool scrollAnimatorEnabled() const { return false; }
 
     virtual bool isInStableState() const { return true; }
+
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    float scrollbarOpacity() const;
+#endif
 
     // NOTE: Only called from Internals for testing.
     WEBCORE_EXPORT void setScrollOffsetFromInternals(const ScrollOffset&);
