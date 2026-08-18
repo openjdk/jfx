@@ -79,9 +79,9 @@ public class LocalDateTimeStringConverter extends BaseTemporalStringConverter<Lo
     /// @param chronology the `Chronology` that will be used by the formatter and parser. If `null`,
     ///        [IsoChronology#INSTANCE] will be used.
     public LocalDateTimeStringConverter(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chronology) {
-        // JEP-513 could make this look better by moving the null checks before super
-        super(Objects.requireNonNullElse(dateStyle, FormatStyle.SHORT),
-              Objects.requireNonNullElse(timeStyle, FormatStyle.SHORT), locale, chronology);
+        dateStyle = Objects.requireNonNullElse(dateStyle, FormatStyle.SHORT);
+        timeStyle = Objects.requireNonNullElse(timeStyle, FormatStyle.SHORT);
+        super(dateStyle, timeStyle, locale, chronology);
     }
 
     /// Creates a `LocalDateTimeStringConverter` that uses the given formatter and parser.

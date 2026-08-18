@@ -62,7 +62,8 @@ public class LocalTimeStringConverter extends BaseTemporalStringConverter<LocalT
     /// @param locale the `Locale` that will be used by the formatter and parser. If `null`, the user's locale will be
     ///        used.
     public LocalTimeStringConverter(FormatStyle timeStyle, Locale locale) {
-        super(null, Objects.requireNonNullElse(timeStyle, FormatStyle.SHORT), locale, null);
+        timeStyle = Objects.requireNonNullElse(timeStyle, FormatStyle.SHORT);
+        super(null, timeStyle, locale, null);
     }
 
     /// Creates a `LocalTimeStringConverter` that uses the given formatter and parser.
