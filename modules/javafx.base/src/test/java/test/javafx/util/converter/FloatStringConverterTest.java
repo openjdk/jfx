@@ -25,30 +25,28 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.FloatStringConverter;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.FloatStringConverter;
+
 public class FloatStringConverterTest {
-    private FloatStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new FloatStringConverter();
+    private static final FloatStringConverter CONVERTER = new FloatStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(10.3521f, CONVERTER.fromString("10.3521"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals((Float)10.3521f, converter.fromString("10.3521"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(10.3521f, CONVERTER.fromString("      10.3521     "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals((Float)10.3521f, converter.fromString("      10.3521     "));
-    }
-
-    @Test public void toString_validInput() {
-        assertEquals("10.3521", converter.toString(10.3521f));
+    @Test
+    void toString_validInput() {
+        assertEquals("10.3521", CONVERTER.toString(10.3521f));
     }
 }
