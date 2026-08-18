@@ -26,7 +26,7 @@ import com.sun.javafx.gradle.CompileTarget
 
 boolean isAllTaskRequested() {
     return gradle.startParameter.taskNames.any { String taskName ->
-        taskName == "all"
+        taskName == "all" || taskName == ":all"
     }
 }
 
