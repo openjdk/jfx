@@ -39,8 +39,11 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.stage.Stage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.DoubleUnaryOperator;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -2118,6 +2121,145 @@ public class RegionTest {
                 double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
                 assertEquals(snappedValue, snapOfSnappedValue, 0.0, failMessage);
             }
+        }
+    }
+
+    @Test
+    public void layoutInAreaUsesSnappedWidthForHorizontalBias() {
+        var child = new RecordingBiasedRegion(Orientation.HORIZONTAL, 10.2, value -> value < 11 ? 40 : 20);
+        Region.layoutInArea(child, 0, 0, 10.2, 100, -1, Insets.EMPTY, true, false, HPos.LEFT, VPos.TOP, true);
+
+        assertEquals(11, child.getWidth());
+        assertEquals(20, child.getHeight());
+        assertDependentArguments(child, 11);
+    }
+
+    @Test
+    public void layoutInAreaUsesSnappedHeightForVerticalBias() {
+        var child = new RecordingBiasedRegion(Orientation.VERTICAL, 10.2, value -> value < 11 ? 40 : 20);
+        Region.layoutInArea(child, 0, 0, 100, 10.2, -1, Insets.EMPTY, false, true, HPos.LEFT, VPos.TOP, true);
+
+        assertEquals(20, child.getWidth());
+        assertEquals(11, child.getHeight());
+        assertDependentArguments(child, 11);
+    }
+
+    @Test
+    public void layoutInAreaSnapsPreferredPrimarySizeWhenNotFilling() {
+        var child = new RecordingBiasedRegion(Orientation.HORIZONTAL, 10.2, _ -> 20);
+        Region.layoutInArea(child, 0, 0, 100, 100, -1, Insets.EMPTY, false, false, HPos.LEFT, VPos.TOP, true);
+
+        assertEquals(11, child.getWidth());
+        assertEquals(20, child.getHeight());
+        assertDependentArguments(child, 11);
+    }
+
+    @Test
+    public void layoutInAreaPreservesRawPrimarySizeWhenSnappingIsDisabled() {
+        var child = new RecordingBiasedRegion(Orientation.HORIZONTAL, 10.2, _ -> 20.3);
+        Region.layoutInArea(child, 0, 0, 10.2, 100, -1, Insets.EMPTY, true, false, HPos.LEFT, VPos.TOP, false);
+
+        assertEquals(10.2, child.getWidth());
+        assertEquals(20.3, child.getHeight());
+        assertDependentArguments(child, 10.2);
+    }
+
+    @Test
+    public void layoutInAreaUsesAxisSpecificFractionalRenderScales() {
+        Stage stage = new Stage();
+        Pane root = new Pane();
+        stage.setScene(new Scene(root));
+        stage.setRenderScaleX(1.25);
+        stage.setRenderScaleY(1.5);
+
+        try {
+            var horizontal = new RecordingBiasedRegion(Orientation.HORIZONTAL, 10.2, _ -> 10.2);
+            root.getChildren().setAll(horizontal);
+            Region.layoutInArea(horizontal, 0, 0, 10.2, 100, -1, Insets.EMPTY, true, false, HPos.LEFT, VPos.TOP, true);
+
+            assertEquals(10.4, horizontal.getWidth());
+            assertEquals(10.666666666666666, horizontal.getHeight());
+            assertDependentArguments(horizontal, 10.4);
+
+            var vertical = new RecordingBiasedRegion(Orientation.VERTICAL, 10.2, _ -> 10.2);
+            root.getChildren().setAll(vertical);
+            Region.layoutInArea(vertical, 0, 0, 100, 10.2, -1, Insets.EMPTY, false, true, HPos.LEFT, VPos.TOP, true);
+
+            assertEquals(10.4, vertical.getWidth());
+            assertEquals(10.666666666666666, vertical.getHeight());
+            assertDependentArguments(vertical, 10.666666666666666);
+        } finally {
+            stage.close();
+        }
+    }
+
+    @Test
+    public void layoutInAreaHonorsContinuousConstraintsAtSnappedPrimarySize() {
+        var child = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region.layoutInArea(child, 0, 0, 99.2, 1000, -1, Insets.EMPTY, true, false, HPos.LEFT, VPos.TOP, true);
+
+        assertEquals(100, child.getWidth());
+        assertEquals(200, child.getHeight());
+        assertEquals(child.minHeight(child.getWidth()), child.getHeight());
+        assertEquals(child.maxHeight(child.getWidth()), child.getHeight());
+    }
+
+    private static void assertDependentArguments(RecordingBiasedRegion child, double expected) {
+        assertEquals(List.of(expected, expected, expected), child.dependentArguments);
+    }
+
+    private static final class RecordingBiasedRegion extends Region {
+        private final Orientation bias;
+        private final double preferredPrimarySize;
+        private final DoubleUnaryOperator dependentSize;
+        private final List<Double> dependentArguments = new ArrayList<>();
+
+        private RecordingBiasedRegion(Orientation bias,
+                                      double preferredPrimarySize,
+                                      DoubleUnaryOperator dependentSize) {
+            this.bias = bias;
+            this.preferredPrimarySize = preferredPrimarySize;
+            this.dependentSize = dependentSize;
+        }
+
+        @Override
+        public Orientation getContentBias() {
+            return bias;
+        }
+
+        @Override
+        protected double computeMinWidth(double height) {
+            return bias == Orientation.VERTICAL ? computeDependentSize(height) : 0;
+        }
+
+        @Override
+        protected double computeMinHeight(double width) {
+            return bias == Orientation.HORIZONTAL ? computeDependentSize(width) : 0;
+        }
+
+        @Override
+        protected double computePrefWidth(double height) {
+            return bias == Orientation.VERTICAL ? computeDependentSize(height) : preferredPrimarySize;
+        }
+
+        @Override
+        protected double computePrefHeight(double width) {
+            return bias == Orientation.HORIZONTAL ? computeDependentSize(width) : preferredPrimarySize;
+        }
+
+        @Override
+        protected double computeMaxWidth(double height) {
+            return bias == Orientation.VERTICAL ? computeDependentSize(height) : Double.MAX_VALUE;
+        }
+
+        @Override
+        protected double computeMaxHeight(double width) {
+            return bias == Orientation.HORIZONTAL ? computeDependentSize(width) : Double.MAX_VALUE;
+        }
+
+        private double computeDependentSize(double primarySize) {
+            dependentArguments.add(primarySize);
+            return dependentSize.applyAsDouble(primarySize);
         }
     }
 }
