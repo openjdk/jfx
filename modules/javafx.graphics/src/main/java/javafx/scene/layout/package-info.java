@@ -218,7 +218,7 @@
  * direction. If this behavior is not desired, nodes can override {@link javafx.scene.Node#usesMirroring()}
  * and return {@code false}.
  *
- * <h2>Pixel Snapping</h2>
+ * <h2 id="pixel-snapping">Pixel Snapping</h2>
  *
  * In JavaFX, layout coordinates use {@code double} values, which means that a position or size can be fractional.
  * Mapping fractional coordinates onto a physical screen can introduce blurriness if the edge of a node falls
@@ -394,11 +394,20 @@
  *         // Incorrect: a 0.1-unit gap becomes a full pixel
  *         double gap = snapSizeX(0.1);
  *         }
- *     <li><b>Re-snap after calculations, using the meaning of the result.</b><br>
- *         Addition and subtraction of already-snapped values can leave the result a few floating-point units away
- *         from a pixel boundary. After calculating a final value from snapped terms, re-snap a coordinate with
- *         {@code snapPositionX/Y}, and re-snap a gap or other empty space with {@code snapSpaceX/Y}. Also use
- *         {@code snapSpaceX/Y} to re-snap a final allocated span composed of independently snapped sizes and spaces:
+ *     <li><b>Re-snap calculations whose exact result is known to be pixel-aligned.</b><br>
+ *         If every operand of an addition or subtraction has already been snapped, the <em>idealized</em>
+ *         mathematical result is also pixel-aligned. However, floating-point arithmetic can cause that result
+ *         to be slightly off the pixel grid. In this situation, the fractional remainder is <em>known</em> to
+ *         be arithmetic drift rather than an intentional offset, so re-snap the final result using nearest-pixel
+ *         rounding before returning it or using it in another layout calculation:
+ *         <p>
+ *         <ul>
+ *             <li>Re-snap a coordinate with {@code snapPositionX/Y}.
+ *             <li>Re-snap empty space (gaps, margins, padding) or an allocated content span with {@code snapSpaceX/Y}.
+ *             <li>Do not use {@code snapSizeX/Y} to snap such a result, because ceiling can turn positive
+ *                 floating-point drift into an extra pixel.
+ *         </ul>
+ *         For example, write:
  *         {@snippet :
  *         double firstWidth = snapSizeX(firstChildWidth);
  *         double gapWidth = snapSpaceX(getGap());
@@ -416,8 +425,6 @@
  *         // Incorrect: the sum of snapped values can add floating-point drift
  *         double allocatedWidth = firstWidth + gapWidth + secondWidth;
  *         }
- *         Using {@code snapSpaceX/Y} for the allocated span does not mean that the span is empty space, it merely
- *         selects nearest-pixel rounding for the final arithmetic result.
  *     <li><b>Snap independent allocations independently.</b><br>
  *         If two independent pieces of content each need their own pixels, snapping only their sum can under-allocate
  *         layout space. At scale {@code 1.0}, two content widths of {@code 0.4} <em>each</em> require one pixel, while
