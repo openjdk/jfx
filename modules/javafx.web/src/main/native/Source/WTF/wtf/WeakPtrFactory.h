@@ -28,6 +28,7 @@
 
 #include <wtf/CompactRefPtrTuple.h>
 #include <wtf/Forward.h>
+#include <wtf/MainThread.h>
 #include <wtf/Packed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakRef.h>
@@ -50,7 +51,7 @@ public:
     using WeakPtrImplType = WeakPtrImpl;
 
     WeakPtrFactory()
-#if ASSERT_ENABLED && !PLATFORM(JAVA)
+#if ASSERT_ENABLED
         : m_wasConstructedOnMainThread(isMainThread())
 #endif
     {

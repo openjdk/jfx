@@ -819,6 +819,11 @@ void WebPage::disableWatchdog() {
 using namespace WebCore;
 using namespace WTF;
 
+extern "C" JNIEXPORT void WebPage_doJSCGarbageCollection()
+{
+    WebCore::GarbageCollectionController::singleton().garbageCollectNow();
+}
+
 class WebStorageNamespaceProviderJava final : public WebCore::StorageNamespaceProvider {
 public:
     void setLocalStorageDatabasePath(const String& path) {
@@ -2619,7 +2624,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkWorkerThreadCount
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
   (JNIEnv*, jclass)
 {
-   GarbageCollectionController::singleton().garbageCollectNow();
+    WebPage_doJSCGarbageCollection();
 }
 
 }

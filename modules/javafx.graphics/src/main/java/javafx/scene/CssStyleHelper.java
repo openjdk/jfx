@@ -130,7 +130,6 @@ final class CssStyleHelper {
             if (node.styleHelper.cacheContainer != null && node.styleHelper.isUserSetFont(node)) {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
-            node.styleHelper.cacheContainer.forceSlowpath = true;
 
             if (triggerStates[0] != null) {
                 node.styleHelper.triggerStates.addAll(triggerStates[0]);
@@ -460,8 +459,6 @@ final class CssStyleHelper {
         // here so the property can be reset without expanding properties that
         // were not set by css.
         private final Map<CssMetaData, CalculatedValue> cssSetProperties;
-
-        private boolean forceSlowpath = false;
     }
 
     private boolean resetInProgress = false;
@@ -890,9 +887,6 @@ final class CssStyleHelper {
         final StyleCacheEntry.Key cacheEntryKey = new StyleCacheEntry.Key(transitionStates, fontForRelativeSizes);
         StyleCacheEntry cacheEntry = sharedCache.getStyleCacheEntry(cacheEntryKey);
 
-        // if the cacheEntry already exists, take the fastpath
-        final boolean fastpath = cacheEntry != null;
-
         if (cacheEntry == null) {
             cacheEntry = new StyleCacheEntry();
             sharedCache.addStyleCacheEntry(cacheEntryKey, cacheEntry);
@@ -902,9 +896,6 @@ final class CssStyleHelper {
 
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
-
-        final boolean isForceSlowpath = cacheContainer.forceSlowpath;
-        cacheContainer.forceSlowpath = false;
 
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
@@ -923,33 +914,18 @@ final class CssStyleHelper {
                 continue;
             }
 
-            // Skip the lookup if we know there isn't a chance for this property
-            // to be set (usually due to a "bind").
-            if (!cssMetaData.isSettable(node)) continue;
-
             final String property = cssMetaData.getProperty();
 
             CalculatedValue calculatedValue = cacheEntry.get(property);
 
-            // If there is no calculatedValue and we're on the fast path,
-            // take the slow path if cssFlags is REAPPLY (JDK-8116341)
-            final boolean forceSlowpath =
-                    fastpath && calculatedValue == null && isForceSlowpath;
+            if (calculatedValue == null) {
 
-            final boolean addToCache =
-                    (!fastpath && calculatedValue == null) || forceSlowpath;
+                /*
+                 * A cache miss occurred; this means that either we're the first to evaluate
+                 * this property, or that the CssMetaData didn't include this property yet
+                 * (not all styleables have stable CssMetaData, most notably Control).
+                 */
 
-            if (fastpath && !forceSlowpath) {
-
-                // If the cache contains SKIP, then there was an
-                // exception thrown from applyStyle
-                if (calculatedValue == SKIP) {
-                    continue;
-                }
-
-            } else if (calculatedValue == null) {
-
-                // slowpath!
                 calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
                         node, cachedFont);
 
@@ -959,46 +935,46 @@ final class CssStyleHelper {
                     continue;
                 }
 
+                cacheEntry.put(property, calculatedValue);
             }
+
+            /*
+             * Skip this property (after caching) if it can't be set (usually because it is bound).
+             * The cached value is still useful for others sharing this entry.
+             */
+
+            if (!cssMetaData.isSettable(node)) continue;
 
             // StyleableProperty#applyStyle might throw an exception and it is called
             // from two places in this try block.
             try {
 
-                //
-                // JDK-8127435
-                // If the current value of the property was set by CSS
-                // and there is no style for the property, then reset this
-                // property to its initial value. If it was not set by CSS
-                // then leave the property alone.
-                //
-                if (calculatedValue == null || calculatedValue == SKIP) {
+                /*
+                 * JDK-8127435: If there is no style for the property (SKIP), then check if it must be reset
+                 * to its initial value. Otherwise, continue with CSS application.
+                 */
+
+                if (calculatedValue == SKIP) {  // calculatedValue is never null here
 
                     // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
                     // If this property is not in cssSetProperties map, then the property was not set in the previous state.
                     // This accomplishes two things. First, it lets us know if the property was set in the previous state
-                    // so it can be reset in this state if there is no value for it. Second, it calling
+                    // so it can be reset in this state if there is no value for it. Second, it avoids calling
                     // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
                     // properties.
                     CalculatedValue initialValue = cacheContainer.cssSetProperties.get(cssMetaData);
 
-                    // if the current value was set by CSS and there
-                    // is no calculated value for the property, then
-                    // there was no style for the property in the current
-                    // state, so reset the property to its initial value.
+                    /*
+                     * If the initial value is not null, then the property was set by CSS
+                     * on this node, and so it must be reset:
+                     */
+
                     if (initialValue != null) {
                         resetToInitialValue(node, cssMetaData, initialValue);
                     }
 
                     continue;
 
-                }
-
-                if (addToCache) {
-
-                    // If we're not on the fastpath, then add the calculated
-                    // value to cache.
-                    cacheEntry.put(property, calculatedValue);
                 }
 
                 StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);

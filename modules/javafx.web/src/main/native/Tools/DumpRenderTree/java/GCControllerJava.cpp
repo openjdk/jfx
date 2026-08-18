@@ -27,9 +27,11 @@
 
 #include "GCController.h"
 
+extern "C" void WebPage_doJSCGarbageCollection();
+
 void GCController::collect() const
 {
-    // NOT IMPLEMENTED
+    WebPage_doJSCGarbageCollection();
 }
 
 void GCController::collectOnAlternateThread(bool waitUntilDone) const

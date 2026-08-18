@@ -738,7 +738,7 @@ void UniqueIDBDatabase::createIndexAsync(UniqueIDBDatabaseTransaction& transacti
 
     CheckedPtr manager = m_manager.get();
     if (!manager)
-        transaction.didCreateIndexAsync(IDBError { ExceptionCode::InvalidStateError });
+        return transaction.didCreateIndexAsync(IDBError { ExceptionCode::InvalidStateError });
 
     auto taskSize = defaultWriteOperationCost + estimateSize(indexInfo);
     manager->requestSpace(m_identifier.origin(), taskSize, [weakThis = WeakPtr { *this }, weakTransaction = WeakPtr { transaction }, indexInfo](bool granted) mutable {
@@ -1365,6 +1365,11 @@ void UniqueIDBDatabase::connectionClosedFromClient(UniqueIDBDatabaseConnection& 
     // Now that a database connection has closed, previously blocked operations might be runnable.
     handleDatabaseOperations();
     handleTransactions();
+}
+
+bool UniqueIDBDatabase::isVersionChangeTransactionActive(const UniqueIDBDatabaseConnection& connection) const
+{
+    return m_versionChangeDatabaseConnection == &connection && m_versionChangeTransaction;
 }
 
 void UniqueIDBDatabase::connectionClosedFromServer(UniqueIDBDatabaseConnection& connection)

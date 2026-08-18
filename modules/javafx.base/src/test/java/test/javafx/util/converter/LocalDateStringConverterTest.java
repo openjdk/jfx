@@ -25,6 +25,8 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.time.LocalDate;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
@@ -32,137 +34,107 @@ import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-import javafx.util.converter.LocalDateStringConverter;
-import javafx.util.converter.LocalDateStringConverterShim;
-
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javafx.util.converter.BaseTemporalStringConverterShim;
+import javafx.util.converter.LocalDateStringConverter;
+
 public class LocalDateStringConverterTest {
+
     private static final LocalDate VALID_DATE = LocalDate.of(1985, 1, 12);
 
-    private static Locale oldLocale = null;
-    private static DateTimeFormatter aFormatter = null;
-    private static DateTimeFormatter aParser = null;
-
-    private enum LocalDateStringConverterVariant {
-        NO_PARAM,
-        WITH_FORMATTER_PARSER,
-        WITH_FORMAT_STYLES,
-    }
-
-    static Stream<Arguments> provideTestParameters() {
-        return Stream.of(
-                Arguments.of(LocalDateStringConverterVariant.NO_PARAM, FormatStyle.SHORT, VALID_DATE),
-                Arguments.of(LocalDateStringConverterVariant.WITH_FORMATTER_PARSER, null, VALID_DATE),
-                Arguments.of(LocalDateStringConverterVariant.WITH_FORMAT_STYLES, FormatStyle.SHORT, VALID_DATE)
-        );
-    }
+    private static Locale oldLocale;
+    private static DateTimeFormatter aFormatter;
+    private static DateTimeFormatter aParser;
 
     @BeforeAll
     public static void setupBeforeAll() {
         oldLocale = Locale.getDefault();
+        // Tests require that default locale is en_US
         Locale.setDefault(Locale.US);
-
+        // DateTimeFormatter uses default locale, so we can init this after updating locale
         aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy");
         aParser = DateTimeFormatter.ofPattern("yyyy MM dd");
     }
 
     @AfterAll
     public static void teardownAfterAll() {
+        // Restore VM's old locale
         Locale.setDefault(oldLocale);
     }
 
-    private record ConverterSetup(
-            LocalDateStringConverter converter,
-            Locale locale,
-            DateTimeFormatter formatter,
-            DateTimeFormatter parser
-    ) {}
+    private enum LocalDateStringConverterVariant {
+        NO_PARAM,
+        WITH_FORMATTER_PARSER,
+        WITH_FORMAT_STYLES;
+    }
 
-    private ConverterSetup setupConverter(
-            LocalDateStringConverterVariant converterVariant,
-            FormatStyle dateStyle,
-            LocalDate validDate
-    ) {
+    private record TestCase(LocalDateStringConverterVariant variant, LocalDate validDate) {}
+
+    private static Stream<TestCase> provideTestParameters() {
+        return Stream.of(
+                new TestCase(LocalDateStringConverterVariant.NO_PARAM, VALID_DATE),
+                new TestCase(LocalDateStringConverterVariant.WITH_FORMATTER_PARSER, VALID_DATE),
+                new TestCase(LocalDateStringConverterVariant.WITH_FORMAT_STYLES, VALID_DATE)
+        );
+    }
+
+    private record ConverterSetup(LocalDateStringConverter converter, DateTimeFormatter formatter, DateTimeFormatter parser) {}
+
+    private ConverterSetup setupConverter(LocalDateStringConverterVariant converterVariant) {
         return switch (converterVariant) {
             case NO_PARAM -> {
-                LocalDateStringConverter converter = new LocalDateStringConverter();
-                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
-                yield new ConverterSetup(converter, locale, null, null);
+                var converter = new LocalDateStringConverter();
+                yield new ConverterSetup(converter, null, null);
             }
             case WITH_FORMATTER_PARSER -> {
-                LocalDateStringConverter converter = new LocalDateStringConverter(aFormatter, aParser);
-                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
-                yield new ConverterSetup(converter, locale, aFormatter, aParser);
+                var converter = new LocalDateStringConverter(aFormatter, aParser);
+                yield new ConverterSetup(converter, aFormatter, aParser);
             }
             case WITH_FORMAT_STYLES -> {
-                LocalDateStringConverter converter = new LocalDateStringConverter(
-                        FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE
-                );
-                yield new ConverterSetup(converter, Locale.UK, null, null);
+                var converter = new LocalDateStringConverter(FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE);
+                yield new ConverterSetup(converter, null, null);
             }
-            default -> throw new IllegalArgumentException("Invalid converter variant: " + converterVariant);
         };
     }
 
     @ParameterizedTest
     @MethodSource("provideTestParameters")
-    void testConstructor(
-            LocalDateStringConverterVariant converterVariant,
-            FormatStyle dateStyle,
-            LocalDate validDate
-    ) {
-        ConverterSetup setup = setupConverter(converterVariant, dateStyle, validDate);
+    void testConstructor(TestCase testCase) {
+        ConverterSetup setup = setupConverter(testCase.variant());
         LocalDateStringConverter converter = setup.converter();
-        Locale locale = setup.locale();
         DateTimeFormatter formatter = setup.formatter();
         DateTimeFormatter parser = setup.parser();
 
-        assertEquals(locale, LocalDateStringConverterShim.getldtConverterLocale(converter));
-        assertEquals(
-                (dateStyle != null) ? dateStyle : FormatStyle.SHORT,
-                LocalDateStringConverterShim.getldtConverterDateStyle(converter)
-        );
-        assertNull(LocalDateStringConverterShim.getldtConverterTimeStyle(converter));
         if (formatter != null) {
-            assertEquals(formatter, LocalDateStringConverterShim.getldtConverterFormatter(converter));
+            assertEquals(formatter, BaseTemporalStringConverterShim.getFormatter(converter));
         }
         if (parser != null) {
-            assertEquals(parser, LocalDateStringConverterShim.getldtConverterParser(converter));
+            assertEquals(parser, BaseTemporalStringConverterShim.getParser(converter));
         } else if (formatter != null) {
-            assertEquals(formatter, LocalDateStringConverterShim.getldtConverterParser(converter));
+            assertEquals(formatter, BaseTemporalStringConverterShim.getParser(converter));
         }
     }
 
     @ParameterizedTest
     @MethodSource("provideTestParameters")
-    void toString_to_fromString_testRoundtrip(
-            LocalDateStringConverterVariant converterVariant,
-            FormatStyle dateStyle,
-            LocalDate validDate
-    ) {
-        ConverterSetup setup = setupConverter(converterVariant, dateStyle, validDate);
+    void toString_to_fromString_testRoundtrip(TestCase testCase) {
+        ConverterSetup setup = setupConverter(testCase.variant());
         LocalDateStringConverter converter = setup.converter();
         DateTimeFormatter formatter = setup.formatter();
 
         if (formatter == null) {
-            assertEquals(validDate, converter.fromString(converter.toString(validDate)));
+            assertEquals(testCase.validDate(), converter.fromString(converter.toString(testCase.validDate())));
         }
     }
 
     @ParameterizedTest
     @MethodSource("provideTestParameters")
-    void fromString_testInvalidInput(
-            LocalDateStringConverterVariant converterVariant,
-            FormatStyle dateStyle,
-            LocalDate validDate
-    ) {
-        ConverterSetup setup = setupConverter(converterVariant, dateStyle, validDate);
+    void fromString_testInvalidInput(TestCase testCase) {
+        ConverterSetup setup = setupConverter(testCase.variant());
         LocalDateStringConverter converter = setup.converter();
 
         assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));

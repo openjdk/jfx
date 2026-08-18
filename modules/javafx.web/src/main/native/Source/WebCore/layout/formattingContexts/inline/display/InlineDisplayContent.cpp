@@ -90,9 +90,22 @@ void Content::setLineEllipsis(size_t lineIndex, Line::Ellipsis&& ellipsis)
 {
     if (!lineEllipses)
         lineEllipses = makeUnique<LineEllipses>();
-
+#if PLATFORM(JAVA)
+    if (lineEllipses->size() <= lineIndex)
+        lineEllipses->grow(lineIndex + 1);
+#else
     lineEllipses->grow(lineIndex + 1);
+#endif
     lineEllipses->at(lineIndex) = WTF::move(ellipsis);
+}
+
+void Content::setEllipsisOnTrailingLine(Line::Ellipsis&& ellipsis)
+{
+    if (lines.isEmpty()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+    setLineEllipsis(lines.size() - 1, WTF::move(ellipsis));
 }
 
 std::optional<Line::Ellipsis> Content::lineEllipsis(size_t lineIndex) const

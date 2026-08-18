@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.WebPage;
 
 final class NetworkContext {
@@ -157,7 +158,7 @@ final class NetworkContext {
                     Util.formatHeaders(headers)));
         }
 
-        if (useHTTP2Loader) {
+        if (useHTTP2Loader && (asynchronous || Toolkit.getToolkit().canStartNestedEventLoop())) {
             final URLLoaderBase loader = HTTP2Loader.create(
                 webPage,
                 byteBufferPool,

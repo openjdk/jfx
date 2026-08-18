@@ -151,9 +151,6 @@ HTMLCanvasElement::~HTMLCanvasElement()
     // avoided in destructors, but works as long as it's done before HTMLCanvasElement destructs completely.
     notifyObserversCanvasDestroyed();
     removeCanvasNeedingPreparationForDisplayOrFlush();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 bool HTMLCanvasElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
@@ -175,8 +172,10 @@ void HTMLCanvasElement::collectPresentationalHintsForAttribute(const QualifiedNa
 
 void HTMLCanvasElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == widthAttr || name == heightAttr)
+    if (name == widthAttr || name == heightAttr) {
+        if (!isControlledByOffscreen())
         didUpdateSizeProperties();
+    }
     HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
@@ -220,21 +219,21 @@ ExceptionOr<void> HTMLCanvasElement::setWidth(unsigned value)
     return { };
 }
 
-void HTMLCanvasElement::setCSSCanvasContextSize(const IntSize& newSize)
+void HTMLCanvasElement::setSizeForControllingContext(IntSize newSize)
 {
     if (newSize == size())
         return;
-
     m_ignoreDidUpdateSizeProperties = true;
-    setWidth(newSize.width());
-    setHeight(newSize.height());
+    setAttributeWithoutSynchronization(widthAttr, AtomString::number(limitToOnlyHTMLNonNegative(newSize.width(), defaultWidth)));
+    setAttributeWithoutSynchronization(heightAttr, AtomString::number(limitToOnlyHTMLNonNegative(newSize.height(), defaultHeight)));
     m_ignoreDidUpdateSizeProperties = false;
     didUpdateSizeProperties();
 }
 
 ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::JSGlobalObject& state, const String& contextId, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    if (m_context) {
+    auto getExistingContext = [&]() -> ExceptionOr<std::optional<RenderingContext>> {
+        ASSERT(m_context);
         if (m_context->isPlaceholder())
             return Exception { ExceptionCode::InvalidStateError };
 
@@ -271,7 +270,10 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
 
         ASSERT_NOT_REACHED();
         return std::optional<RenderingContext> { std::nullopt };
-    }
+    };
+
+    if (m_context)
+        return getExistingContext();
 
     if (is2dType(contextId)) {
         Ref vm = state.vm();
@@ -280,6 +282,10 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         auto settings = convert<IDLDictionary<CanvasRenderingContext2DSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
         if (settings.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
+
+        // Dictionary conversion may run script, which may have set m_context via a re-entrant getContext().
+        if (m_context) [[unlikely]]
+            return getExistingContext();
 
         RefPtr context = createContext2d(contextId, settings.releaseReturnValue());
         if (!context)
@@ -295,6 +301,10 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         if (settings.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
+        // Dictionary conversion may run script, which may have set m_context via a re-entrant getContext().
+        if (m_context) [[unlikely]]
+            return getExistingContext();
+
         RefPtr context = createContextBitmapRenderer(contextId, settings.releaseReturnValue());
         if (!context)
             return std::optional<RenderingContext> { std::nullopt };
@@ -309,6 +319,10 @@ ExceptionOr<std::optional<RenderingContext>> HTMLCanvasElement::getContext(JSC::
         auto attributes = convert<IDLDictionary<WebGLContextAttributes>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
         if (attributes.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
+
+        // Dictionary conversion may run script, which may have set m_context via a re-entrant getContext().
+        if (m_context) [[unlikely]]
+            return getExistingContext();
 
         RefPtr context = createContextWebGL(toWebGLVersion(contextId), attributes.releaseReturnValue());
         if (!context)
@@ -363,7 +377,7 @@ bool HTMLCanvasElement::is2dType(const String& type)
 CanvasRenderingContext2D* HTMLCanvasElement::createContext2d(const String& type, CanvasRenderingContext2DSettings&& settings)
 {
     ASSERT_UNUSED(HTMLCanvasElement::is2dType(type), type);
-    ASSERT(!m_context);
+    ASSERT_WITH_SECURITY_IMPLICATION(!m_context);
 
     m_context = CanvasRenderingContext2D::create(*this, WTF::move(settings), document().inQuirksMode());
     if (!m_context)
@@ -431,7 +445,7 @@ WebGLVersion HTMLCanvasElement::toWebGLVersion(const String& type)
 
 WebGLRenderingContextBase* HTMLCanvasElement::createContextWebGL(WebGLVersion type, WebGLContextAttributes&& attrs)
 {
-    ASSERT(!m_context);
+    ASSERT_WITH_SECURITY_IMPLICATION(!m_context);
 
     if (!shouldEnableWebGL(document().settings()))
         return nullptr;
@@ -498,7 +512,7 @@ bool HTMLCanvasElement::isBitmapRendererType(const String& type)
 ImageBitmapRenderingContext* HTMLCanvasElement::createContextBitmapRenderer(const String& type, ImageBitmapRenderingContextSettings&& settings)
 {
     ASSERT_UNUSED(type, HTMLCanvasElement::isBitmapRendererType(type));
-    ASSERT(!m_context);
+    ASSERT_WITH_SECURITY_IMPLICATION(!m_context);
 
     auto context = ImageBitmapRenderingContext::create(*this, WTF::move(settings));
     WeakPtr weakContext = *context;
@@ -530,7 +544,7 @@ bool HTMLCanvasElement::isWebGPUType(const String& type)
 GPUCanvasContext* HTMLCanvasElement::createContextWebGPU(const String& type, GPU* gpu)
 {
     ASSERT_UNUSED(type, HTMLCanvasElement::isWebGPUType(type));
-    ASSERT(!m_context);
+    ASSERT_WITH_SECURITY_IMPLICATION(!m_context);
 
     if (!document().settings().webGPUEnabled() || !gpu)
         return nullptr;
@@ -605,49 +619,27 @@ void HTMLCanvasElement::didDraw(const std::optional<FloatRect>& rect, ShouldAppl
 
 void HTMLCanvasElement::didUpdateSizeProperties()
 {
-    if (m_ignoreDidUpdateSizeProperties || isControlledByOffscreen())
+    if (m_ignoreDidUpdateSizeProperties)
         return;
-
-    bool hadImageBuffer = hasCreatedImageBuffer();
 
     int w = limitToOnlyHTMLNonNegative(attributeWithoutSynchronization(widthAttr), defaultWidth);
     int h = limitToOnlyHTMLNonNegative(attributeWithoutSynchronization(heightAttr), defaultHeight);
 
-    if (RefPtr context = dynamicDowncast<CanvasRenderingContext2D>(m_context.get()))
-        context->reset();
-    else
-        resetGraphicsContextState();
-
     IntSize oldSize = size();
     IntSize newSize(w, h);
-    // If the size of an existing buffer matches, we can just clear it instead of reallocating.
-    // This optimization is only done for 2D canvases for now.
-    if (hasCreatedImageBuffer() && oldSize == newSize && m_context && m_context->is2d() && buffer() && m_context->colorSpace() == buffer()->colorSpace() && m_context->pixelFormat() == buffer()->pixelFormat()) {
-        if (!m_didClearImageBuffer)
-            clearImageBuffer();
-        return;
-    }
-
-    setSize(newSize);
-    setHasCreatedImageBuffer(false);
-    setImageBuffer(nullptr);
+    bool sizeChanged = oldSize != newSize;
+    CanvasBase::setSize(newSize);
     clearCopiedImage();
-
-    if (m_context) {
-        if (RefPtr context = dynamicDowncast<GPUBasedCanvasRenderingContext>(*m_context))
-            context->reshape();
-    }
-
+    if (m_context)
+        m_context->didUpdateCanvasSizeProperties(sizeChanged);
     if (CheckedPtr canvasRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer())) {
-        if (oldSize != size()) {
+        if (sizeChanged) {
             canvasRenderer->canvasSizeChanged();
             if (canvasRenderer->hasAcceleratedCompositing())
                 canvasRenderer->contentChanged(ContentChangeType::Canvas);
         }
-        if (hadImageBuffer)
             canvasRenderer->repaint();
     }
-
     notifyObserversCanvasResized();
 }
 
@@ -894,49 +886,6 @@ SecurityOrigin* HTMLCanvasElement::securityOrigin() const
     return &protectedDocument()->securityOrigin();
 }
 
-void HTMLCanvasElement::createImageBuffer() const
-{
-    ASSERT(!hasCreatedImageBuffer());
-
-    const_cast<HTMLCanvasElement*>(this)->setHasCreatedImageBuffer(true);
-    m_didClearImageBuffer = true;
-    setImageBuffer(allocateImageBuffer());
-
-#if USE(CA) || USE(SKIA)
-    if (m_context && m_context->is2d()) {
-        // Recalculate compositing requirements if acceleration state changed.
-        const_cast<HTMLCanvasElement*>(this)->invalidateStyleAndLayerComposition();
-#if USE(SKIA)
-        if (CheckedPtr renderer = renderBox()) {
-            if (usesContentsAsLayerContents())
-                renderer->contentChanged(ContentChangeType::Canvas);
-    }
-#endif
-    }
-#endif
-}
-
-void HTMLCanvasElement::setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&& buffer)
-{
-    IntSize oldSize = size();
-    setHasCreatedImageBuffer(true);
-    setImageBuffer(WTF::move(buffer));
-
-    if (isControlledByOffscreen() && oldSize != size()) {
-        setAttributeWithoutSynchronization(widthAttr, AtomString::number(width()));
-        setAttributeWithoutSynchronization(heightAttr, AtomString::number(height()));
-
-        if (CheckedPtr canvasRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer())) {
-            canvasRenderer->canvasSizeChanged();
-            canvasRenderer->contentChanged(ContentChangeType::Canvas);
-        }
-
-        notifyObserversCanvasResized();
-    }
-
-    CanvasBase::didDraw(FloatRect(FloatPoint(), size()));
-}
-
 Image* HTMLCanvasElement::copiedImage() const
 {
     if (!m_copiedImage) {
@@ -947,24 +896,9 @@ Image* HTMLCanvasElement::copiedImage() const
     return m_copiedImage.get();
 }
 
-void HTMLCanvasElement::clearImageBuffer() const
-{
-    ASSERT(hasCreatedImageBuffer());
-    ASSERT(!m_didClearImageBuffer);
-    ASSERT(m_context);
-
-    m_didClearImageBuffer = true;
-
-    if (RefPtr canvas = dynamicDowncast<CanvasRenderingContext2D>(*m_context)) {
-        // No need to undo transforms/clip/etc. because we are called right after the context is reset.
-        canvas->clearRect(0, 0, width(), height());
-    }
-}
-
 void HTMLCanvasElement::clearCopiedImage() const
 {
     m_copiedImage = nullptr;
-    m_didClearImageBuffer = false;
 }
 
 bool HTMLCanvasElement::virtualHasPendingActivity() const

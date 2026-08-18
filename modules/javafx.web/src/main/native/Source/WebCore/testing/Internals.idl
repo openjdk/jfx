@@ -890,6 +890,8 @@ enum ContentsFormat {
     [Conditional=WEB_AUDIO] unsigned long long baseAudioContextIdentifier(BaseAudioContext context);
     [Conditional=WEB_AUDIO] boolean isBaseAudioContextAlive(unsigned long long contextID);
 
+    [Conditional=WEB_AUDIO] sequence<unrestricted float> waveShaperProcessCurveWithData(sequence<unrestricted float> source, sequence<unrestricted float> curve);
+
     DOMString counterValue(Element element);
     long pageNumber(Element element, optional unrestricted float pageWidth = 800, optional unrestricted float pageHeight = 600);
     sequence<DOMString> shortcutIconURLs();
@@ -1205,7 +1207,9 @@ enum ContentsFormat {
     undefined setSpeculativeTilingDelayDisabledForTesting(boolean disabled);
 
     [Conditional=WEBGL] undefined simulateEventForWebGLContext(SimulatedWebGLContextEvent event, WebGLRenderingContext context);
+    [Conditional=WEBGL] undefined simulateEventForWebGLContext(SimulatedWebGLContextEvent event, WebGL2RenderingContext context);
     [Conditional=WEBGL] RequestedGPU requestedGPU(WebGLRenderingContext context);
+    [Conditional=WEBGL] RequestedGPU requestedGPU(WebGL2RenderingContext context);
 
     undefined setPageVisibility(boolean isVisible);
     undefined setPageIsFocused(boolean isFocused);

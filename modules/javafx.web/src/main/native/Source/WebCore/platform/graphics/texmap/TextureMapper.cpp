@@ -244,7 +244,11 @@ void TextureMapper::releaseUnusedTexturesNow()
 
 ClipStack& TextureMapper::clipStack()
 {
+#if PLATFORM(JAVA)
+    return m_clipStack;
+#else
     return data().currentSurface ? data().currentSurface->clipStack() : m_clipStack;
+#endif
 }
 
 void TextureMapper::beginPainting(FlipY flipY, BitmapTexture* surface)
@@ -1400,7 +1404,11 @@ void TextureMapper::bindSurface(BitmapTexture *surface)
 
 BitmapTexture* TextureMapper::currentSurface()
 {
+#if PLATFORM(JAVA)
+    return nullptr;
+#else
     return data().currentSurface.get();
+#endif
 }
 
 bool TextureMapper::beginScissorClip(const TransformationMatrix& modelViewMatrix, const FloatRect& targetRect)
@@ -1506,6 +1514,9 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     // Increase stencilIndex and apply stencil testing.
     clipStack().setStencilIndex(stencilIndex * 2);
     clipStack().applyIfNeeded();
+#else
+    clipStack().push();
+    clipStack().intersect(enclosingIntRect(modelViewMatrix.mapRect(targetRect.rect())));
 #endif
 }
 
@@ -1569,6 +1580,9 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     // Increase stencilIndex and apply stencil testing.
     clipStack().setStencilIndex(stencilIndex * 2);
     clipStack().applyIfNeeded();
+#else
+    clipStack().push();
+    clipStack().intersect(modelViewMatrix.mapQuad(clipPath.bounds()).enclosingBoundingBox());
 #endif
 }
 
@@ -1581,7 +1595,9 @@ void TextureMapper::beginClipWithoutApplying(const TransformationMatrix& modelVi
 void TextureMapper::endClip()
 {
     clipStack().pop();
+#if !PLATFORM(JAVA)
     clipStack().applyIfNeeded();
+#endif
 }
 
 void TextureMapper::endClipWithoutApplying()
@@ -1596,14 +1612,23 @@ IntRect TextureMapper::clipBounds()
 
 IntSize TextureMapper::maxTextureSize() const
 {
+#if PLATFORM(JAVA)
+    return IntSize(maximumAllowedImageBufferDimension, maximumAllowedImageBufferDimension);
+#else
     return IntSize(data().maxTextureSize(), data().maxTextureSize());
+#endif
 }
 
 void TextureMapper::setDepthRange(double zNear, double zFar)
 {
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(zNear);
+    UNUSED_PARAM(zFar);
+#else
     data().zNear = zNear;
     data().zFar = zFar;
     updateProjectionMatrix();
+#endif
 }
 
 std::pair<double, double> TextureMapper::depthRange() const

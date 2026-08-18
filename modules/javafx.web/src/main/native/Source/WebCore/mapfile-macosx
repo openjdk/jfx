@@ -128,6 +128,7 @@
                __ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE
                __ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb
                __ZN18WebCoreTestSupport23allowsAnySSLCertificateEv
+               _WebPage_doJSCGarbageCollection
                _Java_com_sun_webkit_dom_AttrImpl_getNameImpl
                _Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl
                _Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl

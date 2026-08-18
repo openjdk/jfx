@@ -148,6 +148,7 @@ class TypeConversions;
 class VoidCallback;
 class WebAnimation;
 class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 class WindowProxy;
 class XMLHttpRequest;
 
@@ -621,6 +622,9 @@ public:
     // BaseAudioContext lifetime testing.
     static uint64_t baseAudioContextIdentifier(const BaseAudioContext&);
     static bool isBaseAudioContextAlive(uint64_t contextID);
+
+    Vector<float> waveShaperProcessCurveWithData(Vector<float> source, Vector<float> curve);
+
 #endif
 
     unsigned numberOfIntersectionObservers(const Document&) const;
@@ -1023,14 +1027,14 @@ public:
         GPUStatusFailure,
         Timeout
     };
-    void simulateEventForWebGLContext(SimulatedWebGLContextEvent, WebGLRenderingContext&);
+    void simulateEventForWebGLContext(SimulatedWebGLContextEvent, WebGLRenderingContextBase&);
 
     enum class RequestedGPU {
         Default,
         LowPower,
         HighPerformance
     };
-    RequestedGPU requestedGPU(WebGLRenderingContext&);
+    RequestedGPU requestedGPU(WebGLRenderingContextBase&);
 #endif
 
     void setPageVisibility(bool isVisible);

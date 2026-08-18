@@ -131,42 +131,46 @@ OffscreenCanvas::~OffscreenCanvas()
 {
     notifyObserversCanvasDestroyed();
     removeCanvasNeedingPreparationForDisplayOrFlush();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 void OffscreenCanvas::setWidth(unsigned newWidth)
 {
     if (m_detached)
         return;
-    setSize(IntSize(newWidth, height()));
-    didUpdateSizeProperties();
+    IntSize newSize(newWidth, height());
+    bool sizeChanged = newSize != size();
+    if (sizeChanged)
+        setSize(newSize);
+    didUpdateSizeProperties(sizeChanged);
 }
 
 void OffscreenCanvas::setHeight(unsigned newHeight)
 {
     if (m_detached)
         return;
-    setSize(IntSize(width(), newHeight));
-    didUpdateSizeProperties();
+    IntSize newSize(width(), newHeight);
+    bool sizeChanged = newSize != size();
+    if (sizeChanged)
+        setSize(newSize);
+    didUpdateSizeProperties(sizeChanged);
 }
 
-void OffscreenCanvas::didUpdateSizeProperties()
+void OffscreenCanvas::setSizeForControllingContext(IntSize newSize)
 {
-    resetGraphicsContextState();
-    if (RefPtr context = dynamicDowncast<OffscreenCanvasRenderingContext2D>(m_context.get()))
-        context->reset();
+    // Controlling context size change semantics are different to width, height assignment.
+    if (size() == newSize)
+        return;
+    setSize(newSize);
+    didUpdateSizeProperties(true);
+}
 
-    setHasCreatedImageBuffer(false);
-    setImageBuffer(nullptr);
+void OffscreenCanvas::didUpdateSizeProperties(bool sizeChanged)
+{
     clearCopiedImage();
-
+    if (m_context)
+        m_context->didUpdateCanvasSizeProperties(sizeChanged);
     notifyObserversCanvasResized();
     scheduleCommitToPlaceholderCanvas();
-
-    if (RefPtr context = dynamicDowncast<GPUBasedCanvasRenderingContext>(m_context.get()))
-        context->reshape();
 }
 
 #if ENABLE(WEBGL)
@@ -207,6 +211,13 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
     if (m_detached)
         return Exception { ExceptionCode::InvalidStateError };
 
+    // Dictionary conversion may run script, which may have detached this canvas.
+    auto shouldThrowForDetachedCanvas = [&]() -> ExceptionOr<void> {
+        if (m_detached) [[unlikely]]
+            return Exception { ExceptionCode::InvalidStateError };
+        return { };
+    };
+
     if (contextType == RenderingContextType::_2d) {
         if (!m_context) {
         auto scope = DECLARE_THROW_SCOPE(state.vm());
@@ -215,6 +226,9 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
+            if (!m_context)
             m_context = OffscreenCanvasRenderingContext2D::create(*this, settings.releaseReturnValue());
         }
         if (RefPtr context = dynamicDowncast<OffscreenCanvasRenderingContext2D>(m_context.get()))
@@ -229,8 +243,12 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
+            if (!m_context) {
             m_context = ImageBitmapRenderingContext::create(*this, settings.releaseReturnValue());
             downcast<ImageBitmapRenderingContext>(m_context.get())->transferFromImageBitmap(nullptr);
+        }
         }
         if (RefPtr context = dynamicDowncast<ImageBitmapRenderingContext>(m_context.get()))
             return { { WTF::move(context) } };
@@ -267,8 +285,10 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             if (attributes.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
             RefPtr scriptExecutionContext = this->scriptExecutionContext();
-            if (shouldEnableWebGL(scriptExecutionContext->settingsValues(), is<WorkerGlobalScope>(scriptExecutionContext)))
+            if (!m_context && shouldEnableWebGL(scriptExecutionContext->settingsValues(), is<WorkerGlobalScope>(scriptExecutionContext)))
                 m_context = WebGLRenderingContextBase::create(*this, attributes.releaseReturnValue(), webGLVersion);
         }
         if (webGLVersion == WebGLVersion::WebGL1) {
@@ -292,10 +312,11 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
     if (size().isEmpty())
             return { RefPtr<ImageBitmap> { nullptr } };
         clearCopiedImage();
+    bool bitmapOriginClean = originClean();
     RefPtr buffer = m_context->transferToImageBuffer();
         if (!buffer)
         return Exception { ExceptionCode::UnknownError }; // UnknownError is used for DOM out-of-memory.
-        return { ImageBitmap::create(buffer.releaseNonNull(), originClean()) };
+    return { ImageBitmap::create(buffer.releaseNonNull(), bitmapOriginClean) };
 }
 
 static String toEncodingMimeType(const String& mimeType)
@@ -435,20 +456,6 @@ void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
             commitToPlaceholderCanvas();
         });
     }
-}
-
-void OffscreenCanvas::createImageBuffer() const
-{
-    const_cast<OffscreenCanvas*>(this)->setHasCreatedImageBuffer(true);
-    setImageBuffer(allocateImageBuffer());
-}
-
-void OffscreenCanvas::setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&& buffer)
-{
-    setHasCreatedImageBuffer(true);
-    setImageBuffer(WTF::move(buffer));
-
-    CanvasBase::didDraw(FloatRect(FloatPoint(), size()));
 }
 
 void OffscreenCanvas::queueTaskKeepingObjectAlive(TaskSource source, Function<void(CanvasBase&)>&& task)

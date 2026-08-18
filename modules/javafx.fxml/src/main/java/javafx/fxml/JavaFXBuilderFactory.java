@@ -107,7 +107,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
     /**
      * Returns the builder for the specified type, or null if no builder is
-     * used. Most classes will note use a builder.
+     * used. Most classes will not use a builder.
      *
      * @param type the class being looked up
      *

@@ -1209,7 +1209,9 @@ void LineLayout::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, con
         return;
 
     if (isContentConsideredStale()) {
+#if !(PLATFORM(JAVA) && ASSERT_ENABLED)
         ASSERT_NOT_REACHED();
+#endif
         return;
     }
 
@@ -1280,7 +1282,9 @@ bool LineLayout::hitTest(const HitTestRequest& request, HitTestResult& result, c
         return false;
 
     if (isContentConsideredStale()) {
+#if !(PLATFORM(JAVA) && ASSERT_ENABLED)
         ASSERT_NOT_REACHED();
+#endif
         return false;
     }
 

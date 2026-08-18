@@ -423,6 +423,7 @@ static inline void dispatchEventsOnWindowAndFocusedElement(Document* document, b
             return;
         }
 
+        if (RefPtr focusedElement = document->focusedElement())
         focusedElement->dispatchBlurEvent(nullptr);
     }
 
@@ -722,14 +723,14 @@ FocusableElementSearchResult FocusController::findAndFocusElementInDocumentOrder
     // that because some elements (e.g. HTMLInputElement and HTMLTextAreaElement) do extra work in
     // their focus() methods.
 
-    Document& newDocument = element->document();
+    RefPtr newDocument = element->document();
 
-    if (&newDocument != document) {
+    if (newDocument != document) {
         // Focus is going away from this document, so clear the focused node.
         document->setFocusedElement(nullptr);
     }
 
-    setFocusedFrame(newDocument.protectedFrame().get());
+    setFocusedFrame(newDocument->protectedFrame().get());
 
     if (caretBrowsing) {
         VisibleSelection newSelection(firstPositionInOrBeforeNode(element.get()), Affinity::Downstream);
