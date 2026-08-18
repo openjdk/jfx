@@ -35,7 +35,7 @@ ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH) || isAllTaskRequested
 defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (ext.IS_MILESTONE_FCS ? project.ext.RELEASE_VERSION_SHORT : project.ext.RELEASE_VERSION_LONG) : "")
 ext.MAVEN_GROUP_ID = "org.openjfx"
 
-logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
+logger.quiet("MAVEN_PUBLISH: $IS_MAVEN_PUBLISH")
 logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 
 registerModules()
@@ -169,10 +169,10 @@ void addMavenPublication(Project project, List<Project> projectDependencies) {
                 def repositoryUrl = project.hasProperty('repositoryUrl') ? project.getProperty('repositoryUrl') : ""
                 def repositoryUsername = project.hasProperty('repositoryUsername') ? project.getProperty('repositoryUsername') : ""
                 def repositoryPassword = project.hasProperty('repositoryPassword') ? project.getProperty('repositoryPassword') : ""
-                url repositoryUrl
+                url = repositoryUrl
                 credentials {
-                    username repositoryUsername
-                    password repositoryPassword
+                    username = repositoryUsername
+                    password = repositoryPassword
                 }
             }
         }

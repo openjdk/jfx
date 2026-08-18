@@ -77,6 +77,8 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import java.lang.Runtime.Version
 
+import org.gradle.process.ExecOperations
+
 def execOps = project.services.get(ExecOperations)
 
 /******************************************************************************
@@ -803,6 +805,7 @@ try {
 // for exporting to a JDK build. If HAS_JAVAFX_MODULES is false, then we will
 // build / test a standalone sdk for running with a JDK that does not include
 // the javafx modules.
+
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -3113,7 +3116,6 @@ project(":fxml") {
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
 
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -3720,7 +3722,6 @@ project(":media") {
             dependsOn buildNativeTargets
         }
     }
-
 
     addValidateSourceSets(project, sourceSets)
 }
