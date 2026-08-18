@@ -2123,7 +2123,10 @@ public class LabelSkinTest {
 
         label.setText("foo_bar");
         tk.firePulse();
-        assertTrue(containsMnemonicNode.get());
+        // Mac does not implement or add mnemonics, skip this test on a Mac
+        if (!com.sun.javafx.PlatformUtil.isMac()) {
+            assertTrue(containsMnemonicNode.get());
+        }
 
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         tk.firePulse();
