@@ -551,12 +551,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Have to do this just in case it needs to be recomputed
         // This is especially important because it also recomputes the 'containsMnemonic' value,
         // which is used by this method later on.
-        updateDisplayedText(w, h);
 
         if (ignoreText) {
             textWidth  = textHeight = 0;
             text.setText("");
         } else {
+            updateDisplayedText(w, h);
             textWidth  = snapSizeX(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
             textHeight = snapSizeY(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
         }
@@ -603,12 +603,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Point2D mnemonicPos = null;
         double mnemonicWidth = 0.0;
         double mnemonicHeight = 0.0;
-        if (containsMnemonic) {
+        int mnemonicIndex = mnemonicInfo != null ? mnemonicInfo.getMnemonicIndex() : -1;
+        if (containsMnemonic && mnemonicIndex >= 0) {
             final Font font = text.getFont();
             String preSt = mnemonicInfo.getText();
             boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, mnemonicInfo.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing(), isRTL);
-            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(mnemonicInfo.getMnemonicIndex(), mnemonicInfo.getMnemonicIndex() + 1), 0);
+            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, mnemonicIndex, this.wrapWidth, labeled.getLineSpacing(), isRTL);
+            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(mnemonicIndex, mnemonicIndex + 1), 0);
             mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
         }
 

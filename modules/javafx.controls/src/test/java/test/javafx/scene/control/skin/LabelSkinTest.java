@@ -43,6 +43,7 @@ import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -53,6 +54,7 @@ import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
 
 /**
  * Need to test:
@@ -2107,6 +2109,34 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 
         checkMnemonics();
+    }
+
+    @Test
+    public void testMnemonics_whenContentDisplay_GRAPHIC_ONLY_noAdditionalChildren() {
+        Toolkit tk = Toolkit.getToolkit();
+        StageLoader sl = new StageLoader(label);
+        tk.firePulse();
+
+        label.setMnemonicParsing(true);
+        Supplier<Boolean> containsMnemonicNode = () -> label.getChildrenUnmodifiable().stream().anyMatch(p -> p instanceof Line);
+
+        label.setText("foo_bar");
+        tk.firePulse();
+        assertTrue(containsMnemonicNode.get());
+
+        label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        tk.firePulse();
+        assertFalse(containsMnemonicNode.get());
+
+        label.setText("xxx");
+        tk.firePulse();
+        assertFalse(containsMnemonicNode.get());
+
+        label.setText("foo_bar");
+        tk.firePulse();
+        assertFalse(containsMnemonicNode.get());
+
+        sl.dispose();
     }
 
     @Test
