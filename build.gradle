@@ -2496,8 +2496,8 @@ project(":graphics") {
             inputs.files(fileTree("$prismD3DSource/hlsl") {
                       include "*.hlsl"
                       include "*.h"
-                  }).withPropertyName("hlslSources")
-            inputs.file("$prismD3DSource/PassThroughVS.hlsl").withPropertyName("PassThroughVsSources")
+                  })
+            inputs.file("$prismD3DSource/PassThroughVS.hlsl")
             outputs.dir "$buildDir/headers/PrismD3D/"
             description = "Generate headers by compiling hlsl files"
             doLast {
