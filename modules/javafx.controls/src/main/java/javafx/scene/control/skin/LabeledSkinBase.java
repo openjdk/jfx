@@ -548,11 +548,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             graphicHeight = graphic.getLayoutBounds().getHeight();
         }
 
+        updateDisplayedText(w, h);
+
         if (ignoreText) {
             textWidth  = textHeight = 0;
             text.setText("");
         } else {
-            updateDisplayedText(w, h); // Have to do this just in case it needs to be recomputed
             textWidth  = snapSizeX(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
             textHeight = snapSizeY(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
         }
@@ -599,14 +600,19 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Point2D mnemonicPos = null;
         double mnemonicWidth = 0.0;
         double mnemonicHeight = 0.0;
-        int mnemonicIndex = mnemonicInfo != null ? mnemonicInfo.getMnemonicIndex() : -1;
-        if (containsMnemonic && mnemonicIndex >= 0) {
-            final Font font = text.getFont();
-            String preSt = mnemonicInfo.getText();
-            boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, mnemonicIndex, this.wrapWidth, labeled.getLineSpacing(), isRTL);
-            mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(mnemonicIndex, mnemonicIndex + 1), 0);
-            mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
+        if (containsMnemonic && mnemonicInfo != null) {
+            int mnemonicIndex = mnemonicInfo.getMnemonicIndex();
+            String cleanText = mnemonicInfo.getText();
+            // The mnemonic KeyCode can also be defined in the following form: Exit_(q)
+            // In this case, no mnemonic character is available and the mnemonicIndex value is equal to the text.length().
+            // This means we cannot substring the character from the text.
+            if (mnemonicIndex >= 0 && mnemonicInfo.getExtendedMnemonicText() == null) {
+                final Font font = text.getFont();
+                boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+                mnemonicPos = Utils.computeMnemonicPosition(font, cleanText, mnemonicIndex, this.wrapWidth, labeled.getLineSpacing(), isRTL);
+                mnemonicWidth = Utils.computeTextWidth(font, cleanText.substring(mnemonicIndex, mnemonicIndex + 1), 0);
+                mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
+            }
         }
 
 
@@ -969,7 +975,9 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (cleanText != null && cleanText.length() > 0
                     && mnemonicInfo != null
                     && !com.sun.javafx.PlatformUtil.isMac()
-                    && getSkinnable().isMnemonicParsing()) {
+                    && getSkinnable().isMnemonicParsing()
+                    // Consider the mnemonic as not present if the text is not visible at all
+                    && labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
                 /*
                 ** the Labeled has a MnemonicParsing property,
                 ** if set true, then auto-parsing will check for

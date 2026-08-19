@@ -28,11 +28,19 @@ package test.javafx.scene.control.skin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
@@ -42,6 +50,8 @@ import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.LabelSkinBaseShim;
 import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.Mnemonic;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -50,12 +60,12 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-
 
 /**
  * Need to test:
@@ -66,6 +76,7 @@ public class LabelSkinTest {
     private Label label;
     private LabelSkinMock skin;
     private Text text;
+    private StageLoader stageLoader;
 
     @BeforeEach
     public void setup() {
@@ -78,6 +89,13 @@ public class LabelSkinTest {
         // It so happens that a brand new LabelSkin on a plain Label
         // will have as its only child the Text node
         text = (Text) SkinBaseShim.getChildren(skin).get(0);
+    }
+
+    @AfterEach
+    public void teardown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     /****************************************************************************
@@ -2096,94 +2114,112 @@ public class LabelSkinTest {
     }
 
     @Test
-    public void testMnemonics_noExceptionIsThrown() {
+    public void testMnemonics_setMnemonicParsing() {
         label.setMnemonicParsing(true);
-        checkMnemonics();
+        checkMnemonics(true);
 
         label.setMnemonicParsing(false);
-        checkMnemonics();
+        checkMnemonics(false);
+
+        label.setMnemonicParsing(true);
+        checkMnemonics(true);
     }
 
     @Test
-    public void testMnemonics_whenContentDisplay_GRAPHIC_ONLY_noExceptionIsThrown() {
+    public void testMnemonics_setContentDisplay() {
         label.setMnemonicParsing(true);
-        label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 
-        checkMnemonics();
-    }
-
-    @Test
-    public void testMnemonics_whenContentDisplay_GRAPHIC_ONLY_noAdditionalChildren() {
-        Toolkit tk = Toolkit.getToolkit();
-        StageLoader sl = new StageLoader(label);
-        tk.firePulse();
-
-        label.setMnemonicParsing(true);
-        Supplier<Boolean> containsMnemonicNode = () -> label.getChildrenUnmodifiable().stream().anyMatch(p -> p instanceof Line);
-
-        label.setText("foo_bar");
-        tk.firePulse();
-        // Mac does not implement or add mnemonics, skip this test on a Mac
-        if (!com.sun.javafx.PlatformUtil.isMac()) {
-            assertTrue(containsMnemonicNode.get());
-        }
+        ContentDisplay originalContentDisplay = label.getContentDisplay();
+        checkMnemonics(true);
 
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        tk.firePulse();
-        assertFalse(containsMnemonicNode.get());
+        checkMnemonics(false);
 
-        label.setText("xxx");
-        tk.firePulse();
-        assertFalse(containsMnemonicNode.get());
-
-        label.setText("foo_bar");
-        tk.firePulse();
-        assertFalse(containsMnemonicNode.get());
-
-        sl.dispose();
-    }
-
-    @Test
-    public void testMnemonics_whenContentDisplay_TEXT_ONLY_noExceptionIsThrown() {
-        label.setMnemonicParsing(true);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
+        checkMnemonics(true);
 
-        checkMnemonics();
+        label.setContentDisplay(originalContentDisplay);
+        checkMnemonics(true);
     }
 
-    private void checkMnemonics() {
+    private void checkMnemonics(boolean expectedMnemonics) {
         Toolkit tk = Toolkit.getToolkit();
-        StageLoader sl = new StageLoader(label);
+        StageLoader sl = createStageLoader(label);
         tk.firePulse();
 
+        ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics = sl.getStage().getScene().getMnemonics();
+
+        Function<String, Boolean> mnemonicRegistrationChecker = character ->
+                mnemonics.getOrDefault(
+                        new MnemonicInfo.MnemonicKeyCombination(character), FXCollections.emptyObservableList())
+                .stream().filter(m -> m.getNode() == label).toList().size() == 1;
+
+        Supplier<Boolean> mnemonicNodePresenceChecker = () -> label.getChildrenUnmodifiable().stream().anyMatch(p -> p instanceof Line);
+
+        Function<Boolean, String> mnemonicErrorMessageSupplier = expected ->
+                (expected
+                        ? "Mnemonic registration expected but not found: "
+                        : "No mnemonic expected but was: ")
+                        + mnemonics;
+
+        // Mac does not support mnemonics
+        expectedMnemonics = PlatformUtil.isMac() ? false : expectedMnemonics;
+
+        // --------------------------------------------------------------------
+
+        // no text
+        label.setText(null);
+        tk.firePulse();
+        assertTrue(mnemonics.values().stream().allMatch(List::isEmpty), mnemonicErrorMessageSupplier.apply(false));
+        assertFalse(mnemonicNodePresenceChecker.get());
+
+        // initial mnemonic
         label.setText("foo_bar");
         tk.firePulse();
+        assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
+        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> text
         label.setText("xxx");
         tk.firePulse();
+        assertFalse(mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(false));
+        assertFalse(mnemonicNodePresenceChecker.get());
 
         // text -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
+        assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
+        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> empty
         label.setText("");
         tk.firePulse();
+        assertFalse(mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(false));
+        assertFalse(mnemonicNodePresenceChecker.get());
 
         // empty -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
+        assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
+        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> null
         label.setText(null);
         tk.firePulse();
+        assertFalse(mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(false));
+        assertFalse(mnemonicNodePresenceChecker.get());
 
         // null -> mnemonic
         label.setText("foo_bar");
         tk.firePulse();
+        assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
+        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
 
-        sl.dispose();
+        // extended mnemonic
+        label.setText("test_(t)");
+        tk.firePulse();
+        assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("t"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
+        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
     }
 
     /*********************************************************************
@@ -2218,6 +2254,13 @@ public class LabelSkinTest {
         tk.firePulse();
         assertEquals(label1.getBaselineOffset(), (label2.getBaselineOffset() - (r.getHeight()-label2Height)/2), 0);
         sl.dispose();
+    }
+
+    private StageLoader createStageLoader(Node node) {
+        if (stageLoader == null) {
+            stageLoader = new StageLoader(node);
+        }
+        return stageLoader;
     }
 
 
