@@ -25,14 +25,16 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "AssemblyHelpers.h"
-#include "DisallowMacroScratchRegisterUsage.h"
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "OperationResult.h"
-#include "StackAlignment.h"
+#include <JavaScriptCore/AssemblyHelpers.h>
+#include <JavaScriptCore/DisallowMacroScratchRegisterUsage.h>
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/OperationResult.h>
+#include <JavaScriptCore/StackAlignment.h>
 #include <wtf/FunctionTraits.h>
 #include <wtf/ScopedLambda.h>
 #include <wtf/TZoneMalloc.h>
@@ -351,7 +353,7 @@ private:
     ALWAYS_INLINE void pokeForArgument(ArgType arg, unsigned currentGPRArgument, unsigned currentFPRArgument, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke)
     {
         unsigned pokeOffset = calculatePokeOffset(currentGPRArgument, currentFPRArgument, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-        if constexpr (std::is_base_of_v<ConstantMaterializer, ArgType>)
+        if constexpr (std::derived_from<ArgType, ConstantMaterializer>)
             arg.store(*this, addressForPoke(pokeOffset));
         else
             poke(arg, pokeOffset);
@@ -447,8 +449,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<sizeof(CURRENT_ARGUMENT_TYPE) <= 4>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, GPRReg arg, Args... args)
+        requires (sizeof(CURRENT_ARGUMENT_TYPE) <= 4)
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, GPRReg arg, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(arg);
@@ -484,8 +486,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, CellValue payload, Args... args)
+        requires std::same_as<CURRENT_ARGUMENT_TYPE, EncodedJSValue>
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, CellValue payload, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(payload.gpr());
@@ -506,8 +508,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, JSValueRegs arg, Args... args)
+        requires std::same_as<CURRENT_ARGUMENT_TYPE, EncodedJSValue>
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, JSValueRegs arg, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(arg.tagGPR());
@@ -531,15 +533,13 @@ private:
 #endif // USE(JSVALUE64)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_base_of<TrustedImm, Arg>::value
-        || std::is_convertible<Arg, TrustedImm>::value> // We have this since DFGSpeculativeJIT has it's own implementation of TrustedImmPtr
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires WTF::DerivedFromOrConvertibleTo<Arg, TrustedImm> // DerivedFromOrConvertibleTo instead of derived_from since DFGSpeculativeJIT has its own implementation of TrustedImmPtr
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         // Right now this only supports non-floating point immediate arguments since we never call operations with non-register values.
         // If we ever needed to support immediate floating point arguments we would need to duplicate this logic for both types, which sounds
         // gross so it's probably better to do that marshalling before the call operation...
-        static_assert(!std::is_floating_point<CURRENT_ARGUMENT_TYPE>::value, "We don't support immediate floats/doubles in setupArguments");
+        static_assert(!std::is_floating_point_v<CURRENT_ARGUMENT_TYPE>, "We don't support immediate floats/doubles in setupArguments");
         auto numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         auto currentArgCount = numGPRArgs + extraGPRArgs;
         if (currentArgCount < numArgRegisters) {
@@ -553,49 +553,39 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Arg>::value
-        && std::is_integral<CURRENT_ARGUMENT_TYPE>::value
-        && (sizeof(CURRENT_ARGUMENT_TYPE) <= 4)>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Arg> && std::integral<CURRENT_ARGUMENT_TYPE> && sizeof(CURRENT_ARGUMENT_TYPE) <= 4)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImm32(arg), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Arg>::value
-        && std::is_integral<CURRENT_ARGUMENT_TYPE>::value
-        && (sizeof(CURRENT_ARGUMENT_TYPE) == 8)>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Arg> && std::integral<CURRENT_ARGUMENT_TYPE> && sizeof(CURRENT_ARGUMENT_TYPE) == 8)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImm64(arg), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_pointer<CURRENT_ARGUMENT_TYPE>::value
-        && std::is_same<Arg, std::nullptr_t>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::is_pointer_v<CURRENT_ARGUMENT_TYPE> && std::same_as<Arg, std::nullptr_t>)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImmPtr(arg), args...);
     }
 
     // Special case DFG::RegisteredStructure because it's really annoying to deal with otherwise...
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Structure*>::value
-        && std::is_same<Arg, DFG::RegisteredStructure>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Structure*> && std::same_as<Arg, DFG::RegisteredStructure>)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImmPtr(arg.get()), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_base_of_v<ConstantMaterializer, Arg>>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires std::derived_from<Arg, ConstantMaterializer>
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
-        static_assert(!std::is_floating_point<CURRENT_ARGUMENT_TYPE>::value, "We don't support immediate floats/doubles in setupArguments");
+        static_assert(!std::is_floating_point_v<CURRENT_ARGUMENT_TYPE>, "We don't support immediate floats/doubles in setupArguments");
         auto numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         auto currentArgCount = numGPRArgs + extraGPRArgs;
         if (currentArgCount < numArgRegisters) {
@@ -624,7 +614,7 @@ private:
         // arguments should be passed through FPRRegs. This is asserted in the invocation of the lastly-called
         // setupArgumentsImpl(ArgCollection<>) overload, by matching the number of handled GPR and FPR arguments
         // with the corresponding count of properly-typed arguments for this operation.
-        if (!std::is_same_v<ArgumentType, double>) {
+        if constexpr (!std::is_same_v<ArgumentType, double>) {
             // RV64 calling convention requires all 32-bit values to be sign-extended into the whole register.
             // JSC JIT is tailored for other ISAs that pass these values in 32-bit-wide registers, which RISC-V
             // doesn't support, so any 32-bit value passed in argument registers has to be manually sign-extended.
@@ -678,10 +668,10 @@ private:
     ALWAYS_INLINE void setupArgumentsEntryImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Args... args)
     {
         using FirstArgumentType = typename FunctionTraits<OperationType>::template ArgumentType<0>;
-        if constexpr (std::is_same<FirstArgumentType, CallFrame*>::value) {
+        if constexpr (std::same_as<FirstArgumentType, CallFrame*>) {
 #if USE(JSVALUE64)
             // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...
-            static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args) + 1, "Basic sanity check");
+            static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args) + 1, "Basic sanity check; Did you explicitly pass callFrameRegister for the first argument?");
 #endif
             setupArgumentsImpl<OperationType>(argSourceRegs, GPRInfo::callFrameRegister, args...);
         } else {
@@ -768,8 +758,9 @@ public:
     static constexpr GPRReg operationExceptionRegister()
     {
         static_assert(assertNotOperationSignature<T>);
-        if (std::is_floating_point_v<typename T::ResultType> || std::is_same_v<typename T::ResultType, void>)
+        if constexpr (std::is_floating_point_v<typename T::ResultType> || std::is_same_v<typename T::ResultType, void>)
             return GPRInfo::returnValueGPR;
+        else
         return GPRInfo::returnValueGPR2;
     }
 #else
@@ -778,8 +769,9 @@ public:
     static constexpr GPRReg operationExceptionRegister()
     {
         static_assert(assertNotOperationSignature<T>);
-        if (std::is_same_v<T, ExceptionOperationResult<void>>)
+        if constexpr (std::is_same_v<T, ExceptionOperationResult<void>>)
             return GPRInfo::returnValueGPR;
+        else
         return GPRInfo::returnValueGPR2;
     }
 #endif
@@ -791,9 +783,6 @@ public:
         static_assert(assertNotOperationSignature<T>);
         return InvalidGPRReg;
     }
-
-    template<auto operation>
-    static constexpr GPRReg operationExceptionRegister() { return operationExceptionRegister<OperationReturnType<typename FunctionTraits<decltype(operation)>::ResultType>>(); }
 
     void prepareForTailCallSlow(RegisterSet preserved = { })
     {
@@ -897,8 +886,8 @@ public:
     }
 
     // This function is used to store the wasm callee in case this function hasn't tiered up yet.
-    // The LLInt/IPInt is going to expect this so that the common entrypoint can read bytecode/metadata.
-    void storeWasmCalleeCallee(RegisterID value, int offset = 0)
+    // The IPInt is going to expect this so that the common entrypoint can read bytecode/metadata.
+    void storeWasmCalleeToCalleeCallFrame(RegisterID value, int offset = 0)
     {
         JIT_COMMENT(*this, "< Store Callee's wasm callee");
         auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
@@ -912,28 +901,25 @@ public:
 #endif
     }
 
-    void storeWasmCalleeCallee(const CalleeBits* boxedWasmCalleeLoadLocation)
+    void storeWasmCalleeToCalleeCallFrame(CalleeBits boxedCallee)
     {
-        ASSERT(boxedWasmCalleeLoadLocation);
-        JIT_COMMENT(*this, "> ", RawPointer(boxedWasmCalleeLoadLocation->asNativeCallee()));
-        move(TrustedImmPtr(boxedWasmCalleeLoadLocation->rawPtr()), scratchRegister());
-        storeWasmCalleeCallee(scratchRegister());
+        JIT_COMMENT(*this, "> ", RawPointer(boxedCallee.asNativeCallee()));
+        storeWasmCalleeToCalleeCallFrame(TrustedImmPtr(boxedCallee.rawPtr()));
     }
 
-    DataLabelPtr storeWasmCalleeCalleePatchable(int offset = 0)
+    void storeWasmCalleeToCalleeCallFrame(TrustedImmPtr imm, int offset = 0)
     {
-        JIT_COMMENT(*this, "Store Callee's wasm callee (patchable)");
-        auto patch = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
+        JIT_COMMENT(*this, "Store Callee's wasm callee");
         auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
 #if USE(JSVALUE64)
-        storePtr(scratchRegister(), addr);
+        store64(imm, addr);
 #elif USE(JSVALUE32_64)
+        move(imm, scratchRegister());
         store32(scratchRegister(), addr.withOffset(PayloadOffset));
         store32(TrustedImm32(JSValue::NativeCalleeTag), addr.withOffset(TagOffset));
 #else
 #error "Unsupported configuration"
 #endif
-        return patch;
     }
 
     // These operations clobber all volatile registers. They assume that there is room on the top of

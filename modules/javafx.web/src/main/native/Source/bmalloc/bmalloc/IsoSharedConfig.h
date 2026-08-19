@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "BPlatform.h"
@@ -40,3 +44,5 @@ static constexpr unsigned alignmentForIsoSharedAllocation = 16;
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

@@ -34,20 +34,21 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGLineElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGLineElement);
 
 inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::lineTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::x1Attr, &SVGLineElement::m_x1>();
         PropertyRegistry::registerProperty<SVGNames::y1Attr, &SVGLineElement::m_y1>();
         PropertyRegistry::registerProperty<SVGNames::x2Attr, &SVGLineElement::m_x2>();
         PropertyRegistry::registerProperty<SVGNames::y2Attr, &SVGLineElement::m_y2>();
-    });
+    }
 }
 
 Ref<SVGLineElement> SVGLineElement::create(const QualifiedName& tagName, Document& document)

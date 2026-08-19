@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "SecurityOriginData.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
@@ -79,7 +79,7 @@ public:
     bool isRelatedToOrigin(const SecurityOriginData& other) const { return m_origin.isRelated(other); }
 
 private:
-    friend struct IPC::ArgumentCoder<IDBDatabaseIdentifier, void>;
+    friend struct IPC::ArgumentCoder<IDBDatabaseIdentifier>;
 
     String m_databaseName;
     ClientOrigin m_origin;
@@ -90,12 +90,6 @@ inline void add(Hasher& hasher, const IDBDatabaseIdentifier& identifier)
 {
     add(hasher, identifier.databaseName(), identifier.origin(), identifier.isTransient());
 }
-
-struct IDBDatabaseIdentifierHash {
-    static unsigned hash(const IDBDatabaseIdentifier& a) { return computeHash(a); }
-    static bool equal(const IDBDatabaseIdentifier& a, const IDBDatabaseIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdentifier> {
     static const bool hasIsEmptyValueFunction = true;
@@ -108,6 +102,5 @@ struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdenti
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHash { };
 
 } // namespace WTF

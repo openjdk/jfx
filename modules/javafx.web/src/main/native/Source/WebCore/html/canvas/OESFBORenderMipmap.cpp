@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESFBORenderMipmap);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESFBORenderMipmap);
 
 OESFBORenderMipmap::OESFBORenderMipmap(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::OESFBORenderMipmap)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_fbo_render_mipmap"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_fbo_render_mipmap);
 }
 
 OESFBORenderMipmap::~OESFBORenderMipmap() = default;
 
 bool OESFBORenderMipmap::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_fbo_render_mipmap"_s);
+    return context.supportsExtension(GCGLExtension::OES_fbo_render_mipmap);
 }
 
 } // namespace WebCore

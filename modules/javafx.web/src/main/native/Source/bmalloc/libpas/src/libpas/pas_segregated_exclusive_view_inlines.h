@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,8 @@
 #include "pas_segregated_page.h"
 #include "pas_thread_local_cache.h"
 #include "pas_thread_local_cache_node.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -219,5 +221,5 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_note_eligibility(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_EXCLUSIVE_VIEW_INLINES_H */
-

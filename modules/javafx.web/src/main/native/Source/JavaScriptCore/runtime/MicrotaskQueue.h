@@ -25,11 +25,16 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "Microtask.h"
-#include "SlotVisitorMacros.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <wtf/CompactRefPtrTuple.h>
+#include <wtf/Compiler.h>
 #include <wtf/Deque.h>
 #include <wtf/SentinelLinkedList.h>
+#include <wtf/TZoneMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -37,65 +42,26 @@ class JSGlobalObject;
 class MarkedMicrotaskDeque;
 class MicrotaskDispatcher;
 class MicrotaskQueue;
+class QueuedTask;
 class VM;
 
-class QueuedTask {
-    WTF_MAKE_TZONE_ALLOCATED(QueuedTask);
-    friend class MicrotaskQueue;
-    friend class MarkedMicrotaskDeque;
-public:
-    static constexpr unsigned maxArguments = 4;
-
-    enum class Result : uint8_t {
-        Executed,
-        Discard,
-        Suspended,
-    };
-
-    QueuedTask(RefPtr<MicrotaskDispatcher>&& dispatcher)
-        : m_dispatcher(WTFMove(dispatcher))
-        , m_identifier(MicrotaskIdentifier::generate())
-    {
-    }
-
-    QueuedTask(RefPtr<MicrotaskDispatcher>&& dispatcher, JSGlobalObject* globalObject, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
-        : m_dispatcher(WTFMove(dispatcher))
-        , m_identifier(MicrotaskIdentifier::generate())
-        , m_globalObject(globalObject)
-        , m_job(job)
-        , m_arguments { argument0, argument1, argument2, argument3 }
-    {
-    }
-
-    void setDispatcher(RefPtr<MicrotaskDispatcher>&& dispatcher)
-    {
-        m_dispatcher = WTFMove(dispatcher);
-    }
-
-    bool isRunnable() const;
-
-    MicrotaskDispatcher* dispatcher() const { return m_dispatcher.get(); }
-    MicrotaskIdentifier identifier() const { return m_identifier; }
-    JSGlobalObject* globalObject() const { return m_globalObject; }
-    JSValue job() const { return m_job; }
-    std::span<const JSValue> arguments() const { return std::span { m_arguments }; }
-
-private:
-    RefPtr<MicrotaskDispatcher> m_dispatcher;
-    MicrotaskIdentifier m_identifier;
-    JSGlobalObject* m_globalObject { nullptr };
-    JSValue m_job { };
-    JSValue m_arguments[maxArguments] { };
+enum class QueuedTaskResult : uint8_t {
+    Executed,
+    Discard,
+    Suspended,
 };
 
 class MicrotaskDispatcher : public RefCounted<MicrotaskDispatcher> {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(MicrotaskDispatcher);
 public:
     enum class Type : uint8_t {
         None,
+        JSCDebuggable,
         // WebCoreMicrotaskDispatcher starts from here.
-        JavaScript,
-        UserGestureIndicator,
-        Function,
+        WebCoreJS,
+        WebCoreJSDebuggable,
+        WebCoreUserGestureIndicator,
+        WebCoreFunction,
     };
 
     explicit MicrotaskDispatcher(Type type)
@@ -103,14 +69,82 @@ public:
     { }
 
     virtual ~MicrotaskDispatcher() = default;
-    virtual QueuedTask::Result run(QueuedTask&) = 0;
+    virtual QueuedTaskResult run(QueuedTask&) = 0;
     virtual bool isRunnable() const = 0;
     Type type() const { return m_type; }
-    bool isWebCoreMicrotaskDispatcher() const { return static_cast<uint8_t>(m_type) >= static_cast<uint8_t>(Type::JavaScript); }
+    bool isWebCoreMicrotaskDispatcher() const { return static_cast<uint8_t>(m_type) >= static_cast<uint8_t>(Type::WebCoreJS); }
 
 private:
     Type m_type { Type::None };
 };
+
+class DebuggableMicrotaskDispatcher final : public MicrotaskDispatcher {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(DebuggableMicrotaskDispatcher);
+public:
+    explicit DebuggableMicrotaskDispatcher()
+        : MicrotaskDispatcher(Type::JSCDebuggable)
+    { }
+
+    static Ref<DebuggableMicrotaskDispatcher> create()
+    {
+        return adoptRef(*new DebuggableMicrotaskDispatcher());
+    }
+
+    QueuedTaskResult run(QueuedTask&) final;
+    bool isRunnable() const final;
+};
+
+class QueuedTask {
+    WTF_MAKE_TZONE_ALLOCATED(QueuedTask);
+    friend class MicrotaskQueue;
+    friend class MarkedMicrotaskDeque;
+public:
+    static constexpr unsigned maxArguments = maxMicrotaskArguments;
+    using Result = QueuedTaskResult;
+
+    QueuedTask(Ref<MicrotaskDispatcher>&& dispatcher)
+        : m_dispatcher(WTF::move(dispatcher), static_cast<uint16_t>(InternalMicrotask::Opaque))
+        , m_globalObject(nullptr)
+    {
+    }
+
+    template<typename... Args>
+    requires (sizeof...(Args) <= maxArguments) && (std::is_convertible_v<Args, JSValue> && ...)
+    QueuedTask(RefPtr<MicrotaskDispatcher>&& dispatcher, InternalMicrotask job, uint8_t payload, JSGlobalObject* globalObject, Args&&...args)
+        : m_dispatcher(WTF::move(dispatcher), static_cast<uint16_t>(job) | (static_cast<uint16_t>(payload) << 8))
+        , m_globalObject(globalObject)
+        , m_arguments { std::forward<Args>(args)... }
+    {
+    }
+
+    void setDispatcher(RefPtr<MicrotaskDispatcher>&& dispatcher)
+    {
+        m_dispatcher.setPointer(WTF::move(dispatcher));
+    }
+
+    bool isRunnable() const;
+
+    MicrotaskDispatcher* dispatcher() const { return m_dispatcher.pointer(); }
+    std::optional<MicrotaskIdentifier> identifier() const
+    {
+        auto* pointer = m_dispatcher.pointer();
+        if (!pointer)
+            return std::nullopt;
+        return MicrotaskIdentifier { std::bit_cast<uintptr_t>(pointer) };
+    }
+    JSGlobalObject* globalObject() const { return m_globalObject; }
+    InternalMicrotask job() const { return static_cast<InternalMicrotask>(static_cast<uint8_t>(m_dispatcher.type())); }
+    // Task-specific metadata stored in upper 8 bits of m_dispatcher's type field.
+    // Typically holds JSPromise::Status or a nested InternalMicrotask value.
+    uint8_t payload() const { return static_cast<uint8_t>(m_dispatcher.type() >> 8); }
+    std::span<const JSValue, maxArguments> arguments() const { return std::span<const JSValue, maxArguments> { m_arguments, maxArguments }; }
+
+private:
+    CompactRefPtrTuple<MicrotaskDispatcher, uint16_t> m_dispatcher;
+    JSGlobalObject* m_globalObject;
+    JSValue m_arguments[maxArguments] { };
+};
+static_assert(sizeof(QueuedTask) <= 40, "Size of QueuedTask is critical for performance");
 
 class MarkedMicrotaskDeque {
 public:
@@ -127,7 +161,7 @@ public:
 
     void enqueue(QueuedTask&& task)
     {
-        m_queue.append(WTFMove(task));
+        m_queue.append(WTF::move(task));
     }
 
     bool isEmpty() const
@@ -193,6 +227,7 @@ public:
 
     DECLARE_VISIT_AGGREGATE;
 
+    template<bool useCallOnEachMicrotask>
     inline void performMicrotaskCheckpoint(VM&, NOESCAPE const Invocable<QueuedTask::Result(QueuedTask&)> auto& functor);
 
     bool hasMicrotasksForFullyActiveDocument() const
@@ -206,3 +241,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -34,11 +34,11 @@
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomEffect);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CustomEffect);
 
 ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Document& document, Ref<CustomEffectCallback>&& callback, std::optional<Variant<double, EffectTiming>>&& options)
 {
-    auto customEffect = adoptRef(*new CustomEffect(WTFMove(callback)));
+    auto customEffect = adoptRef(*new CustomEffect(WTF::move(callback)));
 
     if (options) {
         OptionalEffectTiming timing;
@@ -73,7 +73,7 @@ ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Document& document, Ref<Cust
 }
 
 CustomEffect::CustomEffect(Ref<CustomEffectCallback>&& callback)
-    : m_callback(WTFMove(callback))
+    : m_callback(WTF::move(callback))
 {
 }
 

@@ -28,7 +28,7 @@
 
 #include "CustomElementReactionQueue.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
 #include "ElementRareData.h"
 #include "ElementTraversal.h"
 #include "HTMLElementFactory.h"
@@ -37,7 +37,6 @@
 #include "LocalDOMWindow.h"
 #include "MathMLNames.h"
 #include "QualifiedName.h"
-#include "Quirks.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -82,7 +81,7 @@ void CustomElementRegistry::didAssociateWithDocument(Document& document)
 static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCustomElementInterface& elementInterface, CustomElementRegistry& registry)
 {
     for (RefPtr element = ElementTraversal::firstWithin(node); element; element = ElementTraversal::next(*element)) {
-        if (element->isCustomElementUpgradeCandidate() && element->treeScope().customElementRegistry() == &registry && element->tagQName().matches(elementInterface.name()))
+        if (element->isCustomElementUpgradeCandidate() && CustomElementRegistry::registryForElement(*element) == &registry && element->tagQName().matches(elementInterface.name()))
             element->enqueueToUpgrade(elementInterface);
         if (RefPtr shadowRoot = element->shadowRoot()) {
             if (shadowRoot->mode() != ShadowRootMode::UserAgent)
@@ -220,11 +219,19 @@ ExceptionOr<void> CustomElementRegistry::initialize(Node& root)
             if (this != registryOfTreeScope)
                 addToScopedCustomElementRegistryMap(element, *this);
     };
+    auto upgradeElementIfPossible = [&](Element& element) {
+        if (element.isCustomElementUpgradeCandidate() && CustomElementRegistry::registryForElement(element) == this)
+            CustomElementReactionQueue::tryToUpgradeElement(element);
+    };
 
-    if (RefPtr element = dynamicDowncast<Element>(*containerRoot))
+    if (RefPtr element = dynamicDowncast<Element>(*containerRoot)) {
         updateRegistryIfNeeded(*element);
-    for (Ref element : descendantsOfType<Element>(*containerRoot))
+        upgradeElementIfPossible(*element);
+    }
+    for (Ref element : descendantsOfType<Element>(*containerRoot)) {
         updateRegistryIfNeeded(element);
+        upgradeElementIfPossible(element);
+    }
     return { };
 }
 

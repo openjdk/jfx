@@ -399,7 +399,7 @@ bool ScrollingEffectsController::handleWheelEvent(const PlatformWheelEvent& whee
         || (deltaY > 0 && scrollOffset.y() <= minPosition.y()))
         deltaY = 0;
 
-    if (wheelEvent.granularity() == ScrollByPageWheelEvent) {
+    if (wheelEvent.granularity() == PlatformWheelEventGranularity::ScrollByPageWheelEvent) {
         if (deltaX) {
             bool negative = deltaX < 0;
             deltaX = Scrollbar::pageStepDelta(extents.contentsSize.width());
@@ -548,8 +548,16 @@ void ScrollingEffectsController::scrollAnimationDidEnd(ScrollAnimation& animatio
     UNUSED_PARAM(animation);
 #endif
 
-    if (is<ScrollAnimationKeyboard>(animation) || is<ScrollAnimationSmooth>(animation))
+    switch (animation.type()) {
+    case ScrollAnimation::Type::Smooth:
+    case ScrollAnimation::Type::Kinetic:
+    case ScrollAnimation::Type::Keyboard:
     m_client.didStopAnimatedScroll();
+        break;
+    case ScrollAnimation::Type::Momentum:
+    case ScrollAnimation::Type::RubberBand:
+        break;
+    }
 
     if (is<ScrollAnimationKeyboard>(animation)) {
         didStopKeyboardScrolling();

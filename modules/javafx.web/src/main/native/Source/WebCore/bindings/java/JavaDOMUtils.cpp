@@ -29,6 +29,8 @@
 
 #include "Document.h"
 #include "Frame.h"
+#include "LocalFrameInlines.h"
+#include "FrameInlines.h"
 #include "Element.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"

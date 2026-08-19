@@ -25,16 +25,19 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "FloatSize.h"
-#include "PlaneLayout.h"
-#include "PlatformVideoColorSpace.h"
-#include "VideoPixelFormat.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/PlaneLayout.h>
+#include <WebCore/PlatformVideoColorSpace.h>
+#include <WebCore/VideoPixelFormat.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
+
+#include "NativeImage.h"
 
 #if PLATFORM(COCOA)
 typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
@@ -116,8 +119,7 @@ public:
 
     void initializeCharacteristics(MediaTime presentationTime, bool isMirrored, Rotation);
 
-    void draw(GraphicsContext&, const FloatRect&, ImageOrientation, bool shouldDiscardAlpha);
-
+    RefPtr<NativeImage> copyNativeImage() const;
     const PlatformVideoColorSpace& colorSpace() const { return m_colorSpace; }
 
     bool hasNoTransformation() const { return m_rotation == VideoFrameRotation::None && !m_isMirrored; }

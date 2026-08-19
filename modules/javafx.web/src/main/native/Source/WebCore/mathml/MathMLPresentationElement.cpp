@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Alex Milowski (alex@milowski.com). All rights reserved.
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,12 +43,13 @@
 #include "RenderTableCell.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
+#include "Settings.h"
 #include <wtf/SortedArrayMap.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLPresentationElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLPresentationElement);
 
 using namespace MathMLNames;
 
@@ -65,9 +66,9 @@ Ref<MathMLPresentationElement> MathMLPresentationElement::create(const Qualified
 RenderPtr<RenderElement> MathMLPresentationElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
     if (hasTagName(mtableTag))
-        return createRenderer<RenderMathMLTable>(*this, WTFMove(style));
+        return createRenderer<RenderMathMLTable>(*this, WTF::move(style));
 
-    return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
+    return MathMLElement::createElementRenderer(WTF::move(style), insertionPosition);
 }
 
 const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttribute(const QualifiedName& name, std::optional<BooleanValue>& attribute)
@@ -75,11 +76,12 @@ const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttri
     if (attribute)
         return attribute.value();
 
-    // In MathML, attribute values are case-sensitive.
+    // In MathML Core, attribute values are ASCII case-insensitive.
+    // https://w3c.github.io/mathml-core/#dfn-boolean
     const AtomString& value = attributeWithoutSynchronization(name);
-    if (value == trueAtom())
+    if (equalIgnoringASCIICase(value, trueAtom()))
         attribute = BooleanValue::True;
-    else if (value == falseAtom())
+    else if (equalIgnoringASCIICase(value, falseAtom()))
         attribute = BooleanValue::False;
     else
         attribute = BooleanValue::Default;
@@ -208,10 +210,10 @@ const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const
     return length.value();
 }
 
-MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
+MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
 {
     // The mathvariant attribute values is case-sensitive.
-    static constexpr std::pair<ComparableASCIILiteral, MathVariant> mappings[] = {
+    static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, MathVariant>>({
         { "bold"_s, MathVariant::Bold },
         { "bold-fraktur"_s, MathVariant::BoldFraktur },
         { "bold-italic"_s, MathVariant::BoldItalic },
@@ -230,12 +232,11 @@ MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(
         { "script"_s, MathVariant::Script },
         { "stretched"_s, MathVariant::Stretched },
         { "tailed"_s, MathVariant::Tailed },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    }) };
     return map.get(attributeValue, MathVariant::None);
 }
 
-std::optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMathVariant()
+std::optional<MathVariant> MathMLPresentationElement::specifiedMathVariant()
 {
     if (!acceptsMathVariantAttribute())
         return std::nullopt;

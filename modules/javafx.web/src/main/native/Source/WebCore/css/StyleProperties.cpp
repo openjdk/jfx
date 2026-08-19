@@ -212,7 +212,6 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     case CSSPropertyWebkitColumnBreakInside:
     case CSSPropertyWebkitMaskPosition:
     case CSSPropertyWebkitPerspective:
-    case CSSPropertyWebkitTextDecoration:
     case CSSPropertyWebkitTextOrientation:
                 return false;
 
@@ -233,14 +232,6 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     // FIXME: If font-variant-ligatures is none, this depends on the value of the longhand.
     case CSSPropertyFontVariant:
     // FIXME: These shorthands are avoided for unknown legacy reasons, probably shouldn't be avoided.
-    case CSSPropertyBorderBlockEnd:
-    case CSSPropertyBorderBlockStart:
-    case CSSPropertyBorderBottom:
-    case CSSPropertyBorderInlineEnd:
-    case CSSPropertyBorderInlineStart:
-    case CSSPropertyBorderLeft:
-    case CSSPropertyBorderRight:
-    case CSSPropertyBorderTop:
     case CSSPropertyColumnRule:
     case CSSPropertyColumns:
     case CSSPropertyContainer:
@@ -378,7 +369,7 @@ Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSP
             return CSSProperty(property, value.releaseNonNull());
         return std::nullopt;
     });
-    return MutableStyleProperties::create(WTFMove(vector));
+    return MutableStyleProperties::create(WTF::move(vector));
 }
 
 CSSStyleProperties* MutableStyleProperties::cssStyleProperties()

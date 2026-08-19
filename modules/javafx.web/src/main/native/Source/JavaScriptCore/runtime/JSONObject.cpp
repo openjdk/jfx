@@ -125,7 +125,7 @@ private:
         bool m_hasFastObjectProperties { false };
         unsigned m_index { 0 };
         unsigned m_size { 0 };
-        RefPtr<PropertyNameArrayData> m_propertyNames;
+        RefPtr<PropertyNameArray> m_propertyNames;
         Vector<std::tuple<PropertyName, unsigned>, 8> m_propertiesAndOffsets;
     };
 
@@ -147,7 +147,7 @@ private:
     JSGlobalObject* const m_globalObject;
     JSValue m_replacer;
     bool m_usingArrayReplacer { false };
-    PropertyNameArray m_arrayReplacerPropertyNames;
+    PropertyNameArrayBuilder m_arrayReplacerPropertyNames;
     CallData m_replacerCallData;
     String m_gap;
 
@@ -269,7 +269,7 @@ Stringifier::Stringifier(JSGlobalObject* globalObject, JSValue replacer, JSValue
                     RETURN_IF_EXCEPTION(scope, false);
                     auto propertyName = propertyNameString->toIdentifier(globalObject);
                     RETURN_IF_EXCEPTION(scope, false);
-                    m_arrayReplacerPropertyNames.add(WTFMove(propertyName));
+                    m_arrayReplacerPropertyNames.add(WTF::move(propertyName));
                     return true;
                 });
                 RETURN_IF_EXCEPTION(scope, );
@@ -383,7 +383,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
         if (object->inherits<JSRawJSONObject>()) {
             String string = jsCast<JSRawJSONObject*>(object)->rawJSON(vm)->value(m_globalObject);
             RETURN_IF_EXCEPTION(scope, StringifyFailed);
-            builder.append(WTFMove(string));
+            builder.append(WTF::move(string));
         return StringifySucceeded;
 
         }
@@ -557,7 +557,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
                 });
                 m_size = m_propertiesAndOffsets.size();
             } else {
-                PropertyNameArray objectPropertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+                PropertyNameArrayBuilder objectPropertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
                 m_object->methodTable()->getOwnPropertyNames(m_object, globalObject, objectPropertyNames, DontEnumPropertiesMode::Exclude);
                 RETURN_IF_EXCEPTION(scope, false);
                 m_propertyNames = objectPropertyNames.releaseData();
@@ -714,6 +714,7 @@ private:
     void append(JSValue);
     String result();
 
+    // FIXME These should probably just take an ASCIILiteral.
     void append(char, char, char, char);
     void append(char, char, char, char, char);
     template<typename T> void recordFailure(FailureReason, T&& reason);
@@ -769,7 +770,7 @@ static void logOutcomeImpl(String&& outcome)
         Vector<KeyValuePair<String, unsigned>> vector;
         for (auto& pair : set.get())
             vector.append(pair);
-        std::sort(vector.begin(), vector.end(), [](auto& a, auto &b) {
+        std::ranges::sort(vector, [](auto& a, auto &b) {
             return a.value != b.value ? a.value > b.value : codePointCompareLessThan(a.key, b.key);
         });
         dataLogLn("fastStringify outcomes");
@@ -789,7 +790,7 @@ void FastStringifier<CharType, bufferMode>::logOutcome(ASCIILiteral outcome)
 template<typename CharType, BufferMode bufferMode>
 void FastStringifier<CharType, bufferMode>::logOutcome(String&& outcome)
 {
-    logOutcomeImpl(WTFMove(outcome));
+    logOutcomeImpl(WTF::move(outcome));
 }
 
 #endif
@@ -828,7 +829,7 @@ inline unsigned FastStringifier<CharType, bufferMode>::usableBufferSize(unsigned
     // to limit recursion. Hence, we need to compute an appropriate m_capacity value.
     //
     // To do this, we empirically measured the worst case stack usage incurred by 1 recursion
-    // of any of the append methods. Assuming each call to append() only consumes 1 LChar in
+    // of any of the append methods. Assuming each call to append() only consumes 1 Latin1Character in
     // m_buffer, the amount of buffer size that FastStringifier is allowed to run with can be
     // estimated as:
     //
@@ -923,7 +924,7 @@ inline String FastStringifier<CharType, bufferMode>::result()
 #endif
     if constexpr (bufferMode == BufferMode::DynamicBuffer) {
         m_dynamicBuffer.shrink(m_length);
-        return StringImpl::adopt(WTFMove(m_dynamicBuffer));
+        return StringImpl::adopt(WTF::move(m_dynamicBuffer));
     }
     return std::span { static_cast<const FastStringifier*>(this)->buffer(), m_length };
 }
@@ -968,7 +969,7 @@ bool FastStringifier<CharType, bufferMode>::hasRemainingCapacitySlow(unsigned si
     return true;
     } else {
         size_t newSize = std::max<size_t>(m_dynamicBuffer.size() * 2, m_dynamicBuffer.size() + size);
-        if (newSize > StringImpl::MaxLength) [[unlikely]]
+        if (!StringImpl::isValidLength<CharType>(newSize)) [[unlikely]]
             return false;
 
         if (!m_dynamicBuffer.tryGrow(newSize)) [[unlikely]]
@@ -1081,7 +1082,7 @@ static ALWAYS_INLINE bool stringCopySameType(std::span<const CharType> span, Cha
 #if (CPU(ARM64) || CPU(X86_64)) && COMPILER(CLANG)
             constexpr size_t stride = SIMD::stride<CharType>;
             if (span.size() >= stride) {
-                using UnsignedType = std::make_unsigned_t<CharType>;
+        using UnsignedType = SameSizeUnsignedInteger<CharType>;
                 using BulkType = decltype(SIMD::load(static_cast<const UnsignedType*>(nullptr)));
                 constexpr auto quoteMask = SIMD::splat<UnsignedType>('"');
                 constexpr auto escapeMask = SIMD::splat<UnsignedType>('\\');
@@ -1131,12 +1132,12 @@ static ALWAYS_INLINE bool stringCopySameType(std::span<const CharType> span, Cha
             return false;
 }
 
-static ALWAYS_INLINE bool stringCopyUpconvert(std::span<const LChar> span, char16_t* cursor)
+static ALWAYS_INLINE bool stringCopyUpconvert(std::span<const Latin1Character> span, char16_t* cursor)
 {
 #if (CPU(ARM64) || CPU(X86_64)) && COMPILER(CLANG)
-            constexpr size_t stride = SIMD::stride<LChar>;
+    constexpr size_t stride = SIMD::stride<Latin1Character>;
             if (span.size() >= stride) {
-                using UnsignedType = std::make_unsigned_t<LChar>;
+        using UnsignedType = uint8_t;
                 using BulkType = decltype(SIMD::load(static_cast<const UnsignedType*>(nullptr)));
                 constexpr auto quoteMask = SIMD::splat<UnsignedType>('"');
                 constexpr auto escapeMask = SIMD::splat<UnsignedType>('\\');
@@ -1232,13 +1233,13 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             return;
         }
         if constexpr (sizeof(CharType) == 1) {
-            const char* cursor = WTF::dragonbox::detail::to_chars_n<WTF::dragonbox::Mode::ToShortest>(number, reinterpret_cast<char*>(buffer() + m_length));
-            m_length = cursor - reinterpret_cast<char*>(buffer());
+            auto cursor = WTF::dragonbox::detail::to_chars_n<WTF::dragonbox::Mode::ToShortest>(number, byteCast<char>(bufferSpan().subspan(m_length)));
+            m_length = cursor.data() - reinterpret_cast<char*>(buffer());
         } else {
             std::array<char, WTF::dragonbox::max_string_length<WTF::dragonbox::ieee754_binary64>()> temporary;
-            const char* cursor = WTF::dragonbox::detail::to_chars_n<WTF::dragonbox::Mode::ToShortest>(number, temporary.data());
-            size_t length = cursor - temporary.data();
-            WTF::copyElements(spanReinterpretCast<uint16_t>(bufferSpan().subspan(m_length)), spanReinterpretCast<const uint8_t>(std::span { temporary }).first(length));
+            auto cursor = WTF::dragonbox::detail::to_chars_n<WTF::dragonbox::Mode::ToShortest>(number, std::span { temporary });
+            size_t length = cursor.data() - temporary.data();
+            WTF::copyElements(spanReinterpretCast<uint16_t>(bufferSpan().subspan(m_length)), byteCast<uint8_t>(std::span { temporary }).first(length));
             m_length += length;
         }
         return;
@@ -1257,32 +1258,23 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             recordFailure("String::tryGetValue"_s);
             return;
         }
-
             auto stringLength = string.data.length();
-        if constexpr (sizeof(CharType) == 1) {
-            if (!string.data.is8Bit()) [[unlikely]] {
-                if constexpr (bufferMode == BufferMode::DynamicBuffer)
-                    recordFailure(FailureReason::Unknown, "16-bit string"_s);
-                else
-                    recordFailure(m_length < (m_capacity / 2) ? FailureReason::Found16BitEarly : FailureReason::Found16BitLate, "16-bit string"_s);
-                return;
-            }
             if (!hasRemainingCapacity(1 + stringLength + 1)) [[unlikely]] {
             recordBufferFull();
             return;
         }
             buffer()[m_length] = '"';
+
+        if constexpr (std::same_as<CharType, Latin1Character>) {
+            if (string.data.is8Bit()) [[likely]] {
             if (!stringCopySameType(string.data.span8(), buffer() + m_length + 1)) [[likely]] {
                 buffer()[m_length + 1 + stringLength] = '"';
                 m_length += 1 + stringLength + 1;
                 return;
             }
-        } else {
-            if (!hasRemainingCapacity(1 + stringLength + 1)) [[unlikely]] {
-                recordBufferFull();
-        return;
     }
-            buffer()[m_length] = '"';
+        } else {
+            static_assert(std::same_as<CharType, char16_t>);
             if (string.data.is8Bit()) {
                 if (!stringCopyUpconvert(string.data.span8(), buffer() + m_length + 1)) [[likely]] {
                     buffer()[m_length + 1 + stringLength] = '"';
@@ -1307,14 +1299,30 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             recordBufferFull();
             return;
         }
+
+        ASSERT(buffer()[m_length] == '"');
         auto output = bufferSpan().subspan(m_length + 1);
-        if constexpr (sizeof(CharType) == 2) {
+        if constexpr (std::same_as<CharType, char16_t>) {
             if (string.data.is8Bit())
                 WTF::appendEscapedJSONStringContent(output, string.data.span8());
             else
                 WTF::appendEscapedJSONStringContent(output, string.data.span16());
-        } else
+        } else {
+            if (string.data.is8Bit())
             WTF::appendEscapedJSONStringContent(output, string.data.span8());
+            else {
+                // It's possible the UTF-16 string is actually Latin-1. We try to avoid that but bailing out here is _way_ more expensive if it does sometimes happen.
+                bool success = WTF::appendEscapedJSONStringContent(output, string.data.span16());
+                if (!success) [[unlikely]] {
+                    if constexpr (bufferMode == BufferMode::DynamicBuffer)
+                        recordFailure(FailureReason::Unknown, "16-bit string, "_s);
+                    else
+                        recordFailure(m_length < (m_capacity / 2) ? FailureReason::Found16BitEarly : FailureReason::Found16BitLate, "16-bit string, "_s);
+                    return;
+                }
+            }
+        }
+
         consume(output) = '"';
         m_length = output.data() - buffer();
         return;
@@ -1362,6 +1370,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
             }
 
             // Right now, we do not support 16-bit name here since name in 16-bit is significantly more rare than 16-bit string.
+            // FIXME: We should just extract the `StringType` case into a helper and use that.
             if (!name.is8Bit()) [[unlikely]] {
                 recordFailure("16-bit property name"_s);
                 return false;
@@ -1386,7 +1395,7 @@ void FastStringifier<CharType, bufferMode>::append(JSValue value)
                 buffer()[m_length++] = ',';
             buffer()[m_length] = '"';
 
-            if constexpr (sizeof(CharType) == 2) {
+            if constexpr (std::same_as<CharType, char16_t>) {
                 if (stringCopyUpconvert(span, buffer() + m_length + 1)) [[unlikely]] {
                     recordFailure("property name character needs escaping"_s);
                     return false;
@@ -1497,7 +1506,7 @@ static NEVER_INLINE String stringify(JSGlobalObject& globalObject, JSValue value
     if (std::bit_cast<uint8_t*>(currentStackPointer()) >= stackLimit) [[likely]] {
         std::optional<FailureReason> failureReason;
         failureReason = std::nullopt;
-        if (String result = FastStringifier<LChar, BufferMode::StaticBuffer>::stringify(globalObject, value, replacer, space, failureReason); !result.isNull())
+        if (String result = FastStringifier<Latin1Character, BufferMode::StaticBuffer>::stringify(globalObject, value, replacer, space, failureReason); !result.isNull())
         return result;
         if (failureReason == FailureReason::Found16BitEarly) {
             failureReason = std::nullopt;
@@ -1511,7 +1520,7 @@ static NEVER_INLINE String stringify(JSGlobalObject& globalObject, JSValue value
             }
         } else if (failureReason == FailureReason::BufferFull) {
             failureReason = std::nullopt;
-            if (String result = FastStringifier<LChar, BufferMode::DynamicBuffer>::stringify(globalObject, value, replacer, space, failureReason); !result.isNull())
+            if (String result = FastStringifier<Latin1Character, BufferMode::DynamicBuffer>::stringify(globalObject, value, replacer, space, failureReason); !result.isNull())
                 return result;
         }
     }
@@ -1590,7 +1599,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
     VM& vm = m_globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Vector<PropertyNameArray, 16, UnsafeVectorOverflow> propertyStack;
+    Vector<PropertyNameArrayBuilder, 16, UnsafeVectorOverflow> propertyStack;
     Vector<uint32_t, 16, UnsafeVectorOverflow> indexStack;
     MarkedArgumentBuffer markedStack;
     Vector<const JSONRanges::Entry*, 16> entryStack;
@@ -1710,7 +1719,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     entryStack.append(inValueRange);
                 }
                 indexStack.append(0);
-                propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
+                propertyStack.append(PropertyNameArrayBuilder(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                 object->methodTable()->getOwnPropertyNames(object, m_globalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
                 RETURN_IF_EXCEPTION(scope, { });
             }
@@ -1719,7 +1728,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
             case ObjectStartVisitMember: {
                 JSObject* object = jsCast<JSObject*>(markedStack.last());
                 uint32_t index = indexStack.last();
-                PropertyNameArray& properties = propertyStack.last();
+                PropertyNameArrayBuilder& properties = propertyStack.last();
                 if (index == properties.size()) {
                     outValue = object;
                     if (m_sourceRanges)
@@ -1819,7 +1828,7 @@ static NEVER_INLINE JSValue jsonParseSlow(JSGlobalObject* globalObject, JSString
     JSONRanges ranges;
     JSValue unfiltered;
     if (view.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Enabled> jsonParser(globalObject, view.span8(), StrictJSON);
+        LiteralParser<Latin1Character, JSONReviverMode::Enabled> jsonParser(globalObject, view.span8(), StrictJSON);
         unfiltered = jsonParser.tryLiteralParse(Options::useJSONSourceTextAccess() ? &ranges : nullptr);
         EXCEPTION_ASSERT(!scope.exception() || !unfiltered);
         if (!unfiltered) {
@@ -1857,11 +1866,11 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncParse, (JSGlobalObject* globalObject, Call
         JSValue function = callFrame->uncheckedArgument(1);
         CallData callData = JSC::getCallData(function);
         if (callData.type != CallData::Type::None)
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsonParseSlow(globalObject, string, view, WTFMove(callData), asObject(function))));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsonParseSlow(globalObject, string, view, WTF::move(callData), asObject(function))));
     }
 
     if (view->is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, view->span8(), StrictJSON);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> jsonParser(globalObject, view->span8(), StrictJSON);
         JSValue unfiltered = jsonParser.tryLiteralParse();
         EXCEPTION_ASSERT(!scope.exception() || !unfiltered);
         if (!unfiltered) {
@@ -1885,7 +1894,7 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncParse, (JSGlobalObject* globalObject, Call
 JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncStringify, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     String result = stringify(*globalObject, callFrame->argument(0), callFrame->argument(1), callFrame->argument(2));
-    return result.isNull() ? encodedJSUndefined() : JSValue::encode(jsString(globalObject->vm(), WTFMove(result)));
+    return result.isNull() ? encodedJSUndefined() : JSValue::encode(jsString(globalObject->vm(), WTF::move(result)));
 }
 
 JSValue JSONParse(JSGlobalObject* globalObject, StringView json)
@@ -1894,7 +1903,7 @@ JSValue JSONParse(JSGlobalObject* globalObject, StringView json)
         return JSValue();
 
     if (json.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, json.span8(), StrictJSON);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> jsonParser(globalObject, json.span8(), StrictJSON);
         return jsonParser.tryLiteralParse();
     }
 
@@ -1911,7 +1920,7 @@ JSValue JSONParseWithException(JSGlobalObject* globalObject, StringView json)
         return JSValue();
 
     if (json.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, json.span8(), StrictJSON);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> jsonParser(globalObject, json.span8(), StrictJSON);
         JSValue result = jsonParser.tryLiteralParse();
         RETURN_IF_EXCEPTION(scope, { });
         if (!result)
@@ -1979,7 +1988,7 @@ JSC_DEFINE_HOST_FUNCTION(jsonProtoFuncRawJSON, (JSGlobalObject* globalObject, Ca
     {
         JSValue result;
         if (string.is8Bit()) {
-            LiteralParser<LChar, JSONReviverMode::Disabled> jsonParser(globalObject, string.span8(), StrictJSON);
+            LiteralParser<Latin1Character, JSONReviverMode::Disabled> jsonParser(globalObject, string.span8(), StrictJSON);
             result = jsonParser.tryLiteralParsePrimitiveValue();
             RETURN_IF_EXCEPTION(scope, { });
             if (!result) [[unlikely]] {

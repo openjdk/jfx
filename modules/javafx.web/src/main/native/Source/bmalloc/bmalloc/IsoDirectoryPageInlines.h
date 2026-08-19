@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoDirectoryPage.h"
@@ -51,3 +55,5 @@ IsoDirectoryPage<Config>* IsoDirectoryPage<Config>::pageFor(IsoDirectory<Config,
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

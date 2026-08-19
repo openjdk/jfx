@@ -34,17 +34,17 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ExtendableCookieChangeEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExtendableCookieChangeEvent);
 
 Ref<ExtendableCookieChangeEvent> ExtendableCookieChangeEvent::create(const AtomString& type, ExtendableCookieChangeEventInit&& eventInitDict, IsTrusted isTrusted)
 {
-    return adoptRef(*new ExtendableCookieChangeEvent(type, WTFMove(eventInitDict), isTrusted));
+    return adoptRef(*new ExtendableCookieChangeEvent(type, WTF::move(eventInitDict), isTrusted));
 }
 
 ExtendableCookieChangeEvent::ExtendableCookieChangeEvent(const AtomString& type, ExtendableCookieChangeEventInit&& eventInitDict, IsTrusted isTrusted)
     : ExtendableEvent(EventInterfaceType::ExtendableCookieChangeEvent, type, eventInitDict, isTrusted)
-    , m_changed(WTFMove(eventInitDict.changed))
-    , m_deleted(WTFMove(eventInitDict.deleted))
+    , m_changed(WTF::move(eventInitDict.changed))
+    , m_deleted(WTF::move(eventInitDict.deleted))
 { }
 
 ExtendableCookieChangeEvent::~ExtendableCookieChangeEvent() = default;

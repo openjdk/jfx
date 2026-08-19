@@ -60,13 +60,15 @@ struct ApplePayShippingMethodUpdate;
 template<typename> class ExceptionOr;
 
 class ApplePaySession final : public PaymentSession, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePaySession);
+    WTF_MAKE_TZONE_ALLOCATED(ApplePaySession);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static ExceptionOr<Ref<ApplePaySession>> create(Document&, unsigned version, ApplePayPaymentRequest&&);
     virtual ~ApplePaySession();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     static constexpr auto STATUS_SUCCESS = ApplePayPaymentAuthorizationResult::Success;
     static constexpr auto STATUS_FAILURE = ApplePayPaymentAuthorizationResult::Failure;
@@ -111,7 +113,7 @@ private:
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::ApplePaySession; }
-    ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const override;
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
@@ -173,6 +175,8 @@ private:
     unsigned m_version;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ApplePaySession)
 
 #endif

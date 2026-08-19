@@ -27,19 +27,15 @@
 
 #include "JSGenerator.h"
 #include "JSInternalFieldObjectImpl.h"
+#include <tuple>
 
 namespace JSC {
+
+class JSPromise;
 
 class JSAsyncGenerator final : public JSInternalFieldObjectImpl<8> {
 public:
     using Base = JSInternalFieldObjectImpl<8>;
-
-    // JSAsyncGenerator has one inline storage slot, which is pointing internalField(0).
-    static size_t allocationSize(Checked<size_t> inlineCapacity)
-    {
-        ASSERT_UNUSED(inlineCapacity, inlineCapacity == 0U);
-        return sizeof(JSAsyncGenerator);
-    }
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -50,48 +46,140 @@ public:
     enum class AsyncGeneratorState : int32_t {
         Completed = -1,
         Executing = -2,
-        SuspendedStart = -3,
-        SuspendedYield = -4,
-        AwaitingReturn = -5,
+        Init = 0,
+        AwaitingReturn = -3,
     };
     static_assert(static_cast<int32_t>(AsyncGeneratorState::Completed) == static_cast<int32_t>(JSGenerator::State::Completed));
     static_assert(static_cast<int32_t>(AsyncGeneratorState::Executing) == static_cast<int32_t>(JSGenerator::State::Executing));
+    static_assert(static_cast<int32_t>(AsyncGeneratorState::Init) == static_cast<int32_t>(JSGenerator::State::Init));
 
     enum class AsyncGeneratorSuspendReason : int32_t {
-        None = 0,
-        Yield = -1,
-        Await = -2
+        Await = 0,
+        Yield = 1,
     };
+    static constexpr int32_t reasonMask = 0x1;
+    static constexpr int32_t reasonShift = 1;
+
+    enum class AsyncGeneratorResumeMode : int32_t {
+        Empty = -1,
+        Normal = 0,
+        Return = 1,
+        Throw = 2
+    };
+    static_assert(static_cast<int32_t>(AsyncGeneratorResumeMode::Normal) == static_cast<int32_t>(JSGenerator::ResumeMode::NormalMode));
+    static_assert(static_cast<int32_t>(AsyncGeneratorResumeMode::Return) == static_cast<int32_t>(JSGenerator::ResumeMode::ReturnMode));
+    static_assert(static_cast<int32_t>(AsyncGeneratorResumeMode::Throw) == static_cast<int32_t>(JSGenerator::ResumeMode::ThrowMode));
 
     enum class Field : uint32_t {
-        // FIXME: JSAsyncGenerator should support PolyProto, since generator tends to be created with poly proto mode.
-        // We reserve the first internal field for PolyProto property. This offset is identical to JSFinalObject's first inline storage slot which will be used for PolyProto.
-        PolyProto = 0,
-        State,
+        State = 0,
         Next,
         This,
         Frame,
-        SuspendReason,
-        QueueFirst,
-        QueueLast,
+        Queue,
+        ResumeValue,
+        ResumeMode,
+        ResumePromise,
     };
     static_assert(numberOfInternalFields == 8);
     static std::array<JSValue, numberOfInternalFields> initialValues()
     {
         return { {
-            jsNull(),
-            jsNumber(static_cast<int32_t>(AsyncGeneratorState::SuspendedStart)),
+            jsNumber(static_cast<int32_t>(AsyncGeneratorState::Init)),
             jsUndefined(),
             jsUndefined(),
             jsUndefined(),
-            jsNumber(static_cast<int32_t>(AsyncGeneratorSuspendReason::None)),
             jsNull(),
-            jsNull(),
+            jsUndefined(),
+            jsNumber(static_cast<int32_t>(AsyncGeneratorResumeMode::Empty)),
+            jsUndefined(),
         } };
     }
 
     static JSAsyncGenerator* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
+
+    int32_t state() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::State)).get().asInt32AsAnyInt();
+    }
+
+    void setState(int32_t state)
+    {
+        Base::internalField(static_cast<unsigned>(Field::State)).setWithoutWriteBarrier(jsNumber(state));
+    }
+
+    JSValue next() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::Next)).get();
+    }
+
+    JSValue thisValue() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::This)).get();
+    }
+
+    JSValue frame() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::Frame)).get();
+    }
+
+    JSValue queue() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::Queue)).get();
+    }
+
+    void setQueue(VM& vm, JSValue value)
+    {
+        Base::internalField(static_cast<unsigned>(Field::Queue)).set(vm, this, value);
+    }
+
+    JSValue resumeValue() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::ResumeValue)).get();
+    }
+
+    void setResumeValue(VM& vm, JSValue value)
+    {
+        Base::internalField(static_cast<unsigned>(Field::ResumeValue)).set(vm, this, value);
+    }
+
+    int32_t resumeMode() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::ResumeMode)).get().asInt32AsAnyInt();
+    }
+
+    void setResumeMode(int32_t mode)
+    {
+        Base::internalField(static_cast<unsigned>(Field::ResumeMode)).setWithoutWriteBarrier(jsNumber(mode));
+    }
+
+    JSValue resumePromise() const
+    {
+        return Base::internalField(static_cast<unsigned>(Field::ResumePromise)).get();
+    }
+
+    void setResumePromise(VM& vm, JSValue value)
+    {
+        Base::internalField(static_cast<unsigned>(Field::ResumePromise)).set(vm, this, value);
+    }
+
+    bool isQueueEmpty() const
+    {
+        return resumeMode() == static_cast<int32_t>(AsyncGeneratorResumeMode::Empty);
+    }
+
+    bool isExecutionState() const
+    {
+        int32_t state = this->state();
+        if (state == static_cast<int32_t>(AsyncGeneratorState::Executing))
+            return true;
+        if (state > 0 && (state & reasonMask) == static_cast<int32_t>(AsyncGeneratorSuspendReason::Await))
+            return true;
+        return false;
+    }
+
+    void enqueue(VM&, JSValue value, int32_t resumeMode, JSPromise*);
+    std::tuple<JSValue, int32_t, JSPromise*> dequeue(VM&);
 
     DECLARE_EXPORT_INFO;
 

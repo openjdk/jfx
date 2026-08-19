@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
-#include "B3Common.h"
-#include "SIMDInfo.h"
-#include "Width.h"
+#include <JavaScriptCore/B3Common.h>
+#include <JavaScriptCore/SIMDInfo.h>
+#include <JavaScriptCore/Width.h>
 #include <wtf/StdLibExtras.h>
 
 #if !ASSERT_ENABLED

@@ -41,7 +41,7 @@ class RequestAnimationFrameCallback;
 class WeakPtrImplWithEventTargetData;
 class WorkerGlobalScope;
 
-class WorkerAnimationController final : public ThreadSafeRefCounted<WorkerAnimationController>, public ActiveDOMObject {
+class WorkerAnimationController final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WorkerAnimationController>, public ActiveDOMObject {
 public:
     static Ref<WorkerAnimationController> create(WorkerGlobalScope&);
     ~WorkerAnimationController();
@@ -50,8 +50,8 @@ public:
     void cancelAnimationFrame(int);
 
     // ActiveDOMObject.
-    void ref() const final { ThreadSafeRefCounted::ref(); }
-    void deref() const final { ThreadSafeRefCounted::deref(); }
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
 private:
     WorkerAnimationController(WorkerGlobalScope&);
@@ -66,9 +66,9 @@ private:
     void animationTimerFired();
     void serviceRequestAnimationFrameCallbacks(DOMHighResTimeStamp timestamp);
 
-    WeakRef<WorkerGlobalScope, WeakPtrImplWithEventTargetData> m_workerGlobalScope;
+    const CheckedRef<WorkerGlobalScope> m_workerGlobalScope;
 
-    typedef Vector<RefPtr<RequestAnimationFrameCallback>> CallbackList;
+    typedef Vector<Ref<RequestAnimationFrameCallback>> CallbackList;
     CallbackList m_animationCallbacks;
     typedef int CallbackId;
     CallbackId m_nextAnimationCallbackId { 0 };

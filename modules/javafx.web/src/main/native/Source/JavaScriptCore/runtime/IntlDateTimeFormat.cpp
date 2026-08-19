@@ -63,6 +63,10 @@ void UDateIntervalFormatDeleter::operator()(UDateIntervalFormat* formatter)
 
 const ClassInfo IntlDateTimeFormat::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDateTimeFormat) };
 
+// Approximate sizes of ICU objects for GC memory pressure reporting, measured empirically with udat_open + udat_format.
+static constexpr size_t estimatedUDateFormatSize = 30000;
+static constexpr size_t estimatedUDateIntervalFormatSize = 30000;
+
 namespace IntlDateTimeFormatInternal {
 static constexpr bool verbose = false;
 }
@@ -93,6 +97,11 @@ void IntlDateTimeFormat::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(thisObject, visitor);
 
     visitor.append(thisObject->m_boundFormat);
+
+    if (thisObject->m_dateFormat)
+        visitor.reportExtraMemoryVisited(estimatedUDateFormatSize);
+    if (thisObject->m_dateIntervalFormat)
+        visitor.reportExtraMemoryVisited(estimatedUDateIntervalFormatSize);
 }
 
 DEFINE_VISIT_CHILDREN(IntlDateTimeFormat);
@@ -121,7 +130,7 @@ static String availableNamedTimeZoneIdentifier(StringView timeZoneName)
             break;
 
         StringView ianaTimeZoneView(std::span(ianaTimeZone, ianaTimeZoneLength));
-        if (!equalIgnoringASCIICase(timeZoneName, ianaTimeZoneView))
+        if (!equalIgnoringASCIICase(timeZoneName, ianaTimeZoneView) || isNonIANA(ianaTimeZoneView))
             continue;
         return ianaTimeZoneView.toString();
     } while (true);
@@ -151,13 +160,13 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
                 // This is fine because this function's purpose is collecting what calendar strings are accepted by IntlDateTimeFormat.
                 // When "gregorian" is specified, we convert it to "gregory" to make it aligned to BCP-47. Thus we accept non BCP-47 compliant
                 // calendar IDs only when we can convert it to corresponding BCP-47 compliant ID: when mapICUCalendarKeywordToBCP47 returns a mapped value.
-                keyLocaleData.append(WTFMove(calendar));
-                keyLocaleData.append(WTFMove(mapped.value()));
+                keyLocaleData.append(WTF::move(calendar));
+                keyLocaleData.append(WTF::move(mapped.value()));
             } else {
                 // Skip if the obtained calendar code is not meeting Unicode Locale Identifier's `type` definition
                 // as whole ECMAScript's i18n is relying on Unicode Local Identifiers.
                 if (isUnicodeLocaleIdentifierType(calendar))
-                    keyLocaleData.append(WTFMove(calendar));
+                    keyLocaleData.append(WTF::move(calendar));
         }
         }
         break;
@@ -711,9 +720,9 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     {
         String calendar = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Ca)];
         if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
-            calendar = WTFMove(mapped.value());
+            calendar = WTF::move(mapped.value());
 
-            m_calendar = WTFMove(calendar);
+        m_calendar = WTF::move(calendar);
         // Handling "islamicc" candidate for backward compatibility.
         if (m_calendar == "islamicc"_s)
             m_calendar = "islamic-civil"_s;
@@ -753,7 +762,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         tz = vm.dateCache.defaultTimeZone();
     m_timeZone = tz;
     if (!timeZoneForICU.isNull())
-        m_timeZoneForICU = WTFMove(timeZoneForICU);
+        m_timeZoneForICU = WTF::move(timeZoneForICU);
     else
         m_timeZoneForICU = tz;
 
@@ -947,6 +956,8 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
         return;
     }
+
+    vm.heap.reportExtraMemoryAllocated(this, estimatedUDateFormatSize);
 
     // Gregorian calendar should be used from the beginning of ECMAScript time.
     // Failure here means unsupported calendar, and can safely be ignored.
@@ -1259,7 +1270,7 @@ JSValue IntlDateTimeFormat::format(JSGlobalObject* globalObject, double value) c
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(result);
 
-    return jsString(vm, String(WTFMove(result)));
+    return jsString(vm, String(WTF::move(result)));
 }
 
 static ASCIILiteral partTypeString(UDateFormatField field)
@@ -1436,6 +1447,9 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
         throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
         return nullptr;
     }
+
+    vm.heap.reportExtraMemoryAllocated(this, estimatedUDateIntervalFormatSize);
+
     return m_dateIntervalFormat.get();
 }
 
@@ -1571,7 +1585,7 @@ JSValue IntlDateTimeFormat::formatRange(JSGlobalObject* globalObject, double sta
     Vector<char16_t, 32> buffer(std::span<const char16_t> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(buffer);
 
-    return jsString(vm, String(WTFMove(buffer)));
+    return jsString(vm, String(WTF::move(buffer)));
 }
 
 JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, double startDate, double endDate)

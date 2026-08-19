@@ -60,7 +60,7 @@ void TZoneLog::init()
     }
 }
 
-TZoneLog& TZoneLog::singleton()
+extern TZoneLog& TZoneLog::singleton()
 {
     if (!theTZoneLog)
         ensureSingleton();
@@ -132,3 +132,4 @@ void TZoneLog::ensureSingleton()
 } } // namespace bmalloc::api
 
 #endif // BUSE(TZONE)
+

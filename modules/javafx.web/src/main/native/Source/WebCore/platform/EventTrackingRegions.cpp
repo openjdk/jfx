@@ -34,6 +34,12 @@ namespace WebCore {
 ASCIILiteral EventTrackingRegions::eventName(EventType eventType)
 {
     switch (eventType) {
+    case EventType::Gesturechange:
+        return "gesturechange"_s;
+    case EventType::Gestureend:
+        return "gestureend"_s;
+    case EventType::Gesturestart:
+        return "gesturestart"_s;
     case EventType::Mousedown:
         return "mousedown"_s;
     case EventType::Mousemove:
@@ -73,6 +79,12 @@ ASCIILiteral EventTrackingRegions::eventName(EventType eventType)
 const AtomString& EventTrackingRegions::eventNameAtomString(const EventNames& eventNames, EventType eventType)
 {
     switch (eventType) {
+    case EventType::Gesturechange:
+        return eventNames.gesturechangeEvent;
+    case EventType::Gestureend:
+        return eventNames.gestureendEvent;
+    case EventType::Gesturestart:
+        return eventNames.gesturestartEvent;
     case EventType::Mousedown:
         return eventNames.mousedownEvent;
     case EventType::Mousemove:

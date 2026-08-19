@@ -102,6 +102,9 @@
 
     // WebKit extension for DOM wrapper worlds.
     [EnabledForWorld=allowElementUserInfo, CallWith=CurrentGlobalObject] undefined setUserInfo(any userInfo);
+
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement);
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement, AriaNotifyOptions options);
 };
 
 Element includes AccessibilityRole;

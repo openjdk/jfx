@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "EditingBoundary.h"
-#include "LayoutRect.h"
-#include "Position.h"
-#include "RenderObject.h"
+#include <WebCore/EditingBoundary.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/Position.h>
+#include <WebCore/RenderObject.h>
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ public:
 
     struct LocalCaretRect {
         LayoutRect rect;
-        RenderObject* renderer { nullptr };
+        CheckedPtr<RenderObject> renderer;
     };
     WEBCORE_EXPORT LocalCaretRect localCaretRect() const;
 

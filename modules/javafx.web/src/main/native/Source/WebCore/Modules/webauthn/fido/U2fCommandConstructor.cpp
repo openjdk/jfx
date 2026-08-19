@@ -56,7 +56,7 @@ static Vector<uint8_t> constructU2fRegisterCommand(std::span<const uint8_t> appl
     command.setIns(static_cast<uint8_t>(U2fApduInstruction::kRegister));
     // This is needed for test of user presence even though the spec doesn't specify it.
     command.setP1(kP1EnforceUserPresenceAndSign);
-    command.setData(WTFMove(data));
+    command.setData(WTF::move(data));
     command.setResponseLength(apdu::ApduCommand::kApduMaxResponseLength);
     return command.getEncodedCommand();
 }
@@ -76,7 +76,7 @@ static std::optional<Vector<uint8_t>> constructU2fSignCommand(const Vector<uint8
     apdu::ApduCommand command;
     command.setIns(static_cast<uint8_t>(U2fApduInstruction::kSign));
     command.setP1(checkOnly ? kP1CheckOnly : kP1EnforceUserPresenceAndSign);
-    command.setData(WTFMove(data));
+    command.setData(WTF::move(data));
     command.setResponseLength(apdu::ApduCommand::kApduMaxResponseLength);
     return command.getEncodedCommand();
 }

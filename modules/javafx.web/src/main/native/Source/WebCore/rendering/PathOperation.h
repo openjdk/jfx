@@ -29,13 +29,13 @@
 
 #pragma once
 
-#include "MotionPath.h"
-#include "Path.h"
-#include "RenderStyleConstants.h"
-#include "StyleBasicShape.h"
-#include "StyleRayFunction.h"
-#include "StyleURL.h"
-#include "TransformOperationData.h"
+#include <WebCore/MotionPath.h>
+#include <WebCore/Path.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleBasicShape.h>
+#include <WebCore/StyleRayFunction.h>
+#include <WebCore/StyleURL.h>
+#include <WebCore/TransformOperationData.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
@@ -151,7 +151,7 @@ private:
 
     ShapePathOperation(Style::BasicShape shape, CSSBoxType referenceBox)
         : PathOperation(Type::Shape, referenceBox)
-        , m_shape(WTFMove(shape))
+        , m_shape(WTF::move(shape))
     {
     }
 
@@ -216,7 +216,7 @@ private:
 
     RayPathOperation(Style::RayFunction ray, CSSBoxType referenceBox)
         : PathOperation(Type::Ray, referenceBox)
-        , m_ray(WTFMove(ray))
+        , m_ray(WTF::move(ray))
     {
     }
 

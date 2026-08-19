@@ -23,12 +23,13 @@
 
 #pragma once
 
-#include "Document.h"
-#include "HTMLElement.h"
-#include "HTMLNames.h"
-#include "PrivateClickMeasurement.h"
-#include "SharedStringHash.h"
-#include "URLDecomposition.h"
+#include <WebCore/Document.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/HTMLNames.h>
+#include <WebCore/PrivateClickMeasurement.h>
+#include <WebCore/SharedStringHash.h>
+#include <WebCore/SpeculationRules.h>
+#include <WebCore/URLDecomposition.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -45,7 +46,7 @@ enum class Relation : uint8_t {
 };
 
 class HTMLAnchorElement : public HTMLElement, public URLDecomposition {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAnchorElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLAnchorElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLAnchorElement);
 public:
     static Ref<HTMLAnchorElement> create(Document&);
@@ -82,8 +83,11 @@ public:
     ReferrerPolicy referrerPolicy() const;
 
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode& parentOfInsertedTree) override;
+    void didFinishInsertingNode() override;
 
     AtomString target() const override;
+
+    void setShouldBePrefetched(SpeculationRules::Eagerness, Vector<String>&& tags, std::optional<ReferrerPolicy>&&);
 
 protected:
     HTMLAnchorElement(const QualifiedName&, Document&);
@@ -128,6 +132,18 @@ private:
 
     URL fullURL() const final { return href(); }
     void setFullURL(const URL&) final;
+
+    void checkForSpeculationRules();
+
+    enum class PrefetchEagerness : uint8_t {
+        None,
+        Conservative,
+        Immediate,
+    };
+
+    PrefetchEagerness m_prefetchEagerness { PrefetchEagerness::None };
+    Vector<String> m_speculationRulesTags;
+    std::optional<ReferrerPolicy> m_prefetchReferrerPolicy;
 
     bool m_hasRootEditableElementForSelectionOnMouseDown { false };
     bool m_wasShiftKeyDownOnMouseDown { false };

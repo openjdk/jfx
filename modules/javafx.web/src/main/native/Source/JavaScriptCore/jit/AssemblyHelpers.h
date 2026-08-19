@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,30 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CodeBlock.h"
-#include "EntryFrame.h"
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "Heap.h"
-#include "InlineCallFrame.h"
-#include "JITAllocator.h"
-#include "JITCode.h"
-#include "JSBigInt.h"
-#include "JSCell.h"
-#include "JSString.h"
-#include "MacroAssembler.h"
-#include "MarkedSpace.h"
-#include "RegisterAtOffsetList.h"
-#include "RegisterSet.h"
-#include "ScratchRegisterAllocator.h"
-#include "StackAlignment.h"
-#include "TagRegistersMode.h"
-#include "TypeofType.h"
-#include "VM.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/EntryFrame.h>
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/InlineCallFrame.h>
+#include <JavaScriptCore/JITAllocator.h>
+#include <JavaScriptCore/JITCode.h>
+#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSCell.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/MarkedSpace.h>
+#include <JavaScriptCore/RegisterAtOffsetList.h>
+#include <JavaScriptCore/RegisterSet.h>
+#include <JavaScriptCore/ScratchRegisterAllocator.h>
+#include <JavaScriptCore/StackAlignment.h>
+#include <JavaScriptCore/TagRegistersMode.h>
+#include <JavaScriptCore/TypeofType.h>
+#include <JavaScriptCore/VM.h>
 #include <wtf/TZoneMalloc.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -570,10 +572,19 @@ public:
         emitFunctionEpilogueWithEmptyFrame();
     }
 
+#if CPU(ARM_THUMB2)
+    ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
+    {
+        // Clear LSB in LR; it's not part of the return address, it only
+        // signifies that we return to Thumb code.
+        and32(TrustedImm32(0xfffffffe), linkRegister, reg);
+    }
+#else
     ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
     {
         move(linkRegister, reg);
     }
+#endif
 
     ALWAYS_INLINE void restoreReturnAddressBeforeReturn(RegisterID reg)
     {
@@ -1498,9 +1509,13 @@ public:
         jitAssertIsJSDouble(gpr);
         return unboxDoubleWithoutAssertions(gpr, resultGPR, fpr, mode);
     }
+    void unboxDouble(JSValueRegs regs, GPRReg resultGPR, FPRReg fpr)
+    {
+        unboxDouble(regs.payloadGPR(), resultGPR, fpr);
+    }
     void unboxDouble(JSValueRegs regs, FPRReg fpr)
     {
-        unboxDouble(regs.tagGPR(), regs.payloadGPR(), fpr);
+        unboxDouble(regs.payloadGPR(), regs.payloadGPR(), fpr);
     }
     void boxDouble(FPRReg fpr, JSValueRegs regs, TagRegistersMode mode = HaveTagRegisters)
     {
@@ -1700,10 +1715,6 @@ public:
     void boxNativeCallee(GPRReg calleeGPR, GPRReg boxedGPR)
     {
 #if USE(JSVALUE64)
-#if CPU(ARM64)
-        // NativeCallees are sometimes stored in ThreadSafeWeakOrStrongPtr, which relies on top byte ignore, so we need to strip the top byte on ARM64.
-        and64(TrustedImm64(CalleeBits::nativeCalleeTopByteMask), calleeGPR);
-#endif
         sub64(calleeGPR, TrustedImm64(lowestAccessibleAddress()), boxedGPR);
         or64(TrustedImm64(JSValue::NativeCalleeTag), boxedGPR);
 #else
@@ -1824,6 +1835,7 @@ public:
         return branch8(Above, AbsoluteAddress(address), TrustedImm32(blackThreshold));
     }
 
+    // FIXME: We should name this something more obvious like branchIfCellIsRememberedOrEden. barrierBranch could mean many things.
     // Branch taken if the cell does not need a memory fence or store barrier.
     // When reverse is true, branch taken when the memory barrier or store barrier is needed.
     Jump barrierBranch(VM& vm, GPRReg cell, GPRReg scratchGPR, bool reverse = false)
@@ -2107,29 +2119,6 @@ public:
     {
         ptrdiff_t initialOffset = -sizeof(IndexingHeader) - outOfLineCapacity * sizeof(EncodedJSValue);
         emitFillStorageWithJSEmpty(butterflyGPR, initialOffset, outOfLineCapacity, scratchGPR);
-    }
-
-    void loadCompactPtr(Address address, GPRReg dest)
-    {
-#if HAVE(36BIT_ADDRESS)
-        load32(address, dest);
-        lshift64(TrustedImm32(4), dest);
-#else
-        loadPtr(address, dest);
-#endif
-    }
-
-    Jump branchCompactPtr(RelationalCondition cond, GPRReg left, Address right, GPRReg scratch)
-    {
-#if HAVE(36BIT_ADDRESS)
-        ASSERT(left != scratch);
-        load32(right, scratch);
-        lshift64(TrustedImm32(4), scratch);
-        return branchPtr(cond, left, Address(scratch));
-#else
-        UNUSED_PARAM(scratch);
-        return branchPtr(cond, left, right);
-#endif
     }
 
 #if USE(JSVALUE64)

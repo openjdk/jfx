@@ -39,7 +39,7 @@ class GPUBindGroup : public RefCounted<GPUBindGroup> {
 public:
     static Ref<GPUBindGroup> create(Ref<WebGPU::BindGroup>&& backing, const GPUBindGroupLayout* layout)
     {
-        return adoptRef(*new GPUBindGroup(WTFMove(backing), layout));
+        return adoptRef(*new GPUBindGroup(WTF::move(backing), layout));
     }
 
     String label() const;

@@ -85,7 +85,7 @@ void MediaEngineConfigurationFactory::resetFactories()
 
 void MediaEngineConfigurationFactory::installFactory(MediaEngineFactory&& factory)
 {
-    factories().append(WTFMove(factory));
+    factories().append(WTF::move(factory));
 }
 
 bool MediaEngineConfigurationFactory::hasDecodingConfigurationFactory()
@@ -101,38 +101,38 @@ bool MediaEngineConfigurationFactory::hasEncodingConfigurationFactory()
 void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingConfiguration&& config, DecodingConfigurationCallback&& callback)
 {
     if (mockEnabled()) {
-        MediaEngineConfigurationFactoryMock::createDecodingConfiguration(WTFMove(config), WTFMove(callback));
+        MediaEngineConfigurationFactoryMock::createDecodingConfiguration(WTF::move(config), WTF::move(callback));
         return;
     }
 
     auto factoryCallback = [] (auto factoryCallback, std::span<const MediaEngineFactory> nextFactories, MediaDecodingConfiguration&& config, DecodingConfigurationCallback&& callback) mutable {
         if (nextFactories.empty()) {
-            callback({ { }, WTFMove(config) });
+            callback({ { }, WTF::move(config) });
             return;
         }
 
         auto& factory = nextFactories[0];
         if (!factory.createDecodingConfiguration) {
-            callback({ { }, WTFMove(config) });
+            callback({ { }, WTF::move(config) });
             return;
         }
 
-        factory.createDecodingConfiguration(WTFMove(config), [factoryCallback, nextFactories, config, callback = WTFMove(callback)] (MediaCapabilitiesDecodingInfo&& info) mutable {
+        factory.createDecodingConfiguration(WTF::move(config), [factoryCallback, nextFactories, config, callback = WTF::move(callback)] (MediaCapabilitiesDecodingInfo&& info) mutable {
             if (info.supported) {
-                callback(WTFMove(info));
+                callback(WTF::move(info));
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTF::move(info.configuration), WTF::move(callback));
         });
     };
-    factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
+    factoryCallback(factoryCallback, factories().span(), WTF::move(config), WTF::move(callback));
 }
 
 void MediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingConfiguration&& config, EncodingConfigurationCallback&& callback)
 {
     if (mockEnabled()) {
-        MediaEngineConfigurationFactoryMock::createEncodingConfiguration(WTFMove(config), WTFMove(callback));
+        MediaEngineConfigurationFactoryMock::createEncodingConfiguration(WTF::move(config), WTF::move(callback));
         return;
     }
 
@@ -148,16 +148,16 @@ void MediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingC
             return;
         }
 
-        factory.createEncodingConfiguration(WTFMove(config), [factoryCallback, nextFactories, callback = WTFMove(callback)] (auto&& info) mutable {
+        factory.createEncodingConfiguration(WTF::move(config), [factoryCallback, nextFactories, callback = WTF::move(callback)] (auto&& info) mutable {
             if (info.supported) {
-                callback(WTFMove(info));
+                callback(WTF::move(info));
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTF::move(info.configuration), WTF::move(callback));
         });
     };
-    factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
+    factoryCallback(factoryCallback, factories().span(), WTF::move(config), WTF::move(callback));
 }
 
 void MediaEngineConfigurationFactory::enableMock()
@@ -178,7 +178,7 @@ static MediaEngineConfigurationFactory::MediaSessionManagerProvider& mediaSessio
 
 void MediaEngineConfigurationFactory::setMediaSessionManagerProvider(MediaSessionManagerProvider&& provider)
 {
-    mediaSessionManagerProvider() = WTFMove(provider);
+    mediaSessionManagerProvider() = WTF::move(provider);
 }
 
 RefPtr<MediaSessionManagerInterface> MediaEngineConfigurationFactory::mediaSessionManagerForPageIdentifier(PageIdentifier pageIdentifier)

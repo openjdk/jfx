@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "ErrorInstance.h"
+#include <JavaScriptCore/ErrorInstance.h>
 
 namespace JSC {
 

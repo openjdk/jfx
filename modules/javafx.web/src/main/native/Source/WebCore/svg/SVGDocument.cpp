@@ -22,7 +22,6 @@
 #include "config.h"
 #include "SVGDocument.h"
 
-#include "DocumentInlines.h"
 #include "DocumentSVG.h"
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
@@ -30,7 +29,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGDocument);
 
 SVGDocument::SVGDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : XMLDocument(frame, settings, url, { DocumentClass::SVG })

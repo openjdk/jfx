@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "PageIdentifier.h"
+#include <WebCore/PageIdentifier.h>
 #include <wtf/Function.h>
 
 namespace WebCore {

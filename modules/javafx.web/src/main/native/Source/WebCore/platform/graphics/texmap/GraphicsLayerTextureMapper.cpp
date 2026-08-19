@@ -23,6 +23,8 @@
 
 #include "GraphicsContext.h"
 #include "GraphicsLayerFactory.h"
+#include "GraphicsLayerFilterAnimationValue.h"
+#include "GraphicsLayerKeyframeValueList.h"
 #include "ImageBuffer.h"
 #include "TransformOperation.h"
 
@@ -95,7 +97,7 @@ void GraphicsLayerTextureMapper::setNeedsDisplayInRect(const FloatRect& rect, Sh
 
 bool GraphicsLayerTextureMapper::setChildren(Vector<Ref<GraphicsLayer>>&& children)
 {
-    if (GraphicsLayer::setChildren(WTFMove(children))) {
+    if (GraphicsLayer::setChildren(WTF::move(children))) {
         notifyChange(ChildrenChange);
         return true;
     }
@@ -105,30 +107,30 @@ bool GraphicsLayerTextureMapper::setChildren(Vector<Ref<GraphicsLayer>>&& childr
 void GraphicsLayerTextureMapper::addChild(Ref<GraphicsLayer>&& layer)
 {
     notifyChange(ChildrenChange);
-    GraphicsLayer::addChild(WTFMove(layer));
+    GraphicsLayer::addChild(WTF::move(layer));
 }
 
 void GraphicsLayerTextureMapper::addChildAtIndex(Ref<GraphicsLayer>&& layer, int index)
 {
-    GraphicsLayer::addChildAtIndex(WTFMove(layer), index);
+    GraphicsLayer::addChildAtIndex(WTF::move(layer), index);
     notifyChange(ChildrenChange);
 }
 
 void GraphicsLayerTextureMapper::addChildAbove(Ref<GraphicsLayer>&& layer, GraphicsLayer* sibling)
 {
-    GraphicsLayer::addChildAbove(WTFMove(layer), sibling);
+    GraphicsLayer::addChildAbove(WTF::move(layer), sibling);
     notifyChange(ChildrenChange);
 }
 
 void GraphicsLayerTextureMapper::addChildBelow(Ref<GraphicsLayer>&& layer, GraphicsLayer* sibling)
 {
-    GraphicsLayer::addChildBelow(WTFMove(layer), sibling);
+    GraphicsLayer::addChildBelow(WTF::move(layer), sibling);
     notifyChange(ChildrenChange);
 }
 
 bool GraphicsLayerTextureMapper::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& newChild)
 {
-    if (GraphicsLayer::replaceChild(oldChild, WTFMove(newChild))) {
+    if (GraphicsLayer::replaceChild(oldChild, WTF::move(newChild))) {
         notifyChange(ChildrenChange);
         return true;
     }
@@ -141,7 +143,7 @@ void GraphicsLayerTextureMapper::setMaskLayer(RefPtr<GraphicsLayer>&& value)
         return;
 
     GraphicsLayer* rawLayer = value.get();
-    GraphicsLayer::setMaskLayer(WTFMove(value));
+    GraphicsLayer::setMaskLayer(WTF::move(value));
     notifyChange(MaskLayerChange);
 
     if (!rawLayer)
@@ -155,7 +157,7 @@ void GraphicsLayerTextureMapper::setReplicatedByLayer(RefPtr<GraphicsLayer>&& va
 {
     if (value == replicaLayer())
         return;
-    GraphicsLayer::setReplicatedByLayer(WTFMove(value));
+    GraphicsLayer::setReplicatedByLayer(WTF::move(value));
     notifyChange(ReplicaLayerChange);
 }
 
@@ -429,7 +431,7 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         auto rawChildren = WTF::map(children(), [](auto& child) -> TextureMapperLayer* {
             return &downcast<GraphicsLayerTextureMapper>(child.get()).layer();
         });
-        m_layer.setChildren(WTFMove(rawChildren));
+        m_layer.setChildren(WTF::move(rawChildren));
     }
 
     if (m_changeMask & MaskLayerChange) {
@@ -603,11 +605,11 @@ bool GraphicsLayerTextureMapper::filtersCanBeComposited(const FilterOperations& 
     return !filters.hasReferenceFilter();
 }
 
-bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList, const FloatSize& boxSize, const Animation* anim, const String& keyframesName, double timeOffset)
+bool GraphicsLayerTextureMapper::addAnimation(const GraphicsLayerKeyframeValueList& valueList, const GraphicsLayerAnimation* anim, const String& keyframesName, double timeOffset)
 {
     ASSERT(!keyframesName.isEmpty());
 
-    if (!anim || anim->isEmptyOrZeroDuration() || valueList.size() < 2 || (valueList.property() != AnimatedProperty::Transform && valueList.property() != AnimatedProperty::Opacity))
+    if (!anim || anim->isZeroDuration() || valueList.size() < 2 || (valueList.property() != AnimatedProperty::Transform && valueList.property() != AnimatedProperty::Opacity))
         return false;
 
     if (valueList.property() == AnimatedProperty::Filter) {
@@ -615,7 +617,7 @@ bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList
         if (listIndex < 0)
             return false;
 
-        const auto& filters = static_cast<const FilterAnimationValue&>(valueList.at(listIndex)).value();
+        const auto& filters = static_cast<const GraphicsLayerFilterAnimationValue&>(valueList.at(listIndex)).value();
         // The animation of drop-shadow filter with currentColor isn't supported yet.
         // GraphicsLayerCA doesn't accept animations with drap-shadow. Do it here.
         if (filters.hasFilterOfType<FilterOperation::Type::DropShadowWithStyleColor>())
@@ -625,7 +627,7 @@ bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList
     }
 
     const MonotonicTime currentTime = MonotonicTime::now();
-    m_animations.add(TextureMapperAnimation(keyframesName, valueList, boxSize, *anim, currentTime - Seconds(timeOffset), 0_s, TextureMapperAnimation::State::Playing));
+    m_animations.add(TextureMapperAnimation(keyframesName, valueList, *anim, currentTime - Seconds(timeOffset), 0_s, TextureMapperAnimation::State::Playing));
     // m_animationStartTime is the time of the first real frame of animation, now or delayed by a negative offset.
     if (Seconds(timeOffset) > 0_s)
         m_animationStartTime = currentTime;

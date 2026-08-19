@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioBufferSourceNode);
 
 constexpr double DefaultGrainDuration = 0.020; // 20ms
 
@@ -70,7 +70,7 @@ ExceptionOr<Ref<AudioBufferSourceNode>> AudioBufferSourceNode::create(BaseAudioC
     auto node = adoptRef(*new AudioBufferSourceNode(context));
     node->suspendIfNeeded();
 
-    node->setBufferForBindings(WTFMove(options.buffer));
+    node->setBufferForBindings(WTF::move(options.buffer));
     node->detune().setValue(options.detune);
     node->setLoopForBindings(options.loop);
     node->setLoopEndForBindings(options.loopEnd);
@@ -99,7 +99,8 @@ AudioBufferSourceNode::~AudioBufferSourceNode()
 
 void AudioBufferSourceNode::process(size_t framesToProcess)
 {
-    auto& outputBus = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    auto& outputBus = firstOutput->bus();
 
     if (!isInitialized()) {
         outputBus.zero();
@@ -213,6 +214,9 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus& bus, unsigned destination
     double pitchRate = totalPitchRate();
     bool reverse = pitchRate < 0;
 
+    if (!bufferLength)
+        return false;
+
     // Avoid converting from time to sample-frames twice by computing
     // the grain end time first before computing the sample frame.
     unsigned maxFrame;
@@ -248,7 +252,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus& bus, unsigned destination
 
         // Wrap back to the beginning of the loop.
         m_virtualReadIndex = (m_loopStart < 0) ? 0 : (m_loopStart * m_buffer->sampleRate());
-        m_virtualReadIndex = std::min(m_virtualReadIndex, static_cast<double>(bufferLength - 1));
+        m_virtualReadIndex = std::min(m_virtualReadIndex, static_cast<double>(bufferLength) - 1);
     }
 
     // Sanity check that our playback rate isn't larger than the loop size.
@@ -338,6 +342,9 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus& bus, unsigned destination
 
         if (readIndex >= maxFrame)
             readIndex -= deltaFrames;
+
+        if (readIndex >= bufferLength)
+            return false;
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
             std::ranges::fill(m_destinationChannels[i].subspan(writeIndex).first(framesToProcess), m_sourceChannels[i][readIndex]);
@@ -459,7 +466,7 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
         unsigned numberOfChannels = buffer->numberOfChannels();
         ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
 
-        output(0)->setNumberOfChannels(numberOfChannels);
+        checkedOutput(0)->setNumberOfChannels(numberOfChannels);
 
         m_sourceChannels = FixedVector<std::span<const float>>(numberOfChannels);
         m_destinationChannels = FixedVector<std::span<float>>(numberOfChannels);
@@ -469,13 +476,12 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     }
 
     m_virtualReadIndex = 0;
-    m_buffer = WTFMove(buffer);
+    m_buffer = WTF::move(buffer);
 
     // In case the buffer gets set after playback has started, we need to clamp the grain parameters now.
     if (m_isGrain)
         adjustGrainParameters();
 
-    if (isPlayingOrScheduled())
         acquireBufferContent();
 
     return { };

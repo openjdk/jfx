@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "BreakLines.h"
+#include "BreakablePositions.h"
 #include "LegacyInlineIteratorInlines.h"
 #include "LineBreaker.h"
 #include "LineInfo.h"
@@ -36,7 +36,6 @@
 #include "RenderLayer.h"
 #include "RenderLineBreak.h"
 #include "RenderListMarker.h"
-#include "RenderObjectInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderTextInlines.h"
 #include "TrailingObjects.h"
@@ -84,6 +83,7 @@ public:
     }
 
     RenderObject* currentObject() { return m_current.renderer(); }
+    CheckedPtr<RenderObject> checkedCurrentObject() { return currentObject(); }
     LegacyInlineIterator lineBreak() { return m_lineBreak; }
     LineWidth& lineWidth() { return m_width; }
     bool atEnd() { return m_atEnd; }
@@ -345,9 +345,9 @@ inline bool BreakingContext::handleText()
 
     const RenderStyle& style = lineStyle(renderer, m_lineInfo);
     const FontCascade& font = style.fontCascade();
-    bool canHangPunctuationAtStart = style.hangingPunctuation().contains(HangingPunctuation::First);
-    bool canHangPunctuationAtEnd = style.hangingPunctuation().contains(HangingPunctuation::Last);
-    bool canHangStopOrCommaAtLineEnd = style.hangingPunctuation().contains(HangingPunctuation::AllowEnd);
+    bool canHangPunctuationAtStart = style.hangingPunctuation().contains(Style::HangingPunctuationValue::First);
+    bool canHangPunctuationAtEnd = style.hangingPunctuation().contains(Style::HangingPunctuationValue::Last);
+    bool canHangStopOrCommaAtLineEnd = style.hangingPunctuation().contains(Style::HangingPunctuationValue::AllowEnd);
     int endPunctuationIndex = canHangPunctuationAtEnd && m_collapseWhiteSpace ? renderer.lastCharacterIndexStrippingSpaces() : renderer.text().length() - 1;
 
     float wrapWidthOffset = m_width.uncommittedWidth() + inlineLogicalWidth(renderer, !m_appliedStartWidth, true);
@@ -376,7 +376,7 @@ inline bool BreakingContext::handleText()
         m_renderTextInfo.text = &renderer;
         m_renderTextInfo.font = &font;
         m_renderTextInfo.layout = font.createLayout(renderer, m_width.currentWidth(), m_collapseWhiteSpace);
-        m_renderTextInfo.lineBreakIteratorFactory.resetStringAndReleaseIterator(renderer.text(), style.computedLocale(), iteratorMode, contentAnalysis);
+        m_renderTextInfo.lineBreakIteratorFactory.resetStringAndReleaseIterator(renderer.text(), Style::toPlatform(style.computedLocale()), iteratorMode, contentAnalysis);
     } else if (m_renderTextInfo.layout && m_renderTextInfo.font != &font) {
         m_renderTextInfo.font = &font;
         m_renderTextInfo.layout = font.createLayout(renderer, m_width.currentWidth(), m_collapseWhiteSpace);
@@ -432,7 +432,7 @@ inline bool BreakingContext::handleText()
 
         std::optional<unsigned> nextBreakablePosition = m_current.nextBreakablePosition();
         auto mayBreakHere = !(m_currentWhitespaceCollapse == WhiteSpaceCollapse::Preserve && m_currentTextWrap == TextWrapMode::NoWrap);
-        bool betweenWords = c == newlineCharacter || (mayBreakHere && !m_atStart && BreakLines::isBreakable(m_renderTextInfo.lineBreakIteratorFactory, m_current.offset(), nextBreakablePosition, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere));
+        bool betweenWords = c == newlineCharacter || (mayBreakHere && !m_atStart && BreakablePositions::isBreakable(m_renderTextInfo.lineBreakIteratorFactory, m_current.offset(), nextBreakablePosition, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere));
         m_current.setNextBreakablePosition(nextBreakablePosition);
 
         if (canHangStopOrCommaAtLineEnd && renderer.isHangableStopOrComma(c) && m_width.fitsOnLine()) {
@@ -585,7 +585,7 @@ inline bool BreakingContext::handleText()
             // Spaces after right-aligned text and before a line-break get collapsed away completely so that the trailing
             // space doesn't seem to push the text out from the right-hand edge.
             // FIXME: Do this regardless of the container's alignment - will require rebaselining a lot of test results.
-            if (m_nextObject && m_startOfIgnoredSpaces.offset() && m_nextObject->isBR() && (m_blockStyle.textAlign() == TextAlignMode::Right || m_blockStyle.textAlign() == TextAlignMode::WebKitRight)) {
+            if (m_nextObject && m_startOfIgnoredSpaces.offset() && m_nextObject->isBR() && (m_blockStyle.textAlign() == Style::TextAlign::Right || m_blockStyle.textAlign() == Style::TextAlign::WebKitRight)) {
                 m_startOfIgnoredSpaces.setOffset(m_startOfIgnoredSpaces.offset() - 1);
                 // If there's just a single trailing space start ignoring it now so it collapses away.
                 if (m_current.offset() == renderer.text().length() - 1)

@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ConstantSourceNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConstantSourceNode);
 
 ExceptionOr<Ref<ConstantSourceNode>> ConstantSourceNode::create(BaseAudioContext& context, const ConstantSourceOptions& options)
 {
@@ -64,7 +64,8 @@ ConstantSourceNode::~ConstantSourceNode()
 
 void ConstantSourceNode::process(size_t framesToProcess)
 {
-    auto& outputBus = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    auto& outputBus = firstOutput->bus();
 
     if (!isInitialized() || !outputBus.numberOfChannels()) {
         outputBus.zero();

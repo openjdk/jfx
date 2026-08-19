@@ -31,6 +31,7 @@
 #if USE(COORDINATED_GRAPHICS)
 
 #include "IntSize.h"
+#include "PixelFormat.h"
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
 #include <wtf/MallocSpan.h>
@@ -47,7 +48,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 namespace WebCore {
 class BitmapTexture;
 class GLFence;
-enum class PixelFormat : uint8_t;
 
 class CoordinatedTileBuffer : public ThreadSafeRefCounted<CoordinatedTileBuffer> {
 public:
@@ -112,7 +112,7 @@ public:
     const unsigned char* data() const { return m_data.span().data(); }
     unsigned char* data() { return m_data.mutableSpan().data(); }
 
-    PixelFormat pixelFormat() const;
+    PixelFormat pixelFormat() const { return PixelFormat::BGRA8; }
 
 private:
     CoordinatedUnacceleratedTileBuffer(const IntSize&, Flags);

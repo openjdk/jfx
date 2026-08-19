@@ -42,7 +42,7 @@ static String nonEmptyProtocol(String&& protocol)
 {
     if (protocol.isEmpty())
         return invalidProtocol();
-    return String(WTFMove(protocol));
+    return String(WTF::move(protocol));
 }
 
 Site::Site(const URL& url)
@@ -50,8 +50,8 @@ Site::Site(const URL& url)
     , m_domain(url) { }
 
 Site::Site(String&& protocol, RegistrableDomain&& domain)
-    : m_protocol(nonEmptyProtocol(WTFMove(protocol)))
-    , m_domain(WTFMove(domain)) { }
+    : m_protocol(nonEmptyProtocol(WTF::move(protocol)))
+    , m_domain(WTF::move(domain)) { }
 
 Site::Site(const SecurityOriginData& data)
     : m_protocol(nonEmptyProtocol(String(data.protocol())))

@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "SIMDInfo.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/SIMDInfo.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
