@@ -26,6 +26,8 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.text.HitInfo;
 
 /**
@@ -33,31 +35,43 @@ import javafx.scene.text.HitInfo;
  */
 public class PasswordFieldBehavior extends TextFieldBehavior {
 
-    public PasswordFieldBehavior(PasswordField passwordField) {
-        super(passwordField);
+    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
+        super(c, skin);
     }
 
     // JDK-8127160 & JDK-8127849: Stub out word based navigation and editing
     // for security reasons.
     @Override
-    protected void deletePreviousWord() { }
+    protected void deletePreviousWord() {
+    }
+
     @Override
-    protected void deleteNextWord() { }
+    protected void deleteNextWord() {
+    }
+
     @Override
-    protected void selectPreviousWord() { }
+    protected void selectPreviousWord() {
+    }
+
     @Override
-    public void selectNextWord() { }
+    public void selectNextWord() {
+    }
+
     @Override
-    protected void previousWord() { }
+    protected void previousWord() {
+    }
+
     @Override
-    protected void nextWord() { }
+    protected void nextWord() {
+    }
+
     @Override
     protected void selectWord() {
         selectAll();
     }
+
     @Override
     protected void mouseDoubleClick(HitInfo hit) {
-        getNode().selectAll();
+        getControl().selectAll();
     }
-
 }

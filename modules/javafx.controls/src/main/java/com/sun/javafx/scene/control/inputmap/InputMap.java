@@ -62,6 +62,7 @@ import java.util.stream.Collectors;
  * @param <N> The type of the Node that the InputMap is installed in.
  * @since 9
  */
+@Deprecated // TODO to be replaced with new InputMap
 public class InputMap<N extends Node> implements EventHandler<Event> {
 
     /***************************************************************************
