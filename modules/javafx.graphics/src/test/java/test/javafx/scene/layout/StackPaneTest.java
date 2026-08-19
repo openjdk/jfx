@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,21 +29,37 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 public class StackPaneTest {
+
+    Stage stage;
     StackPane stack;
 
     @BeforeEach
     public void setUp() {
         this.stack = new StackPane();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (stage != null) {
+            stage.hide();
+            stage = null;
+        }
     }
 
     @Test
@@ -581,4 +597,109 @@ public class StackPaneTest {
         assertEquals(200, biased.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @ParameterizedTest
+    @ValueSource(doubles = {1, 1.25, 1.5, 1.75, 2})
+    public void testSnappedInsetsAreUsedForMeasurementAndLayout(double renderScale) {
+        Region child = new Region();
+        child.setMinSize(100, 100);
+        child.setPrefSize(100, 100);
+        ParentShim.getChildren(stack).add(child);
+        stack.setPadding(new Insets(9.6));
+        showAtRenderScale(stack, renderScale);
+
+        double expectedWidth = stack.snapSpaceX(
+            stack.snappedLeftInset() + stack.snapSizeX(100) + stack.snappedRightInset());
+
+        double expectedHeight = stack.snapSpaceY(
+            stack.snappedTopInset() + stack.snapSizeY(100) + stack.snappedBottomInset());
+
+        assertEquals(expectedWidth, stack.minWidth(-1), 1e-10);
+        assertEquals(expectedHeight, stack.minHeight(-1), 1e-10);
+        assertEquals(expectedWidth, stack.prefWidth(-1), 1e-10);
+        assertEquals(expectedHeight, stack.prefHeight(-1), 1e-10);
+
+        stack.resize(120.2, 120.2);
+        stack.layout();
+
+        double expectedContentWidth = stack.snapSpaceX(
+            stack.snapSpaceX(120.2) - stack.snappedLeftInset() - stack.snappedRightInset());
+
+        double expectedContentHeight = stack.snapSpaceY(
+            stack.snapSpaceY(120.2) - stack.snappedTopInset() - stack.snappedBottomInset());
+
+        assertEquals(stack.snappedLeftInset(), child.getLayoutX(), 1e-10);
+        assertEquals(stack.snappedTopInset(), child.getLayoutY(), 1e-10);
+        assertEquals(expectedContentWidth, child.getLayoutBounds().getWidth(), 1e-10);
+        assertEquals(expectedContentHeight, child.getLayoutBounds().getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {1, 1.25, 1.5, 1.75, 2})
+    public void testFractionalInsetsAndContentAreaArePreservedWhenSnappingIsDisabled(double renderScale) {
+        Region child = new Region();
+        child.setMinSize(100, 100);
+        child.setPrefSize(100, 100);
+        ParentShim.getChildren(stack).add(child);
+        stack.setPadding(new Insets(9.6));
+        stack.setSnapToPixel(false);
+        showAtRenderScale(stack, renderScale);
+
+        assertEquals(119.2, stack.minWidth(-1), 1e-10);
+        assertEquals(119.2, stack.minHeight(-1), 1e-10);
+        assertEquals(119.2, stack.prefWidth(-1), 1e-10);
+        assertEquals(119.2, stack.prefHeight(-1), 1e-10);
+
+        stack.resize(120.2, 120.2);
+        stack.layout();
+
+        assertEquals(9.6, child.getLayoutX(), 1e-10);
+        assertEquals(9.6, child.getLayoutY(), 1e-10);
+        assertEquals(101, child.getLayoutBounds().getWidth(), 1e-10);
+        assertEquals(101, child.getLayoutBounds().getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {1, 1.25, 1.5, 1.75, 2})
+    public void testSnappedContentSizeIsUsedForBiasedMeasurements(double renderScale) {
+        stack.setPadding(new Insets(9.6));
+        MockBiased horizontalChild = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        ParentShim.getChildren(stack).add(horizontalChild);
+        showAtRenderScale(stack, renderScale);
+
+        double horizontalContentWidth = stack.snapSpaceX(
+            stack.snapSpaceX(120) - stack.snappedLeftInset() - stack.snappedRightInset());
+
+        double horizontalChildHeight = stack.snapSizeY(horizontalChild.prefHeight(horizontalContentWidth));
+
+        double expectedHorizontalHeight = stack.snapSpaceY(
+            stack.snappedTopInset() + horizontalChildHeight + stack.snappedBottomInset());
+
+        assertEquals(expectedHorizontalHeight, stack.minHeight(120), 1e-10);
+        assertEquals(expectedHorizontalHeight, stack.prefHeight(120), 1e-10);
+
+        StackPane verticalStack = new StackPane();
+        verticalStack.setPadding(new Insets(9.6));
+        MockBiased verticalChild = new MockBiased(Orientation.VERTICAL, 100, 200);
+        ParentShim.getChildren(verticalStack).add(verticalChild);
+        stage.getScene().setRoot(verticalStack);
+
+        double verticalContentHeight = verticalStack.snapSpaceY(
+            verticalStack.snapSpaceY(220) - verticalStack.snappedTopInset() - verticalStack.snappedBottomInset());
+
+        double verticalChildWidth = verticalStack.snapSizeX(verticalChild.prefWidth(verticalContentHeight));
+
+        double expectedVerticalWidth = verticalStack.snapSpaceX(
+            verticalStack.snappedLeftInset() + verticalChildWidth + verticalStack.snappedRightInset());
+
+        assertEquals(expectedVerticalWidth, verticalStack.minWidth(220), 1e-10);
+        assertEquals(expectedVerticalWidth, verticalStack.prefWidth(220), 1e-10);
+    }
+
+    private void showAtRenderScale(StackPane root, double renderScale) {
+        stage = new Stage();
+        stage.setRenderScaleX(renderScale);
+        stage.setRenderScaleY(renderScale);
+        stage.setScene(new Scene(root));
+        stage.show();
+    }
 }
