@@ -317,8 +317,7 @@ public class ImageUtils {
         Objects.nonNull(im);
         Objects.nonNull(format);
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        try {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream(65536)) {
             // using disk cache slows things down
             boolean old = ImageIO.getUseCache();
             ImageIO.setUseCache(false);
@@ -328,9 +327,7 @@ public class ImageUtils {
             } finally {
                 ImageIO.setUseCache(old);
             }
-        } finally {
-            out.close();
+            return out.toByteArray();
         }
-        return out.toByteArray();
     }
 }
