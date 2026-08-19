@@ -2116,13 +2116,13 @@ public class LabelSkinTest {
     @Test
     public void testMnemonics_setMnemonicParsing() {
         label.setMnemonicParsing(true);
-        checkMnemonics(true);
+        checkMnemonics();
 
         label.setMnemonicParsing(false);
-        checkMnemonics(false);
+        checkMnemonics();
 
         label.setMnemonicParsing(true);
-        checkMnemonics(true);
+        checkMnemonics();
     }
 
     @Test
@@ -2130,19 +2130,19 @@ public class LabelSkinTest {
         label.setMnemonicParsing(true);
 
         ContentDisplay originalContentDisplay = label.getContentDisplay();
-        checkMnemonics(true);
+        checkMnemonics();
 
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        checkMnemonics(false);
+        checkMnemonics();
 
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        checkMnemonics(true);
+        checkMnemonics();
 
         label.setContentDisplay(originalContentDisplay);
-        checkMnemonics(true);
+        checkMnemonics();
     }
 
-    private void checkMnemonics(boolean expectedMnemonics) {
+    private void checkMnemonics() {
         Toolkit tk = Toolkit.getToolkit();
         StageLoader sl = createStageLoader(label);
         tk.firePulse();
@@ -2163,7 +2163,8 @@ public class LabelSkinTest {
                         + mnemonics;
 
         // Mac does not support mnemonics
-        expectedMnemonics = PlatformUtil.isMac() ? false : expectedMnemonics;
+        boolean expectedMnemonics = PlatformUtil.isMac() ? false : label.isMnemonicParsing();
+        boolean expectedMnemonicsNode = expectedMnemonics && label.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY;
 
         // --------------------------------------------------------------------
 
@@ -2177,7 +2178,7 @@ public class LabelSkinTest {
         label.setText("foo_bar");
         tk.firePulse();
         assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
-        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
+        assertEquals(expectedMnemonicsNode, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> text
         label.setText("xxx");
@@ -2189,7 +2190,7 @@ public class LabelSkinTest {
         label.setText("foo_bar");
         tk.firePulse();
         assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
-        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
+        assertEquals(expectedMnemonicsNode, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> empty
         label.setText("");
@@ -2201,7 +2202,7 @@ public class LabelSkinTest {
         label.setText("foo_bar");
         tk.firePulse();
         assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
-        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
+        assertEquals(expectedMnemonicsNode, mnemonicNodePresenceChecker.get());
 
         // mnemonic -> null
         label.setText(null);
@@ -2213,13 +2214,13 @@ public class LabelSkinTest {
         label.setText("foo_bar");
         tk.firePulse();
         assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("b"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
-        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
+        assertEquals(expectedMnemonicsNode, mnemonicNodePresenceChecker.get());
 
         // extended mnemonic
         label.setText("test_(t)");
         tk.firePulse();
         assertEquals(expectedMnemonics, mnemonicRegistrationChecker.apply("t"), mnemonicErrorMessageSupplier.apply(expectedMnemonics));
-        assertEquals(expectedMnemonics, mnemonicNodePresenceChecker.get());
+        assertEquals(expectedMnemonicsNode, mnemonicNodePresenceChecker.get());
     }
 
     /*********************************************************************

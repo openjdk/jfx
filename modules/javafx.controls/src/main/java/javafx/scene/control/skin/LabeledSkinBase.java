@@ -975,9 +975,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (cleanText != null && cleanText.length() > 0
                     && mnemonicInfo != null
                     && !com.sun.javafx.PlatformUtil.isMac()
-                    && getSkinnable().isMnemonicParsing()
-                    // Consider the mnemonic as not present if the text is not visible at all
-                    && labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
+                    && getSkinnable().isMnemonicParsing()) {
                 /*
                 ** the Labeled has a MnemonicParsing property,
                 ** if set true, then auto-parsing will check for
@@ -1030,16 +1028,19 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             }
 
             if (containsMnemonic) {
-                if (mnemonic_underscore == null) {
-                    mnemonic_underscore = new Line();
-                    mnemonic_underscore.setStartX(0.0f);
-                    mnemonic_underscore.setStartY(0.0f);
-                    mnemonic_underscore.setEndY(0.0f);
-                    mnemonic_underscore.getStyleClass().clear();
-                    mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
-                }
-                if (!getChildren().contains(mnemonic_underscore)) {
-                    getChildren().add(mnemonic_underscore);
+                // If only the graphic is visible, we do not need mnemonic_underscore node
+                if (labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
+                    if (mnemonic_underscore == null) {
+                        mnemonic_underscore = new Line();
+                        mnemonic_underscore.setStartX(0.0f);
+                        mnemonic_underscore.setStartY(0.0f);
+                        mnemonic_underscore.setEndY(0.0f);
+                        mnemonic_underscore.getStyleClass().clear();
+                        mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
+                    }
+                    if (!getChildren().contains(mnemonic_underscore)) {
+                        getChildren().add(mnemonic_underscore);
+                    }
                 }
             } else if (mnemonic_underscore != null && getChildren().contains(mnemonic_underscore)) {
                 Platform.runLater(() -> {
