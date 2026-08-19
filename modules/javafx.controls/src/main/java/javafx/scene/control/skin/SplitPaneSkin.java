@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
@@ -58,6 +59,8 @@ import com.sun.javafx.scene.control.ListenerHelper;
  */
 public class SplitPaneSkin extends SkinBase<SplitPane> {
 
+    private static final double EPSILON = 1e-10;
+
     /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
@@ -68,6 +71,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private ObservableList<ContentDivider> contentDividers;
     private ListenerHelper contentDividerListenerHelper;
     private boolean horizontal;
+    private double contentWidth = -1;
+    private double contentHeight = -1;
+
     /**
      * Flag which is used to determine whether we need to request layout when a divider position changed or not.
      * E.g. We don't want to request layout when we are changing the divider position in
@@ -111,6 +117,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         lh.addChangeListener(control.orientationProperty(), (v) -> {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
             this.previousSize = -1;
+            this.contentWidth = -1;
+            this.contentHeight = -1;
             for (ContentDivider c: contentDividers) {
                 c.setGrabberStyle(horizontal);
             }
@@ -138,17 +146,15 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
-        final SplitPane s = getSkinnable();
-        final double sw = s.getWidth();
-        final double sh = s.getHeight();
+        contentWidth = w;
+        contentHeight = h;
+        final double mainSize = horizontal ? w : h;
 
-        if ((horizontal ? sw == 0 : sh == 0) || contentRegions.isEmpty()) {
+        if (mainSize == 0 || contentRegions.isEmpty()) {
             return;
         }
 
-        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-
-        if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? sw  : sh)) {
+        if (!contentDividers.isEmpty() && previousSize != -1 && previousSize != mainSize) {
             //This algorithm adds/subtracts a little to each panel on every resize
             List<Content> resizeList = new ArrayList<>();
             for (Content c: contentRegions) {
@@ -157,24 +163,22 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 }
             }
 
-            double delta = (horizontal ? s.getWidth() : s.getHeight()) - previousSize;
+            double delta = snapSpaceOnAxis(mainSize - previousSize);
             boolean growing = delta > 0;
 
-            delta = Math.abs(delta);
+            delta = snapSpaceOnAxis(Math.abs(delta));
 
-            if (delta != 0 && !resizeList.isEmpty()) {
-                int portion = (int)(delta)/resizeList.size();
-                int remainder = (int)delta%resizeList.size();
-                int size = 0;
-                if (portion == 0) {
+            if (isPositive(delta) && !resizeList.isEmpty()) {
+                double portion = snapPortionOnAxis(delta / resizeList.size());
+                double size = snapSpaceOnAxis(portion * resizeList.size());
+                double remainder = snapSpaceOnAxis(delta - size);
+                if (!isPositive(portion)) {
                     portion = remainder;
                     size = remainder;
                     remainder = 0;
-                } else {
-                    size = portion * resizeList.size();
                 }
 
-                while (size > 0 && !resizeList.isEmpty()) {
+                while (isPositive(size) && !resizeList.isEmpty()) {
                     if (growing) {
                         lastDividerUpdate++;
                     } else {
@@ -188,29 +192,29 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                     if (content.isResizableWithParent() && resizeList.contains(content)) {
                         double area = content.getArea();
                         if (growing) {
-                            double max = horizontal ? content.maxWidth(-1) : content.maxHeight(-1);
+                            double max = getMaxSize(content);
                             if ((area + portion) <= max) {
-                                area += portion;
+                                area = snapSpaceOnAxis(area + portion);
                             } else {
                                 resizeList.remove(content);
                                 continue;
                             }
                         } else {
-                            double min = horizontal ? content.minWidth(-1) : content.minHeight(-1);
+                            double min = getMinSize(content);
                             if ((area - portion) >= min) {
-                                area -= portion;
+                                area = snapSpaceOnAxis(area - portion);
                             } else {
                                 resizeList.remove(content);
                                 continue;
                             }
                         }
-                        content.setArea(area);
-                        size -= portion;
-                        if (size == 0 && remainder != 0) {
+                        setArea(content, area);
+                        size = snapSpaceOnAxis(size - portion);
+                        if (!isPositive(size) && isPositive(remainder)) {
                             portion = remainder;
                             size = remainder;
                             remainder = 0;
-                        } else if (size == 0) {
+                        } else if (!isPositive(size)) {
                             break;
                         }
                     }
@@ -227,29 +231,18 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 resize = true;
             }
 
-            previousSize = horizontal ? sw : sh;
+            previousSize = mainSize;
         } else {
-            previousSize = horizontal ? sw : sh;
+            previousSize = mainSize;
         }
 
         duringLayout = true;
         // If the window is less than the min size we want to resize proportionally
         double minSize = totalMinSize();
-        if (minSize > (horizontal ? w : h)) {
-            double percentage = 0;
-            for (int i = 0; i < contentRegions.size(); i++) {
-                Content c = contentRegions.get(i);
-                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
-                percentage = min/minSize;
-                if (horizontal) {
-                    c.setArea(snapSpaceX(percentage * w));
-                } else {
-                    c.setArea(snapSpaceY(percentage * h));
-                }
-                c.setAvailable(0);
-            }
+        if (minSize > mainSize) {
+            layoutBelowMinimumSize(mainSize);
             setupContentAndDividerForLayout();
-            layoutDividersAndContent(w, h);
+            layoutDividersAndContent(x, y, w, h, true);
             resize = false;
             duringLayout = false;
             return;
@@ -269,9 +262,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                     }
                     if (i == 0) {
                         // First panel
-                        space = getAbsoluteDividerPos(divider);
+                        space = snapSpaceOnAxis(getAbsoluteDividerPos(divider));
                     } else {
-                        double newPos = getAbsoluteDividerPos(previousDivider) + dividerWidth;
+                        double newPos = snapPositionOnAxis(
+                            getAbsoluteDividerPos(previousDivider) + getDividerSize(previousDivider));
                         // Middle panels
                         if (getAbsoluteDividerPos(divider) <= getAbsoluteDividerPos(previousDivider)) {
                             // The current divider and the previous divider share the same position
@@ -279,14 +273,17 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                             // We will set the divider next to the previous divider.
                             setAndCheckAbsoluteDividerPos(divider, newPos);
                         }
-                        space = getAbsoluteDividerPos(divider) - newPos;
+                        space = snapSpaceOnAxis(getAbsoluteDividerPos(divider) - newPos);
                     }
                 } else if (i == contentDividers.size()) {
                     // Last panel
-                    space = (horizontal ? w : h) - (previousDivider != null ? getAbsoluteDividerPos(previousDivider) + dividerWidth : 0);
+                    double end = previousDivider != null
+                            ? snapPositionOnAxis(getAbsoluteDividerPos(previousDivider)
+                                    + getDividerSize(previousDivider)) : 0;
+                    space = snapSpaceOnAxis(mainSize - end);
                 }
                 if (!resize || divider.posExplicit) {
-                    contentRegions.get(i).setArea(space);
+                    setArea(contentRegions.get(i), space);
                 }
                 previousDivider = divider;
             }
@@ -301,21 +298,21 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             for (Content c: contentRegions) {
                 if (c == null) continue;
 
-                double max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
-                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+                double max = getMaxSize(c);
+                double min = getMinSize(c);
 
                 if (c.getArea() >= max) {
                     // Add the space that needs to be distributed to the others
-                    extraSpace += (c.getArea() - max);
-                    c.setArea(max);
+                    extraSpace = snapSpaceOnAxis(extraSpace + c.getArea() - max);
+                    setArea(c, max);
                 }
-                c.setAvailable(c.getArea() - min);
+                c.setAvailable(snapSpaceOnAxis(c.getArea() - min));
                 if (c.getAvailable() < 0) {
-                    spaceRequested += c.getAvailable();
+                    spaceRequested = snapSpaceOnAxis(spaceRequested + c.getAvailable());
                 }
             }
 
-            spaceRequested = Math.abs(spaceRequested);
+            spaceRequested = snapSpaceOnAxis(Math.abs(spaceRequested));
 
             // Add the panels where we can take space from
             List<Content> availableList = new ArrayList<>();
@@ -324,7 +321,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             double available = 0;
             for (Content c: contentRegions) {
                 if (c.getAvailable() >= 0) {
-                    available += c.getAvailable();
+                    available = snapSpaceOnAxis(available + c.getAvailable());
                     availableList.add(c);
                 }
 
@@ -332,11 +329,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                     // We are making the SplitPane bigger and will need to
                     // distribute the extra space.
                     if (c.getArea() >= c.getResizableWithParentArea()) {
-                        extraSpace += (c.getArea() - c.getResizableWithParentArea());
+                        extraSpace = snapSpaceOnAxis(extraSpace + c.getArea() - c.getResizableWithParentArea());
                     } else {
                         // We are making the SplitPane smaller and will need to
                         // distribute the space requested.
-                        spaceRequested += (c.getResizableWithParentArea() - c.getArea());
+                        spaceRequested = snapSpaceOnAxis(spaceRequested + c.getResizableWithParentArea() - c.getArea());
                     }
                     c.setAvailable(0);
                 }
@@ -354,7 +351,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 }
             }
 
-            if (extraSpace > 0) {
+            if (isPositive(extraSpace)) {
                 extraSpace = distributeTo(storageList, extraSpace);
                 // After distributing add any panels that may still need space to the
                 // spaceRequestor list.
@@ -364,26 +361,26 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 availableList.clear();
                 for (Content c: contentRegions) {
                     if (c.getAvailable() < 0) {
-                        spaceRequested += c.getAvailable();
+                        spaceRequested = snapSpaceOnAxis(spaceRequested + c.getAvailable());
                         spaceRequestor.add(c);
                     } else {
-                        available += c.getAvailable();
+                        available = snapSpaceOnAxis(available + c.getAvailable());
                         availableList.add(c);
                     }
                 }
-                spaceRequested = Math.abs(spaceRequested);
+                spaceRequested = snapSpaceOnAxis(Math.abs(spaceRequested));
             }
 
             if (available >= spaceRequested) {
                 for (Content requestor: spaceRequestor) {
-                    double min = horizontal ? requestor.minWidth(-1) : requestor.minHeight(-1);
-                    requestor.setArea(min);
+                    double min = getMinSize(requestor);
+                    setArea(requestor, min);
                     requestor.setAvailable(0);
                 }
                 // After setting all the space requestors to their min we have to
                 // redistribute the space requested to any panel that still
                 // has available space.
-                if (spaceRequested > 0 && !spaceRequestor.isEmpty()) {
+                if (isPositive(spaceRequested) && !spaceRequestor.isEmpty()) {
                     distributeFrom(spaceRequested, availableList);
                 }
 
@@ -394,17 +391,17 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                     double total = 0;
                     for (Content c: contentRegions) {
                         if (c.isResizableWithParent()) {
-                            total += c.getArea();
+                            total = snapSpaceOnAxis(total + c.getArea());
                         } else {
-                            total += c.getResizableWithParentArea();
+                            total = snapSpaceOnAxis(total + c.getResizableWithParentArea());
                         }
                     }
-                    total += (dividerWidth * contentDividers.size());
-                    if (total < (horizontal ? w : h)) {
-                        extraSpace += ((horizontal ? w : h) - total);
+                    total = snapSpaceOnAxis(total + getTotalDividerSize());
+                    if (total < mainSize) {
+                        extraSpace = snapSpaceOnAxis(extraSpace + mainSize - total);
                         distributeTo(storageList, extraSpace);
                     } else {
-                        spaceRequested += (total - (horizontal ? w : h));
+                        spaceRequested = snapSpaceOnAxis(spaceRequested + total - mainSize);
                         distributeFrom(spaceRequested, storageList);
                     }
                 }
@@ -415,8 +412,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             // Check the bounds of every panel
             boolean passed = true;
             for (Content c: contentRegions) {
-                double max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
-                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+                double max = getMaxSize(c);
+                double min = getMinSize(c);
                 if (c.getArea() < min || c.getArea() > max) {
                     passed = false;
                     break;
@@ -427,7 +424,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             }
         }
 
-        layoutDividersAndContent(w, h);
+        layoutDividersAndContent(x, y, w, h, false);
         duringLayout = false;
         resize = false;
     }
@@ -436,17 +433,20 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minWidth = 0;
         double maxMinWidth = 0;
-        for (Content c: contentRegions) {
-            minWidth += c.minWidth(-1);
-            maxMinWidth = Math.max(maxMinWidth, c.minWidth(-1));
-        }
-        for (ContentDivider d: contentDividers) {
-            minWidth += d.prefWidth(-1);
+        double contentHeight = height == -1 ? -1 : snapSpaceY(Math.max(0, height - topInset - bottomInset));
+        for (Content c : contentRegions) {
+            double dependentHeight = horizontal ? getSnappedDependentSize(c, contentHeight) : -1;
+            double childMinWidth = snapSizeX(c.minWidth(dependentHeight));
+            minWidth = snapSpaceX(minWidth + childMinWidth);
+            maxMinWidth = Math.max(maxMinWidth, childMinWidth);
         }
         if (horizontal) {
-            return minWidth + leftInset + rightInset;
+            for (ContentDivider d : contentDividers) {
+                minWidth = snapSpaceX(minWidth + getDividerSize(d));
+            }
+            return snapSpaceX(minWidth + leftInset + rightInset);
         } else {
-            return maxMinWidth + leftInset + rightInset;
+            return snapSpaceX(maxMinWidth + leftInset + rightInset);
         }
     }
 
@@ -454,17 +454,20 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minHeight = 0;
         double maxMinHeight = 0;
-        for (Content c: contentRegions) {
-            minHeight += c.minHeight(-1);
-            maxMinHeight = Math.max(maxMinHeight, c.minHeight(-1));
-        }
-        for (ContentDivider d: contentDividers) {
-            minHeight += d.prefWidth(-1);
+        double contentWidth = width == -1 ? -1 : snapSpaceX(Math.max(0, width - leftInset - rightInset));
+        for (Content c : contentRegions) {
+            double dependentWidth = horizontal ? -1 : getSnappedDependentSize(c, contentWidth);
+            double childMinHeight = snapSizeY(c.minHeight(dependentWidth));
+            minHeight = snapSpaceY(minHeight + childMinHeight);
+            maxMinHeight = Math.max(maxMinHeight, childMinHeight);
         }
         if (horizontal) {
-            return maxMinHeight + topInset + bottomInset;
+            return snapSpaceY(maxMinHeight + topInset + bottomInset);
         } else {
-            return minHeight + topInset + bottomInset;
+            for (ContentDivider d : contentDividers) {
+                minHeight = snapSpaceY(minHeight + getDividerSize(d));
+            }
+            return snapSpaceY(minHeight + topInset + bottomInset);
         }
     }
 
@@ -472,17 +475,20 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0;
         double prefMaxWidth = 0;
-        for (Content c: contentRegions) {
-            prefWidth += c.prefWidth(-1);
-            prefMaxWidth = Math.max(prefMaxWidth, c.prefWidth(-1));
-        }
-        for (ContentDivider d: contentDividers) {
-            prefWidth += d.prefWidth(-1);
+        double contentHeight = height == -1 ? -1 : snapSpaceY(Math.max(0, height - topInset - bottomInset));
+        for (Content c : contentRegions) {
+            double dependentHeight = horizontal ? getSnappedDependentSize(c, contentHeight) : -1;
+            double childPrefWidth = snapSizeX(c.prefWidth(dependentHeight));
+            prefWidth = snapSpaceX(prefWidth + childPrefWidth);
+            prefMaxWidth = Math.max(prefMaxWidth, childPrefWidth);
         }
         if (horizontal) {
-            return prefWidth + leftInset + rightInset;
+            for (ContentDivider d : contentDividers) {
+                prefWidth = snapSpaceX(prefWidth + getDividerSize(d));
+            }
+            return snapSpaceX(prefWidth + leftInset + rightInset);
         } else {
-            return prefMaxWidth + leftInset + rightInset;
+            return snapSpaceX(prefMaxWidth + leftInset + rightInset);
         }
     }
 
@@ -490,17 +496,20 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefHeight = 0;
         double maxPrefHeight = 0;
-        for (Content c: contentRegions) {
-            prefHeight += c.prefHeight(-1);
-            maxPrefHeight = Math.max(maxPrefHeight, c.prefHeight(-1));
-        }
-        for (ContentDivider d: contentDividers) {
-            prefHeight += d.prefWidth(-1);
+        double contentWidth = width == -1 ? -1 : snapSpaceX(Math.max(0, width - leftInset - rightInset));
+        for (Content c : contentRegions) {
+            double dependentWidth = horizontal ? -1 : getSnappedDependentSize(c, contentWidth);
+            double childPrefHeight = snapSizeY(c.prefHeight(dependentWidth));
+            prefHeight = snapSpaceY(prefHeight + childPrefHeight);
+            maxPrefHeight = Math.max(maxPrefHeight, childPrefHeight);
         }
         if (horizontal) {
-            return maxPrefHeight + topInset + bottomInset;
+            return snapSpaceY(maxPrefHeight + topInset + bottomInset);
         } else {
-            return prefHeight + topInset + bottomInset;
+            for (ContentDivider d : contentDividers) {
+                prefHeight = snapSpaceY(prefHeight + getDividerSize(d));
+            }
+            return snapSpaceY(prefHeight + topInset + bottomInset);
         }
     }
 
@@ -511,6 +520,114 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private double snapSizeOnAxis(double value) {
+        return horizontal ? snapSizeX(value) : snapSizeY(value);
+    }
+
+    private double snapSpaceOnAxis(double value) {
+        return horizontal ? snapSpaceX(value) : snapSpaceY(value);
+    }
+
+    private double snapPositionOnAxis(double value) {
+        return horizontal ? snapPositionX(value) : snapPositionY(value);
+    }
+
+    private double snapPortionOnAxis(double value) {
+        if (value > 0) {
+            return -snapSizeOnAxis(-value);
+        } else if (value < 0) {
+            return snapSizeOnAxis(value);
+        }
+        return value;
+    }
+
+    private static boolean isPositive(double value) {
+        return value > EPSILON;
+    }
+
+    private void setArea(Content content, double value) {
+        content.setArea(snapSpaceOnAxis(value));
+    }
+
+    private double getMinSize(Content content) {
+        double dependentSize = getSnappedDependentSize(content, horizontal ? contentHeight : contentWidth);
+        double min = horizontal ? content.minWidth(dependentSize) : content.minHeight(dependentSize);
+        return snapSizeOnAxis(min);
+    }
+
+    private double getMaxSize(Content content) {
+        double dependentSize = getSnappedDependentSize(content, horizontal ? contentHeight : contentWidth);
+        double max = horizontal ? content.maxWidth(dependentSize) : content.maxHeight(dependentSize);
+        return max == Double.MAX_VALUE ? max : snapSizeOnAxis(max);
+    }
+
+    private double getSnappedDependentSize(Content content, double crossSize) {
+        if (crossSize < 0) {
+            return -1;
+        }
+
+        Orientation bias = content.getContentBias();
+        if (horizontal && bias == Orientation.VERTICAL) {
+            return snapSizeY(boundedSize(content.minHeight(-1), crossSize, content.maxHeight(-1)));
+        } else if (!horizontal && bias == Orientation.HORIZONTAL) {
+            return snapSizeX(boundedSize(content.minWidth(-1), crossSize, content.maxWidth(-1)));
+        }
+
+        return -1;
+    }
+
+    private static double boundedSize(double min, double value, double max) {
+        return Math.min(Math.max(value, min), Math.max(min, max));
+    }
+
+    private double getDividerSize(ContentDivider divider) {
+        return snapSizeOnAxis(divider.prefDividerSize(horizontal));
+    }
+
+    private double getTotalDividerSize() {
+        double size = 0;
+
+        for (ContentDivider divider : contentDividers) {
+            size = snapSpaceOnAxis(size + getDividerSize(divider));
+        }
+
+        return size;
+    }
+
+    private void layoutBelowMinimumSize(double mainSize) {
+        double totalDividerSize = getTotalDividerSize();
+        double contentSize = snapSpaceOnAxis(Math.max(0, mainSize - totalDividerSize));
+        double totalContentMinSize = 0;
+        List<Double> minimumSizes = new ArrayList<>(contentRegions.size());
+
+        for (Content content : contentRegions) {
+            double minimumSize = getMinSize(content);
+            minimumSizes.add(minimumSize);
+            totalContentMinSize = snapSpaceOnAxis(totalContentMinSize + minimumSize);
+        }
+
+        double allocated = 0;
+        double cumulativeMinSize = 0;
+
+        for (int i = 0; i < contentRegions.size(); i++) {
+            Content content = contentRegions.get(i);
+            double boundary;
+
+            if (i == contentRegions.size() - 1) {
+                boundary = contentSize;
+            } else if (isPositive(totalContentMinSize)) {
+                cumulativeMinSize = snapSpaceOnAxis(cumulativeMinSize + minimumSizes.get(i));
+                boundary = snapSpaceOnAxis(contentSize * cumulativeMinSize / totalContentMinSize);
+            } else {
+                boundary = snapSpaceOnAxis(contentSize * (i + 1) / contentRegions.size());
+            }
+
+            setArea(content, boundary - allocated);
+            content.setAvailable(0);
+            allocated = boundary;
+        }
+    }
 
     private void addContent(int index, Node n) {
         Content c = new Content(n);
@@ -562,26 +679,28 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     }
 
     private void checkDividerPosition(ContentDivider divider, double newPos, double oldPos) {
-        double dividerWidth = divider.prefWidth(-1);
+        newPos = snapPositionOnAxis(newPos);
         Content left = getLeft(divider);
         Content right = getRight(divider);
-        double minLeft = left == null ? 0 : (horizontal) ? left.minWidth(-1) : left.minHeight(-1);
-        double minRight = right == null ? 0 : (horizontal) ? right.minWidth(-1) : right.minHeight(-1);
-        double maxLeft = left == null ? 0 :
-            left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
-        double maxRight = right == null ? 0 :
-            right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;
+        double dividerSize = getDividerSize(divider);
+        double minLeft = left == null ? 0 : getMinSize(left);
+        double minRight = right == null ? 0 : getMinSize(right);
+        double maxLeft = left == null ? 0 : getMaxSize(left);
+        double maxRight = right == null ? 0 : getMaxSize(right);
 
         double previousDividerPos = 0;
+        double previousDividerEnd = 0;
         double nextDividerPos = getSize();
         int index = contentDividers.indexOf(divider);
 
         if (index - 1 >= 0) {
-            previousDividerPos = contentDividers.get(index - 1).getDividerPos();
+            ContentDivider previousDivider = contentDividers.get(index - 1);
+            previousDividerPos = previousDivider.getDividerPos();
             if (previousDividerPos == -1) {
                 // Get the divider position if it hasn't been initialized.
-                previousDividerPos = getAbsoluteDividerPos(contentDividers.get(index - 1));
+                previousDividerPos = getAbsoluteDividerPos(previousDivider);
             }
+            previousDividerEnd = snapPositionOnAxis(previousDividerPos + getDividerSize(previousDivider));
         }
         if (index + 1 < contentDividers.size()) {
             nextDividerPos = contentDividers.get(index + 1).getDividerPos();
@@ -594,13 +713,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         // Set the divider into the correct position by looking at the max and min content sizes.
         checkDividerPos = false;
         if (newPos > oldPos) {
-            double max = previousDividerPos == 0 ? maxLeft : previousDividerPos + dividerWidth + maxLeft;
-            double min = nextDividerPos - minRight - dividerWidth;
-            double stopPos = Math.min(max, min);
+            double max = snapPositionOnAxis(previousDividerEnd + maxLeft);
+            double min = snapPositionOnAxis(nextDividerPos - minRight - dividerSize);
+            double stopPos = snapPositionOnAxis(Math.min(max, min));
             if (newPos >= stopPos) {
                 setAbsoluteDividerPos(divider, stopPos);
             } else {
-                double rightMax = nextDividerPos - maxRight - dividerWidth;
+                double rightMax = snapPositionOnAxis(nextDividerPos - maxRight - dividerSize);
                 if (newPos <= rightMax) {
                     setAbsoluteDividerPos(divider, rightMax);
                 } else {
@@ -608,13 +727,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 }
             }
         } else {
-            double max = nextDividerPos - maxRight - dividerWidth;
-            double min = previousDividerPos == 0 ? minLeft : previousDividerPos + minLeft + dividerWidth;
-            double stopPos = Math.max(max, min);
+            double max = snapPositionOnAxis(nextDividerPos - maxRight - dividerSize);
+            double min = snapPositionOnAxis(previousDividerEnd + minLeft);
+            double stopPos = snapPositionOnAxis(Math.max(max, min));
             if (newPos <= stopPos) {
                 setAbsoluteDividerPos(divider, stopPos);
             } else {
-                double leftMax = previousDividerPos + maxLeft + dividerWidth;
+                double leftMax = snapPositionOnAxis(previousDividerEnd + maxLeft);
                 if (newPos >= leftMax) {
                     setAbsoluteDividerPos(divider, leftMax);
                 } else {
@@ -669,7 +788,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         divider.setOnMousePressed(e -> {
             if (horizontal) {
                 divider.setInitialPos(divider.getDividerPos());
-                divider.setPressPos(e.getSceneX());
                 divider.setPressPos(getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
                         ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX());
             } else {
@@ -688,7 +806,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 delta = e.getSceneY();
             }
             delta -= divider.getPressPos();
-            setAndCheckAbsoluteDividerPos(divider, Math.ceil(divider.getInitialPos() + delta));
+            setAndCheckAbsoluteDividerPos(divider, snapPositionOnAxis(divider.getInitialPos() + delta));
             e.consume();
         });
     }
@@ -713,12 +831,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private void setAbsoluteDividerPos(ContentDivider divider, double value) {
         if (getSkinnable().getWidth() > 0 && getSkinnable().getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
+            value = snapPositionOnAxis(value);
             divider.setDividerPos(value);
             double size = getSize();
             if (size != 0) {
                 // Adjust the position to the center of the
                 // divider and convert its position to a percentage.
-                double pos = value + divider.prefWidth(-1)/2;
+                double pos = value + getDividerSize(divider) / 2;
                 paneDivider.setPosition(pos / size);
             } else {
                 paneDivider.setPosition(0);
@@ -744,39 +863,30 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private double posToDividerPos(ContentDivider divider, double pos) {
         double newPos = getSize() * pos;
         if (pos == 1) {
-            newPos -= divider.prefWidth(-1);
+            newPos -= getDividerSize(divider);
         } else {
-            newPos -= divider.prefWidth(-1)/2;
+            newPos -= getDividerSize(divider) / 2;
         }
-        return Math.round(newPos);
+        return snapPositionOnAxis(newPos);
     }
 
     private double totalMinSize() {
-        double dividerWidth = !contentDividers.isEmpty() ? contentDividers.size() * contentDividers.get(0).prefWidth(-1) : 0;
-        double minSize = 0;
-        for (Content c: contentRegions) {
-            if (horizontal) {
-                minSize += c.minWidth(-1);
-            } else {
-                minSize += c.minHeight(-1);
-            }
+        double minSize = getTotalDividerSize();
+
+        for (Content c : contentRegions) {
+            minSize = snapSpaceOnAxis(minSize + getMinSize(c));
         }
-        return minSize + dividerWidth;
+
+        return minSize;
     }
 
     private double getSize() {
         final SplitPane s = getSkinnable();
-        double size = totalMinSize();
         if (horizontal) {
-            if (s.getWidth() > size) {
-                size = s.getWidth() - snappedLeftInset() - snappedRightInset();
-            }
+            return Math.max(0, snapSpaceX(snapSizeX(s.getWidth()) - snappedLeftInset() - snappedRightInset()));
         } else {
-            if (s.getHeight() > size) {
-                size = s.getHeight() - snappedTopInset() - snappedBottomInset();
-            }
+            return Math.max(0, snapSpaceY(snapSizeY(s.getHeight()) - snappedTopInset() - snappedBottomInset()));
         }
-        return size;
     }
 
     // Evenly distribute the size to the available list.
@@ -786,51 +896,52 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             return size;
         }
 
-        size = horizontal ? snapSizeX(size) : snapSizeY(size);
-        int portion = (int)(size)/available.size();
-        int remainder;
+        size = snapSpaceOnAxis(size);
+        double portion = snapPortionOnAxis(size / available.size());
+        if (!isPositive(portion) && isPositive(size)) {
+            portion = size;
+        }
 
-        while (size > 0 && !available.isEmpty()) {
+        while (isPositive(size) && !available.isEmpty()) {
             Iterator<Content> i = available.iterator();
             while (i.hasNext()) {
                 Content c = i.next();
-                double max = Math.min((horizontal ? c.maxWidth(-1) : c.maxHeight(-1)), Double.MAX_VALUE);
-                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
+                double max = getMaxSize(c);
+                double min = getMinSize(c);
+                double capacity = snapSpaceOnAxis(max - c.getArea());
 
                 // We have too much space
-                if (c.getArea() >= max) {
-                    c.setAvailable(c.getArea() - min);
+                if (!isPositive(capacity)) {
+                    c.setAvailable(snapSpaceOnAxis(c.getArea() - min));
                     i.remove();
                     continue;
                 }
                 // Not enough space
-                if (portion >= (max - c.getArea())) {
-                    size -= (max - c.getArea());
-                    c.setArea(max);
-                    c.setAvailable(max - min);
+                if (portion >= capacity) {
+                    size = snapSpaceOnAxis(size - capacity);
+                    setArea(c, max);
+                    c.setAvailable(snapSpaceOnAxis(max - min));
                     i.remove();
                 } else {
                     // Enough space
-                    c.setArea(c.getArea() + portion);
-                    c.setAvailable(c.getArea() - min);
-                    size -= portion;
+                    setArea(c, c.getArea() + portion);
+                    c.setAvailable(snapSpaceOnAxis(c.getArea() - min));
+                    size = snapSpaceOnAxis(size - portion);
                 }
-                if ((int)size == 0) {
-                    return size;
+                if (!isPositive(size)) {
+                    return 0;
                 }
             }
             if (available.isEmpty()) {
                 // We reached the max size for everything just return
                 return size;
             }
-            portion = (int)(size)/available.size();
-            remainder = (int)(size)%available.size();
-            if (portion == 0 && remainder != 0) {
-                portion = remainder;
-                remainder = 0;
+            portion = snapPortionOnAxis(size / available.size());
+            if (!isPositive(portion)) {
+                portion = size;
             }
         }
-        return size;
+        return isPositive(size) ? size : 0;
     }
 
     // Evenly distribute the size from the available list.
@@ -840,111 +951,124 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             return size;
         }
 
-        size = horizontal ? snapSizeX(size) : snapSizeY(size);
-        int portion = (int)(size)/available.size();
-        int remainder;
+        size = snapSpaceOnAxis(size);
+        double portion = snapPortionOnAxis(size / available.size());
+        if (!isPositive(portion) && isPositive(size)) {
+            portion = size;
+        }
 
-        while (size > 0 && !available.isEmpty()) {
+        while (isPositive(size) && !available.isEmpty()) {
             Iterator<Content> i = available.iterator();
             while (i.hasNext()) {
                 Content c = i.next();
+                double capacity = snapSpaceOnAxis(c.getAvailable());
+                if (!isPositive(capacity)) {
+                    c.setAvailable(0);
+                    i.remove();
+                    continue;
+                }
                 //not enough space taking available and setting min
-                if (portion >= c.getAvailable()) {
-                    c.setArea(c.getArea() - c.getAvailable()); // Min size
-                    size -= c.getAvailable();
+                if (portion >= capacity) {
+                    setArea(c, c.getArea() - capacity); // Min size
+                    size = snapSpaceOnAxis(size - capacity);
                     c.setAvailable(0);
                     i.remove();
                 } else {
                     //enough space
-                    c.setArea(c.getArea() - portion);
-                    c.setAvailable(c.getAvailable() - portion);
-                    size -= portion;
+                    setArea(c, c.getArea() - portion);
+                    c.setAvailable(snapSpaceOnAxis(c.getAvailable() - portion));
+                    size = snapSpaceOnAxis(size - portion);
                 }
-                if ((int)size == 0) {
-                    return size;
+                if (!isPositive(size)) {
+                    return 0;
                 }
             }
             if (available.isEmpty()) {
                 // We reached the min size for everything just return
                 return size;
             }
-            portion = (int)(size)/available.size();
-            remainder = (int)(size)%available.size();
-            if (portion == 0 && remainder != 0) {
-                portion = remainder;
-                remainder = 0;
+            portion = snapPortionOnAxis(size / available.size());
+            if (!isPositive(portion)) {
+                portion = size;
             }
         }
-        return size;
+        return isPositive(size) ? size : 0;
     }
 
     private void setupContentAndDividerForLayout() {
         // Set all the value to prepare for layout
-        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-        double startX = 0;
-        double startY = 0;
-        for (Content c: contentRegions) {
-            if (resize && !c.isResizableWithParent()) {
-                c.setArea(c.getResizableWithParentArea());
-            }
+        double position = 0;
 
-            c.setX(startX);
-            c.setY(startY);
-            if (horizontal) {
-                startX += (c.getArea() + dividerWidth);
-            } else {
-                startY += (c.getArea() + dividerWidth);
-            }
-        }
-
-        startX = 0;
-        startY = 0;
-        // The dividers are already in the correct positions.  Disable
-        // checking the divider positions.
+        // The dividers are already in the correct positions. Disable checking
+        // while synchronizing their public position properties.
         checkDividerPos = false;
-        for (int i = 0; i < contentDividers.size(); i++) {
-            ContentDivider d = contentDividers.get(i);
-            if (horizontal) {
-                startX += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
-            } else {
-                startY += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
+
+        for (int i = 0; i < contentRegions.size(); i++) {
+            Content c = contentRegions.get(i);
+            if (resize && !c.isResizableWithParent()) {
+                setArea(c, c.getResizableWithParentArea());
             }
-            d.setX(startX);
-            d.setY(startY);
-            setAbsoluteDividerPos(d, (horizontal ? d.getX() : d.getY()));
-            d.posExplicit = false;
+
+            if (horizontal) {
+                c.setX(snapPositionOnAxis(position));
+                c.setY(0);
+            } else {
+                c.setX(0);
+                c.setY(snapPositionOnAxis(position));
+            }
+
+            position = snapPositionOnAxis(position + c.getArea());
+
+            if (i < contentDividers.size()) {
+                ContentDivider d = contentDividers.get(i);
+                if (horizontal) {
+                    d.setX(position);
+                    d.setY(0);
+                } else {
+                    d.setX(0);
+                    d.setY(position);
+                }
+
+                setAbsoluteDividerPos(d, position);
+                d.posExplicit = false;
+                position = snapPositionOnAxis(position + getDividerSize(d));
+            }
         }
         checkDividerPos = true;
     }
 
-    private void layoutDividersAndContent(double width, double height) {
-        final double paddingX = snappedLeftInset();
-        final double paddingY = snappedTopInset();
-        final double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
-
-        for (Content c: contentRegions) {
-//            System.out.println("LAYOUT " + c.getId() + " PANELS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? c.getArea() : width) + " H " + (horizontal ? height : c.getArea()));
-            if (horizontal) {
-                c.setClipSize(c.getArea(), height);
-                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, c.getArea(), height,
-                    0/*baseline*/,HPos.CENTER, VPos.CENTER);
-            } else {
-                c.setClipSize(width, c.getArea());
-                layoutInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, c.getArea(),
-                    0/*baseline*/,HPos.CENTER, VPos.CENTER);
+    private void layoutDividersAndContent(double contentX, double contentY,
+                                          double width, double height,
+                                          boolean belowMinimumSize) {
+        for (Content c : contentRegions) {
+            double areaX = snapPositionX(c.getX() + contentX);
+            double areaY = snapPositionY(c.getY() + contentY);
+            double areaWidth = horizontal ? snapSpaceX(c.getArea()) : snapSpaceX(width);
+            double areaHeight = horizontal ? snapSpaceY(height) : snapSpaceY(c.getArea());
+            c.setClipSize(areaWidth, areaHeight);
+            layoutInArea(c, areaX, areaY, areaWidth, areaHeight,
+                    0/*baseline*/, HPos.CENTER, VPos.CENTER);
+            if (belowMinimumSize) {
+                // The proportional layout deliberately allocates less than the
+                // content minimum, so restore its main-axis allocation.
+                if (horizontal) {
+                    c.resize(areaWidth, c.getHeight());
+                } else {
+                    c.resize(c.getWidth(), areaHeight);
+                }
+                positionInArea(c, areaX, areaY, areaWidth, areaHeight,
+                        0/*baseline*/, HPos.CENTER, VPos.CENTER);
             }
         }
-        for (ContentDivider c: contentDividers) {
-//            System.out.println("LAYOUT DIVIDERS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? dividerWidth : width) + " H " + (horizontal ? height : dividerWidth));
-            if (horizontal) {
-                c.resize(dividerWidth, height);
-                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, dividerWidth, height,
-                    /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-            } else {
-                c.resize(width, dividerWidth);
-                positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, dividerWidth,
-                    /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-            }
+
+        for (ContentDivider c : contentDividers) {
+            double areaX = snapPositionX(c.getX() + contentX);
+            double areaY = snapPositionY(c.getY() + contentY);
+            double areaWidth = horizontal ? getDividerSize(c) : snapSpaceX(width);
+            double areaHeight = horizontal ? snapSpaceY(height) : getDividerSize(c);
+            c.resize(areaWidth, areaHeight);
+            positionInArea(c, areaX, areaY, areaWidth, areaHeight,
+                /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
         }
     }
 
@@ -956,7 +1080,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private void setAndCheckAbsoluteDividerPos(ContentDivider divider, double value) {
         double oldPos = divider.getDividerPos();
         setAbsoluteDividerPos(divider, value);
-        checkDividerPosition(divider, value, oldPos);
+        checkDividerPosition(divider, divider.getDividerPos(), oldPos);
     }
 
 
@@ -1015,11 +1139,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 }
 
                 @Override protected double computePrefWidth(double height) {
-                    return snappedLeftInset() + snappedRightInset();
+                    return snapSpaceX(snappedLeftInset() + snappedRightInset());
                 }
 
                 @Override protected double computePrefHeight(double width) {
-                    return snappedTopInset() + snappedBottomInset();
+                    return snapSpaceY(snappedTopInset() + snappedBottomInset());
                 }
 
                 @Override protected double computeMaxWidth(double height) {
@@ -1047,6 +1171,16 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             if (horizontal) {
                 grabber.getStyleClass().setAll("horizontal-grabber");
                 setCursor(Cursor.H_RESIZE);
+            }
+        }
+
+        private double prefDividerSize(boolean horizontal) {
+            Insets insets = getInsets();
+
+            if (horizontal) {
+                return snapSpaceX(snapSpaceX(insets.getLeft()) + snapSpaceX(insets.getRight()));
+            } else {
+                return snapSpaceY(snapSpaceY(insets.getLeft()) + snapSpaceY(insets.getRight()));
             }
         }
 
@@ -1100,11 +1234,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
 
         @Override protected double computePrefWidth(double height) {
-            return snappedLeftInset() + snappedRightInset();
+            return snapSpaceX(snappedLeftInset() + snappedRightInset());
         }
 
         @Override protected double computePrefHeight(double width) {
-            return snappedTopInset() + snappedBottomInset();
+            return snapSpaceY(snappedTopInset() + snappedBottomInset());
         }
 
         @Override protected double computeMaxWidth(double height) {
@@ -1116,10 +1250,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
 
         @Override protected void layoutChildren() {
-            double grabberWidth = grabber.prefWidth(-1);
-            double grabberHeight = grabber.prefHeight(-1);
-            double grabberX = (getWidth() - grabberWidth)/2;
-            double grabberY = (getHeight() - grabberHeight)/2;
+            double grabberWidth = snapSizeX(grabber.prefWidth(-1));
+            double grabberHeight = snapSizeY(grabber.prefHeight(-1));
+            double grabberX = snapPositionX((getWidth() - grabberWidth) / 2);
+            double grabberY = snapPositionY((getHeight() - grabberHeight) / 2);
             grabber.resize(grabberWidth, grabberHeight);
             positionInArea(grabber, grabberX, grabberY, grabberWidth, grabberHeight,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
@@ -1222,4 +1356,3 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
     }
 }
-
