@@ -242,7 +242,7 @@
  * }</pre>
  *
  * At a render scale of {@code 1.0}, one logical unit is one pixel. At a render scale of {@code 1.5}, one pixel is
- * {@code 1 / 1.5} ≈ {@code 0.6667}, logical units. A correctly snapped value is therefore not necessarily an integer,
+ * {@code 1 / 1.5} ≈ {@code 0.6667} logical units. A correctly snapped value is therefore not necessarily an integer,
  * and simply rounding coordinates to integers is wrong. Conceptually, snapping applies a rounding operation in pixels
  * and converts the result back to logical units:
  *
