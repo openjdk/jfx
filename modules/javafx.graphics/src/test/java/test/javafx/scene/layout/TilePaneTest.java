@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import java.util.stream.Stream;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
@@ -45,11 +46,10 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TilePaneTest {
 
@@ -1087,13 +1087,7 @@ public class TilePaneTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "1.0, 1.0",
-        "1.25, 1.5",
-        "1.5, 1.5",
-        "1.75, 2.25",
-        "1.0, 1.75",
-    })
+    @MethodSource("renderScales")
     public void testMinAndPrefSizeSnapInsetsAtRenderScale(double scaleX, double scaleY) {
         var horizontal = new TilePane(Orientation.HORIZONTAL);
         horizontal.setPadding(new Insets(9.6));
@@ -1128,13 +1122,7 @@ public class TilePaneTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "1.0, 1.0",
-        "1.25, 1.5",
-        "1.5, 1.5",
-        "1.75, 2.25",
-        "1.0, 1.75",
-    })
+    @MethodSource("renderScales")
     public void testExactFitDoesNotWrapAtRenderScale(double scaleX, double scaleY) {
         double tileWidth = 2 / scaleX;
         double tileHeight = 2 / scaleY;
@@ -1184,13 +1172,7 @@ public class TilePaneTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "1.0, 1.0",
-        "1.25, 1.5",
-        "1.5, 1.5",
-        "1.75, 2.25",
-        "1.0, 1.75",
-    })
+    @MethodSource("renderScales")
     public void testComputedTileSizeDoesNotCeilSnappedAggregate(double scaleX, double scaleY) {
         var child = new Region();
         child.setPrefSize(0.1 / scaleX, 0.1 / scaleY);
@@ -1215,13 +1197,7 @@ public class TilePaneTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "1.0, 1.0",
-        "1.25, 1.5",
-        "1.5, 1.5",
-        "1.75, 2.25",
-        "1.0, 1.75",
-    })
+    @MethodSource("renderScales")
     public void testBiasedChildUsesActualSnappedTileDimension(double scaleX, double scaleY) {
         double naturalWidth = 100 / scaleX;
         double naturalHeight = 100 / scaleY;
@@ -1265,13 +1241,7 @@ public class TilePaneTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "1.0, 1.0",
-        "1.25, 1.5",
-        "1.5, 1.5",
-        "1.75, 2.25",
-        "1.0, 1.75",
-    })
+    @MethodSource("renderScales")
     public void testTileSizeCacheTracksRenderScaleAndSnapPolicy(double scaleX, double scaleY) {
         var tilePane = new TilePane();
         tilePane.setPrefTileWidth(0.1);
@@ -1362,6 +1332,16 @@ public class TilePaneTest {
         } catch (Exception e) {
             fail(e.toString());
         }
+    }
+
+    private static Stream<Arguments> renderScales() {
+        return Stream.of(
+            Arguments.of(1.0, 1.0),
+            Arguments.of(1.25, 1.5),
+            Arguments.of(1.5, 1.5),
+            Arguments.of(1.75, 2.25),
+            Arguments.of(1.0, 1.75)
+        );
     }
 
     private static Stage showAtScale(double scaleX, double scaleY, Node... nodes) {
