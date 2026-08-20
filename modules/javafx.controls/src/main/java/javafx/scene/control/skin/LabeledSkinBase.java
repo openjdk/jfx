@@ -129,11 +129,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     private MnemonicInfo mnemonicInfo;
     private Line mnemonic_underscore;
 
-    private boolean containsMnemonic = false;
-    private Scene mnemonicScene = null;
-    private KeyCombination mnemonicCode;
-    // needs to be an object, as MenuItem isn't a node
-    private Node labeledNode = null;
+    // Mnemonic and the scene where it was added.
+    private Mnemonic mnemonic;
+    private Scene mnemonicRegistrationScene;
+
     private final AtomicBoolean textTruncated = new AtomicBoolean();
 
 
@@ -215,7 +214,6 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             getSkinnable().requestLayout();
         });
         registerChangeListener(labeled.mnemonicParsingProperty(), o -> {
-            containsMnemonic = false;
             textMetricsChanged();
         });
         registerChangeListener(labeled.textProperty(), o -> {
@@ -600,7 +598,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Point2D mnemonicPos = null;
         double mnemonicWidth = 0.0;
         double mnemonicHeight = 0.0;
-        if (containsMnemonic && mnemonicInfo != null) {
+        if (mnemonicInfo != null) {
             int mnemonicIndex = mnemonicInfo.getMnemonicIndex();
             String cleanText = mnemonicInfo.getText();
             // The mnemonic KeyCode can also be defined in the following form: Exit_(q)
@@ -608,7 +606,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // This means we cannot substring the character from the text.
             if (mnemonicIndex >= 0 && mnemonicInfo.getExtendedMnemonicText() == null) {
                 final Font font = text.getFont();
-                boolean isRTL = (labeledNode.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+                boolean isRTL = (labeled.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
                 mnemonicPos = Utils.computeMnemonicPosition(font, cleanText, mnemonicIndex, this.wrapWidth, labeled.getLineSpacing(), isRTL);
                 mnemonicWidth = Utils.computeTextWidth(font, cleanText.substring(mnemonicIndex, mnemonicIndex + 1), 0);
                 mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
@@ -643,7 +641,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // adjust the text based on the text's minX/minY so no need to
             // worry about that here
             text.relocate(snapPositionX(contentX), snapPositionY(contentY));
-            if (containsMnemonic && (mnemonicPos != null)) {
+            if (mnemonic_underscore != null && mnemonicPos != null) {
                 mnemonic_underscore.setEndX(mnemonicWidth-2.0);
                 mnemonic_underscore.relocate(snapPositionX(contentX + mnemonicPos.getX()),
                                              snapPositionY(contentY + mnemonicPos.getY()));
@@ -655,7 +653,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // there is a graphic, the text isn't even in the scene)
             text.relocate(snapPositionX(contentX), snapPositionY(contentY));
             graphic.relocate(snapPositionX(contentX), snapPositionY(contentY));
-            if (containsMnemonic && (mnemonicPos != null)) {
+            if (mnemonic_underscore != null && mnemonicPos != null) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
                 mnemonic_underscore.relocate(snapPositionX(contentX + mnemonicPos.getX()),
@@ -702,7 +700,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 textY = contentY + ((contentHeight - textHeight) / 2.0);
             }
             text.relocate(snapPositionX(textX), snapPositionY(textY));
-            if (containsMnemonic && (mnemonicPos != null)) {
+            if (mnemonic_underscore != null && mnemonicPos != null) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
                 mnemonic_underscore.relocate(snapPositionX(textX + mnemonicPos.getX()),
@@ -917,34 +915,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     ** swap them over, and tidy up.
     */
     void mnemonicTargetChanged() {
-        if (containsMnemonic) {
-            /*
-            ** was there previously a labelFor
-            */
-            removeMnemonic();
-
-            /*
-            ** is there a new labelFor
-            */
-            Control control = getSkinnable();
-            if (control instanceof Label) {
-                labeledNode = ((Label)control).getLabelFor();
-                addMnemonic();
-            }
-            else {
-                labeledNode = null;
-            }
-        }
+        updateMnemonicRegistration();
     }
 
     private void sceneChanged() {
-        final Labeled labeled = getSkinnable();
-        Scene scene = labeled.getScene();
-
-        if (scene != null && containsMnemonic) {
-            addMnemonic();
-        }
-
+        updateMnemonicRegistration();
     }
 
     /**
@@ -970,64 +945,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         if (invalidText) {
             final Labeled labeled = getSkinnable();
             String cleanText = getCleanText();
-            int mnemonicIndex = -1;
 
-            if (cleanText != null && cleanText.length() > 0
-                    && mnemonicInfo != null
-                    && !com.sun.javafx.PlatformUtil.isMac()
-                    && getSkinnable().isMnemonicParsing()) {
-                /*
-                ** the Labeled has a MnemonicParsing property,
-                ** if set true, then auto-parsing will check for
-                ** a mnemonic
-                */
-                if (labeled instanceof Label) {
-                    // buttons etc
-                    labeledNode = ((Label)labeled).getLabelFor();
-                } else {
-                    labeledNode = labeled;
-                }
-
-                if (labeledNode == null) {
-                    labeledNode = labeled;
-                }
-                mnemonicIndex = mnemonicInfo.getMnemonicIndex() ;
-            }
-
-            /*
-            ** we were previously a mnemonic
-            */
-            if (containsMnemonic) {
-                /*
-                ** are we no longer a mnemonic, or have we changed code?
-                */
-                if (mnemonicScene != null) {
-                    if (mnemonicIndex == -1 ||
-                            (mnemonicInfo != null && !mnemonicInfo.getMnemonicKeyCombination().equals(mnemonicCode))) {
-                        removeMnemonic();
-                        containsMnemonic = false;
-                    }
-                }
-            }
-            else {
-                /*
-                ** this can happen if mnemonic parsing is
-                ** disabled on a previously valid mnemonic
-                */
-                removeMnemonic();
-            }
-
-            /*
-            ** check we have a labeled
-            */
-            if (cleanText != null && cleanText.length() > 0
-                    && mnemonicIndex >= 0 && !containsMnemonic) {
-                containsMnemonic = true;
-                mnemonicCode = mnemonicInfo.getMnemonicKeyCombination();
-                addMnemonic();
-            }
-
-            if (containsMnemonic) {
+            if (mnemonicInfo != null && mnemonicInfo.getMnemonicIndex() >= 0) {
                 // If only the graphic is visible, we do not need mnemonic_underscore node
                 if (labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
                     if (mnemonic_underscore == null) {
@@ -1043,10 +962,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                     }
                 }
             } else if (mnemonic_underscore != null && getChildren().contains(mnemonic_underscore)) {
-                Platform.runLater(() -> {
-                      getChildren().remove(mnemonic_underscore);
-                      mnemonic_underscore = null;
-                });
+                getChildren().remove(mnemonic_underscore);
+                mnemonic_underscore = null;
             }
 
             int len = cleanText != null ? cleanText.length() : 0;
@@ -1175,6 +1092,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             text.setText(result);
             updateWrappingWidth();
             LabeledHelper.setTextTruncated(getSkinnable(), textTruncated.get());
+            updateMnemonicRegistration();
             invalidText = false;
         }
     }
@@ -1186,33 +1104,52 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Labeled labeled = getSkinnable();
         String sourceText = labeled.getText();
 
-        if (sourceText != null && labeled.isMnemonicParsing()) {
+        if (labeled.isMnemonicParsing()) {
             if (mnemonicInfo == null) {
                 mnemonicInfo = new MnemonicInfo(sourceText);
             } else {
                 mnemonicInfo.update(sourceText);
             }
-
             return mnemonicInfo.getText();
+        } else {
+            mnemonicInfo = null;
         }
 
         return sourceText;
     }
 
-    private void addMnemonic() {
-        if (labeledNode != null) {
-            mnemonicScene = labeledNode.getScene();
-            if (mnemonicScene != null) {
-                mnemonicScene.addMnemonic(new Mnemonic(labeledNode, mnemonicCode));
+    private void updateMnemonicRegistration() {
+        Control skinnable = getSkinnable();
+        Scene skinnableScene = skinnable.getScene();
+        Node mnemonicNode = skinnable;
+        if(skinnable instanceof Label l && l.getLabelFor() != null) {
+            mnemonicNode =  l.getLabelFor();
+        }
+
+        if (mnemonic != null) {
+            // Mnemonic registration implies the following information:
+            // - Is it defined at all?
+            // - Scene where the mnemonic is registered
+            // - Node that receives the event
+            // - KeyCombination that triggers the event
+            // If any of this changes we must remove the previous mnemonic registration.
+            if (mnemonicInfo == null
+                    || mnemonicRegistrationScene != skinnableScene
+                    || mnemonic.getNode() != mnemonicNode
+                    || !mnemonic.getKeyCombination().equals(mnemonicInfo.getMnemonicKeyCombination())) {
+                mnemonicRegistrationScene.removeMnemonic(mnemonic);
+                mnemonicRegistrationScene = null;
+                mnemonic = null;
             }
         }
-    }
 
-
-    private void removeMnemonic() {
-        if (mnemonicScene != null && labeledNode != null) {
-            mnemonicScene.removeMnemonic(new Mnemonic(labeledNode, mnemonicCode));
-            mnemonicScene = null;
+        if (mnemonicInfo != null && mnemonic == null) {
+            KeyCombination mnemonicKeyCombination = mnemonicInfo.getMnemonicKeyCombination();
+            if (skinnableScene != null && mnemonicKeyCombination != null) {
+                mnemonic = new Mnemonic(mnemonicNode, mnemonicKeyCombination);
+                skinnableScene.addMnemonic(mnemonic);
+                mnemonicRegistrationScene = skinnableScene;
+            }
         }
     }
 

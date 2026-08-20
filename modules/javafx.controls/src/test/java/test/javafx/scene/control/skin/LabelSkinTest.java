@@ -30,9 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -53,6 +55,7 @@ import javafx.scene.effect.BlendMode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -61,10 +64,14 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.tk.Toolkit;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -2142,17 +2149,126 @@ public class LabelSkinTest {
         checkMnemonics();
     }
 
+    @Test
+    public void withGraphic() {
+        Assumptions.assumeFalse(PlatformUtil.isMac());
+        label.setText("_test");
+        label.setMnemonicParsing(true);
+        label.setGraphic(new Label());
+        label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        stageLoader = new StageLoader(label);
+        Toolkit.getToolkit().firePulse(); // No NPE
+    }
+
+    @ParameterizedTest
+    @MethodSource("provide_testMnemonics_parameters")
+    void testMnemonics_with_new_Labeled_and_Scene_each_time(boolean mnemonicParsing, ContentDisplay contentDisplay, String text, Node graphic, Node labelFor) {
+        label.setMnemonicParsing(mnemonicParsing);
+        label.setContentDisplay(contentDisplay);
+        label.setText(text);
+        label.setGraphic(graphic);
+        label.setLabelFor(labelFor);
+
+        StackPane root = new StackPane(label);
+        if (labelFor != null) {
+            root.getChildren().add(labelFor);
+        }
+        stageLoader = new StageLoader(root);
+
+        checkMnemonics();
+    }
+
+    @Test
+    void testMnemonics_with_same_Labeled_and_Scene() {
+        StackPane root = new StackPane();
+        root.getChildren().add(label);
+        stageLoader = new StageLoader(root);
+
+        StringBuilder sb = new StringBuilder();
+
+        provide_testMnemonics_parameters().forEach(a -> {
+            boolean mnemonicParsing = (boolean) a.get()[0];
+            ContentDisplay contentDisplay = (ContentDisplay) a.get()[1];
+            String text = (String) a.get()[2];
+            Node graphic = (Node) a.get()[3];
+            Node labelFor = (Node) a.get()[4];
+
+            if (labelFor != null) {
+                if (!root.getChildren().contains(labelFor)) {
+                    root.getChildren().add(labelFor);
+                }
+            } else {
+                root.getChildren().removeIf(o -> o != label);
+            }
+
+            label.setMnemonicParsing(mnemonicParsing);
+            label.setContentDisplay(contentDisplay);
+            label.setText(text);
+            label.setGraphic(graphic);
+            label.setLabelFor(labelFor);
+
+            sb.append(mnemonicParsing + ", " + contentDisplay + ", " + text + ", " + graphic + ", " + labelFor).append("\n");
+            try {
+                checkMnemonics();
+            } catch (Throwable e) {
+                // This makes it easier to identify the failed step
+                System.out.println(sb.toString());
+                throw e;
+            }
+        });
+    }
+
+    private static Stream<Arguments> provide_testMnemonics_parameters() {
+        Label graphicNode = new Label() {
+            @Override
+            public String toString() {
+                return "graphic";
+            }
+        };
+        Label labelForNode = new Label() {
+            @Override
+            public String toString() {
+                return "labelFor";
+            }
+        };
+
+        List<Arguments> arguments = new ArrayList<>();
+
+        for (Boolean mnemonicParsing : listOf(true, false)) {
+            for (ContentDisplay contentDisplay : listOf(ContentDisplay.LEFT, ContentDisplay.TEXT_ONLY, ContentDisplay.GRAPHIC_ONLY)) {
+                for (String text : listOf(null, "", "xxx", "foo_bar", "test_(t)")) {
+                    for (Label graphic : listOf(null, graphicNode)) {
+                        for (Label labelFor : listOf(null, labelForNode)) {
+                            arguments.add(Arguments.of(listOf(mnemonicParsing, contentDisplay, text, graphic, labelFor).toArray()));
+                        }
+                    }
+                }
+            }
+        }
+
+        return arguments.stream();
+    }
+
+    private static <T> List<T> listOf(T... a) {
+        List<T> result = new ArrayList<>();
+        for (T o : a) {
+            result.add(o);
+        }
+        return result;
+    }
+
     private void checkMnemonics() {
         Toolkit tk = Toolkit.getToolkit();
-        StageLoader sl = createStageLoader(label);
+        if (stageLoader == null) {
+            stageLoader = new StageLoader(label);
+        }
         tk.firePulse();
 
-        ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics = sl.getStage().getScene().getMnemonics();
-
         Function<String, Boolean> mnemonicRegistrationChecker = character ->
-                mnemonics.getOrDefault(
-                        new MnemonicInfo.MnemonicKeyCombination(character), FXCollections.emptyObservableList())
-                .stream().filter(m -> m.getNode() == label).toList().size() == 1;
+                label.getScene().getMnemonics()
+                        .getOrDefault(new MnemonicInfo.MnemonicKeyCombination(character), FXCollections.emptyObservableList())
+                        .stream().filter(m -> m.getNode() == (label.getLabelFor() != null ? label.getLabelFor() : label))
+                        .toList().size() == 1;
 
         Supplier<Boolean> mnemonicNodePresenceChecker = () -> label.getChildrenUnmodifiable().stream().anyMatch(p -> p instanceof Line);
 
@@ -2160,7 +2276,7 @@ public class LabelSkinTest {
                 (expected
                         ? "Mnemonic registration expected but not found: "
                         : "No mnemonic expected but was: ")
-                        + mnemonics;
+                        + label.getScene().getMnemonics();
 
         // Mac does not support mnemonics
         boolean expectedMnemonics = PlatformUtil.isMac() ? false : label.isMnemonicParsing();
@@ -2171,7 +2287,7 @@ public class LabelSkinTest {
         // no text
         label.setText(null);
         tk.firePulse();
-        assertTrue(mnemonics.values().stream().allMatch(List::isEmpty), mnemonicErrorMessageSupplier.apply(false));
+        assertTrue(label.getScene().getMnemonics().values().stream().allMatch(List::isEmpty), mnemonicErrorMessageSupplier.apply(false));
         assertFalse(mnemonicNodePresenceChecker.get());
 
         // initial mnemonic
@@ -2256,14 +2372,6 @@ public class LabelSkinTest {
         assertEquals(label1.getBaselineOffset(), (label2.getBaselineOffset() - (r.getHeight()-label2Height)/2), 0);
         sl.dispose();
     }
-
-    private StageLoader createStageLoader(Node node) {
-        if (stageLoader == null) {
-            stageLoader = new StageLoader(node);
-        }
-        return stageLoader;
-    }
-
 
     /********************************************************************************
      *                                                                              *
