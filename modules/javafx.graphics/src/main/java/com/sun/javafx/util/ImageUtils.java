@@ -70,7 +70,6 @@ public class ImageUtils {
      *        used to store the returned pixel data
      * @return an {@code Image} object representing a snapshot of the
      *         current pixels in the {@code BufferedImage}.
-     * @since JavaFX 2.2
      */
     public static WritableImage toFXImage(BufferedImage bimg, WritableImage wimg) {
         int bw = bimg.getWidth();
@@ -244,7 +243,6 @@ public class ImageUtils {
      *        used to store the returned pixel data
      * @return a {@code BufferedImage} containing a snapshot of the JavaFX
      *         {@code Image}, or null if the {@code Image} is not readable.
-     * @since JavaFX 2.2
      */
     public static BufferedImage fromFXImage(Image img, BufferedImage bimg) {
         PixelReader pr = img.getPixelReader();
@@ -303,7 +301,7 @@ public class ImageUtils {
     }
 
     /**
-     * Write Image to a byte array in one of the formats supported by the ImageIO.
+     * Writes the image to a byte array in one of the formats supported by the ImageIO.
      * The format string is passed to
      * {@link ImageIO#write(java.awt.image.RenderedImage, String, java.io.OutputStream) ImageIO.write()}
      * method (example: {@code "png"}).
@@ -314,8 +312,8 @@ public class ImageUtils {
      * @throws IOException
      */
     public static byte[] writeImage(Image im, String format) throws IOException {
-        Objects.nonNull(im);
-        Objects.nonNull(format);
+        Objects.requireNonNull(im);
+        Objects.requireNonNull(format);
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream(65536)) {
             // using disk cache slows things down
