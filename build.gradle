@@ -2490,20 +2490,21 @@ project(":graphics") {
 
     if (IS_WINDOWS) {
         addNative(project, "prismD3D")
-        // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
+        def prismD3DSource = "src/main/native-prism-d3d"
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl"
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl"
-            inputs.file "src/main/native-prism-d3d/PassThroughVS.hlsl"
+            inputs.files(fileTree("$prismD3DSource/hlsl") {
+                      include "*.hlsl"
+                      include "*.h"
+                  })
+            inputs.file("$prismD3DSource/PassThroughVS.hlsl")
             outputs.dir "$buildDir/headers/PrismD3D/"
-            outputs.dir "$buildDir/headers/PrismD3D/hlsl/"
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
-                def PS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl")
-                def VS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl")
-                def PASSTHROUGH_VS_SRC = file("src/main/native-prism-d3d/PassThroughVS.hlsl")
+                def PS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1PS.hlsl")
+                def VS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1VS.hlsl")
+                def PASSTHROUGH_VS_SRC = file("$prismD3DSource/PassThroughVS.hlsl")
                 def jobs = [
                         ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$PASSTHROUGH_VS_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS.h", "/DSpec=0", "/DSType=0", "$PS_3D_SRC"],
