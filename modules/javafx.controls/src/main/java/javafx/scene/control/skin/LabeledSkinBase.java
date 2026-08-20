@@ -946,24 +946,26 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             final Labeled labeled = getSkinnable();
             String cleanText = getCleanText();
 
-            if (mnemonicInfo != null && mnemonicInfo.getMnemonicIndex() >= 0) {
-                // If only the graphic is visible, we do not need mnemonic_underscore node
-                if (labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
-                    if (mnemonic_underscore == null) {
-                        mnemonic_underscore = new Line();
-                        mnemonic_underscore.setStartX(0.0f);
-                        mnemonic_underscore.setStartY(0.0f);
-                        mnemonic_underscore.setEndY(0.0f);
-                        mnemonic_underscore.getStyleClass().clear();
-                        mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
+            if (!com.sun.javafx.PlatformUtil.isMac()) {
+                if (mnemonicInfo != null && mnemonicInfo.getMnemonicIndex() >= 0) {
+                    // If only the graphic is visible, we do not need mnemonic_underscore node
+                    if (labeled.getContentDisplay() != ContentDisplay.GRAPHIC_ONLY) {
+                        if (mnemonic_underscore == null) {
+                            mnemonic_underscore = new Line();
+                            mnemonic_underscore.setStartX(0.0f);
+                            mnemonic_underscore.setStartY(0.0f);
+                            mnemonic_underscore.setEndY(0.0f);
+                            mnemonic_underscore.getStyleClass().clear();
+                            mnemonic_underscore.getStyleClass().setAll("mnemonic-underline");
+                        }
+                        if (!getChildren().contains(mnemonic_underscore)) {
+                            getChildren().add(mnemonic_underscore);
+                        }
                     }
-                    if (!getChildren().contains(mnemonic_underscore)) {
-                        getChildren().add(mnemonic_underscore);
-                    }
+                } else if (mnemonic_underscore != null && getChildren().contains(mnemonic_underscore)) {
+                    getChildren().remove(mnemonic_underscore);
+                    mnemonic_underscore = null;
                 }
-            } else if (mnemonic_underscore != null && getChildren().contains(mnemonic_underscore)) {
-                getChildren().remove(mnemonic_underscore);
-                mnemonic_underscore = null;
             }
 
             int len = cleanText != null ? cleanText.length() : 0;
@@ -1104,7 +1106,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Labeled labeled = getSkinnable();
         String sourceText = labeled.getText();
 
-        if (labeled.isMnemonicParsing() && !com.sun.javafx.PlatformUtil.isMac()) {
+        if (labeled.isMnemonicParsing()) {
             if (mnemonicInfo == null) {
                 mnemonicInfo = new MnemonicInfo(sourceText);
             } else {
@@ -1119,10 +1121,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     }
 
     private void updateMnemonicRegistration() {
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            return;
+        }
         Control skinnable = getSkinnable();
         Scene skinnableScene = skinnable.getScene();
         Node mnemonicNode = skinnable;
-        if(skinnable instanceof Label l && l.getLabelFor() != null) {
+        if (skinnable instanceof Label l && l.getLabelFor() != null) {
             mnemonicNode =  l.getLabelFor();
         }
 
