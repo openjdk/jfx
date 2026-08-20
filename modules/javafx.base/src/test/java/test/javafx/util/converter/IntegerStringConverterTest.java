@@ -25,30 +25,28 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.IntegerStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.IntegerStringConverter;
+
 public class IntegerStringConverterTest {
-    private IntegerStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new IntegerStringConverter();
+    private static final IntegerStringConverter CONVERTER = new IntegerStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(10, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals((Integer) 10, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(10, CONVERTER.fromString("      10      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals((Integer) 10, converter.fromString("      10      "));
-    }
-
-    @Test public void toString_validInput() {
-        assertEquals("10", converter.toString(10));
+    @Test
+    void toString_validInput() {
+        assertEquals("10", CONVERTER.toString(10));
     }
 }

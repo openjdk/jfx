@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -156,6 +156,9 @@ public class SwingFXUtils {
                 return bimgType;
             }
         }
+        if (isOpaque) {
+            return BufferedImage.TYPE_INT_RGB;
+        }
         switch (fxFormat.getType()) {
             default:
             case BYTE_BGRA_PRE:
@@ -201,10 +204,12 @@ public class SwingFXUtils {
     }
 
     private static boolean checkFXImageOpaque(PixelReader pr, int iw, int ih) {
-        for (int x = 0; x < iw; x++) {
-            for (int y = 0; y < ih; y++) {
-                Color color = pr.getColor(x,y);
-                if (color.getOpacity() != 1.0) {
+        int[] pixels = new int[iw];
+        WritablePixelFormat<IntBuffer> format = PixelFormat.getIntArgbPreInstance();
+        for (int y = 0; y < ih; y++) {
+            pr.getPixels(0, y, iw, 1, format, pixels, 0, iw);
+            for (int pixel : pixels) {
+                if ((pixel >>> 24) != 0xff) {
                     return false;
                 }
             }
@@ -255,11 +260,11 @@ public class SwingFXUtils {
             case INT_ARGB:
             case BYTE_BGRA_PRE:
             case BYTE_BGRA:
-                // Check fx image opacity only if
-                // supplied BufferedImage is without alpha channel
-                if (bimg != null &&
-                        (bimg.getType() == BufferedImage.TYPE_INT_BGR ||
-                         bimg.getType() == BufferedImage.TYPE_INT_RGB)) {
+            case BYTE_INDEXED:
+                boolean opacityMatters = bimg == null ||
+                        bimg.getType() == BufferedImage.TYPE_INT_BGR ||
+                        bimg.getType() == BufferedImage.TYPE_INT_RGB;
+                if (opacityMatters) {
                     srcPixelsAreOpaque = checkFXImageOpaque(pr, iw, ih);
                 }
                 break;
