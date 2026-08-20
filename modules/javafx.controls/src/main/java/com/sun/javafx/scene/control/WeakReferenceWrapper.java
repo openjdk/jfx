@@ -38,6 +38,22 @@ import java.util.Objects;
  * In the case of a value object, the referent is never collected, so it is only
  * suitable for uses that do not rely on the object being placed onto a reference
  * queue.
+ * This class might not be suitable for large trees of value objects or for
+ * value objects that wrap an identity object (for example, {@code Optional<Object>}.
+ * Using it for such cases can lead to memory being held longer than expected
+ * (as long as the {@code WeakReferenceWrapper} itself is held).
+ * <p>
+ * NOTE: we might be able to modify or eliminate this class in the future based
+ * on one the following:
+ *
+ * <ol>
+ * <li>A future version of the value objects preview (a follow-on to JEP 401) might
+ * relax the restriction on weak references of value objects. Depending on how
+ * this is done, we might change this wrapper to take advantage of that.</li>
+ * <li>A future improvement to list-based UI controls might eliminate the need
+ * for some or all of the weak references to application-proved items. If all are
+ * eliminated, then we can eliminate this wrapper class.</li>
+ * </ol>
  *
  * @param <T> the type of the referent
  */
