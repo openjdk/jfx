@@ -1104,7 +1104,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         Labeled labeled = getSkinnable();
         String sourceText = labeled.getText();
 
-        if (labeled.isMnemonicParsing()) {
+        if (labeled.isMnemonicParsing() && !com.sun.javafx.PlatformUtil.isMac()) {
             if (mnemonicInfo == null) {
                 mnemonicInfo = new MnemonicInfo(sourceText);
             } else {
