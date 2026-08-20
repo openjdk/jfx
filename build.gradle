@@ -5168,9 +5168,9 @@ compileTargets { t ->
     }
     buildModules.dependsOn(buildModulesTask)
 
-    // Configures the maven publication (if enabled) for all projects of this compile target.
-    // Will run after the buildModulesTask.
-    configureMavenPublication(moduleProjList, t, buildModulesTask)
+    // Configures the publication for all projects of this compile target.
+    // Will only run during the all task, after the buildModulesTask.
+    configurePublication(moduleProjList, t, buildModulesTask)
 
     // BUNDLED SDK
     moduleProjList.each { project ->
