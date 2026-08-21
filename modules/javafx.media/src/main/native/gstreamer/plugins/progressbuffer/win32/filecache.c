@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,18 +140,36 @@ GstFlowReturn cache_read_buffer_from_position(Cache* cache, gint64 start_positio
                 if (*buffer != NULL)
                 {
                     GST_BUFFER_OFFSET(*buffer) = cache->read_position;
+                    // Adjust read position, only if we returning valid buffer.
+                    cache->read_position += read;
                     result = GST_FLOW_OK;
                 }
             }
             else
                 g_free(data); // Wrong size, deleting buffer to avoid leaking.
-
-            cache->read_position += read;
         }
         else if (data) // ReadError, deleting buffer to avoid leaking.
             g_free(data);
     }
     return result;
+}
+
+GstFlowReturn cache_read_buffer_from_position2(Cache* cache, gint64 start_position,
+                                               guint size, GstBuffer** buffer)
+{
+    GstFlowReturn result = GST_FLOW_ERROR;
+
+    if (cache == NULL)
+        return GST_FLOW_ERROR;
+
+    guint64 bytes_available = cache_bytes_available(cache, start_position);
+    if (bytes_available == 0)
+        return GST_FLOW_FLUSHING;
+
+    if ((guint64)size > bytes_available)
+        size = bytes_available;
+
+    return cache_read_buffer_from_position(cache, start_position, size, buffer);
 }
 
 static gboolean cache_set_handler_position(HANDLE handle, guint64 position)
@@ -184,10 +202,27 @@ gboolean cache_set_read_position(Cache* cache, gint64 position)
         if (result)
             cache->read_position = position;
     }
+
     return result;
 }
 
 gboolean cache_has_enough_data(Cache* cache)
 {
     return cache->read_position < cache->write_position;
+}
+
+gboolean cache_has_enough_data2(Cache* cache, guint64 read_position, guint size)
+{
+    if ((read_position + size) <= cache->write_position)
+        return TRUE;
+
+    return FALSE;
+}
+
+gint64 cache_bytes_available(Cache* cache, guint64 read_position)
+{
+    if (read_position < cache->write_position)
+        return (guint64)(cache->write_position - read_position);
+    else
+        return 0;
 }

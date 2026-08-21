@@ -33,13 +33,13 @@
 #include <stdio.h>
 
 #include "mfwrapper.h"
+#include "mftrace.h"
 
 #include <mfidl.h>
 #include <Wmcodecdsp.h>
 
 #include "fxplugins_common.h"
 
-#define PTS_DEBUG 0
 #define MEDIA_FORMAT_DEBUG 0
 
 // 3 buffers is enough for rendering. During testing 2 buffers is actually
@@ -58,6 +58,15 @@ enum
     PROP_IS_SUPPORTED,
 };
 
+// Process input return values
+enum
+{
+    PI_DELIVERED,
+    PI_NOTACCEPTING,
+    PI_FAILED,
+};
+
+// Process output return values
 enum
 {
     PO_DELIVERED,
@@ -75,6 +84,8 @@ GST_STATIC_PAD_TEMPLATE("sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS(
+        // H.264
+        "video/x-h264; "
         // H.265
         "video/x-h265"
     ));
@@ -204,6 +215,9 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
     decoder->is_decoder_error = FALSE;
     decoder->is_force_discontinuity = FALSE;
     decoder->is_force_output_discontinuity = FALSE;
+#if TRACE_ENABLE
+    decoder->trace_first_input_sample = TRUE;
+#endif
 
     // Initialize Media Foundation
     bool bCallCoUninitialize = true;
@@ -217,6 +231,7 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
         CoUninitialize();
 
     decoder->pDecoder = NULL;
+    decoder->pDecoderInputType = NULL;
     decoder->pDecoderOutput = NULL;
     decoder->pDecoderBuffer = NULL;
 
@@ -229,12 +244,11 @@ static void gst_mfwrapper_init(GstMFWrapper *decoder)
 
     decoder->pool = NULL;
 
-    decoder->header = NULL;
-    decoder->header_size = 0;
-    decoder->is_send_header = FALSE;
-
     decoder->width = 1920;
     decoder->height = 1080;
+    // Should be 0 by default
+    decoder->visibleWidth = 0;
+    decoder->visibleHeight = 0;
     decoder->framerate_num = 2997;
     decoder->framerate_den = 100;
 
@@ -249,13 +263,7 @@ static void gst_mfwrapper_dispose(GObject* object)
 {
     GstMFWrapper *decoder = GST_MFWRAPPER(object);
 
-    if (decoder->header != NULL)
-    {
-        delete[] decoder->header;
-        decoder->header = NULL;
-        decoder->header_size = 0;
-    }
-
+    SafeRelease(&decoder->pDecoderInputType);
     SafeRelease(&decoder->pDecoderOutput);
     // No need to free pDecoderBuffer, it will be released when
     // pDecoderOutput is released.
@@ -317,18 +325,34 @@ static void gst_mfwrapper_get_property(GObject *object, guint property_id, GValu
 static gboolean mfwrapper_is_decoder_by_codec_id_supported(GstMFWrapper *decoder, gint codec_id)
 {
     HRESULT hr = S_FALSE;
+    GstCaps *caps = NULL;
 
     switch (codec_id)
     {
-    case JFX_CODEC_ID_H265:
-        // Dummy caps to load H.265 decoder
-        GstCaps *caps = gst_caps_new_simple("video/x-h265",
-            "width", G_TYPE_INT, 1920,
-            "height", G_TYPE_INT, 1080,
-            NULL);
+        case JFX_CODEC_ID_H264:
+        {
+            // Dummy caps to load H.264 decoder
+            caps = gst_caps_new_simple("video/x-h264",
+                    "width", G_TYPE_INT, 1920,
+                    "height", G_TYPE_INT, 1080,
+                    NULL);
+            break;
+        }
+        case JFX_CODEC_ID_HEVC:
+        {
+            // Dummy caps to load H.265 decoder
+            caps = gst_caps_new_simple("video/x-h265",
+                    "width", G_TYPE_INT, 1920,
+                    "height", G_TYPE_INT, 1080,
+                    NULL);
+            break;
+        }
+    }
+
+    if (caps)
+    {
         hr = mfwrapper_load_decoder_caps(decoder, caps);
         gst_caps_unref(caps);
-        break;
     }
 
     if (hr == S_OK)
@@ -337,7 +361,8 @@ static gboolean mfwrapper_is_decoder_by_codec_id_supported(GstMFWrapper *decoder
         return FALSE;
 }
 
-static HRESULT mfwrapper_create_sample(IMFSample **ppSample, DWORD dwSize, CMFGSTBuffer **ppMFGSTBuffer)
+static HRESULT mfwrapper_create_sample(IMFSample **ppSample, DWORD dwSize,
+                                       CMFGSTBuffer **ppMFGSTBuffer)
 {
     if (ppSample == NULL || dwSize == 0 || ppMFGSTBuffer == NULL)
         return E_INVALIDARG;
@@ -364,11 +389,74 @@ static HRESULT mfwrapper_create_sample(IMFSample **ppSample, DWORD dwSize, CMFGS
     return S_OK;
 }
 
+static HRESULT mfwrapper_create_sample_from_gst_buffer(IMFSample **ppSample,
+                                                       GstBuffer *buf,
+                                                       gboolean &bDiscont)
+{
+    if (ppSample == NULL || buf == NULL)
+        return E_INVALIDARG;
+
+    HRESULT hr = MFCreateSample(ppSample);
+    if (SUCCEEDED(hr))
+    {
+        CMFGSTBuffer *pMFGSTBuffer = new (nothrow) CMFGSTBuffer(hr, buf);
+        if (pMFGSTBuffer == NULL)
+            return E_OUTOFMEMORY;
+
+        if (FAILED(hr))
+        {
+            delete pMFGSTBuffer;
+            return hr;
+        }
+
+        IMFMediaBuffer *pBuffer = NULL;
+        hr = pMFGSTBuffer->QueryInterface(IID_IMFMediaBuffer, (void **)&pBuffer);
+        if (FAILED(hr) || pBuffer == NULL)
+        {
+            delete pMFGSTBuffer;
+            return E_NOINTERFACE;
+        }
+
+        hr = (*ppSample)->AddBuffer(pBuffer);
+        SafeRelease(&pBuffer);
+
+        // Copy metadata from GStreamer to Media Foundation sample
+        if (SUCCEEDED(hr) && GST_BUFFER_PTS_IS_VALID(buf))
+            hr = (*ppSample)->SetSampleTime(GST_BUFFER_PTS(buf) / 100);
+
+        if (SUCCEEDED(hr) && GST_BUFFER_DURATION_IS_VALID(buf))
+            hr = (*ppSample)->SetSampleDuration(GST_BUFFER_DURATION(buf) / 100);
+
+        if (SUCCEEDED(hr) &&
+            (GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DISCONT) || bDiscont))
+        {
+            hr = (*ppSample)->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
+            bDiscont = FALSE;
+        }
+
+        if (SUCCEEDED(hr))
+        {
+            hr = (*ppSample)->SetUINT32(MFSampleExtension_CleanPoint,
+                    GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DELTA_UNIT) ? FALSE : TRUE);
+        }
+    }
+
+    return hr;
+}
+
 static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
 {
     GstCaps *srcCaps = NULL;
     HRESULT hr = S_OK;
     MFT_OUTPUT_STREAM_INFO outputStreamInfo;
+
+    gint strideY = decoder->defaultStride != 0 ? decoder->defaultStride : decoder->width;
+    gint strideU = strideY / 2;
+    gint strideV = strideY / 2;
+
+    gint offsetY = 0;
+    gint offsetU = strideY * decoder->height;
+    gint offsetV = offsetU + strideU * (decoder->height / 2);
 
     GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad);
     if (padCaps == NULL)
@@ -376,14 +464,14 @@ static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
         srcCaps = gst_caps_new_simple("video/x-raw-yuv",
             "format", G_TYPE_STRING, "YV12",
             "framerate", GST_TYPE_FRACTION, decoder->framerate_num, decoder->framerate_den,
-            "width", G_TYPE_INT, decoder->width,
-            "height", G_TYPE_INT, decoder->height,
-            "offset-y", G_TYPE_INT, 0,
-            "offset-v", G_TYPE_INT, (decoder->width * decoder->height + ((decoder->width * decoder->height) / 4)),
-            "offset-u", G_TYPE_INT, decoder->width * decoder->height,
-            "stride-y", G_TYPE_INT, decoder->width,
-            "stride-v", G_TYPE_INT, decoder->width / 2,
-            "stride-u", G_TYPE_INT, decoder->width / 2,
+            "width", G_TYPE_INT, decoder->visibleWidth ? decoder->visibleWidth : decoder->width,
+            "height", G_TYPE_INT, decoder->visibleHeight ? decoder->visibleHeight : decoder->height,
+            "offset-y", G_TYPE_INT, offsetY,
+            "offset-v", G_TYPE_INT, offsetV,
+            "offset-u", G_TYPE_INT, offsetU,
+            "stride-y", G_TYPE_INT, strideY,
+            "stride-v", G_TYPE_INT, strideU,
+            "stride-u", G_TYPE_INT, strideV,
             NULL);
     }
     else
@@ -394,14 +482,14 @@ static void mfwrapper_set_src_caps(GstMFWrapper *decoder)
             return;
 
         gst_caps_set_simple(srcCaps,
-            "width", G_TYPE_INT, decoder->width,
-            "height", G_TYPE_INT, decoder->height,
-            "offset-y", G_TYPE_INT, 0,
-            "offset-v", G_TYPE_INT, (decoder->width * decoder->height + ((decoder->width * decoder->height) / 4)),
-            "offset-u", G_TYPE_INT, decoder->width * decoder->height,
-            "stride-y", G_TYPE_INT, decoder->width,
-            "stride-v", G_TYPE_INT, decoder->width / 2,
-            "stride-u", G_TYPE_INT, decoder->width / 2,
+            "width", G_TYPE_INT, decoder->visibleWidth ? decoder->visibleWidth : decoder->width,
+            "height", G_TYPE_INT, decoder->visibleHeight ? decoder->visibleHeight : decoder->height,
+            "offset-y", G_TYPE_INT, offsetY,
+            "offset-v", G_TYPE_INT, offsetV,
+            "offset-u", G_TYPE_INT, offsetU,
+            "stride-y", G_TYPE_INT, strideY,
+            "stride-v", G_TYPE_INT, strideU,
+            "stride-u", G_TYPE_INT, strideV,
             NULL);
     }
 
@@ -489,146 +577,36 @@ static void mfwrapper_print_output_media_formats(IMFTransform *pMFTrasnform, con
 }
 #endif // MEDIA_FORMAT_DEBUG
 
-// Return S_FALSE if we fail to convert. S_FALSE is not critical error,
-// but will signal caller, that something is wrong with buffer.
-static HRESULT mfwrapper_nalu_to_start_code(BYTE *pbBuffer, gsize size)
-{
-    gsize leftSize = size;
-
-    if (pbBuffer == NULL || size < NALU_LENGTH_SIZE)
-        return S_FALSE;
-
-    do
-    {
-        guint naluLen = ((guint)*(guint8*)pbBuffer) << 24;
-        naluLen |= ((guint)*(guint8*)(pbBuffer + 1)) << 16;
-        naluLen |= ((guint)*(guint8*)(pbBuffer + 2)) << 8;
-        naluLen |= ((guint)*(guint8*)(pbBuffer + 3));
-
-        // Start code or something wrong.
-        // naluLen cannot be more then data we have to process.
-        if (naluLen <= 1 || naluLen > (leftSize - NALU_LENGTH_SIZE))
-            return S_FALSE;
-
-        pbBuffer[0] = 0x00;
-        pbBuffer[1] = 0x00;
-        pbBuffer[2] = 0x00;
-        pbBuffer[3] = 0x01;
-
-        leftSize -= (naluLen + NALU_LENGTH_SIZE);
-        pbBuffer += (naluLen + NALU_LENGTH_SIZE);
-
-    } while (leftSize > NALU_LENGTH_SIZE);
-
-    return leftSize == 0 ? S_OK : S_FALSE;
-}
-
-static gboolean mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
+static gint mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
 {
     IMFSample *pSample = NULL;
-    IMFMediaBuffer *pBuffer = NULL;
-    DWORD dwBufferSize = 0;
-    BYTE *pbBuffer = NULL;
-    GstMapInfo info;
-    HRESULT hrDeliverBuffer = S_OK;
-    gboolean unmap_buf = FALSE;
-    gboolean unlock_buf = FALSE;
 
     if (!decoder->pDecoder)
-        return FALSE;
+        return PI_FAILED;
 
-    HRESULT hr = MFCreateSample(&pSample);
-
-    if (SUCCEEDED(hr) && decoder->is_force_discontinuity)
-    {
-        hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
-        decoder->is_force_discontinuity = FALSE;
-    }
-
-    if (SUCCEEDED(hr) && GST_BUFFER_PTS_IS_VALID(buf))
-        hr = pSample->SetSampleTime(GST_BUFFER_PTS(buf) / 100);
-
-    if (SUCCEEDED(hr) && GST_BUFFER_DURATION_IS_VALID(buf))
-        hr = pSample->SetSampleDuration(GST_BUFFER_DURATION(buf) / 100);
-
-    if (SUCCEEDED(hr) && gst_buffer_map(buf, &info, GST_MAP_READ))
-        unmap_buf = TRUE;
-    else
-        hr = E_FAIL;
-
-    if (SUCCEEDED(hr) && decoder->is_send_header &&
-            decoder->header != NULL && decoder->header_size > 0)
-        dwBufferSize = (DWORD)decoder->header_size + (DWORD)info.size;
-    else if (SUCCEEDED(hr))
-        dwBufferSize = (DWORD)info.size;
+    HRESULT hr = mfwrapper_create_sample_from_gst_buffer(&pSample, buf,
+            decoder->force_discontinuity);
 
     if (SUCCEEDED(hr))
-        hr = MFCreateMemoryBuffer(dwBufferSize, &pBuffer);
+        hr = decoder->pDecoder->ProcessInput(0, pSample, 0);
 
-    if (SUCCEEDED(hr))
-        hr = pBuffer->SetCurrentLength(dwBufferSize);
-
-    if (SUCCEEDED(hr))
-        hr = pBuffer->Lock(&pbBuffer, NULL, NULL);
-
-    if (SUCCEEDED(hr))
-        unlock_buf = TRUE;
-
-    if (SUCCEEDED(hr) && decoder->is_send_header &&
-            decoder->header != NULL && decoder->header_size > 0)
-    {
-        decoder->is_send_header = FALSE;
-        if (dwBufferSize >= decoder->header_size)
-        {
-            memcpy_s(pbBuffer, dwBufferSize, decoder->header, decoder->header_size);
-            pbBuffer += decoder->header_size;
-            dwBufferSize -= decoder->header_size;
-
-            if (dwBufferSize >= info.size)
-            {
-                memcpy_s(pbBuffer, dwBufferSize, info.data, info.size);
-                hrDeliverBuffer = mfwrapper_nalu_to_start_code(pbBuffer, info.size);
-            }
-            else
-            {
-                hr = E_FAIL;
-            }
-        }
-        else
-        {
-            hr = E_FAIL;
-        }
-    }
-    else if (SUCCEEDED(hr))
-    {
-        memcpy_s(pbBuffer, dwBufferSize, info.data, info.size);
-        hrDeliverBuffer = mfwrapper_nalu_to_start_code(pbBuffer, info.size);
-    }
-
-    if (unlock_buf)
-        hr = pBuffer->Unlock();
-
-    if (unmap_buf)
-        gst_buffer_unmap(buf, &info);
-
-    // mfwrapper_nalu_to_start_code() can return S_FALSE, so deliver
-    // buffer only if we have S_OK.
-    if (SUCCEEDED(hr) && hrDeliverBuffer == S_OK)
-    {
-        hr = pSample->AddBuffer(pBuffer);
-        if (SUCCEEDED(hr))
-            hr = decoder->pDecoder->ProcessInput(0, pSample, 0);
-    }
-
-    gst_buffer_unref(buf);
-
-    SafeRelease(&pBuffer);
     SafeRelease(&pSample);
 
-    if (SUCCEEDED(hr))
-        return TRUE;
-    else
-        return FALSE;
+    if (hr == MF_E_NOTACCEPTING)
+    {
+        return PI_NOTACCEPTING;
+    }
+    else if (FAILED(hr)) // If ProcessInput() fails it is critical and we cannot decode
+    {
+        decoder->is_decoder_error = TRUE;
+        gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                g_strdup_printf("Failed to decode stream (0x%X)", hr), NULL,
+                ("mfwrapper.c"), ("mfwrapper_process_input"), 0);
+        return PI_FAILED;
+    }
+
+    return PI_DELIVERED;
 }
 
 static HRESULT mfwrapper_configure_colorconvert_input_type(GstMFWrapper *decoder,
@@ -1020,6 +998,34 @@ static HRESULT mfwrapper_configure_buffer_pool(GstMFWrapper *decoder)
     return S_OK;
 }
 
+static gboolean mfwrapper_get_minimum_display_aperture(IMFMediaType *pMediaType,
+                                                       UINT32 *pVisibleWidth,
+                                                       UINT32 *pVisibleHeight)
+{
+    if (pMediaType == NULL || pVisibleWidth == NULL || pVisibleHeight == NULL)
+        return FALSE;
+
+    MFVideoArea area;
+    UINT32 cbBlobSize = 0;
+
+    HRESULT hr = pMediaType->GetBlobSize(MF_MT_MINIMUM_DISPLAY_APERTURE,
+                                         &cbBlobSize);
+    if (FAILED(hr) || cbBlobSize != sizeof(MFVideoArea))
+        return FALSE;
+
+    hr = pMediaType->GetBlob(MF_MT_MINIMUM_DISPLAY_APERTURE,
+                             reinterpret_cast<UINT8*>(&area),
+                             sizeof(MFVideoArea),
+                             NULL);
+    if (FAILED(hr))
+        return FALSE;
+
+    *pVisibleWidth = area.Area.cx;
+    *pVisibleHeight = area.Area.cy;
+
+    return TRUE;
+}
+
 static HRESULT mfwrapper_set_decoder_output_type(GstMFWrapper *decoder,
                                                  IMFMediaType *pOutputType,
                                                  gboolean bInitColorConverter)
@@ -1030,6 +1036,8 @@ static HRESULT mfwrapper_set_decoder_output_type(GstMFWrapper *decoder,
     GUID currentSubType;
     guint width = 0;
     guint height = 0;
+    guint visibleWidth = 0;
+    guint visibleHeight = 0;
 
     if (decoder == NULL && pOutputType == NULL)
         return E_POINTER;
@@ -1085,12 +1093,28 @@ static HRESULT mfwrapper_set_decoder_output_type(GstMFWrapper *decoder,
         }
         hr = S_OK; // Ok if we do not have above attribute
 
+        // Get visible resolution. It should be used instead for caps, since
+        // MF via MF_MT_FRAME_SIZE provides encoded resolution for H.264 in same cases.
+        if (mfwrapper_get_minimum_display_aperture(
+                pOutputType, &visibleWidth, &visibleHeight))
+        {
+            if (decoder->visibleWidth != visibleWidth || decoder->visibleHeight != visibleHeight)
+            {
+                decoder->visibleWidth = visibleWidth;
+                decoder->visibleHeight = visibleHeight;
+
+                decoder->is_set_caps = TRUE; // Only set caps if resolution changed, so
+                // we do not trigger it during decoder reload.
+            }
+        }
+
         // Cache stride and pixel aspect ratio. Ok if we do not have it.
         UINT32 unDefaultStride = 0;
         hr = pOutputType->GetUINT32(MF_MT_DEFAULT_STRIDE, &unDefaultStride);
         if (SUCCEEDED(hr))
         {
-            decoder->defaultStride = unDefaultStride;
+            // Based on doc should be cast to signed int 32
+            decoder->defaultStride = (gint)unDefaultStride;
         }
         hr = S_OK;
 
@@ -1219,7 +1243,7 @@ static HRESULT mfwrapper_configure_decoder_output_type(GstMFWrapper *decoder)
     // We should cache as much supported formats as possible.
     // Try them in order we prefered.
     if (pOutputTypeIYUV)
-        hr = mfwrapper_set_decoder_output_type(decoder, pOutputTypeIYUV, false);
+        hr = mfwrapper_set_decoder_output_type(decoder, pOutputTypeIYUV, true);
 
     // Try only if previous one failed
     if (hr != S_OK && pOutputTypeNV12)
@@ -1341,13 +1365,12 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder,
         return GST_FLOW_ERROR;
 
     hr = pSample->GetSampleTime(&llTimestamp);
-    GST_BUFFER_TIMESTAMP(pGstBuffer) = llTimestamp * 100;
-
     if (SUCCEEDED(hr))
-    {
-        hr = pSample->GetSampleDuration(&llDuration);
+        GST_BUFFER_TIMESTAMP(pGstBuffer) = llTimestamp * 100;
+
+    hr = pSample->GetSampleDuration(&llDuration);
+    if (SUCCEEDED(hr))
         GST_BUFFER_DURATION(pGstBuffer) = llDuration * 100;
-    }
 
     if (SUCCEEDED(hr) && decoder->is_force_output_discontinuity)
     {
@@ -1356,20 +1379,17 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder,
         decoder->is_force_output_discontinuity = FALSE;
     }
 
-#if PTS_DEBUG
-    if (GST_BUFFER_TIMESTAMP_IS_VALID(pGstBuffer) && GST_BUFFER_DURATION_IS_VALID(pGstBuffer))
-        g_print("JFXMEDIA H265 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(pGstBuffer), GST_BUFFER_DURATION(pGstBuffer));
-    else if (GST_BUFFER_TIMESTAMP_IS_VALID(pGstBuffer) && !GST_BUFFER_DURATION_IS_VALID(pGstBuffer))
-        g_print("JFXMEDIA H265 %I64u -1\n", GST_BUFFER_TIMESTAMP(pGstBuffer));
-    else
-        g_print("JFXMEDIA H265 -1\n");
-#endif
+    TRACE(DECODER_OUTPUT_PTS, "PTS OUT pts=%lld dur=%lld discont=%d\n",
+          GST_BUFFER_TIMESTAMP_IS_VALID(pGstBuffer) ? GST_BUFFER_TIMESTAMP(pGstBuffer) : -1,
+          GST_BUFFER_DURATION_IS_VALID(pGstBuffer) ? GST_BUFFER_DURATION(pGstBuffer) : -1,
+          GST_BUFFER_FLAG_IS_SET(pGstBuffer, GST_BUFFER_FLAG_DISCONT));
 
     return gst_pad_push(decoder->srcpad, pGstBuffer);
 }
 
 static gint mfwrapper_process_output(GstMFWrapper *decoder)
 {
+    HRESULT hr = S_OK;
     MFT_OUTPUT_DATA_BUFFER outputDataBuffer;
     outputDataBuffer.dwStreamID = 0;
     outputDataBuffer.pSample = decoder->pDecoderOutput;
@@ -1385,9 +1405,16 @@ static gint mfwrapper_process_output(GstMFWrapper *decoder)
     if (decoder->is_eos || decoder->is_flushing)
         return PO_FLUSHING;
 
-    HRESULT hr = decoder->pDecoder->GetOutputStatus(&dwFlags);
-    if (SUCCEEDED(hr) && dwFlags != MFT_OUTPUT_STATUS_SAMPLE_READY)
-        return PO_NEED_MORE_DATA;
+//    For H.264 MFT_OUTPUT_STATUS_SAMPLE_READY is never reported even if
+//    GetOutputStatus() returns S_OK. It should fail or report flag
+//    based on documentation. This code will be disabled for now.
+//    hr = decoder->pDecoder->GetOutputStatus(&dwFlags);
+//    if (SUCCEEDED(hr) && dwFlags != MFT_OUTPUT_STATUS_SAMPLE_READY)
+//        return PO_NEED_MORE_DATA;
+
+    // Just in case reset decoder buffer to initial state
+    if (decoder->pDecoderBuffer)
+        decoder->pDecoderBuffer->SetCurrentLength(0);
 
     hr = decoder->pDecoder->ProcessOutput(0, 1, &outputDataBuffer, &dwStatus);
     SafeRelease(&outputDataBuffer.pEvents);
@@ -1445,27 +1472,58 @@ static gint mfwrapper_process_output(GstMFWrapper *decoder)
 // Processes input buffers
 static GstFlowReturn mfwrapper_chain(GstPad *pad, GstObject *parent, GstBuffer *buf)
 {
-    GstFlowReturn ret = GST_FLOW_OK;
     GstMFWrapper *decoder = GST_MFWRAPPER(parent);
+    gint pi_ret = PI_FAILED;
+    gint po_ret = PO_FAILED;
 
-    if (decoder->is_flushing || decoder->is_eos_received)
+#if TRACE_ENABLE
+    if (decoder->trace_first_input_sample)
+    {
+        TRACE(DECODER_FIRST_PTS, "First input sample PTS=%lld dur=%lld\n",
+              GST_BUFFER_TIMESTAMP_IS_VALID(buf) ? GST_BUFFER_TIMESTAMP(buf) : -1,
+              GST_BUFFER_DURATION_IS_VALID(buf) ? GST_BUFFER_DURATION(buf) : -1);
+        decoder->trace_first_input_sample = FALSE;
+    }
+#endif
+
+    TRACE(DECODER_INPUT_PTS, "PTS IN pad=%s pts=%lld dur=%lld discont=%d\n",
+          GST_PAD_NAME(pad),
+          GST_BUFFER_TIMESTAMP_IS_VALID(buf) ? GST_BUFFER_TIMESTAMP(buf) : -1,
+          GST_BUFFER_DURATION_IS_VALID(buf) ? GST_BUFFER_DURATION(buf) : -1,
+          GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DISCONT));
+
+    if (decoder->is_flushing || decoder->is_eos_received || decoder->is_decoder_error)
     {
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(buf);
         return GST_FLOW_FLUSHING;
     }
 
-    if (!mfwrapper_process_input(decoder, buf))
+    pi_ret = mfwrapper_process_input(decoder, buf);
+    // Process all output only if process input did not failed
+    if (pi_ret != PI_FAILED)
+    {
+        do
+        {
+            po_ret = mfwrapper_process_output(decoder);
+        } while (po_ret == PO_DELIVERED);
+    }
+
+    // Input might reject sample, so try again
+    if (pi_ret == PI_NOTACCEPTING)
+        pi_ret = mfwrapper_process_input(decoder, buf);
+
+    // INLINE - gst_buffer_unref()
+    gst_buffer_unref(buf);
+
+    // By now PI_FAILED or PI_NOTACCEPTING is critical
+    if (pi_ret != PI_DELIVERED || po_ret == PO_FAILED)
+        return GST_FLOW_ERROR;
+
+    if (po_ret == PO_FLUSHING || decoder->is_flushing)
         return GST_FLOW_FLUSHING;
 
-    gint po_ret = mfwrapper_process_output(decoder);
-    if (po_ret != PO_DELIVERED && po_ret != PO_NEED_MORE_DATA)
-        return GST_FLOW_FLUSHING;
-
-    if (decoder->is_flushing)
-        return GST_FLOW_FLUSHING;
-
-    return ret;
+    return GST_FLOW_OK;
 }
 
 static gboolean mfwrapper_push_sink_event(GstMFWrapper *decoder, GstEvent *event)
@@ -1480,6 +1538,47 @@ static gboolean mfwrapper_push_sink_event(GstMFWrapper *decoder, GstEvent *event
 
     return ret;
 }
+static void mfwrapper_drain_output(GstMFWrapper *decoder)
+{
+    if (decoder == NULL || decoder->pDecoder == NULL)
+        return;
+
+    if (decoder->is_decoder_error)
+        return;
+
+    if (!decoder->is_decoder_initialized)
+        return;
+
+    // Let decoder know that we got end of stream
+    HRESULT hr = decoder->pDecoder->
+        ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+
+    // Ask decoder to produce all remaining data
+    if (SUCCEEDED(hr))
+    {
+        decoder->pDecoder->
+            ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
+    }
+
+    // Deliver remaining data
+    gint po_ret;
+    do
+    {
+        po_ret = mfwrapper_process_output(decoder);
+    } while (po_ret == PO_DELIVERED);
+
+    for (int i = 0; i < MAX_COLOR_CONVERT; i++)
+    {
+        if (decoder->pColorConvert[i])
+        {
+            hr = decoder->pColorConvert[i]->
+                ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+            if (SUCCEEDED(hr))
+                hr = decoder->pColorConvert[i]->
+                    ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+        }
+    }
+}
 
 // This function will unload old instance of decoder and will create a new one.
 // Input and Output media formats will be exactly same as old one.
@@ -1490,39 +1589,61 @@ static gboolean mfwrapper_push_sink_event(GstMFWrapper *decoder, GstEvent *event
 static gboolean mfwrapper_reload_decoder(GstMFWrapper *decoder)
 {
     HRESULT hr = S_OK;
-
-    IMFMediaType *pInputType = NULL;
     IMFMediaType *pOutputType = NULL;
-
     DWORD dwStatus = 0;
-
     GUID majorType;
     GUID subType;
 
-    if (decoder == NULL || decoder->pDecoder == NULL)
+    if (decoder == NULL || decoder->pDecoder == NULL || decoder->pDecoderInputType == NULL)
         return false;
 
-    // Save copy of old decoder
-    IMFTransform *pOldDecoder = decoder->pDecoder;
+    // Can required information from old decoder
+    hr = decoder->pDecoder->GetOutputCurrentType(0, &pOutputType);
 
-    decoder->pDecoder = NULL;
+    // Release old decoder. All needed information is cached.
+    SafeRelease(&decoder->pDecoder);
 
-    hr = pOldDecoder->GetInputCurrentType(0, &pInputType);
     if (SUCCEEDED(hr))
-        hr = pOldDecoder->GetOutputCurrentType(0, &pOutputType);
+        hr = decoder->pDecoderInputType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
     if (SUCCEEDED(hr))
-        hr = pInputType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
-    if (SUCCEEDED(hr))
-        hr = pInputType->GetGUID(MF_MT_SUBTYPE, &subType);
+        hr = decoder->pDecoderInputType->GetGUID(MF_MT_SUBTYPE, &subType);
 
     // Load decoder based on media types of current one
     hr = mfwrapper_load_decoder_media_types(decoder, majorType, subType);
 
-    // Copy input and output types and we should be good to go
+    // Set input type from saved copy so we keep all infromation
+    IMFMediaType* pInputType = NULL;
+    if (SUCCEEDED(hr))
+        hr = MFCreateMediaType(&pInputType);
+
+    if (SUCCEEDED(hr))
+        hr = decoder->pDecoderInputType->CopyAllItems(pInputType);
+
     if (SUCCEEDED(hr))
         hr = decoder->pDecoder->SetInputType(0, pInputType, 0);
+
+    SafeRelease(&pInputType);
+
+    // Set output format from old decoder and update resolution on
+    // it to match input. Resolution can change and H.264 will reject such
+    // format if different from input. H.265 is fine with both cases.
+    // We will update it anyway when streaming starts.
     if (SUCCEEDED(hr))
-        hr = decoder->pDecoder->SetOutputType(0, pOutputType, 0);
+    {
+        // Copy resolution from input to output
+        UINT32 uiWidth = 0;
+        UINT32 uiHeight = 0;
+        hr = MFGetAttributeSize(decoder->pDecoderInputType, MF_MT_FRAME_SIZE,
+                &uiWidth, &uiHeight);
+
+        if (SUCCEEDED(hr))
+            hr = MFSetAttributeSize(pOutputType, MF_MT_FRAME_SIZE, uiWidth, uiHeight);
+
+        if (SUCCEEDED(hr))
+            hr = decoder->pDecoder->SetOutputType(0, pOutputType, 0);
+    }
+
+    SafeRelease(&pOutputType);
 
     if (SUCCEEDED(hr))
         hr = decoder->pDecoder->GetInputStatus(0, &dwStatus);
@@ -1540,10 +1661,6 @@ static gboolean mfwrapper_reload_decoder(GstMFWrapper *decoder)
     if (SUCCEEDED(hr))
         hr = decoder->pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, NULL);
 
-    SafeRelease(&pInputType);
-    SafeRelease(&pOutputType);
-    SafeRelease(&pOldDecoder);
-
     if (FAILED(hr))
         return false;
 
@@ -1560,6 +1677,17 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     {
     case GST_EVENT_SEGMENT:
     {
+#if TRACE_ENABLE
+        {
+            const GstSegment *segment = NULL;
+            gst_event_parse_segment(event, &segment);
+            TRACE(DECODER_SINK_EVENTS, "GST_EVENT_SEGMENT start=%lld time=%lld position=%lld\n",
+                    segment != NULL ? segment->start : -1,
+                    segment != NULL ? segment->time : -1,
+                    segment != NULL ? segment->position : -1);
+            decoder->trace_first_input_sample = TRUE;
+        }
+#endif
         decoder->is_force_discontinuity = TRUE;
         ret = mfwrapper_push_sink_event(decoder, event);
         decoder->is_eos_received = FALSE;
@@ -1568,6 +1696,7 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     break;
     case GST_EVENT_FLUSH_START:
     {
+        TRACE(DECODER_SINK_EVENTS, "GST_EVENT_FLUSH_START\n");
         decoder->is_flushing = TRUE;
 
         ret = mfwrapper_push_sink_event(decoder, event);
@@ -1575,21 +1704,11 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     break;
     case GST_EVENT_FLUSH_STOP:
     {
-        if (!decoder->is_decoder_error)
+        TRACE(DECODER_SINK_EVENTS, "GST_EVENT_FLUSH_STOP\n");
+        if (decoder->pDecoder && !decoder->is_decoder_error)
         {
-            if (!mfwrapper_reload_decoder(decoder))
+            if (mfwrapper_reload_decoder(decoder))
             {
-                decoder->is_decoder_error = TRUE;
-                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
-                                     GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
-                                     g_strdup("Failed to reload decoder"), NULL,
-                                     ("mfwrapper.c"), ("mfwrapper_sink_event"), 0);
-            }
-            else
-            {
-                // Send header after reload
-                decoder->is_send_header = TRUE;
-
                 for (int i = 0; i < MAX_COLOR_CONVERT; i++)
                 {
                     if (decoder->pColorConvert[i])
@@ -1598,6 +1717,15 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
                                 ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
                     }
                 }
+            }
+            else
+            {
+                decoder->is_decoder_error = TRUE;
+                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
+                        GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
+                        g_strdup("Failed to reload decoder"), NULL,
+                        ("mfwrapper.c"), ("mfwrapper_sink_event"), 0);
+
             }
         }
 
@@ -1610,40 +1738,10 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     break;
     case GST_EVENT_EOS:
     {
+        TRACE(DECODER_SINK_EVENTS, "GST_EVENT_EOS\n");
         decoder->is_eos_received = TRUE;
 
-        if (!decoder->is_decoder_error)
-        {
-            // Let decoder know that we got end of stream
-            hr = decoder->pDecoder->
-                ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
-
-            // Ask decoder to produce all remaining data
-            if (SUCCEEDED(hr))
-            {
-                decoder->pDecoder->
-                        ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
-            }
-
-            // Deliver remaining data
-            gint po_ret;
-            do
-            {
-                po_ret = mfwrapper_process_output(decoder);
-            } while (po_ret == PO_DELIVERED);
-
-            for (int i = 0; i < MAX_COLOR_CONVERT; i++)
-            {
-                if (decoder->pColorConvert[i])
-                {
-                    hr = decoder->pColorConvert[i]->
-                            ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
-                    if (SUCCEEDED(hr))
-                        hr = decoder->pColorConvert[i]->
-                                ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
-                }
-            }
-        }
+        mfwrapper_drain_output(decoder);
 
         // We done pushing all frames. Deliver EOS.
         ret = mfwrapper_push_sink_event(decoder, event);
@@ -1653,9 +1751,31 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     break;
     case GST_EVENT_CAPS:
     {
-        GstCaps *caps;
-
+        GstCaps *caps = NULL;
         gst_event_parse_caps(event, &caps);
+
+#if TRACE_ENABLE
+        {
+            gchar *caps_str = gst_caps_to_string(caps);
+            TRACE(DECODER_SINK_EVENTS, "GST_EVENT_CAPS: %s\n", caps_str);
+            g_free(caps_str);
+        }
+#endif
+
+        if (decoder->pDecoder && !decoder->is_decoder_error)
+        {
+            decoder->pDecoder->
+                ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+            for (int i = 0; i < MAX_COLOR_CONVERT; i++)
+            {
+                if (decoder->pColorConvert[i])
+                {
+                    decoder->pColorConvert[i]->
+                        ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+                }
+            }
+        }
+
         if (!mfwrapper_sink_set_caps(pad, parent, caps))
         {
             gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
@@ -1670,6 +1790,7 @@ static gboolean mfwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *e
     }
     break;
     default:
+        TRACE(DECODER_SINK_EVENTS, "Received pass-thru event\n");
         ret = mfwrapper_push_sink_event(decoder, event);
         break;
     }
@@ -1691,7 +1812,14 @@ static gboolean mfwrapper_get_mf_media_types(GstCaps *caps, GUID *pMajorType, GU
         mimetype = gst_structure_get_name(s);
         if (mimetype != NULL)
         {
-            if (strstr(mimetype, "video/x-h265") != NULL)
+            if (strstr(mimetype, "video/x-h264") != NULL)
+            {
+                *pMajorType = MFMediaType_Video;
+                *pSubType = MFVideoFormat_H264;
+
+                return TRUE;
+            }
+            else if (strstr(mimetype, "video/x-h265") != NULL)
             {
                 *pMajorType = MFMediaType_Video;
                 *pSubType = MFVideoFormat_HEVC;
@@ -1760,81 +1888,57 @@ static HRESULT mfwrapper_load_decoder_media_types(GstMFWrapper *decoder,
     return hr;
 }
 
-gsize mfwrapper_get_hevc_config(void *in, gsize in_size, BYTE *out, gsize out_size)
+static HRESULT mfwrapper_set_mf_blob_from_caps(IMFMediaType *pMediaType,
+                                               GstStructure *structure,
+                                               const gchar *fieldName,
+                                               const GUID &guidKey)
 {
-    guintptr bdata = (guintptr)in;
-    guint8 arrayCount = 0;
-    guint16 nalUnitsCount = 0;
-    guint16 nalUnitLength = 0;
-    guint ii = 0;
-    guint jj = 0;
-    gsize in_bytes_count = 22;
-    gsize out_bytes_count = 0;
-    guint8 startCode[4] = { 0x00, 0x00, 0x00, 0x01 };
+    const GValue *value = NULL;
+    GstBuffer *buffer = NULL;
+    GstMapInfo info;
+    HRESULT hr = S_OK;
 
-    if (in_bytes_count > in_size)
-        return 0;
+    if (pMediaType == NULL || structure == NULL || fieldName == NULL)
+        return E_INVALIDARG;
 
-    // Skip first 22 bytes
-    bdata += in_bytes_count;
+    value = gst_structure_get_value(structure, fieldName);
+    if (value == NULL)
+        return S_OK;
 
-    // Get array count
-    arrayCount = *(guint8*)bdata;
-    bdata++; in_bytes_count++;
+    buffer = gst_value_get_buffer(value);
+    if (buffer == NULL)
+        return S_OK;
 
-    for (ii = 0; ii < arrayCount; ii++) {
-        if ((in_bytes_count + 3) > in_size)
-            return 0;
+    if (!gst_buffer_map(buffer, &info, GST_MAP_READ))
+        return E_FAIL;
 
-        // Skip 1 byte, not needed
-        bdata++; in_bytes_count++;
-
-        // 2 bytes number of nal units in array
-        nalUnitsCount = ((guint16)*(guint8*)bdata) << 8;
-        bdata++; in_bytes_count++;
-        nalUnitsCount |= (guint16)*(guint8*)bdata;
-        bdata++; in_bytes_count++;
-
-        for (jj = 0; jj < nalUnitsCount; jj++) {
-            if ((in_bytes_count + 2) > in_size)
-                return 0;
-
-            nalUnitLength = ((guint16)*(guint8*)bdata) << 8;
-            bdata++; in_bytes_count++;
-            nalUnitLength |= (guint16)*(guint8*)bdata;
-            bdata++; in_bytes_count++;
-
-            if ((out_bytes_count + 4) > out_size)
-                return 0;
-
-            // Set start code
-            memcpy(out, &startCode[0], sizeof(startCode));
-            out += sizeof(startCode); out_bytes_count += sizeof(startCode);
-
-            if ((out_bytes_count + nalUnitLength) > out_size)
-                return 0;
-
-            if ((in_bytes_count + nalUnitLength) > in_size)
-                return 0;
-
-            // Copy nal unit
-            memcpy(out, (guint8*)bdata, nalUnitLength);
-            bdata += nalUnitLength; in_bytes_count += nalUnitLength;
-            out += nalUnitLength; out_bytes_count += nalUnitLength;
-        }
+    if (info.size > G_MAXUINT)
+    {
+        hr = E_FAIL;
+    }
+    else if (info.size > 0)
+    {
+        hr = pMediaType->SetBlob(guidKey, info.data, (UINT32)info.size);
     }
 
-    return out_bytes_count;
+    gst_buffer_unmap(buffer, &info);
+
+    return hr;
 }
 
 static HRESULT mfwrapper_set_input_media_type(GstMFWrapper *decoder, GstCaps *caps)
 {
     HRESULT hr = S_OK;
 
-    IMFMediaType *pInputType = NULL;
     GUID majorType;
     GUID subType;
     GstStructure *s = NULL;
+    const gchar *streamFormat = NULL;
+    guint value = 0;
+    gint numerator = 0;
+    gint denominator = 0;
+
+    SafeRelease(&decoder->pDecoderInputType);
 
     s = gst_caps_get_structure(caps, 0);
     if (s == NULL)
@@ -1843,19 +1947,54 @@ static HRESULT mfwrapper_set_input_media_type(GstMFWrapper *decoder, GstCaps *ca
     if (!mfwrapper_get_mf_media_types(caps, &majorType, &subType))
         return E_FAIL;
 
-    hr = MFCreateMediaType(&pInputType);
+    hr = MFCreateMediaType(&decoder->pDecoderInputType);
 
     if (SUCCEEDED(hr))
-        hr = pInputType->SetGUID(MF_MT_MAJOR_TYPE, majorType);
+        hr = decoder->pDecoderInputType->SetGUID(MF_MT_MAJOR_TYPE, majorType);
 
     if (SUCCEEDED(hr))
-        hr = pInputType->SetGUID(MF_MT_SUBTYPE, subType);
+        hr = decoder->pDecoderInputType->SetGUID(MF_MT_SUBTYPE, subType);
 
-    if (SUCCEEDED(hr) && gst_structure_get_int(s, "width", (gint*)&decoder->width) && gst_structure_get_int(s, "height", (gint*)&decoder->height))
-        hr = MFSetAttributeSize(pInputType, MF_MT_FRAME_SIZE, decoder->width, decoder->height);
+    if (SUCCEEDED(hr) && gst_structure_get_int(s, "width", (gint*)&decoder->width)
+                      && gst_structure_get_int(s, "height", (gint*)&decoder->height))
+        hr = MFSetAttributeSize(decoder->pDecoderInputType, MF_MT_FRAME_SIZE,
+                decoder->width, decoder->height);
 
-    if (SUCCEEDED(hr) && gst_structure_get_fraction(s, "framerate", (gint*)&decoder->framerate_num, (gint*)&decoder->framerate_den))
-        hr = MFSetAttributeRatio(pInputType, MF_MT_FRAME_RATE, decoder->framerate_num, decoder->framerate_den);
+    if (SUCCEEDED(hr) && gst_structure_get_fraction(s, "framerate",
+            (gint*)&decoder->framerate_num, (gint*)&decoder->framerate_den))
+        hr = MFSetAttributeRatio(decoder->pDecoderInputType, MF_MT_FRAME_RATE,
+                decoder->framerate_num, decoder->framerate_den);
+
+    if (SUCCEEDED(hr) && gst_structure_get_uint(s, "mf-interlace-mode", &value))
+        hr = decoder->pDecoderInputType->SetUINT32(MF_MT_INTERLACE_MODE, value);
+
+    if (SUCCEEDED(hr) && gst_structure_get_fraction(s, "pixel-aspect-ratio",
+            &numerator, &denominator))
+    {
+        decoder->pixel_num = numerator;
+        decoder->pixel_den = denominator;
+        hr = MFSetAttributeRatio(decoder->pDecoderInputType, MF_MT_PIXEL_ASPECT_RATIO,
+                                 numerator, denominator);
+    }
+
+    if (SUCCEEDED(hr) && gst_structure_get_uint(s, "mf-mpeg2-profile", &value))
+       hr = decoder->pDecoderInputType->SetUINT32(MF_MT_MPEG2_PROFILE, value);
+
+    if (SUCCEEDED(hr) && gst_structure_get_uint(s, "mf-mpeg2-level", &value))
+       hr = decoder->pDecoderInputType->SetUINT32(MF_MT_MPEG2_LEVEL, value);
+
+    if (SUCCEEDED(hr))
+    {
+        hr = mfwrapper_set_mf_blob_from_caps(decoder->pDecoderInputType, s,
+                "mf-mpeg-sequence-header", MF_MT_MPEG_SEQUENCE_HEADER);
+    }
+
+    IMFMediaType* pInputType = NULL;
+    if (SUCCEEDED(hr))
+        hr = MFCreateMediaType(&pInputType);
+
+    if (SUCCEEDED(hr))
+        hr = decoder->pDecoderInputType->CopyAllItems(pInputType);
 
     if (SUCCEEDED(hr))
         hr = decoder->pDecoder->SetInputType(0, pInputType, 0);
@@ -1865,7 +2004,7 @@ static HRESULT mfwrapper_set_input_media_type(GstMFWrapper *decoder, GstCaps *ca
     return hr;
 }
 
-static HRESULT mfwrapper_set_output_media_type(GstMFWrapper *decoder, GstCaps *caps)
+static HRESULT mfwrapper_set_output_media_type(GstMFWrapper *decoder, gboolean setCaps)
 {
     HRESULT hr = S_OK;
 
@@ -1889,7 +2028,8 @@ static HRESULT mfwrapper_set_output_media_type(GstMFWrapper *decoder, GstCaps *c
         hr = decoder->pDecoder->SetOutputType(0, pOutputType, 0);
 
     // Set srcpad caps
-    mfwrapper_set_src_caps(decoder);
+    if (setCaps)
+        mfwrapper_set_src_caps(decoder);
 
     SafeRelease(&pOutputType);
 
@@ -1913,7 +2053,11 @@ static gboolean mfwrapper_init_mf(GstMFWrapper *decoder, GstCaps *caps)
             hr = mfwrapper_set_input_media_type(decoder, caps);
 
         if (SUCCEEDED(hr))
-            hr = mfwrapper_set_output_media_type(decoder, caps);
+            hr = mfwrapper_set_output_media_type(decoder, TRUE);
+
+        // H.264 might not send MFT_OUTPUT_DATA_BUFFER_FORMAT_CHANGE
+        if (SUCCEEDED(hr))
+            hr = mfwrapper_configure_decoder_output_type(decoder);
 
         if (SUCCEEDED(hr))
             hr = decoder->pDecoder->GetInputStatus(0, &dwStatus);
@@ -1928,44 +2072,6 @@ static gboolean mfwrapper_init_mf(GstMFWrapper *decoder, GstCaps *caps)
 
     if (s == NULL)
         return FALSE;
-
-    // Get HEVC Config
-    GstMapInfo info;
-
-    if (SUCCEEDED(hr))
-        codec_data_value = gst_structure_get_value(s, "codec_data");
-
-    if (codec_data_value)
-        codec_data = gst_value_get_buffer(codec_data_value);
-
-    if (codec_data != NULL)
-    {
-        if (gst_buffer_map(codec_data, &info, GST_MAP_READ) && info.size > 0)
-        {
-            // Free old one if exist
-            if (decoder->header)
-                delete[] decoder->header;
-
-            decoder->header = new BYTE[info.size * 2]; // Should be enough, since we will only add several 4 bytes start codes to 3 nal units
-            if (decoder->header == NULL)
-            {
-                gst_buffer_unmap(codec_data, &info);
-                return FALSE;
-            }
-
-            decoder->header_size = mfwrapper_get_hevc_config(info.data, info.size, decoder->header, info.size * 2);
-            gst_buffer_unmap(codec_data, &info);
-
-            if (decoder->header_size <= 0)
-            {
-                delete[] decoder->header;
-                decoder->header = NULL;
-                return FALSE;
-            }
-
-            decoder->is_send_header = TRUE;
-        }
-    }
 
     if (!decoder->is_decoder_initialized)
     {

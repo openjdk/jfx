@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,49 @@
 
 CMFGSTBuffer::CMFGSTBuffer(DWORD cbMaxLength)
 {
+    Init();
+
+    m_cbMaxLength = cbMaxLength;
+}
+
+// pGstBuffer will be ref, so caller needs to unref buffer if no
+// longer needed.
+CMFGSTBuffer::CMFGSTBuffer(HRESULT &hr, GstBuffer *pGstBuffer)
+{
+    Init();
+
+    if (pGstBuffer == NULL)
+    {
+        hr = E_POINTER;
+        return;
+    }
+
+    // Map buffer
+    if (!gst_buffer_map(pGstBuffer, &m_GstMapInfo, GST_MAP_READWRITE))
+    {
+        hr = E_FAIL;
+        return;
+    }
+
+    // Set unmap flag, so AllocateOrGetBuffer() does not map it again.
+    m_bUnmapGstBuffer = TRUE;
+
+    // If we mapped buffer, then update our max and data length from buffer.
+    m_cbMaxLength = m_GstMapInfo.maxsize;
+    m_cbCurrentLength = m_GstMapInfo.size;
+
+    // Keep reference to buffer, so it does not gets released.
+    // INLINE - gst_buffer_ref()
+    m_pGstBuffer = gst_buffer_ref(pGstBuffer);
+}
+
+void CMFGSTBuffer::Init()
+{
     m_ulRefCount = 0;
 
     m_ulLockCount = 0;
     InitializeCriticalSection(&m_csBufferLock);
 
-    m_cbMaxLength = cbMaxLength;
     m_cbCurrentLength = 0;
     m_pbBuffer = NULL;
 
@@ -243,7 +280,7 @@ HRESULT CMFGSTBuffer::AllocateOrGetBuffer(BYTE **ppbBuffer)
         return E_INVALIDARG;
 
     // If we have GStreamer get buffer callback set, then call it to get
-    // buffer. Otherwise allocate memory internally.
+    // buffer if we do not have one.
     if (GetGstBufferCallback != NULL)
     {
         // Get buffer if needed
@@ -253,7 +290,12 @@ HRESULT CMFGSTBuffer::AllocateOrGetBuffer(BYTE **ppbBuffer)
             if (m_pGstBuffer == NULL)
                 return E_OUTOFMEMORY;
         }
+    }
 
+    // If we have m_pGstBuffer, just use it. It might be from callback or
+    // provided to us via constructor.
+    if (m_pGstBuffer)
+    {
         // Lock can be called multiple times, so if we have GStreamer buffer
         // allocated and mapped just return it.
         if (m_bUnmapGstBuffer)

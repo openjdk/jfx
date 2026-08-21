@@ -835,7 +835,6 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
                 g_print("JFXMEDIA OUTPUT AAC  -1\n");
         }
 #endif
-
         // Set output buffer to NULL before delivering it, otherwise flush stop can release it right after
         // we finish delivery.
         pBufferOut = decoder->out_buffer[pUserData->output_index];
@@ -2967,7 +2966,6 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstObject *parent, GstBuf
             g_print("JFXMEDIA INPUT AAC  -1\n");
     }
 #endif
-
     if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
     {
         decoder->enable_pts = TRUE;

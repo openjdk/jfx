@@ -32,6 +32,8 @@
     <ClCompile Include="..\..\gstreamer\plugins\javasource\marshal.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfgstbytestream.cpp" />
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.cpp" />
     <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.cpp" />
     <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.cpp" />
     <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.c">
@@ -45,6 +47,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbytestream.h" />
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.h" />
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.h" />
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\cache.h" />
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.h" />
@@ -60,21 +64,21 @@
     <ProjectGuid>{87CF0F6E-87BD-4CB5-A6A1-841F81F17842}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>plugins</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

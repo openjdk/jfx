@@ -1,34 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="javasource">
-      <UniqueIdentifier>{bb6f275d-3492-4001-a1d8-bd300341db59}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="progressbuffer">
-      <UniqueIdentifier>{a2baa68b-83bd-4126-81a2-068ff08d9c98}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="dshowwrapper">
-      <UniqueIdentifier>{56564e42-f8d2-4a48-8b90-8d65e262180a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="mfwrapper">
-      <UniqueIdentifier>{a396eb3d-d2e5-418e-999c-38fcdc5473a5}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\gstreamer\plugins\javasource\javasource.c">
-      <Filter>javasource</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\fxplugins.c" />
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.cpp">
+      <Filter>mfwrapper</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\javasource\marshal.c">
-      <Filter>javasource</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.cpp">
+      <Filter>mfwrapper</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.c">
-      <Filter>progressbuffer</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfgstbytestream.cpp">
+      <Filter>mfwrapper</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.c">
-      <Filter>progressbuffer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\win32\filecache.c">
-      <Filter>progressbuffer</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.cpp">
+      <Filter>mfwrapper</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Allocator.cpp">
       <Filter>dshowwrapper</Filter>
@@ -42,15 +26,33 @@
     <ClCompile Include="..\..\gstreamer\plugins\dshowwrapper\Src.cpp">
       <Filter>dshowwrapper</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\fxplugins.c" />
-    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.cpp">
-      <Filter>mfwrapper</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.c">
+      <Filter>progressbuffer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.cpp">
-      <Filter>mfwrapper</Filter>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.c">
+      <Filter>progressbuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\win32\filecache.c">
+      <Filter>progressbuffer\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\javasource.c">
+      <Filter>javasource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\plugins\javasource\marshal.c">
+      <Filter>javasource</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\plugins\fxplugins_common.h" />
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.h">
+      <Filter>mfwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.h">
+      <Filter>mfwrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbytestream.h">
+      <Filter>mfwrapper</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfwrapper.h">
       <Filter>mfwrapper</Filter>
     </ClInclude>
@@ -66,12 +68,6 @@
     <ClInclude Include="..\..\gstreamer\plugins\dshowwrapper\Src.h">
       <Filter>dshowwrapper</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gstreamer\plugins\fxplugins_common.h" />
-    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.h">
-      <Filter>mfwrapper</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\cache.h">
       <Filter>progressbuffer</Filter>
     </ClInclude>
@@ -81,5 +77,22 @@
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\progressbuffer.h">
       <Filter>progressbuffer</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="mfwrapper">
+      <UniqueIdentifier>{cd030290-f4d1-48ea-baed-22e512ed1d47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dshowwrapper">
+      <UniqueIdentifier>{4f39dd0f-2632-440d-b238-083d0ec4c9ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="progressbuffer">
+      <UniqueIdentifier>{bee46b16-0101-41ac-9e87-35f0ba732976}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="progressbuffer\win32">
+      <UniqueIdentifier>{9b6f392c-0e37-4697-a9be-28aa18ae5a8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="javasource">
+      <UniqueIdentifier>{6cb7f151-1911-4df9-8bfb-5cc1e57ec447}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

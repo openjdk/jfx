@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #include "hlsprogressbuffer.h"
 #include "cache.h"
+#include "fxplugins_common.h"
 
 /***********************************************************************************
  * Debug category init
@@ -53,6 +54,7 @@ struct _HLSProgressBuffer
     Cache*        cache[NUM_OF_CACHED_SEGMENTS];
     guint         cache_size[NUM_OF_CACHED_SEGMENTS];
     gboolean      cache_write_ready[NUM_OF_CACHED_SEGMENTS];
+    gboolean      cache_read_ready[NUM_OF_CACHED_SEGMENTS];
     gboolean      cache_discont[NUM_OF_CACHED_SEGMENTS];
     gint          cache_write_index;
     gint          cache_read_index;
@@ -66,6 +68,9 @@ struct _HLSProgressBuffer
     GstFlowReturn srcresult;
 
     GstClockTime  buffer_pts;
+
+    gboolean is_pull_mode;
+    gboolean send_segment_ready_event;
 };
 
 struct _HLSProgressBufferClass
@@ -123,9 +128,15 @@ static GstStateChangeReturn hls_progress_buffer_change_state (GstElement *elemen
 static GstFlowReturn        hls_progress_buffer_chain(GstPad *pad, GstObject *parent, GstBuffer *data);
 static gboolean             hls_progress_buffer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active);
 static gboolean             hls_progress_buffer_activatepush_src(GstPad *pad, GstObject *parent, gboolean active);
+static gboolean             hls_progress_buffer_activatepull_src(GstPad *pad, GstObject *parent, gboolean active);
 static gboolean             hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, GstEvent *event);
+static gboolean             hls_progress_buffer_src_event(GstPad *pad, GstObject *parent, GstEvent *event);
 static void                 hls_progress_buffer_loop(void *data);
 static void                 hls_progress_buffer_flush_data(HLSProgressBuffer *buffer);
+static GstFlowReturn        hls_progress_buffer_getrange(GstPad *pad, GstObject *parent,
+                                guint64 start_position, guint length, GstBuffer **data);
+static gboolean             hls_progress_buffer_query(GstPad *pad, GstObject *parent, GstQuery *query);
+static void                 hls_send_segment_ready_event(HLSProgressBuffer *element, gboolean bForce);
 
 /**
  * hls_progress_buffer_class_init()
@@ -162,14 +173,17 @@ static void hls_progress_buffer_class_init (HLSProgressBufferClass *klass)
  */
 static void hls_progress_buffer_init(HLSProgressBuffer *element)
 {
-    element->sinkpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "sink"), "sink");
+    element->sinkpad = gst_pad_new_from_template(gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "sink"), "sink");
     gst_pad_set_chain_function(element->sinkpad, hls_progress_buffer_chain);
     gst_pad_set_event_function(element->sinkpad, hls_progress_buffer_sink_event);
-    gst_element_add_pad (GST_ELEMENT (element), element->sinkpad);
+    gst_element_add_pad(GST_ELEMENT (element), element->sinkpad);
 
-    element->srcpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "src"), "src");
-    gst_pad_set_activatemode_function (element->srcpad, hls_progress_buffer_activatemode);
-    gst_element_add_pad (GST_ELEMENT (element), element->srcpad);
+    element->srcpad = gst_pad_new_from_template(gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "src"), "src");
+    gst_pad_set_activatemode_function(element->srcpad, hls_progress_buffer_activatemode);
+    gst_pad_set_getrange_function(element->srcpad, hls_progress_buffer_getrange);
+    gst_pad_set_query_function(element->srcpad, hls_progress_buffer_query);
+    gst_pad_set_event_function(element->srcpad, hls_progress_buffer_src_event);
+    gst_element_add_pad(GST_ELEMENT (element), element->srcpad);
 
     g_mutex_init(&element->lock);
     g_cond_init(&element->add_cond);
@@ -180,6 +194,7 @@ static void hls_progress_buffer_init(HLSProgressBuffer *element)
         element->cache[i] = create_cache();
         element->cache_size[i] = 0;
         element->cache_write_ready[i] = TRUE;
+        element->cache_read_ready[i] = FALSE;
         element->cache_discont[i] = FALSE;
     }
 
@@ -195,6 +210,9 @@ static void hls_progress_buffer_init(HLSProgressBuffer *element)
     element->srcresult = GST_FLOW_OK;
 
     element->buffer_pts = GST_CLOCK_TIME_NONE;
+
+    element->is_pull_mode = FALSE;
+    element->send_segment_ready_event = FALSE;
 }
 
 /**
@@ -223,15 +241,22 @@ static void hls_progress_buffer_finalize (GObject *object)
 /**
  * hls_progress_buffer_activatepush_src()
  *
- * Set the source pad's push mode.
+ * Set the source pad's push or pull mode.
  */
 static gboolean hls_progress_buffer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active)
 {
     gboolean res = FALSE;
+    HLSProgressBuffer *element = HLS_PROGRESS_BUFFER(parent);
 
     switch (mode) {
         case GST_PAD_MODE_PUSH:
+            element->is_pull_mode = FALSE;
             res = hls_progress_buffer_activatepush_src(pad, parent, active);
+            break;
+        case GST_PAD_MODE_PULL:
+            element->is_pull_mode = TRUE;
+            element->send_segment_ready_event = TRUE;
+            res = hls_progress_buffer_activatepull_src(pad, parent, active);
             break;
         default:
             /* unknown scheduling mode */
@@ -269,6 +294,28 @@ static gboolean hls_progress_buffer_activatepush_src(GstPad *pad, GstObject *par
     }
 }
 
+static gboolean hls_progress_buffer_activatepull_src(GstPad *pad, GstObject *parent, gboolean active)
+{
+    HLSProgressBuffer *element = HLS_PROGRESS_BUFFER(parent);
+
+    if (active)
+    {
+        g_mutex_lock(&element->lock);
+        element->srcresult = GST_FLOW_OK;
+        g_mutex_unlock(&element->lock);
+    }
+    else
+    {
+        g_mutex_lock(&element->lock);
+        element->srcresult = GST_FLOW_FLUSHING;
+        g_cond_signal(&element->add_cond);
+        g_cond_signal(&element->del_cond);
+        g_mutex_unlock(&element->lock);
+    }
+
+    return TRUE;
+}
+
 /***********************************************************************************
  * Internal functions
  ***********************************************************************************/
@@ -285,6 +332,7 @@ static void hls_progress_buffer_flush_data(HLSProgressBuffer *element)
 
     element->cache_write_index = -1;
     element->cache_read_index = 0;
+    element->send_segment_ready_event = element->is_pull_mode;
     for (i = 0; i < NUM_OF_CACHED_SEGMENTS; i++)
     {
         if (element->cache[i])
@@ -293,6 +341,8 @@ static void hls_progress_buffer_flush_data(HLSProgressBuffer *element)
             cache_set_read_position(element->cache[i], 0);
             element->cache_size[i] = 0;
             element->cache_write_ready[i] = TRUE;
+            element->cache_read_ready[i] = FALSE;
+            element->cache_discont[i] = FALSE;
         }
     }
 
@@ -320,12 +370,10 @@ static GstFlowReturn hls_progress_buffer_chain(GstPad *pad, GstObject *parent, G
     }
 
     g_mutex_lock(&element->lock);
-    if (element->srcresult != GST_FLOW_FLUSHING)
+    if (element->srcresult != GST_FLOW_FLUSHING && element->cache_write_index >= 0)
     {
         if (GST_BUFFER_FLAG_IS_SET(data, GST_BUFFER_FLAG_DISCONT))
-        {
             element->cache_discont[element->cache_write_index] = TRUE;
-        }
 
         cache_write_buffer(element->cache[element->cache_write_index], data);
         g_cond_signal(&element->add_cond);
@@ -463,6 +511,146 @@ static void hls_progress_buffer_loop(void *data)
         gst_pad_pause_task(element->srcpad);
 }
 
+static GstFlowReturn hls_progress_buffer_getrange(GstPad *pad, GstObject *parent,
+                                                  guint64 start_position, guint size,
+                                                  GstBuffer **buffer)
+{
+    HLSProgressBuffer *element = HLS_PROGRESS_BUFFER(parent);
+    GstFlowReturn  result = GST_FLOW_OK;
+
+    g_mutex_lock(&element->lock); // Use one lock for push and pull modes
+    if (!element->cache_read_ready[element->cache_read_index])
+    {
+        send_hls_not_full_message(element);
+        gboolean is_eos = element->is_eos;
+        g_mutex_unlock(&element->lock);
+        if (is_eos)
+            return GST_FLOW_EOS;
+        else
+            return GST_FLOW_FLUSHING;
+    }
+    else
+    {
+        // Read data as requested or less.
+        result = cache_read_buffer_from_position2(
+                element->cache[element->cache_read_index], start_position,
+                size, buffer);
+    }
+
+    // Set flag GST_BUFFER_FLAG_DISCONT if needed
+    if (element->cache_discont[element->cache_read_index])
+    {
+        if (result == GST_FLOW_OK && (*buffer) != NULL)
+        {
+            (*buffer) = gst_buffer_make_writable((*buffer));
+            GST_BUFFER_FLAG_SET((*buffer), GST_BUFFER_FLAG_DISCONT);
+        }
+        element->cache_discont[element->cache_read_index] = FALSE;
+    }
+
+    g_mutex_unlock(&element->lock);
+
+    return result;
+}
+
+static gboolean hls_progress_buffer_query(GstPad *pad, GstObject *parent, GstQuery *query)
+{
+    HLSProgressBuffer *element = HLS_PROGRESS_BUFFER(parent);
+    gboolean result = FALSE;
+
+    switch (GST_QUERY_TYPE(query))
+    {
+    case GST_QUERY_DURATION:
+        {
+            GstFormat format;
+
+            gst_query_parse_duration(query, &format, NULL);
+
+            // If we asked for duration in bytes report size of current read
+            // segment. "mfdemux" design in such way that it needs to know size
+            // in bytes of data it will pull. Once it read segment it will
+            // query duration again for second segment. In HLS we report new
+            // segment in time units, so "mfdemux" cannot use it. "javasource"
+            // will handle duration query in GST_FORMAT_TIME and will report
+            // length of entire HLS stream in time units. With such design down
+            // stream can figure out length of stream in time units and length
+            // of segment in bytes for parsing.
+            if (format == GST_FORMAT_BYTES)
+            {
+                g_mutex_lock(&element->lock);
+                if (element->cache_read_ready[element->cache_read_index])
+                {
+                    gst_query_set_duration(query, GST_FORMAT_BYTES,
+                        element->cache_size[element->cache_read_index]);
+                    result = TRUE;
+                }
+                else
+                {
+                    result = FALSE;
+                }
+                g_mutex_unlock(&element->lock);
+
+                return result;
+            }
+            else
+            {
+                result = gst_pad_query_default(pad, parent, query);
+            }
+            break;
+        }
+    default:
+        result = gst_pad_query_default(pad, parent, query);
+        break;
+    }
+
+    return result;
+}
+
+/**
+ * hls_send_segment_ready_event()
+ *
+ * Sends FX_EVENT_SEGMENT_READY if needed.
+ *
+ * Note: Lock needs to be acquired when this function is called.
+ */
+static void hls_send_segment_ready_event(HLSProgressBuffer *element, gboolean bForce)
+{
+    if (element->send_segment_ready_event || bForce)
+    {
+        element->send_segment_ready_event = FALSE;
+        GstStructure *s = gst_structure_new("HLSSegmentInfo",
+            "size", G_TYPE_INT64,
+            element->cache_size[element->cache_read_index], NULL);
+
+        g_mutex_unlock(&element->lock);
+        gst_pad_push_event(element->srcpad,
+            gst_event_new_custom(FX_EVENT_SEGMENT_READY, s));
+        g_mutex_lock(&element->lock);
+    }
+}
+
+/**
+ * hls_finalize_read_segment()
+ *
+ * Marks segment as read ready in pull mode. In pull mode we need to call it
+ * for EOS as well to finalize last segment.
+ *
+ * Note: Lock needs to be acquired when this function is called.
+ */
+static void hls_finalize_read_segment(HLSProgressBuffer *element)
+{
+    if (element && element->is_pull_mode)
+    {
+        if (element->cache_write_index != -1)
+        {
+            element->cache_read_ready[element->cache_write_index] = TRUE;
+
+            // Let downstream know that we have segment ready to read
+            hls_send_segment_ready_event(element, FALSE);
+        }
+    }
+}
+
 /**
  * hls_progress_buffer_sink_event()
  *
@@ -481,7 +669,8 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
             GstSegment segment;
 
             g_mutex_lock(&element->lock);
-            if (element->srcresult != GST_FLOW_OK)
+            if (element->srcresult != GST_FLOW_OK &&
+                    !(element->srcresult == GST_FLOW_FLUSHING && element->is_eos))
             {
                 // INLINE - gst_event_unref()
                 gst_event_unref(event);
@@ -494,7 +683,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
             {
                 element->is_eos = FALSE;
                 element->srcresult = GST_FLOW_OK;
-                if (gst_pad_is_linked(element->srcpad))
+                if (!element->is_pull_mode && gst_pad_is_linked(element->srcpad))
                     gst_pad_start_task(element->srcpad, hls_progress_buffer_loop, element, NULL);
             }
 
@@ -525,6 +714,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
 
             // Get and prepare next write segment
             g_mutex_lock(&element->lock);
+            hls_finalize_read_segment(element);
             element->cache_write_index = (element->cache_write_index + 1) % NUM_OF_CACHED_SEGMENTS;
 
             while (element->srcresult == GST_FLOW_OK && !element->cache_write_ready[element->cache_write_index])
@@ -557,7 +747,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
         ret = gst_pad_push_event(element->srcpad, event);
         hls_progress_buffer_flush_data(element);
 
-        if (gst_pad_is_linked(element->srcpad))
+        if (!element->is_pull_mode && gst_pad_is_linked(element->srcpad))
             gst_pad_pause_task(element->srcpad);
 
         break;
@@ -570,7 +760,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
         element->is_flushing = FALSE;
         element->srcresult = GST_FLOW_OK;
 
-        if (!element->is_eos && gst_pad_is_linked(element->srcpad))
+        if (!element->is_pull_mode && !element->is_eos && gst_pad_is_linked(element->srcpad))
             gst_pad_start_task(element->srcpad, hls_progress_buffer_loop, element, NULL);
 
         g_mutex_unlock(&element->lock);
@@ -580,9 +770,11 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
         send_hls_eos_message(element); // Just in case we stall
 
         g_mutex_lock(&element->lock);
+        hls_finalize_read_segment(element);
         element->is_eos = TRUE;
         g_cond_signal(&element->add_cond);
         g_mutex_unlock(&element->lock);
+
         // INLINE - gst_event_unref()
         gst_event_unref(event);
         ret = TRUE;
@@ -590,6 +782,66 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
         break;
     default:
         ret = gst_pad_push_event(element->srcpad, event);
+        break;
+    }
+
+    return ret;
+}
+
+/**
+ * hls_progress_buffer_src_event()
+ *
+ * Receives event from the src pad (currently, data from mfdemux).  When an event comes in,
+ * we get the data from the pad by getting at the ProgressBuffer* object associated with the pad.
+ */
+static gboolean hls_progress_buffer_src_event(GstPad *pad, GstObject *parent, GstEvent *event)
+{
+    HLSProgressBuffer *element = HLS_PROGRESS_BUFFER(parent);
+    gboolean ret = FALSE;
+
+    switch (GST_EVENT_TYPE (event))
+    {
+    case FX_EVENT_NEXT_SEGMENT:
+        if (element->is_pull_mode)
+        {
+            g_mutex_lock(&element->lock);
+
+            element->cache_write_ready[element->cache_read_index] = TRUE;
+            element->cache_read_ready[element->cache_read_index] = FALSE;
+            element->cache_read_index = (element->cache_read_index + 1) % NUM_OF_CACHED_SEGMENTS;
+
+            if (element->cache_read_ready[element->cache_read_index])
+            {
+                hls_send_segment_ready_event(element, TRUE);
+            }
+            else
+            {
+                element->send_segment_ready_event = TRUE;
+            }
+
+            // Signal EOS if set and nothing to read.
+            if (!element->cache_read_ready[element->cache_read_index])
+            {
+                if (element->is_eos)
+                {
+                    g_mutex_unlock(&element->lock);
+                    gst_pad_push_event(element->srcpad, gst_event_new_eos());
+                    g_mutex_lock(&element->lock);
+                }
+            }
+
+            send_hls_not_full_message(element);
+            g_cond_signal(&element->del_cond);
+            g_mutex_unlock(&element->lock);
+        }
+
+        // INLINE - gst_event_unref()
+        gst_event_unref(event);
+        ret = TRUE;
+
+        break;
+    default:
+        ret = gst_pad_push_event(element->sinkpad, event);
         break;
     }
 

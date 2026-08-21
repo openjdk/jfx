@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -132,33 +132,51 @@ gint64 cache_read_buffer(Cache* cache, GstBuffer** buffer)
     return 0;
 }
 
-GstFlowReturn cache_read_buffer_from_position(Cache* cache, gint64 start_position, guint size, GstBuffer** buffer)
+GstFlowReturn cache_read_buffer_from_position(Cache *cache, gint64 start_position, guint size, GstBuffer **buffer)
 {
     GstFlowReturn result = GST_FLOW_ERROR;
     *buffer = NULL;
 
     if (cache_set_read_position(cache, start_position))
     {
-        guint8 *data = (guint8*)g_try_malloc(size);
+        guint8 *data = (guint8 *)g_try_malloc(size);
         if (data)
-    {
-        ssize_t read_bytes = read(cache->readHandle, data, size);
+        {
+            ssize_t read_bytes = read(cache->readHandle, data, size);
             if (read_bytes == size)
             {
                 *buffer = gst_buffer_new_wrapped_full(0, data, size, 0, read_bytes, data, g_free);
                 if (*buffer != NULL)
                 {
                     GST_BUFFER_OFFSET(*buffer) = cache->read_position;
+                    // Adjust read position, only if we returning valid buffer.
+                    cache->read_position += read_bytes;
                     result = GST_FLOW_OK;
                 }
             }
             else
-            g_free(data); // Wrong size, deleting buffer to avoid leaking.
-
-            cache->read_position += read_bytes;
-    }
+                g_free(data); // Wrong size, deleting buffer to avoid leaking.
+        }
     }
     return result;
+}
+
+GstFlowReturn cache_read_buffer_from_position2(Cache* cache, gint64 start_position,
+                                               guint size, GstBuffer** buffer)
+{
+    GstFlowReturn result = GST_FLOW_ERROR;
+
+    if (cache == NULL)
+        return GST_FLOW_ERROR;
+
+    guint64 bytes_available = cache_bytes_available(cache, start_position);
+    if (bytes_available == 0)
+        return GST_FLOW_FLUSHING;
+
+    if ((guint64)size < bytes_available)
+        size = bytes_available;
+
+    return cache_read_buffer_from_position(cache, start_position, size, buffer);
 }
 
 static inline gboolean cache_set_handler_position(int handle, guint64 position)
@@ -193,4 +211,20 @@ gboolean cache_set_read_position(Cache* cache, gint64 position)
 gboolean cache_has_enough_data(Cache* cache)
 {
     return cache->read_position < cache->write_position;
+}
+
+gboolean cache_has_enough_data2(Cache* cache, guint64 read_position, guint size)
+{
+    if ((read_position + size) <= cache->write_position)
+        return TRUE;
+
+    return FALSE;
+}
+
+guint64 cache_bytes_available(Cache* cache, guint64 read_position)
+{
+    if (read_position < cache->write_position)
+        return (guint64)(cache->write_position - read_position);
+    else
+        return 0;
 }
