@@ -1146,7 +1146,6 @@ public abstract non-sealed class Parent extends Node {
         }
     }
 
-    // PENDING_DOC_REVIEW
     /**
      * Computes the preferred width for the specified height.
      * <p>
@@ -1176,7 +1175,6 @@ public abstract non-sealed class Parent extends Node {
         return maxX - minX;
     }
 
-    // PENDING_DOC_REVIEW
     /**
      * Computes the preferred height for the specified width.
      * <p>
@@ -1223,7 +1221,6 @@ public abstract non-sealed class Parent extends Node {
         return prefWidth(height);
     }
 
-    // PENDING_DOC_REVIEW
     /**
      * Computes the minimum height for the specified width.
      * <p>
