@@ -865,6 +865,22 @@ public class AnchorPaneTest {
     }
 
     @Test
+    void testDualAnchoredChildClampsNegativeAllocatedSizeToZero() {
+        Region child = new Region();
+        AnchorPane anchorPane = new AnchorPane(child);
+        AnchorPane.setTopAnchor(child, 6.0);
+        AnchorPane.setRightAnchor(child, 5.0);
+        AnchorPane.setBottomAnchor(child, 5.0);
+        AnchorPane.setLeftAnchor(child, 6.0);
+
+        anchorPane.resize(10, 10);
+        anchorPane.layout();
+
+        assertEquals(0.0, child.getWidth());
+        assertEquals(0.0, child.getHeight());
+    }
+
+    @Test
     void testUnsnappedPreservesFractionalAnchorGeometry() {
         Region child = new Region();
         AnchorPane anchorPane = new AnchorPane(child);
@@ -977,6 +993,34 @@ public class AnchorPaneTest {
     }
 
     @Test
+    void testHorizontalBiasReceivesZeroForNegativeStretchedWidth() {
+        HorizontalBiasedRegion child = new HorizontalBiasedRegion();
+        AnchorPane anchorPane = new AnchorPane(child);
+        AnchorPane.setLeftAnchor(child, 6.0);
+        AnchorPane.setRightAnchor(child, 5.0);
+
+        anchorPane.resize(10, 100);
+        anchorPane.layout();
+
+        assertEquals(0.0, child.getWidth());
+        assertEquals(0.0, child.lastWidth);
+    }
+
+    @Test
+    void testVerticalBiasReceivesZeroForNegativeStretchedHeight() {
+        VerticalBiasedRegion child = new VerticalBiasedRegion(10);
+        AnchorPane anchorPane = new AnchorPane(child);
+        AnchorPane.setTopAnchor(child, 6.0);
+        AnchorPane.setBottomAnchor(child, 5.0);
+
+        anchorPane.resize(100, 10);
+        anchorPane.layout();
+
+        assertEquals(0.0, child.getHeight());
+        assertEquals(0.0, child.lastHeight);
+    }
+
+    @Test
     void testRightBottomAnchoringUsesActualNonResizableSize() {
         Rectangle child = new Rectangle(1.4, 1.4);
         AnchorPane anchorPane = new AnchorPane(child);
@@ -991,6 +1035,26 @@ public class AnchorPaneTest {
 
         assertEquals(expectedX, child.getLayoutX());
         assertEquals(expectedY, child.getLayoutY());
+    }
+
+    @Test
+    void testRightBottomAnchoredOversizedChildKeepsNegativePosition() {
+        Region child = new Region();
+        child.setMinSize(50, 50);
+        child.setPrefSize(50, 50);
+        child.setMaxSize(50, 50);
+
+        AnchorPane anchorPane = new AnchorPane(child);
+        AnchorPane.setRightAnchor(child, 5.0);
+        AnchorPane.setBottomAnchor(child, 5.0);
+
+        anchorPane.resize(40, 40);
+        anchorPane.layout();
+
+        assertEquals(-15.0, child.getLayoutX());
+        assertEquals(-15.0, child.getLayoutY());
+        assertEquals(35.0, child.getLayoutX() + child.getWidth());
+        assertEquals(35.0, child.getLayoutY() + child.getHeight());
     }
 
     @Test

@@ -363,7 +363,8 @@ public class AnchorPane extends Pane {
         }
 
         if (leftAnchor != null && rightAnchor != null) {
-            return snapSpaceX(areaWidth - snappedLeftInset() - snappedRightInset() - leftAnchor - rightAnchor);
+            return Math.max(0, snapSpaceX(
+                areaWidth - snappedLeftInset() - snappedRightInset() - leftAnchor - rightAnchor));
         }
 
         return computeChildPrefWidth(child, height);
@@ -376,7 +377,8 @@ public class AnchorPane extends Pane {
         }
 
         if (topAnchor != null && bottomAnchor != null) {
-            return snapSpaceY(areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor);
+            return Math.max(0, snapSpaceY(
+                areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor));
         }
 
         return computeChildPrefHeight(child, width);
