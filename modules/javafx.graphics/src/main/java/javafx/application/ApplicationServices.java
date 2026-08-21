@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,47 @@
  * questions.
  */
 
-package com.sun.javafx.tk;
+package javafx.application;
 
-import java.util.List;
-
-import com.sun.javafx.menu.MenuBase;
-
+import com.sun.javafx.application.PlatformImpl;
 
 /**
- * We use this interface to access the Glass native system menu
+ * This class provides services for an Application. This includes
+ * methods to show and hide other applications.
+ *
+ * @since 26
  */
-public interface TKSystemMenu {
+public final class ApplicationServices {
+
+    // To prevent instantiation
+    private ApplicationServices() {
+    }
 
     /**
-     * Check whether top level global system menubar support is
-     * available on this OS.  Currently supported on Mac OSX only.
+     * Hide the application.
      *
-     * @return  whether top-level global system menus are supported
+     * @since 26
      */
-    public boolean isSupported();
+    public static void hideApplication() {
+        PlatformImpl.hideApplication();
+    }
 
-    public void setMenus(List<MenuBase> menus);
-    public void setCommonMenus(List<MenuBase> menus);
+    /**
+     * Hide applications other than the current one.
+     *
+     * @since 26
+     */
+    public static void hideOtherApplications() {
+        PlatformImpl.hideOtherApplications();
+    }
+
+    /**
+     * Show all applications.
+     *
+     * @since 26
+     */
+    public static void showAllApplications() {
+        PlatformImpl.showAllApplications();
+    }
+
 }
