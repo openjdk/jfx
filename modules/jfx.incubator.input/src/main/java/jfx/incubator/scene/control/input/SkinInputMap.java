@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,12 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package jfx.incubator.scene.control.input;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -35,27 +36,29 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.KeyBinding;
+import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
+import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
+import com.sun.jfx.incubator.scene.control.input.PHList;
 
 /**
  * The Input Map for use by the Skin.
  * <p>
- * Skins whose behavior encapsulates state information must use a Stateful variant obtained with
+ * Skins whose behavior encapsulates state information must use a {@code Stateful} variant obtained with
  * the {@link #create()} factory method.
  * <p>
- * Skins whose behavior requires no state, or when state is fully encapsulated by the Control itself,
- * could use a Stateless variant obtained with the {@link #createStateless()} method.
+ * Skins whose behavior requires no state, or when the state is fully encapsulated by the Control itself,
+ * could use the {@code Stateless} variant obtained with the {@link #createStateless()} method.
+ *
+ * @since 999 TODO
  */
 public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInputMap.Stateless {
-    /**
-     * <pre> KeyBinding -> FunctionTag
-     * FunctionTag -> Runnable or FunctionHandler
-     * EventType -> PHList</pre>
-     */
+    /// ```
+    /// KeyBinding -> FunctionTag
+    /// FunctionTag -> Runnable or FunctionHandler
+    /// EventType -> PHList</pre>
+    /// ```
     final HashMap<Object, Object> map = new HashMap<>();
-    // TODO change to package protected once SkinInputMap is public
-    public final KeyEventMapper kmapper = new KeyEventMapper();
+    final KeyEventMapper kmapper = new KeyEventMapper();
 
     /**
      * Creates a skin input map.
@@ -111,10 +114,11 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     /**
      * Maps a key binding to the specified function tag.
      *
-     * @param k the key binding
+     * @param k the key binding, cannot be null
      * @param tag the function tag
      */
     public final void registerKey(KeyBinding k, FunctionTag tag) {
+        Objects.nonNull(k);
         map.put(k, tag);
         kmapper.addType(k);
     }
@@ -129,8 +133,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         registerKey(KeyBinding.of(code), tag);
     }
 
-    // TODO change to package protected once SkinInputMap is public
-    public Object resolve(KeyBinding k) {
+    Object resolve(KeyBinding k) {
         return map.get(k);
     }
 
@@ -152,8 +155,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         return collectKeyBindings(null, tag);
     }
 
-    // TODO change to package protected once SkinInputMap is public
-    public Set<KeyBinding> collectKeyBindings(Set<KeyBinding> bindings, FunctionTag tag) {
+    Set<KeyBinding> collectKeyBindings(Set<KeyBinding> bindings, FunctionTag tag) {
         if (bindings == null) {
             bindings = new HashSet<>();
         }
@@ -180,8 +182,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         }
     }
 
-    // TODO change to package protected once SkinInputMap is public
-    public final boolean execute(Object source, FunctionTag tag) {
+    final boolean execute(Object source, FunctionTag tag) {
         Object x = map.get(tag);
         if (x instanceof Runnable r) {
             r.run();
@@ -197,8 +198,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         return false;
     }
 
-    // TODO change to package protected once SkinInputMap is public
-    public void unbind(FunctionTag tag) {
+    void unbind(FunctionTag tag) {
         Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Object, Object> en = it.next();
@@ -209,8 +209,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         }
     }
 
-    // TODO change to package protected once SkinInputMap is public
-    public void forEach(TriConsumer client) {
+    void forEach(TriConsumer client) {
         for (Map.Entry<Object, Object> en : map.entrySet()) {
             if (en.getKey() instanceof EventType type) {
                 PHList hs = (PHList)en.getValue();
@@ -222,9 +221,8 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         }
     }
 
-    // TODO change to package protected once SkinInputMap is public
     @FunctionalInterface
-    public static interface TriConsumer<T extends Event> {
+    static interface TriConsumer<T extends Event> {
         public void accept(EventType<T> type, EventHandlerPriority pri, EventHandler<T> h);
     }
 
@@ -299,7 +297,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
 
     /**
      * SkinInputMap for skins that either encapsulate the state fully in their Controls,
-     * or don't require a state at all.
+     * or don't require the state at all.
      *
      * @param <C> the type of Control
      */

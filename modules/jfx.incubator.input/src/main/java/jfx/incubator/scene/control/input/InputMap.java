@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
 import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
@@ -389,12 +388,13 @@ public final class InputMap {
      * {@link javafx.scene.control.Skin#install() Skin.install()}
      * method.
      * <p>
-     * This method removes all the mappings from the previous skin input map, if any.
+     * This method removes all the mappings added by the previous skin input map, if any.
+     *
      * @param m the skin input map
+     * @since 999 TODO
      */
-    // TODO change to public once SkinInputMap is public
-    // or add getSkinInputMap() to Skin.
-    private void setSkinInputMap(SkinInputMap m) {
+    // alternatively, we could add Skin.getSkinInputMap()
+    public void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -443,12 +443,6 @@ public final class InputMap {
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
-            }
-
-            // TODO will be unnecessary once SkinInputMap is public
-            @Override
-            public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-                inputMap.setSkinInputMap(sm);
             }
         });
     }
