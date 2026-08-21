@@ -176,7 +176,7 @@ public class ImageUtils {
     }
 
     /**
-     * Determine the appropriate {@link WritablePixelFormat} type that can
+     * Determines the appropriate {@link WritablePixelFormat} type that can
      * be used to transfer data into the indicated BufferedImage.
      *
      * @param bimg the BufferedImage that will be used as a destination for
@@ -301,15 +301,15 @@ public class ImageUtils {
     }
 
     /**
-     * Writes the image to a byte array in one of the formats supported by the ImageIO.
-     * The format string is passed to
+     * Writes the image to a byte array in one of the formats supported by ImageIO.
+     * The format string is passed to the
      * {@link ImageIO#write(java.awt.image.RenderedImage, String, java.io.OutputStream) ImageIO.write()}
-     * method (example: {@code "png"}).
+     * method (for example, {@code "png"}).
      *
-     * @param im the image, cannot be null
-     * @param format the format string, cannot be null
-     * @return the byte array containing image in the specified format
-     * @throws IOException
+     * @param im the image, must not be null
+     * @param format the format string, must not be null
+     * @return a byte array containing the image in the specified format
+     * @throws IOException if an I/O error occurs, the format is not supported, or the source image is not readable
      */
     public static byte[] writeImage(Image im, String format) throws IOException {
         Objects.requireNonNull(im);
@@ -321,7 +321,12 @@ public class ImageUtils {
             ImageIO.setUseCache(false);
             try {
                 BufferedImage bi = fromFXImage(im, null);
-                ImageIO.write(bi, format, out);
+                if (bi == null) {
+                    throw new IOException("source image is not readable");
+                }
+                if (!ImageIO.write(bi, format, out)) {
+                    throw new IOException("no image writer is found for " + format);
+                }
             } finally {
                 ImageIO.setUseCache(old);
             }

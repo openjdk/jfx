@@ -56,14 +56,21 @@ public class TestImageUtils {
         assertTrue(b.length > 0);
     }
 
+    // NOTE: omitting JPEG format since StubToolkit does not support it
     @ParameterizedTest
-    @ValueSource(strings = { "png", "jpg", "jpeg", "gif" })
+    @ValueSource(strings = { "png", /* "jpg", "jpeg", */ "gif" })
     public void writeImageOpaque(String format) throws IOException {
         WritableImage im = new WritableImage(1, 1);
         im.getPixelWriter().setArgb(0, 0, 0xffffffff);
         byte[] b = ImageUtils.writeImage(im, format);
-        // StubToolkit cannot write jpg, we'll test for non-null return value
-        // assertTrue(b.length > 0);
-        assertTrue(b != null);
+        assertTrue(b.length > 0);
+    }
+
+    @Test
+    public void writeBadFormat() {
+        WritableImage im = new WritableImage(1, 1);
+        assertThrows(IOException.class, () -> {
+            ImageUtils.writeImage(im, "BAD_F0Rmåt");
+        });
     }
 }
