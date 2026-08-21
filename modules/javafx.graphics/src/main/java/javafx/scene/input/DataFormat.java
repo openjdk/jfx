@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,9 @@
 
 package javafx.scene.input;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
-
-import com.sun.javafx.util.WeakReferenceQueue;
 import javafx.beans.NamedArg;
 
 /**
@@ -41,14 +37,9 @@ import javafx.beans.NamedArg;
  */
 public class DataFormat {
 
-    /**
-     * A static cache of all DataFormats created and currently in use. This is needed
-     * by the underlying implementation, such that, given a mime type, we can determine
-     * the associated DataFormat. The OS level is going to supply us with a mime type
-     * (or other string based key), and we need to be able to map this back to the FX
-     * DataFormat.
-     */
-    private static final WeakReferenceQueue<DataFormat> DATA_FORMAT_LIST = new WeakReferenceQueue<>();
+    // A static registry of DataFormats for the purposes of checking against constructing DataFormats
+    // that contain mismatched mime types.
+    private static final HashMap<String,DataFormat> registry = new HashMap<>();
 
     /**
      * Represents a plain text string.
@@ -101,7 +92,7 @@ public class DataFormat {
      * A set of identifiers, typically mime types, for this DataFormat.
      * In most cases this will be a single String.
      */
-    private final Set<String> identifier;
+    private final Set<String> identifiers;
 
     /**
      * Create a new DataFormat, specifying the set of ids that are associated with
@@ -126,25 +117,37 @@ public class DataFormat {
      * to drag data of this type from/to {@link javafx.embed.swing.JFXPanel}.
      * </p>
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
-     * @throws IllegalArgumentException if one of the given mime types is already
-     *         assigned to another DataFormat.
+     * @throws IllegalArgumentException if one of the given ids is already
+     *         assigned to another DataFormat with a different set of ids
+     * @throws NullPointerException if any of the ids is null
      */
     public DataFormat(@NamedArg("ids") String... ids) {
-        DATA_FORMAT_LIST.cleanup();
-        if (ids != null) {
-            for (String id : ids) {
-                if (lookupMimeType(id) != null) {
-                    throw new IllegalArgumentException("DataFormat '" + id +
-                            "' already exists.");
-                }
-            }
-            this.identifier = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ids)));
-        } else {
-            this.identifier = Collections.<String>emptySet();
+        if ((ids == null) || (ids.length == 0)) {
+            identifiers = Set.of();
+            return;
         }
 
-        // Add to the statis data format list.
-        DATA_FORMAT_LIST.add(this);
+        identifiers = Set.of(ids);
+        // check for mismatched formats
+        boolean isNew = true;
+        synchronized (registry) {
+            for (String id : identifiers) {
+                DataFormat f = registry.get(id);
+                if (f != null) {
+                    if (!identifiers.equals(f.identifiers)) {
+                        throw new IllegalArgumentException("DataFormat '" + id + "' already exists.");
+                    }
+                    isNew = false;
+                }
+            }
+
+            // add to the registry if new
+            if (isNew) {
+                for (String id : ids) {
+                    registry.put(id, this);
+                }
+            }
+        }
     }
 
     /**
@@ -152,7 +155,7 @@ public class DataFormat {
      * @return an unmodifiable set that is never null.
      */
     public final Set<String> getIdentifiers() {
-        return identifier;
+        return identifiers;
     }
 
     /**
@@ -160,15 +163,15 @@ public class DataFormat {
      * @return a string representation of this {@code DataFormat} object.
      */
     @Override public String toString() {
-        if (identifier.isEmpty()) {
+        if (identifiers.isEmpty()) {
             return "[]";
-        } else if (identifier.size() == 1) {
+        } else if (identifiers.size() == 1) {
             StringBuilder sb = new StringBuilder("[");
-            sb.append(identifier.iterator().next());
+            sb.append(identifiers.iterator().next());
             return (sb.append("]").toString());
         } else {
             StringBuilder b = new StringBuilder("[");
-            Iterator<String> itr = identifier.iterator();
+            Iterator<String> itr = identifiers.iterator();
             while (itr.hasNext()) {
                 b = b.append(itr.next());
                 if (itr.hasNext()) {
@@ -187,7 +190,7 @@ public class DataFormat {
     @Override public int hashCode() {
         int hash = 7;
 
-        for (String id : identifier) {
+        for (String id : identifiers) {
             hash = 31 * hash + id.hashCode();
         }
 
@@ -199,18 +202,12 @@ public class DataFormat {
      * @param obj the reference object with which to compare.
      * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise.
      */
-    @Override public boolean equals(Object obj) {
-        if (obj == null || ! (obj instanceof DataFormat)) {
-            return false;
-        }
-
-        DataFormat otherDataFormat = (DataFormat) obj;
-
-        if (identifier.equals(otherDataFormat.identifier)) {
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
             return true;
         }
-
-        return false;
+        return (obj instanceof DataFormat f) && identifiers.equals(f.identifiers);
     }
 
     /**
@@ -224,13 +221,8 @@ public class DataFormat {
             return null;
         }
 
-        Iterator itr = DATA_FORMAT_LIST.iterator();
-        while (itr.hasNext()) {
-            DataFormat dataFormat = (DataFormat) itr.next();
-            if (dataFormat.getIdentifiers().contains(mimeType)) {
-                return dataFormat;
-            }
+        synchronized (registry) {
+            return registry.get(mimeType);
         }
-        return null;
     }
 }
