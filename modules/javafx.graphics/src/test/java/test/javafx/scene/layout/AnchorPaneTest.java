@@ -25,10 +25,12 @@
 
 package test.javafx.scene.layout;
 
-import javafx.geometry.Bounds;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -43,7 +45,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AnchorPaneTest {
 
-    private static final double EPSILON = 0.000001;
+    private static final double EPSILON = 0.000000001;
+
+    private Stage stage;
+
+    @AfterEach
+    public void teardown() {
+        if (stage != null) {
+            stage.close();
+        }
+    }
 
     @Test
     public void testNoAnchorsSet() {
@@ -747,40 +758,36 @@ public class AnchorPaneTest {
         AnchorPane.setBottomAnchor(child, 0d);
         AnchorPane.setRightAnchor(child, 0d);
 
-        Stage stage = new Stage();
-        stage.setRenderScaleX(scale);
-        stage.setRenderScaleY(scale);
+        DoubleProperty renderScaleProperty = new SimpleDoubleProperty(scale);
+
+        stage = new Stage();
+        stage.renderScaleXProperty().bind(renderScaleProperty);
+        stage.renderScaleYProperty().bind(renderScaleProperty);
 
         int widthHeight = 500;
         Scene scene = new Scene(anchorPane, widthHeight, widthHeight);
         stage.setScene(scene);
+        stage.show();
 
-        try {
-            stage.show();
+        double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
+        double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
+        double snappedPaddingX = anchorPane.snapSpaceX(padding);
+        double snappedPaddingY = anchorPane.snapSpaceY(padding);
 
-            Bounds boundsInParent = child.getBoundsInParent();
-            double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
-            double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
-            double snappedPaddingX = anchorPane.snapSpaceX(padding);
-            double snappedPaddingY = anchorPane.snapSpaceY(padding);
+        assertEquals(snappedPaddingX, child.getLayoutX());
+        assertEquals(snappedPaddingY, child.getLayoutY());
 
-            assertEquals(snappedPaddingX, boundsInParent.getMinX(), 0.0001);
-            assertEquals(snappedPaddingY, boundsInParent.getMinY(), 0.0001);
+        double expectedMaxX = anchorPane.snapPositionX(areaWidth - snappedPaddingX);
+        assertEquals(expectedMaxX, child.getLayoutX() + child.getWidth(), EPSILON);
 
-            double expectedMaxX = anchorPane.snapPositionX(areaWidth - snappedPaddingX);
-            assertEquals(expectedMaxX, boundsInParent.getMaxX(), 0.0001);
+        double expectedMaxY = anchorPane.snapPositionY(areaHeight - snappedPaddingY);
+        assertEquals(expectedMaxY, child.getLayoutY() + child.getHeight(), EPSILON);
 
-            double expectedMaxY = anchorPane.snapPositionY(areaHeight - snappedPaddingY);
-            assertEquals(expectedMaxY, boundsInParent.getMaxY(), 0.0001);
+        double expectedWidth = anchorPane.snapSpaceX(areaWidth - snappedPaddingX * 2);
+        assertEquals(expectedWidth, child.getWidth());
 
-            double expectedWidth = anchorPane.snapSpaceX(areaWidth - snappedPaddingX * 2);
-            assertEquals(expectedWidth, boundsInParent.getWidth(), 0.0001);
-
-            double expectedHeight = anchorPane.snapSpaceY(areaHeight - snappedPaddingY * 2);
-            assertEquals(expectedHeight, boundsInParent.getHeight(), 0.0001);
-        } finally {
-            stage.hide();
-        }
+        double expectedHeight = anchorPane.snapSpaceY(areaHeight - snappedPaddingY * 2);
+        assertEquals(expectedHeight, child.getHeight());
     }
 
     /**
@@ -805,42 +812,38 @@ public class AnchorPaneTest {
         AnchorPane.setBottomAnchor(child, bottomAnchor);
         AnchorPane.setRightAnchor(child, rightAnchor);
 
-        Stage stage = new Stage();
-        stage.setRenderScaleX(scale);
-        stage.setRenderScaleY(scale);
+        DoubleProperty renderScaleProperty = new SimpleDoubleProperty(scale);
+
+        stage = new Stage();
+        stage.renderScaleXProperty().bind(renderScaleProperty);
+        stage.renderScaleYProperty().bind(renderScaleProperty);
 
         int widthHeight = 500;
         Scene scene = new Scene(anchorPane, widthHeight, widthHeight);
         stage.setScene(scene);
+        stage.show();
 
-        try {
-            stage.show();
+        double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
+        double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
+        double snappedLeftAnchor = anchorPane.snapSpaceX(leftAnchor);
+        double snappedRightAnchor = anchorPane.snapSpaceX(rightAnchor);
+        double snappedTopAnchor = anchorPane.snapSpaceY(topAnchor);
+        double snappedBottomAnchor = anchorPane.snapSpaceY(bottomAnchor);
 
-            Bounds boundsInParent = child.getBoundsInParent();
-            double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
-            double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
-            double snappedLeftAnchor = anchorPane.snapSpaceX(leftAnchor);
-            double snappedRightAnchor = anchorPane.snapSpaceX(rightAnchor);
-            double snappedTopAnchor = anchorPane.snapSpaceY(topAnchor);
-            double snappedBottomAnchor = anchorPane.snapSpaceY(bottomAnchor);
+        assertEquals(snappedLeftAnchor, child.getLayoutX());
+        assertEquals(snappedTopAnchor, child.getLayoutY());
 
-            assertEquals(snappedLeftAnchor, boundsInParent.getMinX(), 0.0001);
-            assertEquals(snappedTopAnchor, boundsInParent.getMinY(), 0.0001);
+        double expectedMaxX = anchorPane.snapPositionX(areaWidth - snappedRightAnchor);
+        assertEquals(expectedMaxX, child.getLayoutX() + child.getWidth(), EPSILON);
 
-            double expectedMaxX = anchorPane.snapPositionX(areaWidth - snappedRightAnchor);
-            assertEquals(expectedMaxX, boundsInParent.getMaxX(), 0.0001);
+        double expectedMaxY = anchorPane.snapPositionY(areaHeight - snappedBottomAnchor);
+        assertEquals(expectedMaxY, child.getLayoutY() + child.getHeight(), EPSILON);
 
-            double expectedMaxY = anchorPane.snapPositionY(areaHeight - snappedBottomAnchor);
-            assertEquals(expectedMaxY, boundsInParent.getMaxY(), 0.0001);
+        double expectedWidth = anchorPane.snapSpaceX(areaWidth - snappedLeftAnchor - snappedRightAnchor);
+        assertEquals(expectedWidth, child.getWidth());
 
-            double expectedWidth = anchorPane.snapSpaceX(areaWidth - snappedLeftAnchor - snappedRightAnchor);
-            assertEquals(expectedWidth, boundsInParent.getWidth(), 0.0001);
-
-            double expectedHeight = anchorPane.snapSpaceY(areaHeight - snappedTopAnchor - snappedBottomAnchor);
-            assertEquals(expectedHeight, boundsInParent.getHeight(), 0.0001);
-        } finally {
-            stage.hide();
-        }
+        double expectedHeight = anchorPane.snapSpaceY(areaHeight - snappedTopAnchor - snappedBottomAnchor);
+        assertEquals(expectedHeight, child.getHeight());
     }
 
     @Test
@@ -855,10 +858,10 @@ public class AnchorPaneTest {
         anchorPane.resize(100.4, 50.4);
         anchorPane.layout();
 
-        assertEquals(anchorPane.snapSpaceX(anchorPane.getWidth()), child.getWidth(), 0.0);
-        assertEquals(anchorPane.snapSpaceY(anchorPane.getHeight()), child.getHeight(), 0.0);
-        assertEquals(0.0, child.getLayoutX(), 0.0);
-        assertEquals(0.0, child.getLayoutY(), 0.0);
+        assertEquals(anchorPane.snapSpaceX(anchorPane.getWidth()), child.getWidth());
+        assertEquals(anchorPane.snapSpaceY(anchorPane.getHeight()), child.getHeight());
+        assertEquals(0.0, child.getLayoutX());
+        assertEquals(0.0, child.getLayoutY());
     }
 
     @Test
@@ -874,8 +877,8 @@ public class AnchorPaneTest {
         anchorPane.resize(100.4, 50.4);
         anchorPane.layout();
 
-        assertEquals(0.1, child.getBoundsInParent().getMinX(), EPSILON);
-        assertEquals(0.2, child.getBoundsInParent().getMinY(), EPSILON);
+        assertEquals(0.1, child.getLayoutX(), EPSILON);
+        assertEquals(0.2, child.getLayoutY(), EPSILON);
         assertEquals(100.4 - 0.1 - 0.3, child.getWidth(), EPSILON);
         assertEquals(50.4 - 0.2 - 0.4, child.getHeight(), EPSILON);
     }
@@ -894,14 +897,11 @@ public class AnchorPaneTest {
         anchorPane.resize(100.4, 50.4);
         anchorPane.layout();
 
-        double expectedX = anchorPane.snapPositionX(
-            anchorPane.snapSpaceX(anchorPane.getWidth()) - child.getLayoutBounds().getWidth());
+        double expectedX = anchorPane.snapPositionX(anchorPane.snapSpaceX(anchorPane.getWidth()) - child.getWidth());
+        double expectedY = anchorPane.snapPositionY(anchorPane.snapSpaceY(anchorPane.getHeight()) - child.getHeight());
 
-        double expectedY = anchorPane.snapPositionY(
-            anchorPane.snapSpaceY(anchorPane.getHeight()) - child.getLayoutBounds().getHeight());
-
-        assertEquals(expectedX, child.getBoundsInParent().getMinX(), 0.0);
-        assertEquals(expectedY, child.getBoundsInParent().getMinY(), 0.0);
+        assertEquals(expectedX, child.getLayoutX());
+        assertEquals(expectedY, child.getLayoutY());
     }
 
     @Test
@@ -917,10 +917,10 @@ public class AnchorPaneTest {
         AnchorPane.setBottomAnchor(child, 0.0);
         AnchorPane.setLeftAnchor(child, 0.0);
 
-        assertEquals(anchorPane.snapSizeX(0.4), anchorPane.minWidth(-1), 0.0);
-        assertEquals(anchorPane.snapSizeY(0.4), anchorPane.minHeight(-1), 0.0);
-        assertEquals(anchorPane.snapSizeX(0.4), anchorPane.prefWidth(-1), 0.0);
-        assertEquals(anchorPane.snapSizeY(0.4), anchorPane.prefHeight(-1), 0.0);
+        assertEquals(anchorPane.snapSizeX(0.4), anchorPane.minWidth(-1));
+        assertEquals(anchorPane.snapSizeY(0.4), anchorPane.minHeight(-1));
+        assertEquals(anchorPane.snapSizeX(0.4), anchorPane.prefWidth(-1));
+        assertEquals(anchorPane.snapSizeY(0.4), anchorPane.prefHeight(-1));
     }
 
     @Test
@@ -931,15 +931,15 @@ public class AnchorPaneTest {
         AnchorPane.setBottomAnchor(child, 0.0);
         AnchorPane.setLeftAnchor(child, 0.0);
 
-        assertEquals(10.0, anchorPane.prefWidth(100), 0.0);
-        assertEquals(100.0, child.lastHeight, 0.0);
+        assertEquals(10.0, anchorPane.prefWidth(100));
+        assertEquals(100.0, child.lastHeight);
 
         anchorPane.resize(200, 100);
         anchorPane.layout();
 
-        assertEquals(100.0, child.getHeight(), 0.0);
-        assertEquals(10.0, child.getWidth(), 0.0);
-        assertEquals(child.getHeight(), child.lastHeight, 0.0);
+        assertEquals(100.0, child.getHeight());
+        assertEquals(10.0, child.getWidth());
+        assertEquals(child.getHeight(), child.lastHeight);
     }
 
     @Test
@@ -953,12 +953,12 @@ public class AnchorPaneTest {
 
         double expectedHeight = anchorPane.snapSpaceY(anchorPane.snapSpaceY(100) - 2 * anchorPane.snapSpaceY(0.6));
         anchorPane.prefWidth(100);
-        assertEquals(expectedHeight, child.lastHeight, 0.0);
+        assertEquals(expectedHeight, child.lastHeight);
 
         anchorPane.resize(50, 100);
         anchorPane.layout();
-        assertEquals(expectedHeight, child.getHeight(), 0.0);
-        assertEquals(child.getHeight(), child.lastHeight, 0.0);
+        assertEquals(expectedHeight, child.getHeight());
+        assertEquals(child.getHeight(), child.lastHeight);
     }
 
     @Test
@@ -972,8 +972,8 @@ public class AnchorPaneTest {
         anchorPane.resize(100.4, 50);
         anchorPane.layout();
 
-        assertEquals(anchorPane.snapSpaceX(anchorPane.getWidth()), child.getWidth(), 0.0);
-        assertEquals(child.getWidth(), child.lastWidth, 0.0);
+        assertEquals(anchorPane.snapSpaceX(anchorPane.getWidth()), child.getWidth());
+        assertEquals(child.getWidth(), child.lastWidth);
     }
 
     @Test
@@ -986,14 +986,11 @@ public class AnchorPaneTest {
         anchorPane.resize(100, 100);
         anchorPane.layout();
 
-        double expectedX = anchorPane.snapPositionX(
-            anchorPane.snapSpaceX(anchorPane.getWidth()) - child.getLayoutBounds().getWidth());
+        double expectedX = anchorPane.snapPositionX(anchorPane.snapSpaceX(anchorPane.getWidth()) - child.getWidth());
+        double expectedY = anchorPane.snapPositionY(anchorPane.snapSpaceY(anchorPane.getHeight()) - child.getHeight());
 
-        double expectedY = anchorPane.snapPositionY(
-            anchorPane.snapSpaceY(anchorPane.getHeight()) - child.getLayoutBounds().getHeight());
-
-        assertEquals(expectedX, child.getBoundsInParent().getMinX(), EPSILON);
-        assertEquals(expectedY, child.getBoundsInParent().getMinY(), EPSILON);
+        assertEquals(expectedX, child.getLayoutX());
+        assertEquals(expectedY, child.getLayoutY());
     }
 
     @Test
@@ -1008,22 +1005,17 @@ public class AnchorPaneTest {
         AnchorPane.setTopAnchor(child, 1.6);
         AnchorPane.setRightAnchor(child, 1.6);
 
-        Stage stage = new Stage();
-        stage.setRenderScaleX(1.25);
-        stage.setRenderScaleY(1.25);
+        stage = new Stage();
+        stage.renderScaleXProperty().bind(new SimpleDoubleProperty(1.25));
+        stage.renderScaleYProperty().bind(new SimpleDoubleProperty(1.25));
         stage.setScene(new Scene(anchorPane, 100, 100));
+        stage.show();
 
-        try {
-            stage.show();
+        double expectedPrefWidth = anchorPane.snapSpaceX(anchorPane.snapSizeX(0.1) + anchorPane.snapSpaceX(1.6));
+        assertEquals(expectedPrefWidth, anchorPane.prefWidth(-1));
 
-            double expectedPrefWidth = anchorPane.snapSpaceX(anchorPane.snapSizeX(0.1) + anchorPane.snapSpaceX(1.6));
-            assertEquals(expectedPrefWidth, anchorPane.prefWidth(-1), 0.0);
-
-            double expectedY = anchorPane.snapPositionY(anchorPane.snapSpaceY(0.8) + anchorPane.snapSpaceY(1.6));
-            assertEquals(expectedY, child.getBoundsInParent().getMinY(), 0.0);
-        } finally {
-            stage.hide();
-        }
+        double expectedY = anchorPane.snapPositionY(anchorPane.snapSpaceY(0.8) + anchorPane.snapSpaceY(1.6));
+        assertEquals(expectedY, child.getLayoutY());
     }
 
     @Test
@@ -1041,32 +1033,26 @@ public class AnchorPaneTest {
         AnchorPane.setBottomAnchor(child, bottomAnchor);
         AnchorPane.setRightAnchor(child, rightAnchor);
 
-        Stage stage = new Stage();
-        stage.setRenderScaleX(1.25);
-        stage.setRenderScaleY(1.5);
+        stage = new Stage();
+        stage.renderScaleXProperty().bind(new SimpleDoubleProperty(1.25));
+        stage.renderScaleYProperty().bind(new SimpleDoubleProperty(1.5));
         stage.setScene(new Scene(anchorPane, 100, 100));
+        stage.show();
 
-        try {
-            stage.show();
+        double left = anchorPane.snapSpaceX(leftAnchor);
+        double right = anchorPane.snapSpaceX(rightAnchor);
+        double top = anchorPane.snapSpaceY(topAnchor);
+        double bottom = anchorPane.snapSpaceY(bottomAnchor);
+        double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
+        double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
 
-            Bounds bounds = child.getBoundsInParent();
-            double left = anchorPane.snapSpaceX(leftAnchor);
-            double right = anchorPane.snapSpaceX(rightAnchor);
-            double top = anchorPane.snapSpaceY(topAnchor);
-            double bottom = anchorPane.snapSpaceY(bottomAnchor);
-            double areaWidth = anchorPane.snapSpaceX(anchorPane.getWidth());
-            double areaHeight = anchorPane.snapSpaceY(anchorPane.getHeight());
+        assertEquals(anchorPane.snapPositionX(left), child.getLayoutX());
+        assertEquals(anchorPane.snapPositionY(top), child.getLayoutY());
+        assertEquals(anchorPane.snapSpaceX(areaWidth - left - right), child.getWidth());
+        assertEquals(anchorPane.snapSpaceY(areaHeight - top - bottom), child.getHeight());
 
-            assertEquals(anchorPane.snapPositionX(left), bounds.getMinX(), EPSILON);
-            assertEquals(anchorPane.snapPositionY(top), bounds.getMinY(), EPSILON);
-            assertEquals(anchorPane.snapSpaceX(areaWidth - left - right), bounds.getWidth(), EPSILON);
-            assertEquals(anchorPane.snapSpaceY(areaHeight - top - bottom), bounds.getHeight(), EPSILON);
-
-            assertEquals(leftAnchor, AnchorPane.getLeftAnchor(child), 0.0);
-            assertEquals(topAnchor, AnchorPane.getTopAnchor(child), 0.0);
-        } finally {
-            stage.hide();
-        }
+        assertEquals(leftAnchor, AnchorPane.getLeftAnchor(child));
+        assertEquals(topAnchor, AnchorPane.getTopAnchor(child));
     }
 
     private static final class HorizontalBiasedRegion extends Region {
