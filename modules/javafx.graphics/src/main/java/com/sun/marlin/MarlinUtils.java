@@ -77,13 +77,4 @@ public final class MarlinUtils {
         }
         return currentTG;
     }
-
-    // JavaFX specific Cleaner for Marlin-FX:
-    // Module issue with jdk.internal.ref.Cleaner
-    private final static java.lang.ref.Cleaner cleaner
-        = java.lang.ref.Cleaner.create();
-
-    static java.lang.ref.Cleaner getCleaner() {
-        return cleaner;
-    }
 }
