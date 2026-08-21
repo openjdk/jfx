@@ -25,6 +25,7 @@
 
 package com.sun.jfx.incubator.scene.control.richtext.util;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -434,6 +435,35 @@ public final class RichUtils {
         return sb.toString();
     }
 
+    private static byte[] writeImage(Image im, String format) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
+        try {
+            // using disk cache slows things down
+            boolean old = ImageIO.getUseCache();
+            ImageIO.setUseCache(false);
+            try {
+                BufferedImage bi = ImgUtil.fromFXImage(im, null);
+                ImageIO.write(bi, format, out);
+            } finally {
+                ImageIO.setUseCache(old);
+            }
+        } finally {
+            out.close();
+        }
+        return out.toByteArray();
+    }
+
+    /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return writeImage(im, "JPG");
+    }
+
     /**
      * Writes an Image to a byte array in PNG format.
      *
@@ -442,11 +472,7 @@ public final class RichUtils {
      * @throws IOException if an I/O error occurs
      */
     public static byte[] writePNG(Image im) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        // this might conflict with user-set value
-        ImageIO.setUseCache(false);
-        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
-        return out.toByteArray();
+        return writeImage(im, "PNG");
     }
 
     /**
