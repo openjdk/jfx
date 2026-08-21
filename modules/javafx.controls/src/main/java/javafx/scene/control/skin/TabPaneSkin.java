@@ -29,6 +29,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiConsumer;
 import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -42,6 +43,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -68,7 +70,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -163,11 +164,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      **************************************************************************/
 
     /**
-     * Creates a new TabPaneSkin instance, installing the necessary child
-     * nodes into the Control {@link Control#getChildren() children} list, as
-     * well as the necessary input mappings for handling key, mouse, etc events.
+     * Creates a new TabPaneSkin instance, adding the necessary
+     * nodes to the {@link javafx.scene.Parent#getChildren() children} list, as
+     * well as the necessary input mappings.
      *
-     * @param control The control that this skin should be installed onto.
+     * @param control The TabPane that this skin should be installed onto.
      */
     public TabPaneSkin(TabPane control) {
         super(control);
@@ -257,6 +258,48 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             return "closeTabAnimation";
         }
     };
+
+    /**
+     * This property allows customization of the overflow menu items.  When this property is not {@code null},
+     * the {@link MenuItem} text be set to be the same as the {@link Tab} text and {@code null}
+     * graphic prior to invocation of the decorator.  Keep in mind that {@link MenuItem#disableProperty()} gets bound
+     * to the {@link Tab#disableProperty()}.
+     * <p>
+     * When this property is {@code null}, the menu item is initialized with the text and the graphic
+     * obtained from the corresponding {@link Tab}.  For the graphic, either an {@link ImageView}
+     * or a {@link Label} with an {@link ImageView} will be used.
+     * <p>
+     * Changing this property while the menu is shown has no effect.
+     *
+     * @since 28
+     * @defaultValue null
+     */
+    private ObjectProperty<BiConsumer<Tab, MenuItem>> overflowMenuDecorator;
+
+    public final ObjectProperty<BiConsumer<Tab, MenuItem>> overflowMenuDecoratorProperty() {
+        if (overflowMenuDecorator == null) {
+            overflowMenuDecorator = new SimpleObjectProperty<>() {
+                @Override
+                public Object getBean() {
+                    return TabPaneSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "overflowMenuDecorator";
+                }
+            };
+        }
+        return overflowMenuDecorator;
+    }
+
+    public final BiConsumer<Tab, MenuItem> getOverflowMenuDecorator() {
+        return overflowMenuDecorator == null ? null : overflowMenuDecorator.get();
+    }
+
+    public final void setOverflowMenuDecorator(BiConsumer<Tab, MenuItem> d) {
+        overflowMenuDecoratorProperty().set(d);
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -487,27 +530,31 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     }
 
-    /**
-     * VERY HACKY - this lets us 'duplicate' Label and ImageView nodes to be used in a
-     * Tab and the tabs menu at the same time.
-     */
-    private static Node clone(Node n) {
-        if (n == null) {
-            return null;
-        }
-        if (n instanceof ImageView) {
-            ImageView iv = (ImageView) n;
+    private Node copyGraphic(Node n) {
+        if (n instanceof ImageView v) {
             ImageView imageview = new ImageView();
-            imageview.imageProperty().bind(iv.imageProperty());
+            imageview.imageProperty().bind(v.imageProperty());
             return imageview;
-        }
-        if (n instanceof Label) {
-            Label l = (Label)n;
-            Label label = new Label(l.getText(), clone(l.getGraphic()));
+        } else if (n instanceof Label l) {
+            Label label = new Label(l.getText(), copyGraphic(l.getGraphic()));
             label.textProperty().bind(l.textProperty());
             return label;
+        } else {
+            // we might extend support for more types in the future (Path?)
+            return null;
         }
-        return null;
+    }
+
+    private void decorateMenuItem(Tab tab, RadioMenuItem item) {
+        BiConsumer<Tab, MenuItem> decorator = getOverflowMenuDecorator();
+        if (decorator == null) {
+            Node n = tab.getGraphic();
+            Node copy = copyGraphic(n);
+            item.setGraphic(copy);
+            item.textProperty().bind(tab.textProperty());
+        } else {
+            decorator.accept(tab, item);
+        }
     }
 
     private void removeTabs(List<? extends Tab> removedList) {
@@ -1520,7 +1567,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             });
 
             getProperties().put(Tab.class, tab);
-            getProperties().put(ContextMenu.class, tab.getContextMenu());
 
             setOnContextMenuRequested((ContextMenuEvent me) -> {
                if (getTab().getContextMenu() != null) {
@@ -1782,8 +1828,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showPopupMenu();
             });
 
-            setupPopupMenu();
-
             inner = new StackPane() {
                 @Override protected double computePrefWidth(double height) {
                     double pw;
@@ -1845,7 +1889,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
                 requestLayout();
             }
-            getProperties().put(ContextMenu.class, popup);
         }
 
         InvalidationListener sidePropListener =  e -> {
@@ -1925,8 +1968,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
             } else {
                 setVisible(false);
-                clearPopupMenu();
-                popup = null;
+                if (popup != null) {
+                    clearPopupMenu();
+                    popup = null;
+                }
             }
 
             // This needs to be called when we are in the left tabPosition
@@ -1944,6 +1989,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             ObservableList<RadioMenuItem> menuitems = FXCollections.<RadioMenuItem>observableArrayList();
             for (final Tab tab : getSkinnable().getTabs()) {
                 TabMenuItem item = new TabMenuItem(tab);
+                decorateMenuItem(tab, item);
                 item.setToggleGroup(group);
                 item.setOnAction(t -> getSkinnable().getSelectionModel().select(tab));
                 menuitems.add(item);
@@ -1959,6 +2005,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         private void showPopupMenu() {
+            if (popup == null) {
+                setupPopupMenu();
+            }
             for (MenuItem mi: popup.getItems()) {
                 TabMenuItem tmi = (TabMenuItem)mi;
                 if (selectedTab.equals(tmi.getTab())) {
@@ -1968,26 +2017,16 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
             popup.show(downArrowBtn, Side.BOTTOM, 0, 0);
         }
-    } /* End TabControlButtons*/
+    }
 
+    /** The MenuItem for use in the overflow menu */
     static class TabMenuItem extends RadioMenuItem {
-        Tab tab;
+        private Tab tab;
 
-        private InvalidationListener disableListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                setDisable(tab.isDisable());
-            }
-        };
-
-        private WeakInvalidationListener weakDisableListener =
-                new WeakInvalidationListener(disableListener);
-
-        public TabMenuItem(final Tab tab) {
-            super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));
+        public TabMenuItem(Tab tab) {
+            super(tab.getText());
             this.tab = tab;
-            setDisable(tab.isDisable());
-            tab.disableProperty().addListener(weakDisableListener);
-            textProperty().bind(tab.textProperty());
+            disableProperty().bind(tab.disableProperty());
         }
 
         public Tab getTab() {
@@ -1996,7 +2035,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         public void dispose() {
             textProperty().unbind();
-            tab.disableProperty().removeListener(weakDisableListener);
+            disableProperty().unbind();
             tab = null;
         }
     }
@@ -2362,6 +2401,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     // For testing purpose.
     ContextMenu test_getTabsMenu() {
+        if (tabHeaderArea.controlButtons.popup == null) {
+            tabHeaderArea.controlButtons.setupPopupMenu();
+        }
         return tabHeaderArea.controlButtons.popup;
     }
 
