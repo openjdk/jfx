@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.scene.layout;
 
 import java.util.List;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
@@ -262,7 +261,7 @@ public class AnchorPane extends Pane {
 
     private double computeWidth(final boolean minimum, final double height) {
         double max = 0;
-        double contentHeight = height != -1 ? height - getInsets().getTop() - getInsets().getBottom() : -1;
+        double areaHeight = height != -1 ? snapSpaceY(height) : -1;
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
             Double leftAnchor = getSnappedLeftAnchor(child);
@@ -272,15 +271,25 @@ public class AnchorPane extends Pane {
                 (rightAnchor != null? 0 : child.getLayoutBounds().getMinX() + child.getLayoutX());
             double right = rightAnchor != null? rightAnchor : 0;
             double childHeight = -1;
-            if (child.getContentBias() == Orientation.VERTICAL && contentHeight != -1) {
+
+            if (child.getContentBias() == Orientation.VERTICAL && areaHeight != -1) {
                 // The width depends on the node's height!
-                childHeight = computeChildHeight(child, getSnappedTopAnchor(child), getSnappedBottomAnchor(child), contentHeight, -1);
+                childHeight = computeChildHeight(
+                    child, getSnappedTopAnchor(child), getSnappedBottomAnchor(child), areaHeight, -1);
             }
-            max = Math.max(max, left + (minimum && leftAnchor != null && rightAnchor != null?
-                    child.minWidth(childHeight) : computeChildPrefAreaWidth(child, -1, null, childHeight, false)) + right);
+
+            double childWidth = minimum && leftAnchor != null && rightAnchor != null
+                ? snapSizeX(child.minWidth(childHeight))
+                : computeChildPrefWidth(child, childHeight);
+
+            double childAreaWidth = leftAnchor == null && rightAnchor == null
+                ? snapSizeX(left + childWidth)
+                : snapSpaceX(left + childWidth + right);
+
+            max = Math.max(max, childAreaWidth);
         }
 
-        return snappedLeftInset() + max + snappedRightInset();
+        return snapSpaceX(snappedLeftInset() + max + snappedRightInset());
     }
 
     private Double getSnappedTopAnchor(Node child) {
@@ -288,7 +297,7 @@ public class AnchorPane extends Pane {
         if (topAnchor == null) {
             return null;
         }
-        return snapPositionY(topAnchor);
+        return snapSpaceY(topAnchor);
     }
 
     private Double getSnappedBottomAnchor(Node child) {
@@ -296,7 +305,7 @@ public class AnchorPane extends Pane {
         if (bottomAnchor == null) {
             return null;
         }
-        return snapPositionY(bottomAnchor);
+        return snapSpaceY(bottomAnchor);
     }
 
     private Double getSnappedLeftAnchor(Node child) {
@@ -304,7 +313,7 @@ public class AnchorPane extends Pane {
         if (leftAnchor == null) {
             return null;
         }
-        return snapPositionX(leftAnchor);
+        return snapSpaceX(leftAnchor);
     }
 
     private Double getSnappedRightAnchor(Node child) {
@@ -312,12 +321,12 @@ public class AnchorPane extends Pane {
         if (rightAnchor == null) {
             return null;
         }
-        return snapPositionX(rightAnchor);
+        return snapSpaceX(rightAnchor);
     }
 
     private double computeHeight(final boolean minimum, final double width) {
         double max = 0;
-        double contentWidth = width != -1 ? width - getInsets().getLeft()- getInsets().getRight() : -1;
+        double areaWidth = width != -1 ? snapSpaceX(width) : -1;
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
             Double topAnchor = getSnappedTopAnchor(child);
@@ -327,31 +336,65 @@ public class AnchorPane extends Pane {
                 (bottomAnchor != null? 0 : child.getLayoutBounds().getMinY() + child.getLayoutY());
             double bottom = bottomAnchor != null? bottomAnchor : 0;
             double childWidth = -1;
-            if (child.getContentBias() == Orientation.HORIZONTAL && contentWidth != -1) {
-                childWidth = computeChildWidth(child, getSnappedLeftAnchor(child), getSnappedRightAnchor(child), contentWidth, -1);
+
+            if (child.getContentBias() == Orientation.HORIZONTAL && areaWidth != -1) {
+                childWidth = computeChildWidth(
+                    child, getSnappedLeftAnchor(child), getSnappedRightAnchor(child), areaWidth, -1);
             }
-            max = Math.max(max, top + (minimum && topAnchor != null && bottomAnchor != null?
-                    child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth, true)) + bottom);
+
+            double childHeight = minimum && topAnchor != null && bottomAnchor != null
+                ? snapSizeY(child.minHeight(childWidth))
+                : computeChildPrefHeight(child, childWidth);
+
+            double childAreaHeight = topAnchor == null && bottomAnchor == null
+                ? snapSizeY(top + childHeight)
+                : snapSpaceY(top + childHeight + bottom);
+
+            max = Math.max(max, childAreaHeight);
         }
 
-        return snappedTopInset() + max + snappedBottomInset();
+        return snapSpaceY(snappedTopInset() + max + snappedBottomInset());
     }
 
-    private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor, double areaWidth, double height) {
-        if (leftAnchor != null && rightAnchor != null && child.isResizable()) {
-            return areaWidth - snappedLeftInset() - snappedRightInset() - leftAnchor - rightAnchor;
+    private double computeChildWidth(Node child, Double leftAnchor, Double rightAnchor,
+                                     double areaWidth, double height) {
+        if (!child.isResizable()) {
+            return child.getLayoutBounds().getWidth();
         }
-        return computeChildPrefAreaWidth(child, -1, Insets.EMPTY, height, true);
+
+        if (leftAnchor != null && rightAnchor != null) {
+            return Math.max(0, snapSpaceX(
+                areaWidth - snappedLeftInset() - snappedRightInset() - leftAnchor - rightAnchor));
+        }
+
+        return computeChildPrefWidth(child, height);
     }
 
-    private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor, double areaHeight, double width) {
-        if (topAnchor != null && bottomAnchor != null && child.isResizable()) {
-            return areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor;
+    private double computeChildHeight(Node child, Double topAnchor, Double bottomAnchor,
+                                      double areaHeight, double width) {
+        if (!child.isResizable()) {
+            return child.getLayoutBounds().getHeight();
         }
-        return computeChildPrefAreaHeight(child, -1, Insets.EMPTY, width, true);
+
+        if (topAnchor != null && bottomAnchor != null) {
+            return Math.max(0, snapSpaceY(
+                areaHeight - snappedTopInset() - snappedBottomInset() - topAnchor - bottomAnchor));
+        }
+
+        return computeChildPrefHeight(child, width);
+    }
+
+    private double computeChildPrefWidth(Node child, double height) {
+        return snapSizeX(boundedSize(child.minWidth(height), child.prefWidth(height), child.maxWidth(height)));
+    }
+
+    private double computeChildPrefHeight(Node child, double width) {
+        return snapSizeY(boundedSize(child.minHeight(width), child.prefHeight(width), child.maxHeight(width)));
     }
 
     @Override protected void layoutChildren() {
+        final double areaWidth = snapSpaceX(getWidth());
+        final double areaHeight = snapSpaceY(getHeight());
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
             final Double topAnchor = getSnappedTopAnchor(child);
@@ -368,32 +411,33 @@ public class AnchorPane extends Pane {
 
             if (bias == Orientation.VERTICAL) {
                 // width depends on height
-                // WARNING: The order of these calls is crucial, there is some
-                // hidden ordering dependency here!
-                h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), -1);
-                w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), h);
+                h = computeChildHeight(child, topAnchor, bottomAnchor, areaHeight, -1);
+                w = computeChildWidth(child, leftAnchor, rightAnchor, areaWidth, h);
             } else if (bias == Orientation.HORIZONTAL) {
-                w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), -1);
-                h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), w);
+                w = computeChildWidth(child, leftAnchor, rightAnchor, areaWidth, -1);
+                h = computeChildHeight(child, topAnchor, bottomAnchor, areaHeight, w);
             } else {
                 // bias may be null
-                w = computeChildWidth(child, leftAnchor, rightAnchor, getWidth(), -1);
-                h = computeChildHeight(child, topAnchor, bottomAnchor, getHeight(), -1);
+                w = computeChildWidth(child, leftAnchor, rightAnchor, areaWidth, -1);
+                h = computeChildHeight(child, topAnchor, bottomAnchor, areaHeight, -1);
             }
 
+            child.resize(w, h);
+            final Bounds resizedBounds = child.getLayoutBounds();
+
             if (leftAnchor != null) {
-                x = snappedLeftInset() + leftAnchor;
+                x = snapPositionX(snappedLeftInset() + leftAnchor);
             } else if (rightAnchor != null) {
-                x = getWidth() - snappedRightInset() - rightAnchor - w;
+                x = snapPositionX(areaWidth - snappedRightInset() - rightAnchor - resizedBounds.getWidth());
             }
 
             if (topAnchor != null) {
-                y = snappedTopInset() + topAnchor;
+                y = snapPositionY(snappedTopInset() + topAnchor);
             } else if (bottomAnchor != null) {
-                y = getHeight() - snappedBottomInset() - bottomAnchor - h;
+                y = snapPositionY(areaHeight - snappedBottomInset() - bottomAnchor - resizedBounds.getHeight());
             }
 
-            child.resizeRelocate(x, y, w, h);
+            child.relocate(x, y);
         }
     }
 }
