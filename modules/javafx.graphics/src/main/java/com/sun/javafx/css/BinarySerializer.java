@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,20 @@
 
 package com.sun.javafx.css;
 
+import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
+import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-
+import java.util.TreeSet;
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
 import javafx.css.StyleConverter;
 import javafx.geometry.NodeOrientation;
-
-import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
-import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
 
 /**
  * Class which can read and write selectors in a binary format.
@@ -46,6 +46,7 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
 public class BinarySerializer {
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;
+    private static final Comparator<PseudoClass> PSEUDO_CLASS_COMPARATOR = initPseudoClassComparator();
 
     public static Selector read(DataInputStream is, String[] strings) throws IOException {
         int type = is.readByte();
@@ -169,6 +170,11 @@ public class BinarySerializer {
         os.writeShort(stringStore.addString(selector.getId()));
 
         Set<PseudoClass> pseudoClassStates = selector.getPseudoClassStates();
+        if (!pseudoClassStates.isEmpty()) {
+            Set<PseudoClass> sorted = new TreeSet<>(PSEUDO_CLASS_COMPARATOR);
+            sorted.addAll(pseudoClassStates);
+            pseudoClassStates = sorted;
+        }
         NodeOrientation nodeOrientation = selector.getNodeOrientation();
 
         int pclassSize = pseudoClassStates.size()
@@ -186,5 +192,14 @@ public class BinarySerializer {
         else if (nodeOrientation == LEFT_TO_RIGHT) {
             os.writeShort(stringStore.addString("dir(ltr)"));
         }
+    }
+
+    private static Comparator<PseudoClass> initPseudoClassComparator() {
+        return new Comparator<PseudoClass>() {
+            @Override
+            public int compare(PseudoClass a, PseudoClass b) {
+                return a.getPseudoClassName().compareTo(b.getPseudoClassName());
+            }
+        };
     }
 }
