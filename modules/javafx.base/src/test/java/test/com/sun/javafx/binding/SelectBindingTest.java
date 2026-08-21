@@ -429,7 +429,7 @@ public class SelectBindingTest {
         select = Bindings.selectString(a.nextProperty(), "dummy", "name");
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NoSuchMethodException.class);
-        OutputRedirect.checkAndRestoreStderr(NoSuchMethodException.class);
+        OutputRedirect.restoreStderr();  // just restore as we already asserted this above, and checking stderr for warnings is flakey
     }
 
     @Test

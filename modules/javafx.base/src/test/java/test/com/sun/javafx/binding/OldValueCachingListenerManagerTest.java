@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,33 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.Logging;
-import org.junit.jupiter.api.Test;
-import test.util.memory.JMemoryBuddy;
+import com.sun.javafx.binding.ListenerManagerBase;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
-public class TestLogging {
+public class OldValueCachingListenerManagerTest extends AbstractListenerManagerTest {
+    private final OldValueCachingListenerManager<String, SimpleObservableValue<String>> helper = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(SimpleObservableValue<String> instance) {
+            return instance.data;
+        }
 
-    @Test
-    public void testExceptionCollectableAfterLogging() {
+        @Override
+        protected void setData(SimpleObservableValue<String> instance, Object data) {
+            instance.data = data;
+        }
+    };
 
-        JMemoryBuddy.memoryTest(checker -> {
-            Throwable e = new Exception();
+    private final SimpleObservableValue<String> ov = new SimpleObservableValue<>(
+        ov -> helper.fireValueChanged(ov, ov.data)  // doesn't rely on old value
+    );
 
-            // This is the value that is used in the application
-            // other test might set it to true
-            Logging.setKeepLastLogRecord(false);
+    @Override
+    protected SimpleObservableValue<String> getTestObservableValue() {
+        return ov;
+    }
 
-            Logging.getLogger().warning("test", e);
-
-            checker.assertCollectable(e);
-        });
+    @Override
+    protected ListenerManagerBase<String, SimpleObservableValue<String>> getListenerManager() {
+        return helper;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,13 @@
 package test.com.sun.javafx.binding;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.binding.ListenerListBase;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -69,6 +73,19 @@ public class ExpressionHelperUtility {
             return Collections.emptyList();
         }
         final Class helperClass = helper.getClass();
+
+        if (helper instanceof InvalidationListener il) {
+            return List.of(il);
+        }
+        if (helper instanceof ListenerListBase list) {
+            List<InvalidationListener> listeners = new ArrayList<>();
+
+            for (int i = 0; i < list.invalidationListenersSize(); i++) {
+                listeners.add(list.getInvalidationListener(i));
+            }
+
+            return listeners;
+        }
 
         try {
             final Class clazz = Class.forName(EXPRESSION_HELPER_SINGLE_INVALIDATION);
@@ -136,6 +153,29 @@ public class ExpressionHelperUtility {
         if (helper == null) {
             return Collections.emptyList();
         }
+
+        if (helper instanceof ChangeListener) {
+            try {
+                Field field = Class.forName("com.sun.javafx.binding.OldValueCachingListenerManager$ChangeListenerWrapper").getDeclaredField("listener");
+
+                field.setAccessible(true);
+
+                return List.of((ChangeListener<T>) field.get(helper));
+            }
+            catch(Exception e) {}
+
+            return List.of((ChangeListener<T>) helper);
+        }
+        if (helper instanceof ListenerListBase list) {
+            List<ChangeListener<? super T>> listeners = new ArrayList<>();
+
+            for (int i = 0; i < list.changeListenersSize(); i++) {
+                listeners.add(list.getChangeListener(i));
+            }
+
+            return listeners;
+        }
+
         final Class helperClass = helper.getClass();
 
         try {
@@ -343,7 +383,15 @@ public class ExpressionHelperUtility {
                 final Field field = clazz.getDeclaredField("helper");
                 field.setAccessible(true);
                 return field.get(bean);
-            } catch (Exception ex) { }
+            } catch (Exception ex) {
+                try {
+                    Field field = clazz.getDeclaredField("listenerData");
+                    field.setAccessible(true);
+                    return field.get(bean);
+                }
+                catch(Exception ex2) {
+                }
+            }
             clazz = clazz.getSuperclass();
         }
         return null;

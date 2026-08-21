@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,8 @@ import javafx.beans.binding.FloatBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
+
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
 import javafx.beans.value.ObservableFloatValue;
@@ -52,11 +53,23 @@ import javafx.beans.value.ObservableNumberValue;
  */
 public abstract class FloatPropertyBase extends FloatProperty {
 
+    private static final OldValueCachingListenerManager<Number, FloatPropertyBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(FloatPropertyBase instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(FloatPropertyBase instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private float value;
     private ObservableFloatValue observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
-    private ExpressionHelper<Number> helper = null;
+    private Object listenerData;
 
     /**
      * The constructor of the {@code FloatPropertyBase}.
@@ -76,22 +89,22 @@ public abstract class FloatPropertyBase extends FloatProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -104,7 +117,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
     private void markInvalid() {
