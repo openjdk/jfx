@@ -36,8 +36,8 @@ import java.lang.annotation.Native;
 
 class GtkWindow extends Window {
 
-    public GtkWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    public GtkWindow(Window owner, Screen screen, int styleMask, int backdropID) {
+        super(owner, screen, styleMask, backdropID);
 
         if (isExtendedWindow()) {
             headerButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
@@ -45,7 +45,7 @@ class GtkWindow extends Window {
     }
 
     @Override
-    protected native long _createWindow(long ownerPtr, long screenPtr, int mask);
+    protected native long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID);
 
     @Override
     protected native boolean _close(long ptr);
@@ -298,5 +298,19 @@ class GtkWindow extends Window {
             case DRAGBAR -> HT_CAPTION;
             case null, default -> HT_CLIENT;
         };
+    }
+
+    @Override
+    public void setDarkFrame(boolean ignored) {
+        if (hasBackdrop()) {
+            if (getView() instanceof GtkView view) {
+                view.repaintEverything();
+            }
+        }
+    }
+
+    @Override
+    public boolean emulateBackdrop() {
+        return true;
     }
 }
