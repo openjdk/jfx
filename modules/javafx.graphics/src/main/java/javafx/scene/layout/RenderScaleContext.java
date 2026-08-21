@@ -33,6 +33,7 @@ package javafx.scene.layout;
  *        ratio of device pixels to logical pixels on the X axis
  * @param snapScaleY a positive vertical scale factor, expressed as the
  *        ratio of device pixels to logical pixels on the Y axis
+ * @since 28
  */
 public record RenderScaleContext(double snapScaleX, double snapScaleY) {
 
