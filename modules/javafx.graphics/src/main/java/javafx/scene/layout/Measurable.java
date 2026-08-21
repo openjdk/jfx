@@ -57,6 +57,7 @@ import javafx.geometry.Orientation;
  * Layout engines must always check {@link #getContentBias()} before invoking measurement methods.
  *
  * @see Layoutable
+ * @since 28
  */
 public interface Measurable {
 
@@ -199,7 +200,7 @@ public interface Measurable {
     /**
      * The 'alphabetic' (or 'roman') baseline offset from the element's top boundary
      * that should be used when this element is being vertically aligned by baseline with
-     * other elements. By default this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable elements
+     * other elements. By default, this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable elements
      * and height for non-resizable elements. Implementations which contain text
      * should override this method to return their actual text baseline offset.
      *

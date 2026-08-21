@@ -312,7 +312,7 @@ public class Region extends Parent {
 
         Scene scene = getScene();
 
-        return scene == null ? Snapper.DEFAULT : SceneHelper.getSnapper(scene);
+        return scene == null ? Snapper.IDENTITY : SceneHelper.getSnapper(scene);
     }
 
     /**
@@ -423,7 +423,7 @@ public class Region extends Parent {
     double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
                                         Function<Integer, Double> positionToWidth,
                                         double areaHeight, boolean fillHeight) {
-        return LayoutSupport.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight);
+        return LayoutUtils.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight);
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
@@ -445,7 +445,7 @@ public class Region extends Parent {
     double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
             Function<Integer, Double> positionToWidth,
             double areaHeight, Function<Integer, Boolean> fillHeight, double minComplement) {
-        return LayoutSupport.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight, minComplement);
+        return LayoutUtils.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight, minComplement);
     }
 
     /**
@@ -454,7 +454,7 @@ public class Region extends Parent {
      * @return
      */
     static double getMinBaselineComplement(List<Node> children) {
-        return LayoutSupport.getMinBaselineComplement(children);
+        return LayoutUtils.getMinBaselineComplement(children);
     }
 
     /**
@@ -463,7 +463,7 @@ public class Region extends Parent {
      * @return
      */
     static double getPrefBaselineComplement(List<Node> children) {
-        return LayoutSupport.getPrefBaselineComplement(children);
+        return LayoutUtils.getPrefBaselineComplement(children);
     }
 
     /**
@@ -472,7 +472,7 @@ public class Region extends Parent {
      * @return
      */
     static double getMaxBaselineComplement(List<Node> children) {
-        return LayoutSupport.getMaxBaselineComplement(children);
+        return LayoutUtils.getMaxBaselineComplement(children);
     }
 
 
@@ -573,7 +573,7 @@ public class Region extends Parent {
     /**
      * I'm using a super-lazy property pattern here, so as to only create the
      * property object when needed for listeners or when being set from CSS,
-     * but also making sure that we only call requestParentLayout in the case
+     * but also making sure that we only call requestLayout in the case
      * that the snapToPixel value has actually changed, whether set via the setter
      * or set via the property object.
      */
@@ -584,7 +584,7 @@ public class Region extends Parent {
             if (_snapToPixel != value) {
                 _snapToPixel = value;
                 updateSnappedInsets();
-                requestParentLayout();
+                requestLayout();
             }
         } else {
             snapToPixel.set(value);
@@ -606,7 +606,7 @@ public class Region extends Parent {
                     if (_snapToPixel != value) {
                         _snapToPixel = value;
                         updateSnappedInsets();
-                        requestParentLayout();
+                        requestLayout();
                     }
                 }
             };
@@ -1837,7 +1837,7 @@ public class Region extends Parent {
     }
 
     double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        return LayoutSupport.computeChildMinAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
+        return LayoutUtils.computeChildMinAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     double computeChildMinAreaHeight(Node child, Insets margin) {
@@ -1845,7 +1845,7 @@ public class Region extends Parent {
     }
 
     double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        return LayoutSupport.computeChildMinAreaHeight(snapper(), child, minBaselineComplement, margin, availableWidth, fillWidth);
+        return LayoutUtils.computeChildMinAreaHeight(snapper(), child, minBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     double computeChildPrefAreaWidth(Node child, Insets margin) {
@@ -1853,7 +1853,7 @@ public class Region extends Parent {
     }
 
     double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        return LayoutSupport.computeChildPrefAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
+        return LayoutUtils.computeChildPrefAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin) {
@@ -1861,15 +1861,15 @@ public class Region extends Parent {
     }
 
     double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        return LayoutSupport.computeChildPrefAreaHeight(snapper(), child, prefBaselineComplement, margin, availableWidth, fillWidth);
+        return LayoutUtils.computeChildPrefAreaHeight(snapper(), child, prefBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        return LayoutSupport.computeChildMaxAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
+        return LayoutUtils.computeChildMaxAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        return LayoutSupport.computeChildMaxAreaHeight(snapper(), child, maxBaselineComplement, margin, availableWidth, fillWidth);
+        return LayoutUtils.computeChildMaxAreaHeight(snapper(), child, maxBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     /*
@@ -1903,7 +1903,7 @@ public class Region extends Parent {
 
     double computeMaxMinAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins, double height,
             boolean fillHeight) {
-        return LayoutSupport.computeMaxMinAreaWidth(snapper(), children, margins, height, fillHeight);
+        return LayoutUtils.computeMaxMinAreaWidth(snapper(), children, margins, height, fillHeight);
     }
 
     double computeMaxMinAreaWidth(List<Node> children, Callback<Layoutable, Insets> childMargins,
@@ -1919,7 +1919,7 @@ public class Region extends Parent {
 
     double computeMaxMinAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, double width,
             boolean fillWidth, VPos valignment) {
-        return LayoutSupport.computeMaxMinAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
+        return LayoutUtils.computeMaxMinAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
     }
 
     double computeMaxMinAreaHeight(List<Node> children, Callback<Layoutable, Insets> childMargins,
@@ -1935,7 +1935,7 @@ public class Region extends Parent {
 
     double computeMaxPrefAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins, double height,
             boolean fillHeight) {
-        return LayoutSupport.computeMaxPrefAreaWidth(snapper(), children, margins, height, fillHeight);
+        return LayoutUtils.computeMaxPrefAreaWidth(snapper(), children, margins, height, fillHeight);
     }
 
     double computeMaxPrefAreaWidth(List<Node> children, Callback<Layoutable, Insets> childMargins,
@@ -1951,7 +1951,7 @@ public class Region extends Parent {
 
     double computeMaxPrefAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, double width,
             boolean fillWidth, VPos valignment) {
-        return LayoutSupport.computeMaxPrefAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
+        return LayoutUtils.computeMaxPrefAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
     }
 
     double computeMaxPrefAreaHeight(List<Node> children, Callback<Layoutable, Insets> childMargins,
@@ -2022,13 +2022,13 @@ public class Region extends Parent {
         List<Node> children, Callback<Layoutable, Insets> childMargins, double[] childWidths,
         boolean fillWidth, boolean minimum, VPos valignment
     ) {
-        return LayoutSupport.getMaxAreaHeight(snapper(), children, childMargins, childWidths, fillWidth, minimum, valignment);
+        return LayoutUtils.getMaxAreaHeight(snapper(), children, childMargins, childWidths, fillWidth, minimum, valignment);
     }
 
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
     private double getMaxAreaWidth(List<Node> children,
             Callback<Layoutable, Insets> childMargins, double[] childHeights, boolean fillHeight, boolean minimum) {
-        return LayoutSupport.getMaxAreaWidth(snapper(), children, childMargins, childHeights, fillHeight, minimum);
+        return LayoutUtils.getMaxAreaWidth(snapper(), children, childMargins, childHeights, fillHeight, minimum);
     }
 
     /**
@@ -2211,8 +2211,7 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin,
                                HPos halignment, VPos valignment) {
-        layoutInArea(child, areaX, areaY, areaWidth, areaHeight,
-                areaBaselineOffset, margin, true, true, halignment, valignment);
+        LayoutUtils.layoutInArea(snapper(), child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
     }
 
     /**
@@ -2270,7 +2269,7 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
-        LayoutSupport.layoutInArea(snapper(), child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
+        LayoutUtils.layoutInArea(snapper(), child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
     }
 
     /**

@@ -39,7 +39,7 @@ import javafx.util.Callback;
 /**
  * Layout math shared between Region and Layoutable-based layouts.
  */
-final class LayoutSupport {
+final class LayoutUtils {
 
     static double computeChildMinAreaWidth(Snapper snapper, Measurable child, Insets margin) {
         return computeChildMinAreaWidth(snapper, child, -1, margin, -1, false);
@@ -495,6 +495,67 @@ final class LayoutSupport {
         }
 
         return new Size(childWidth, childHeight);
+    }
+
+    /**
+     * Utility method which lays out the child within an area of it's
+     * parent defined by {@code areaX}, {@code areaY}, {@code areaWidth} x {@code areaHeight},
+     * with a baseline offset relative to that area.
+     * <p>
+     * If the child is resizable, this method will resize it to fill the specified
+     * area unless the child's maximum size prevents it.  If the child's maximum
+     * size preference is less than the area size, the maximum size will be used.
+     * If child's maximum is greater than the area size, then the child will be
+     * resized to fit within the area, unless its minimum size prevents it.
+     * <p>
+     * If the child has a non-null contentBias, then this method will use it when
+     * resizing the child.  If the contentBias is horizontal, it will set its width
+     * first to the area's width (up to the child's max width limit) and then pass
+     * that value to compute the child's height.  If child's contentBias is vertical,
+     * then it will set its height to the area height (up to child's max height limit)
+     * and pass that height to compute the child's width.  If the child's contentBias
+     * is null, then it's width and height have no dependencies on each other.
+     * <p>
+     * If the child is not resizable (Shape, Group, etc) then it will only be
+     * positioned and not resized.
+     * <p>
+     * If the child's resulting size differs from the area's size (either
+     * because it was not resizable or it's sizing preferences prevented it), then
+     * this function will align the node relative to the area using horizontal and
+     * vertical alignment values.
+     * If valignment is {@code VPos.BASELINE} then the node's baseline will be aligned
+     * with the area baseline offset parameter, otherwise the baseline parameter
+     * is ignored.
+     * <p>
+     * If {@code margin} is non-null, then that space will be allocated around the
+     * child within the layout area.  margin may be null.
+     * <p>
+     * The resulting x,y values will be rounded to their nearest pixel
+     * boundaries and the width/height values will be ceiled to the next
+     * pixel boundary, as determined by the given {@code snapper}.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child being positioned within the area, cannot be {@code null}
+     * @param areaX the horizontal offset of the layout area
+     * @param areaY the vertical offset of the layout area
+     * @param areaWidth the width of the layout area
+     * @param areaHeight the height of the layout area
+     * @param areaBaselineOffset the baseline offset to be used if VPos is BASELINE
+     * @param margin the margin of space to be allocated around the child
+     * @param halignment the horizontal alignment for the child within the area
+     * @param valignment the vertical alignment for the child within the area
+     */
+    static void layoutInArea(
+        Snapper snapper, Layoutable child, double areaX, double areaY,
+        double areaWidth, double areaHeight,
+        double areaBaselineOffset,
+        Insets margin,
+        HPos halignment, VPos valignment
+    ) {
+        layoutInArea(
+            snapper, child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
+            margin, true, true, halignment, valignment
+        );
     }
 
     /**

@@ -2234,7 +2234,7 @@ public class Scene implements EventTarget {
      * Cached {@link Snapper} for this scene's window render scale, refreshed
      * whenever the window changes or its render scale changes.
      */
-    private Snapper snapper = Snapper.DEFAULT;
+    private Snapper snapper = Snapper.IDENTITY;
 
     /**
      * Cached {@link RenderScaleContext} for this scene's window render scale, refreshed

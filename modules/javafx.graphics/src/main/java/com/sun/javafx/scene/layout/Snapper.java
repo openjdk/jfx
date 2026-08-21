@@ -39,7 +39,7 @@ public interface Snapper {
     /**
      * A default snapper for 1.0 scaling.
      */
-    static final Snapper DEFAULT = new Snapper() {
+    static final Snapper IDENTITY = new Snapper() {
 
         @Override
         public double snapPositionX(double value) {
@@ -111,7 +111,7 @@ public interface Snapper {
         private static final Map<RenderScaleContext, Snapper> INSTANCES = new ConcurrentHashMap<>();
 
         {
-            INSTANCES.put(RenderScaleContext.DEFAULT, DEFAULT);
+            INSTANCES.put(RenderScaleContext.DEFAULT, IDENTITY);
         }
     }
 

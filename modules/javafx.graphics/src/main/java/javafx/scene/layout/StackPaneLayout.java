@@ -163,28 +163,28 @@ class StackPaneLayout implements Layoutable {
     public double minWidth(double height) {
         // TODO pre-existing bug, insets not snapped anywhere
         return insets.getLeft()
-            + LayoutSupport.computeMaxMinAreaWidth(snapper, children, marginLookup, height, true)
+            + LayoutUtils.computeMaxMinAreaWidth(snapper, children, marginLookup, height, true)
             + insets.getRight();
     }
 
     @Override
     public double minHeight(double width) {
         return insets.getTop()
-            + LayoutSupport.computeMaxMinAreaHeight(snapper, children, marginLookup, width, true, alignment.getVpos())
+            + LayoutUtils.computeMaxMinAreaHeight(snapper, children, marginLookup, width, true, alignment.getVpos())
             + insets.getBottom();
     }
 
     @Override
     public double prefWidth(double height) {
         return insets.getLeft()
-            + LayoutSupport.computeMaxPrefAreaWidth(snapper, children, marginLookup, (height == -1) ? -1 : (height - insets.getTop() - insets.getBottom()), true)
+            + LayoutUtils.computeMaxPrefAreaWidth(snapper, children, marginLookup, (height == -1) ? -1 : (height - insets.getTop() - insets.getBottom()), true)
             + insets.getRight();
     }
 
     @Override
     public double prefHeight(double width) {
         return insets.getTop()
-            + LayoutSupport.computeMaxPrefAreaHeight(snapper, children, marginLookup, (width == -1) ? -1 : (width - insets.getLeft() - insets.getRight()), true, alignment.getVpos())
+            + LayoutUtils.computeMaxPrefAreaHeight(snapper, children, marginLookup, (width == -1) ? -1 : (width - insets.getLeft() - insets.getRight()), true, alignment.getVpos())
             + insets.getBottom();
     }
 
@@ -210,12 +210,12 @@ class StackPaneLayout implements Layoutable {
 
     @Override
     public void resize(double width, double height) {
-        resizeRelocate(x, y, w, h);
+        resizeRelocate(this.x, this.y, width, height);
     }
 
     @Override
-    public void relocate(double x, double y) {
-        resizeRelocate(x, y, w, h);
+    public void relocate(double xPos, double yPos) {
+        resizeRelocate(xPos, yPos, this.w, this.h);
     }
 
     @Override
@@ -238,14 +238,14 @@ class StackPaneLayout implements Layoutable {
         double contentWidth = w - left - right;
         double contentHeight = h - top - bottom;
         double baselineOffset = alignVpos == VPos.BASELINE
-            ? LayoutSupport.getAreaBaselineOffset(snapper, children, marginLookup, _ -> contentWidth, contentHeight, true)
+            ? LayoutUtils.getAreaBaselineOffset(snapper, children, marginLookup, _ -> contentWidth, contentHeight, true)
             : 0;
 
         for (int i = 0, size = children.size(); i < size; i++) {
             Layoutable child = children.get(i);
             Pos childAlignment = alignmentLookup.call(child);
 
-            LayoutSupport.layoutInArea(
+            LayoutUtils.layoutInArea(
                 snapper, child, x + left, y + top,
                 contentWidth, contentHeight,
                 baselineOffset, marginLookup.call(child), true, true,

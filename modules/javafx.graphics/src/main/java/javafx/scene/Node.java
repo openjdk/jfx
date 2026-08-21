@@ -3553,6 +3553,7 @@ public abstract sealed class Node
         }
     };
 
+    @Override
     public final Bounds getLayoutBounds() {
         return layoutBoundsProperty().get();
     }
