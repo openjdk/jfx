@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,29 +30,31 @@ import static javafx.scene.input.KeyCombination.CONTROL_ANY;
 import static javafx.scene.input.KeyCombination.CONTROL_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_ANY;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import javafx.event.Event;
-import javafx.scene.input.KeyCombination.ModifierValue;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.input.KeyCharacterCombination;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+import javafx.event.Event;
+import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyCombination.ModifierValue;
+import javafx.scene.input.KeyEvent;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.scene.input.KeyCodeMap;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 
 public class KeyCombinationTest {
@@ -605,12 +607,74 @@ public class KeyCombinationTest {
         assertEquals("[", acceleratorKeyCombo.getDisplayText());
     }
 
-    /*
-     * check that the KeyCodeCombination for KeyCode.DELETE produces something printable.
-     * We only display the unicode DELETE char on mac, otherwise we use "Delete".
+    private static Stream platformSpecificCombinations() {
+        return Stream.of(
+            Arguments.of("Backspace", "\u232B", KeyCode.BACK_SPACE),
+            Arguments.of("Delete", "\u2326", KeyCode.DELETE),
+            Arguments.of("Esc", "\u238B", KeyCode.ESCAPE)
+        );
+    }
+
+    /**
+     * Checks keys that show different text between Windows/Linux and macOS.
      */
-    @Test public void validStringForDELETE() {
-        KeyCodeCombination keyComboDELETE = new KeyCodeCombination(KeyCode.DELETE);
-        assertPlatformEquals("Delete", "\u2326", keyComboDELETE.getDisplayText());
+    @ParameterizedTest
+    @MethodSource("platformSpecificCombinations")
+    public void platformSpecific(String win, String mac, KeyCode code) {
+        KeyCodeCombination k = new KeyCodeCombination(code);
+        assertPlatformEquals(win, mac, k.getDisplayText());
+    }
+
+    private static List<Arguments> commonCombinations() {
+        return toArgumentsList(
+            2,
+            "NumPad 0", KeyCode.NUMPAD0,
+            "NumPad 1", KeyCode.NUMPAD1,
+            "NumPad 2", KeyCode.NUMPAD2,
+            "NumPad 3", KeyCode.NUMPAD3,
+            "NumPad 4", KeyCode.NUMPAD4,
+            "NumPad 5", KeyCode.NUMPAD5,
+            "NumPad 6", KeyCode.NUMPAD6,
+            "NumPad 7", KeyCode.NUMPAD7,
+            "NumPad 8", KeyCode.NUMPAD8,
+            "NumPad 9", KeyCode.NUMPAD9,
+            "NumPad *", KeyCode.MULTIPLY,
+            "NumPad +", KeyCode.ADD,
+            "NumPad -", KeyCode.SUBTRACT,
+            "NumPad .", KeyCode.DECIMAL,
+            "NumPad /", KeyCode.DIVIDE,
+            "PgDn", KeyCode.PAGE_DOWN,
+            "PgUp", KeyCode.PAGE_UP
+        );
+    }
+
+    // converts an array into a Stream<Arguments> with the specified arity (number of arguments)
+    // this should be a standard function in junit5
+    private static List<Arguments> toArgumentsList(int arity, Object... items) {
+        if (arity <= 0) {
+            throw new IllegalArgumentException("arity must be > 0");
+        }
+        if ((items.length % arity) != 0) {
+            throw new IllegalArgumentException("wrong number of items for arity=" + arity);
+        }
+        ArrayList<Arguments> a = new ArrayList<>();
+        for (int i = 0; i < items.length;) {
+            Object[] v = new Object[arity];
+            for (int j = 0; j < arity; ) {
+                v[j++] = items[i++];
+            }
+            a.add(Arguments.of(v));
+        }
+        return a;
+    }
+
+    /**
+     * Checks numeric pad keys
+     */
+    @ParameterizedTest
+    @MethodSource("commonCombinations")
+    public void numPadSymbols(String expected, KeyCode code) {
+        KeyCodeCombination k = new KeyCodeCombination(code);
+        assertEquals(expected, k.getDisplayText());
     }
 }
