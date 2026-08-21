@@ -217,5 +217,320 @@
  * mode, a mirroring transform is automatically applied to nodes, flipping the visual flow in the horizontal
  * direction. If this behavior is not desired, nodes can override {@link javafx.scene.Node#usesMirroring()}
  * and return {@code false}.
+ *
+ * <h2 id="pixel-snapping">Pixel Snapping</h2>
+ *
+ * In JavaFX, layout coordinates use {@code double} values, which means that a position or size can be fractional.
+ * Mapping fractional coordinates onto a physical screen can introduce blurriness if the edge of a node falls
+ * somewhere between physical pixels. JavaFX uses <em>snapping</em> to fix this problem; it ensures that the bounds
+ * of scene graph nodes do not fall between physical pixels on the screen.
+ * <p>
+ * This section provides guidance for authors of custom {@link javafx.scene.layout.Region} or
+ * {@link javafx.scene.control.SkinBase} implementations that override measurement and layout methods such as
+ * {@link javafx.scene.Parent#layoutChildren()}, {@link javafx.scene.layout.Region#computeMinWidth(double)},
+ * {@link javafx.scene.layout.Region#computeMinHeight(double)}, {@link javafx.scene.layout.Region#computePrefWidth(double)},
+ * {@link javafx.scene.layout.Region#computePrefHeight(double)}, as well as the corresponding {@code SkinBase} methods.
+ *
+ * <h3>Logical vs. pixel coordinates</h3>
+ *
+ * Layout is expressed in logical coordinates, and the {@linkplain javafx.stage.Window#getRenderScaleX() horizontal}
+ * and {@linkplain javafx.stage.Window#getRenderScaleY() vertical} render scales of a window convert logical units
+ * to pixels in the window's rendering buffer:
+ *
+ * <pre>{@code
+ *     physical pixels = logical units * render scale
+ * }</pre>
+ *
+ * At a render scale of {@code 1.0}, one logical unit is one pixel. At a render scale of {@code 1.5}, one pixel is
+ * {@code 1 / 1.5} ≈ {@code 0.6667} logical units. A correctly snapped value is therefore not necessarily an integer,
+ * and simply rounding coordinates to integers is wrong. Conceptually, snapping applies a rounding operation in pixels
+ * and converts the result back to logical units:
+ *
+ * <pre>{@code
+ *     snappedValue = round(logicalValue * renderScale) / renderScale
+ * }</pre>
+ *
+ * The render scales in the two axes can be different, and they can change when a window moves between screens.
+ * A {@link javafx.scene.layout.Region Region} that is not attached to a window uses a render scale of {@code 1.0}.
+ * Applications should use the snapping methods on {@code Region} instead of implementing the formula above or
+ * caching its result. The built-in methods use the appropriate current render scale and account for floating-point
+ * error near pixel boundaries.
+ *
+ * <h3>Choosing the snapping operation</h3>
+ *
+ * {@code Region} provides three pairs of axis-specific snapping methods. Their names describe the semantic role of
+ * the value being snapped, which influences the snapping direction:
+ *
+ * <table border="1">
+ *     <caption>Snapping operations</caption>
+ *     <thead>
+ *         <tr>
+ *             <th scope="col">Meaning</th>
+ *             <th scope="col">Method</th>
+ *             <th scope="col">Rounding</th>
+ *             <th scope="col">Example</th>
+ *         </tr>
+ *     </thead>
+ *     <tbody>
+ *         <tr>
+ *             <td>Position of a child</td>
+ *             <td>{@link javafx.scene.layout.Region#snapPositionX(double) snapPositionX} or
+ *                 {@link javafx.scene.layout.Region#snapPositionY(double) snapPositionY}</td>
+ *             <td>Nearest pixel</td>
+ *             <td>The final {@code x} or {@code y} passed to
+ *                 {@link javafx.scene.Node#relocate(double, double) relocate}</td>
+ *         </tr>
+ *         <tr>
+ *             <td>Size of a child</td>
+ *             <td>{@link javafx.scene.layout.Region#snapSizeX(double) snapSizeX} or
+ *                 {@link javafx.scene.layout.Region#snapSizeY(double) snapSizeY}</td>
+ *             <td>Up to the next pixel</td>
+ *             <td>The final {@code width} or {@code height} passed to
+ *                 {@link javafx.scene.Node#resize(double, double) resize}</td>
+ *         </tr>
+ *         <tr>
+ *             <td>Empty space</td>
+ *             <td>{@link javafx.scene.layout.Region#snapSpaceX(double) snapSpaceX} or
+ *                 {@link javafx.scene.layout.Region#snapSpaceY(double) snapSpaceY}</td>
+ *             <td>Nearest pixel</td>
+ *             <td>An inset, a padding, or a gap between adjacent children</td>
+ *         </tr>
+ *     </tbody>
+ * </table>
+ *
+ * The reason for the different snapping methods is semantic:
+ * <ul>
+ *     <li>A position is rounded to the nearest pixel so that an edge stays close to its requested coordinate.
+ *     <li>Sizes use ceiling so that snapping itself does not reduce the measured content allocation.
+ *     <li>Empty space can usually become slightly smaller without losing content.
+ * </ul>
+ *
+ * The {@linkplain javafx.scene.layout.Region#snappedTopInset() snapped inset} methods return the combined border
+ * inset and padding; custom controls should normally use these methods instead of snapping
+ * {@linkplain javafx.scene.layout.Region#getInsets() raw insets} manually.
+ *
+ * <h3>Why snapped content can still look blurry</h3>
+ *
+ * Enabling pixel snapping on a region does not guarantee that the region or its descendants will be rendered on
+ * pixel boundaries. The {@link javafx.scene.layout.Region#snapToPixelProperty() snapToPixel} property controls
+ * layout calculations <em>performed by that region only</em>; it is not inherited from the parent and does not
+ * affect whether children snap their contents. A region owns the position and size it allocates to a child;
+ * the child owns the layout of its own descendants.
+ * <p>
+ * For example, setting only the child's property does not repair a fractional position assigned by its parent:
+ * {@snippet :
+ * parent.setSnapToPixel(false);
+ * child.setSnapToPixel(true);
+ *
+ * // At scale 1.0, the parent places the child between pixels
+ * child.relocate(10.5, 20.5);
+ * }
+ *
+ * In this case, even if the child snaps its descendants in its local coordinates, the entire child subtree remains
+ * shifted by half a pixel. Conversely, a parent can allocate a child pixel-aligned outer bounds even when that child
+ * has disabled snapping for its own layout.
+ * <p>
+ * Transforms are applied after the layout has been computed. For example, at render scale {@code 1.0},
+ * the following translation undoes the alignment established during layout:
+ * {@snippet :
+ * child.relocate(snapPositionX(10), snapPositionY(20));
+ * child.setTranslateX(0.5); // The rendered X coordinate is now between pixels
+ * }
+ * <p>
+ * Therefore, if content appears blurry despite pixel snapping being enabled, check both how its ancestors position
+ * and size it and whether transforms affect its final rendered position.
+ *
+ * <h3>Why snapping is difficult</h3>
+ *
+ * There is no <em>single</em> correct direction in which to round a value, and no <em>single</em> place in a layout
+ * algorithm where snapping must occur. Since a value can represent a position, content size, empty space, or a
+ * combined sum of such elements, each semantic role can require a different decision:
+ * <ul>
+ *     <li>Snapping too early can lose precision, while snapping too late can introduce errors.
+ *     <li>Snapping several children independently can avoid clipping, but the region's measurement and layout
+ *         methods must use consistent calculations so that the computed content size includes those allocations.
+ * </ul>
+ *
+ * Additionally, adding or subtracting already-snapped values can introduce floating-point drift that may cause a
+ * later snapping operation to incorrectly add or remove a pixel. Calling a snapping method somewhere in a layout
+ * algorithm is not, by itself, evidence that the resulting value is correctly snapped. Implementing correct snapping
+ * therefore requires a great deal of caution to get it right.
+ *
+ * <h3>Checklist for correct snapping</h3>
+ *
+ * <ol>
+ *     <li><b>Use the axis-specific snapping method.</b><br>
+ *         A horizontal value uses the X scale and a vertical value uses the Y scale.
+ *         This matters when those scales differ:
+ *         {@snippet :
+ *         double left = snapSpaceX(margin.getLeft()); // Correct
+ *         double top = snapSpaceY(margin.getTop());   // Correct
+ *
+ *         double top = snapSpaceX(margin.getTop());   // Incorrect axis
+ *         double gap = snapSpace(rawGap);             // Deprecated and ambiguous
+ *         }
+ *     <li><b>Identify the owner of the snapping policy.</b><br>
+ *         The region arranging a child owns the child's position and its allocated size; use that region's
+ *         {@code isSnapToPixel} policy. For example, write:
+ *         {@snippet :
+ *         // Correct: this region owns the child's position
+ *         double x = snapPositionX(computeChildX());
+ *         double y = snapPositionY(computeChildY());
+ *         child.relocate(x, y);
+ *
+ *         // Incorrect: the child's snapping policy does not control placement by its parent
+ *         double x = child.snapPositionX(computeChildX());
+ *         double y = child.snapPositionY(computeChildY());
+ *         child.relocate(x, y);
+ *         }
+ *     <li><b>Classify each value before choosing a snapping method.</b><br>
+ *         Positions and spaces use nearest-pixel rounding; content sizes use ceiling.
+ *         This distinction prevents gaps from growing unnecessarily and content from being clipped:
+ *         {@snippet :
+ *         double x = snapPositionX(rawX);       // coordinate
+ *         double gap = snapSpaceX(rawGap);      // empty space
+ *         double width = snapSizeX(rawWidth);   // content size
+ *
+ *         // Incorrect: a 0.1-unit gap becomes a full pixel
+ *         double gap = snapSizeX(0.1);
+ *         }
+ *     <li><b>Re-snap calculations whose exact result is known to be pixel-aligned.</b><br>
+ *         If every operand of an addition or subtraction has already been snapped, the <em>idealized</em>
+ *         mathematical result is also pixel-aligned. However, floating-point arithmetic can cause that result
+ *         to be slightly off the pixel grid. In this situation, the fractional remainder is <em>known</em> to
+ *         be arithmetic drift rather than an intentional offset, so re-snap the final result using nearest-pixel
+ *         rounding before returning it or using it in another layout calculation:
+ *         <ul>
+ *             <li>Re-snap a coordinate with {@code snapPositionX/Y}.
+ *             <li>Re-snap empty space (gaps, margins, padding) or an allocated content span with {@code snapSpaceX/Y}.
+ *             <li>Do not use {@code snapSizeX/Y} to snap such a result, because ceiling can turn positive
+ *                 floating-point drift into an extra pixel.
+ *         </ul>
+ *         For example, write:
+ *         {@snippet :
+ *         double firstWidth = snapSizeX(firstChildWidth);
+ *         double gapWidth = snapSpaceX(getGap());
+ *         double secondWidth = snapSizeX(secondChildWidth);
+ *
+ *         // Correct: re-snap the final allocated span with snapSpaceX after arithmetic
+ *         double allocatedWidth = snapSpaceX(firstWidth + gapWidth + secondWidth);
+ *
+ *         // Correct: coordinate calculated from snapped values is re-snapped as a position
+ *         double childX = snapPositionX(snappedLeftInset() + allocatedWidth);
+ *
+ *         // Incorrect: snapSizeX can turn floating-point noise into an extra pixel
+ *         double allocatedWidth = snapSizeX(firstWidth + gapWidth + secondWidth);
+ *
+ *         // Incorrect: the sum of snapped values can add floating-point drift
+ *         double allocatedWidth = firstWidth + gapWidth + secondWidth;
+ *         }
+ *     <li><b>Snap independent allocations independently.</b><br>
+ *         If two independent pieces of content each need their own pixels, snapping only their sum can under-allocate
+ *         layout space. At scale {@code 1.0}, two content widths of {@code 0.4} <em>each</em> require one pixel, while
+ *         their combined raw width of {@code 0.8} would be rounded to only one pixel:
+ *         {@snippet :
+ *         // Correct: each content item receives an independent allocation
+ *         double total = snapSpaceX(snapSizeX(firstWidth) + snapSizeX(secondWidth)); // 2.0
+ *
+ *         // Incorrect: the raw sum is treated as one allocation
+ *         double total = snapSpaceX(firstWidth + secondWidth); // 1.0
+ *         }
+ *         Only the correct example gives each child its own snapped allocation before adding them; the outer
+ *         {@code snapSpaceX} follows the preceding re-snapping rule. This independent allocation rule also
+ *         applies to distinct margins and gaps.
+ *         <p>
+ *         Note that this only applies to <em>independent</em> allocations. If several children must fit within a
+ *         fixed allocated space, the algorithm must consider all children together and coordinate rounding children
+ *         up or down so that their sum does not exceed the allocated space.
+ *     <li><b>Do not repeatedly snap the same semantic value.</b><br>
+ *         Preserve precision while refining a value and call the appropriate snapping method only after the
+ *         refinement. Repeated snapping is especially dangerous for content sizes because {@code snapSizeX/Y}
+ *         uses ceiling. For example, if an adjustment is part of the same content measurement:
+ *         {@snippet :
+ *         // Correct: compute all terms first, then allocate the width once
+ *         double width = snapSizeX(measuredWidth + measurementAdjustment);
+ *
+ *         // Incorrect: snapping early throws away information and the second snapSizeX can add another pixel
+ *         double width = snapSizeX(snapSizeX(measuredWidth) + measurementAdjustment);
+ *         }
+ *         At scale {@code 1.0}, if both values are {@code 0.2}, the first form returns {@code 1.0}, while the second
+ *         (incorrect) form returns {@code 2.0}. This rule does not conflict with the preceding rule: two independent
+ *         pieces of content are two allocations, while two intermediate terms describing one piece of content are
+ *         one allocation.
+ *     <li><b>Use the same snapped dependent dimension for measurement and layout.</b><br>
+ *         Content-biased nodes have an order dependency between width and height. For example, for a
+ *         horizontally-biased child, height depends on width. Establish the snapped width first and pass
+ *         that exact width to the height calculation:
+ *         {@snippet :
+ *         static double boundedSize(double value, double min, double max) {
+ *             return Math.min(Math.max(value, min), Math.max(min, max));
+ *         }
+ *
+ *         // This assumes the child should fill the available width
+ *         double rawChildWidth = boundedSize(
+ *             availableWidth,
+ *             child.minWidth(-1),
+ *             child.maxWidth(-1));
+ *
+ *         // Correct:
+ *         // 1. Snap the width the child will actually receive
+ *         double snappedChildWidth = snapSizeX(rawChildWidth);
+ *
+ *         // 2. Use the snapped width for every dependent height measurement
+ *         double rawChildHeight = boundedSize(
+ *             child.prefHeight(snappedChildWidth),
+ *             child.minHeight(snappedChildWidth),
+ *             child.maxHeight(snappedChildWidth));
+ *
+ *         // 3. Snap the height the child will receive
+ *         double snappedChildHeight = snapSizeY(rawChildHeight);
+ *
+ *         // Incorrect:
+ *         // 1. The dependent height is measured for rawChildWidth
+ *         double rawChildHeight = boundedSize(
+ *             child.prefHeight(rawChildWidth),
+ *             child.minHeight(rawChildWidth),
+ *             child.maxHeight(rawChildWidth));
+ *
+ *          // 2. rawChildHeight was measured for a width that the child might not
+ *          //    actually receive, which makes the snapped value potentially wrong
+ *          double snappedChildHeight = snapSizeY(rawChildHeight);
+ *         }
+ *     <li><b>Deliberately apply the snapping policy to values determined by the parent.</b><br>
+ *         Since a region's position and allocated size are determined by its parent (and the {@code isSnapToPixel}
+ *         policy of its parent), it must not reposition or resize itself. If the allocated width or height is not
+ *         pixel-aligned, the region cannot both preserve the exact allocation and make its complete bounds
+ *         pixel-aligned. The region must choose how to lay out its children according to its fitting and overflow
+ *         policy. For example, a fill policy that accepts a slight underflow or overflow can round the available
+ *         span to the nearest pixel before laying out a resizable child:
+ *         {@snippet :
+ *         // Snap own width and height to determine the content rectangle for children
+ *         double availableWidth = snapSpaceX(getWidth());
+ *         double availableHeight = snapSpaceY(getHeight());
+ *
+ *         // Assumes a completely unconstrained, resizable child
+ *         child.resizeRelocate(0, 0, availableWidth, availableHeight);
+ *         }
+ *     <li><b>Property values should not be snapped when set, only when they are consumed.</b><br>
+ *         The setter of a geometric property should not snap the value, and the getter should return the
+ *         exact value set by the application:
+ *         {@snippet :
+ *         // Correct
+ *         public void setGap(double value) {
+ *             gap.set(value);
+ *         }
+ *
+ *         protected void layoutChildren() {
+ *             double snappedGap = snapSpaceX(getGap());
+ *             // use snappedGap for this horizontal allocation
+ *         }
+ *
+ *         // Incorrect: this loses the requested value and uses whichever scale is
+ *         //            current when the setter happens to be called
+ *         public void setGap(double value) {
+ *             gap.set(snapSpaceX(value));
+ *         }
+ *         }
+ * </ol>
  */
 package javafx.scene.layout;
