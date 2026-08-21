@@ -170,7 +170,7 @@ public class BinarySerializer {
         os.writeShort(stringStore.addString(selector.getId()));
 
         Set<PseudoClass> pseudoClassStates = selector.getPseudoClassStates();
-        if (!pseudoClassStates.isEmpty()) {
+        if (pseudoClassStates.size() > 1) {
             Set<PseudoClass> sorted = new TreeSet<>(PSEUDO_CLASS_COMPARATOR);
             sorted.addAll(pseudoClassStates);
             pseudoClassStates = sorted;
