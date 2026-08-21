@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -582,11 +582,10 @@ public class FlowPane extends Pane {
             for (int i=0, size=children.size(); i<size; i++) {
                 Node child = children.get(i);
                 if (child.isManaged()) {
-                    maxPref = Math.max(maxPref, child.prefWidth(-1));
+                    maxPref = Math.max(maxPref, snapSizeX(child.prefWidth(-1)));
                 }
             }
-            final Insets insets = getInsets();
-            return insets.getLeft() + snapSizeX(maxPref) + insets.getRight();
+            return snapSpaceX(snappedLeftInset() + maxPref + snappedRightInset());
         }
         return computePrefWidth(height);
     }
@@ -598,48 +597,51 @@ public class FlowPane extends Pane {
             for (int i=0, size=children.size(); i<size; i++) {
                 Node child = children.get(i);
                 if (child.isManaged()) {
-                    maxPref = Math.max(maxPref, child.prefHeight(-1));
+                    maxPref = Math.max(maxPref, snapSizeY(child.prefHeight(-1)));
                 }
             }
-            final Insets insets = getInsets();
-            return insets.getTop() + snapSizeY(maxPref) + insets.getBottom();
+            return snapSpaceY(snappedTopInset() + maxPref + snappedBottomInset());
         }
         return computePrefHeight(width);
     }
 
     @Override protected double computePrefWidth(double forHeight) {
-        final Insets insets = getInsets();
+        final double left = snappedLeftInset();
+        final double right = snappedRightInset();
         if (getOrientation() == HORIZONTAL) {
             // horizontal
-            double maxRunWidth = getPrefWrapLength();
+            double maxRunWidth = snapSizeX(getPrefWrapLength());
             List<Run> hruns = getRuns(maxRunWidth);
             double w = computeContentWidth(hruns);
-            w = getPrefWrapLength() > w ? getPrefWrapLength() : w;
-            return insets.getLeft() + snapSizeX(w) + insets.getRight();
+            w = Math.max(maxRunWidth, w);
+            return snapSpaceX(left + w + right);
         } else {
             // vertical
-            double maxRunHeight = forHeight != -1?
-                forHeight - insets.getTop() - insets.getBottom() : getPrefWrapLength();
+            double maxRunHeight = forHeight != -1
+                ? snapSpaceY(forHeight - snappedTopInset() - snappedBottomInset())
+                : snapSizeY(getPrefWrapLength());
             List<Run> vruns = getRuns(maxRunHeight);
-            return insets.getLeft() + computeContentWidth(vruns) + insets.getRight();
+            return snapSpaceX(left + computeContentWidth(vruns) + right);
         }
     }
 
     @Override protected double computePrefHeight(double forWidth) {
-        final Insets insets = getInsets();
+        final double top = snappedTopInset();
+        final double bottom = snappedBottomInset();
         if (getOrientation() == HORIZONTAL) {
             // horizontal
-            double maxRunWidth = forWidth != -1?
-                forWidth - insets.getLeft() - insets.getRight() : getPrefWrapLength();
+            double maxRunWidth = forWidth != -1
+                ? snapSpaceX(forWidth - snappedLeftInset() - snappedRightInset())
+                : snapSizeX(getPrefWrapLength());
             List<Run> hruns = getRuns(maxRunWidth);
-            return insets.getTop() + computeContentHeight(hruns) + insets.getBottom();
+            return snapSpaceY(top + computeContentHeight(hruns) + bottom);
         } else {
             // vertical
-            double maxRunHeight = getPrefWrapLength();
+            double maxRunHeight = snapSizeY(getPrefWrapLength());
             List<Run> vruns = getRuns(maxRunHeight);
             double h = computeContentHeight(vruns);
-            h = getPrefWrapLength() > h ? getPrefWrapLength() : h;
-            return insets.getTop() + snapSizeY(h) + insets.getBottom();
+            h = Math.max(maxRunHeight, h);
+            return snapSpaceY(top + h + bottom);
         }
     }
 
@@ -652,154 +654,214 @@ public class FlowPane extends Pane {
 
     private List<Run> runs = null;
     private double lastMaxRunLength = -1;
+    private double lastSnapScaleX;
+    private double lastSnapScaleY;
+    private boolean lastSnapToPixel;
     boolean computingRuns = false;
 
     private List<Run> getRuns(double maxRunLength) {
-        if (runs == null || maxRunLength != lastMaxRunLength) {
-            computingRuns = true;
-            lastMaxRunLength = maxRunLength;
-            runs = new ArrayList();
-            double runLength = 0;
-            double runOffset = 0;
-            Run run = new Run();
-            double vgap = snapSpaceY(this.getVgap());
-            double hgap = snapSpaceX(this.getHgap());
+        maxRunLength = snapMainSpace(maxRunLength);
 
-            final List<Node> children = getChildren();
-            for (int i=0, size=children.size(); i<size; i++) {
-                Node child = children.get(i);
-                if (child.isManaged()) {
-                    LayoutRect nodeRect = new LayoutRect();
-                    nodeRect.node = child;
-                    Insets margin = getMargin(child);
-                    nodeRect.width = computeChildPrefAreaWidth(child, margin);
-                    nodeRect.height = computeChildPrefAreaHeight(child, -1, margin, nodeRect.width, false);
-                    double nodeLength = getOrientation() == HORIZONTAL ? nodeRect.width : nodeRect.height;
-                    if (runLength + nodeLength > maxRunLength && runLength > 0) {
-                        // wrap to next run *unless* its the only node in the run
-                        normalizeRun(run, runOffset);
-                        if (getOrientation() == HORIZONTAL) {
-                            // horizontal
-                            runOffset += run.height + vgap;
-                        } else {
-                            // vertical
-                            runOffset += run.width + hgap;
+        boolean snapToPixel = isSnapToPixel();
+        double snapScaleX = snapToPixel ? Region.getSnapScaleX(this) : 1;
+        double snapScaleY = snapToPixel ? Region.getSnapScaleY(this) : 1;
+
+        if (runs == null || maxRunLength != lastMaxRunLength ||
+                snapToPixel != lastSnapToPixel ||
+                snapScaleX != lastSnapScaleX || snapScaleY != lastSnapScaleY) {
+            computingRuns = true;
+            try {
+                lastMaxRunLength = maxRunLength;
+                lastSnapToPixel = snapToPixel;
+                lastSnapScaleX = snapScaleX;
+                lastSnapScaleY = snapScaleY;
+                runs = new ArrayList<>();
+                double runLength = 0;
+                double runOffset = 0;
+                Run run = new Run();
+                double vgap = snapSpaceY(getVgap());
+                double hgap = snapSpaceX(getHgap());
+
+                final List<Node> children = getChildren();
+                for (int i=0, size=children.size(); i<size; i++) {
+                    Node child = children.get(i);
+                    if (child.isManaged()) {
+                        LayoutRect nodeRect = createLayoutRect(child);
+                        double nodeLength = getOrientation() == HORIZONTAL ? nodeRect.width : nodeRect.height;
+                        double gap = run.rects.isEmpty() ? 0 : getOrientation() == HORIZONTAL ? hgap : vgap;
+                        double candidateLength = snapMainSpace(runLength + gap + nodeLength);
+
+                        if (candidateLength > maxRunLength && !run.rects.isEmpty()) {
+                            // wrap to next run unless this is the only node in the run
+                            normalizeRun(run, runOffset, runLength);
+                            if (getOrientation() == HORIZONTAL) {
+                                runOffset = snapPositionY(runOffset + run.height + vgap);
+                            } else {
+                                runOffset = snapPositionX(runOffset + run.width + hgap);
+                            }
+                            runs.add(run);
+                            runLength = 0;
+                            run = new Run();
+                            gap = 0;
+                            candidateLength = snapMainSpace(nodeLength);
                         }
-                        runs.add(run);
-                        runLength = 0;
-                        run = new Run();
+
+                        if (getOrientation() == HORIZONTAL) {
+                            nodeRect.x = snapPositionX(runLength + gap);
+                        } else {
+                            nodeRect.y = snapPositionY(runLength + gap);
+                        }
+
+                        runLength = candidateLength;
+                        run.rects.add(nodeRect);
                     }
-                    if (getOrientation() == HORIZONTAL) {
-                        // horizontal
-                        nodeRect.x = runLength;
-                        runLength += nodeRect.width + hgap;
-                    } else {
-                        // vertical
-                        nodeRect.y = runLength;
-                        runLength += nodeRect.height + vgap;
-                    }
-                    run.rects.add(nodeRect);
                 }
 
+                // insert last run
+                normalizeRun(run, runOffset, runLength);
+                runs.add(run);
+            } catch (RuntimeException | Error ex) {
+                runs = null;
+                throw ex;
+            } finally {
+                computingRuns = false;
             }
-            // insert last run
-            normalizeRun(run, runOffset);
-            runs.add(run);
-            computingRuns = false;
         }
         return runs;
     }
 
-    private void normalizeRun(final Run run, double runOffset) {
+    private LayoutRect createLayoutRect(Node child) {
+        LayoutRect rect = new LayoutRect();
+        rect.node = child;
+
+        Orientation bias = child.getContentBias();
+        double contentWidth;
+        double contentHeight;
+
+        if (bias == VERTICAL) {
+            contentHeight = computeChildPrefContentHeight(child, -1);
+            contentWidth = computeChildPrefContentWidth(child, contentHeight);
+        } else {
+            contentWidth = computeChildPrefContentWidth(child, -1);
+            contentHeight = computeChildPrefContentHeight(child, bias == HORIZONTAL ? contentWidth : -1);
+        }
+
+        Insets margin = getMargin(child);
+        double top = margin != null ? snapSpaceY(margin.getTop()) : 0;
+        double right = margin != null ? snapSpaceX(margin.getRight()) : 0;
+        double bottom = margin != null ? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null ? snapSpaceX(margin.getLeft()) : 0;
+        rect.width = snapSpaceX(left + contentWidth + right);
+        rect.height = snapSpaceY(top + contentHeight + bottom);
+        return rect;
+    }
+
+    private double computeChildPrefContentWidth(Node child, double height) {
+        return snapSizeX(boundedSize(child.minWidth(height), child.prefWidth(height), child.maxWidth(height)));
+    }
+
+    private double computeChildPrefContentHeight(Node child, double width) {
+        return snapSizeY(boundedSize(child.minHeight(width), child.prefHeight(width), child.maxHeight(width)));
+    }
+
+    private double snapMainSpace(double value) {
+        return getOrientation() == HORIZONTAL ? snapSpaceX(value) : snapSpaceY(value);
+    }
+
+    private void normalizeRun(final Run run, double runOffset, double runLength) {
         if (getOrientation() == HORIZONTAL) {
             // horizontal
-            ArrayList<Node> rownodes = new ArrayList();
-            run.width = (run.rects.size()-1)*snapSpaceX(getHgap());
+            ArrayList<Node> rownodes = new ArrayList<>();
+            run.width = snapSpaceX(runLength);
+            double maxHeight = 0;
             for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
                 rownodes.add(lrect.node);
-                run.width += lrect.width;
-                lrect.y = runOffset;
+                maxHeight = Math.max(maxHeight, lrect.height);
+                lrect.y = snapPositionY(runOffset);
             }
-            run.height = computeMaxPrefAreaHeight(rownodes, marginAccessor, run.width, false, getRowValignment());
-            run.baselineOffset = getRowValignment() == VPos.BASELINE?
+
+            VPos rowValignment = getRowValignmentInternal();
+            run.height = rowValignment == VPos.BASELINE ?
+                    snapSpaceY(computeMaxPrefAreaHeight(rownodes, marginAccessor, run.width, false, rowValignment)) :
+                    snapSpaceY(maxHeight);
+            run.baselineOffset = rowValignment == VPos.BASELINE?
                     getAreaBaselineOffset(rownodes, marginAccessor, i -> run.rects.get(i).width, run.height, true) : 0;
 
         } else {
             // vertical
-            run.height = (run.rects.size()-1)*snapSpaceY(getVgap());
+            run.height = snapSpaceY(runLength);
             double maxw = 0;
             for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
-                run.height += lrect.height;
-                lrect.x = runOffset;
+                lrect.x = snapPositionX(runOffset);
                 maxw = Math.max(maxw, lrect.width);
             }
 
-            run.width = maxw;
+            run.width = snapSpaceX(maxw);
             run.baselineOffset = run.height;
         }
     }
 
     private double computeContentWidth(List<Run> runs) {
-        double cwidth = getOrientation() == HORIZONTAL ? 0 : (runs.size()-1)*snapSpaceX(getHgap());
+        double cwidth = 0;
+        double hgap = snapSpaceX(getHgap());
         for (int i=0, max=runs.size(); i<max; i++) {
             Run run = runs.get(i);
             if (getOrientation() == HORIZONTAL) {
                 cwidth = Math.max(cwidth, run.width);
             } else {
                 // vertical
-                cwidth += run.width;
+                cwidth = snapSpaceX(cwidth + (i == 0 ? 0 : hgap) + run.width);
             }
         }
-        return cwidth;
+        return snapSpaceX(cwidth);
     }
 
     private double computeContentHeight(List<Run> runs) {
-        double cheight = getOrientation() == VERTICAL ? 0 : (runs.size()-1)*snapSpaceY(getVgap());
+        double cheight = 0;
+        double vgap = snapSpaceY(getVgap());
         for (int i=0, max=runs.size(); i<max; i++) {
             Run run = runs.get(i);
             if (getOrientation() == VERTICAL) {
                 cheight = Math.max(cheight, run.height);
             } else {
                 // horizontal
-                cheight += run.height;
+                cheight = snapSpaceY(cheight + (i == 0 ? 0 : vgap) + run.height);
             }
         }
-        return cheight;
+        return snapSpaceY(cheight);
     }
 
     @Override protected void layoutChildren() {
-        final Insets insets = getInsets();
-        final double width = getWidth();
-        final double height = getHeight();
-        final double top = insets.getTop();
-        final double left = insets.getLeft();
-        final double bottom = insets.getBottom();
-        final double right = insets.getRight();
-        final double insideWidth = width - left - right;
-        final double insideHeight = height - top - bottom;
+        final double top = snappedTopInset();
+        final double left = snappedLeftInset();
+        final double bottom = snappedBottomInset();
+        final double right = snappedRightInset();
+        final double insideWidth = snapSpaceX(getWidth() - left - right);
+        final double insideHeight = snapSpaceY(getHeight() - top - bottom);
 
         //REMIND(aim): need to figure out how to cache the runs to avoid over-calculation
         final List<Run> runs = getRuns(getOrientation() == HORIZONTAL ? insideWidth : insideHeight);
+        final double contentWidth = computeContentWidth(runs);
+        final double contentHeight = computeContentHeight(runs);
 
         // Now that the nodes are broken into runs, figure out alignments
         for (int i=0, max=runs.size(); i<max; i++) {
             final Run run = runs.get(i);
-            final double xoffset = left + computeXOffset(insideWidth,
-                                     getOrientation() == HORIZONTAL ? run.width : computeContentWidth(runs),
-                                     getAlignmentInternal().getHpos());
-            final double yoffset = top + computeYOffset(insideHeight,
-                                    getOrientation() == VERTICAL ? run.height : computeContentHeight(runs),
-                                    getAlignmentInternal().getVpos());
+            final double xoffset = snapPositionX(left + computeXOffset(insideWidth,
+                                     getOrientation() == HORIZONTAL ? run.width : contentWidth,
+                                     getAlignmentInternal().getHpos()));
+            final double yoffset = snapPositionY(top + computeYOffset(insideHeight,
+                                    getOrientation() == VERTICAL ? run.height : contentHeight,
+                                    getAlignmentInternal().getVpos()));
             for (int j = 0; j < run.rects.size(); j++) {
                 final LayoutRect lrect = run.rects.get(j);
-//              System.out.println("flowpane.layout: run="+i+" "+run.width+"x"+run.height+" xoffset="+xoffset+" yoffset="+yoffset+" lrect="+lrect);
-                final double x = xoffset + lrect.x;
-                final double y = yoffset + lrect.y;
+                final double x = snapPositionX(xoffset + lrect.x);
+                final double y = snapPositionY(yoffset + lrect.y);
                 layoutInArea(lrect.node, x, y,
-                           getOrientation() == HORIZONTAL? lrect.width : run.width,
-                           getOrientation() == VERTICAL? lrect.height : run.height,
+                           snapSpaceX(getOrientation() == HORIZONTAL? lrect.width : run.width),
+                           snapSpaceY(getOrientation() == VERTICAL? lrect.height : run.height),
                            run.baselineOffset, getMargin(lrect.node),
                            getColumnHalignmentInternal(), getRowValignmentInternal());
             }
