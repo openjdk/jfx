@@ -26,6 +26,7 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.fireMouseOnHorizontalTrack;
@@ -96,17 +97,15 @@ public class EditAndScrollTest {
     @Test
     public void testTreeTableViewEditingAfterMouseOnVerticalScrollBar() {
         TreeTableView<?> control = createAndShowTreeTableView(true);
-        TreeTablePosition<?, ?> editingItem = new TreeTablePosition(control, editingRow, control.getColumns().get(0));
         fireMouseOnVerticalTrack(control);
-        assertEquals(editingItem, control.getEditingCell());
+        assertNull(control.getEditingCell());
     }
 
     @Test
     public void testTreeTableViewEditingAfterMouseOnHorizontalScrollBar() {
         TreeTableView<?> control = createAndShowTreeTableView(true);
-        TreeTablePosition<?, ?> editingItem = new TreeTablePosition(control, editingRow, control.getColumns().get(0));
         fireMouseOnHorizontalTrack(control);
-        assertEquals(editingItem, control.getEditingCell());
+        assertNull(control.getEditingCell());
     }
 
     @Test
@@ -173,17 +172,15 @@ public class EditAndScrollTest {
     @Test
     public void testTableViewEditingAfterMouseOnVerticalScrollBar() {
         TableView<?> control = createAndShowTableView(true);
-        TablePosition<?, ?> editingItem = new TablePosition(control, editingRow, control.getColumns().get(0));
         fireMouseOnVerticalTrack(control);
-        assertEquals(editingItem, control.getEditingCell());
+        assertNull(control.getEditingCell());
     }
 
     @Test
     public void testTableViewEditingAfterMouseOnHorizontalScrollBar() {
         TableView<?> control = createAndShowTableView(true);
-        TablePosition<?, ?> editingItem = new TablePosition(control, editingRow, control.getColumns().get(0));
         fireMouseOnHorizontalTrack(control);
-        assertEquals(editingItem, control.getEditingCell());
+        assertNull(control.getEditingCell());
     }
 
     @Test
@@ -247,17 +244,15 @@ public class EditAndScrollTest {
     @Test
     public void testTreeViewEditingAfterMouseOnVerticalScrollBar() {
         TreeView<?> control = createAndShowTreeView(true);
-        TreeItem<?> editingItem = control.getTreeItem(editingRow);
         fireMouseOnVerticalTrack(control);
-        assertEquals(editingItem, control.getEditingItem());
+        assertNull(control.getEditingItem());
     }
 
     @Test
     public void testTreeViewEditingAfterMouseOnHorizontalScrollBar() {
         TreeView<?> control = createAndShowTreeView(true);
-        TreeItem<?> editingItem = control.getTreeItem(editingRow);
         fireMouseOnHorizontalTrack(control);
-        assertEquals(editingItem, control.getEditingItem());
+        assertNull(control.getEditingItem());
     }
 
     @Test
@@ -315,14 +310,14 @@ public class EditAndScrollTest {
     public void testListViewEditingAfterMouseOnVerticalScrollBar() {
         ListView<?> control = createAndShowListView(true);
         fireMouseOnVerticalTrack(control);
-        assertEquals(editingRow, control.getEditingIndex());
+        assertEquals(-1, control.getEditingIndex());
     }
 
     @Test
     public void testListViewEditingAfterMouseOnHorizontalScrollBar() {
         ListView<?> control = createAndShowListView(true);
         fireMouseOnHorizontalTrack(control);
-        assertEquals(editingRow, control.getEditingIndex());
+        assertEquals(-1, control.getEditingIndex());
     }
 
     @Test
@@ -384,7 +379,7 @@ public class EditAndScrollTest {
         Button focusableControl = new Button("dummy");
         showControl(focusableControl, true);
         if (dir == Orientation.HORIZONTAL) {
-           fireMouseOnHorizontalTrack(control);
+            fireMouseOnHorizontalTrack(control);
         } else {
             fireMouseOnVerticalTrack(control);
         }

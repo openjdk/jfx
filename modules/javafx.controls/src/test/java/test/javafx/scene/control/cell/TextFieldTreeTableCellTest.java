@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,35 @@
 
 package test.javafx.scene.control.cell;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.input.MouseButton;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TextFieldTreeTableCellTest {
 
     private StringConverter<Object> converter;
+    private StageLoader stageLoader;
 
     @BeforeEach
     public void setup() {
@@ -55,6 +66,13 @@ public class TextFieldTreeTableCellTest {
                 return null;
             }
         };
+    }
+
+    @AfterEach
+    public void afterEach() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     /**************************************************************************
@@ -364,5 +382,49 @@ public class TextFieldTreeTableCellTest {
         tableView.edit(-1, null);
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
+    }
+
+    /**
+     * A right-click on the TextField, usually to bring up the ContextMenu should not stop the editing
+     * or interfere in any way with the cell.
+     */
+    @Test
+    public void testRightClickInTextFieldDoesNotStopEditing() {
+        String text = "Dummy Text";
+
+        TreeTableColumn<String, String> tc = new TreeTableColumn<>();
+        tc.setCellValueFactory(_ -> new ReadOnlyStringWrapper(text));
+        tc.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+
+        TreeTableView<String> treeTableView = new TreeTableView<>(new TreeItem<>(text));
+        treeTableView.getColumns().add(tc);
+        treeTableView.setEditable(true);
+
+        stageLoader = new StageLoader(treeTableView);
+
+        treeTableView.edit(0, tc);
+
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(treeTableView, 0, 0);
+
+        assertTrue(cell.isEditing());
+        assertNotNull(cell.getGraphic());
+
+        TextField textField = (TextField) cell.getGraphic();
+
+        textField.requestFocus();
+        textField.selectAll();
+        assertEquals(text, textField.getSelectedText());
+
+        MouseEventFirer mouse = new MouseEventFirer(textField);
+
+        mouse.fireMousePressed(MouseButton.SECONDARY);
+        assertNotNull(textField.getScene());
+        assertEquals(text, textField.getSelectedText());
+
+        mouse.fireMouseReleased(MouseButton.SECONDARY);
+        assertNotNull(textField.getScene());
+        assertEquals(text, textField.getSelectedText());
     }
 }
