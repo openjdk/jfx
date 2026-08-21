@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "URLPatternComponent.h"
-#include "URLPatternInit.h"
+#include <WebCore/URLPatternComponent.h>
+#include <WebCore/URLPatternInit.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -39,6 +38,8 @@ namespace WebCore {
 class ScriptExecutionContext;
 struct URLPatternOptions;
 struct URLPatternResult;
+template<typename> class ExceptionOr;
+
 enum class BaseURLStringType : bool { Pattern, URL };
 
 namespace URLPatternUtilities {
@@ -46,14 +47,14 @@ class URLPatternComponent;
 }
 
 class URLPattern final : public RefCounted<URLPattern> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(URLPattern);
+    WTF_MAKE_TZONE_ALLOCATED(URLPattern);
 public:
-    using URLPatternInput = std::variant<String, URLPatternInit>;
+    using URLPatternInput = Variant<String, URLPatternInit>;
 
     static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, URLPatternInput&&, String&& baseURL, URLPatternOptions&&);
     static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, std::optional<URLPatternInput>&&, URLPatternOptions&&);
 
-    using Compatible = std::variant<String, URLPatternInit, RefPtr<URLPattern>>;
+    using Compatible = Variant<String, URLPatternInit, RefPtr<URLPattern>>;
     static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, Compatible&&, const String&);
 
     ~URLPattern();
@@ -72,12 +73,18 @@ public:
     const String& hash() const { return m_hashComponent.patternString(); }
 
     bool hasRegExpGroups() const;
+    bool shouldIgnoreCase() const { return m_shouldIgnoreCase; }
 
 private:
-    URLPattern();
-    ExceptionOr<void> compileAllComponents(ScriptExecutionContext&, URLPatternInit&&, const URLPatternOptions&);
-    ExceptionOr<std::optional<URLPatternResult>> match(ScriptExecutionContext&, std::variant<URL, URLPatternInput>&&, String&& baseURLString) const;
+    explicit URLPattern(bool shouldIgnoreCase)
+        : m_shouldIgnoreCase(shouldIgnoreCase)
+    {
+    }
 
+    ExceptionOr<void> compileAllComponents(ScriptExecutionContext&, URLPatternInit&&);
+    ExceptionOr<std::optional<URLPatternResult>> match(ScriptExecutionContext&, Variant<URL, URLPatternInput>&&, String&& baseURLString) const;
+
+    const bool m_shouldIgnoreCase;
     URLPatternUtilities::URLPatternComponent m_protocolComponent;
     URLPatternUtilities::URLPatternComponent m_usernameComponent;
     URLPatternUtilities::URLPatternComponent m_passwordComponent;

@@ -73,7 +73,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
     JSValue adderFunction = weakMap->JSObject::get(globalObject, vm.propertyNames->set);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    auto adderFunctionCallData = JSC::getCallData(adderFunction);
+    auto adderFunctionCallData = JSC::getCallDataInline(adderFunction);
     if (adderFunctionCallData.type == CallData::Type::None)
         return throwVMTypeError(globalObject, scope, "'set' property of a WeakMap should be callable."_s);
 
@@ -96,7 +96,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
         RETURN_IF_EXCEPTION(scope, void());
 
         if (canPerformFastSet) {
-            if (UNLIKELY(!canBeHeldWeakly(key))) {
+            if (!canBeHeldWeakly(key)) [[unlikely]] {
                 throwTypeError(asObject(adderFunction)->globalObject(), scope, WeakMapInvalidKeyError);
             return;
         }

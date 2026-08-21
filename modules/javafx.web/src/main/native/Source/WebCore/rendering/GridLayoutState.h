@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "RenderBox.h"
+#include <WebCore/RenderBox.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashMap.h>
 
 namespace WebCore {
 
@@ -46,9 +47,13 @@ public:
     bool needsSecondTrackSizingPass() const { return m_needsSecondTrackSizingPass; }
     void setNeedsSecondTrackSizingPass() { m_needsSecondTrackSizingPass = true; }
 
+    void setHasAspectRatioBlockSizeDependentItem() { m_hasAspectRatioBlockSizeDependentItem = true; }
+    bool hasAspectRatioBlockSizeDependentItem() const { return m_hasAspectRatioBlockSizeDependentItem; }
+
 private:
     ItemsLayoutRequirements m_itemsLayoutRequirements;
     bool m_needsSecondTrackSizingPass { false };
+    bool m_hasAspectRatioBlockSizeDependentItem { false };
 };
 
 } // namespace WebCore

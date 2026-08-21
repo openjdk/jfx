@@ -34,7 +34,7 @@
 #include "RenderLayoutState.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "TransformState.h"
@@ -42,10 +42,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnFlow);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMultiColumnFlow);
 
 RenderMultiColumnFlow::RenderMultiColumnFlow(Document& document, RenderStyle&& style)
-    : RenderFragmentedFlow(Type::MultiColumnFlow, document, WTFMove(style))
+    : RenderFragmentedFlow(Type::MultiColumnFlow, document, WTF::move(style))
 {
     setFragmentedFlowState(FragmentedFlowState::InsideFlow);
     ASSERT(isRenderMultiColumnFlow());
@@ -82,7 +82,7 @@ RenderBox* RenderMultiColumnFlow::firstColumnSetOrSpanner() const
 {
     if (RenderObject* sibling = nextSibling()) {
         ASSERT(is<RenderBox>(*sibling));
-        ASSERT(is<RenderMultiColumnSet>(*sibling) || findColumnSpannerPlaceholder(downcast<RenderBox>(sibling)));
+        ASSERT(is<RenderMultiColumnSet>(*sibling) || findColumnSpannerPlaceholder(downcast<RenderBox>(*sibling)));
         return downcast<RenderBox>(sibling);
     }
     return nullptr;
@@ -104,9 +104,9 @@ RenderBox* RenderMultiColumnFlow::previousColumnSetOrSpannerSiblingOf(const Rend
     return nullptr;
 }
 
-RenderMultiColumnSpannerPlaceholder* RenderMultiColumnFlow::findColumnSpannerPlaceholder(const RenderBox* spanner) const
+RenderMultiColumnSpannerPlaceholder* RenderMultiColumnFlow::findColumnSpannerPlaceholder(const RenderBox& spanner) const
 {
-    return m_spannerMap.get(spanner).get();
+    return m_spannerMap.get(spanner);
 }
 
 void RenderMultiColumnFlow::layout()
@@ -283,7 +283,7 @@ bool RenderMultiColumnFlow::addForcedFragmentBreak(const RenderBlock* block, Lay
     return false;
 }
 
-LayoutSize RenderMultiColumnFlow::offsetFromContainer(RenderElement& enclosingContainer, const LayoutPoint& physicalPoint, bool* offsetDependsOnPoint) const
+LayoutSize RenderMultiColumnFlow::offsetFromContainer(const RenderElement& enclosingContainer, const LayoutPoint& physicalPoint, bool* offsetDependsOnPoint) const
 {
     ASSERT(&enclosingContainer == container());
 

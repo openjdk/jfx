@@ -24,6 +24,7 @@
 #include "PropertyAllowlist.h"
 #include "SelectorFilter.h"
 #include "StyleRule.h"
+#include <wtf/CompactRefPtrTuple.h>
 
 namespace WebCore {
 namespace Style {
@@ -46,24 +47,24 @@ public:
 
     unsigned position() const { return m_position; }
 
-    const StyleRule& styleRule() const { return *m_styleRule; }
+    const StyleRule& styleRule() const { return *m_styleRuleWithSelectorIndex.pointer(); }
 
-    const CSSSelector* selector() const
+    const CSSSelector& selector() const
     {
-        return m_styleRule->selectorList().selectorAt(m_selectorIndex);
+        return styleRule().selectorList().selectorAt(selectorIndex());
     }
 
 #if ENABLE(CSS_SELECTOR_JIT)
-    CompiledSelector& compiledSelector() const { return m_styleRule->compiledSelectorForListIndex(m_selectorListIndex); }
+    CompiledSelector& compiledSelector() const { return styleRule().compiledSelectorForListIndex(m_selectorListIndex); }
 #endif
 
-    unsigned selectorIndex() const { return m_selectorIndex; }
+    unsigned selectorIndex() const { return m_styleRuleWithSelectorIndex.type(); }
     unsigned selectorListIndex() const { return m_selectorListIndex; }
 
     bool canMatchPseudoElement() const { return m_canMatchPseudoElement; }
     MatchBasedOnRuleHash matchBasedOnRuleHash() const { return static_cast<MatchBasedOnRuleHash>(m_matchBasedOnRuleHash); }
-    bool containsUncommonAttributeSelector() const { return m_containsUncommonAttributeSelector; }
     unsigned linkMatchType() const { return m_linkMatchType; }
+    void setLinkMatchType(unsigned value) { m_linkMatchType = value; }
     PropertyAllowlist propertyAllowlist() const { return static_cast<PropertyAllowlist>(m_propertyAllowlist); }
     IsStartingStyle isStartingStyle() const { return static_cast<IsStartingStyle>(m_isStartingStyle); }
     bool isEnabled() const { return m_isEnabled; }
@@ -74,19 +75,17 @@ public:
     void disableSelectorFiltering() { m_descendantSelectorIdentifierHashes[0] = 0; }
 
 private:
-    RefPtr<const StyleRule> m_styleRule;
     // Keep in sync with RuleFeature's selectorIndex and selectorListIndex size.
-    unsigned m_selectorIndex : 16;
+    CompactRefPtrTuple<const StyleRule, uint16_t> m_styleRuleWithSelectorIndex;
     unsigned m_selectorListIndex : 16;
-    // If we have more rules than 2^bitcount here we'll get confused about rule order.
-    unsigned m_position : 21;
     unsigned m_matchBasedOnRuleHash : 3;
     unsigned m_canMatchPseudoElement : 1;
-    unsigned m_containsUncommonAttributeSelector : 1;
     unsigned m_linkMatchType : 2; //  SelectorChecker::LinkMatchMask
     unsigned m_propertyAllowlist : 2;
     unsigned m_isStartingStyle : 1;
     unsigned m_isEnabled : 1;
+    // If we have more rules than 2^bitcount here we'll get confused about rule order.
+    unsigned m_position : 21;
     SelectorFilter::Hashes m_descendantSelectorIdentifierHashes;
 };
 
@@ -99,3 +98,4 @@ namespace WTF {
 template<> struct VectorTraits<WebCore::Style::RuleData> : SimpleClassVectorTraits { };
 
 } // namespace WTF
+

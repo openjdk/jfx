@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #include "config.h"
 #include "NavigatorScreenWakeLock.h"
 
+#include "ContextDestructionObserverInlines.h"
+#include "Document.h"
 #include "Navigator.h"
 #include "WakeLock.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -43,18 +45,13 @@ NavigatorScreenWakeLock::~NavigatorScreenWakeLock() = default;
 
 NavigatorScreenWakeLock* NavigatorScreenWakeLock::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorScreenWakeLock*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorScreenWakeLock>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorScreenWakeLock>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
-}
-
-ASCIILiteral NavigatorScreenWakeLock::supplementName()
-{
-    return "NavigatorScreenWakeLock"_s;
 }
 
 WakeLock& NavigatorScreenWakeLock::wakeLock(Navigator& navigator)
@@ -65,7 +62,7 @@ WakeLock& NavigatorScreenWakeLock::wakeLock(Navigator& navigator)
 WakeLock& NavigatorScreenWakeLock::wakeLock()
 {
     if (!m_wakeLock)
-        m_wakeLock = WakeLock::create(downcast<Document>(m_navigator.scriptExecutionContext()));
+        lazyInitialize(m_wakeLock, WakeLock::create(downcast<Document>(m_navigator->protectedScriptExecutionContext().get())));
     return *m_wakeLock;
 }
 

@@ -23,15 +23,14 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "XMLDocument.h"
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/XMLDocument.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class DOMImplementation final : public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMImplementation);
+    WTF_MAKE_TZONE_ALLOCATED(DOMImplementation);
 public:
     explicit DOMImplementation(Document&);
 

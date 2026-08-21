@@ -27,12 +27,14 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "FloatConversion.h"
-#include "FloatPoint.h"
-#include "FloatSize.h"
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/FloatConversion.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatSize.h>
 #include <array>
 #include <optional>
+#include <span>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -65,6 +67,7 @@ class AffineTransform {
 public:
     constexpr AffineTransform();
     constexpr AffineTransform(double a, double b, double c, double d, double e, double f);
+    constexpr AffineTransform(std::span<const double, 6>);
 
 #if USE(CG)
     WEBCORE_EXPORT AffineTransform(const CGAffineTransform&);
@@ -197,6 +200,8 @@ public:
     operator SkMatrix() const;
 #endif
 
+    constexpr std::span<const double, 6> span() const LIFETIME_BOUND;
+
     static AffineTransform makeTranslation(FloatSize delta)
     {
         return AffineTransform(1, 0, 0, 1, delta.width(), delta.height());
@@ -237,6 +242,16 @@ constexpr AffineTransform::AffineTransform()
 constexpr AffineTransform::AffineTransform(double a, double b, double c, double d, double e, double f)
     : m_transform { { a, b, c, d, e, f } }
 {
+}
+
+constexpr AffineTransform::AffineTransform(std::span<const double, 6> transform)
+    : m_transform { transform[0], transform[1], transform[2], transform[3], transform[4], transform[5] }
+{
+}
+
+constexpr std::span<const double, 6> AffineTransform::span() const LIFETIME_BOUND
+{
+    return m_transform;
 }
 
 static constexpr inline AffineTransform identity;

@@ -24,7 +24,9 @@
  */
 
 #include "WebBroadcastChannelRegistry.h"
-
+#if PLATFORM(JAVA)
+#include "ContextDestructionObserverInlines.h"
+#endif
 #include <WebCore/BroadcastChannel.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/CallbackAggregator.h>
@@ -69,7 +71,7 @@ void WebBroadcastChannelRegistry::unregisterChannel(const WebCore::PartitionedSe
 void WebBroadcastChannelRegistry::postMessage(const WebCore::PartitionedSecurityOrigin& origin, const String& name, WebCore::BroadcastChannelIdentifier source, Ref<WebCore::SerializedScriptValue>&& message, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(isMainThread());
-    auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
+    auto callbackAggregator = CallbackAggregator::create(WTF::move(completionHandler));
 
     auto channelsForOriginIterator = m_channels.find(origin);
     ASSERT(channelsForOriginIterator != m_channels.end());

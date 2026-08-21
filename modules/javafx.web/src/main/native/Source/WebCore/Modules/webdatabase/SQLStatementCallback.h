@@ -41,8 +41,12 @@ class SQLStatementCallback : public ThreadSafeRefCounted<SQLStatementCallback>, 
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(SQLTransaction&, SQLResultSet&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(SQLTransaction&, SQLResultSet&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(SQLTransaction&, SQLResultSet&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(SQLTransaction&, SQLResultSet&) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

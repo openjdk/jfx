@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <pal/ThreadGlobalData.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -33,7 +34,6 @@
 
 namespace JSC {
 class CallFrame;
-class JSGlobalObject;
 }
 
 namespace WebCore {
@@ -57,33 +57,33 @@ public:
     const CachedResourceRequestInitiatorTypes& cachedResourceRequestInitiatorTypes()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_cachedResourceRequestInitiatorTypes))
+        if (!m_cachedResourceRequestInitiatorTypes) [[unlikely]]
             initializeCachedResourceRequestInitiatorTypes();
         return *m_cachedResourceRequestInitiatorTypes;
     }
     EventNames& eventNames()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_eventNames))
+        if (!m_eventNames) [[unlikely]]
             initializeEventNames();
         return *m_eventNames;
     }
     QualifiedNameCache& qualifiedNameCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_qualifiedNameCache))
+        if (!m_qualifiedNameCache) [[unlikely]]
             initializeQualifiedNameCache();
         return *m_qualifiedNameCache;
     }
     const MIMETypeRegistryThreadGlobalData& mimeTypeRegistryThreadGlobalData()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_MIMETypeRegistryThreadGlobalData))
+        if (!m_MIMETypeRegistryThreadGlobalData) [[unlikely]]
             initializeMimeTypeRegistryThreadGlobalData();
         return *m_MIMETypeRegistryThreadGlobalData;
     }
 
-    ThreadTimers& threadTimers() { return *m_threadTimers; }
+    ThreadTimers& threadTimers() { return m_threadTimers; }
 
     JSC::JSGlobalObject* currentState() const { return m_currentState; }
     void setCurrentState(JSC::JSGlobalObject* state) { m_currentState = state; }
@@ -98,7 +98,7 @@ public:
     FontCache& fontCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_fontCache))
+        if (!m_fontCache) [[unlikely]]
             initializeFontCache();
         return *m_fontCache;
     }
@@ -117,7 +117,7 @@ private:
 
     std::unique_ptr<CachedResourceRequestInitiatorTypes> m_cachedResourceRequestInitiatorTypes;
     std::unique_ptr<EventNames> m_eventNames;
-    std::unique_ptr<ThreadTimers> m_threadTimers;
+    const UniqueRef<ThreadTimers> m_threadTimers;
     std::unique_ptr<QualifiedNameCache> m_qualifiedNameCache;
     JSC::JSGlobalObject* m_currentState { nullptr };
     std::unique_ptr<MIMETypeRegistryThreadGlobalData> m_MIMETypeRegistryThreadGlobalData;
@@ -129,7 +129,7 @@ private:
 
     bool m_isInRemoveAllEventListeners { false };
 
-    friend ThreadGlobalData& threadGlobalData();
+    friend ThreadGlobalData& threadGlobalDataSingleton();
 };
 
 
@@ -139,22 +139,30 @@ WEBCORE_EXPORT ThreadGlobalData& threadGlobalDataSlow();
 WEBCORE_EXPORT ThreadGlobalData& threadGlobalDataSlow() PURE_FUNCTION;
 #endif
 
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ThreadGlobalData)
+    static bool isType(const WTF::Thread::ClientData& data) { return data.type() == PAL::ThreadGlobalData::Type::WebCoreThreadGlobalData; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebCore {
+
 #if USE(WEB_THREAD)
-inline ThreadGlobalData& threadGlobalData()
+inline ThreadGlobalData& threadGlobalDataSingleton()
 #else
-inline PURE_FUNCTION ThreadGlobalData& threadGlobalData()
+inline PURE_FUNCTION ThreadGlobalData& threadGlobalDataSingleton()
 #endif
 {
 #if HAVE(FAST_TLS)
-    if (auto* thread = Thread::currentMayBeNull(); LIKELY(thread)) {
-        if (auto* clientData = thread->m_clientData.get(); LIKELY(clientData))
-            return *static_cast<ThreadGlobalData*>(clientData);
+    if (auto* thread = Thread::currentMayBeNull(); thread) [[likely]] {
+        // No need to ref the clientData as we're simply returning it right away.
+        SUPPRESS_UNCOUNTED_LOCAL if (auto* clientData = thread->m_clientData.get(); clientData) [[likely]]
+            return downcast<ThreadGlobalData>(*clientData);
     }
 #else
-    auto& thread = Thread::current();
-    auto* clientData = thread.m_clientData.get();
-    if (LIKELY(clientData))
-        return *static_cast<ThreadGlobalData*>(clientData);
+    // No need to ref the clientData as we're simply returning it right away.
+    SUPPRESS_UNCOUNTED_LOCAL if (auto* clientData = Thread::currentSingleton().m_clientData.get()) [[likely]]
+        return downcast<ThreadGlobalData>(*clientData);
 #endif
     return threadGlobalDataSlow();
 }

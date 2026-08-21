@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2016 Igalia S.L.
  * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
- * Copyright (c) 2011, Google Inc. All rights reserved.
+ * Copyright (c) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollAnimationSmooth);
 
 static const float animationSpeed { 1000.0f };
 static const Seconds maxAnimationDuration { 200_ms };
+
 ScrollAnimationSmooth::ScrollAnimationSmooth(ScrollAnimationClient& client)
     : ScrollAnimation(Type::Smooth, client)
     , m_timingFunction(CubicBezierTimingFunction::create())

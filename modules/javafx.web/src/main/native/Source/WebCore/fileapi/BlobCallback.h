@@ -39,8 +39,12 @@ class BlobCallback : public RefCounted<BlobCallback>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(Blob*) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(Blob*) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(Blob*) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(Blob*) = 0;
 
     void scheduleCallback(ScriptExecutionContext&, RefPtr<Blob>&&);
 

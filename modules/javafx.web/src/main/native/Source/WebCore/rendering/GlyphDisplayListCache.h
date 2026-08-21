@@ -31,11 +31,12 @@
 #include "Logging.h"
 #include "TextRun.h"
 #include "TextRunHash.h"
+#include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/WeakRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -51,12 +52,10 @@ class GlyphDisplayListCacheEntry : public RefCounted<GlyphDisplayListCacheEntry>
     friend struct GlyphDisplayListCacheKeyTranslator;
     friend void add(Hasher&, const GlyphDisplayListCacheEntry&);
 public:
-    static Ref<GlyphDisplayListCacheEntry> create(std::unique_ptr<DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
+    static Ref<GlyphDisplayListCacheEntry> create(Ref<const DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
     {
-        return adoptRef(*new GlyphDisplayListCacheEntry(WTFMove(displayList), textRun, font, context));
+        return adoptRef(*new GlyphDisplayListCacheEntry(WTF::move(displayList), textRun, font, context));
     }
-
-    ~GlyphDisplayListCacheEntry();
 
     bool operator==(const GlyphDisplayListCacheEntry& other) const
     {
@@ -66,20 +65,19 @@ public:
             && m_shouldSubpixelQuantizeFont == other.m_shouldSubpixelQuantizeFont;
     }
 
-    DisplayList::DisplayList& displayList() { return *m_displayList.get(); }
+    const DisplayList::DisplayList& displayList() const { return m_displayList.get(); }
 
 private:
-    GlyphDisplayListCacheEntry(std::unique_ptr<DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
-        : m_displayList(WTFMove(displayList))
+    GlyphDisplayListCacheEntry(Ref<const DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
+        : m_displayList(WTF::move(displayList))
         , m_textRun(textRun.isolatedCopy())
         , m_scaleFactor(context.scaleFactor())
         , m_fontCascadeGeneration(font.generation())
         , m_shouldSubpixelQuantizeFont(context.shouldSubpixelQuantizeFonts())
     {
-        ASSERT(m_displayList.get());
     }
 
-    std::unique_ptr<DisplayList::DisplayList> m_displayList;
+    Ref<const DisplayList::DisplayList> m_displayList;
 
     TextRun m_textRun;
     FloatSize m_scaleFactor;
@@ -92,15 +90,6 @@ inline void add(Hasher& hasher, const GlyphDisplayListCacheEntry& entry)
     add(hasher, entry.m_textRun, entry.m_scaleFactor.width(), entry.m_scaleFactor.height(), entry.m_fontCascadeGeneration, entry.m_shouldSubpixelQuantizeFont);
 }
 
-struct GlyphDisplayListCacheEntryHash {
-    static unsigned hash(const GlyphDisplayListCacheEntry* entry) { return computeHash(*entry); }
-    static unsigned hash(const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& entry) { return computeHash(entry.get()); }
-    static bool equal(const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& a, const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& b) { return a.ptr() == b.ptr(); }
-    static bool equal(const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& a, const GlyphDisplayListCacheEntry* b) { return a.ptr() == b; }
-    static bool equal(const GlyphDisplayListCacheEntry* a, const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& b) { return a == b.ptr(); }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
-};
-
 class GlyphDisplayListCache {
     WTF_MAKE_TZONE_ALLOCATED(GlyphDisplayListCache);
     friend class GlyphDisplayListCacheEntry;
@@ -109,11 +98,11 @@ public:
 
     static GlyphDisplayListCache& singleton();
 
-    DisplayList::DisplayList* get(const LegacyInlineTextBox&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
-    DisplayList::DisplayList* get(const InlineDisplay::Box&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    RefPtr<const DisplayList::DisplayList> get(const LegacyInlineTextBox&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    RefPtr<const DisplayList::DisplayList> get(const InlineDisplay::Box&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
 
-    DisplayList::DisplayList* getIfExists(const LegacyInlineTextBox&);
-    DisplayList::DisplayList* getIfExists(const InlineDisplay::Box&);
+    RefPtr<const DisplayList::DisplayList> getIfExists(const LegacyInlineTextBox&);
+    RefPtr<const DisplayList::DisplayList> getIfExists(const InlineDisplay::Box&);
 
     void remove(const LegacyInlineTextBox& run) { remove(&run); }
     void remove(const InlineDisplay::Box& run) { remove(&run); }
@@ -129,19 +118,16 @@ public:
 private:
     static bool canShareDisplayList(const DisplayList::DisplayList&);
 
-    template<typename LayoutRun> DisplayList::DisplayList* getDisplayList(const LayoutRun&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
-    template<typename LayoutRun> DisplayList::DisplayList* getIfExistsImpl(const LayoutRun&);
+    template<typename LayoutRun>
+    RefPtr<const DisplayList::DisplayList> getDisplayList(const LayoutRun&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    template<typename LayoutRun>
+    RefPtr<const DisplayList::DisplayList> getIfExistsImpl(const LayoutRun&);
     void remove(const void* run);
 
-    UncheckedKeyHashMap<const void*, Ref<GlyphDisplayListCacheEntry>> m_entriesForLayoutRun;
-    UncheckedKeyHashSet<SingleThreadWeakRef<GlyphDisplayListCacheEntry>> m_entries;
+    HashMap<const void*, Ref<GlyphDisplayListCacheEntry>> m_entriesForLayoutRun;
+    Deque<WeakPtr<GlyphDisplayListCacheEntry, SingleThreadWeakPtrImpl>> m_entries;
     bool m_forceUseGlyphDisplayListForTesting { false };
+    static constexpr unsigned s_maxDeduplicationCacheSize { 20 };
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct DefaultHash<SingleThreadWeakRef<WebCore::GlyphDisplayListCacheEntry>> : WebCore::GlyphDisplayListCacheEntryHash { };
-
-} // namespace WTF

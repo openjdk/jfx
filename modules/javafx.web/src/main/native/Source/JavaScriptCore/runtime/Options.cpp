@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,7 +83,7 @@ namespace OptionsHelper {
 struct Metadata {
     // This struct does not need to be TZONE_ALLOCATED because it is only used for transient memory
     // during Options initialization, and will not be re-allocated thereafter. See comment above.
-    WTF_MAKE_FAST_ALLOCATED(Metadata);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Metadata);
 public:
     OptionsStorage defaults;
 };
@@ -98,6 +98,8 @@ struct ConstMetaData {
     Options::Availability availability;
     uint16_t offsetOfOption;
 };
+
+// Realize the names for each of the options:
 static const ConstMetaData g_constMetaData[NumberOfOptions] = {
 #define FILL_OPTION_INFO(type_, name_, defaultValue_, availability_, description_) \
     { #name_ ## _s, description_, Options::Type::type_, Options::Availability::availability_, offsetof(OptionsStorage, name_) },
@@ -122,7 +124,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     {
         initValue(addressOfValue);
     }
+
     void initValue(void* addressOfValue);
+
     Options::ID m_id;
     union {
         bool m_bool;
@@ -136,6 +140,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         OSLogType m_osLogType;
     };
 };
+
 static void initialize()
 {
     g_optionWasOverridden.construct();
@@ -146,7 +151,7 @@ static void initialize()
     g_metadata.construct();
     auto metadata = makeUnique<Metadata>();
     memcpy(&metadata->defaults, &g_jscConfig.options, sizeof(OptionsStorage));
-    g_metadata.get() = WTFMove(metadata);
+    g_metadata.get() = WTF::move(metadata);
 }
 
 static void releaseMetadata()
@@ -227,7 +232,7 @@ std::optional<OptionsStorage::Unsigned> parse(const char* string)
     return std::nullopt;
 }
 
-#if CPU(ADDRESS64) || OS(DARWIN)
+#if CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 template<>
 std::optional<OptionsStorage::Size> parse(const char* string)
 {
@@ -236,7 +241,7 @@ std::optional<OptionsStorage::Size> parse(const char* string)
         return value;
     return std::nullopt;
 }
-#endif // CPU(ADDRESS64) || OS(DARWIN)
+#endif // CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 
 template<>
 std::optional<OptionsStorage::Double> parse(const char* string)
@@ -376,17 +381,10 @@ bool Options::isAvailable(Options::ID id, Options::Availability availability)
     if (id == maxSingleAllocationSizeID)
         return true;
 #endif
-#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
-    if (id == logJITCodeForPerfID)
-        return true;
-#endif
     if (id == traceLLIntExecutionID)
         return !!LLINT_TRACING;
     if (id == traceLLIntSlowPathID)
         return !!LLINT_TRACING;
-    if (id == traceWasmLLIntExecutionID)
-        return !!LLINT_TRACING;
-
     if (id == validateVMEntryCalleeSavesID)
         return !!ASSERT_ENABLED;
     return false;
@@ -452,7 +450,6 @@ int32_t Options::computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelt
 
     return multiCorePriorityDelta;
 }
-
 
 unsigned Options::computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers)
 {
@@ -533,8 +530,6 @@ void OptionRange::dump(PrintStream& out) const
     out.print(m_rangeString);
 }
 
-// Realize the names for each of the options:
-
 static void scaleJITPolicy()
 {
     auto& scaleFactor = Options::jitPolicyScale();
@@ -555,6 +550,7 @@ static void scaleJITPolicy()
     scaleOption(Options::thresholdForOptimizeSoon(), 1);
     scaleOption(Options::thresholdForFTLOptimizeSoon(), 2);
     scaleOption(Options::thresholdForFTLOptimizeAfterWarmUp(), 2);
+
     scaleOption(Options::thresholdForBBQOptimizeAfterWarmUp(), 0);
     scaleOption(Options::thresholdForBBQOptimizeSoon(), 0);
     scaleOption(Options::thresholdForOMGOptimizeAfterWarmUp(), 1);
@@ -588,8 +584,17 @@ static void overrideDefaults()
 
 #if OS(DARWIN) && CPU(ARM64)
     Options::numberOfGCMarkers() = std::min<unsigned>(4, kernTCSMAwareNumberOfProcessorCores());
+
+    Options::minNumberOfWorklistThreads() = 1;
+    Options::maxNumberOfWorklistThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfBaselineCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfDFGCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfFTLCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::worklistLoadFactor() = 20;
+    Options::worklistBaselineLoadWeight() = 2;
+    Options::worklistDFGLoadWeight() = 5;
+    // Set the FTL load weight equal to the load-factor so that a new thread is started for each FTL plan
+    Options::worklistFTLLoadWeight() = 20;
 #endif
 
 #if OS(LINUX) && CPU(ARM)
@@ -621,9 +626,18 @@ static void overrideDefaults()
 #endif
 
 #if ASAN_ENABLED
+    // This is a heuristic because ASAN builds are memory hogs in terms of stack frame usage.
+    // So, we need a much larger ReservedZoneSize to allow stack overflow handlers to execute.
     Options::reservedZoneSize() = 3 * Options::reservedZoneSize();
 #endif
+
+#if PLATFORM(IOS_FAMILY)
+    // This is used to mitigate performance regression rdar://150522186.
+    if (Options::usePartialLoopUnrolling())
+        Options::maxPartialLoopUnrollingBodyNodeSize() = 50;
+#endif
 }
+
 bool Options::setAllJITCodeValidations(const char* valueStr)
 {
     auto value = parse<OptionsStorage::Bool>(valueStr);
@@ -632,10 +646,12 @@ bool Options::setAllJITCodeValidations(const char* valueStr)
     setAllJITCodeValidations(value.value());
     return true;
 }
+
 void Options::setAllJITCodeValidations(bool value)
 {
     Options::validateDFGClobberize() = value;
     Options::validateDFGExceptionHandling() = value;
+    Options::validateDFGMayExit() = value;
     Options::validateDoesGC() = value;
     Options::useJITAsserts() = value;
 }
@@ -643,11 +659,10 @@ void Options::setAllJITCodeValidations(bool value)
 static inline void disableAllWasmJITOptions()
 {
     Options::useLLInt() = true;
-    Options::useWasmJIT() = false;
     Options::useBBQJIT() = false;
     Options::useOMGJIT() = false;
 
-    Options::useWasmSIMD() = false;
+    Options::useWasmSIMD() = Options::useWasmSIMD() && Options::useWasmIPIntSIMD();
 
     Options::dumpWasmDisassembly() = false;
     Options::dumpBBQDisassembly() = false;
@@ -660,14 +675,14 @@ static inline void disableAllWasmOptions()
 
     Options::useWasm() = false;
     Options::useWasmIPInt() = false;
-    Options::useWasmLLInt() = false;
+    Options::useWasmIPIntSIMD() = false;
     Options::failToCompileWasmCode() = true;
 
     Options::useWasmFastMemory() = false;
     Options::useWasmFaultSignalHandler() = false;
     Options::numberOfWasmCompilerThreads() = 0;
 
-    // SIMD is already disabled by JITOptions
+    Options::useWasmSIMD() = false;
     Options::useWasmRelaxedSIMD() = false;
     Options::useWasmTailCalls() = false;
 }
@@ -676,10 +691,10 @@ static inline void disableAllJITOptions()
 {
     Options::useLLInt() = true;
     Options::useJIT() = false;
-    Options::useWasmJIT() = false;
     disableAllWasmJITOptions();
 
     Options::useBaselineJIT() = false;
+    Options::useLOLJIT() = false;
     Options::useDFGJIT() = false;
     Options::useFTLJIT() = false;
     Options::useDOMJIT() = false;
@@ -690,7 +705,6 @@ static inline void disableAllJITOptions()
     Options::usePollingTraps() = true;
 
     Options::dumpDisassembly() = false;
-    Options::asyncDisassembly() = false;
     Options::dumpBaselineDisassembly() = false;
     Options::dumpDFGDisassembly() = false;
     Options::dumpFTLDisassembly() = false;
@@ -710,7 +724,7 @@ static void disableAllSignalHandlerBasedOptions()
 
 void Options::executeDumpOptions()
 {
-    if (LIKELY(!Options::dumpOptions()))
+    if (!Options::dumpOptions()) [[likely]]
         return;
 
     DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
@@ -748,9 +762,13 @@ void Options::notifyOptionsChanged()
     if (thresholdForGlobalLexicalBindingEpoch == 0 || thresholdForGlobalLexicalBindingEpoch == 1)
         Options::thresholdForGlobalLexicalBindingEpoch() = UINT_MAX;
 
+#if !ENABLE(OFFLINE_ASM_ALT_ENTRY)
+    if (Options::useGdbJITInfo())
+        dataLogLn("useGdbJITInfo should be used with OFFLINE_ASM_ALT_ENTRY");
+#endif
+
 #if !ENABLE(JIT)
     Options::useJIT() = false;
-    Options::useWasmJIT() = false;
 #endif
 #if !ENABLE(CONCURRENT_JS)
     Options::useConcurrentJIT() = false;
@@ -778,6 +796,7 @@ void Options::notifyOptionsChanged()
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
     Options::useWasmSIMD() = false;
+    Options::useWasmIPInt() = false;
 #if !CPU(ARM_THUMB2)
     Options::useBBQJIT() = false;
 #endif
@@ -797,12 +816,27 @@ void Options::notifyOptionsChanged()
         disableAllWasmOptions();
 
     if (!Options::useJIT())
-        Options::useWasmJIT() = false;
-    if (!Options::useWasmJIT())
         disableAllWasmJITOptions();
 
-    if (!Options::useWasmLLInt() && !Options::useWasmIPInt())
+    if (!Options::useWasmIPInt())
         Options::thresholdForBBQOptimizeAfterWarmUp() = 0; // Trigger immediate BBQ tier up.
+
+#if CPU(ARM_THUMB2)
+    // WasmIPInt is not supported on ARM32, so disable wasm if BBQJIT is disabled.
+    if (Options::useWasm() && !Options::useBBQJIT())
+        Options::useWasm() = false;
+#endif
+
+#if ENABLE(WEBASSEMBLY)
+#if CPU(ARM64)
+    if (Options::enableWasmDebugger()) [[unlikely]] {
+        Options::useBBQJIT() = false;
+        Options::useOMGJIT() = false;
+    }
+#else
+    Options::enableWasmDebugger() = false;
+#endif
+#endif
 
     // At initialization time, we may decide that useJIT should be false for any
     // number of reasons (including failing to allocate JIT memory), and therefore,
@@ -824,7 +858,6 @@ void Options::notifyOptionsChanged()
     }
 
     if (Options::dumpDisassembly()
-        || Options::asyncDisassembly()
             || Options::dumpBaselineDisassembly()
         || Options::dumpDFGDisassembly()
         || Options::dumpFTLDisassembly()
@@ -833,31 +866,6 @@ void Options::notifyOptionsChanged()
         || Options::dumpBBQDisassembly()
         || Options::dumpOMGDisassembly())
         Options::needDisassemblySupport() = true;
-
-    if (Options::logJIT()
-        || Options::needDisassemblySupport()
-        || Options::dumpBytecodeAtDFGTime()
-        || Options::dumpGraphAtEachPhase()
-        || Options::dumpDFGGraphAtEachPhase()
-        || Options::dumpDFGFTLGraphAtEachPhase()
-        || Options::dumpB3GraphAtEachPhase()
-        || Options::dumpAirGraphAtEachPhase()
-        || Options::verboseCompilation()
-        || Options::verboseFTLCompilation()
-        || Options::logCompilationChanges()
-        || Options::validateGraph()
-        || Options::validateGraphAtEachPhase()
-        || Options::verboseOSR()
-        || Options::verboseCompilationQueue()
-        || Options::reportCompileTimes()
-        || Options::reportBaselineCompileTimes()
-        || Options::reportDFGCompileTimes()
-        || Options::reportFTLCompileTimes()
-        || Options::logPhaseTimes()
-        || Options::verboseCFA()
-        || Options::verboseDFGFailure()
-            || Options::verboseFTLFailure())
-        Options::alwaysComputeHash() = true;
 
         if (OptionsHelper::wasOverridden(jitPolicyScaleID))
         scaleJITPolicy();
@@ -892,15 +900,16 @@ void Options::notifyOptionsChanged()
         if (Options::forceAllFunctionsToUseSIMD() && !Options::useWasmSIMD())
             Options::forceAllFunctionsToUseSIMD() = false;
 
-        if (Options::useWasmSIMD() && !(Options::useWasmLLInt() || Options::useWasmIPInt())) {
+        if (Options::useWasmSIMD() && !Options::useWasmIPInt()) {
             // The LLInt is responsible for discovering if functions use SIMD.
             // If we can't run using it, then we should be conservative.
             Options::forceAllFunctionsToUseSIMD() = true;
         }
     }
 
-    if (Options::dumpFuzzerAgentPredictions())
-        Options::alwaysComputeHash() = true;
+    // TODO
+    if (Options::useLOLJIT())
+        Options::forceOSRExitToLLInt() = true;
 
     if (!Options::useConcurrentGC())
         Options::collectContinuously() = false;
@@ -979,7 +988,13 @@ void Options::notifyOptionsChanged()
     if (!Options::useWasmFaultSignalHandler())
         Options::useWasmFastMemory() = false;
 
-#if CPU(ADDRESS32) || PLATFORM(PLAYSTATION)
+    if (Options::dumpOptimizationTracing()) {
+        Options::printEachDFGFTLInlineCall() = true;
+        Options::printEachUnrolledLoop() = true;
+        // FIXME: Should support for OSR exit as well.
+    }
+
+#if CPU(ADDRESS32) || PLATFORM(PLAYSTATION) || OS(WINDOWS)
     Options::useWasmFastMemory() = false;
 #endif
 
@@ -987,11 +1002,6 @@ void Options::notifyOptionsChanged()
     ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
     ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
     ASSERT(Options::criticalGCMemoryThreshold() > 0.0 && Options::criticalGCMemoryThreshold() < 1.0);
-
-    // The following should only be done at the end after all options
-    // have been initialized.
-
-
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
@@ -1006,13 +1016,13 @@ inline bool strncasecmp(const char* str1, const char* str2, size_t n)
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-void Options::initialize()
+void Options::initializeWithOptionsCustomization(const ScopedLambda<void()>& optionsCustomizationCallback)
 {
     static std::once_flag initializeOptionsOnceFlag;
 
     std::call_once(
         initializeOptionsOnceFlag,
-        [] {
+        [&] {
             AllowUnfinalizedAccessScope scope;
 
             // Sanity check that options address computation is working.
@@ -1080,6 +1090,9 @@ void Options::initialize()
                 (hwPhysicalCPUMax() >= 4) && (hwL3CacheSize() >= static_cast<int64_t>(6 * MB));
 #endif
 
+            // Client gets the last word on what options they want to override.
+            optionsCustomizationCallback();
+
             // No more options changes after this point. notifyOptionsChanged() will
             // do sanity checks and fix up options as needed.
             notifyOptionsChanged();
@@ -1090,7 +1103,6 @@ void Options::initialize()
             if (Options::useMachForExceptions())
                 handleSignalsWithMach();
 #endif
-
     });
 }
 
@@ -1100,8 +1112,11 @@ void Options::finalize()
 {
     ASSERT(!g_jscConfig.options.allowUnfinalizedAccess);
     g_jscConfig.options.isFinalized = true;
+
+    // The following should only be done at the end after all options
+    // have been initialized.
     assertOptionsAreCoherent();
-    if (UNLIKELY(Options::dumpOptions()))
+    if (Options::dumpOptions()) [[unlikely]]
         executeDumpOptions();
 
 #if USE(LIBPAS)
@@ -1364,9 +1379,13 @@ void Options::assertOptionsAreCoherent()
         coherent = false;
         dataLog("INCOHERENT OPTIONS: at least one of useLLInt or useJIT must be true\n");
     }
-    if (useWasm() && !(useWasmLLInt() || useBBQJIT())) {
+    if (useWasm() && !(useWasmIPInt() || useBBQJIT())) {
         coherent = false;
-        dataLog("INCOHERENT OPTIONS: at least one of useWasmLLInt or useBBQJIT must be true\n");
+        dataLog("INCOHERENT OPTIONS: at least one of useWasmIPInt, or useBBQJIT must be true\n");
+    }
+    if (useWasmIPIntSIMD() && useWasmRelaxedSIMD()) {
+        coherent = false;
+        dataLog("INCOHERENT OPTIONS: useWasmIPIntSIMD and useWasmRelaxedSIMD cannot both be enabled (relaxed SIMD opcodes 0x100-0x10c are not yet supported in IPInt)\n");
     }
     if (useProfiler() && useConcurrentJIT()) {
         coherent = false;
@@ -1443,7 +1462,7 @@ void Option::dump(StringBuilder& builder) const
         builder.append(unsafeSpan(m_optionRange.rangeString()));
         break;
     case Options::Type::OptionString:
-        builder.append('"', m_optionString ? unsafeSpan8(m_optionString) : ""_span8, '"');
+        builder.append('"', m_optionString ? unsafeSpan(m_optionString) : ""_span, '"');
         break;
     case Options::Type::GCLogLevel:
         builder.append(m_gcLogLevel);
@@ -1505,6 +1524,8 @@ bool canUseHandlerIC()
 
 bool canUseWasm()
 {
+    if constexpr (useCompressedHeap)
+        return false;
 #if ENABLE(WEBASSEMBLY) && !PLATFORM(WATCHOS)
     return true;
 #else

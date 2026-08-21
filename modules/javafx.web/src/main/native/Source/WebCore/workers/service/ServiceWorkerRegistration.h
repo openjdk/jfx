@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CookieStoreManager.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "Notification.h"
 #include "NotificationOptions.h"
@@ -55,14 +56,16 @@ class WebCoreOpaqueRoot;
 struct CookieStoreGetOptions;
 
 class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public Supplementable<ServiceWorkerRegistration>, public EventTarget, public ActiveDOMObject, public PushSubscriptionOwner {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<ServiceWorkerRegistration> getOrCreate(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
 
     WEBCORE_EXPORT ~ServiceWorkerRegistration();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     ServiceWorkerRegistrationIdentifier identifier() const { return m_registrationData.identifier; }
 
@@ -99,7 +102,6 @@ public:
 
     NavigationPreloadManager& navigationPreload();
     ServiceWorkerContainer& container() { return m_container.get(); }
-    Ref<ServiceWorkerContainer> protectedContainer() const;
 
 #if ENABLE(NOTIFICATION_EVENT)
     struct GetNotificationOptions {
@@ -120,6 +122,7 @@ private:
 
     enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -128,7 +131,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     ServiceWorkerRegistrationData m_registrationData;
-    Ref<ServiceWorkerContainer> m_container;
+    const Ref<ServiceWorkerContainer> m_container;
 
     RefPtr<ServiceWorker> m_installingWorker;
     RefPtr<ServiceWorker> m_waitingWorker;
@@ -142,3 +145,5 @@ private:
 WebCoreOpaqueRoot root(ServiceWorkerRegistration*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ServiceWorkerRegistration)

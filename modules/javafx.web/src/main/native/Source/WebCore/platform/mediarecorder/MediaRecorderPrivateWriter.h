@@ -40,8 +40,8 @@ struct CGAffineTransform;
 namespace WebCore {
 
 class MediaSamplesBlock;
-struct AudioInfo;
-struct VideoInfo;
+class AudioInfo;
+class VideoInfo;
 
 class MediaRecorderPrivateWriterListener : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateWriterListener> {
 public:
@@ -49,10 +49,16 @@ public:
     virtual ~MediaRecorderPrivateWriterListener() = default;
 };
 
+enum class MediaRecorderContainerType : uint8_t {
+    Mp4,
+    WebM
+};
+
 class MediaRecorderPrivateWriter {
     WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateWriter);
 public:
     WEBCORE_EXPORT static std::unique_ptr<MediaRecorderPrivateWriter> create(String type, MediaRecorderPrivateWriterListener&);
+    WEBCORE_EXPORT static std::unique_ptr<MediaRecorderPrivateWriter> create(MediaRecorderContainerType, MediaRecorderPrivateWriterListener&);
 
     WEBCORE_EXPORT MediaRecorderPrivateWriter();
     WEBCORE_EXPORT virtual ~MediaRecorderPrivateWriter();
@@ -62,13 +68,14 @@ public:
     virtual bool allTracksAdded() = 0;
     enum class Result : uint8_t { Success, Failure, NotReady };
     using WriterPromise = NativePromise<void, Result>;
-    WEBCORE_EXPORT virtual Ref<WriterPromise> writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&);
-    WEBCORE_EXPORT virtual Ref<GenericPromise> close();
+    WEBCORE_EXPORT Ref<WriterPromise> writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&);
+    WEBCORE_EXPORT Ref<GenericPromise> close();
+    virtual bool shouldApplyVideoRotation() const { return false; }
 
 private:
     virtual Result writeFrame(const MediaSamplesBlock&) = 0;
     virtual void forceNewSegment(const MediaTime&) = 0;
-    virtual Ref<GenericPromise> close(const MediaTime&) = 0;
+    virtual Ref<GenericPromise> close(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&) = 0;
     Deque<UniqueRef<MediaSamplesBlock>> m_pendingFrames;
     MediaTime m_lastEndTime { MediaTime::invalidTime() };
 };

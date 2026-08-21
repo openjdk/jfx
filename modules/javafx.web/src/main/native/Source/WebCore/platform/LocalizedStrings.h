@@ -30,6 +30,7 @@
 #include <wtf/Forward.h>
 
 #ifdef __OBJC__
+#include <wtf/Platform.h>
 #include <wtf/cocoa/TypeCastsCocoa.h>
 #endif
 
@@ -139,6 +140,7 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTagSmartQuotes();
     WEBCORE_EXPORT String contextMenuItemTagSmartDashes();
     WEBCORE_EXPORT String contextMenuItemTagSmartLinks();
+    WEBCORE_EXPORT String contextMenuItemTagSmartLists();
     WEBCORE_EXPORT String contextMenuItemTagTextReplacement();
     WEBCORE_EXPORT String contextMenuItemTagTransformationsMenu();
     WEBCORE_EXPORT String contextMenuItemTagMakeUpperCase();
@@ -179,9 +181,12 @@ namespace WebCore {
 #endif
 #if ENABLE(WRITING_TOOLS)
     String contextMenuItemTagWritingTools();
+    String contextMenuItemTagProofread();
+    String contextMenuItemTagRewrite();
+    String contextMenuItemTagSummarize();
 #endif
 #if ENABLE(UNIFIED_PDF)
-    WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithDefaultViewer(const String& appName);
 #endif
 #if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
     WEBCORE_EXPORT String contextMenuItemPDFSinglePage();
@@ -205,6 +210,10 @@ namespace WebCore {
     String searchMenuClearRecentSearchesText();
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+    String defaultSystemSpeakerLabel();
+#endif
+
     String AXWebAreaText();
     String AXLinkText();
     String AXListMarkerText();
@@ -215,6 +224,7 @@ namespace WebCore {
     String AXDescriptionListText();
     String AXDescriptionListTermText();
     String AXDescriptionListDetailText();
+    String AXHeaderRoleDescriptionText();
     String AXFooterRoleDescriptionText();
     String AXSuggestionRoleDescriptionText();
     String AXFileUploadButtonText();
@@ -345,7 +355,10 @@ namespace WebCore {
 #if ENABLE(VIDEO)
     String trackNoLabelText();
     String textTrackOffMenuItemText();
+    String textTrackOnMenuItemText();
     String textTrackAutomaticMenuItemText();
+    String captionStylePreview();
+    String captionStylePreviewWithProfileName(const String&);
 #if PLATFORM(COCOA)
     String addTrackLabelAsSuffix(const String&, const String&);
     String textTrackKindClosedCaptionsDisplayName();
@@ -372,12 +385,7 @@ namespace WebCore {
     String contextMenuItemTagShowMediaStats();
 #endif // ENABLE(VIDEO)
 
-    String snapshottedPlugInLabelTitle();
-    String snapshottedPlugInLabelSubtitle();
-
-    WEBCORE_EXPORT String useBlockedPlugInContextMenuTitle();
-
-#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
     String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName);
     String webCryptoMasterKeyKeychainComment();
 #endif
@@ -429,6 +437,11 @@ namespace WebCore {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     WEBCORE_EXPORT String fullscreenControllerViewSpatial();
     WEBCORE_EXPORT String fullscreenControllerViewImmersive();
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    WEBCORE_EXPORT String imageControlsLabelSpatial();
+    WEBCORE_EXPORT String imageControlsLabelPanorama();
 #endif
 
 #if PLATFORM(COCOA)

@@ -59,8 +59,16 @@ static inline int osRedZoneAdjustment()
     // See http://people.freebsd.org/~obrien/amd64-elf-abi.pdf Section 3.2.2.
     redZoneAdjustment = -128;
 #elif CPU(ARM64)
+#if OS(DARWIN)
     // See https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html#//apple_ref/doc/uid/TP40013702-SW7
     redZoneAdjustment = -128;
+#elif OS(WINDOWS)
+    // https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898
+    redZoneAdjustment = -16;
+#else
+    // There is no red zone.
+    // https://stackoverflow.com/questions/77908878/aarch64-is-there-a-red-zone-on-linux-if-so-16-or-128-bytes
+#endif
 #endif
     return redZoneAdjustment;
 }
@@ -116,7 +124,7 @@ void MachineThreads::tryCopyOtherThreadStack(const ThreadSuspendLocker& locker, 
     // This is a workaround for <rdar://problem/27607384>. libdispatch recycles work
     // queue threads without running pthread exit destructors. This can cause us to scan a
     // thread during work queue initialization, when the stack pointer is null.
-    if (UNLIKELY(!MachineContext::stackPointer(registers))) {
+    if (!MachineContext::stackPointer(registers)) [[unlikely]] {
         *size = 0;
         return;
     }
@@ -143,7 +151,7 @@ bool MachineThreads::tryCopyOtherThreadStacks(const AbstractLocker& locker, void
 
     *size = 0;
 
-    Thread& currentThread = Thread::current();
+    auto& currentThread = Thread::currentSingleton();
     const ListHashSet<Ref<Thread>>& threads = m_threadGroup->threads(locker);
     BitVector isSuspended(threads.size());
 

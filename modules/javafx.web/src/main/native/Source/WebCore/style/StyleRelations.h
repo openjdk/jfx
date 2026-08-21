@@ -52,7 +52,6 @@ struct Relation {
         FirstChild,
         LastChild,
         NthChildIndex,
-        Unique,
         AffectedByHasWithPositionalPseudoClass,
     };
     const Element* element;

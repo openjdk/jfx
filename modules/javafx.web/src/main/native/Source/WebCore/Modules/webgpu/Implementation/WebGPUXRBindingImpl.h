@@ -48,11 +48,11 @@ namespace WebCore::WebGPU {
 class ConvertToBackingContext;
 
 class XRBindingImpl final : public XRBinding {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRBindingImpl);
 public:
     static Ref<XRBindingImpl> create(WebGPUPtr<WGPUXRBinding>&& binding, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new XRBindingImpl(WTFMove(binding), convertToBackingContext));
+        return adoptRef(*new XRBindingImpl(WTF::move(binding), convertToBackingContext));
     }
 
     virtual ~XRBindingImpl();
@@ -68,6 +68,7 @@ private:
     XRBindingImpl& operator=(XRBindingImpl&&) = delete;
 
     WGPUXRBinding backing() const { return m_backing.get(); }
+    bool isXRBindingImpl() const final { return true; }
 
     RefPtr<XRProjectionLayer> createProjectionLayer(const XRProjectionLayerInit&) final;
     RefPtr<XRSubImage> getSubImage(XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<XREye>/* = "none"*/) final;
@@ -75,9 +76,13 @@ private:
     TextureFormat getPreferredColorFormat() final;
 
     WebGPUPtr<WGPUXRBinding> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::XRBindingImpl)
+    static bool isType(const WebCore::WebGPU::XRBinding& xrBinding) { return xrBinding.isXRBindingImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

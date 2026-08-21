@@ -26,6 +26,7 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
+#include "Damage.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerTransform.h"
 #include "TextureMapperAnimation.h"
@@ -34,6 +35,7 @@
 namespace WebCore {
 class CoordinatedPlatformLayer;
 class CoordinatedPlatformLayerBufferProxy;
+class GraphicsLayerKeyframeValueList;
 class NativeImage;
 
 class GraphicsLayerCoordinated final : public GraphicsLayer {
@@ -77,6 +79,7 @@ private:
     void setContentsTilePhase(const FloatSize&) override;
     void setContentsClippingRect(const FloatRoundedRect&) override;
     void setContentsNeedsDisplay() override;
+    void setContentsNeedsDisplayInRect(const FloatRect&) override;
     void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
     void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate*) override;
@@ -106,16 +109,16 @@ private:
     bool setBackdropFilters(const FilterOperations&) override;
     void setBackdropFiltersRect(const FloatRoundedRect&) override;
 
-    bool addAnimation(const KeyframeValueList&, const FloatSize&, const Animation*, const String&, double) override;
+    bool addAnimation(const GraphicsLayerKeyframeValueList&, const GraphicsLayerAnimation*, const String&, double) override;
     void removeAnimation(const String&, std::optional<AnimatedProperty>) override;
     void pauseAnimation(const String& animationName, double timeOffset) override;
     void suspendAnimations(MonotonicTime) override;
     void resumeAnimations() override;
     void transformRelatedPropertyDidChange() override;
-    Vector<std::pair<String, double>> acceleratedAnimationsForTesting(const Settings&) const override;
+    Vector<GraphicsLayer::AcceleratedAnimationForTesting> acceleratedAnimationsForTesting() const override;
 
     void setNeedsDisplay() override;
-    void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
+    void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ShouldClipToLayer::Clip) override;
 
     FloatSize pixelAlignmentOffset() const override { return m_pixelAlignmentOffset; }
 
@@ -171,10 +174,6 @@ private:
     IntRect transformedRect(const FloatRect&) const;
     IntRect transformedRectIncludingFuture(const FloatRect&) const;
     void updateGeometry(float pageScaleFactor, const FloatPoint&);
-#if ENABLE(DAMAGE_TRACKING)
-    void updateDamage();
-#endif
-    void updateDirtyRegion();
     void updateBackdropFilters();
     void updateBackdropFiltersRect();
     void updateAnimations();
@@ -195,16 +194,14 @@ private:
     bool updateBackingStoresIfNeeded();
     bool updateBackingStoreIfNeeded();
 
-    Ref<CoordinatedPlatformLayer> m_platformLayer;
+    const Ref<CoordinatedPlatformLayer> m_platformLayer;
     OptionSet<Change> m_pendingChanges;
     bool m_hasDescendantsWithPendingChanges { false };
     bool m_hasDescendantsWithPendingTilesCreation { false };
     bool m_hasDescendantsWithRunningTransformAnimations { false };
     FloatSize m_pixelAlignmentOffset;
-    struct {
-        bool fullRepaint { false };
-        Vector<FloatRect> rects;
-    } m_dirtyRegion;
+    std::optional<Damage> m_dirtyRegion;
+    std::optional<Damage> m_contentsDirtyRegion;
     FloatRect m_visibleRect;
     struct {
         GraphicsLayerTransform current;

@@ -56,7 +56,7 @@ pas_allocator_scavenge_action_get_string(pas_allocator_scavenge_action action)
         return "force_stop_action";
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

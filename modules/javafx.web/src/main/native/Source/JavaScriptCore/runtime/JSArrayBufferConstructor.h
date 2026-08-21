@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ArrayBuffer.h"
-#include "InternalFunction.h"
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace JSC {
 
@@ -62,5 +62,7 @@ using JSArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferShar
 using JSSharedArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferSharingMode::Shared>;
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSArrayBufferConstructor, InternalFunction);
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSSharedArrayBufferConstructor, InternalFunction);
+
+JSObject* constructArrayBufferWithSize(JSGlobalObject*, Structure*, size_t);
 
 } // namespace JSC

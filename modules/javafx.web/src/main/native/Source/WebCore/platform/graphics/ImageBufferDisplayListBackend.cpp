@@ -33,42 +33,50 @@ namespace WebCore {
 
 std::unique_ptr<ImageBufferDisplayListBackend> ImageBufferDisplayListBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
 {
-    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters));
+    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters, ControlFactory::singleton()));
 }
 
-ImageBufferDisplayListBackend::ImageBufferDisplayListBackend(const Parameters& parameters)
+
+std::unique_ptr<ImageBufferDisplayListBackend> ImageBufferDisplayListBackend::create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, ControlFactory& controlFactory)
+{
+    Parameters parameters { ImageBuffer::calculateBackendSize(size, resolutionScale), resolutionScale, colorSpace, { pixelFormat }, purpose };
+    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters, controlFactory));
+}
+
+ImageBufferDisplayListBackend::ImageBufferDisplayListBackend(const Parameters& parameters, ControlFactory& controlFactory)
     : ImageBufferBackend(parameters)
+    , m_controlFactory(controlFactory)
     , m_drawingContext(parameters.backendSize)
 {
 }
 
 GraphicsContext& ImageBufferDisplayListBackend::context()
 {
-    return m_drawingContext.context();
+    return m_drawingContext;
 }
 
 RefPtr<NativeImage> ImageBufferDisplayListBackend::copyNativeImage()
 {
-    RefPtr buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    RefPtr buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 
     auto& context = buffer->context();
-    m_drawingContext.replayDisplayList(context);
+    context.drawDisplayList(m_drawingContext.copyDisplayList());
 
-    return ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(buffer));
 }
 
 RefPtr<SharedBuffer> ImageBufferDisplayListBackend::sinkIntoPDFDocument()
 {
-    RefPtr buffer = ImageBuffer::create(size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    RefPtr buffer = ImageBuffer::create(size(), RenderingMode::PDFDocument, RenderingPurpose::Snapshot, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 
     auto& context = buffer->context();
-    m_drawingContext.replayDisplayList(context);
+    context.drawDisplayList(m_drawingContext.copyDisplayList(), m_controlFactory);
 
-    return ImageBuffer::sinkIntoPDFDocument(WTFMove(buffer));
+    return ImageBuffer::sinkIntoPDFDocument(WTF::move(buffer));
 }
 
 String ImageBufferDisplayListBackend::debugDescription() const

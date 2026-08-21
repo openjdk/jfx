@@ -20,6 +20,8 @@
 #include "config.h"
 #include "RefTrackerMixin.h"
 
+#include <ranges>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
@@ -34,7 +36,7 @@ void RefTracker::reportLive(void* id)
     std::unique_ptr<StackShot> stack = nullptr;
     if (!loggingDisabledDepth.load())
         stack = makeUnique<StackShot>(16);
-    RELEASE_ASSERT(map.add(id, WTFMove(stack)).isNewEntry);
+    RELEASE_ASSERT(map.add(id, WTF::move(stack)).isNewEntry);
 }
 
 void RefTracker::reportDead(void* id)
@@ -55,7 +57,7 @@ void RefTracker::logAllLiveReferences()
     Locker locker(lock);
     auto keysIterator = map.keys();
     auto keys = std::vector<void*> { keysIterator.begin(), keysIterator.end() };
-    std::sort(keys.begin(), keys.end());
+    std::ranges::sort(keys);
     for (auto& k : keys) {
         auto* v = map.get(k);
         if (!v)

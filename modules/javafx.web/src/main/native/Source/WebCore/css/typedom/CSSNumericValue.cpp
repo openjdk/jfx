@@ -47,18 +47,20 @@
 #include "CSSNumericType.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPrimitiveNumericCategory.h"
+#include "CSSPropertyParserState.h"
 #include "CSSTokenizer.h"
 #include "CSSUnitValue.h"
-#include "CalculationCategory.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
+#include <ranges>
 #include <wtf/FixedVector.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSNumericValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSNumericValue);
 
 // Explicitly prefixed name used to avoid conflicts with existing macros that can be indirectly #included.
 #define CSS_NUMERIC_RETURN_IF_EXCEPTION(resultVariable, expression) \
@@ -69,13 +71,13 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSNumericValue);
 
 template<typename T> static ExceptionOr<Ref<CSSNumericValue>> convertToExceptionOrNumericValue(ExceptionOr<Ref<T>>&& input)
 {
-    CSS_NUMERIC_RETURN_IF_EXCEPTION(result, WTFMove(input));
-    return static_reference_cast<CSSNumericValue>(WTFMove(result));
+    CSS_NUMERIC_RETURN_IF_EXCEPTION(result, WTF::move(input));
+    return upcast<CSSNumericValue>(WTF::move(result));
 }
 
 template<typename T> static ExceptionOr<Ref<CSSNumericValue>> convertToExceptionOrNumericValue(Ref<T>&& input)
 {
-    return static_reference_cast<CSSNumericValue>(WTFMove(input));
+    return upcast<CSSNumericValue>(WTF::move(input));
 }
 
 static ExceptionOr<Vector<Ref<CSSNumericValue>>> reifyMathExpressions(const CSSCalc::Children& nodes)
@@ -84,7 +86,7 @@ static ExceptionOr<Vector<Ref<CSSNumericValue>>> reifyMathExpressions(const CSSC
     values.reserveInitialCapacity(nodes.size());
     for (auto& node : nodes) {
         CSS_NUMERIC_RETURN_IF_EXCEPTION(value, CSSNumericValue::reifyMathExpression(node));
-        values.append(WTFMove(value));
+        values.append(WTF::move(value));
     }
     return values;
 }
@@ -100,40 +102,52 @@ static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::Symb
     return Exception { ExceptionCode::UnknownError };
 }
 
+static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::SiblingCount&)
+{
+    // CSS Typed OM doesn't currently support unresolved sibling-count() functions.
+    return Exception { ExceptionCode::UnknownError };
+}
+
+static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::SiblingIndex&)
+{
+    // CSS Typed OM doesn't currently support unresolved sibling-index() functions.
+    return Exception { ExceptionCode::UnknownError };
+}
+
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Sum>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(values, reifyMathExpressions(root->children));
-    return convertToExceptionOrNumericValue(CSSMathSum::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathSum::create(WTF::move(values)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Product>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(values, reifyMathExpressions(root->children));
-    return convertToExceptionOrNumericValue(CSSMathProduct::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathProduct::create(WTF::move(values)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Negate>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(child, CSSNumericValue::reifyMathExpression(root->a));
-    return convertToExceptionOrNumericValue(CSSMathNegate::create(WTFMove(child)));
+    return convertToExceptionOrNumericValue(CSSMathNegate::create(WTF::move(child)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Invert>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(child, CSSNumericValue::reifyMathExpression(root->a));
-    return convertToExceptionOrNumericValue(CSSMathInvert::create(WTFMove(child)));
+    return convertToExceptionOrNumericValue(CSSMathInvert::create(WTF::move(child)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Min>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(values, reifyMathExpressions(root->children));
-        return convertToExceptionOrNumericValue(CSSMathMin::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathMin::create(WTF::move(values)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Max>& root)
 {
     CSS_NUMERIC_RETURN_IF_EXCEPTION(values, reifyMathExpressions(root->children));
-        return convertToExceptionOrNumericValue(CSSMathMax::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathMax::create(WTF::move(values)));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<CSSCalc::Clamp>& root)
@@ -141,7 +155,7 @@ static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::Indi
     CSS_NUMERIC_RETURN_IF_EXCEPTION(min, CSSNumericValue::reifyMathExpression(root->min));
     CSS_NUMERIC_RETURN_IF_EXCEPTION(val, CSSNumericValue::reifyMathExpression(root->val));
     CSS_NUMERIC_RETURN_IF_EXCEPTION(max, CSSNumericValue::reifyMathExpression(root->max));
-    return convertToExceptionOrNumericValue(CSSMathClamp::create(WTFMove(min), WTFMove(val), WTFMove(max)));
+    return convertToExceptionOrNumericValue(CSSMathClamp::create(WTF::move(min), WTF::move(val), WTF::move(max)));
 }
 
 template<typename Op> static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::IndirectNode<Op>&)
@@ -175,7 +189,7 @@ static Ref<CSSNumericValue> negate(Ref<CSSNumericValue>&& value)
         return mathNegate->value();
     if (auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get()))
         return CSSUnitValue::create(-unitValue->value(), unitValue->unitEnum());
-    return CSSMathNegate::create(WTFMove(value));
+    return CSSMathNegate::create(WTF::move(value));
 }
 
 static ExceptionOr<Ref<CSSNumericValue>> invert(Ref<CSSNumericValue>&& value)
@@ -192,20 +206,20 @@ static ExceptionOr<Ref<CSSNumericValue>> invert(Ref<CSSNumericValue>&& value)
         }
     }
 
-    return Ref<CSSNumericValue> { CSSMathInvert::create(WTFMove(value)) };
+    return Ref<CSSNumericValue> { CSSMathInvert::create(WTF::move(value)) };
 }
 
 template<typename T>
 static RefPtr<CSSNumericValue> operationOnValuesOfSameUnit(T&& operation, const Vector<Ref<CSSNumericValue>>& values)
 {
-    bool allValuesHaveSameUnit = values.size() && WTF::allOf(values, [&] (const Ref<CSSNumericValue>& value) {
+    bool allValuesHaveSameUnit = values.size() && std::ranges::all_of(values, [&](auto& value) {
         auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get());
         return unitValue ? unitValue->unitEnum() == downcast<CSSUnitValue>(values[0].get()).unitEnum() : false;
     });
     if (allValuesHaveSameUnit) {
-        auto& firstUnitValue = downcast<CSSUnitValue>(values[0].get());
-        auto unit = firstUnitValue.unitEnum();
-        double result = firstUnitValue.value();
+        Ref firstUnitValue = downcast<CSSUnitValue>(values[0]);
+        auto unit = firstUnitValue->unitEnum();
+        double result = firstUnitValue->value();
         for (size_t i = 1; i < values.size(); ++i)
             result = operation(result, downcast<CSSUnitValue>(values[i].get()).value());
         return CSSUnitValue::create(result, unit);
@@ -227,32 +241,32 @@ template<typename T> Vector<Ref<CSSNumericValue>> CSSNumericValue::prependItemsO
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::addInternal(Vector<Ref<CSSNumericValue>>&& numericValues)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-add
-    auto values = prependItemsOfTypeOrThis<CSSMathSum>(WTFMove(numericValues));
+    auto values = prependItemsOfTypeOrThis<CSSMathSum>(WTF::move(numericValues));
 
     if (auto result = operationOnValuesOfSameUnit(std::plus<double>(), values))
         return { *result };
 
-    return convertToExceptionOrNumericValue(CSSMathSum::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathSum::create(WTF::move(values)));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::add(FixedVector<CSSNumberish>&& values)
 {
-    return addInternal(WTF::map(WTFMove(values), rectifyNumberish));
+    return addInternal(WTF::map(WTF::move(values), rectifyNumberish));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::sub(FixedVector<CSSNumberish>&& values)
 {
-    return addInternal(WTF::map(WTFMove(values), [] (CSSNumberish&& numberish) {
-        return WebCore::negate(rectifyNumberish(WTFMove(numberish)));
+    return addInternal(WTF::map(WTF::move(values), [] (CSSNumberish&& numberish) {
+        return WebCore::negate(rectifyNumberish(WTF::move(numberish)));
     }));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::multiplyInternal(Vector<Ref<CSSNumericValue>>&& numericValues)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-mul
-    auto values = prependItemsOfTypeOrThis<CSSMathProduct>(WTFMove(numericValues));
+    auto values = prependItemsOfTypeOrThis<CSSMathProduct>(WTF::move(numericValues));
 
-    bool allUnitValues = WTF::allOf(values, [&] (const Ref<CSSNumericValue>& value) {
+    bool allUnitValues = std::ranges::all_of(values, [](auto& value) {
         return is<CSSUnitValue>(value.get());
     });
     if (allUnitValues) {
@@ -277,45 +291,45 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::multiplyInternal(Vector<Ref<C
         }
     }
 
-    return convertToExceptionOrNumericValue(CSSMathProduct::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathProduct::create(WTF::move(values)));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::mul(FixedVector<CSSNumberish>&& values)
 {
-    return multiplyInternal(WTF::map(WTFMove(values), rectifyNumberish));
+    return multiplyInternal(WTF::map(WTF::move(values), rectifyNumberish));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::div(FixedVector<CSSNumberish>&& values)
 {
     Vector<Ref<CSSNumericValue>> invertedValues;
     invertedValues.reserveInitialCapacity(values.size());
-    for (auto&& value : WTFMove(values)) {
-        CSS_NUMERIC_RETURN_IF_EXCEPTION(inverted, invert(rectifyNumberish(WTFMove(value))));
-        invertedValues.append(WTFMove(inverted));
+    for (auto&& value : WTF::move(values)) {
+        CSS_NUMERIC_RETURN_IF_EXCEPTION(inverted, invert(rectifyNumberish(WTF::move(value))));
+        invertedValues.append(WTF::move(inverted));
     }
-    return multiplyInternal(WTFMove(invertedValues));
+    return multiplyInternal(WTF::move(invertedValues));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::min(FixedVector<CSSNumberish>&& numberishes)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-min
-    auto values = prependItemsOfTypeOrThis<CSSMathMin>(WTF::map(WTFMove(numberishes), rectifyNumberish));
+    auto values = prependItemsOfTypeOrThis<CSSMathMin>(WTF::map(WTF::move(numberishes), rectifyNumberish));
 
     if (auto result = operationOnValuesOfSameUnit<const double&(*)(const double&, const double&)>(std::min<double>, values))
         return { *result };
 
-    return convertToExceptionOrNumericValue(CSSMathMin::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathMin::create(WTF::move(values)));
 }
 
 ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::max(FixedVector<CSSNumberish>&& numberishes)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-max
-    auto values = prependItemsOfTypeOrThis<CSSMathMax>(WTF::map(WTFMove(numberishes), rectifyNumberish));
+    auto values = prependItemsOfTypeOrThis<CSSMathMax>(WTF::map(WTF::move(numberishes), rectifyNumberish));
 
     if (auto result = operationOnValuesOfSameUnit<const double&(*)(const double&, const double&)>(std::max<double>, values))
         return { *result };
 
-    return convertToExceptionOrNumericValue(CSSMathMax::create(WTFMove(values)));
+    return convertToExceptionOrNumericValue(CSSMathMax::create(WTF::move(values)));
 }
 
 Ref<CSSNumericValue> CSSNumericValue::rectifyNumberish(CSSNumberish&& numberish)
@@ -332,8 +346,9 @@ Ref<CSSNumericValue> CSSNumericValue::rectifyNumberish(CSSNumberish&& numberish)
 bool CSSNumericValue::equals(FixedVector<CSSNumberish>&& values)
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-equals
-    auto numericValues = WTF::map(WTFMove(values), rectifyNumberish);
-    return WTF::allOf(numericValues, [&] (const Ref<CSSNumericValue>& value) {
+    auto numericValues = WTF::map(WTF::move(values), rectifyNumberish);
+    // FIXME: Drop SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE once <rdar://150855062> is fixed.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return std::ranges::all_of(numericValues, [&](auto& value) {
         return this->equals(value.get());
     });
 }
@@ -404,10 +419,10 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
     }
 
     if (parsedUnits.isEmpty()) {
-        std::sort(values.begin(), values.end(), [](auto& a, auto& b) {
-            return compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()) < 0;
+        std::ranges::sort(values, [](auto& a, auto& b) {
+            return is_lt(compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()));
         });
-        return CSSMathSum::create(WTFMove(values));
+        return CSSMathSum::create(WTF::move(values));
     }
 
     Vector<Ref<CSSNumericValue>> result;
@@ -417,17 +432,17 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
             auto value = downcast<CSSUnitValue>(values[i]);
             if (auto convertedValue = value->convertTo(parsedUnit)) {
                 temp->setValue(temp->value() + convertedValue->value());
-                values.remove(i);
+                values.removeAt(i);
             } else
                 ++i;
         }
-        result.append(WTFMove(temp));
+        result.append(WTF::move(temp));
     }
 
     if (!values.isEmpty())
         return Exception { ExceptionCode::TypeError, "Failed to convert all values"_s };
 
-    return CSSMathSum::create(WTFMove(result));
+    return CSSMathSum::create(WTF::move(result));
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#dom-cssnumericvalue-parse
@@ -463,20 +478,23 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
             // See https://github.com/w3c/csswg-drafts/issues/10753
 
             auto parserContext = CSSParserContext { document };
+            auto parserState = CSS::PropertyParserState {
+                .context = parserContext,
+            };
             auto parserOptions = CSSCalc::ParserOptions {
-                .category = Calculation::Category::LengthPercentage,
+                .category = CSS::Category::LengthPercentage,
                 .range = CSS::All,
                 .allowedSymbols = { },
                 .propertyOptions = { },
             };
             auto simplificationOptions = CSSCalc::SimplificationOptions {
-                .category = Calculation::Category::LengthPercentage,
+                .category = CSS::Category::LengthPercentage,
                 .range = CSS::All,
                 .conversionData = std::nullopt,
                 .symbolTable = { },
                 .allowZeroValueLengthRemovalFromSum = false,
             };
-            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserContext, parserOptions, simplificationOptions);
+            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserState, parserOptions, simplificationOptions);
             if (!tree)
                 return Exception { ExceptionCode::SyntaxError, "Failed to parse CSS text"_s };
 

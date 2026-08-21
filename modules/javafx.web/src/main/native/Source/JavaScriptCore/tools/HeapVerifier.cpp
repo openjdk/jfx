@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "CodeBlockInlines.h"
 #include "JSObject.h"
 #include "MarkedSpaceInlines.h"
-#include "VMInspector.h"
+#include "VMManager.h"
 #include "ValueProfile.h"
 #include <wtf/ProcessID.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -147,7 +147,7 @@ void HeapVerifier::printVerificationHeader()
     RELEASE_ASSERT(m_heap->collectionScope());
     CollectionScope scope = currentCycle().scope;
     MonotonicTime gcCycleTimestamp = currentCycle().timestamp;
-    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::current(), "] vm ",
+    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::currentSingleton(), "] vm ",
         RawPointer(&m_heap->vm()), " on ", scope, " GC @ ", gcCycleTimestamp, "\n");
 }
 
@@ -327,7 +327,7 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
         }
 
         CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(cell);
-        if (UNLIKELY(codeBlock)) {
+        if (codeBlock) [[unlikely]] {
             bool success = true;
             codeBlock->forEachValueProfile([&](auto& valueProfile, bool) {
                 for (unsigned i = 0; i < std::remove_reference_t<decltype(valueProfile)>::totalNumberOfBuckets; ++i) {
@@ -442,13 +442,7 @@ void HeapVerifier::checkIfRecorded(uintptr_t candidateCell)
 {
     HeapCell* candidateHeapCell = reinterpret_cast<HeapCell*>(candidateCell);
 
-    auto& inspector = VMInspector::singleton();
-    if (!inspector.getLock().tryLockWithTimeout(2_s)) {
-        dataLog("ERROR: Timed out while waiting to iterate VMs.");
-        return;
-    }
-    Locker locker { AdoptLock, inspector.getLock() };
-    inspector.iterate([&] (VM& vm) {
+    auto result = VMManager::forEachVMWithTimeout(2_s, [&] (VM& vm) {
         if (!vm.isInService())
             return IterationStatus::Continue;
 
@@ -460,6 +454,8 @@ void HeapVerifier::checkIfRecorded(uintptr_t candidateCell)
         verifier->checkIfRecorded(candidateHeapCell);
         return IterationStatus::Continue;
     });
+    if (result == VMManager::Error::TimedOut)
+        dataLog("ERROR: Timed out while waiting to iterate VMs.");
 }
 
 } // namespace JSC

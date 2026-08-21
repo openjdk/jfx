@@ -47,40 +47,32 @@ StringPrintStream::~StringPrintStream()
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-void StringPrintStream::vprintf(const char* format, va_list argList)
+void StringPrintStream::vprintf(const char* format, va_list passedArgList)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(m_length < m_buffer.size());
     ASSERT(!m_buffer[m_length]);
 
-    va_list firstPassArgList;
-    va_copy(firstPassArgList, argList);
+    while (true) {
+        va_list argList;
+        va_copy(argList, passedArgList);
 
-    int numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten =
-        vsnprintf(m_buffer.subspan(m_length).data(), m_buffer.size() - m_length, format, firstPassArgList);
+        auto remaining = m_buffer.subspan(m_length);
+        int numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten = vsnprintf(remaining.data(), remaining.size(), format, argList);
 
-    va_end(firstPassArgList);
+        va_end(argList);
 
-    int numberOfBytesThatWouldHaveBeenWritten =
-        numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten + 1;
+        RELEASE_ASSERT(numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten >= 0);
+
+        size_t numberOfBytesThatWouldHaveBeenWritten = static_cast<size_t>(numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten) + 1;
 
     if (m_length + numberOfBytesThatWouldHaveBeenWritten <= m_buffer.size()) {
-        m_length += numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten;
+            m_length += static_cast<size_t>(numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten);
+            ASSERT(!m_buffer[m_length]);
         return; // This means that vsnprintf() succeeded.
     }
 
     increaseSize(m_length + numberOfBytesThatWouldHaveBeenWritten);
-
-    int numberOfBytesNotIncludingTerminatorThatWereWritten =
-        vsnprintf(m_buffer.subspan(m_length).data(), m_buffer.size() - m_length, format, argList);
-
-    int numberOfBytesThatWereWritten = numberOfBytesNotIncludingTerminatorThatWereWritten + 1;
-
-    ASSERT_UNUSED(numberOfBytesThatWereWritten, m_length + numberOfBytesThatWereWritten <= m_buffer.size());
-
-    m_length += numberOfBytesNotIncludingTerminatorThatWereWritten;
-
-    ASSERT_WITH_SECURITY_IMPLICATION(m_length < m_buffer.size());
-    ASSERT(!m_buffer[m_length]);
+    }
 }
 
 CString StringPrintStream::toCString() const

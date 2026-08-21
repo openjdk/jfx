@@ -48,7 +48,7 @@ static JSC_DECLARE_CUSTOM_GETTER(methodGetter);
 
 RuntimeObject::RuntimeObject(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     : Base(vm, structure)
-    , m_instance(WTFMove(instance))
+    , m_instance(WTF::move(instance))
 {
 }
 
@@ -63,7 +63,8 @@ void RuntimeObject::finishCreation(VM& vm)
 
 void RuntimeObject::destroy(JSCell* cell)
 {
-    static_cast<RuntimeObject*>(cell)->RuntimeObject::~RuntimeObject();
+    // Cannot call jsCast() during destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<RuntimeObject*>(cell)->RuntimeObject::~RuntimeObject();
 }
 
 void RuntimeObject::invalidate()
@@ -238,7 +239,7 @@ JSC_DEFINE_HOST_FUNCTION(convertRuntimeObjectToPrimitive, (JSGlobalObject* lexic
 JSC_DEFINE_HOST_FUNCTION(callRuntimeObject, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     ASSERT_UNUSED(globalObject, callFrame->jsCallee()->inherits<RuntimeObject>());
-    RefPtr<Instance> instance(static_cast<RuntimeObject*>(callFrame->jsCallee())->getInternalInstance());
+    RefPtr instance = jsCast<RuntimeObject*>(callFrame->jsCallee())->getInternalInstance();
     instance->begin();
     JSValue result = instance->invokeDefaultMethod(globalObject, callFrame);
     instance->end();
@@ -264,7 +265,7 @@ JSC_DEFINE_HOST_FUNCTION(callRuntimeConstructor, (JSGlobalObject* globalObject, 
 {
     JSObject* constructor = callFrame->jsCallee();
     ASSERT_UNUSED(globalObject, constructor->inherits<RuntimeObject>());
-    RefPtr<Instance> instance(static_cast<RuntimeObject*>(callFrame->jsCallee())->getInternalInstance());
+    RefPtr instance = jsCast<RuntimeObject*>(callFrame->jsCallee())->getInternalInstance();
     instance->begin();
     ArgList args(callFrame);
     JSValue result = instance->invokeConstruct(globalObject, callFrame, args);
@@ -289,7 +290,7 @@ CallData RuntimeObject::getConstructData(JSCell* cell)
     return constructData;
 }
 
-void RuntimeObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode)
+void RuntimeObject::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode)
 {
     auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject->vm());
 

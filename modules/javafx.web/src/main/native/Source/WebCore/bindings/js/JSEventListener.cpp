@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -110,7 +110,6 @@ JSValue eventHandlerAttribute(EventTarget& eventTarget, const AtomString& eventT
     return jsNull();
 }
 
-
 template<typename Visitor>
 inline void JSEventListener::visitJSFunctionImpl(Visitor& visitor)
 {
@@ -151,10 +150,10 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     if (!jsFunction)
         return;
 
-    if (UNLIKELY(!m_isolatedWorld))
+    if (!m_isolatedWorld) [[unlikely]]
         return;
 
-    auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, *m_isolatedWorld);
+    SUPPRESS_UNCOUNTED_ARG auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, *m_isolatedWorld);
     if (!globalObject)
         return;
 
@@ -169,7 +168,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
                 return;
         }
         // FIXME: Is this check needed for other contexts?
-        RefPtr frame = dynamicDowncast<LocalFrame>(window->wrapped().frame());
+        RefPtr frame = dynamicDowncast<LocalFrame>(localDOMWindow->frame());
         if (!frame)
             return;
         CheckedRef script = frame->script();
@@ -208,30 +207,37 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
             return;
 
         handleEventFunction = jsFunction->get(lexicalGlobalObject, builtinNames(vm).handleEventPublicName());
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             auto* exception = scope.exception();
             scope.clearException();
-            event.target()->uncaughtExceptionInEventHandler();
+            event.protectedTarget()->uncaughtExceptionInEventHandler();
             reportException(jsFunctionGlobalObject, exception);
             return;
         }
         callData = JSC::getCallData(handleEventFunction);
         if (callData.type == CallData::Type::None) {
-            event.target()->uncaughtExceptionInEventHandler();
+            event.protectedTarget()->uncaughtExceptionInEventHandler();
             reportException(jsFunctionGlobalObject, createTypeError(lexicalGlobalObject, "'handleEvent' property of event listener should be callable"_s));
             return;
         }
     }
 
     MarkedArgumentBuffer args;
-    args.append(toJS(lexicalGlobalObject, globalObject, &event));
+    args.append(toJS(lexicalGlobalObject, globalObject, event));
     ASSERT(!args.hasOverflowed());
 
     VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : lexicalGlobalObject);
 
     JSExecState::instrumentFunction(&scriptExecutionContext, callData);
 
-    JSValue thisValue = handleEventFunction == jsFunction ? toJS(lexicalGlobalObject, globalObject, event.currentTarget()) : jsFunction;
+    auto thisValue = [&] -> JSValue {
+        if (handleEventFunction != jsFunction)
+            return jsFunction;
+        if (RefPtr currentTarget = event.currentTarget())
+            return toJS(lexicalGlobalObject, globalObject, currentTarget.releaseNonNull());
+        return jsNull();
+    }();
+
     NakedPtr<JSC::Exception> uncaughtException;
     JSValue retval = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, handleEventFunction, callData, thisValue, args, uncaughtException);
 
@@ -239,14 +245,14 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
     auto handleExceptionIfNeeded = [&] (JSC::Exception* exception) -> bool {
         if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
-            auto* scriptController = globalScope->script();
+            CheckedPtr scriptController = globalScope->script();
             bool terminatorCausedException = (exception && vm.isTerminationException(exception));
             if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution()))
                 scriptController->forbidExecution();
         }
 
         if (exception) {
-            event.target()->uncaughtExceptionInEventHandler();
+            event.protectedTarget()->uncaughtExceptionInEventHandler();
             reportException(jsFunctionGlobalObject, exception);
             return true;
         }
@@ -267,7 +273,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
         // This is a OnBeforeUnloadEventHandler, and therefore the return value must be coerced into a String.
         if (auto* beforeUnloadEvent = dynamicDowncast<BeforeUnloadEvent>(event)) {
             auto conversionResult = convert<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, retval);
-            if (UNLIKELY(conversionResult.hasException(scope))) {
+            if (conversionResult.hasException(scope)) [[unlikely]] {
                 if (handleExceptionIfNeeded(scope.exception()))
                     return;
             }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
- * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmFormat.h"
-#include "WasmSections.h"
+#include <JavaScriptCore/WasmFormat.h>
+#include <JavaScriptCore/WasmSections.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SHA1.h>
 #include <wtf/TZoneMalloc.h>
@@ -107,11 +109,11 @@ private:
     Expected<uint32_t, State> consumeVarUInt32(std::span<const uint8_t> bytes, size_t&, IsEndOfStream);
 
     void moveToStateIfNotFailed(State);
-    template <typename ...Args> NEVER_INLINE State WARN_UNUSED_RETURN fail(Args...);
+    template <typename ...Args> [[nodiscard]] NEVER_INLINE State fail(Args...);
 
     State failOnState(State);
 
-    Ref<ModuleInformation> m_info;
+    const Ref<ModuleInformation> m_info;
     StreamingParserClient& m_client;
     Vector<uint8_t> m_remaining;
     String m_errorMessage;

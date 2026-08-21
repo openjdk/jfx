@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/HashMap.h>
 #include <wtf/Locker.h>
 #include <wtf/NeverDestroyed.h>
@@ -34,7 +35,7 @@ namespace JSC {
 class SideDataRepository {
 public:
     class SideData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SideData);
     public:
         virtual ~SideData() = default;
     };

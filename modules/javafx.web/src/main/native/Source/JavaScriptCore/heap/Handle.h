@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "HandleForward.h"
-#include "HandleTypes.h"
+#include <JavaScriptCore/HandleForward.h>
+#include <JavaScriptCore/HandleTypes.h>
 
 namespace JSC {
 
@@ -150,11 +150,6 @@ template <typename T, typename U> inline bool operator==(const Handle<T>& a, con
 template <typename T, typename U> inline bool operator==(const Handle<T>& a, U* b)
 {
     return a.get() == b;
-}
-
-template <typename T, typename U> inline bool operator==(T* a, const Handle<U>& b)
-{
-    return a == b.get();
 }
 
 } // namespace JSC

@@ -87,7 +87,7 @@ struct UniqueArrayMaker<false, T> {
     // UniqueArrayElement has new [] and delete [] operators for FastMalloc. We allocate UniqueArrayElement[] and cast
     // it to T[]. When deleting, the custom deleter casts T[] to UniqueArrayElement[] and deletes it.
     class UniqueArrayElement {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UniqueArrayElement);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UniqueArrayElement, UniqueArrayElement);
     public:
         struct Deleter {
             void operator()(T* pointer)
@@ -114,7 +114,7 @@ template<typename T>
 using UniqueArray = typename UniqueArrayMaker<std::is_trivially_destructible<T>::value, T>::ResultType;
 
 template<typename T>
-UniqueArray<T> makeUniqueArray(size_t size)
+[[nodiscard]] UniqueArray<T> makeUniqueArray(size_t size)
 {
     static_assert(std::is_same<typename std::remove_extent<T>::type, T>::value);
     return UniqueArrayMaker<std::is_trivially_destructible<T>::value, T>::make(size);

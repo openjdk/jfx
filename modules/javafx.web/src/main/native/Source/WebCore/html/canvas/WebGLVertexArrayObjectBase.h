@@ -88,11 +88,16 @@ public:
     bool isUsable() const { return object() && !isDeleted(); }
     bool isInitialized() const { return m_hasEverBeenBound; }
 
+    enum class ArrayObjectType : uint8_t { Object, ObjectOES };
+    virtual ArrayObjectType arrayObjectType() const = 0;
+
 protected:
     WebGLVertexArrayObjectBase(WebGLRenderingContextBase&, PlatformGLObject, Type);
+    WebGLVertexArrayObjectBase();
+
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override = 0;
 
-    Type m_type;
+    const Type m_type;
     bool m_hasEverBeenBound { false };
     WebGLBindingPoint<WebGLBuffer, GraphicsContextGL::ELEMENT_ARRAY_BUFFER> m_boundElementArrayBuffer;
     Vector<VertexAttribState> m_vertexAttribState;

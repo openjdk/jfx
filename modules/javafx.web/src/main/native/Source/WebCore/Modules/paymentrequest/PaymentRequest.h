@@ -29,13 +29,12 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentMethodChangeEvent.h"
 #include "PaymentOptions.h"
 #include "PaymentResponse.h"
-#include <variant>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -51,19 +50,22 @@ enum class PaymentShippingType;
 struct PaymentDetailsUpdate;
 struct PaymentMethodData;
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PaymentRequest final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentRequest> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentRequest);
+    WTF_MAKE_TZONE_ALLOCATED(PaymentRequest);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     using AbortPromise = DOMPromiseDeferred<void>;
     using CanMakePaymentPromise = DOMPromiseDeferred<IDLBoolean>;
     using ShowPromise = DOMPromiseDeferred<IDLInterface<PaymentResponse>>;
 
     static ExceptionOr<Ref<PaymentRequest>> create(Document&, Vector<PaymentMethodData>&&, PaymentDetailsInit&&, PaymentOptions&&);
     ~PaymentRequest();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void show(Document&, RefPtr<DOMPromise>&& detailsPromise, ShowPromise&&);
     void abort(AbortPromise&&);
@@ -105,7 +107,7 @@ public:
     ExceptionOr<void> retry(PaymentValidationErrors&&);
     void cancel();
 
-    using MethodIdentifier = std::variant<String, URL>;
+    using MethodIdentifier = Variant<String, URL>;
 
 private:
     struct Method {
@@ -125,6 +127,7 @@ private:
     void whenDetailsSettled(std::function<void()>&&);
     void abortWithException(Exception&&);
     PaymentHandler* activePaymentHandler() { return m_activePaymentHandler ? m_activePaymentHandler->paymentHandler.ptr() : nullptr; }
+    RefPtr<PaymentHandler> protectedActivePaymentHandler();
     void settleShowPromise(ExceptionOr<PaymentResponse&>&&);
     void closeActivePaymentHandler();
 
@@ -134,7 +137,8 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PaymentRequest; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
     bool isPaymentRequest() const final { return true; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

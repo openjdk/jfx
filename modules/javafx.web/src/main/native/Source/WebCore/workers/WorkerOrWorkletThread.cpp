@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ThreadGlobalData.h"
 #include "WorkerEventLoop.h"
+#include "WorkerLoaderProxy.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 
@@ -43,11 +44,7 @@ namespace WebCore {
 
 ThreadSafeWeakHashSet<WorkerOrWorkletThread>& WorkerOrWorkletThread::workerOrWorkletThreads()
 {
-    static LazyNeverDestroyed<ThreadSafeWeakHashSet<WorkerOrWorkletThread>> workerOrWorkletThreads;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        workerOrWorkletThreads.construct();
-    });
+    static NeverDestroyed<ThreadSafeWeakHashSet<WorkerOrWorkletThread>> workerOrWorkletThreads;
     return workerOrWorkletThreads;
 }
 
@@ -76,14 +73,14 @@ WorkerOrWorkletThread::~WorkerOrWorkletThread()
 
 void WorkerOrWorkletThread::dispatch(Function<void()>&& func)
 {
-    runLoop().postTask([func = WTFMove(func)](auto&) mutable {
+    runLoop().postTask([func = WTF::move(func)](auto&) mutable {
         func();
     });
 }
 
 bool WorkerOrWorkletThread::isCurrent() const
 {
-    return thread() ? thread()->uid() == Thread::current().uid() : false;
+    return thread() ? thread()->uid() == Thread::currentSingleton().uid() : false;
 }
 
 void WorkerOrWorkletThread::startRunningDebuggerTasks()
@@ -97,7 +94,7 @@ void WorkerOrWorkletThread::startRunningDebuggerTasks()
 
     MessageQueueWaitResult result;
     do {
-        result = downcast<WorkerDedicatedRunLoop>(m_runLoop.get()).runInDebuggerMode(*m_globalScope);
+        result = downcast<WorkerDedicatedRunLoop>(m_runLoop.get()).runInDebuggerMode(*protectedGlobalScope());
     } while (result != MessageQueueTerminated && m_pausedForDebugger);
 }
 
@@ -110,7 +107,7 @@ void WorkerOrWorkletThread::runEventLoop()
 {
     // Does not return until terminated.
     if (auto* runLoop = dynamicDowncast<WorkerDedicatedRunLoop>(m_runLoop.get()))
-        runLoop->run(RefPtr { m_globalScope }.get());
+        runLoop->run(protectedGlobalScope().get());
 }
 
 void WorkerOrWorkletThread::workerOrWorkletThread()
@@ -122,12 +119,12 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
         if (!m_globalScope)
             return;
 
-        downcast<WorkerMainRunLoop>(m_runLoop.get()).setGlobalScope(*m_globalScope);
+        downcast<WorkerMainRunLoop>(m_runLoop.get()).setGlobalScope(*protectedGlobalScope());
 
         String exceptionMessage;
         evaluateScriptIfNecessary(exceptionMessage);
 
-        callOnMainThread([evaluateCallback = WTFMove(m_evaluateCallback), message = WTFMove(exceptionMessage)] {
+        callOnMainThread([evaluateCallback = WTF::move(m_evaluateCallback), message = WTF::move(exceptionMessage)] {
             if (evaluateCallback)
                 evaluateCallback(message);
         });
@@ -179,7 +176,7 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
     String exceptionMessage;
     evaluateScriptIfNecessary(exceptionMessage);
 
-    callOnMainThread([evaluateCallback = WTFMove(m_evaluateCallback), message = exceptionMessage.isolatedCopy()] {
+    callOnMainThread([evaluateCallback = WTF::move(m_evaluateCallback), message = exceptionMessage.isolatedCopy()] {
         if (evaluateCallback)
             evaluateCallback(message);
     });
@@ -191,12 +188,12 @@ void WorkerOrWorkletThread::workerOrWorkletThread()
 #endif
 
     if (!m_childThreads.isEmptyIgnoringNullReferences()) {
-        m_runWhenLastChildThreadIsGone = [this, protectedThis = WTFMove(protectedThis)]() mutable {
-            destroyWorkerGlobalScope(WTFMove(protectedThis));
+        m_runWhenLastChildThreadIsGone = [this, protectedThis = WTF::move(protectedThis)]() mutable {
+            destroyWorkerGlobalScope(WTF::move(protectedThis));
         };
         return;
     }
-    destroyWorkerGlobalScope(WTFMove(protectedThis));
+    destroyWorkerGlobalScope(WTF::move(protectedThis));
 }
 
 void WorkerOrWorkletThread::destroyWorkerGlobalScope(Ref<WorkerOrWorkletThread>&& protectedThis)
@@ -228,13 +225,13 @@ void WorkerOrWorkletThread::destroyWorkerGlobalScope(Ref<WorkerOrWorkletThread>&
 
     // Make sure we don't call the stoppedCallback before the WorkerGlobalScope has been destroyed.
     if (stoppedCallback)
-        callOnMainThread(WTFMove(stoppedCallback));
+        callOnMainThread(WTF::move(stoppedCallback));
 
     // Clean up WebCore::ThreadGlobalData before WTF::Thread goes away!
-    threadGlobalData().destroy();
+    threadGlobalDataSingleton().destroy();
 
     // Send the last WorkerThread Ref to be Deref'ed on the main thread.
-    callOnMainThread([protectedThis = WTFMove(protectedThis)] { });
+    callOnMainThread([protectedThis = WTF::move(protectedThis)] { });
 
     // The thread object may be already destroyed from notification now, don't try to access "this".
     protector->detach();
@@ -248,14 +245,14 @@ void WorkerOrWorkletThread::start(Function<void(const String&)>&& evaluateCallba
     if (m_thread)
         return;
 
-    m_evaluateCallback = WTFMove(evaluateCallback);
+    m_evaluateCallback = WTF::move(evaluateCallback);
 
     auto thread = createThread();
 
     // Force the Thread object to be initialized fully before storing it to m_thread (and becoming visible to other threads).
     WTF::storeStoreFence();
 
-    m_thread = WTFMove(thread);
+    m_thread = WTF::move(thread);
 }
 
 void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
@@ -266,8 +263,8 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
     if (!m_threadCreationAndGlobalScopeLock.tryLock()) {
         // The thread is still starting, spin the runloop and try again to avoid deadlocks if the worker thread
         // needs to interact with the main thread during startup.
-        callOnMainThread([this, stoppedCallback = WTFMove(stoppedCallback)]() mutable {
-            stop(WTFMove(stoppedCallback));
+        callOnMainThread([this, stoppedCallback = WTF::move(stoppedCallback)]() mutable {
+            stop(WTF::move(stoppedCallback));
         });
         return;
     }
@@ -278,7 +275,7 @@ void WorkerOrWorkletThread::stop(Function<void()>&& stoppedCallback)
         resume();
 
     ASSERT(!m_stoppedCallback);
-    m_stoppedCallback = WTFMove(stoppedCallback);
+    m_stoppedCallback = WTF::move(stoppedCallback);
 
     // Ensure that tasks are being handled by thread event loop. If script execution weren't forbidden, a while(1) loop in JS could keep the thread alive forever.
     if (globalScope()) {
@@ -321,14 +318,14 @@ void WorkerOrWorkletThread::suspend()
     if (is<WorkerMainRunLoop>(m_runLoop.get()))
         return;
 
-    m_runLoop->postTask([&](ScriptExecutionContext&) {
-        if (globalScope())
-            globalScope()->suspend();
+    m_runLoop->postTask([protectedThis = Ref { *this }](ScriptExecutionContext&) {
+        if (RefPtr globalScope = protectedThis->m_globalScope)
+            globalScope->suspend();
 
-        m_suspensionSemaphore.wait();
+        protectedThis->m_suspensionSemaphore.wait();
 
-        if (globalScope())
-            globalScope()->resume();
+        if (RefPtr globalScope = protectedThis->m_globalScope)
+            globalScope->resume();
     });
 }
 
@@ -344,8 +341,8 @@ void WorkerOrWorkletThread::resume()
 
 void WorkerOrWorkletThread::releaseFastMallocFreeMemoryInAllThreads()
 {
-    for (auto& workerOrWorkletThread : workerOrWorkletThreads()) {
-        workerOrWorkletThread.runLoop().postTask([] (ScriptExecutionContext&) {
+    for (Ref workerOrWorkletThread : workerOrWorkletThreads()) {
+        workerOrWorkletThread->runLoop().postTask([](ScriptExecutionContext&) {
             WTF::releaseFastMallocFreeMemory();
         });
     }
@@ -361,6 +358,16 @@ void WorkerOrWorkletThread::removeChildThread(WorkerOrWorkletThread& childThread
     m_childThreads.remove(childThread);
     if (m_childThreads.isEmptyIgnoringNullReferences() && m_runWhenLastChildThreadIsGone)
         std::exchange(m_runWhenLastChildThreadIsGone, nullptr)();
+}
+
+CheckedPtr<WorkerLoaderProxy> WorkerOrWorkletThread::checkedWorkerLoaderProxy() const
+{
+    return workerLoaderProxy();
+}
+
+RefPtr<WorkerOrWorkletGlobalScope> WorkerOrWorkletThread::protectedGlobalScope() const
+{
+    return m_globalScope.get();
 }
 
 } // namespace WebCore

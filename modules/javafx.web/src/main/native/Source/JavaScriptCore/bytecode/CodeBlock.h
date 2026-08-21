@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,43 +29,43 @@
 
 #pragma once
 
-#include "ArrayProfile.h"
-#include "BytecodeConventions.h"
-#include "CallLinkInfo.h"
-#include "CodeBlockHash.h"
-#include "CodeOrigin.h"
-#include "CodeType.h"
-#include "CompilationResult.h"
-#include "ConcurrentJSLock.h"
-#include "DFGCodeOriginPool.h"
-#include "DFGCommon.h"
-#include "DirectEvalCodeCache.h"
-#include "EvalExecutable.h"
-#include "ExecutionCounter.h"
-#include "ExpressionInfo.h"
-#include "FunctionExecutable.h"
-#include "HandlerInfo.h"
-#include "ICStatusMap.h"
-#include "Instruction.h"
-#include "InstructionStream.h"
-#include "JITCode.h"
-#include "JITCodeMap.h"
-#include "JITMathICForwards.h"
-#include "JSCast.h"
-#include "JumpTable.h"
-#include "LazyValueProfile.h"
-#include "MetadataTable.h"
-#include "ModuleProgramExecutable.h"
-#include "ObjectAllocationProfile.h"
-#include "Options.h"
-#include "Printer.h"
-#include "ProfilerJettisonReason.h"
-#include "ProgramExecutable.h"
-#include "PutPropertySlot.h"
-#include "RegisterAtOffsetList.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/ArrayProfile.h>
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/CallLinkInfo.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/CodeType.h>
+#include <JavaScriptCore/CompilationResult.h>
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/DFGCodeOriginPool.h>
+#include <JavaScriptCore/DFGCommon.h>
+#include <JavaScriptCore/DirectEvalCodeCache.h>
+#include <JavaScriptCore/EvalExecutable.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/ExpressionInfo.h>
+#include <JavaScriptCore/FunctionExecutable.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/ICStatusMap.h>
+#include <JavaScriptCore/Instruction.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/JITCode.h>
+#include <JavaScriptCore/JITCodeMap.h>
+#include <JavaScriptCore/JITMathICForwards.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JumpTable.h>
+#include <JavaScriptCore/LazyValueProfile.h>
+#include <JavaScriptCore/MetadataTable.h>
+#include <JavaScriptCore/ModuleProgramExecutable.h>
+#include <JavaScriptCore/ObjectAllocationProfile.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/Printer.h>
+#include <JavaScriptCore/ProfilerJettisonReason.h>
+#include <JavaScriptCore/ProgramExecutable.h>
+#include <JavaScriptCore/PutPropertySlot.h>
+#include <JavaScriptCore/RegisterAtOffsetList.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <wtf/ApproximateTime.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FixedVector.h>
@@ -98,6 +98,12 @@ class ScriptExecutable;
 class StructureStubInfo;
 class BaselineJITCode;
 class BaselineJITData;
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#define ENABLE_CODEBLOCK_CRASH_ANALYSIS 1 // FIXME: rdar://149223818
+#else
+#define ENABLE_CODEBLOCK_CRASH_ANALYSIS 0
+#endif
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
 
@@ -139,16 +145,64 @@ protected:
 
     WriteBarrier<JSGlobalObject> m_globalObject;
 
+private:
+    struct CrashChecker {
+        enum Entry {
+            This,
+            Metadata,
+            BaselineJITData,
+            StubInfoCount,
+            DFGJITData,
+            Destructed
+        };
+
+#if ENABLE(CODEBLOCK_CRASH_ANALYSIS)
+        static constexpr bool isEnabled = true;
+
+        template<typename T>
+        static uint8_t hash(T src)
+        {
+            uintptr_t value = std::bit_cast<uintptr_t>(src);
+            value = value ^ (value >> 32);
+            value = value ^ (value >> 16);
+            value = value ^ (value >> 8);
+            return value;
+        }
+
+        template<typename T, typename U>
+        static uint8_t hash(T src1, U src2)
+        {
+            uintptr_t value1 = std::bit_cast<uintptr_t>(src1);
+            uintptr_t value2 = std::bit_cast<uintptr_t>(src2);
+            return hash(value1 ^ value2);
+        }
+
+        uint8_t get(unsigned index) { return m_data >> (index * CHAR_BIT); }
+        void set(unsigned index, uint8_t value) { m_data |= static_cast<uintptr_t>(value) << (index * CHAR_BIT); }
+
+        uintptr_t value() const { return m_data; }
+
+    private:
+        uintptr_t m_data { 0 };
+#else
+        static constexpr bool isEnabled = false;
+        template<typename T> static uint8_t hash(T) { return 0; }
+        template<typename T, typename U> static uint8_t hash(T, U) { return 0; }
+        uint8_t get(unsigned) { return 0; }
+        void set(unsigned, uint8_t) { }
+        uintptr_t value() const { return 0; }
+#endif
+    };
+
 public:
     JS_EXPORT_PRIVATE ~CodeBlock();
 
     UnlinkedCodeBlock* unlinkedCodeBlock() const { return m_unlinkedCode.get(); }
 
     CString inferredName() const;
+    String inferredNameWithHash() const;
     CodeBlockHash hash() const;
     bool hasHash() const;
-    bool isSafeToComputeHash() const;
-    CString hashAsStringIfPossible() const;
     CString sourceCodeForTools() const;
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITType) const;
@@ -310,6 +364,7 @@ public:
 
     // Exactly equivalent to codeBlock->ownerExecutable()->newReplacementCodeBlockFor(codeBlock->specializationKind())
     CodeBlock* newReplacement();
+    CodeBlock* replacement();
 
     void setJITCode(Ref<JSC::JITCode>&& code)
     {
@@ -318,7 +373,7 @@ public:
 
         ConcurrentJSLocker locker(m_lock);
         WTF::storeStoreFence(); // This is probably not needed because the lock will also do something similar, but it's good to be paranoid.
-        m_jitCode = WTFMove(code);
+        m_jitCode = WTF::move(code);
     }
 
     RefPtr<JSC::JITCode> jitCode() { return m_jitCode; }
@@ -340,8 +395,6 @@ public:
     CodePtr<JSEntryPtrTag> addressForCallConcurrently(const ConcurrentJSLocker&, ArityCheckMode) const;
 
 #if ENABLE(JIT)
-    CodeBlock* replacement();
-
     DFG::CapabilityLevel computeCapabilityLevel();
     DFG::CapabilityLevel capabilityLevel();
     DFG::CapabilityLevel capabilityLevelState() { return static_cast<DFG::CapabilityLevel>(m_capabilityLevelState); }
@@ -497,7 +550,9 @@ public:
 
     FunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     int numberOfFunctionDecls() { return m_functionDecls.size(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionDecls() { return m_functionDecls.span(); }
     FunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionExprs() { return m_functionExprs.span(); }
 
     const BitVector& bitVector(size_t i) { return m_unlinkedCode->bitVector(i); }
 
@@ -520,12 +575,7 @@ public:
 #if ENABLE(JIT)
     SimpleJumpTable& baselineSwitchJumpTable(int tableIndex);
     StringJumpTable& baselineStringSwitchJumpTable(int tableIndex);
-    void setBaselineJITData(std::unique_ptr<BaselineJITData>&& jitData)
-    {
-        ASSERT(!m_jitData);
-        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
-        m_jitData = jitData.release();
-    }
+    void setBaselineJITData(std::unique_ptr<BaselineJITData>&&);
     BaselineJITData* baselineJITData()
     {
         if (!JSC::JITCode::isOptimizingJIT(jitType()))
@@ -539,6 +589,7 @@ public:
         ASSERT(!m_jitData);
         WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
         m_jitData = jitData.release();
+        checker().set(CrashChecker::DFGJITData, checker().hash(this, m_jitData));
     }
 
     DFG::JITData* dfgJITData()
@@ -797,7 +848,7 @@ public:
     NO_RETURN_DUE_TO_CRASH void endValidationDidFail();
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RareData, CodeBlockRareData);
     public:
         Vector<HandlerInfo> m_exceptionHandlers;
 
@@ -910,7 +961,7 @@ private:
         if (!m_rareData) {
             auto rareData = makeUnique<RareData>();
             WTF::storeStoreFence();
-            m_rareData = WTFMove(rareData);
+            m_rareData = WTF::move(rareData);
         }
     }
 
@@ -977,6 +1028,21 @@ private:
     ApproximateTime m_creationTime;
 
     std::unique_ptr<RareData> m_rareData;
+#if OS(WINDOWS) && !ENABLE(CODEBLOCK_CRASH_ANALYSIS)
+    CrashChecker& checker()
+    {
+        // This is needed because the Windows build appears to be using more space
+        // in CodeBlock than other ports for unknown reasons. The addition of
+        // m_checker appears to push it pass 224 bytes and fails the static_assert
+        // below. NO_UNIQUE_ADDRESS appears to not be supported on the Windows build
+        // as well. So, we'll apply this workaround of using a static stub instead.
+        static CrashChecker noOpCheckerStub;
+        return noOpCheckerStub;
+    }
+#else
+    NO_UNIQUE_ADDRESS CrashChecker m_checker;
+    ALWAYS_INLINE CrashChecker& checker() { return m_checker; }
+#endif
 
 #if ASSERT_ENABLED
     Lock m_cachedIdentifierUidsLock;
@@ -993,14 +1059,14 @@ template <typename ExecutableType>
 void ScriptExecutable::prepareForExecution(VM& vm, JSFunction* function, JSScope* scope, CodeSpecializationKind kind, CodeBlock*& resultCodeBlock)
 {
     if (hasJITCodeFor(kind)) {
-        if constexpr (std::is_same<ExecutableType, EvalExecutable>::value)
+        if constexpr (std::same_as<ExecutableType, EvalExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
-        else if constexpr (std::is_same<ExecutableType, ProgramExecutable>::value)
+        else if constexpr (std::same_as<ExecutableType, ProgramExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
-        else if constexpr (std::is_same<ExecutableType, ModuleProgramExecutable>::value)
+        else if constexpr (std::same_as<ExecutableType, ModuleProgramExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
         else {
-            static_assert(std::is_same<ExecutableType, FunctionExecutable>::value);
+            static_assert(std::same_as<ExecutableType, FunctionExecutable>);
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlockFor(kind));
         }
         return;

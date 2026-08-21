@@ -34,7 +34,7 @@ class LegacyRenderSVGResourceContainer;
 class SVGSVGElement;
 
 class LegacyRenderSVGRoot final : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGRoot);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGRoot);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGRoot);
 public:
     LegacyRenderSVGRoot(SVGSVGElement&, RenderStyle&&);
@@ -46,7 +46,8 @@ public:
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+    FloatSize computeIntrinsicSize() const final;
+    FloatSize preferredAspectRatio() const final;
     bool hasIntrinsicAspectRatio() const final;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
@@ -82,13 +83,14 @@ private:
     void insertedIntoTree() override;
     void willBeRemovedFromTree() override;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     const AffineTransform& localToParentTransform() const override;
 
-    FloatRect objectBoundingBox() const override { return m_objectBoundingBox; }
+    FloatRect objectBoundingBox() const override { return m_objectBoundingBox.value_or(FloatRect()); }
     FloatRect strokeBoundingBox() const override;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override;
+    FloatRect decoratedBoundingBox() const override;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
@@ -102,7 +104,7 @@ private:
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
     bool canBeSelectionLeaf() const override { return false; }
     bool canHaveChildren() const override { return true; }
@@ -111,21 +113,19 @@ private:
     void updateCachedBoundaries();
     void buildLocalToBorderBoxTransform();
 
-    FloatSize calculateIntrinsicSize() const;
-
     IntSize m_containerSize;
-    FloatRect m_objectBoundingBox;
-    bool m_objectBoundingBoxValid { false };
-    bool m_inLayout { false };
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
     FloatRect m_repaintBoundingBox;
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_accurateRepaintBoundingBox;
+    Markable<FloatRect> m_objectBoundingBox;
+    mutable Markable<FloatRect> m_strokeBoundingBox;
+    mutable Markable<FloatRect> m_accurateRepaintBoundingBox;
     mutable AffineTransform m_localToParentTransform;
     AffineTransform m_localToBorderBoxTransform;
     SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
-    bool m_isLayoutSizeChanged : 1;
-    bool m_needsBoundariesOrTransformUpdate : 1;
-    bool m_hasBoxDecorations : 1;
+
+    bool m_inLayout { false };
+    bool m_isLayoutSizeChanged : 1 { false };
+    bool m_needsBoundariesOrTransformUpdate : 1 { true };
+    bool m_hasBoxDecorations : 1 { false };
 };
 
 } // namespace WebCore

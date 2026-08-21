@@ -39,6 +39,7 @@
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "ViolationReportType.h"
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/MakeString.h>
@@ -87,8 +88,8 @@ CrossOriginEmbedderPolicy CrossOriginEmbedderPolicy::isolatedCopy() &&
     return {
         value,
         reportOnlyValue,
-        WTFMove(reportingEndpoint).isolatedCopy(),
-        WTFMove(reportOnlyReportingEndpoint).isolatedCopy()
+        WTF::move(reportingEndpoint).isolatedCopy(),
+        WTF::move(reportOnlyReportingEndpoint).isolatedCopy()
     };
 }
 
@@ -114,8 +115,8 @@ void CrossOriginEmbedderPolicy::addPolicyHeadersTo(ResourceResponse& response) c
 void sendCOEPInheritenceViolation(ReportingClient& reportingClient, const URL& embedderURL, const String& endpoint, COEPDisposition disposition, const String& type, const URL& blockedURL)
 {
     Ref reportBody = COEPInheritenceViolationReportBody::create(disposition, blockedURL, AtomString { type });
-    Ref report = Report::create("coep"_s, embedderURL.string(), WTFMove(reportBody));
-    reportingClient.notifyReportObservers(WTFMove(report));
+    Ref report = Report::create("coep"_s, embedderURL.string(), WTF::move(reportBody));
+    reportingClient.notifyReportObservers(WTF::move(report));
 
     if (endpoint.isEmpty())
         return;
@@ -125,15 +126,15 @@ void sendCOEPInheritenceViolation(ReportingClient& reportingClient, const URL& e
         body.setString("type"_s, type);
         body.setString("blockedURL"_s, PingLoader::sanitizeURLForReport(blockedURL));
     });
-    reportingClient.sendReportToEndpoints(embedderURL, { }, { endpoint }, WTFMove(reportFormData), ViolationReportType::COEPInheritenceViolation);
+    reportingClient.sendReportToEndpoints(embedderURL, { }, singleElementSpan(endpoint), WTF::move(reportFormData), ViolationReportType::COEPInheritenceViolation);
 }
 
 // https://fetch.spec.whatwg.org/#queue-a-cross-origin-embedder-policy-corp-violation-report
 void sendCOEPCORPViolation(ReportingClient& reportingClient, const URL& embedderURL, const String& endpoint, COEPDisposition disposition, FetchOptions::Destination destination, const URL& blockedURL)
 {
     Ref reportBody = CORPViolationReportBody::create(disposition, blockedURL, destination);
-    Ref report = Report::create("coep"_s, embedderURL.string(), WTFMove(reportBody));
-    reportingClient.notifyReportObservers(WTFMove(report));
+    Ref report = Report::create("coep"_s, embedderURL.string(), WTF::move(reportBody));
+    reportingClient.notifyReportObservers(WTF::move(report));
 
     if (endpoint.isEmpty())
         return;
@@ -144,7 +145,7 @@ void sendCOEPCORPViolation(ReportingClient& reportingClient, const URL& embedder
         body.setString("blockedURL"_s, PingLoader::sanitizeURLForReport(blockedURL));
         body.setString("destination"_s, convertEnumerationToString(destination));
     });
-    reportingClient.sendReportToEndpoints(embedderURL, { }, { endpoint }, WTFMove(reportFormData), ViolationReportType::CORPViolation);
+    reportingClient.sendReportToEndpoints(embedderURL, { }, singleElementSpan(endpoint), WTF::move(reportFormData), ViolationReportType::CORPViolation);
 }
 
 void CrossOriginEmbedderPolicy::encode(WTF::Persistence::Encoder& encoder) const
@@ -177,8 +178,8 @@ std::optional<CrossOriginEmbedderPolicy> CrossOriginEmbedderPolicy::decode(WTF::
     return { {
         *value,
         *reportOnlyValue,
-        WTFMove(*reportingEndpoint),
-        WTFMove(*reportOnlyReportingEndpoint)
+        WTF::move(*reportingEndpoint),
+        WTF::move(*reportOnlyReportingEndpoint)
     } };
 }
 

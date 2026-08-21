@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "PlatformXR.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
@@ -38,21 +39,30 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class WebXRLayer : public RefCounted<WebXRLayer>, public EventTarget, public ContextDestructionObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRLayer);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRLayer);
 public:
     virtual ~WebXRLayer();
 
-    using RefCounted<WebXRLayer>::ref;
-    using RefCounted<WebXRLayer>::deref;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual void startFrame(PlatformXR::FrameData&) = 0;
     virtual PlatformXR::Device::Layer endFrame() = 0;
+
+    virtual bool isWebXRWebGLLayer() const { return false; }
+    virtual bool isXRCompositionLayer() const { return false; }
+    virtual bool isXRCubeLayer() const { return false; }
+    virtual bool isXRCylinderLayer() const { return false; }
+    virtual bool isXREquirectLayer() const { return false; }
+    virtual bool isXRProjectionLayer() const { return false; }
+    virtual bool isXRQuadLayer() const { return false; }
 
 protected:
     explicit WebXRLayer(ScriptExecutionContext*);
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget
@@ -62,5 +72,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebXRLayer)
 
 #endif // ENABLE(WEBXR)

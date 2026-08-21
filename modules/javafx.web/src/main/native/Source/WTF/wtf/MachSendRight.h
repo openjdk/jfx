@@ -25,7 +25,10 @@
 
 #pragma once
 
+#include <wtf/ExportMacros.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 
 #if PLATFORM(COCOA) || (PLATFORM(JAVA) && USE(CF))
 
@@ -34,7 +37,7 @@
 namespace WTF {
 
 class MachSendRight {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MachSendRight);
 public:
     WTF_EXPORT_PRIVATE static MachSendRight adopt(mach_port_t);
     WTF_EXPORT_PRIVATE static MachSendRight create(mach_port_t);
@@ -49,9 +52,9 @@ public:
 
     explicit operator bool() const { return m_port != MACH_PORT_NULL; }
 
-    mach_port_t sendRight() const { return m_port; }
+    mach_port_t sendRight() const LIFETIME_BOUND { return m_port; }
 
-    WTF_EXPORT_PRIVATE mach_port_t leakSendRight() WARN_UNUSED_RETURN;
+    [[nodiscard]] WTF_EXPORT_PRIVATE mach_port_t leakSendRight();
 
 private:
     explicit MachSendRight(mach_port_t);

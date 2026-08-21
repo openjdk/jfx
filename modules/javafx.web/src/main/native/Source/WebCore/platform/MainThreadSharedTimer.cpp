@@ -50,11 +50,10 @@ MainThreadSharedTimer& MainThreadSharedTimer::singleton()
 MainThreadSharedTimer::MainThreadSharedTimer() = default;
 #else
 MainThreadSharedTimer::MainThreadSharedTimer()
-    : m_timer(RunLoop::main(), this, &MainThreadSharedTimer::fired)
+    : m_timer(RunLoop::mainSingleton(), "MainThreadSharedTimer::timer"_s, this, &MainThreadSharedTimer::fired)
 {
 #if USE(GLIB)
     m_timer.setPriority(RunLoopSourcePriority::MainThreadSharedTimer);
-    m_timer.setName("[WebKit] MainThreadSharedTimer"_s);
 #endif
 }
 
@@ -77,7 +76,7 @@ void MainThreadSharedTimer::invalidate()
 void MainThreadSharedTimer::setFiredFunction(Function<void()>&& firedFunction)
 {
     RELEASE_ASSERT(!m_firedFunction || !firedFunction);
-    m_firedFunction = WTFMove(firedFunction);
+    m_firedFunction = WTF::move(firedFunction);
 }
 
 void MainThreadSharedTimer::fired()

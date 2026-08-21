@@ -30,11 +30,16 @@
 #include "Document.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/FileSystem.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 namespace WebCore {
 
@@ -162,7 +167,7 @@ SecurityOriginData SecurityOriginData::isolatedCopy() const &
 
 SecurityOriginData SecurityOriginData::isolatedCopy() &&
 {
-    return SecurityOriginData { crossThreadCopy(WTFMove(m_data)) };
+    return SecurityOriginData { crossThreadCopy(WTF::move(m_data)) };
 }
 
 bool operator==(const SecurityOriginData& a, const SecurityOriginData& b)
@@ -210,6 +215,9 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         || url.protocolIs("resource"_s)
+#endif
+#if PLATFORM(JAVA)
+        || url.protocolIs("jar:file"_s)
 #endif
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)

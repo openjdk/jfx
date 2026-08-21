@@ -25,11 +25,14 @@
 
 #pragma once
 
-#include "LayoutUnit.h"
-#include "RenderLayerModelObject.h"
-#include "Timer.h"
+#include <WebCore/AnchorPositionEvaluator.h>
+#include <WebCore/LayoutUnit.h>
+#include <WebCore/RenderLayerModelObject.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedRef.h>
+#include <wtf/SegmentedVector.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -50,8 +53,10 @@ class LayoutState;
 class LayoutTree;
 }
 
+enum class LayoutOptions : uint8_t;
+
 struct UpdateScrollInfoAfterLayoutTransaction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(UpdateScrollInfoAfterLayoutTransaction);
 
     UpdateScrollInfoAfterLayoutTransaction();
     ~UpdateScrollInfoAfterLayoutTransaction();
@@ -60,7 +65,7 @@ struct UpdateScrollInfoAfterLayoutTransaction {
     SingleThreadWeakHashSet<RenderBlock> blocks;
 };
 
-class LocalFrameViewLayoutContext final : public CanMakeCheckedPtr<LocalFrameViewLayoutContext> {
+class LocalFrameViewLayoutContext final : public CanMakeCheckedPtr<LocalFrameViewLayoutContext, WTF::DefaultedOperatorEqual::No, WTF::CheckedPtrDeleteCheckException::Yes> {
     WTF_MAKE_TZONE_ALLOCATED(LocalFrameViewLayoutContext);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LocalFrameViewLayoutContext);
 public:
@@ -98,7 +103,7 @@ public:
     bool inPaintableState() const { return layoutPhase() != LayoutPhase::InRenderTreeLayout && layoutPhase() != LayoutPhase::InViewSizeAdjust && (layoutPhase() != LayoutPhase::InPostLayout || inAsynchronousTasks()); }
 
     bool isSkippedContentForLayout(const RenderElement&) const;
-    bool isSkippedContentRootForLayout(const RenderElement&) const;
+    bool isSkippedContentRootForLayout(const RenderBox&) const;
 
     bool isPercentHeightResolveDisabledFor(const RenderBox& flexItem);
 
@@ -157,13 +162,26 @@ public:
     void startTrackingRenderLayerPositionUpdates() { m_renderLayerPositionUpdateCount = 0; }
     unsigned renderLayerPositionUpdateCount() const { return m_renderLayerPositionUpdateCount; }
 
+    bool addToDetachedRendererList(RenderPtr<RenderObject>&& renderer) const { return m_detachedRendererList.append(WTF::move(renderer)); }
+    void deleteDetachedRenderersNow() const { m_detachedRendererList.clear(); }
+
+    Vector<AnchorScrollAdjuster>& anchorScrollAdjusters() { return m_anchorScrollAdjusters; }
+    const AnchorScrollAdjuster* anchorScrollAdjusterFor(const RenderBox& anchored) const;
+    AnchorScrollAdjuster::Diff registerAnchorScrollAdjuster(AnchorScrollAdjuster&&);
+    void unregisterAnchorScrollAdjusterFor(const RenderBox& anchored);
+    void invalidateAnchorDependenciesForScroller(const RenderBox& scroller);
+    void removeScrollerFromAnchorScrollAdjusters(const RenderBox& scroller);
+
+    bool repaintsBlocked() const { return m_repaintsBlocked; }
+
 private:
-    friend class LayoutScope;
+    friend class LayoutFrameScope;
     friend class LayoutStateMaintainer;
     friend class LayoutStateDisabler;
     friend class SubtreeLayoutStateMaintainer;
     friend class FlexPercentResolveDisabler;
-    friend class ContentVisibilityForceLayoutScope;
+    friend class ContentVisibilityOverrideScope;
+    friend class RepaintBlocker;
 
     bool needsLayoutInternal() const;
 
@@ -199,11 +217,20 @@ private:
     void disablePaintOffsetCache() { m_paintOffsetCacheDisableCount++; }
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
 
-    bool needsSkippedContentLayout() const { return m_needsSkippedContentLayout; }
-    void setNeedsSkippedContentLayout(bool needsSkippedContentLayout) { m_needsSkippedContentLayout = needsSkippedContentLayout; }
+    bool isVisiblityHiddenIgnored() const { return m_visiblityHiddenIsIgnored; }
+    void setIsVisiblityHiddenIgnored(bool ignored) { m_visiblityHiddenIsIgnored = ignored; }
+
+    bool isVisiblityAutoIgnored() const { return m_visiblityAutoIsIgnored; }
+    void setIsVisiblityAutoIgnored(bool ignored) { m_visiblityAutoIsIgnored = ignored; }
+
+    bool isRevealedWhenFoundIgnored() const { return m_revealedWhenFoundIgnored; }
+    void setIsRevealedWhenFoundIgnored(bool ignored) { m_revealedWhenFoundIgnored = ignored; }
 
     void disablePercentHeightResolveFor(const RenderBox& flexItem);
     void enablePercentHeightResolveFor(const RenderBox& flexItem);
+
+    void allowRepaints() { m_repaintsBlocked = false; }
+    void blockRepaints() { m_repaintsBlocked = true; }
 
     LocalFrame& frame() const;
     Ref<LocalFrame> protectedFrame();
@@ -223,8 +250,11 @@ private:
     bool m_needsFullRepaint { true };
     bool m_inAsynchronousTasks { false };
     bool m_setNeedsLayoutWasDeferred { false };
-    bool m_needsSkippedContentLayout { false };
+    bool m_visiblityHiddenIsIgnored { false };
+    bool m_visiblityAutoIsIgnored { false };
+    bool m_revealedWhenFoundIgnored { false };
     bool m_updateCompositingLayersIsPending { false };
+    bool m_repaintsBlocked { false };
     LayoutPhase m_layoutPhase { LayoutPhase::OutsideLayout };
     enum class LayoutNestedState : uint8_t  { NotInLayout, NotNested, Nested };
     LayoutNestedState m_layoutNestedState { LayoutNestedState::NotInLayout };
@@ -236,6 +266,7 @@ private:
     std::unique_ptr<UpdateScrollInfoAfterLayoutTransaction> m_updateScrollInfoAfterLayoutTransaction;
     SingleThreadWeakHashMap<RenderBlock, Vector<SingleThreadWeakPtr<RenderBox>>> m_containersWithDescendantsNeedingTransformUpdate;
     SingleThreadWeakHashSet<RenderBox> m_percentHeightIgnoreList;
+    Vector<AnchorScrollAdjuster> m_anchorScrollAdjusters;
     std::optional<TextBoxTrim> m_textBoxTrim;
 
     struct UpdateLayerPositions {
@@ -256,6 +287,25 @@ private:
         bool operator==(const RepaintRectEnvironment&) const = default;
     };
     RepaintRectEnvironment m_lastRepaintRectEnvironment;
+
+    class DetachedRendererList {
+    public:
+        bool append(RenderPtr<RenderObject>&&);
+        void clear() { m_renderers.clear(); }
+
+    private:
+        SegmentedVector<std::unique_ptr<RenderObject>, 50> m_renderers;
+    };
+    mutable DetachedRendererList m_detachedRendererList;
+};
+
+class RepaintBlocker {
+public:
+    explicit RepaintBlocker(Document&);
+    ~RepaintBlocker();
+
+private:
+    const Ref<Document> m_document;
 };
 
 } // namespace WebCore

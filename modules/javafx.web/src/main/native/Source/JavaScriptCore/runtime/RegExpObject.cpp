@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2023 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -80,7 +80,7 @@ bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Pr
     return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
-void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     if (mode == DontEnumPropertiesMode::Include)
@@ -143,7 +143,7 @@ bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
         if (!thisObject->lastIndexIsWritable())
             return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
-        if (UNLIKELY(slot.thisValue() != thisObject))
+        if (slot.thisValue() != thisObject) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
 
         bool result = thisObject->setLastIndex(globalObject, value, slot.isStrictMode());

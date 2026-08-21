@@ -19,9 +19,6 @@
 
 #pragma once
 
-#include "JSDOMGlobalObject.h"
-#include "JSDOMWrapperCache.h"
-#include "LocalDOMWindow.h"
 #include <JavaScriptCore/AuxiliaryBarrierInlines.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSArray.h>
@@ -34,6 +31,9 @@
 #include <JavaScriptCore/Structure.h>
 #include <JavaScriptCore/StructureInlines.h>
 #include <JavaScriptCore/WriteBarrier.h>
+#include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/JSDOMWrapperCache.h>
+#include <WebCore/LocalDOMWindow.h>
 #include <cstddef>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
@@ -77,7 +77,7 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
-    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
+    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, JSC::QueuedTask&&);
     static JSC::JSObject* currentScriptExecutionOwner(JSC::JSGlobalObject*);
     static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
     static void reportViolationForUnsafeEval(JSC::JSGlobalObject*, const String&);
@@ -98,9 +98,9 @@ protected:
 
     RefPtr<JSC::WatchpointSet> m_windowCloseWatchpoints;
 
-private:
     static const JSC::GlobalObjectMethodTable* globalObjectMethodTable();
 
+private:
     RefPtr<DOMWindow> m_wrapped;
     RefPtr<Event> m_currentEvent;
 };

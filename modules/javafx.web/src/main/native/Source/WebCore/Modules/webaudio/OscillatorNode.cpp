@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "PeriodicWave.h"
 #include "VectorMath.h"
 #include <wtf/StdLibExtras.h>
@@ -39,7 +40,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OscillatorNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OscillatorNode);
 
 // Breakpoints where we deicde to do linear interoplation, 3-point interpolation or 5-point interpolation. See doInterpolation().
 constexpr float interpolate2Point = 0.3;
@@ -339,7 +340,8 @@ double OscillatorNode::processKRate(int n, std::span<float> destination, double 
 
 void OscillatorNode::process(size_t framesToProcess)
 {
-    auto& outputBus = *output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    auto& outputBus = firstOutput->bus();
 
     if (!isInitialized() || !outputBus.numberOfChannels()) {
         outputBus.zero();
@@ -433,7 +435,7 @@ void OscillatorNode::setPeriodicWave(PeriodicWave& periodicWave)
 
     // This synchronizes with process().
     Locker locker { m_processLock };
-    m_periodicWave = &periodicWave;
+    m_periodicWave = periodicWave;
     m_type = OscillatorType::Custom;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "pas_config.h"
 #include "pas_log.h"
+#include "pas_mte.h"
 #include "pas_page_base_inlines.h"
 #include "pas_segregated_deallocation_mode.h"
 #include "pas_segregated_exclusive_view_inlines.h"
@@ -37,6 +38,9 @@
 #include "pas_segregated_shared_handle.h"
 #include "pas_segregated_shared_handle_inlines.h"
 #include "pas_thread_local_cache_node.h"
+#include "pas_zero_memory.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -273,7 +277,7 @@ static PAS_ALWAYS_INLINE bool pas_segregated_page_switch_lock_with_mode(
         pas_segregated_page_switch_lock_impl(page, held_lock);
         return true;
     } }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return true;
 }
 
@@ -366,11 +370,12 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
 
     word = page->alloc_bits[word_index];
 
+    // FIXME: Try removing this guard and unconditionally checking for double frees https://bugs.webkit.org/show_bug.cgi?id=295638
     if (page_config.check_deallocation) {
 #if !PAS_ARM && !PAS_RISCV
         new_word = word;
 
-        asm volatile (
+        __asm__ volatile (
             "btrl %1, %0\n\t"
             "jc 0f\n\t"
             "movq %2, %%rdi\n\t"
@@ -463,6 +468,7 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
         }
 
     PAS_PROFILE(SEGREGATED_PAGE_DEALLOCATION, page_config, begin, object_size);
+    PAS_MTE_HANDLE(SEGREGATED_PAGE_DEALLOCATION, page_config, begin, object_size);
 
     if (page_config.base.page_size > page_config.base.granule_size) {
         /* This is the partial decommit case. It's intended for medium pages. It requires doing
@@ -485,6 +491,10 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
     }
 
     if (!new_word) {
+        /* Double check we didn't somehow double free this allocation. */
+        if (PAS_UNLIKELY(!word))
+             pas_segregated_page_deallocation_did_fail(begin);
+
         PAS_TESTING_ASSERT(page->emptiness.num_non_empty_words);
         uintptr_t num_non_empty_words = page->emptiness.num_non_empty_words;
         if (!--num_non_empty_words) {
@@ -538,7 +548,7 @@ pas_segregated_page_get_directory_for_address_in_page(pas_segregated_page* page,
                 pas_segregated_view_get_shared_handle(owning_view), begin, page_config)->directory);
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -578,7 +588,7 @@ pas_segregated_page_get_object_size_for_address_in_page(pas_segregated_page* pag
                 begin, page_config)->directory)->object_size;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -635,5 +645,5 @@ static PAS_ALWAYS_INLINE void pas_segregated_page_log_or_deallocate(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_PAGE_INLINES_H */
-

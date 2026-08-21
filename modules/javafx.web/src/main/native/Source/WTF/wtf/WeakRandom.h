@@ -30,8 +30,9 @@
 
 #pragma once
 
-#include <limits.h>
+#include <limits>
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -39,7 +40,7 @@ namespace WTF {
 // The code used to generate random numbers are inlined manually in JIT code.
 // So it needs to stay in sync with the JIT one.
 class WeakRandom final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakRandom);
 public:
     WeakRandom(unsigned seed = cryptographicallyRandomNumber<unsigned>())
     {

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,14 +38,14 @@ const ClassInfo JSTemplateObjectDescriptor::s_info = { "TemplateObjectDescriptor
 
 JSTemplateObjectDescriptor::JSTemplateObjectDescriptor(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor, int endOffset)
     : Base(vm, vm.templateObjectDescriptorStructure.get())
-    , m_descriptor(WTFMove(descriptor))
+    , m_descriptor(WTF::move(descriptor))
     , m_endOffset(endOffset)
 {
 }
 
 JSTemplateObjectDescriptor* JSTemplateObjectDescriptor::create(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor, int endOffset)
 {
-    JSTemplateObjectDescriptor* result = new (NotNull, allocateCell<JSTemplateObjectDescriptor>(vm)) JSTemplateObjectDescriptor(vm, WTFMove(descriptor), endOffset);
+    JSTemplateObjectDescriptor* result = new (NotNull, allocateCell<JSTemplateObjectDescriptor>(vm)) JSTemplateObjectDescriptor(vm, WTF::move(descriptor), endOffset);
     result->finishCreation(vm);
     return result;
 }

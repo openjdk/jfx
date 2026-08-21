@@ -15,7 +15,6 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -23,8 +22,15 @@
 #include <initializer_list>
 #include <wtf/Compiler.h>
 #include <wtf/Forward.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashIterators.h>
 #include <wtf/HashTable.h>
+#include <wtf/HashTraits.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/KeyValuePair.h>
+#include <wtf/OptionSetHash.h>
+#include <wtf/Packed.h>
+#include <wtf/RangeAdaptors.h>
 
 namespace WTF {
 
@@ -32,9 +38,9 @@ template<typename T> struct KeyValuePairKeyExtractor {
     static const typename T::KeyType& extract(const T& p) { return p.key; }
 };
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename Malloc>
 class HashMap final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(HashMap);
 private:
     using KeyTraits = KeyTraitsArg;
     using MappedTraits = MappedTraitsArg;
@@ -58,7 +64,7 @@ private:
 
     using HashFunctions = HashArg;
 
-    using HashTableType = typename TableTraitsArg::template TableType<KeyType, KeyValuePairType, KeyValuePairKeyExtractor<KeyValuePairType>, HashFunctions, KeyValuePairTraits, KeyTraits, shouldValidateKey>;
+    using HashTableType = typename TableTraitsArg::template TableType<KeyType, KeyValuePairType, KeyValuePairKeyExtractor<KeyValuePairType>, HashFunctions, KeyValuePairTraits, KeyTraits, Malloc>;
 
     class HashMapKeysProxy;
     class HashMapValuesProxy;
@@ -89,6 +95,20 @@ public:
 public:
     HashMap() = default;
 
+    template<typename Range>
+        requires std::ranges::input_range<Range> && std::convertible_to<std::ranges::range_value_t<Range>, KeyValuePairType>
+    explicit HashMap(FromRange, Range&& range)
+    {
+        if constexpr (std::ranges::sized_range<Range>)
+            reserveInitialCapacity(std::ranges::size(range));
+        for (auto&& keyValuePair : range) {
+            if constexpr (std::is_rvalue_reference_v<Range&&>)
+                add(WTF::move(keyValuePair.key), WTF::move(keyValuePair.value));
+            else
+                add(keyValuePair.key, keyValuePair.value);
+        }
+    }
+
     HashMap(std::initializer_list<KeyValuePairType> initializerList)
     {
         reserveInitialCapacity(initializerList.size());
@@ -115,22 +135,22 @@ public:
     void reserveInitialCapacity(unsigned keyCount) { m_impl.reserveInitialCapacity(keyCount); }
 
     // iterators iterate over pairs of keys and values
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() LIFETIME_BOUND;
+    iterator end() LIFETIME_BOUND;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
 
-    iterator random() { return m_impl.random(); }
-    const_iterator random() const { return m_impl.random(); }
+    iterator random() LIFETIME_BOUND { return m_impl.random(); }
+    const_iterator random() const LIFETIME_BOUND { return m_impl.random(); }
 
-    KeysIteratorRange keys() { return makeSizedIteratorRange(*this, begin().keys(), end().keys()); }
-    const KeysConstIteratorRange keys() const { return makeSizedIteratorRange(*this, begin().keys(), end().keys()); }
+    KeysIteratorRange keys() LIFETIME_BOUND { return makeSizedIteratorRange(*this, begin().keys(), end().keys()); }
+    const KeysConstIteratorRange keys() const LIFETIME_BOUND { return makeSizedIteratorRange(*this, begin().keys(), end().keys()); }
 
-    ValuesIteratorRange values() { return makeSizedIteratorRange(*this, begin().values(), end().values()); }
-    const ValuesConstIteratorRange values() const { return makeSizedIteratorRange(*this, begin().values(), end().values()); }
+    ValuesIteratorRange values() LIFETIME_BOUND { return makeSizedIteratorRange(*this, begin().values(), end().values()); }
+    const ValuesConstIteratorRange values() const LIFETIME_BOUND { return makeSizedIteratorRange(*this, begin().values(), end().values()); }
 
-    iterator find(const KeyType&);
-    const_iterator find(const KeyType&) const;
+    iterator find(const KeyType&) LIFETIME_BOUND;
+    const_iterator find(const KeyType&) const LIFETIME_BOUND;
     bool contains(const KeyType&) const;
     MappedPeekType get(const KeyType&) const;
     std::optional<MappedType> getOptional(const KeyType&) const;
@@ -143,21 +163,21 @@ public:
     // Replaces the value but not the key if the key is already present.
     // Return value includes both an iterator to the key location,
     // and an isNewEntry boolean that's true if a new entry was added.
-    template<typename V> AddResult set(const KeyType&, V&&);
-    template<typename V> AddResult set(KeyType&&, V&&);
+    template<typename V> AddResult set(const KeyType&, V&&) LIFETIME_BOUND;
+    template<typename V> AddResult set(KeyType&&, V&&) LIFETIME_BOUND;
 
     // Does nothing if the key is already present.
     // Return value includes both an iterator to the key location,
     // and an isNewEntry boolean that's true if a new entry was added.
-    template<typename V> AddResult add(const KeyType&, V&&);
-    template<typename V> AddResult add(KeyType&&, V&&);
+    template<typename V> AddResult add(const KeyType&, V&&) LIFETIME_BOUND;
+    template<typename V> AddResult add(KeyType&&, V&&) LIFETIME_BOUND;
 
     // Same as add(), but aggressively inlined.
-    template<typename V> AddResult fastAdd(const KeyType&, V&&);
-    template<typename V> AddResult fastAdd(KeyType&&, V&&);
+    template<typename V> AddResult fastAdd(const KeyType&, V&&) LIFETIME_BOUND;
+    template<typename V> AddResult fastAdd(KeyType&&, V&&) LIFETIME_BOUND;
 
-    AddResult ensure(const KeyType&, NOESCAPE const Invocable<MappedType()> auto&);
-    AddResult ensure(KeyType&&, NOESCAPE const Invocable<MappedType()> auto&);
+    AddResult ensure(const KeyType&, NOESCAPE const Invocable<MappedType()> auto&) LIFETIME_BOUND;
+    AddResult ensure(KeyType&&, NOESCAPE const Invocable<MappedType()> auto&) LIFETIME_BOUND;
 
     bool remove(const KeyType&);
     bool remove(iterator);
@@ -170,13 +190,18 @@ public:
     std::optional<MappedType> takeOptional(const KeyType&);
     MappedTakeType takeFirst();
 
+    // Useful when the key type is WeakPtr
+    size_t computeSize() const requires (KeyTraits::hasIsWeakNullValueFunction);
+    bool isEmptyIgnoringNullReferences() const requires (KeyTraits::hasIsWeakNullValueFunction);
+    void removeWeakNullEntries() requires (KeyTraits::hasIsWeakNullValueFunction);
+
     // Alternate versions of find() / contains() / get() / remove() that find the object
     // by hashing and comparing with some other type, to avoid the cost of type conversion.
     // HashTranslator must have the following function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
-    template<typename HashTranslator, typename T> iterator find(const T&);
-    template<typename HashTranslator, typename T> const_iterator find(const T&) const;
+    template<typename HashTranslator, typename T> iterator find(const T&) LIFETIME_BOUND;
+    template<typename HashTranslator, typename T> const_iterator find(const T&) const LIFETIME_BOUND;
     template<typename HashTranslator, typename T> bool contains(const T&) const;
     template<typename HashTranslator, typename T> MappedPeekType get(const T&) const;
     template<typename HashTranslator, typename T> MappedPeekType inlineGet(const T&) const;
@@ -188,26 +213,26 @@ public:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
     //   static translate(ValueType&, const T&, unsigned hashCode);
-    template<typename HashTranslator, typename K, typename V> AddResult add(K&&, V&&);
-    template<typename HashTranslator> AddResult ensure(auto&& key, NOESCAPE const Invocable<MappedType()> auto&);
+    template<typename HashTranslator, typename K, typename V> AddResult add(K&&, V&&) LIFETIME_BOUND;
+    template<typename HashTranslator> AddResult ensure(auto&& key, NOESCAPE const Invocable<MappedType()> auto&) LIFETIME_BOUND;
 
     // Overloads for smart pointer keys that take the raw pointer type as the parameter.
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, iterator>::type find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, const_iterator>::type find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, bool>::type contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, MappedPeekType>::type inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, MappedPeekType>::type get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, bool>::type remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value, MappedTakeType>::type take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
+    template<SmartPtr K = KeyType> iterator find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) LIFETIME_BOUND;
+    template<SmartPtr K = KeyType> const_iterator find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const LIFETIME_BOUND;
+    template<SmartPtr K = KeyType> bool contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
+    template<SmartPtr K = KeyType> MappedPeekType inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
+    template<SmartPtr K = KeyType> MappedPeekType get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*) const;
+    template<SmartPtr K = KeyType> bool remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
+    template<SmartPtr K = KeyType> MappedTakeType take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>*);
 
-    // Overloads for non-nullable smart pointer values that take the raw reference type as the parameter.
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, iterator>::type find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&);
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, const_iterator>::type find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, bool>::type contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedPeekType>::type inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedPeekType>::type get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&) const;
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, bool>::type remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&);
-    template<typename K = KeyType> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedTakeType>::type take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>&);
+    // Overloads for smart pointer keys that take the raw reference type as the parameter.
+    template<SmartPtr K = KeyType> iterator find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) LIFETIME_BOUND { return find(&ref); }
+    template<SmartPtr K = KeyType> const_iterator find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) const LIFETIME_BOUND { return find(&ref); }
+    template<SmartPtr K = KeyType> bool contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) const { return contains(&ref); }
+    template<SmartPtr K = KeyType> MappedPeekType inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) const { return inlineGet(&ref); }
+    template<SmartPtr K = KeyType> MappedPeekType get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) const { return get(&ref); }
+    template<SmartPtr K = KeyType> bool remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) { return remove(&ref); }
+    template<SmartPtr K = KeyType> MappedTakeType take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& ref) { return take(&ref); }
 
     void checkConsistency() const;
 
@@ -225,13 +250,13 @@ private:
     template<typename... Items>
     void addForInitialization(KeyValuePairType&& item, Items&&... items)
     {
-        add(WTFMove(item.key), WTFMove(item.value));
+        add(WTF::move(item.key), WTF::move(item.value));
         addForInitialization(std::forward<Items>(items)...);
     }
 
     void addForInitialization(KeyValuePairType&& item)
     {
-        add(WTFMove(item.key), WTFMove(item.value));
+        add(WTF::move(item.key), WTF::move(item.value));
     }
 
     HashTableType m_impl;
@@ -281,122 +306,122 @@ struct HashMapEnsureTranslatorAdapter {
     }
 };
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline void HashMap<T, U, V, W, X, Y, shouldValidateKey>::swap(HashMap& other)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline void HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::swap(HashMap& other)
 {
     m_impl.swap(other.m_impl);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline unsigned HashMap<T, U, V, W, X, Y, shouldValidateKey>::size() const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline unsigned HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::size() const
 {
     return m_impl.size();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline unsigned HashMap<T, U, V, W, X, Y, shouldValidateKey>::capacity() const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline unsigned HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::capacity() const
 {
     return m_impl.capacity();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline size_t HashMap<T, U, V, W, X, Y, shouldValidateKey>::byteSize() const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline size_t HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::byteSize() const
 {
     return m_impl.byteSize();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::isEmpty() const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::isEmpty() const
 {
     return m_impl.isEmpty();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::begin() -> iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::begin() LIFETIME_BOUND -> iterator
 {
     return m_impl.begin();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::end() -> iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::end() LIFETIME_BOUND -> iterator
 {
     return m_impl.end();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::begin() const -> const_iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::begin() const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.begin();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::end() const -> const_iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::end() const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.end();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(const KeyType& key) -> iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(const KeyType& key) LIFETIME_BOUND -> iterator
 {
-    return m_impl.find(key);
+    return m_impl.template find<shouldValidateKey>(key);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(const KeyType& key) const -> const_iterator
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(const KeyType& key) const LIFETIME_BOUND -> const_iterator
 {
-    return m_impl.find(key);
+    return m_impl.template find<shouldValidateKey>(key);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::contains(const KeyType& key) const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::contains(const KeyType& key) const
 {
-    return m_impl.contains(key);
+    return m_impl.template contains<shouldValidateKey>(key);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(const TYPE& value) -> iterator
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(const TYPE& value) LIFETIME_BOUND -> iterator
 {
-    return m_impl.template find<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(value);
+    return m_impl.template find<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(const TYPE& value) const -> const_iterator
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(const TYPE& value) const LIFETIME_BOUND -> const_iterator
 {
-    return m_impl.template find<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(value);
+    return m_impl.template find<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::get(const TYPE& value) const -> MappedPeekType
+auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::get(const TYPE& value) const -> MappedPeekType
 {
-    auto* entry = const_cast<HashTableType&>(m_impl).template lookup<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(value);
+    auto* entry = const_cast<HashTableType&>(m_impl).template lookup<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(value);
     if (!entry)
         return MappedTraits::peek(MappedTraits::emptyValue());
     return MappedTraits::peek(entry->value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::inlineGet(const TYPE& value) const -> MappedPeekType
+auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::inlineGet(const TYPE& value) const -> MappedPeekType
 {
-    auto* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(value);
+    auto* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(value);
     if (!entry)
         return MappedTraits::peek(MappedTraits::emptyValue());
     return MappedTraits::peek(entry->value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::contains(const TYPE& value) const
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::contains(const TYPE& value) const
 {
-    return m_impl.template contains<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(value);
+    return m_impl.template contains<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename TYPE>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(const TYPE& value)
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::remove(const TYPE& value)
 {
     auto it = find<HashTranslator>(value);
     if (it == end())
@@ -405,9 +430,9 @@ inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(const TYPE& val
     return true;
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename K, typename V>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::inlineSet(K&& key, V&& value) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::inlineSet(K&& key, V&& value) -> AddResult
 {
     AddResult result = inlineAdd(std::forward<K>(key), std::forward<V>(value));
     if (!result.isNewEntry) {
@@ -417,114 +442,114 @@ auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTra
     return result;
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename K, typename V>
-ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::inlineAdd(K&& key, V&& value) -> AddResult
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::inlineAdd(K&& key, V&& value) -> AddResult
 {
-    return m_impl.template add<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
+    return m_impl.template add<HashMapTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename K>
-ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::inlineEnsure(K&& key, NOESCAPE const Invocable<MappedType()> auto& functor) -> AddResult
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::inlineEnsure(K&& key, NOESCAPE const Invocable<MappedType()> auto& functor) -> AddResult
 {
-    return m_impl.template add<HashMapEnsureTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), functor);
+    return m_impl.template add<HashMapEnsureTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(std::forward<K>(key), functor);
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::set(const KeyType& key, T&& mapped) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::set(const KeyType& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
     return inlineSet(key, std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::set(KeyType&& key, T&& mapped) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::set(KeyType&& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
-    return inlineSet(WTFMove(key), std::forward<T>(mapped));
+    return inlineSet(WTF::move(key), std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename K>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::ensure(K&& key, NOESCAPE const Invocable<MappedType()> auto& functor) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::ensure(K&& key, NOESCAPE const Invocable<MappedType()> auto& functor) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.template addPassingHashCode<HashMapEnsureTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(std::forward<K>(key), functor);
+    return m_impl.template addPassingHashCode<HashMapEnsureTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(std::forward<K>(key), functor);
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename HashTranslator, typename K, typename V>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::add(K&& key, V&& value) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::add(K&& key, V&& value) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
+    return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<KeyValuePairTraits, HashTranslator>, shouldValidateKey>(std::forward<K>(key), [&] () ALWAYS_INLINE_LAMBDA -> MappedType { return std::forward<V>(value); });
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::add(const KeyType& key, T&& mapped) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::add(const KeyType& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
     return inlineAdd(key, std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::add(KeyType&& key, T&& mapped) -> AddResult
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::add(KeyType&& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
-    return inlineAdd(WTFMove(key), std::forward<T>(mapped));
+    return inlineAdd(WTF::move(key), std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::fastAdd(const KeyType& key, T&& mapped) -> AddResult
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::fastAdd(const KeyType& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
     return inlineAdd(key, std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
 template<typename T>
-ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::fastAdd(KeyType&& key, T&& mapped) -> AddResult
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::fastAdd(KeyType&& key, T&& mapped) LIFETIME_BOUND -> AddResult
 {
-    return inlineAdd(WTFMove(key), std::forward<T>(mapped));
+    return inlineAdd(WTF::move(key), std::forward<T>(mapped));
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::ensure(const KeyType& key, NOESCAPE const Invocable<MappedType()> auto& functor) -> AddResult
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::ensure(const KeyType& key, NOESCAPE const Invocable<MappedType()> auto& functor) LIFETIME_BOUND -> AddResult
 {
     return inlineEnsure(key, functor);
 }
 
-template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
-auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey>::ensure(KeyType&& key, NOESCAPE const Invocable<MappedType()> auto& functor) -> AddResult
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg, shouldValidateKey, M>::ensure(KeyType&& key, NOESCAPE const Invocable<MappedType()> auto& functor) LIFETIME_BOUND -> AddResult
 {
     return inlineEnsure(std::forward<KeyType>(key), functor);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::get(const KeyType& key) const -> MappedPeekType
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::get(const KeyType& key) const -> MappedPeekType
 {
     return get<IdentityTranslatorType>(key);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::getOptional(const KeyType& key) const -> std::optional<MappedType>
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::getOptional(const KeyType& key) const -> std::optional<MappedType>
 {
-    auto* entry = const_cast<HashTableType&>(m_impl).template lookup<IdentityTranslatorType>(key);
+    auto* entry = const_cast<HashTableType&>(m_impl).template lookup<IdentityTranslatorType, shouldValidateKey>(key);
     if (!entry)
         return { };
     return { entry->value };
 }
 
-template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey>
-ALWAYS_INLINE auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::inlineGet(const KeyType& key) const -> MappedPeekType
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+ALWAYS_INLINE auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey, M>::inlineGet(const KeyType& key) const -> MappedPeekType
 {
-    KeyValuePairType* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<IdentityTranslatorType>(key);
+    KeyValuePairType* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<IdentityTranslatorType, shouldValidateKey>(key);
     if (!entry)
         return MappedTraits::peek(MappedTraits::emptyValue());
     return MappedTraits::peek(entry->value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(iterator it)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::remove(iterator it)
 {
     if (it.m_impl == m_impl.end())
         return false;
@@ -533,42 +558,42 @@ inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(iterator it)
     return true;
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::removeIf(NOESCAPE const Invocable<bool(KeyValuePairType&)> auto& functor)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::removeIf(NOESCAPE const Invocable<bool(KeyValuePairType&)> auto& functor)
 {
     return m_impl.removeIf(functor);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(const KeyType& key)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::remove(const KeyType& key)
 {
     return remove(find(key));
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline void HashMap<T, U, V, W, X, Y, shouldValidateKey>::clear()
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline void HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::clear()
 {
     m_impl.clear();
 }
 
-template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey>
-auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::take(const KeyType& key) -> MappedTakeType
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey, M>::take(const KeyType& key) -> MappedTakeType
 {
     return take(find(key));
 }
 
-template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey>
-auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::take(iterator it) -> MappedTakeType
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey, M>::take(iterator it) -> MappedTakeType
 {
     if (it == end())
         return MappedTraits::take(MappedTraits::emptyValue());
-    auto value = MappedTraits::take(WTFMove(it->value));
+    auto value = MappedTraits::take(WTF::move(it->value));
     remove(it);
     return value;
 }
 
-template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey>
-auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::takeOptional(const KeyType& key) -> std::optional<MappedType>
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey, M>::takeOptional(const KeyType& key) -> std::optional<MappedType>
 {
     auto it = find(key);
     if (it == end())
@@ -576,126 +601,95 @@ auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::takeOptional(const
     return take(it);
 }
 
-template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey>
-auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey>::takeFirst() -> MappedTakeType
+template<typename T, typename U, typename V, typename W, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+auto HashMap<T, U, V, W, MappedTraits, Y, shouldValidateKey, M>::takeFirst() -> MappedTakeType
 {
     return take(begin());
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) -> typename std::enable_if<IsSmartPtr<K>::value, iterator>::type
+template<typename T, typename U, typename V, typename KeyTraits, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline size_t HashMap<T, U, V, KeyTraits, MappedTraits, Y, shouldValidateKey, M>::computeSize() const requires (KeyTraits::hasIsWeakNullValueFunction)
 {
-    return m_impl.template find<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(key);
+    return m_impl.computeSize();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> typename std::enable_if<IsSmartPtr<K>::value, const_iterator>::type
+template<typename T, typename U, typename V, typename KeyTraits, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, KeyTraits, MappedTraits, Y, shouldValidateKey, M>::isEmptyIgnoringNullReferences() const requires (KeyTraits::hasIsWeakNullValueFunction)
 {
-    return m_impl.template find<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(key);
+    return m_impl.isEmptyIgnoringNullReferences();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> typename std::enable_if<IsSmartPtr<K>::value, bool>::type
+template<typename T, typename U, typename V, typename KeyTraits, typename MappedTraits, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline void HashMap<T, U, V, KeyTraits, MappedTraits, Y, shouldValidateKey, M>::removeWeakNullEntries() requires (KeyTraits::hasIsWeakNullValueFunction)
 {
-    return m_impl.template contains<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(key);
+    m_impl.removeWeakNullEntries();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> typename std::enable_if<IsSmartPtr<K>::value, MappedPeekType>::type
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) LIFETIME_BOUND -> iterator
 {
-    KeyValuePairType* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<HashMapTranslator<KeyValuePairTraits, HashFunctions>>(key);
+    return m_impl.template find<HashMapTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(key);
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const LIFETIME_BOUND -> const_iterator
+{
+    return m_impl.template find<HashMapTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(key);
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> bool
+{
+    return m_impl.template contains<HashMapTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(key);
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> MappedPeekType
+{
+    KeyValuePairType* entry = const_cast<HashTableType&>(m_impl).template inlineLookup<HashMapTranslator<KeyValuePairTraits, HashFunctions>, shouldValidateKey>(key);
     if (!entry)
         return MappedTraits::peek(MappedTraits::emptyValue());
     return MappedTraits::peek(entry->value);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> typename std::enable_if<IsSmartPtr<K>::value, MappedPeekType>::type
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) const -> MappedPeekType
 {
     return inlineGet(key);
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) -> typename std::enable_if<IsSmartPtr<K>::value, bool>::type
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) -> bool
 {
     return remove(find(key));
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) -> typename std::enable_if<IsSmartPtr<K>::value, MappedTakeType>::type
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+template<SmartPtr K>
+inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>* key) -> MappedTakeType
 {
     iterator it = find(key);
     if (it == end())
         return MappedTraits::take(MappedTraits::emptyValue());
-    auto value = MappedTraits::take(WTFMove(it->value));
+    auto value = MappedTraits::take(WTF::move(it->value));
     remove(it);
     return value;
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, iterator>::type
-{
-    return find(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) const -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, const_iterator>::type
-{
-    return find(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) const -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, bool>::type
-{
-    return contains(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::inlineGet(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) const -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedPeekType>::type
-{
-    return inlineGet(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::get(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) const -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedPeekType>::type
-{
-    return inlineGet(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, bool>::type
-{
-    return remove(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-template<typename K>
-inline auto HashMap<T, U, V, W, X, Y, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<K>::UnderlyingType>& key) -> typename std::enable_if<IsSmartPtr<K>::value && !IsSmartPtr<K>::isNullable, MappedTakeType>::type
-{
-    return take(&key);
-}
-
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline void HashMap<T, U, V, W, X, Y, shouldValidateKey>::checkConsistency() const
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline void HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::checkConsistency() const
 {
     m_impl.checkTableConsistency();
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::isValidKey(const KeyType& key)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::isValidKey(const KeyType& key)
 {
     if (KeyTraits::isDeletedValue(key))
         return false;
@@ -711,13 +705,13 @@ inline bool HashMap<T, U, V, W, X, Y, shouldValidateKey>::isValidKey(const KeyTy
     return true;
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey>
-bool operator==(const HashMap<T, U, V, W, X, Y, shouldValidateKey>& a, const HashMap<T, U, V, W, X, Y, shouldValidateKey>& b)
+template<typename T, typename U, typename V, typename W, typename X, typename Y, ShouldValidateKey shouldValidateKey, typename M>
+bool operator==(const HashMap<T, U, V, W, X, Y, shouldValidateKey, M>& a, const HashMap<T, U, V, W, X, Y, shouldValidateKey>& b)
 {
     if (a.size() != b.size())
         return false;
 
-    typedef typename HashMap<T, U, V, W, X, Y, shouldValidateKey>::const_iterator const_iterator;
+    typedef typename HashMap<T, U, V, W, X, Y, shouldValidateKey, M>::const_iterator const_iterator;
 
     const_iterator end = a.end();
     const_iterator notFound = b.end();

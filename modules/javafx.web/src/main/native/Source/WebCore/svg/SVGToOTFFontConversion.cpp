@@ -39,18 +39,11 @@
 #include "SVGPathParser.h"
 #include "SVGPathStringViewSource.h"
 #include "SVGVKernElement.h"
+#include <ranges>
+#include <wtf/CheckedRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
-
-namespace WebCore {
-class SVGToOTFFontConverter;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGToOTFFontConverter> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -63,14 +56,16 @@ static inline void append32(V& result, uint32_t value)
     result.append(value);
 }
 
-class SVGToOTFFontConverter : public CanMakeWeakPtr<SVGToOTFFontConverter> {
+class SVGToOTFFontConverter : public CanMakeCheckedPtr<SVGToOTFFontConverter> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(SVGToOTFFontConverter);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGToOTFFontConverter);
 public:
     SVGToOTFFontConverter(const SVGFontElement&);
     bool convertSVGToOTFFont();
 
     Vector<uint8_t> releaseResult()
     {
-        return WTFMove(m_result);
+        return WTF::move(m_result);
     }
 
     bool error() const
@@ -134,7 +129,7 @@ private:
         }
 
     private:
-        WeakRef<SVGToOTFFontConverter> m_converter;
+        const CheckedRef<SVGToOTFFontConverter> m_converter;
         const size_t m_baseOfOffset;
         const size_t m_location;
 #if ASSERT_ENABLED
@@ -232,9 +227,9 @@ private:
 
     Vector<char> transcodeGlyphPaths(float width, const SVGElement& glyphOrMissingGlyphElement, std::optional<FloatRect>& boundingBox) const;
 
-    void addCodepointRanges(const UnicodeRanges&, UncheckedKeyHashSet<Glyph>& glyphSet) const;
-    void addCodepoints(const UncheckedKeyHashSet<String>& codepoints, UncheckedKeyHashSet<Glyph>& glyphSet) const;
-    void addGlyphNames(const UncheckedKeyHashSet<String>& glyphNames, UncheckedKeyHashSet<Glyph>& glyphSet) const;
+    void addCodepointRanges(const UnicodeRanges&, HashSet<Glyph>& glyphSet) const;
+    void addCodepoints(const HashSet<String>& codepoints, HashSet<Glyph>& glyphSet) const;
+    void addGlyphNames(const HashSet<String>& glyphNames, HashSet<Glyph>& glyphSet) const;
     void addKerningPair(Vector<KerningData>&, SVGKerningPair&&) const;
     template<typename T> size_t appendKERNSubtable(std::optional<SVGKerningPair> (T::*buildKerningPair)() const, uint16_t coverage);
     size_t finishAppendingKERNSubtable(Vector<KerningData>, uint16_t coverage);
@@ -253,8 +248,8 @@ private:
     Ref<const SVGFontElement> protectedFontElement() const { return m_fontElement.get(); }
 
     Vector<GlyphData> m_glyphs;
-    UncheckedKeyHashMap<String, Glyph> m_glyphNameToIndexMap; // SVG 1.1: "It is recommended that glyph names be unique within a font."
-    UncheckedKeyHashMap<String, Vector<Glyph, 1>> m_codepointsToIndicesMap;
+    HashMap<String, Glyph> m_glyphNameToIndexMap; // SVG 1.1: "It is recommended that glyph names be unique within a font."
+    HashMap<String, Vector<Glyph, 1>> m_codepointsToIndicesMap;
     Vector<uint8_t> m_result;
     Vector<char, 17> m_emptyGlyphCharString;
     FloatRect m_boundingBox;
@@ -754,7 +749,7 @@ void SVGToOTFFontConverter::appendLigatureSubtable(size_t subtableRecordLocation
     }
     if (ligaturePairs.size() > std::numeric_limits<uint16_t>::max())
         ligaturePairs.clear();
-    std::sort(ligaturePairs.begin(), ligaturePairs.end(), [](auto& lhs, auto& rhs) {
+    std::ranges::sort(ligaturePairs, [](auto& lhs, auto& rhs) {
         return lhs.first[0] < rhs.first[0];
     });
     Vector<size_t> overlappingFirstGlyphSegmentLengths;
@@ -1006,11 +1001,11 @@ void SVGToOTFFontConverter::appendVMTXTable()
 
 static String codepointToString(char32_t codepoint)
 {
-    std::array<UChar, 2> buffer;
+    std::array<char16_t, 2> buffer;
     uint8_t length = 0;
     UBool error = false;
     U16_APPEND(buffer, length, 2, codepoint, error);
-    return error ? String() : String(std::span<UChar> { buffer }.first(length));
+    return error ? String() : String(std::span<char16_t> { buffer }.first(length));
 }
 
 Vector<Glyph, 1> SVGToOTFFontConverter::glyphsForCodepoint(char32_t codepoint) const
@@ -1018,7 +1013,7 @@ Vector<Glyph, 1> SVGToOTFFontConverter::glyphsForCodepoint(char32_t codepoint) c
     return m_codepointsToIndicesMap.get(codepointToString(codepoint));
 }
 
-void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRanges, UncheckedKeyHashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRanges, HashSet<Glyph>& glyphSet) const
 {
     for (auto& unicodeRange : unicodeRanges) {
         for (auto codepoint = unicodeRange.first; codepoint <= unicodeRange.second; ++codepoint) {
@@ -1028,7 +1023,7 @@ void SVGToOTFFontConverter::addCodepointRanges(const UnicodeRanges& unicodeRange
     }
 }
 
-void SVGToOTFFontConverter::addCodepoints(const UncheckedKeyHashSet<String>& codepoints, UncheckedKeyHashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addCodepoints(const HashSet<String>& codepoints, HashSet<Glyph>& glyphSet) const
 {
     for (auto& codepointString : codepoints) {
         for (auto index : m_codepointsToIndicesMap.get(codepointString))
@@ -1036,7 +1031,7 @@ void SVGToOTFFontConverter::addCodepoints(const UncheckedKeyHashSet<String>& cod
     }
 }
 
-void SVGToOTFFontConverter::addGlyphNames(const UncheckedKeyHashSet<String>& glyphNames, UncheckedKeyHashSet<Glyph>& glyphSet) const
+void SVGToOTFFontConverter::addGlyphNames(const HashSet<String>& glyphNames, HashSet<Glyph>& glyphSet) const
 {
     for (auto& glyphName : glyphNames) {
         if (Glyph glyph = m_glyphNameToIndexMap.get(glyphName))
@@ -1046,8 +1041,8 @@ void SVGToOTFFontConverter::addGlyphNames(const UncheckedKeyHashSet<String>& gly
 
 void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, SVGKerningPair&& kerningPair) const
 {
-    UncheckedKeyHashSet<Glyph> glyphSet1;
-    UncheckedKeyHashSet<Glyph> glyphSet2;
+    HashSet<Glyph> glyphSet1;
+    HashSet<Glyph> glyphSet2;
 
     addCodepointRanges(kerningPair.unicodeRange1, glyphSet1);
     addCodepointRanges(kerningPair.unicodeRange2, glyphSet2);
@@ -1066,16 +1061,16 @@ void SVGToOTFFontConverter::addKerningPair(Vector<KerningData>& data, SVGKerning
 template<typename T> inline size_t SVGToOTFFontConverter::appendKERNSubtable(std::optional<SVGKerningPair> (T::*buildKerningPair)() const, uint16_t coverage)
 {
     Vector<KerningData> kerningData;
-    for (auto& element : childrenOfType<T>(protectedFontElement())) {
-        if (auto kerningPair = (element.*buildKerningPair)())
-            addKerningPair(kerningData, WTFMove(*kerningPair));
+    for (Ref element : childrenOfType<T>(protectedFontElement())) {
+        if (auto kerningPair = (element.get().*buildKerningPair)())
+            addKerningPair(kerningData, WTF::move(*kerningPair));
     }
-    return finishAppendingKERNSubtable(WTFMove(kerningData), coverage);
+    return finishAppendingKERNSubtable(WTF::move(kerningData), coverage);
 }
 
 size_t SVGToOTFFontConverter::finishAppendingKERNSubtable(Vector<KerningData> kerningData, uint16_t coverage)
 {
-    std::sort(kerningData.begin(), kerningData.end(), [](auto& a, auto& b) {
+    std::ranges::sort(kerningData, [](auto& a, auto& b) {
         return a.glyph1 < b.glyph1 || (a.glyph1 == b.glyph1 && a.glyph2 < b.glyph2);
     });
 
@@ -1302,13 +1297,13 @@ void SVGToOTFFontConverter::processGlyphElement(const SVGElement& glyphOrMissing
     if (glyphBoundingBox)
         m_minRightSideBearing = std::min(m_minRightSideBearing, horizontalAdvance - glyphBoundingBox.value().maxX());
 
-    m_glyphs.append(GlyphData(WTFMove(path), glyphElement, horizontalAdvance, verticalAdvance, valueOrDefault(glyphBoundingBox), codepoints));
+    m_glyphs.append(GlyphData(WTF::move(path), glyphElement, horizontalAdvance, verticalAdvance, valueOrDefault(glyphBoundingBox), codepoints));
 }
 
 void SVGToOTFFontConverter::appendLigatureGlyphs()
 {
-    UncheckedKeyHashSet<uint32_t> ligatureCodepoints;
-    UncheckedKeyHashSet<uint32_t> nonLigatureCodepoints;
+    HashSet<uint32_t> ligatureCodepoints;
+    HashSet<uint32_t> nonLigatureCodepoints;
     for (auto& glyph : m_glyphs) {
         auto codePoints = StringView(glyph.codepoints).codePoints();
         auto codePointsIterator = codePoints.begin();
@@ -1395,7 +1390,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         m_xHeight = scaleUnitsPerEm(m_fontFaceElement->xHeight());
         m_capHeight = scaleUnitsPerEm(m_fontFaceElement->capHeight());
 
-        // Some platforms, including OS X, use 0 ascent and descent to mean that the platform should synthesize
+        // Some platforms, including macOS, use 0 ascent and descent to mean that the platform should synthesize
         // a value based on a heuristic. However, SVG fonts can legitimately have 0 for ascent or descent.
         // Specifing a single FUnit gets us as close to 0 as we can without triggering the synthesis.
         if (!m_ascent)
@@ -1419,10 +1414,10 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         boundingBox = FloatRect(0, 0, s_outputUnitsPerEm, s_outputUnitsPerEm);
     }
 
-    for (auto& glyphElement : childrenOfType<SVGGlyphElement>(protectedFontElement())) {
-        auto& unicodeAttribute = glyphElement.attributeWithoutSynchronization(SVGNames::unicodeAttr);
+    for (Ref glyphElement : childrenOfType<SVGGlyphElement>(protectedFontElement())) {
+        auto& unicodeAttribute = glyphElement->attributeWithoutSynchronization(SVGNames::unicodeAttr);
         if (!unicodeAttribute.isEmpty()) // If we can never actually trigger this glyph, ignore it completely
-            processGlyphElement(glyphElement, &glyphElement, defaultHorizontalAdvance, defaultVerticalAdvance, unicodeAttribute, boundingBox);
+            processGlyphElement(glyphElement.get(), glyphElement.ptr(), defaultHorizontalAdvance, defaultVerticalAdvance, unicodeAttribute, boundingBox);
     }
 
     m_boundingBox = valueOrDefault(boundingBox);
@@ -1434,7 +1429,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         return;
     }
 
-    std::sort(m_glyphs.begin(), m_glyphs.end(), &compareCodepointsLexicographically);
+    std::ranges::sort(m_glyphs, &compareCodepointsLexicographically);
 
     for (Glyph i = 0; i < m_glyphs.size(); ++i) {
         GlyphData& glyph = m_glyphs[i];
@@ -1565,12 +1560,12 @@ bool SVGToOTFFontConverter::convertSVGToOTFFont()
 
 std::optional<Vector<uint8_t>> convertSVGToOTFFont(const SVGFontElement& element)
 {
-    SVGToOTFFontConverter converter(element);
-    if (converter.error())
+    auto converter = makeUnique<SVGToOTFFontConverter>(element);
+    if (converter->error())
         return std::nullopt;
-    if (!converter.convertSVGToOTFFont())
+    if (!converter->convertSVGToOTFFont())
         return std::nullopt;
-    return converter.releaseResult();
+    return converter->releaseResult();
 }
 
 }

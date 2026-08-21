@@ -28,6 +28,17 @@
 #if ENABLE(B3_JIT)
 
 #include <wtf/PrintStream.h>
+#include <wtf/TaggedPtr.h>
+#include <wtf/ValidatedReinterpretCast.h>
+
+namespace JSC::Wasm {
+class WasmOrigin;
+class OpcodeOrigin;
+}
+
+namespace JSC::DFG {
+struct Node;
+}
 
 namespace JSC { namespace B3 {
 
@@ -37,22 +48,60 @@ namespace JSC { namespace B3 {
 // either drops Origins or lies about them.
 class Origin {
 public:
-    explicit Origin(const void* data = nullptr)
-        : m_data(data)
+    enum OriginType : uint8_t {
+        InvalidTag,
+        DFGOriginPtr,
+        WasmOriginPtr,
+        PackedWasmOrigin,
+    };
+
+    explicit Origin(const Wasm::WasmOrigin* data)
+        : m_data(data, WasmOriginPtr)
     {
     }
 
-    explicit operator bool() const { return !!m_data; }
+    explicit Origin(const DFG::Node* data)
+        : m_data(data, DFGOriginPtr)
+    {
+    }
 
-    const void* data() const { return m_data; }
+    explicit Origin()
+        : m_data(nullptr)
+    { }
 
-    friend bool operator==(const Origin&, const Origin&) = default;
+    explicit operator bool() const { return !!m_data.bits(); }
+
+    bool isDFGOrigin() const { return !m_data.bits() || m_data.tag() == DFGOriginPtr; }
+    bool isWasmOrigin() const { return !m_data.bits() || m_data.tag() == WasmOriginPtr; }
+    bool isPackedWasmOrigin() const { return !m_data.bits() || m_data.tag() == PackedWasmOrigin; }
+
+    Wasm::WasmOrigin* wasmOrigin() const
+    {
+        ASSERT(isWasmOrigin());
+        return VALIDATED_REINTERPRET_CAST("WasmOrigin", Wasm::WasmOrigin, m_data.ptr());
+    }
+
+    DFG::Node* dfgOrigin() const
+    {
+        ASSERT(isDFGOrigin());
+        return std::bit_cast<DFG::Node*>(m_data.ptr());
+    }
+
+    const Wasm::WasmOrigin* maybeWasmOrigin() const { return isWasmOrigin() ? wasmOrigin() : nullptr; }
 
     // You should avoid using this. Use OriginDump instead.
     void dump(PrintStream&) const;
 
 private:
-    const void* m_data;
+
+    // See WasmOpcodeOrigin for packing details.
+    explicit Origin(uint64_t data)
+        : m_data(data, PackedWasmOrigin)
+    {
+    }
+
+    WTF::TaggedBits60 m_data;
+    friend class Wasm::OpcodeOrigin;
 };
 
 } } // namespace JSC::B3

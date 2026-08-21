@@ -47,11 +47,13 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
@@ -170,8 +172,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     // Fix for the regression noted in a comment in JDK-8115009.
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
+                    if (Utils.dispatchToNode(ke, textField)) {
+                        ke.consume();
+                    }
                 }
             }
         });
@@ -361,7 +364,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 // end of fix
             } else {
                 String stringValue = c.toString(value);
-                if (value == null || stringValue == null) {
+                if (stringValue == null) {
                     textField.setText("");
                 } else if (! stringValue.equals(textField.getText())) {
                     textField.setText(stringValue);
@@ -443,7 +446,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
 
         final Node popupContent = getPopupContent();
-        sizePopup();
+        sizePopup(true);
 
         Point2D p = getPrefPopupPosition();
 
@@ -458,10 +461,10 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         // second call to sizePopup here to enable proper sizing _after_ the popup
         // has been displayed. See JDK-8095352 for more detail.
-        sizePopup();
+        sizePopup(false);
     }
 
-    private void sizePopup() {
+    private void sizePopup(boolean first) {
         final Node popupContent = getPopupContent();
 
         if (popupContent instanceof Region) {
@@ -480,6 +483,19 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             double w = snapSizeX(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
             popupContent.resize(w, h);
+
+            // Take into account whether the popup was autofixed for JDK-8338145
+            // If it was, we might need to adjust the position
+            // to retain the relative position to the combo box itself
+            if (!first) {
+                double topY = getSkinnable().localToScreen(0, 0).getY();
+                // The popup does not directly store information on whether it was autofixed
+                // We can determine this by looking whether it was moved upward
+                boolean wasAutofixed = popup.getY() < topY;
+                if (wasAutofixed) {
+                    popup.setY(topY - h);
+                }
+            }
         } else {
             popupContent.autosize();
         }
@@ -593,7 +609,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
             } else if (textField != null) {
-                textField.fireEvent(ke);
+                Utils.dispatchToNode(ke, textField);
             }
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // JDK-8115456: The TextField fires F10 and ESCAPE key events

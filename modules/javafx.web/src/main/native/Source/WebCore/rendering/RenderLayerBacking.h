@@ -25,24 +25,31 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatPoint3D.h"
-#include "GraphicsLayer.h"
-#include "GraphicsLayerClient.h"
-#include "RenderLayer.h"
-#include "RenderLayerCompositor.h"
-#include "ScrollingCoordinator.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatPoint3D.h>
+#include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/GraphicsLayerEnums.h>
+#include <WebCore/RenderLayer.h>
+#include <WebCore/RenderLayerCompositor.h>
+#include <WebCore/ScrollingCoordinator.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
 
 class BlendingKeyframes;
+class GraphicsLayer;
+class GraphicsLayerAnimation;
 class PaintedContentsInfo;
 class RegionContext;
 class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
+
+#if ENABLE(THREADED_ANIMATIONS)
+class AcceleratedTimeline;
+#endif
 
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
@@ -50,6 +57,10 @@ enum CompositingLayerType {
     MediaCompositingLayer, // layer that contains an image, video, WebGL or plugin
     ContainerCompositingLayer // layer with no backing store
 };
+
+namespace DisplayList {
+enum class AsTextFlag : uint8_t;
+}
 
 // RenderLayerBacking controls the compositing behavior for a single RenderLayer.
 // It holds the various GraphicsLayers, and makes decisions about intra-layer rendering
@@ -65,18 +76,18 @@ public:
     ~RenderLayerBacking();
 
     // Do cleanup while layer->backing() is still valid.
-    void willBeDestroyed();
+    void willBeDestroyed(OptionSet<UpdateBackingSharingFlags>);
 
     RenderLayer& owningLayer() const { return m_owningLayer; }
 
     // Included layers are non-z-order descendant layers that are painted into this backing.
-    const SingleThreadWeakListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
-    void setBackingSharingLayers(SingleThreadWeakListHashSet<RenderLayer>&&);
+    const InlineWeakKeyListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
+    void setBackingSharingLayers(InlineWeakKeyListHashSet<RenderLayer>&&);
 
     bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmptyIgnoringNullReferences(); }
 
-    void removeBackingSharingLayer(RenderLayer&);
-    void clearBackingSharingLayers();
+    void removeBackingSharingLayer(RenderLayer&, OptionSet<UpdateBackingSharingFlags>);
+    void clearBackingSharingLayers(OptionSet<UpdateBackingSharingFlags>);
 
     void updateConfigurationAfterStyleChange();
 
@@ -109,6 +120,7 @@ public:
 
     GraphicsLayer* contentsContainmentLayer() const { return m_contentsContainmentLayer.get(); }
     GraphicsLayer* viewportAnchorLayer() const { return m_viewportAnchorLayer.get(); }
+    GraphicsLayer* viewportClippingOrAnchorLayer() const { return m_viewportClippingLayer.get() ?: viewportAnchorLayer(); }
 
     GraphicsLayer* foregroundLayer() const { return m_foregroundLayer.get(); }
     GraphicsLayer* backgroundLayer() const { return m_backgroundLayer.get(); }
@@ -150,7 +162,7 @@ public:
 
     bool hasMaskLayer() const { return m_maskLayer; }
 
-    GraphicsLayer* parentForSublayers() const;
+    WEBCORE_EXPORT GraphicsLayer* parentForSublayers() const;
     GraphicsLayer* childForSuperlayers() const;
     GraphicsLayer* childForSuperlayersExcludingViewTransitions() const;
 
@@ -168,23 +180,23 @@ public:
 
     void setRequiresOwnBackingStore(bool);
 
-    void setContentsNeedDisplay(GraphicsLayer::ShouldClipToLayer = GraphicsLayer::ClipToLayer);
+    void setContentsNeedDisplay(GraphicsLayerShouldClipToLayer = GraphicsLayerShouldClipToLayer::Clip);
     // r is in the coordinate space of the layer's render object
-    void setContentsNeedDisplayInRect(const LayoutRect&, GraphicsLayer::ShouldClipToLayer = GraphicsLayer::ClipToLayer);
+    void setContentsNeedDisplayInRect(const LayoutRect&, GraphicsLayerShouldClipToLayer = GraphicsLayerShouldClipToLayer::Clip);
 
     // Notification from the renderer that its content changed.
-    void contentChanged(ContentChangeType);
+    void contentChanged(ContentChangeType, const std::optional<FloatRect>&);
 
     // Interface to start, finish, suspend and resume animations
-    bool startAnimation(double timeOffset, const Animation&, const BlendingKeyframes&);
+    bool startAnimation(double timeOffset, const GraphicsLayerAnimation&, const BlendingKeyframes&);
     void animationPaused(double timeOffset, const String& name);
     void animationFinished(const String& name);
     void transformRelatedPropertyDidChange();
     void suspendAnimations(MonotonicTime = MonotonicTime());
     void resumeAnimations();
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    bool updateAcceleratedEffectsAndBaseValues();
+#if ENABLE(THREADED_ANIMATIONS)
+    void updateAcceleratedEffectsAndBaseValues(HashSet<Ref<AcceleratedTimeline>>&);
 #endif
 
     WEBCORE_EXPORT LayoutRect compositedBounds() const;
@@ -228,7 +240,7 @@ public:
     void notifyFlushRequired(const GraphicsLayer*) override;
     void notifySubsequentFlushRequired(const GraphicsLayer*) override;
 
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
+    void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -241,6 +253,8 @@ public:
 
     float pageScaleFactor() const override;
     float zoomedOutPageScaleFactor() const override;
+
+    FloatSize enclosingFrameViewVisibleSize() const override;
 
     void didChangePlatformLayerForLayer(const GraphicsLayer*) override;
     bool getCurrentTransform(const GraphicsLayer*, TransformationMatrix&) const override;
@@ -256,6 +270,8 @@ public:
     bool cssUnprefixedBackdropFilterEnabled() const override;
     void logFilledVisibleFreshTile(unsigned) override;
     bool needsPixelAligment() const override { return !m_isMainFrameRenderViewLayer; }
+
+    OptionSet<ContentsFormat> screenContentsFormats() const override;
 
     LayoutSize subpixelOffsetFromRenderer() const { return m_subpixelOffsetFromRenderer; }
 
@@ -315,17 +331,19 @@ private:
 
     LayoutRect compositedBoundsIncludingMargin() const;
 
-    Ref<GraphicsLayer> createGraphicsLayer(const String&, GraphicsLayer::Type = GraphicsLayer::Type::Normal);
+    Ref<GraphicsLayer> createGraphicsLayer(const String&, GraphicsLayerType = GraphicsLayerType::Normal);
 
     RenderLayerModelObject& renderer() const { return m_owningLayer.renderer(); }
     RenderBox* renderBox() const { return m_owningLayer.renderBox(); }
     RenderLayerCompositor& compositor() const { return m_owningLayer.compositor(); }
 
     void updateInternalHierarchy();
-    bool updateViewportConstrainedAnchorLayer(bool needsAnchorLayer);
+    bool updateViewportConstrainedSublayers(ViewportConstrainedSublayers);
     bool updateAncestorClipping(bool needsAncestorClip, const RenderLayer* compositingAncestor);
     bool updateDescendantClippingLayer(bool needsDescendantClip);
     bool updateOverflowControlsLayers(bool needsHorizontalScrollbarLayer, bool needsVerticalScrollbarLayer, bool needsScrollCornerLayer);
+    void clearAncestorClippingStack();
+    void clearOverflowControlsLayers();
     bool updateForegroundLayer(bool needsForegroundLayer);
     bool updateBackgroundLayer(bool needsBackgroundLayer);
     bool updateMaskingLayer(bool hasMask, bool hasClipPath);
@@ -393,7 +411,7 @@ private:
     bool isUnscaledBitmapOnly() const;
     bool isBitmapOnly() const;
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    bool isReplacedElementWithHDR() const;
+    bool rendererHasHDRContent() const;
 #endif
 
     void updateDirectlyCompositedBoxDecorations(PaintedContentsInfo&, bool& didUpdateContentsRect);
@@ -425,10 +443,12 @@ private:
 
     bool shouldSetContentsDisplayDelegate() const;
 
+    void setNeedsFixedContainerEdgesUpdateIfNeeded();
+
     RenderLayer& m_owningLayer;
 
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
-    SingleThreadWeakListHashSet<RenderLayer> m_backingSharingLayers;
+    InlineWeakKeyListHashSet<RenderLayer> m_backingSharingLayers;
 
     std::unique_ptr<LayerAncestorClippingStack> m_ancestorClippingStack; // Only used if we are clipped by an ancestor which is not a stacking context.
     std::unique_ptr<LayerAncestorClippingStack> m_overflowControlsHostLayerAncestorClippingStack; // Used when we have an overflow controls host layer which was reparented, and needs clipping by ancestors.
@@ -438,6 +458,7 @@ private:
     RefPtr<GraphicsLayer> m_foregroundLayer; // Only used in cases where we need to draw the foreground separately.
     RefPtr<GraphicsLayer> m_backgroundLayer; // Only used in cases where we need to draw the background separately.
     RefPtr<GraphicsLayer> m_childContainmentLayer; // Only used if we have clipping on a stacking context with compositing children, or if the layer has a tile cache.
+    RefPtr<GraphicsLayer> m_viewportClippingLayer; // Only used on fixed/sticky elements. Contains the viewport anchor layer.
     RefPtr<GraphicsLayer> m_viewportAnchorLayer; // Only used on fixed/sticky elements.
     RefPtr<GraphicsLayer> m_maskLayer; // Only used if we have a mask and/or clip-path.
     RefPtr<GraphicsLayer> m_transformFlatteningLayer;

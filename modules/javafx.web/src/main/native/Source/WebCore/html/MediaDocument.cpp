@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,11 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSettingsValues.h"
+#include "DocumentView.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
@@ -51,12 +55,13 @@
 #include "ScriptController.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaDocument);
 
 using namespace HTMLNames;
 
@@ -122,7 +127,7 @@ void MediaDocumentParser::createDocumentStructure()
         return;
 
     frame->loader().protectedActiveDocumentLoader()->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
-    frame->protectedLoader()->setOutgoingReferrer(document->completeURL(m_outgoingReferrer));
+    frame->loader().setOutgoingReferrer(document->completeURL(m_outgoingReferrer));
 }
 
 void MediaDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
@@ -169,7 +174,7 @@ void MediaDocument::replaceMediaElementTimerFired()
     htmlBody->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 
     if (RefPtr videoElement = descendantVideoElement(*htmlBody)) {
-        auto embedElement = HTMLEmbedElement::create(*this);
+        Ref embedElement = HTMLEmbedElement::create(*this);
 
         embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
         embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
@@ -180,7 +185,7 @@ void MediaDocument::replaceMediaElementTimerFired()
         if (RefPtr loader = this->loader())
             embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
-        videoElement->parentNode()->replaceChild(embedElement, *videoElement);
+        videoElement->protectedParentNode()->replaceChild(embedElement, *videoElement);
     }
 }
 

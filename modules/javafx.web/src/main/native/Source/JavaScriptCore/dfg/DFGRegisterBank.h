@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,7 +89,7 @@ public:
     {
     }
 
-    // Attempt to allocate a register - this function finds an unlocked
+    // Attempt to allocate a register - this function finds an unlocked unnamed
     // register, locks it, and returns it. If none can be found, this
     // returns -1 (InvalidGPRReg or InvalidFPRReg).
     RegID tryAllocate()
@@ -105,7 +105,7 @@ public:
     }
 
     // Allocate a register - this function finds an unlocked register,
-    // locks it, and returns it. If any named registers exist, one
+    // locks it, and returns it. If any unnamed registers exist, one
     // of these should be selected to be allocated. If all unlocked
     // registers are named, then one of the named registers will need
     // to be spilled. In this case the register selected to be spilled
@@ -115,26 +115,21 @@ public:
     // This method select the register to be allocated, and calls the
     // private 'allocateInternal' method to update internal data
     // structures accordingly.
-    RegID allocate(VirtualRegister &spillMe)
+    RegID allocate(VirtualRegister& spillMe)
     {
         uint32_t currentLowest = NUM_REGS;
         SpillHint currentSpillOrder = SpillHintInvalid;
 
-        // This loop is broken into two halves, looping from the last allocated
-        // register (the register returned last time this method was called) to
-        // the maximum register value, then from 0 to the last allocated.
-        // This implements a simple round-robin like approach to try to reduce
-        // thrash, and minimize time spent scanning locked registers in allocation.
         // If a unlocked and unnamed register is found return it immediately.
         // Otherwise, find the first unlocked register with the lowest spillOrder.
         for (uint32_t i = 0 ; i < NUM_REGS; ++i) {
-            // (1) If the current register is locked, it is not a candidate.
             if (m_data[i].lockCount)
                 continue;
-            // (2) If the current register's spill order is 0, pick this! – unassigned registers have spill order 0.
             SpillHint spillOrder = m_data[i].spillOrder;
-            if (spillOrder == SpillHintInvalid)
+            if (spillOrder == SpillHintInvalid) {
+                ASSERT(!m_data[i].name.isValid());
                 return allocateInternal(i, spillMe);
+            }
             // If this register is better (has a lower spill order value) than any prior
             // candidate, then record it.
             if (spillOrder < currentSpillOrder) {
@@ -337,8 +332,7 @@ private:
         m_data[index].spillOrder = SpillHintInvalid;
     }
 
-    // Used by 'allocate', above, to update inforamtion in the map.
-    RegID allocateInternal(uint32_t i, VirtualRegister &spillMe)
+    RegID allocateInternal(uint32_t i, VirtualRegister& spillMe)
     {
         // 'i' must be a valid, unlocked register.
         ASSERT(i < NUM_REGS && !m_data[i].lockCount);

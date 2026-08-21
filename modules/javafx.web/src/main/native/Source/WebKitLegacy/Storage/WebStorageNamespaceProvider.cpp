@@ -27,6 +27,7 @@
 
 #include "StorageNamespaceImpl.h"
 #include <WebCore/Page.h>
+#include <WebCore/StorageMap.h>
 #include <wtf/NeverDestroyed.h>
 
 using namespace WebCore;
@@ -146,7 +147,7 @@ void WebStorageNamespaceProvider::cloneSessionStorageNamespaceForPage(WebCore::P
 
     auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProvider&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
     ASSERT(!dstSessionStorageNamespaces.contains(dstPage));
-    dstSessionStorageNamespaces.set(dstPage, WTFMove(dstPageSessionStorageNamespaces));
+    dstSessionStorageNamespaces.set(dstPage, WTF::move(dstPageSessionStorageNamespaces));
 }
 
 }

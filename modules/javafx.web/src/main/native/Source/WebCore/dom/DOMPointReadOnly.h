@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,25 +31,29 @@
 #pragma once
 
 #include "DOMPointInit.h"
-#include "ExceptionOr.h"
 #include "FloatPoint3D.h"
+#include "PlatformExportMacros.h"
 #include "ScriptWrappable.h"
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-struct DOMMatrixInit;
 class DOMPoint;
 class WebCoreOpaqueRoot;
+struct DOMMatrixInit;
+template<typename> class ExceptionOr;
 
-class DOMPointReadOnly : public ScriptWrappable, public RefCounted<DOMPointReadOnly> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(DOMPointReadOnly, WEBCORE_EXPORT);
+class DOMPointReadOnly : public ScriptWrappable, public RefCounted<DOMPointReadOnly>, public NoVirtualDestructorBase {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DOMPointReadOnly, WEBCORE_EXPORT);
 public:
     static Ref<DOMPointReadOnly> create(double x, double y, double z, double w) { return adoptRef(*new DOMPointReadOnly(x, y, z, w)); }
     static Ref<DOMPointReadOnly> create(const DOMPointInit& init) { return create(init.x, init.y, init.z, init.w); }
     static Ref<DOMPointReadOnly> fromPoint(const DOMPointInit& init) { return create(init.x, init.y, init.z, init.w); }
     static Ref<DOMPointReadOnly> fromFloatPoint(const FloatPoint3D& p) { return create(p.x(), p.y(), p.z(), 1); }
+
+    WEBCORE_EXPORT ~DOMPointReadOnly();
 
     double x() const { return m_x; }
     double y() const { return m_y; }

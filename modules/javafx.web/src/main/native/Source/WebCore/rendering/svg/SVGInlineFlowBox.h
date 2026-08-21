@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,7 +28,7 @@ namespace WebCore {
 class RenderSVGInlineText;
 
 class SVGInlineFlowBox final : public LegacyInlineFlowBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGInlineFlowBox);
+    WTF_MAKE_TZONE_ALLOCATED(SVGInlineFlowBox);
 public:
     SVGInlineFlowBox(RenderSVGInline& renderer)
         : LegacyInlineFlowBox(renderer)

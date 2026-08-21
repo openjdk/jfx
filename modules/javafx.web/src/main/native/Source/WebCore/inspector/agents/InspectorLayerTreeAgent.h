@@ -32,6 +32,7 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/InlineWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/text/WTFString.h>
@@ -53,7 +54,7 @@ public:
     ~InspectorLayerTreeAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // LayerTreeBackendDispatcherHandler
@@ -61,6 +62,7 @@ public:
     Inspector::Protocol::ErrorStringOr<void> disable();
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::LayerTree::Layer>>> layersForNode(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::LayerTree::CompositingReasons>> reasonsForCompositingLayer(const Inspector::Protocol::LayerTree::LayerId&);
+    Inspector::CommandResult<String> requestContent(const Inspector::Protocol::LayerTree::LayerId&);
 
     // InspectorInstrumentation
     void layerTreeDidChange();
@@ -84,11 +86,11 @@ private:
     String bindPseudoElement(PseudoElement*);
     void unbindPseudoElement(PseudoElement*);
 
-    std::unique_ptr<Inspector::LayerTreeFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::LayerTreeBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::LayerTreeFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::LayerTreeBackendDispatcher> m_backendDispatcher;
 
     HashMap<const RenderLayer*, Inspector::Protocol::LayerTree::LayerId> m_documentLayerToIdMap;
-    HashMap<Inspector::Protocol::LayerTree::LayerId, const RenderLayer*> m_idToLayer;
+    HashMap<Inspector::Protocol::LayerTree::LayerId, InlineWeakPtr<const RenderLayer>> m_idToLayer;
 
     WeakHashMap<PseudoElement, Inspector::Protocol::LayerTree::PseudoElementId, WeakPtrImplWithEventTargetData> m_pseudoElementToIdMap;
     HashMap<Inspector::Protocol::LayerTree::PseudoElementId, WeakPtr<PseudoElement, WeakPtrImplWithEventTargetData>> m_idToPseudoElement;

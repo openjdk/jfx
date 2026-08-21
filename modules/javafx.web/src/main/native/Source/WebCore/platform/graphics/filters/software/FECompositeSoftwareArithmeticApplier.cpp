@@ -131,7 +131,7 @@ inline void FECompositeSoftwareArithmeticApplier::applyPlatform(std::span<unsign
     }
 }
 
-bool FECompositeSoftwareArithmeticApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeSoftwareArithmeticApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
     Ref input2 = inputs[1];
@@ -140,12 +140,12 @@ bool FECompositeSoftwareArithmeticApplier::apply(const Filter&, const FilterImag
     if (!destinationPixelBuffer)
         return false;
 
-    IntRect effectADrawingRect = result.absoluteImageRectRelativeTo(input);
+    IntRect effectADrawingRect = result.absoluteImageRectRelativeTo(input.get());
     auto sourcePixelBuffer = input->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
-    IntRect effectBDrawingRect = result.absoluteImageRectRelativeTo(input2);
+    IntRect effectBDrawingRect = result.absoluteImageRectRelativeTo(input2.get());
     input2->copyPixelBuffer(*destinationPixelBuffer, effectBDrawingRect);
 
     auto sourcePixelBytes = sourcePixelBuffer->bytes();

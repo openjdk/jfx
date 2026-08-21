@@ -24,26 +24,26 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VectorTraits.h>
 
 namespace WTF {
 
-// MARK: - Utility concepts/traits for std::variant.
+// MARK: - Utility concepts/traits for Variant.
 
 template<typename>       struct VariantAllAlternativesCanCopyWithMemcpyHelper;
-template<typename... Ts> struct VariantAllAlternativesCanCopyWithMemcpyHelper<std::variant<Ts...>> : std::integral_constant<bool, all<VectorTraits<Ts>::canCopyWithMemcpy...>> { };
+template<typename... Ts> struct VariantAllAlternativesCanCopyWithMemcpyHelper<Variant<Ts...>> : std::integral_constant<bool, all<VectorTraits<Ts>::canCopyWithMemcpy...>> { };
 template<typename V>     concept VariantAllAlternativesCanCopyWithMemcpy = VariantAllAlternativesCanCopyWithMemcpyHelper<V>::value;
 
 template<typename>       struct VariantAllAlternativesCanMoveWithMemcpyHelper;
-template<typename... Ts> struct VariantAllAlternativesCanMoveWithMemcpyHelper<std::variant<Ts...>> : std::integral_constant<bool, all<VectorTraits<Ts>::canMoveWithMemcpy...>> { };
+template<typename... Ts> struct VariantAllAlternativesCanMoveWithMemcpyHelper<Variant<Ts...>> : std::integral_constant<bool, all<VectorTraits<Ts>::canMoveWithMemcpy...>> { };
 template<typename V>     concept VariantAllAlternativesCanMoveWithMemcpy = VariantAllAlternativesCanMoveWithMemcpyHelper<V>::value;
 
-// MARK: - Best match for std::variant construction.
+// MARK: - Best match for Variant construction.
 
-// `VariantBestMatch` picks the type `T` from `Ts...` in `std::variant<Ts...>` that will be used when the
-// `std::variant<Ts...>` is constructed from type `Arg`. Implementation based off of libc++.
+// `VariantBestMatch` picks the type `T` from `Ts...` in `Variant<Ts...>` that will be used when the
+// `Variant<Ts...>` is constructed from type `Arg`. Implementation based off of libc++.
 
 struct VariantNoNarrowingCheck {
     template<typename D, typename S> using apply = std::type_identity_t<D>;
@@ -68,16 +68,16 @@ template<typename... Ts> using VariantMakeOverloads = typename VariantMakeOverlo
 template<typename T, typename... Ts> using VariantBestMatchImpl = typename std::invoke_result_t<VariantMakeOverloads<Ts...>, T, T>;
 
 template<typename V, typename Arg>     struct VariantBestMatch;
-template<typename Arg, typename... Ts> struct VariantBestMatch<std::variant<Ts...>, Arg> {
+template<typename Arg, typename... Ts> struct VariantBestMatch<Variant<Ts...>, Arg> {
     using type = VariantBestMatchImpl<Arg, Ts...>;
 };
 
-// MARK: - Type switching for std::variant
+// MARK: - Type switching for Variant
 
 // Calls a zero argument functor with a template argument corresponding to the index's mapped type.
 //
 // e.g.
-//   using Variant = std::variant<int, float>;
+//   using Variant = Variant<int, float>;
 //
 //   Variant foo = 5;
 //   typeForIndex<Variant>(
@@ -93,10 +93,10 @@ template<typename Arg, typename... Ts> struct VariantBestMatch<std::variant<Ts..
 
 template<typename V, typename F> constexpr decltype(auto) typeForIndex(size_t index, NOESCAPE F&& f)
 {
-    return visitAtIndex<0, std::variant_size_v<std::remove_cvref_t<V>>>(
+    return visitAtIndex<0, VariantSizeV<std::remove_cvref_t<V>>>(
         index,
         [&]<size_t I>() ALWAYS_INLINE_LAMBDA {
-           return f.template operator()<std::variant_alternative_t<I, std::remove_cvref_t<V>>>();
+            return f.template operator()<VariantAlternativeT<I, std::remove_cvref_t<V>>>();
         }
     );
 }

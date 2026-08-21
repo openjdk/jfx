@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CallMode.h"
-#include "CodeSpecializationKind.h"
-#include "JSCPtrTag.h"
+#include <JavaScriptCore/CallMode.h>
+#include <JavaScriptCore/CodeSpecializationKind.h>
+#include <JavaScriptCore/JSCPtrTag.h>
 
 namespace JSC {
 
@@ -44,6 +46,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGe
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowAtPrologueGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> throwOutOfMemoryErrorGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> checkExceptionGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> returnFromBaselineGenerator(VM&);
@@ -71,11 +74,15 @@ MacroAssemblerCodeRef<JITThunkPtrTag> stringGetByValGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> charCodeAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> charAtThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> stringAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> stringPrototypeCodePointAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> clz32ThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> fromCharCodeThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> globalIsNaNThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> numberIsNaNThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> globalIsFiniteThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> numberIsFiniteThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> numberIsSafeIntegerThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> absThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> ceilThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> expThunkGenerator(VM&);

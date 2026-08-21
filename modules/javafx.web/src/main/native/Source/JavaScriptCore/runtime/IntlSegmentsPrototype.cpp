@@ -69,7 +69,8 @@ void IntlSegmentsPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->iteratorSymbol, intlSegmentsPrototypeFuncIterator, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.iterator]"_s, intlSegmentsPrototypeFuncIterator, ImplementationVisibility::Public);
+    putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, iteratorFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-%segmentsprototype%.containing
@@ -79,7 +80,7 @@ JSC_DEFINE_HOST_FUNCTION(intlSegmentsPrototypeFuncContaining, (JSGlobalObject* g
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* segments = jsDynamicCast<IntlSegments*>(callFrame->thisValue());
-    if (UNLIKELY(!segments))
+    if (!segments) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "%Segments.prototype%.containing called on value that's not a Segments"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(segments->containing(globalObject, callFrame->argument(0))));
@@ -92,7 +93,7 @@ JSC_DEFINE_HOST_FUNCTION(intlSegmentsPrototypeFuncIterator, (JSGlobalObject* glo
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* segments = jsDynamicCast<IntlSegments*>(callFrame->thisValue());
-    if (UNLIKELY(!segments))
+    if (!segments) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "%Segments.prototype%[@@iterator] called on value that's not a Segments"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(segments->createSegmentIterator(globalObject)));

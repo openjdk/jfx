@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2020, 2021, 2022, 2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,22 +47,23 @@
 #include "SVGNames.h"
 #include "SVGPathData.h"
 #include "SVGUseElement.h"
+#include "StyleTransformResolver.h"
 #include "TransformState.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGModelObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGModelObject);
 
 RenderSVGModelObject::RenderSVGModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<SVGModelObjectFlag> typeFlags)
-    : RenderLayerModelObject(type, document, WTFMove(style), { }, typeFlags)
+    : RenderLayerModelObject(type, document, WTF::move(style), { }, typeFlags)
 {
     ASSERT(!isLegacyRenderSVGModelObject());
     ASSERT(isRenderSVGModelObject());
 }
 
 RenderSVGModelObject::RenderSVGModelObject(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> typeFlags)
-    : RenderLayerModelObject(type, element, WTFMove(style), { }, typeFlags)
+    : RenderLayerModelObject(type, element, WTF::move(style), { }, typeFlags)
 {
     ASSERT(!isLegacyRenderSVGModelObject());
     ASSERT(isRenderSVGModelObject());
@@ -102,19 +103,19 @@ auto RenderSVGModelObject::computeVisibleRectsInContainer(const RepaintRects& re
     return computeVisibleRectsInSVGContainer(rects, container, context);
 }
 
-const RenderObject* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     ASSERT(ancestorToStopAt != this);
     ASSERT(style().position() == PositionType::Static);
 
     bool ancestorSkipped;
-    CheckedPtr container = this->container(ancestorToStopAt, ancestorSkipped);
+    WeakPtr container = this->container(ancestorToStopAt, ancestorSkipped);
     if (!container)
         return nullptr;
 
     ASSERT_UNUSED(ancestorSkipped, !ancestorSkipped);
 
-    pushOntoGeometryMap(geometryMap, ancestorToStopAt, container.get(), ancestorSkipped);
+    pushOntoGeometryMap(geometryMap, ancestorToStopAt, CheckedPtr { container.get() }, ancestorSkipped);
     return container.get();
 }
 
@@ -147,7 +148,7 @@ void RenderSVGModelObject::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixe
     quads.append(localToAbsoluteQuad(FloatRect { { }, m_layoutRect.size() }, UseTransforms, wasFixed));
 }
 
-void RenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGModelObject::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderLayerModelObject::styleDidChange(diff, oldStyle);
 
@@ -182,7 +183,7 @@ void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* anc
     mapLocalToSVGContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-LayoutSize RenderSVGModelObject::offsetFromContainer(RenderElement& container, const LayoutPoint&, bool*) const
+LayoutSize RenderSVGModelObject::offsetFromContainer(const RenderElement& container, const LayoutPoint&, bool*) const
 {
     ASSERT_UNUSED(container, &container == this->container());
     ASSERT(!isInFlowPositioned());
@@ -255,7 +256,7 @@ LayoutSize RenderSVGModelObject::cachedSizeForOverflowClip() const
 bool RenderSVGModelObject::applyCachedClipAndScrollPosition(RepaintRects& rects, const RenderLayerModelObject* container, VisibleRectContext context) const
 {
     // Based on RenderBox::applyCachedClipAndScrollPosition -- unused options removed.
-    if (!context.options.contains(VisibleRectContextOption::ApplyContainerClip) && this == container)
+    if (!context.options.contains(VisibleRectContext::Option::ApplyContainerClip) && this == container)
         return true;
 
     LayoutRect clipRect(LayoutPoint(), cachedSizeForOverflowClip());
@@ -265,7 +266,7 @@ bool RenderSVGModelObject::applyCachedClipAndScrollPosition(RepaintRects& rects,
         clipRect.expandToInfiniteY();
 
     bool intersects;
-    if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
+    if (context.options.contains(VisibleRectContext::Option::UseEdgeInclusiveIntersection))
         intersects = rects.edgeInclusiveIntersect(clipRect);
     else
         intersects = rects.intersect(clipRect);
@@ -276,11 +277,11 @@ bool RenderSVGModelObject::applyCachedClipAndScrollPosition(RepaintRects& rects,
 Path RenderSVGModelObject::computeClipPath(AffineTransform& transform) const
 {
     if (layer()->isTransformed())
-        transform.multiply(layer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
+        transform.multiply(layer()->currentTransform(Style::TransformResolver::individualTransformOperations).toAffineTransform());
 
     if (RefPtr useElement = dynamicDowncast<SVGUseElement>(protectedElement())) {
         if (CheckedPtr clipChildRenderer = useElement->rendererClipChild())
-            transform.multiply(downcast<RenderLayerModelObject>(*clipChildRenderer).checkedLayer()->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform());
+            transform.multiply(downcast<RenderLayerModelObject>(*clipChildRenderer).checkedLayer()->currentTransform(Style::TransformResolver::individualTransformOperations).toAffineTransform());
         if (RefPtr clipChild = useElement->clipChild())
             return pathFromGraphicsElement(*clipChild);
     }

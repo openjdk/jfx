@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,8 @@
 namespace WebCore {
 
 class AnalyserNode final : public AudioBasicInspectorNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AnalyserNode);
+    WTF_MAKE_TZONE_ALLOCATED(AnalyserNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AnalyserNode);
 public:
     static ExceptionOr<Ref<AnalyserNode>> create(BaseAudioContext&, const AnalyserOptions& = { });
 
@@ -73,3 +74,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(AnalyserNode, NodeTypeAnalyser);

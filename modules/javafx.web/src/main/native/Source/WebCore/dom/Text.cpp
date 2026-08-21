@@ -25,12 +25,13 @@
 #include "Event.h"
 #include "RenderCombineText.h"
 #include "RenderSVGInlineText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "ScopedEventQueue.h"
+#include "SerializedNode.h"
 #include "ShadowRoot.h"
-#include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleUpdate.h"
 #include "TextManipulationController.h"
@@ -42,17 +43,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Text);
-
-Ref<Text> Text::create(Document& document, String&& data)
-{
-    return adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Text);
 
 Ref<Text> Text::createEditingText(Document& document, String&& data)
 {
-    auto node = adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
-    node->setStateFlag(StateFlag::IsSpecialInternalNode);
+    auto node = adoptRef(*new Text(document, WTF::move(data), TEXT_NODE, { TypeFlag::IsPseudoElementOrSpecialInternalNode }));
     ASSERT(node->isEditingText());
     return node;
 }
@@ -110,13 +105,13 @@ static const Text* latestLogicallyAdjacentTextNode(const Text* text)
 
 String Text::wholeText() const
 {
-    const Text* startText = earliestLogicallyAdjacentTextNode(this);
-    const Text* endText = latestLogicallyAdjacentTextNode(this);
+    RefPtr startText = earliestLogicallyAdjacentTextNode(this);
+    RefPtr endText = latestLogicallyAdjacentTextNode(this);
     ASSERT(endText);
-    const Node* onePastEndText = TextNodeTraversal::nextSibling(*endText);
+    RefPtr<const Node> onePastEndText = TextNodeTraversal::nextSibling(*endText);
 
     StringBuilder result;
-    for (const Text* text = startText; text != onePastEndText; text = TextNodeTraversal::nextSibling(*text))
+    for (RefPtr text = startText; text != onePastEndText; text = TextNodeTraversal::nextSibling(*text))
         result.append(text->data());
     return result.toString();
 }
@@ -128,7 +123,7 @@ void Text::replaceWholeText(const String& newText)
     RefPtr endText = const_cast<Text*>(latestLogicallyAdjacentTextNode(this));
 
     RefPtr parent = parentNode(); // Protect against mutation handlers moving this node during traversal
-    for (RefPtr<Node> node = WTFMove(startText); is<Text>(node) && node != this && node->parentNode() == parent;) {
+    for (RefPtr<Node> node = WTF::move(startText); is<Text>(node) && node != this && node->parentNode() == parent;) {
         Ref nodeToRemove = node.releaseNonNull();
         node = nodeToRemove->nextSibling();
         parent->removeChild(nodeToRemove);
@@ -157,9 +152,14 @@ String Text::nodeName() const
     return "#text"_s;
 }
 
-Ref<Node> Text::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*)
+Ref<Node> Text::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*) const
 {
     return create(document, String { data() });
+}
+
+SerializedNode Text::serializeNode(CloningOperation) const
+{
+    return { SerializedNode::Text { data() } };
 }
 
 static bool isSVGShadowText(const Text& text)
@@ -189,7 +189,7 @@ RenderPtr<RenderText> Text::createTextRenderer(const RenderStyle& style)
 
 Ref<Text> Text::virtualCreate(String&& data)
 {
-    return create(protectedDocument(), WTFMove(data));
+    return create(protectedDocument(), WTF::move(data));
 }
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
@@ -247,7 +247,7 @@ void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData
     if (!offsetOfReplacedData) {
         Ref document = this->document();
         CheckedPtr textManipulationController = document->textManipulationControllerIfExists();
-        if (UNLIKELY(textManipulationController && oldData != newData))
+        if (textManipulationController && oldData != newData) [[unlikely]]
             textManipulationController->didUpdateContentForNode(*this);
     }
 }

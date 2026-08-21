@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IntSize.h"
-#include "RenderingResourceIdentifier.h"
+#include <WebCore/IntSize.h>
+#include <WebCore/RenderingResourceIdentifier.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class NativeImage;
 
 class WEBCORE_EXPORT SourceImage {
 public:
-    using ImageVariant = std::variant<
+    using ImageVariant = Variant<
         Ref<NativeImage>,
         Ref<ImageBuffer>,
         RenderingResourceIdentifier

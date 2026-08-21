@@ -80,6 +80,7 @@
 namespace WebCore {
 namespace SelectorCompiler {
 
+// Using UncheckedKeyHashSet instead of HashSet improves performance on Speedometer 3.
 using PseudoClassesSet = UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>>;
 
 #if ENABLE(SELECTOR_OPERATION_STATS)
@@ -113,6 +114,7 @@ using PseudoClassesSet = UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<C
     v(operationMatchesAnimatingFullscreenTransitionPseudoClass) \
     v(operationMatchesInWindowFullscreenPseudoClass) \
     v(operationMatchesPictureInPicturePseudoClass) \
+    v(operationMatchesImmersivePseudoClass) \
     v(operationMatchesFutureCuePseudoClass) \
     v(operationMatchesPastCuePseudoClass) \
     v(operationMatchesPlayingPseudoClass) \
@@ -125,6 +127,7 @@ using PseudoClassesSet = UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<C
     v(operationHasAttachment) \
     v(operationMatchesDir) \
     v(operationMatchesLangPseudoClass) \
+    v(operationMatchesOpenPseudoClass) \
     v(operationMatchesPopoverOpenPseudoClass) \
     v(operationMatchesModalPseudoClass) \
     v(operationMatchesHtmlDocumentPseudoClass) \
@@ -145,7 +148,6 @@ using PseudoClassesSet = UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<C
     v(operationAttributeValueSpaceSeparatedListContainsCaseInsensitive) \
     v(operationElementIsActive) \
     v(operationElementIsHovered) \
-    v(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown) \
     v(operationIsPlaceholderShown) \
     v(operationSynchronizeStyleAttributeInternal) \
     v(operationSynchronizeAllAnimatedSVGAttribute) \
@@ -224,7 +226,6 @@ static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAddStyle
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationElementIsActive, bool, (const Element*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationElementIsHovered, bool, (const Element*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsPlaceholderShown, bool, (const Element*));
-static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element*, SelectorChecker::CheckingContext*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeAllAnimatedSVGAttribute, void, (SVGElement&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeStyleAttributeInternal, void, (StyledElement* styledElement));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationEqualIgnoringASCIICaseNonNull, bool, (const StringImpl*, const StringImpl*));
@@ -265,6 +266,9 @@ static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesI
 #if ENABLE(PICTURE_IN_PICTURE_API)
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPictureInPicturePseudoClass, bool, (const Element&));
 #endif
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesImmersivePseudoClass, bool, (const Element&));
+#endif
 #if ENABLE(VIDEO)
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesFutureCuePseudoClass, bool, (const Element&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPastCuePseudoClass, bool, (const Element&));
@@ -280,6 +284,7 @@ static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesV
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationHasAttachment, bool, (const Element&));
 #endif
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesHtmlDocumentPseudoClass, bool, (const Element&));
+static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesOpenPseudoClass, bool, (const Element&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesPopoverOpenPseudoClass, bool, (const Element&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesModalPseudoClass, bool, (const Element&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesActiveViewTransitionPseudoClass, bool, (const Element&));
@@ -490,7 +495,7 @@ struct BacktrackingLevel {
 
 class SelectorCodeGenerator {
 public:
-    SelectorCodeGenerator(const CSSSelector*, SelectorContext);
+    SelectorCodeGenerator(const CSSSelector&, SelectorContext);
     SelectorCompilationStatus compile(JSC::MacroAssemblerCodeRef<JSC::CSSSelectorPtrTag>&);
 
 private:
@@ -610,7 +615,7 @@ private:
     StackAllocator::StackReference m_startElement;
 
 #if CSS_SELECTOR_JIT_DEBUGGING
-    const CSSSelector* m_originalSelector;
+    const CSSSelector& m_originalSelector;
 #endif
 };
 
@@ -626,11 +631,11 @@ enum class FragmentsLevel {
 
 enum class PseudoElementMatchingBehavior { CanMatch, NeverMatch };
 
-static FunctionType constructFragments(const CSSSelector* rootSelector, SelectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel, FragmentPositionInRootFragments, bool visitedMatchEnabled, VisitedMode&, PseudoElementMatchingBehavior);
+static FunctionType constructFragments(const CSSSelector& rootSelector, SelectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel, FragmentPositionInRootFragments, bool visitedMatchEnabled, VisitedMode&, PseudoElementMatchingBehavior);
 
 static void computeBacktrackingInformation(SelectorFragmentList& selectorFragments, unsigned level = 0);
 
-void compileSelector(CompiledSelector& compiledSelector, const CSSSelector* selector, SelectorContext selectorContext)
+void compileSelector(CompiledSelector& compiledSelector, const CSSSelector& selector, SelectorContext selectorContext)
 {
     ASSERT(compiledSelector.status == SelectorCompilationStatus::NotCompiled);
 
@@ -643,7 +648,7 @@ void compileSelector(CompiledSelector& compiledSelector, const CSSSelector* sele
     compiledSelector.status = codeGenerator.compile(compiledSelector.codeRef);
 
 #if defined(CSS_SELECTOR_JIT_PROFILING) && CSS_SELECTOR_JIT_PROFILING
-    compiledSelector.selector = selector;
+    compiledSelector.selector = &selector;
 #endif
 
     ASSERT(compiledSelector.status != SelectorCompilationStatus::NotCompiled);
@@ -720,7 +725,7 @@ static FunctionType addNthChildType(const CSSSelector& selector, SelectorContext
             }
 
             VisitedMode ignoreVisitedMode = VisitedMode::None;
-            FunctionType functionType = constructFragments(&subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, PseudoElementMatchingBehavior::NeverMatch);
+            FunctionType functionType = constructFragments(subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, PseudoElementMatchingBehavior::NeverMatch);
             ASSERT_WITH_MESSAGE(ignoreVisitedMode == VisitedMode::None, ":visited is disabled in the functional pseudo classes");
             switch (functionType) {
             case FunctionType::SimpleSelectorChecker:
@@ -930,6 +935,14 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesPictureInPicturePseudoClass, b
 }
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesImmersivePseudoClass, bool, (const Element& element))
+{
+    COUNT_SELECTOR_OPERATION(operationMatchesImmersivePseudoClass);
+    return matchesImmersivePseudoClass(element);
+}
+#endif
+
 #if ENABLE(VIDEO)
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesFutureCuePseudoClass, bool, (const Element& element))
 {
@@ -1016,6 +1029,12 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesPopoverOpenPseudoClass, bool, 
 {
     COUNT_SELECTOR_OPERATION(operationMatchesPopoverOpenPseudoClass);
     return matchesPopoverOpenPseudoClass(element);
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesOpenPseudoClass, bool, (const Element& element))
+{
+    COUNT_SELECTOR_OPERATION(operationMatchesOpenPseudoClass);
+    return matchesOpenPseudoClass(element);
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesModalPseudoClass, bool, (const Element& element))
@@ -1135,6 +1154,12 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    case CSSSelector::PseudoClass::Immersive:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesImmersivePseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+#endif
+
 #if ENABLE(VIDEO)
     case CSSSelector::PseudoClass::Future:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesFutureCuePseudoClass));
@@ -1183,6 +1208,10 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesPopoverOpenPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 
+    case CSSSelector::PseudoClass::Open:
+        fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesOpenPseudoClass));
+        return FunctionType::SimpleSelectorChecker;
+
     case CSSSelector::PseudoClass::Modal:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesModalPseudoClass));
         return FunctionType::SimpleSelectorChecker;
@@ -1228,6 +1257,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     // Optimized pseudo selectors.
     case CSSSelector::PseudoClass::AnyLink:
     case CSSSelector::PseudoClass::Link:
+    case CSSSelector::PseudoClass::PlaceholderShown:
     case CSSSelector::PseudoClass::Root:
         fragment.pseudoClasses.add(type);
         return FunctionType::SimpleSelectorChecker;
@@ -1247,8 +1277,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
 
     case CSSSelector::PseudoClass::Scope:
-        fragment.pseudoClasses.add(CSSSelector::PseudoClass::Scope);
-        return FunctionType::SelectorCheckerWithCheckingContext;
+        return FunctionType::CannotCompile;
 
     case CSSSelector::PseudoClass::Active:
     case CSSSelector::PseudoClass::Empty:
@@ -1256,7 +1285,6 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClass::Hover:
     case CSSSelector::PseudoClass::LastChild:
     case CSSSelector::PseudoClass::OnlyChild:
-    case CSSSelector::PseudoClass::PlaceholderShown:
     case CSSSelector::PseudoClass::Target:
         fragment.pseudoClasses.add(type);
         if (selectorContext == SelectorContext::QuerySelector)
@@ -1286,7 +1314,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
                 }
 
                 VisitedMode ignoreVisitedMode = VisitedMode::None;
-                FunctionType localFunctionType = constructFragments(&subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, PseudoElementMatchingBehavior::NeverMatch);
+                FunctionType localFunctionType = constructFragments(subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, PseudoElementMatchingBehavior::NeverMatch);
                 ASSERT_WITH_MESSAGE(ignoreVisitedMode == VisitedMode::None, ":visited is disabled in the functional pseudo classes");
 
                 // Since this is not pseudo class filter, CannotMatchAnything implies this filter always passes.
@@ -1343,15 +1371,23 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
                     return FunctionType::CannotCompile;
 
                 VisitedMode ignoreVisitedMode = VisitedMode::None;
-                FunctionType localFunctionType = constructFragments(&subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, pseudoElementMatchingBehavior);
+                FunctionType localFunctionType = constructFragments(subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, pseudoElementMatchingBehavior);
                 ASSERT_WITH_MESSAGE(ignoreVisitedMode == VisitedMode::None, ":visited is disabled in the functional pseudo classes");
+
+                if (localFunctionType == FunctionType::CannotCompile)
+                    return FunctionType::CannotCompile;
+
+                // Standalone pseudo-element (like ::before) are invalid, fallback to SelectorChecker.
+                if (selectorFragments->isEmpty())
+                    return FunctionType::CannotCompile;
+
+                // Pseudo-element in functional pseudo-classes are invalid, fallback to SelectorChecker.
+                if (selectorFragments->first().pseudoElementSelector)
+                    return FunctionType::CannotCompile;
 
                 // Since this fragment never matches against the element, don't insert it to matchesList.
                 if (localFunctionType == FunctionType::CannotMatchAnything)
                     continue;
-
-                if (localFunctionType == FunctionType::CannotCompile)
-                    return FunctionType::CannotCompile;
 
                 functionType = mostRestrictiveFunctionType(functionType, localFunctionType);
                 selectorFragments = nullptr;
@@ -1378,7 +1414,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     return FunctionType::CannotCompile;
 }
 
-inline SelectorCodeGenerator::SelectorCodeGenerator(const CSSSelector* rootSelector, SelectorContext selectorContext)
+inline SelectorCodeGenerator::SelectorCodeGenerator(const CSSSelector& rootSelector, SelectorContext selectorContext)
     : m_stackAllocator(m_assembler)
     , m_selectorContext(selectorContext)
     , m_functionType(FunctionType::SimpleSelectorChecker)
@@ -1389,7 +1425,7 @@ inline SelectorCodeGenerator::SelectorCodeGenerator(const CSSSelector* rootSelec
 #endif
 {
 #if CSS_SELECTOR_JIT_DEBUGGING
-    dataLogF("Compiling \"%s\"\n", m_originalSelector->selectorText().utf8().data());
+    dataLogF("Compiling \"%s\"\n", m_originalSelector.selectorText().utf8().data());
 #endif
 
     // In QuerySelector context, :visited always has no effect due to security issues.
@@ -1406,13 +1442,13 @@ static bool pseudoClassOnlyMatchesLinksInQuirksMode(const CSSSelector& selector)
     return pseudoClass == CSSSelector::PseudoClass::Hover || pseudoClass == CSSSelector::PseudoClass::Active;
 }
 
-static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, SelectorContext selectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
+static FunctionType constructFragmentsInternal(const CSSSelector& rootSelector, SelectorContext selectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
 {
     FragmentRelation relationToPreviousFragment = FragmentRelation::Rightmost;
     bool isRightmostOrAdjacent = positionInRootFragments != FragmentPositionInRootFragments::Other;
     FunctionType functionType = FunctionType::SimpleSelectorChecker;
     SelectorFragment* fragment = nullptr;
-    for (const CSSSelector* selector = rootSelector; selector; selector = selector->tagHistory()) {
+    for (const CSSSelector* selector = &rootSelector; selector; selector = selector->precedingInComplexSelector()) {
         if (!fragment) {
             selectorFragments.append(SelectorFragment());
             fragment = &selectorFragments.last();
@@ -1482,7 +1518,8 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             case CSSSelector::PseudoElement::ViewTransition:
             case CSSSelector::PseudoElement::UserAgentPart:
             case CSSSelector::PseudoElement::UserAgentPartLegacyAlias:
-                ASSERT(!fragment->pseudoElementSelector);
+                if (fragment->pseudoElementSelector)
+                    return FunctionType::CannotCompile;
                 fragment->pseudoElementSelector = selector;
                 break;
             case CSSSelector::PseudoElement::WebKitUnknown:
@@ -1507,15 +1544,15 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             break;
         }
         case CSSSelector::Match::List:
-            if (selector->value().find(isASCIIWhitespace<UChar>) != notFound)
+            if (selector->value().find(isASCIIWhitespace<char16_t>) != notFound)
                 return FunctionType::CannotMatchAnything;
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSSelector::Match::Begin:
         case CSSSelector::Match::End:
         case CSSSelector::Match::Contain:
             if (selector->value().isEmpty())
                 return FunctionType::CannotMatchAnything;
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSSelector::Match::Exact:
         case CSSSelector::Match::Hyphen:
             fragment->onlyMatchesLinksInQuirksMode = false;
@@ -1544,7 +1581,7 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
         if (relation == CSSSelector::Relation::Subselector)
             continue;
 
-        if ((relation == CSSSelector::Relation::ShadowDescendant || relation == CSSSelector::Relation::ShadowPartDescendant) && !selector->isLastInTagHistory())
+        if ((relation == CSSSelector::Relation::ShadowDescendant || relation == CSSSelector::Relation::ShadowPartDescendant) && !selector->isFirstInComplexSelector())
             return FunctionType::CannotCompile;
 
         if (relation == CSSSelector::Relation::ShadowSlotted)
@@ -1579,12 +1616,12 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
 
     ASSERT(!fragment);
 
-    selectorFragments.staticSpecificity = rootSelector->computeSpecificity();
+    selectorFragments.staticSpecificity = rootSelector.computeSpecificity();
 
     return functionType;
 }
 
-static FunctionType constructFragments(const CSSSelector* rootSelector, SelectorContext selectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
+static FunctionType constructFragments(const CSSSelector& rootSelector, SelectorContext selectorContext, SelectorFragmentList& selectorFragments, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
 {
     ASSERT(selectorFragments.isEmpty());
 
@@ -1788,7 +1825,7 @@ inline SelectorCompilationStatus SelectorCodeGenerator::compile(JSC::MacroAssemb
         linkBuffer.link(m_functionCalls[i].first, m_functionCalls[i].second);
 
 #if CSS_SELECTOR_JIT_DEBUGGING
-    codeRef = linkBuffer.finalizeCodeWithDisassembly<JSC::CSSSelectorPtrTag>(true, nullptr, "CSS Selector JIT for \"%s\"", m_originalSelector->selectorText().utf8().data());
+    codeRef = linkBuffer.finalizeCodeWithDisassembly<JSC::CSSSelectorPtrTag>(true, nullptr, "CSS Selector JIT for \"%s\"", m_originalSelector.selectorText().utf8().data());
 #else
     codeRef = FINALIZE_CODE(linkBuffer, JSC::CSSSelectorPtrTag, nullptr, "CSS Selector JIT");
 #endif
@@ -2278,7 +2315,7 @@ void SelectorCodeGenerator::generateSelectorChecker()
     StackAllocator earlyFailureStack = m_stackAllocator;
 
     Assembler::JumpList failureOnFunctionEntry;
-    // Test selector's pseudo element equals to requested PseudoId.
+    // Test selector's pseudo element equals to requested PseudoElementType.
     if (m_selectorContext != SelectorContext::QuerySelector && m_functionType == FunctionType::SelectorCheckerWithCheckingContext) {
         ASSERT_WITH_MESSAGE(fragmentMatchesTheRightmostElement(m_selectorFragments.first()), "Matching pseudo elements only make sense for the rightmost fragment.");
         generateRequestedPseudoElementEqualsToSelectorPseudoElement(failureOnFunctionEntry, m_selectorFragments.first(), checkingContextRegister);
@@ -2381,7 +2418,7 @@ void SelectorCodeGenerator::generateSelectorChecker()
             } else
                 failureStack = successStack;
 
-            m_stackAllocator.merge(WTFMove(successStack), WTFMove(failureStack));
+            m_stackAllocator.merge(WTF::move(successStack), WTF::move(failureStack));
             return;
         }
     }
@@ -2416,7 +2453,7 @@ void SelectorCodeGenerator::generateSelectorChecker()
         generateReturn();
     } else
         earlyFailureStack = successStack;
-    m_stackAllocator.merge(WTFMove(successStack), WTFMove(earlyFailureStack));
+    m_stackAllocator.merge(WTF::move(successStack), WTF::move(earlyFailureStack));
 }
 
 void SelectorCodeGenerator::generateSelectorCheckerExcludingPseudoElements(Assembler::JumpList& failureCases, const SelectorFragmentList& selectorFragmentList)
@@ -2567,7 +2604,7 @@ void SelectorCodeGenerator::generateElementMatchesSelectorList(Assembler::JumpLi
 
         skipFailureCase.link(&m_assembler);
 
-        m_stackAllocator.merge(WTFMove(successStack), WTFMove(failureStack));
+        m_stackAllocator.merge(WTF::move(successStack), WTF::move(failureStack));
     }
 }
 
@@ -3952,18 +3989,6 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
     successCase.link(&m_assembler);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element* element, SelectorChecker::CheckingContext* checkingContext))
-{
-    COUNT_SELECTOR_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
-    if (formControl && element->isTextField()) {
-        if (checkingContext->resolvingMode == SelectorChecker::Mode::ResolvingStyle)
-            checkingContext->styleRelations.append({ *element, Style::Relation::Unique, 1 });
-        return formControl->isPlaceholderVisible();
-    }
-    return false;
-}
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIsPlaceholderShown, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationIsPlaceholderShown);
@@ -3991,21 +4016,9 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationEqualIgnoringASCIICaseNonNull, bool, 
 
 void SelectorCodeGenerator::generateElementHasPlaceholderShown(Assembler::JumpList& failureCases)
 {
-    if (m_selectorContext == SelectorContext::QuerySelector) {
         FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
         functionCall.setFunctionAddress(operationIsPlaceholderShown);
         functionCall.setOneArgument(elementAddressRegister);
-        failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
-        return;
-    }
-
-    Assembler::RegisterID checkingContext = m_registerAllocator.allocateRegisterWithPreference(JSC::GPRInfo::argumentGPR1);
-    loadCheckingContext(checkingContext);
-    m_registerAllocator.deallocateRegister(checkingContext);
-
-    FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
-    functionCall.setFunctionAddress(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    functionCall.setTwoArguments(elementAddressRegister, checkingContext);
     failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
 }
 
@@ -4376,16 +4389,16 @@ void SelectorCodeGenerator::generateElementHasPseudoElement(Assembler::JumpList&
 void SelectorCodeGenerator::generateRequestedPseudoElementEqualsToSelectorPseudoElement(Assembler::JumpList& failureCases, const SelectorFragment& fragment, Assembler::RegisterID checkingContext)
 {
     ASSERT(m_selectorContext != SelectorContext::QuerySelector);
-
-    // Make sure that the requested pseudoId equals to the pseudo element of the rightmost fragment.
-    // If the rightmost fragment doesn't have a pseudo element, the requested pseudoId need to be PseudoId::None to succeed the matching.
-    // Otherwise, if the requested pseudoId is not PseudoId::None, the requested pseudoId need to equal to the pseudo element of the rightmost fragment.
+    // Make sure that the requested pseudoElementType equals to the pseudo element of the rightmost fragment.
+    // If the rightmost fragment doesn't have a pseudo element, the request must not have one either to succeed the matching.
+    // Otherwise, the requested pseudoElementType need to equal to the pseudo element of the rightmost fragment.
     if (fragmentMatchesTheRightmostElement(fragment)) {
+        static_assert(sizeof(SelectorChecker::CheckingContext::pseudoElementType) == 1);
         if (!fragment.pseudoElementSelector)
-            failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(PseudoId::None))));
+            failureCases.append(m_assembler.branchTest8(Assembler::NonZero, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, hasRequestedPseudoElement))));
         else {
-            Assembler::Jump skip = m_assembler.branch8(Assembler::Equal, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(PseudoId::None)));
-            failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElement())))));
+            Assembler::Jump skip = m_assembler.branchTest8(Assembler::Zero, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, hasRequestedPseudoElement)));
+            failureCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoElementType)), Assembler::TrustedImm32(static_cast<unsigned>(*CSSSelector::stylePseudoElementTypeFor(fragment.pseudoElementSelector->pseudoElement())))));
             skip.link(&m_assembler);
         }
     }
@@ -4468,25 +4481,28 @@ void SelectorCodeGenerator::generateMarkPseudoStyleForPseudoElement(Assembler::J
 
     Assembler::JumpList successCases;
 
-    // When the requested pseudoId isn't PseudoId::None, there's no need to mark the pseudo element style.
-    successCases.append(m_assembler.branch8(Assembler::NotEqual, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoId)), Assembler::TrustedImm32(static_cast<unsigned>(PseudoId::None))));
+    // When there is a requestedpseudoElementType, there's no need to mark the pseudo element style.
+    static_assert(sizeof(SelectorChecker::CheckingContext::hasRequestedPseudoElement) == 1);
+    static_assert(sizeof(SelectorChecker::CheckingContext::pseudoElementType) == 1);
+    successCases.append(m_assembler.branchTest8(Assembler::NonZero, Assembler::Address(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, hasRequestedPseudoElement))));
 
-    // When resolving mode is CollectingRulesIgnoringVirtualPseudoElements, there's no need to mark the pseudo element style.
-    successCases.append(branchOnResolvingModeWithCheckingContext(Assembler::Equal, SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements, checkingContext));
+    // When style invalidation, there's no need to mark the pseudo element style.
+    successCases.append(branchOnResolvingModeWithCheckingContext(Assembler::Equal, SelectorChecker::Mode::StyleInvalidation, checkingContext));
 
     // When resolving mode is ResolvingStyle, mark the pseudo style for pseudo element.
-    PseudoId dynamicPseudo = CSSSelector::pseudoId(fragment.pseudoElementSelector->pseudoElement());
-    if (dynamicPseudo < PseudoId::FirstInternalPseudoId) {
+    auto pseudoElementType = *CSSSelector::stylePseudoElementTypeFor(fragment.pseudoElementSelector->pseudoElement());
+    if (allPublicPseudoElementTypes.contains(pseudoElementType)) {
         failureCases.append(branchOnResolvingModeWithCheckingContext(Assembler::NotEqual, SelectorChecker::Mode::ResolvingStyle, checkingContext));
 
-        Assembler::Address pseudoIDSetAddress(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, pseudoIDSet));
-        auto pseudoIDSetDataAddress = pseudoIDSetAddress.withOffset(PseudoIdSet::dataMemoryOffset());
-        PseudoIdSet value { dynamicPseudo };
-        m_assembler.store32(Assembler::TrustedImm32(value.data()), pseudoIDSetDataAddress);
+        static_assert(sizeof(decltype(SelectorChecker::CheckingContext::publicPseudoElements)::StorageType) == 4);
+        Assembler::Address pseudoElementSetAddress(checkingContext, OBJECT_OFFSETOF(SelectorChecker::CheckingContext, publicPseudoElements));
+        auto pseudoElementSetDataAddress = pseudoElementSetAddress.withOffset(EnumSet<PseudoElementType>::storageMemoryOffset());
+        EnumSet<PseudoElementType> value { pseudoElementType };
+        m_assembler.store32(Assembler::TrustedImm32(value.toRaw()), pseudoElementSetDataAddress);
     }
 
     // We have a pseudoElementSelector, we are not in CollectingRulesIgnoringVirtualPseudoElements so
-    // we must match that pseudo element. Since the context's pseudo selector is PseudoId::None, we fail matching
+    // we must match that pseudo element. Since the context does not have a requested pseudo element we fail matching
     // after the marking.
     failureCases.append(m_assembler.jump());
 

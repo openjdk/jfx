@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CryptoKey.h"
-#include "ExceptionOr.h"
 #include <wtf/Function.h>
 
 #if ENABLE(WEB_CRYPTO)
@@ -65,11 +64,13 @@ class ScriptExecutionContext;
 struct CryptoKeyPair;
 struct JsonWebKey;
 
+template<typename> class ExceptionOr;
+
 class CryptoKeyRSA final : public CryptoKey {
 public:
     static Ref<CryptoKeyRSA> create(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, CryptoKeyType type, PlatformRSAKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usage)
     {
-        return adoptRef(*new CryptoKeyRSA(identifier, hash, hasHash, type, WTFMove(platformKey), extractable, usage));
+        return adoptRef(*new CryptoKeyRSA(identifier, hash, hasHash, type, WTF::move(platformKey), extractable, usage));
     }
     static RefPtr<CryptoKeyRSA> create(CryptoAlgorithmIdentifier, CryptoAlgorithmIdentifier hash, bool hasHash, const CryptoKeyRSAComponents&, bool extractable, CryptoKeyUsageBitmap);
     virtual ~CryptoKeyRSA() = default;

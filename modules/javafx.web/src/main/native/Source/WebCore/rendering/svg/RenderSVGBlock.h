@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,7 +27,7 @@ class SVGElement;
 class SVGGraphicsElement;
 
 class RenderSVGBlock : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGBlock);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGBlock);
 public:
     inline SVGGraphicsElement& graphicsElement() const;
@@ -39,11 +39,11 @@ protected:
 
     void willBeDestroyed() override;
 
-    void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
+    void computeOverflow(LayoutRect contentArea, OptionSet<ComputeOverflowOptions>) override;
 
     void updateFromStyle() override;
     bool needsHasSVGTransformFlags() const override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
 private:
     void element() const = delete;
@@ -63,8 +63,8 @@ private:
     std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const final;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 };
 
 } // namespace WebCore

@@ -36,6 +36,7 @@
 #include "AudioBus.h"
 #include "AudioParam.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 
 namespace WebCore {
 

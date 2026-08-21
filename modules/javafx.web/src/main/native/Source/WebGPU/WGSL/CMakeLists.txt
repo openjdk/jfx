@@ -31,7 +31,7 @@
 # Target 'wgsl-types' generates TypeDeclarations.h in the build tree.
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/TypeDeclarations.h
-    COMMAND ${RUBY_EXECUTABLE}
+    COMMAND ${Ruby_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/generator/main.rb
         ${CMAKE_CURRENT_SOURCE_DIR}/TypeDeclarations.rb
         ${CMAKE_CURRENT_BINARY_DIR}/TypeDeclarations.h
@@ -122,7 +122,6 @@ set(wgslc_HEADERS
     AST/ASTAttribute.h
     AST/ASTBinaryExpression.h
     AST/ASTBindingAttribute.h
-    AST/ASTBitcastExpression.h
     AST/ASTBoolLiteral.h
     AST/ASTBreakStatement.h
     AST/ASTBuilder.h
@@ -174,7 +173,6 @@ set(wgslc_HEADERS
     AST/ASTSizeAttribute.h
     AST/ASTStageAttribute.h
     AST/ASTStatement.h
-    AST/ASTStaticAssertStatement.h
     AST/ASTStringDumper.h
     AST/ASTStructure.h
     AST/ASTStructureMember.h
@@ -199,9 +197,7 @@ set(wgslc_PRIVATE_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/AST
-    ${CMAKE_CURRENT_SOURCE_DIR}/Metal
-    ${GLIB_INCLUDE_DIR}
-    ${GLIBCONFIG_INCLUDE_DIR})
+    ${CMAKE_CURRENT_SOURCE_DIR}/Metal)
 set(wgslc_DEPENDENCIES wgsl-types)
 
 WEBKIT_EXECUTABLE_DECLARE(wgslc)

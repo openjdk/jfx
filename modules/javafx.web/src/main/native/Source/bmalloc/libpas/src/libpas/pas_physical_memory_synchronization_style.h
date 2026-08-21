@@ -46,7 +46,7 @@ static inline const char* pas_physical_memory_synchronization_style_get_string(
     case pas_physical_memory_is_locked_by_virtual_range_common_lock:
         return "locked_by_virtual_range_common_lock";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

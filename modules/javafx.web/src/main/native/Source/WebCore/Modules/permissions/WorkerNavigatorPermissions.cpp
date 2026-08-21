@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,26 +47,21 @@ Permissions& WorkerNavigatorPermissions::permissions(WorkerNavigator& navigator)
 Permissions& WorkerNavigatorPermissions::permissions()
 {
     if (!m_permissions)
-        m_permissions = Permissions::create(m_navigator);
+        lazyInitialize(m_permissions, Permissions::create(m_navigator.get()));
 
     return *m_permissions;
 }
 
 WorkerNavigatorPermissions& WorkerNavigatorPermissions::from(WorkerNavigator& navigator)
 {
-    auto* supplement = static_cast<WorkerNavigatorPermissions*>(Supplement<WorkerNavigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<WorkerNavigatorPermissions>(Supplement<WorkerNavigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<WorkerNavigatorPermissions>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
 
     return *supplement;
-}
-
-ASCIILiteral WorkerNavigatorPermissions::supplementName()
-{
-    return "WorkerNavigatorPermissions"_s;
 }
 
 } // namespace WebCore

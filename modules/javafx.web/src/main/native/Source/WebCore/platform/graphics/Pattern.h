@@ -27,8 +27,8 @@
 
 #pragma once
 
-#include "AffineTransform.h"
-#include "SourceImage.h"
+#include <WebCore/AffineTransform.h>
+#include <WebCore/SourceImage.h>
 
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -49,10 +49,8 @@ namespace WebCore {
 
 class GraphicsContext;
 
-class Pattern final : public ThreadSafeRefCounted<Pattern> {
-public:
-    struct Parameters {
-        Parameters(bool repeatX = true, bool repeatY = true, AffineTransform patternSpaceTransform = { })
+struct PatternParameters {
+    PatternParameters(bool repeatX = true, bool repeatY = true, AffineTransform patternSpaceTransform = { })
             : repeatX(repeatX)
             , repeatY(repeatY)
             , patternSpaceTransform(patternSpaceTransform)
@@ -61,16 +59,19 @@ public:
         bool repeatX;
         bool repeatY;
         AffineTransform patternSpaceTransform;
-    };
+};
 
+class Pattern final : public ThreadSafeRefCounted<Pattern> {
+public:
+    using Parameters = PatternParameters;
     WEBCORE_EXPORT static Ref<Pattern> create(SourceImage&& tileImage, const Parameters& = { });
     WEBCORE_EXPORT ~Pattern();
 
     WEBCORE_EXPORT const SourceImage& tileImage() const;
     WEBCORE_EXPORT void setTileImage(SourceImage&&);
 
-    RefPtr<NativeImage> tileNativeImage() const;
-    RefPtr<ImageBuffer> tileImageBuffer() const;
+    WEBCORE_EXPORT RefPtr<NativeImage> tileNativeImage() const;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> tileImageBuffer() const;
 
     const Parameters& parameters() const { return m_parameters; }
 
@@ -93,5 +94,6 @@ private:
     SourceImage m_tileImage;
     Parameters m_parameters;
 };
+
 
 } //namespace

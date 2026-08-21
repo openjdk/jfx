@@ -39,7 +39,7 @@
 #include <wtf/text/WTFString.h>
 
 #if HAVE(AVCONTENTKEYSESSION) && ENABLE(MEDIA_SOURCE)
-#include "CDMPrivateMediaSourceAVFObjC.h"
+#include "LegacyCDMPrivateAVFObjC.h"
 #endif
 
 namespace WebCore {
@@ -58,7 +58,7 @@ static void platformRegisterFactories(Vector<LegacyCDMFactory>& factories)
     // FIXME: initialize specific UA CDMs. http://webkit.org/b/109318, http://webkit.org/b/109320
     factories.append({ [](LegacyCDM& cdm) { return makeUniqueWithoutRefCountedCheck<CDMPrivateMediaPlayer>(cdm); }, CDMPrivateMediaPlayer::supportsKeySystem, CDMPrivateMediaPlayer::supportsKeySystemAndMimeType });
 #if HAVE(AVCONTENTKEYSESSION) && ENABLE(MEDIA_SOURCE)
-    factories.append({ [](LegacyCDM& cdm) { return makeUniqueWithoutRefCountedCheck<CDMPrivateMediaSourceAVFObjC>(cdm); }, CDMPrivateMediaSourceAVFObjC::supportsKeySystem, CDMPrivateMediaSourceAVFObjC::supportsKeySystemAndMimeType });
+    factories.append({ [](LegacyCDM& cdm) { return makeUniqueWithoutRefCountedCheck<LegacyCDMPrivateAVFObjC>(cdm); }, LegacyCDMPrivateAVFObjC::supportsKeySystem, LegacyCDMPrivateAVFObjC::supportsKeySystemAndMimeType });
 #endif
 }
 
@@ -87,7 +87,7 @@ void LegacyCDM::clearFactories()
 
 void LegacyCDM::registerCDMFactory(CreateCDM&& constructor, CDMSupportsKeySystem&& supportsKeySystem, CDMSupportsKeySystemAndMimeType&& supportsKeySystemAndMimeType)
 {
-    installedCDMFactories().append({ WTFMove(constructor), WTFMove(supportsKeySystem), WTFMove(supportsKeySystemAndMimeType) });
+    installedCDMFactories().append({ WTF::move(constructor), WTF::move(supportsKeySystem), WTF::move(supportsKeySystemAndMimeType) });
 }
 
 static LegacyCDMFactory* CDMFactoryForKeySystem(const String& keySystem)
@@ -147,9 +147,9 @@ RefPtr<LegacyCDMSession> LegacyCDM::createSession(LegacyCDMSessionClient& client
 
 RefPtr<MediaPlayer> LegacyCDM::mediaPlayer() const
 {
-    if (!m_client)
+    if (CheckedPtr client = m_client)
+        return client->cdmMediaPlayer(this);
         return nullptr;
-    return m_client->cdmMediaPlayer(this);
 }
 
 }

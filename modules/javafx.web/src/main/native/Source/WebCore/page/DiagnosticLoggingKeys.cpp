@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DiagnosticLoggingKeys.h"
 
-#include "HTMLMediaElement.h"
-
 namespace WebCore {
 
 String DiagnosticLoggingKeys::mediaLoadedKey()
@@ -338,11 +336,6 @@ String DiagnosticLoggingKeys::cpuUsageKey()
 String DiagnosticLoggingKeys::createSharedBufferFailedKey()
 {
     return "createSharedBufferFailed"_s;
-}
-
-String DiagnosticLoggingKeys::applicationCacheKey()
-{
-    return "applicationCache"_s;
 }
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -815,6 +808,38 @@ String DiagnosticLoggingKeys::textTrackModeKey()
 {
     return "textTrackMode"_s;
 }
+
+String DiagnosticLoggingKeys::mediaPresentationTypeWatchTimeKey()
+{
+    return "watchtimeByPresentationType"_s;
+}
+
+String DiagnosticLoggingKeys::presentationTypeKey()
+{
+    return "presentationType"_s;
+}
+
+#if ENABLE(CONTENT_EXTENSIONS)
+String DiagnosticLoggingKeys::iframeResourceMonitoringKey()
+{
+    return "IFrameResourceMonitoring"_s;
+}
+
+String DiagnosticLoggingKeys::unloadCountKey()
+{
+    return "unloadCount"_s;
+}
+
+String DiagnosticLoggingKeys::unloadPreventedByThrottlerCountKey()
+{
+    return "unloadPreventedByThrottlerCount"_s;
+}
+
+String DiagnosticLoggingKeys::unloadPreventedByStickyActivationCountKey()
+{
+    return "unloadPreventedByStickyActivationCount"_s;
+}
+#endif
 
 } // namespace WebCore
 

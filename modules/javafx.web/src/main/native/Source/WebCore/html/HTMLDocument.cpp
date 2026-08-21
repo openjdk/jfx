@@ -56,8 +56,9 @@
 #include "CSSPropertyNames.h"
 #include "CommonVM.h"
 #include "CookieJar.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentQuirks.h"
+#include "DocumentSettingsValues.h"
 #include "DocumentType.h"
 #include "ElementChildIteratorInlines.h"
 #include "FocusController.h"
@@ -75,16 +76,16 @@
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "Quirks.h"
 #include "ScriptController.h"
 #include "StyleResolver.h"
+#include <ranges>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDocument);
 
 using namespace HTMLNames;
 
@@ -109,24 +110,24 @@ Ref<DocumentParser> HTMLDocument::createParser()
 }
 
 // https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem
-std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomString& name)
+std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomString& name)
 {
     if (name.isNull() || !hasDocumentNamedItem(name))
         return std::nullopt;
 
-    if (UNLIKELY(documentNamedItemContainsMultipleElements(name))) {
+    if (documentNamedItemContainsMultipleElements(name)) [[unlikely]] {
         auto collection = documentNamedItems(name);
         ASSERT(collection->length() > 1);
-        return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTFMove(collection) } };
+        return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTF::move(collection) } };
     }
 
     Ref element = *documentNamedItem(name);
-    if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element.get()); UNLIKELY(iframe)) {
-        if (RefPtr domWindow = iframe->contentWindow())
-            return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTFMove(domWindow) };
+    if (auto* iframe = dynamicDowncast<HTMLIFrameElement>(element.get()); iframe) [[unlikely]] {
+        if (RefPtr window = iframe->contentWindow())
+            return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTF::move(window) };
     }
 
-    return std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { WTFMove(element) } };
+    return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { WTF::move(element) } };
 }
 
 bool HTMLDocument::isSupportedPropertyName(const AtomString& name) const
@@ -143,7 +144,7 @@ Vector<AtomString> HTMLDocument::supportedPropertyNames() const
     // The specification says these should be sorted in document order but this would be expensive
     // and other browser engines do not comply with this part of the specification. For now, just
     // do an alphabetical sort to get consistent results.
-    std::sort(properties.begin(), properties.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(properties, WTF::codePointCompareLessThan);
     return properties;
 }
 
@@ -235,11 +236,6 @@ bool HTMLDocument::isFrameSet() const
     if (!documentElement())
         return false;
     return !!childrenOfType<HTMLFrameSetElement>(*documentElement()).first();
-}
-
-Ref<Document> HTMLDocument::cloneDocumentWithoutChildren() const
-{
-    return create(nullptr, settings(), url());
 }
 
 }

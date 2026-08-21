@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "LocalDOMWindow.h"
-#include <wtf/URL.h>
-#include "ScriptCachedFrameData.h"
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/ScriptCachedFrameData.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/URL.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -38,6 +38,7 @@ class CachedFrame;
 class CachedFramePlatformData;
 class Document;
 class DocumentLoader;
+class FrameView;
 class LocalFrameView;
 class Node;
 enum class HasInsecureContent : bool;
@@ -92,6 +93,7 @@ public:
 
     using CachedFrameBase::document;
     using CachedFrameBase::view;
+    using CachedFrameBase::protectedView;
     using CachedFrameBase::url;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
 

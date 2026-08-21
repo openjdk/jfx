@@ -24,11 +24,9 @@
  */
 
 [
-    EnabledBySetting=ScrollDrivenAnimationsEnabled,
-    Exposed=Window,
-    JSGenerateToJSObject
+    Exposed=Window
 ] interface ScrollTimeline : AnimationTimeline {
     [CallWith=CurrentDocument] constructor(optional ScrollTimelineOptions options = {});
-    readonly attribute Element? source;
+    [ImplementedAs=bindingsSource] readonly attribute Element? source;
     readonly attribute ScrollAxis axis;
 };

@@ -27,6 +27,10 @@
 #include "ImageBuffer.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEMergeCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEMerge> FEMerge::create(unsigned numberOfEffectInputs, DestinationColorSpace colorSpace)
@@ -45,6 +49,24 @@ bool FEMerge::operator==(const FEMerge& other) const
     return FilterEffect::operator==(other) && m_numberOfEffectInputs == other.m_numberOfEffectInputs;
 }
 
+OptionSet<FilterRenderingMode> FEMerge::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEMerge::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEMergeCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEMerge::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FEMergeSoftwareApplier>(*this);
@@ -52,12 +74,12 @@ std::unique_ptr<FilterEffectApplier> FEMerge::createSoftwareApplier() const
 
 TextStream& FEMerge::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feMerge";
+    ts << indent << "[feMerge"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " mergeNodes=\"" << m_numberOfEffectInputs << "\"";
+    ts << " mergeNodes=\"" << m_numberOfEffectInputs << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

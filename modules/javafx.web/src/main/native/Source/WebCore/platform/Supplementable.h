@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,20 +72,71 @@ namespace WebCore {
 //         return reinterpret_cast<MyClass*>(Supplement<MySupplementable>::from(host, supplementName()));
 //     }
 
+class SupplementBase {
+public:
+    virtual ~SupplementBase() = default;
+
+    // To allow a downcast from Supplement<Foo> to a subclass Bar, we require
+    // a TypeCastTraits specialization. The isBar() function needed for this
+    // specialization can be implemented here and overridden in the base class.
+
+    virtual bool isCSSNumericFactory() const { return false; }
+    virtual bool isDOMCSSPaintWorklet() const { return false; }
+    virtual bool isDOMCSSRegisterCustomProperty() const { return false; }
+    virtual bool isDOMWindowCaches() const { return false; }
+    virtual bool isDOMWindowIndexedDatabase() const { return false; }
+    virtual bool isDOMWindowTrustedTypes() const { return false; }
+    virtual bool isDeviceMotionController() const { return false; }
+    virtual bool isDeviceOrientationController() const { return false; }
+    virtual bool isDocumentMediaElement() const { return false; }
+    virtual bool isDocumentPictureInPicture() const { return false; }
+    virtual bool isDocumentStorageAccess() const { return false; }
+    virtual bool isGeolocationController() const { return false; }
+    virtual bool isHTMLVideoElementPictureInPicture() const { return false; }
+    virtual bool isInternalSettingsWrapper() const { return false; }
+    virtual bool isLocalDOMWindowMediaControls() const { return false; }
+    virtual bool isLocalDOMWindowSpeechSynthesis() const { return false; }
+    virtual bool isMediaKeySystemController() const { return false; }
+    virtual bool isNavigatorAudioSession() const { return false; }
+    virtual bool isNavigatorBeacon() const { return false; }
+    virtual bool isNavigatorClipboard() const { return false; }
+    virtual bool isNavigatorContacts() const { return false; }
+    virtual bool isNavigatorCookieConsent() const { return false; }
+    virtual bool isNavigatorCredentials() const { return false; }
+    virtual bool isNavigatorGamepad() const { return false; }
+    virtual bool isNavigatorGeolocation() const { return false; }
+    virtual bool isNavigatorLoginStatus() const { return false; }
+    virtual bool isNavigatorMediaCapabilities() const { return false; }
+    virtual bool isNavigatorMediaDevices() const { return false; }
+    virtual bool isNavigatorMediaSession() const { return false; }
+    virtual bool isNavigatorPermissions() const { return false; }
+    virtual bool isNavigatorScreenWakeLock() const { return false; }
+    virtual bool isNavigatorUserActivation() const { return false; }
+    virtual bool isNavigatorWebDriver() const { return false; }
+    virtual bool isNotificationController() const { return false; }
+    virtual bool isServiceWorkerRegistrationBackgroundFetchAPI() const { return false; }
+    virtual bool isServiceWorkerRegistrationPushAPI() const { return false; }
+    virtual bool isUserMediaController() const { return false; }
+    virtual bool isWorkerGlobalScopeCaches() const { return false; }
+    virtual bool isWorkerGlobalScopeIndexedDatabase() const { return false; }
+    virtual bool isWorkerGlobalScopeTrustedTypes() const { return false; }
+    virtual bool isWorkerNavigatorMediaCapabilities() const { return false; }
+    virtual bool isWorkerNavigatorPermissions() const { return false; }
+};
+
 template<typename T>
 class Supplementable;
 
 template<typename T>
-class Supplement {
+class Supplement : public SupplementBase {
 public:
-    virtual ~Supplement() = default;
 #if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     virtual bool isRefCountedWrapper() const { return false; }
 #endif
 
     static void provideTo(Supplementable<T>* host, ASCIILiteral key, std::unique_ptr<Supplement<T>> supplement)
     {
-        host->provideSupplement(key, WTFMove(supplement));
+        host->provideSupplement(key, WTF::move(supplement));
     }
 
     static Supplement<T>* from(Supplementable<T>* host, ASCIILiteral key)
@@ -101,7 +152,7 @@ public:
     {
         ASSERT(canCurrentThreadAccessThreadLocalData(m_thread));
         ASSERT(!m_supplements.get(key));
-        m_supplements.add(key, WTFMove(supplement));
+        m_supplements.add(key, WTF::move(supplement));
     }
 
     Supplement<T>* requireSupplement(ASCIILiteral key)
@@ -116,10 +167,10 @@ protected:
 #endif
 
 private:
-    using SupplementMap = UncheckedKeyHashMap<ASCIILiteral, std::unique_ptr<Supplement<T>>>;
+    using SupplementMap = HashMap<ASCIILiteral, std::unique_ptr<Supplement<T>>>;
     SupplementMap m_supplements;
 #if ASSERT_ENABLED
-    Ref<Thread> m_thread { Thread::current() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 #endif
 };
 

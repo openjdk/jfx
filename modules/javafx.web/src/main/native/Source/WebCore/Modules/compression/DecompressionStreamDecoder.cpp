@@ -26,11 +26,22 @@
 #include "DecompressionStreamDecoder.h"
 
 #include "BufferSource.h"
+#include "ExceptionOr.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 
 namespace WebCore {
+
+ExceptionOr<Ref<DecompressionStreamDecoder>> DecompressionStreamDecoder::create(unsigned char formatChar)
+{
+    auto format = static_cast<Formats::CompressionFormat>(formatChar);
+#if !PLATFORM(COCOA)
+    if (format == Formats::CompressionFormat::Brotli)
+        return Exception { ExceptionCode::NotSupportedError, "Unsupported algorithm"_s };
+#endif
+    return adoptRef(*new DecompressionStreamDecoder(format));
+}
 
 ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::decode(const BufferSource&& input)
 {
@@ -42,7 +53,7 @@ ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::decode(const BufferS
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::flush()
@@ -57,7 +68,7 @@ ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::flush()
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompress(std::span<const uint8_t> input)
@@ -68,9 +79,6 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompress(std::s
 #endif
     return decompressZlib(input);
 }
-
-
-
 
 // The decompression algorithm is broken up into 2 steps.
 // 1. Decompression of Data
@@ -146,7 +154,7 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib(st
 
         output.grow(allocateSize);
 
-        m_zstream.getPlatformStream().next_out = output.data();
+        m_zstream.getPlatformStream().next_out = output.mutableSpan().data();
         m_zstream.getPlatformStream().avail_out = output.size();
 
         result = inflate(&m_zstream.getPlatformStream(), m_didFinish ? Z_FINISH : Z_NO_FLUSH);
@@ -168,14 +176,14 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib(st
         storage.append(output);
     }
 
-    RefPtr decompressedData = storage.takeAsArrayBuffer();
+    RefPtr decompressedData = storage.takeBufferAsArrayBuffer();
     if (!decompressedData)
 
 #else
     UNUSED_PARAM(input);
-        //UNUSED_PARAM(inputLength);
+    //UNUSED_PARAM(inputLength);
     auto storage = SharedBufferBuilder();
-        auto decompressedData = storage.takeAsArrayBuffer();
+    auto decompressedData = storage.takeBufferAsArrayBuffer();
     if (!decompressedData)
         return Exception { ExceptionCode::OutOfMemoryError };
 

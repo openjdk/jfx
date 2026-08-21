@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/CompactVariant.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VariantExtras.h>
 
 namespace WTF {
@@ -37,18 +37,18 @@ namespace WTF {
 //
 // For example, take the following usage:
 //
-//   using Foo = FlatteningVariantAdaptor<std::variant, std::variant<std::string, int>, double>;
+//   using Foo = FlatteningVariantAdaptor<Variant, Variant<std::string, int>, double>;
 //
 // Here, `Foo` will be internally represented by:
 //
-//   std::variant<std::string, int, double>
+//   Variant<std::string, int, double>
 //
 // allowing a single index to be used for all options.
 //
 // To add support for flattening to variant-like type, clients can specialize
 // `FlatteningVariantTraits` to expose the list of the nested types.
 //
-// Standard aliases for a flattening `std::variant` and `CompactVariant` are
+// Standard aliases for a flattening `Variant` and `CompactVariant` are
 // provided called `FlatteningVariant` and `FlatteningCompactVariant`.
 
 // MARK: - FlatteningVariantTraits
@@ -57,7 +57,7 @@ template<typename T> struct FlatteningVariantTraits {
     using TypeList = brigand::list<T>;
 };
 
-template<typename... Ts> struct FlatteningVariantTraits<std::variant<Ts...>> {
+template<typename... Ts> struct FlatteningVariantTraits<Variant<Ts...>> {
     using TypeList = brigand::list<Ts...>;
 };
 
@@ -115,7 +115,7 @@ template<template<typename...> typename VariantType, typename... Ts> struct Flat
 
 // MARK: - Standard FlatteningVariantAdaptor Aliases
 
-template<typename... Ts> using FlatteningVariant = FlatteningVariantAdaptor<std::variant, Ts...>;
+template<typename... Ts> using FlatteningVariant = FlatteningVariantAdaptor<Variant, Ts...>;
 template<typename... Ts> using FlatteningCompactVariant = FlatteningVariantAdaptor<CompactVariant, Ts...>;
 
 } // namespace WTF

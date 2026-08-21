@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FilterImageVector.h"
+#include <WebCore/FilterImageVector.h>
 #include <wtf/CheckedRef.h>
 
 namespace WebCore {
@@ -43,7 +43,7 @@ public:
     FilterEffectApplier() = default;
     virtual ~FilterEffectApplier() = default;
 
-    virtual bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const = 0;
+    virtual bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const = 0;
 };
 
 template<typename FilterEffectType>

@@ -33,9 +33,9 @@ namespace CSS {
 SerializationContext::SerializationContext() = default;
 SerializationContext::~SerializationContext() = default;
 
-SerializationContext::SerializationContext(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, bool shouldUseResolvedURLInCSSText)
-    : replacementURLStrings { WTFMove(replacementURLStrings) }
-    , replacementURLStringsForCSSStyleSheet { WTFMove(replacementURLStringsForCSSStyleSheet) }
+SerializationContext::SerializationContext(HashMap<String, String>&& replacementURLStrings, HashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, bool shouldUseResolvedURLInCSSText)
+    : replacementURLStrings { WTF::move(replacementURLStrings) }
+    , replacementURLStringsForCSSStyleSheet { WTF::move(replacementURLStringsForCSSStyleSheet) }
     , shouldUseResolvedURLInCSSText { shouldUseResolvedURLInCSSText }
 {
 }

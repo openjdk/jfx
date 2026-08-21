@@ -27,18 +27,20 @@
 #include "MarkedText.h"
 
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "ElementRuleCollector.h"
 #include "HighlightRegistry.h"
 #include "RenderBoxModelObject.h"
 #include "RenderHighlight.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
+#include "Settings.h"
 #include "TextBoxSelectableRange.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/HashSet.h>
 
 namespace WebCore {
@@ -67,7 +69,7 @@ Vector<MarkedText> MarkedText::subdivide(const Vector<MarkedText>& markedTexts, 
     }
 
     // 2. Sort offsets such that begin offsets are in paint order and end offsets are in reverse paint order.
-    std::sort(offsets.begin(), offsets.end(), [] (const Offset& a, const Offset& b) {
+    std::ranges::sort(offsets, [] (const Offset& a, const Offset& b) {
         return a.value < b.value || (a.value == b.value && a.kind == b.kind && a.kind == Offset::Begin && a.markedText->type < b.markedText->type)
         || (a.value == b.value && a.kind == b.kind && a.kind == Offset::End && a.markedText->type > b.markedText->type);
     });
@@ -75,7 +77,7 @@ Vector<MarkedText> MarkedText::subdivide(const Vector<MarkedText>& markedTexts, 
     // 3. Compute intersection.
     Vector<MarkedText> result;
     result.reserveInitialCapacity(numberOfMarkedTexts);
-    UncheckedKeyHashSet<CheckedPtr<const MarkedText>> processedMarkedTexts;
+    HashSet<CheckedPtr<const MarkedText>> processedMarkedTexts;
     unsigned offsetSoFar = offsets[0].value;
     for (unsigned i = 1; i < numberOfOffsets; ++i) {
         if (offsets[i].value > offsets[i - 1].value) {
@@ -101,7 +103,7 @@ Vector<MarkedText> MarkedText::subdivide(const Vector<MarkedText>& markedTexts, 
     }
     // Fix up; sort the marked texts so that they are in paint order.
     if (overlapStrategy == OverlapStrategy::None)
-        std::sort(result.begin(), result.end(), [] (const MarkedText& a, const MarkedText& b) { return a.startOffset < b.startOffset || (a.startOffset == b.startOffset && a.type < b.type); });
+        std::ranges::sort(result, [] (const MarkedText& a, const MarkedText& b) { return a.startOffset < b.startOffset || (a.startOffset == b.startOffset && a.type < b.type); });
     return result;
 }
 
@@ -113,10 +115,10 @@ Vector<MarkedText> MarkedText::collectForHighlights(const RenderText& renderer, 
         auto& parentStyle = parentRenderer.style();
         if (auto highlightRegistry = renderer.document().highlightRegistryIfExists()) {
             for (auto& highlightName : highlightRegistry->highlightNames()) {
-                auto renderStyle = parentRenderer.getUncachedPseudoStyle({ PseudoId::Highlight, highlightName }, &parentStyle);
+            auto renderStyle = parentRenderer.getUncachedPseudoStyle({ PseudoElementType::Highlight, highlightName }, &parentStyle);
                 if (!renderStyle)
                     continue;
-                if (renderStyle->textDecorationsInEffect().isEmpty() && phase == PaintPhase::Decoration)
+            if (renderStyle->textDecorationLineInEffect().isNone() && phase == PaintPhase::Decoration)
                     continue;
                 for (auto& highlightRange : highlightRegistry->map().get(highlightName)->highlightRanges()) {
                     if (!renderHighlight.setRenderRange(highlightRange))
@@ -158,36 +160,30 @@ Vector<MarkedText> MarkedText::collectForHighlights(const RenderText& renderer, 
             }
         }
 
-    if (renderer.document().settings().scrollToTextFragmentEnabled()) {
-        if (auto fragmentHighlightRegistry = renderer.document().fragmentHighlightRegistryIfExists()) {
-            for (auto& highlight : fragmentHighlightRegistry->map()) {
-                for (auto& highlightRange : highlight.value->highlightRanges()) {
+    auto appendMarkedTextHighlights = [&](const HighlightRegistry& registry, MarkedText::Type markedTextType) {
+        for (Ref highlight : registry.map().values()) {
+            for (Ref highlightRange : highlight->highlightRanges()) {
                     if (!renderHighlight.setRenderRange(highlightRange))
                         continue;
 
                     auto [highlightStart, highlightEnd] = renderHighlight.rangeForTextBox(renderer, selectableRange);
                     if (highlightStart < highlightEnd)
-                        markedTexts.append({ highlightStart, highlightEnd, MarkedText::Type::FragmentHighlight });
-                }
+                    markedTexts.append({ highlightStart, highlightEnd, markedTextType });
             }
         }
+    };
+
+    if (renderer.document().settings().scrollToTextFragmentEnabled()) {
+        if (RefPtr registry = renderer.document().fragmentHighlightRegistryIfExists())
+            appendMarkedTextHighlights(*registry, MarkedText::Type::FragmentHighlight);
     }
+
+    if (RefPtr registry = renderer.document().textExtractionHighlightRegistryIfExists())
+        appendMarkedTextHighlights(*registry, MarkedText::Type::TextExtractionHighlight);
 
 #if ENABLE(APP_HIGHLIGHTS)
-    if (auto appHighlightRegistry = renderer.document().appHighlightRegistryIfExists()) {
-        if (appHighlightRegistry->highlightsVisibility() == HighlightVisibility::Visible) {
-            for (auto& highlight : appHighlightRegistry->map()) {
-                for (auto& highlightRange : highlight.value->highlightRanges()) {
-                    if (!renderHighlight.setRenderRange(highlightRange))
-                        continue;
-
-                    auto [highlightStart, highlightEnd] = renderHighlight.rangeForTextBox(renderer, selectableRange);
-                    if (highlightStart < highlightEnd)
-                        markedTexts.append({ highlightStart, highlightEnd, MarkedText::Type::AppHighlight });
-                }
-            }
-        }
-    }
+    if (RefPtr registry = renderer.document().appHighlightRegistryIfExists(); registry && registry->highlightsVisibility() == HighlightVisibility::Visible)
+        appendMarkedTextHighlights(*registry, MarkedText::Type::AppHighlight);
 #endif
     return markedTexts;
 }
@@ -305,7 +301,7 @@ Vector<MarkedText> MarkedText::collectForDocumentMarkers(const RenderText& rende
             if (!shouldPaintMarker)
                 break;
 
-            BFALLTHROUGH;
+            [[fallthrough]];
         }
 #endif
         case DocumentMarkerType::DictationAlternatives:

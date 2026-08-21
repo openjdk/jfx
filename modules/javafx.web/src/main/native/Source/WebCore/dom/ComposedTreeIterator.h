@@ -32,8 +32,9 @@
 
 namespace WebCore {
 
-class HTMLSlotElement;
+static constexpr size_t defaultInlineCapacity = 8;
 
+template <size_t ContextInlineCapacity = defaultInlineCapacity>
 class ComposedTreeIterator {
 public:
     ComposedTreeIterator();
@@ -82,17 +83,19 @@ private:
 
     bool m_rootIsInShadowTree { false };
     bool m_didDropAssertions { false };
-    Vector<Context, 8> m_contextStack;
+    Vector<Context, ContextInlineCapacity> m_contextStack;
 };
 
-inline ComposedTreeIterator::ComposedTreeIterator()
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::ComposedTreeIterator()
     : m_contextStack({ Context { } })
 {
 }
 
-inline ComposedTreeIterator& ComposedTreeIterator::traverseNext()
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>& ComposedTreeIterator<ContextInlineCapacity>::traverseNext()
 {
-    if (auto* shadowRoot = context().iterator->shadowRoot()) {
+    if (RefPtr shadowRoot = context().iterator->shadowRoot()) {
         traverseShadowRoot(*shadowRoot);
         return *this;
     }
@@ -106,7 +109,8 @@ inline ComposedTreeIterator& ComposedTreeIterator::traverseNext()
     return *this;
 }
 
-inline ComposedTreeIterator& ComposedTreeIterator::traverseNextSkippingChildren()
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>& ComposedTreeIterator<ContextInlineCapacity>::traverseNextSkippingChildren()
 {
     context().iterator.traverseNextSkippingChildren();
 
@@ -116,7 +120,8 @@ inline ComposedTreeIterator& ComposedTreeIterator::traverseNextSkippingChildren(
     return *this;
 }
 
-inline ComposedTreeIterator& ComposedTreeIterator::traverseNextSibling()
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>& ComposedTreeIterator<ContextInlineCapacity>::traverseNextSibling()
 {
     if (current().parentNode()->shadowRoot()) {
         traverseSiblingInSlot(1);
@@ -126,7 +131,8 @@ inline ComposedTreeIterator& ComposedTreeIterator::traverseNextSibling()
     return *this;
 }
 
-inline ComposedTreeIterator& ComposedTreeIterator::traversePreviousSibling()
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>& ComposedTreeIterator<ContextInlineCapacity>::traversePreviousSibling()
 {
     if (current().parentNode()->shadowRoot()) {
         traverseSiblingInSlot(-1);
@@ -136,7 +142,8 @@ inline ComposedTreeIterator& ComposedTreeIterator::traversePreviousSibling()
     return *this;
 }
 
-inline unsigned ComposedTreeIterator::depth() const
+template <size_t ContextInlineCapacity>
+inline unsigned ComposedTreeIterator<ContextInlineCapacity>::depth() const
 {
     unsigned depth = 0;
     for (auto& context : m_contextStack)
@@ -144,34 +151,36 @@ inline unsigned ComposedTreeIterator::depth() const
     return depth;
 }
 
+template <size_t ContextInlineCapacity = defaultInlineCapacity>
 class ComposedTreeDescendantAdapter {
 public:
     ComposedTreeDescendantAdapter(ContainerNode& parent)
         : m_parent(parent)
     { }
 
-    ComposedTreeIterator begin() { return ComposedTreeIterator(m_parent, ComposedTreeIterator::FirstChild); }
-    ComposedTreeIterator end() { return { }; }
-    ComposedTreeIterator at(const Node& child) { return ComposedTreeIterator(m_parent, const_cast<Node&>(child)); }
+    ComposedTreeIterator<ContextInlineCapacity> begin() { return ComposedTreeIterator<ContextInlineCapacity>(m_parent, ComposedTreeIterator<ContextInlineCapacity>::FirstChild); }
+    ComposedTreeIterator<ContextInlineCapacity> end() { return { }; }
+    ComposedTreeIterator<ContextInlineCapacity> at(const Node& child) { return ComposedTreeIterator(m_parent, const_cast<Node&>(child)); }
 
 private:
-    CheckedRef<ContainerNode> m_parent;
+    const CheckedRef<ContainerNode> m_parent;
 };
 
+template <size_t ContextInlineCapacity = defaultInlineCapacity>
 class ComposedTreeChildAdapter {
 public:
-    class Iterator : public ComposedTreeIterator {
+    class Iterator : public ComposedTreeIterator<ContextInlineCapacity> {
     public:
         Iterator() = default;
         explicit Iterator(ContainerNode& root)
-            : ComposedTreeIterator(root, ComposedTreeIterator::FirstChild)
+            : ComposedTreeIterator<ContextInlineCapacity>(root, ComposedTreeIterator<ContextInlineCapacity>::FirstChild)
         { }
         Iterator(ContainerNode& root, Node& current)
-            : ComposedTreeIterator(root, current)
+            : ComposedTreeIterator<ContextInlineCapacity>(root, current)
         { }
 
-        Iterator& operator++() { return static_cast<Iterator&>(traverseNextSibling()); }
-        Iterator& operator--() { return static_cast<Iterator&>(traversePreviousSibling()); }
+        Iterator& operator++() { return static_cast<Iterator&>(ComposedTreeIterator<ContextInlineCapacity>::traverseNextSibling()); }
+        Iterator& operator--() { return static_cast<Iterator&>(ComposedTreeIterator<ContextInlineCapacity>::traversePreviousSibling()); }
     };
 
     ComposedTreeChildAdapter(ContainerNode& parent)
@@ -183,18 +192,20 @@ public:
     Iterator at(const Node& child) { return Iterator(m_parent, const_cast<Node&>(child)); }
 
 private:
-    CheckedRef<ContainerNode> m_parent;
+    const CheckedRef<ContainerNode> m_parent;
 };
 
 // FIXME: We should have const versions too.
-inline ComposedTreeDescendantAdapter composedTreeDescendants(ContainerNode& parent)
+template <size_t ContextInlineCapacity = defaultInlineCapacity>
+inline ComposedTreeDescendantAdapter<ContextInlineCapacity> composedTreeDescendants(ContainerNode& parent)
 {
-    return ComposedTreeDescendantAdapter(parent);
+    return ComposedTreeDescendantAdapter<ContextInlineCapacity>(parent);
 }
 
-inline ComposedTreeChildAdapter composedTreeChildren(ContainerNode& parent)
+template <size_t ContextInlineCapacity = defaultInlineCapacity>
+inline ComposedTreeChildAdapter<ContextInlineCapacity> composedTreeChildren(ContainerNode& parent)
 {
-    return ComposedTreeChildAdapter(parent);
+    return ComposedTreeChildAdapter<ContextInlineCapacity>(parent);
 }
 
 enum class ComposedTreeAsTextMode { Normal, WithPointers };
@@ -204,9 +215,9 @@ WEBCORE_EXPORT String composedTreeAsText(ContainerNode& root, ComposedTreeAsText
 // Helper functions for walking the composed tree.
 // FIXME: Use ComposedTreeIterator instead. These functions are more expensive because they might do O(n) work.
 
-inline HTMLSlotElement* assignedSlotIgnoringUserAgentShadow(Node& node)
+inline RefPtr<HTMLSlotElement> assignedSlotIgnoringUserAgentShadow(Node& node)
 {
-    auto* slot = node.assignedSlot();
+    RefPtr slot = node.assignedSlot();
     if (!slot || slot->containingShadowRoot()->mode() == ShadowRootMode::UserAgent)
         return nullptr;
     return slot;
@@ -233,7 +244,7 @@ inline Node* firstChildInComposedTreeIgnoringUserAgentShadow(Node& node)
 
 inline Node* nextSiblingInComposedTreeIgnoringUserAgentShadow(Node& node)
 {
-    if (auto* slot = assignedSlotIgnoringUserAgentShadow(node)) {
+    if (RefPtr slot = assignedSlotIgnoringUserAgentShadow(node)) {
         auto* assignedNodes = slot->assignedNodes();
         ASSERT(assignedNodes);
         auto nodeIndex = assignedNodes->find(&node);
@@ -249,7 +260,7 @@ inline Node* nextSkippingChildrenInComposedTreeIgnoringUserAgentShadow(Node& nod
 {
     if (auto* sibling = nextSiblingInComposedTreeIgnoringUserAgentShadow(node))
         return sibling;
-    for (auto* ancestor = node.parentInComposedTree(); ancestor; ancestor = ancestor->parentInComposedTree()) {
+    for (RefPtr ancestor = node.parentInComposedTree(); ancestor; ancestor = ancestor->parentInComposedTree()) {
         if (auto* sibling = nextSiblingInComposedTreeIgnoringUserAgentShadow(*ancestor))
             return sibling;
     }
@@ -261,6 +272,202 @@ inline Node* nextInComposedTreeIgnoringUserAgentShadow(Node& node)
     if (auto* firstChild = firstChildInComposedTreeIgnoringUserAgentShadow(node))
         return firstChild;
     return nextSkippingChildrenInComposedTreeIgnoringUserAgentShadow(node);
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::Context::Context()
+{
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::Context::Context(ContainerNode& root, FirstChildTag)
+    : iterator(root, ElementAndTextDescendantIterator::FirstChild)
+{
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::Context::Context(ContainerNode& root, Node& node)
+    : iterator(root, &node)
+{
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::Context::Context(ContainerNode& root, Node& node, SlottedTag)
+    : iterator(root, &node)
+    , end(iterator)
+{
+    end.traverseNextSkippingChildren();
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::ComposedTreeIterator(ContainerNode& root, FirstChildTag)
+    : m_rootIsInShadowTree(root.isInShadowTree())
+{
+    ASSERT(!is<ShadowRoot>(root));
+
+    if (auto* slot = dynamicDowncast<HTMLSlotElement>(root)) {
+        if (auto* assignedNodes = slot->assignedNodes()) {
+            initializeContextStack(root, *assignedNodes->at(0));
+            return;
+        }
+    }
+    if (RefPtr shadowRoot = root.shadowRoot()) {
+        ElementAndTextDescendantIterator firstChild(*shadowRoot, ElementAndTextDescendantIterator::FirstChild);
+        initializeContextStack(root, firstChild ? *firstChild : root);
+        return;
+    }
+
+    m_contextStack.append(Context(root, FirstChild));
+}
+
+template <size_t ContextInlineCapacity>
+inline ComposedTreeIterator<ContextInlineCapacity>::ComposedTreeIterator(ContainerNode& root, Node& current)
+    : m_rootIsInShadowTree(root.isInShadowTree())
+{
+    ASSERT(!is<ShadowRoot>(root));
+    ASSERT(!is<ShadowRoot>(current));
+
+    bool mayNeedShadowStack = root.shadowRoot() || (&current != &root && current.parentNode() != &root);
+    if (mayNeedShadowStack)
+        initializeContextStack(root, current);
+    else
+        m_contextStack.append(Context(root, current));
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::initializeContextStack(ContainerNode& root, Node& current)
+{
+    // This code sets up the iterator for arbitrary node/root pair. It is not needed in common cases
+    // or completes fast because node and root are close (like in composedTreeChildren(*parent).at(node) case).
+    RefPtr node = &current;
+    RefPtr contextCurrent = node;
+    size_t currentSlotNodeIndex = notFound;
+    while (node != &root) {
+        RefPtr parent = node->parentNode();
+        if (!parent) {
+            *this = { };
+            return;
+        }
+        if (RefPtr shadowRoot = dynamicDowncast<ShadowRoot>(*parent)) {
+            m_contextStack.append(Context(*shadowRoot, *contextCurrent));
+            m_contextStack.last().slotNodeIndex = currentSlotNodeIndex;
+
+            node = shadowRoot->host();
+            contextCurrent = node;
+            currentSlotNodeIndex = notFound;
+            continue;
+        }
+        if (RefPtr shadowRoot = parent->shadowRoot()) {
+            m_contextStack.append(Context(*parent, *contextCurrent, Context::Slotted));
+            m_contextStack.last().slotNodeIndex = currentSlotNodeIndex;
+
+            RefPtr assignedSlot = shadowRoot->findAssignedSlot(*node);
+            if (assignedSlot) {
+                currentSlotNodeIndex = assignedSlot->assignedNodes()->find(node.get());
+                ASSERT(currentSlotNodeIndex != notFound);
+                node = assignedSlot;
+                contextCurrent = assignedSlot;
+                continue;
+            }
+            // The node is not part of the composed tree.
+            *this = { };
+            return;
+        }
+        node = parent;
+    }
+    m_contextStack.append(Context(root, *contextCurrent));
+    m_contextStack.last().slotNodeIndex = currentSlotNodeIndex;
+
+    m_contextStack.reverse();
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::dropAssertions()
+{
+    for (auto& context : m_contextStack)
+        context.iterator.dropAssertions();
+    m_didDropAssertions = true;
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::traverseShadowRoot(ShadowRoot& shadowRoot)
+{
+    Context shadowContext(shadowRoot, FirstChild);
+    if (!shadowContext.iterator) {
+        // Empty shadow root.
+        traverseNextSkippingChildren();
+        return;
+    }
+
+    if (m_didDropAssertions)
+        shadowContext.iterator.dropAssertions();
+
+    m_contextStack.append(WTF::move(shadowContext));
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::traverseNextInShadowTree()
+{
+    ASSERT(m_contextStack.size() > 1 || m_rootIsInShadowTree);
+
+    if (RefPtr slot = dynamicDowncast<HTMLSlotElement>(current())) {
+        if (auto* assignedNodes = slot->assignedNodes()) {
+            context().slotNodeIndex = 0;
+            RefPtr assignedNode = assignedNodes->at(0).get();
+            ASSERT(assignedNode);
+            ASSERT(dynamicDowncast<Element>(assignedNode->parentNode()));
+            m_contextStack.append(Context(*dynamicDowncast<Element>(assignedNode->parentNode()), *assignedNode, Context::Slotted));
+            return;
+        }
+    }
+
+    context().iterator.traverseNext();
+
+    if (context().iterator == context().end)
+        traverseNextLeavingContext();
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::traverseNextLeavingContext()
+{
+    while (context().iterator == context().end && m_contextStack.size() > 1) {
+        m_contextStack.removeLast();
+        if (RefPtr slot = dynamicDowncast<HTMLSlotElement>(current()); slot && advanceInSlot(1, *slot))
+            return;
+        if (context().iterator == context().end)
+            return;
+        context().iterator.traverseNextSkippingChildren();
+    }
+}
+
+template <size_t ContextInlineCapacity>
+inline bool ComposedTreeIterator<ContextInlineCapacity>::advanceInSlot(int direction, const HTMLSlotElement& slot)
+{
+    ASSERT(context().slotNodeIndex != notFound);
+
+    auto& assignedNodes = *slot.assignedNodes();
+    // It is fine to underflow this.
+    context().slotNodeIndex += direction;
+    if (context().slotNodeIndex >= assignedNodes.size())
+        return false;
+
+    RefPtr slotNode = assignedNodes.at(context().slotNodeIndex).get();
+    ASSERT(slotNode);
+    ASSERT(dynamicDowncast<Element>(slotNode->parentNode()));
+    m_contextStack.append(Context(*dynamicDowncast<Element>(slotNode->parentNode()), *slotNode, Context::Slotted));
+    return true;
+}
+
+template <size_t ContextInlineCapacity>
+inline void ComposedTreeIterator<ContextInlineCapacity>::traverseSiblingInSlot(int direction)
+{
+    ASSERT(m_contextStack.size() > 1);
+    ASSERT(current().parentNode()->shadowRoot());
+
+    m_contextStack.removeLast();
+
+    if (!advanceInSlot(direction, downcast<HTMLSlotElement>(current())))
+        *this = { };
 }
 
 } // namespace WebCore

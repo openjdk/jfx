@@ -29,6 +29,7 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateTree.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -64,6 +65,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     MouseLocationState&& mouseLocationState,
     ScrollbarHoverState&& scrollbarHoverState,
     ScrollbarEnabledState&& scrollbarEnabledState,
+    std::optional<ScrollbarColor>&& scrollbarColor,
     UserInterfaceLayoutDirection scrollbarLayoutDirection,
     ScrollbarWidth scrollbarWidth,
     bool useDarkAppearanceForScrollbars,
@@ -83,6 +85,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     bool wheelEventGesturesBecomeNonBlocking,
     bool scrollingPerformanceTestingEnabled,
     FloatRect layoutViewport,
+    FloatSize sizeForVisibleContent,
     FloatPoint minLayoutViewportOrigin,
     FloatPoint maxLayoutViewportOrigin,
     std::optional<FloatSize> overrideVisualViewportSize,
@@ -90,7 +93,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
 ) : ScrollingStateScrollingNode(
     isMainFrame ? ScrollingNodeType::MainFrame : ScrollingNodeType::Subframe,
     scrollingNodeID,
-    WTFMove(children),
+    WTF::move(children),
     changedProperties,
     layerID,
     scrollableAreaSize,
@@ -98,12 +101,12 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     reachableContentsSize,
     scrollPosition,
     scrollOrigin,
-    WTFMove(scrollableAreaParameters),
+    WTF::move(scrollableAreaParameters),
 #if ENABLE(SCROLLING_THREAD)
     synchronousScrollingReasons,
 #endif
-    WTFMove(requestedScrollData),
-    WTFMove(snapOffsetsInfo),
+    WTF::move(requestedScrollData),
+    WTF::move(snapOffsetsInfo),
     currentHorizontalSnapPointIndex,
     currentVerticalSnapPointIndex,
     isMonitoringWheelEvents,
@@ -112,19 +115,21 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     horizontalScrollbarLayer,
     verticalScrollbarLayer,
     mouseIsOverContentArea,
-    WTFMove(mouseLocationState),
-    WTFMove(scrollbarHoverState),
-    WTFMove(scrollbarEnabledState),
+    WTF::move(mouseLocationState),
+    WTF::move(scrollbarHoverState),
+    WTF::move(scrollbarEnabledState),
+    WTF::move(scrollbarColor),
     scrollbarLayoutDirection,
     scrollbarWidth,
     useDarkAppearanceForScrollbars,
-    WTFMove(keyboardScrollData))
+    WTF::move(keyboardScrollData))
     , m_rootContentsLayer(rootContentsLayer)
     , m_counterScrollingLayer(counterScrollingLayer)
     , m_insetClipLayer(insetClipLayer)
     , m_contentShadowLayer(contentShadowLayer)
-    , m_eventTrackingRegions(WTFMove(eventTrackingRegions))
+    , m_eventTrackingRegions(WTF::move(eventTrackingRegions))
     , m_layoutViewport(layoutViewport)
+    , m_sizeForVisibleContent(sizeForVisibleContent)
     , m_minLayoutViewportOrigin(minLayoutViewportOrigin)
     , m_maxLayoutViewportOrigin(maxLayoutViewportOrigin)
     , m_overrideVisualViewportSize(overrideVisualViewportSize)
@@ -132,7 +137,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     , m_obscuredContentInsets(obscuredContentInsets)
     , m_headerHeight(headerHeight)
     , m_footerHeight(footerHeight)
-    , m_behaviorForFixed(WTFMove(scrollBehaviorForFixedElements))
+    , m_behaviorForFixed(WTF::move(scrollBehaviorForFixedElements))
 
     , m_visualViewportIsSmallerThanLayoutViewport(visualViewportIsSmallerThanLayoutViewport)
     , m_asyncFrameOrOverflowScrollingEnabled(asyncFrameOrOverflowScrollingEnabled)
@@ -153,6 +158,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(const Scrolli
     : ScrollingStateScrollingNode(stateNode, adoptiveTree)
     , m_eventTrackingRegions(stateNode.eventTrackingRegions())
     , m_layoutViewport(stateNode.layoutViewport())
+    , m_sizeForVisibleContent(stateNode.sizeForVisibleContent())
     , m_minLayoutViewportOrigin(stateNode.minLayoutViewportOrigin())
     , m_maxLayoutViewportOrigin(stateNode.maxLayoutViewportOrigin())
     , m_overrideVisualViewportSize(stateNode.overrideVisualViewportSize())
@@ -213,6 +219,7 @@ OptionSet<ScrollingStateNode::Property> ScrollingStateFrameScrollingNode::applic
         Property::WheelEventGesturesBecomeNonBlocking,
         Property::ScrollingPerformanceTestingEnabled,
         Property::LayoutViewport,
+        Property::SizeForVisibleContent,
         Property::MinLayoutViewportOrigin,
         Property::MaxLayoutViewportOrigin,
         Property::OverrideVisualViewportSize,
@@ -259,6 +266,15 @@ void ScrollingStateFrameScrollingNode::setLayoutViewport(const FloatRect& r)
 
     m_layoutViewport = r;
     setPropertyChanged(Property::LayoutViewport);
+}
+
+void ScrollingStateFrameScrollingNode::setSizeForVisibleContent(const FloatSize& size)
+{
+    if (m_sizeForVisibleContent == size)
+        return;
+
+    m_sizeForVisibleContent = size;
+    setPropertyChanged(Property::SizeForVisibleContent);
 }
 
 void ScrollingStateFrameScrollingNode::setMinLayoutViewportOrigin(const FloatPoint& p)
@@ -420,51 +436,55 @@ bool ScrollingStateFrameScrollingNode::isMainFrame() const
 
 void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Frame scrolling node";
+    ts << "Frame scrolling node"_s;
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs) {
-        ts.dumpProperty("root contents layer ID", m_rootContentsLayer.layerID());
+        ts.dumpProperty("root contents layer ID"_s, m_rootContentsLayer.layerID());
         if (m_counterScrollingLayer.layerID())
-            ts.dumpProperty("counter scrolling layer ID", m_counterScrollingLayer.layerID());
+            ts.dumpProperty("counter scrolling layer ID"_s, m_counterScrollingLayer.layerID());
         if (m_insetClipLayer.layerID())
-            ts.dumpProperty("inset clip layer ID", m_insetClipLayer.layerID());
+            ts.dumpProperty("inset clip layer ID"_s, m_insetClipLayer.layerID());
         if (m_contentShadowLayer.layerID())
-            ts.dumpProperty("content shadow layer ID", m_contentShadowLayer.layerID());
+            ts.dumpProperty("content shadow layer ID"_s, m_contentShadowLayer.layerID());
         if (m_headerLayer.layerID())
-            ts.dumpProperty("header layer ID", m_headerLayer.layerID());
+            ts.dumpProperty("header layer ID"_s, m_headerLayer.layerID());
         if (m_footerLayer.layerID())
-            ts.dumpProperty("footer layer ID", m_footerLayer.layerID());
+            ts.dumpProperty("footer layer ID"_s, m_footerLayer.layerID());
     }
 
     if (m_frameScaleFactor != 1)
-        ts.dumpProperty("frame scale factor", m_frameScaleFactor);
+        ts.dumpProperty("frame scale factor"_s, m_frameScaleFactor);
     if (m_obscuredContentInsets.top())
-        ts.dumpProperty("top content inset", m_obscuredContentInsets.top());
+        ts.dumpProperty("top content inset"_s, m_obscuredContentInsets.top());
     if (m_obscuredContentInsets.bottom())
-        ts.dumpProperty("bottom content inset", m_obscuredContentInsets.bottom());
+        ts.dumpProperty("bottom content inset"_s, m_obscuredContentInsets.bottom());
     if (m_obscuredContentInsets.left())
-        ts.dumpProperty("left content inset", m_obscuredContentInsets.left());
+        ts.dumpProperty("left content inset"_s, m_obscuredContentInsets.left());
     if (m_obscuredContentInsets.right())
-        ts.dumpProperty("right content inset", m_obscuredContentInsets.right());
+        ts.dumpProperty("right content inset"_s, m_obscuredContentInsets.right());
     if (m_headerHeight)
-        ts.dumpProperty("header height", m_headerHeight);
+        ts.dumpProperty("header height"_s, m_headerHeight);
     if (m_footerHeight)
-        ts.dumpProperty("footer height", m_footerHeight);
+        ts.dumpProperty("footer height"_s, m_footerHeight);
 
-    ts.dumpProperty("layout viewport", m_layoutViewport);
-    ts.dumpProperty("min layout viewport origin", m_minLayoutViewportOrigin);
-    ts.dumpProperty("max layout viewport origin", m_maxLayoutViewportOrigin);
+    ts.dumpProperty("layout viewport"_s, m_layoutViewport);
+
+    if (m_layoutViewport.size() != m_sizeForVisibleContent)
+        ts.dumpProperty("size for visible content"_s, m_sizeForVisibleContent);
+
+    ts.dumpProperty("min layout viewport origin"_s, m_minLayoutViewportOrigin);
+    ts.dumpProperty("max layout viewport origin"_s, m_maxLayoutViewportOrigin);
 
     if (m_overrideVisualViewportSize)
-        ts.dumpProperty("override visual viewport size", m_overrideVisualViewportSize.value());
+        ts.dumpProperty("override visual viewport size"_s, m_overrideVisualViewportSize.value());
 
     if (!m_eventTrackingRegions.asynchronousDispatchRegion.isEmpty()) {
         TextStream::GroupScope scope(ts);
-        ts << "asynchronous event dispatch region";
+        ts << "asynchronous event dispatch region"_s;
         for (auto rect : m_eventTrackingRegions.asynchronousDispatchRegion.rects()) {
-            ts << "\n";
+            ts << '\n';
             ts << indent << rect;
         }
     }
@@ -472,22 +492,22 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<
     auto& synchronousDispatchRegionMap = m_eventTrackingRegions.eventSpecificSynchronousDispatchRegions;
     if (!synchronousDispatchRegionMap.isEmpty()) {
         auto eventRegionNames = copyToVector(synchronousDispatchRegionMap.keys());
-        std::sort(eventRegionNames.begin(), eventRegionNames.end());
+        std::ranges::sort(eventRegionNames);
         for (const auto& name : eventRegionNames) {
             const auto& region = synchronousDispatchRegionMap.get(name);
             TextStream::GroupScope scope(ts);
-            ts << "synchronous event dispatch region for event " << EventTrackingRegions::eventName(name);
+            ts << "synchronous event dispatch region for event "_s << EventTrackingRegions::eventName(name);
             for (auto rect : region.rects()) {
-                ts << "\n";
+                ts << '\n';
                 ts << indent << rect;
             }
         }
     }
 
-    ts.dumpProperty("behavior for fixed", m_behaviorForFixed);
+    ts.dumpProperty("behavior for fixed"_s, m_behaviorForFixed);
 
     if (m_visualViewportIsSmallerThanLayoutViewport)
-        ts.dumpProperty("visual viewport smaller than layout viewport", m_visualViewportIsSmallerThanLayoutViewport);
+        ts.dumpProperty("visual viewport smaller than layout viewport"_s, m_visualViewportIsSmallerThanLayoutViewport);
 }
 
 } // namespace WebCore

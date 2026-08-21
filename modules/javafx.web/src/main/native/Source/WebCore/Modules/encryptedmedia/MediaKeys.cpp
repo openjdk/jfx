@@ -40,6 +40,7 @@
 #include "Logging.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
+#include <ranges>
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 
@@ -54,8 +55,8 @@ MediaKeys::MediaKeys(Document& document, bool useDistinctiveIdentifier, bool per
     : m_useDistinctiveIdentifier(useDistinctiveIdentifier)
     , m_persistentStateAllowed(persistentStateAllowed)
     , m_supportedSessionTypes(supportedSessionTypes)
-    , m_implementation(WTFMove(implementation))
-    , m_instance(WTFMove(instance))
+    , m_implementation(WTF::move(implementation))
+    , m_instance(WTF::move(instance))
 #if !RELEASE_LOG_DISABLED
     , m_logger(document.logger())
     , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
@@ -135,13 +136,13 @@ void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<
 
     // 5.1. Use this object's cdm instance to process certificate.
     ALWAYS_LOG(identifier);
-    m_instance->setServerCertificate(WTFMove(certificate), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto success) {
+    m_instance->setServerCertificate(WTF::move(certificate), [this, protectedThis = Ref { *this }, promise = WTF::move(promise), identifier = WTF::move(identifier)] (auto success) {
 #if RELEASE_LOG_DISABLED
         UNUSED_PARAM(this);
 #endif
         // 5.2. If the preceding step failed, resolve promise with a new DOMException whose name is the appropriate error name.
         // 5.1. [Else,] Resolve promise with true.
-        if (success == CDMInstance::Failed) {
+        if (success == CDMInstanceSuccessValue::Failed) {
             ERROR_LOG(identifier, "::task() - Rejected, setServerCertificate() failed");
             promise->reject(ExceptionCode::InvalidStateError);
             return;
@@ -168,13 +169,13 @@ void MediaKeys::detachCDMClient(CDMClient& client)
 
 void MediaKeys::attemptToResumePlaybackOnClients()
 {
-    for (auto& cdmClient : m_cdmClients)
-        cdmClient.cdmClientAttemptToResumePlaybackIfNecessary();
+    for (Ref cdmClient : m_cdmClients)
+        cdmClient->cdmClientAttemptToResumePlaybackIfNecessary();
 }
 
 bool MediaKeys::hasOpenSessions() const
 {
-    return std::any_of(m_sessions.begin(), m_sessions.end(),
+    return std::ranges::any_of(m_sessions,
         [](auto& session) {
             return !session->isClosed();
         });
@@ -182,13 +183,8 @@ bool MediaKeys::hasOpenSessions() const
 
 void MediaKeys::unrequestedInitializationDataReceived(const String& initDataType, Ref<SharedBuffer>&& initData)
 {
-    for (auto& cdmClient : m_cdmClients)
-        cdmClient.cdmClientUnrequestedInitializationDataReceived(initDataType, initData.copyRef());
-}
-
-Ref<CDMInstance> MediaKeys::protectedCDMInstance() const
-{
-    return m_instance;
+    for (Ref cdmClient : m_cdmClients)
+        cdmClient->cdmClientUnrequestedInitializationDataReceived(initDataType, initData.copyRef());
 }
 
 #if !RELEASE_LOG_DISABLED

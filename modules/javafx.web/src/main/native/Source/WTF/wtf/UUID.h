@@ -47,7 +47,7 @@ namespace WTF {
 class StringView;
 
 class UUID {
-WTF_MAKE_FAST_ALLOCATED;
+WTF_DEPRECATED_MAKE_FAST_ALLOCATED(UUID);
 public:
     static constexpr UInt128 emptyValue = 0;
     static constexpr UInt128 deletedValue = 1;
@@ -66,7 +66,7 @@ public:
     WTF_EXPORT_PRIVATE static UUID createVersion5(UUID, std::span<const uint8_t>);
 
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSUUID> createNSUUID() const;
     WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
@@ -120,6 +120,7 @@ public:
 
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }
     constexpr bool isHashTableEmptyValue() const { return m_data == emptyValue; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     WTF_EXPORT_PRIVATE String toString() const;
 
     constexpr operator bool() const { return !!m_data; }
@@ -130,11 +131,6 @@ public:
     uint64_t low() const { return static_cast<uint64_t>(m_data); }
     uint64_t high() const { return static_cast<uint64_t>(m_data >> 64);  }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const UUID& uuid) { return !uuid; }
-        static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
-    };
-
 private:
     WTF_EXPORT_PRIVATE UUID();
     friend void add(Hasher&, UUID);
@@ -144,16 +140,16 @@ private:
     UInt128 m_data;
 };
 
+template<>
+struct MarkableTraits<UUID> {
+    static bool isEmptyValue(const UUID& uuid) { return !uuid; }
+    static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
+};
+
 inline void add(Hasher& hasher, UUID uuid)
 {
     add(hasher, uuid.m_data);
 }
-
-struct UUIDHash {
-    static unsigned hash(const UUID& key) { return computeHash(key); }
-    static bool equal(const UUID& a, const UUID& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
 
 template<> struct HashTraits<UUID> : GenericHashTraits<UUID> {
     static UUID emptyValue() { return UUID { HashTableEmptyValue }; }
@@ -161,7 +157,6 @@ template<> struct HashTraits<UUID> : GenericHashTraits<UUID> {
     static void constructDeletedValue(UUID& slot) { slot = UUID { HashTableDeletedValue }; }
     static bool isDeletedValue(const UUID& value) { return value.isHashTableDeletedValue(); }
 };
-template<> struct DefaultHash<UUID> : UUIDHash { };
 
 // Creates a UUID that consists of 32 hexadecimal digits and returns its canonical form.
 // The canonical form is displayed in 5 groups separated by hyphens, in the form 8-4-4-4-12 for a total of 36 characters.

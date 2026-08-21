@@ -28,56 +28,57 @@
 #if ENABLE(WEBGL)
 #include "EXTDisjointTimerQueryWebGL2.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "EventLoop.h"
 #include "ScriptExecutionContext.h"
-
+#include "ScriptExecutionContextInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTDisjointTimerQueryWebGL2);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTDisjointTimerQueryWebGL2);
 
 EXTDisjointTimerQueryWebGL2::EXTDisjointTimerQueryWebGL2(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTDisjointTimerQueryWebGL2)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_disjoint_timer_query"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_disjoint_timer_query);
 }
 
 EXTDisjointTimerQueryWebGL2::~EXTDisjointTimerQueryWebGL2() = default;
 
 bool EXTDisjointTimerQueryWebGL2::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_disjoint_timer_query"_s);
+    return context.supportsExtension(GCGLExtension::EXT_disjoint_timer_query);
 }
 
 void EXTDisjointTimerQueryWebGL2::queryCounterEXT(WebGLQuery& query, GCGLenum target)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    if (!context.scriptExecutionContext())
+    Ref context = this->context();
+    if (!context->scriptExecutionContext())
         return;
 
-    if (!context.validateWebGLObject("queryCounterEXT"_s, query))
+    if (!context->validateWebGLObject("queryCounterEXT"_s, query))
         return;
 
     if (target != GraphicsContextGL::TIMESTAMP_EXT) {
-        context.synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "queryCounterEXT"_s, "invalid target"_s);
+        context->synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "queryCounterEXT"_s, "invalid target"_s);
         return;
     }
 
     if (query.target() && query.target() != target) {
-        context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "queryCounterEXT"_s, "query type does not match target"_s);
+        context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "queryCounterEXT"_s, "query type does not match target"_s);
         return;
     }
 
     query.setTarget(target);
 
-    context.protectedGraphicsContextGL()->queryCounterEXT(query.object(), target);
+    context->graphicsContextGL()->queryCounterEXT(query.object(), target);
 
     // A query's result must not be made available until control has returned to the user agent's main loop.
-    context.scriptExecutionContext()->eventLoop().queueMicrotask([&] {
-        query.makeResultAvailable();
+    context->protectedScriptExecutionContext()->checkedEventLoop()->queueMicrotask([query = Ref { query }] {
+        query->makeResultAvailable();
     });
 }
 

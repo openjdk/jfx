@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "HTMLEmbedElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "FrameLoader.h"
 #include "HTMLImageLoader.h"
@@ -32,6 +33,7 @@
 #include "HTMLObjectElement.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "PluginDocument.h"
 #include "RenderEmbeddedObject.h"
@@ -43,12 +45,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLEmbedElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLEmbedElement);
 
 using namespace HTMLNames;
 
 inline HTMLEmbedElement::HTMLEmbedElement(const QualifiedName& tagName, Document& document)
-    : HTMLPlugInImageElement(tagName, document)
+    : HTMLPlugInElement(tagName, document)
 {
     ASSERT(hasTagName(embedTag));
 }
@@ -72,11 +74,10 @@ static inline RenderWidget* findWidgetRenderer(const Node* node)
     return nullptr;
 }
 
-RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
+CheckedPtr<RenderWidget> HTMLEmbedElement::renderWidgetLoadingPlugin() const
 {
-    RenderWidget* widget = HTMLPlugInImageElement::renderWidgetLoadingPlugin();
-
-    return widget ? widget : findWidgetRenderer(this);
+    CheckedPtr widget = HTMLPlugInElement::renderWidgetLoadingPlugin();
+    return widget ? widget : CheckedPtr { findWidgetRenderer(this) };
 }
 
 void HTMLEmbedElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
@@ -86,7 +87,7 @@ void HTMLEmbedElement::collectPresentationalHintsForAttribute(const QualifiedNam
             addPropertyToPresentationalHintStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
             addPropertyToPresentationalHintStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
     } else
-        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
+        HTMLPlugInElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
@@ -96,13 +97,13 @@ static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
 
 void HTMLEmbedElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLPlugInImageElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+    HTMLPlugInElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
     switch (name.nodeName()) {
     case AttributeNames::typeAttr:
         m_serviceType = newValue.string().left(newValue.find(';')).convertToASCIILowercase();
         // FIXME: The only difference between this and HTMLObjectElement's corresponding
         // code is that HTMLObjectElement does setNeedsWidgetUpdate(true). Consider moving
-        // this up to the HTMLPlugInImageElement to be shared.
+        // this up to the HTMLPlugInElement to be shared.
         if (renderer() && !hasTypeOrSrc(*this))
             invalidateStyle();
         break;
@@ -123,6 +124,8 @@ void HTMLEmbedElement::attributeChanged(const QualifiedName& name, const AtomStr
     default:
         break;
     }
+
+    invalidateStyleAndRenderersForSubtree();
 }
 
 void HTMLEmbedElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
@@ -137,7 +140,7 @@ void HTMLEmbedElement::parametersForPlugin(Vector<AtomString>& paramNames, Vecto
 }
 
 // FIXME: This should be unified with HTMLObjectElement::updateWidget and
-// moved down into HTMLPluginImageElement.cpp
+// moved down into HTMLPlugInElement.cpp
 void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
 {
     ASSERT(!renderEmbeddedObject()->isPluginUnavailable());
@@ -186,7 +189,7 @@ bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
         return false;
 
     if (isImageType())
-        return HTMLPlugInImageElement::rendererIsNeeded(style);
+        return HTMLPlugInElement::rendererIsNeeded(style);
 
     // If my parent is an <object> and is not set to use fallback content, I
     // should be ignored and not get a renderer.
@@ -199,12 +202,12 @@ bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
         }
     }
 
-    return HTMLPlugInImageElement::rendererIsNeeded(style);
+    return HTMLPlugInElement::rendererIsNeeded(style);
 }
 
 bool HTMLEmbedElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name() == srcAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
+    return attribute.name() == srcAttr || HTMLPlugInElement::isURLAttribute(attribute);
 }
 
 const AtomString& HTMLEmbedElement::imageSourceURL() const
@@ -214,9 +217,9 @@ const AtomString& HTMLEmbedElement::imageSourceURL() const
 
 void HTMLEmbedElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
-    HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
+    HTMLPlugInElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(srcAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(srcAttr)));
 }
 
 }

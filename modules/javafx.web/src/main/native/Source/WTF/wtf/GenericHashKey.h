@@ -25,28 +25,28 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 
 template<typename Key, typename HashArg = DefaultHash<Key>>
 class GenericHashKey final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GenericHashKey);
 
     struct EmptyKey { };
     struct DeletedKey { };
 
 public:
     constexpr GenericHashKey(Key&& key)
-        : m_value(std::in_place_type_t<Key>(), WTFMove(key))
+        : m_value(InPlaceTypeT<Key>(), WTF::move(key))
     {
     }
 
     template<typename K>
     constexpr GenericHashKey(K&& key)
-        : m_value(std::in_place_type_t<Key>(), std::forward<K>(key))
+        : m_value(InPlaceTypeT<Key>(), std::forward<K>(key))
     {
     }
 
@@ -69,6 +69,7 @@ public:
 
     constexpr bool isHashTableDeletedValue() const { return std::holds_alternative<DeletedKey>(m_value); }
     constexpr bool isHashTableEmptyValue() const { return std::holds_alternative<EmptyKey>(m_value); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = false;
 
     constexpr bool operator==(const GenericHashKey& other) const
     {
@@ -80,7 +81,7 @@ public:
     }
 
 private:
-    std::variant<Key, EmptyKey, DeletedKey> m_value;
+    Variant<Key, EmptyKey, DeletedKey> m_value;
 };
 
 template<typename K, typename H> struct HashTraits<GenericHashKey<K, H>> : GenericHashTraits<GenericHashKey<K, H>> {
@@ -88,12 +89,6 @@ template<typename K, typename H> struct HashTraits<GenericHashKey<K, H>> : Gener
     static bool isEmptyValue(const GenericHashKey<K, H>& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(GenericHashKey<K, H>& slot) { slot = GenericHashKey<K, H> { HashTableDeletedValue }; }
     static bool isDeletedValue(const GenericHashKey<K, H>& value) { return value.isHashTableDeletedValue(); }
-};
-
-template<typename K, typename H> struct DefaultHash<GenericHashKey<K, H>> {
-    static unsigned hash(const GenericHashKey<K, H>& key) { return key.hash(); }
-    static bool equal(const GenericHashKey<K, H>& a, const GenericHashKey<K, H>& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 }

@@ -27,12 +27,13 @@
 #include "RenderLayoutState.h"
 
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
@@ -176,7 +177,7 @@ void RenderLayoutState::computePaginationInformation(const LocalFrameViewLayoutC
     }
 
     // If we have a new grid to track, then add it to our set.
-    if (renderer.style().lineGrid() != RenderStyle::initialLineGrid()) {
+    if (!renderer.style().lineGrid().isNone()) {
         if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(renderer))
             establishLineGrid(layoutStateStack, *blockFlow);
     }
@@ -351,20 +352,22 @@ FlexPercentResolveDisabler::~FlexPercentResolveDisabler()
     m_layoutContext->enablePercentHeightResolveFor(m_flexItem);
 }
 
-ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(LocalFrameViewLayoutContext& layoutContext, const Element* element)
+ContentVisibilityOverrideScope::ContentVisibilityOverrideScope(LocalFrameViewLayoutContext& layoutContext, OptionSet<OverrideType> overrideTypes)
     : m_layoutContext(layoutContext)
-    , m_element(element)
 {
-    if (element)
-        m_layoutContext->setNeedsSkippedContentLayout(true);
+    if (overrideTypes.contains(OverrideType::Hidden))
+        layoutContext.setIsVisiblityHiddenIgnored(true);
+    if (overrideTypes.contains(OverrideType::Auto))
+        layoutContext.setIsVisiblityAutoIgnored(true);
+    if (overrideTypes.contains(OverrideType::RevealedWhenFound))
+        layoutContext.setIsRevealedWhenFoundIgnored(true);
 }
 
-ContentVisibilityForceLayoutScope::~ContentVisibilityForceLayoutScope()
+ContentVisibilityOverrideScope::~ContentVisibilityOverrideScope()
 {
-    if (m_element) {
-        ASSERT(m_layoutContext->needsSkippedContentLayout());
-        m_layoutContext->setNeedsSkippedContentLayout(false);
-    }
+    m_layoutContext->setIsVisiblityHiddenIgnored(false);
+    m_layoutContext->setIsVisiblityAutoIgnored(false);
+    m_layoutContext->setIsRevealedWhenFoundIgnored(false);
 }
 
 } // namespace WebCore

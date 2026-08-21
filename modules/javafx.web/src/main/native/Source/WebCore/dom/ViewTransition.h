@@ -28,8 +28,9 @@
 #include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
-#include "ExceptionOr.h"
+#include "EventLoop.h"
 #include "ImageBuffer.h"
+#include "LayoutRect.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"
 #include "ViewTransitionUpdateCallback.h"
@@ -55,6 +56,7 @@ class RenderLayerModelObject;
 class RenderViewTransitionCapture;
 class RenderLayerModelObject;
 class ViewTransitionTypeSet;
+template<typename> class ExceptionOr;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,
@@ -67,19 +69,23 @@ enum class ViewTransitionPhase : uint8_t {
 struct CapturedElement {
     WTF_MAKE_TZONE_ALLOCATED(CapturedElement);
 public:
+    struct State {
+        LayoutRect overflowRect;
+        LayoutPoint layerToLayoutOffset;
+        LayoutSize size;
+        LayoutSize subpixelOffset;
+        RefPtr<MutableStyleProperties> properties;
+        bool intersectsViewport { false };
+        bool isRootElement { false };
+    };
+
     // std::nullopt represents an non-capturable element.
     // nullptr represents an absent snapshot on an capturable element.
     std::optional<RefPtr<ImageBuffer>> oldImage;
-    LayoutRect oldOverflowRect;
-    LayoutPoint oldLayerToLayoutOffset;
-    LayoutSize oldSize;
-    RefPtr<MutableStyleProperties> oldProperties;
-    bool initiallyIntersectsViewport { false };
+    State oldState;
 
     WeakStyleable newElement;
-    LayoutRect newOverflowRect;
-    LayoutSize newSize;
-    RefPtr<MutableStyleProperties> newProperties;
+    State newState;
 
     Vector<AtomString> classList;
     RefPtr<MutableStyleProperties> groupStyleProperties;
@@ -167,13 +173,15 @@ public:
 class ViewTransition : public RefCounted<ViewTransition>, public VisibilityChangeClient, public ActiveDOMObject {
     WTF_MAKE_TZONE_ALLOCATED(ViewTransition);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<ViewTransition> createSamePage(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     static RefPtr<ViewTransition> resolveInboundCrossDocumentViewTransition(Document&, std::unique_ptr<ViewTransitionParams>);
     static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&);
     ~ViewTransition();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(VisibilityChangeClient);
 
     void skipTransition();
     void skipViewTransition(ExceptionOr<JSC::JSValue>&&);
@@ -182,6 +190,8 @@ public:
     void handleTransitionFrame();
 
     void activateViewTransition();
+
+    LayoutRect containingBlockRect();
 
     UniqueRef<ViewTransitionParams> takeViewTransitionParams();
 
@@ -192,7 +202,7 @@ public:
     ViewTransitionPhase phase() const { return m_phase; }
     const OrderedNamedElementsMap& namedElements() const { return m_namedElements; };
 
-    Document* document() const { return downcast<Document>(scriptExecutionContext()); }
+    Document* document() const;
     RefPtr<Document> protectedDocument() const { return document(); }
 
     bool documentElementIsCaptured() const;
@@ -208,8 +218,9 @@ private:
     ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     ViewTransition(Document&, Vector<AtomString>&&);
 
-    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&, LayoutRect& overflowRect, bool& intersectsViewport);
+    void copyElementBaseProperties(RenderLayerModelObject&, CapturedElement::State&);
     bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
+    LayoutRect captureOverflowRect(RenderLayerModelObject& renderer);
 
     // Setup view transition sub-algorithms.
     ExceptionOr<void> captureOldState();
@@ -219,7 +230,7 @@ private:
 
     void callUpdateCallback();
 
-    void updatePseudoElementStylesRead();
+    ExceptionOr<void> updatePseudoElementStylesRead();
     void updatePseudoElementStylesWrite();
     ExceptionOr<void> updatePseudoElementRenderers();
     ExceptionOr<void> checkForViewportSizeChange();

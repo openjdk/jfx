@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ExecutableBase.h"
-#include "FunctionExecutable.h"
-#include "JSCast.h"
-#include "JSFunction.h"
-#include "NativeExecutable.h"
+#include <JavaScriptCore/ExecutableBase.h>
+#include <JavaScriptCore/FunctionExecutable.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/NativeExecutable.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -147,27 +147,9 @@ public:
         return m_callee == deletedToken();
     }
 
-    friend bool operator==(const CallVariant&, const CallVariant&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
-    bool operator<(const CallVariant& other) const
-    {
-        return m_callee < other.m_callee;
-    }
-
-    bool operator>(const CallVariant& other) const
-    {
-        return other < *this;
-    }
-
-    bool operator<=(const CallVariant& other) const
-    {
-        return !(*this < other);
-    }
-
-    bool operator>=(const CallVariant& other) const
-    {
-        return other <= *this;
-    }
+    friend auto operator<=>(const CallVariant&, const CallVariant&) = default;
 
     unsigned hash() const
     {
@@ -178,12 +160,6 @@ private:
     static JSCell* deletedToken() { return std::bit_cast<JSCell*>(static_cast<uintptr_t>(1)); }
 
     JSCell* m_callee;
-};
-
-struct CallVariantHash {
-    static unsigned hash(const CallVariant& key) { return key.hash(); }
-    static bool equal(const CallVariant& a, const CallVariant& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 typedef Vector<CallVariant, 1> CallVariantList;
@@ -198,9 +174,6 @@ CallVariantList despecifiedVariantList(const CallVariantList&);
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::CallVariant> : JSC::CallVariantHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::CallVariant> : SimpleClassHashTraits<JSC::CallVariant> { };

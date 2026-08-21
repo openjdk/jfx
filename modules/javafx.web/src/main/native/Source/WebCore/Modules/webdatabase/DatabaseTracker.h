@@ -28,17 +28,20 @@
 
 #pragma once
 
-#include "DatabaseDetails.h"
-#include "ExceptionOr.h"
-#include "SQLiteDatabase.h"
-#include "SecurityOriginData.h"
-#include "SecurityOriginHash.h"
+#include <WebCore/DatabaseDetails.h>
+#include <WebCore/DatabaseManagerClient.h>
+#include <WebCore/SQLiteDatabase.h>
+#include <WebCore/SecurityOriginData.h>
+#include <WebCore/SecurityOriginHash.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/Platform.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/WallTime.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -49,6 +52,7 @@ class DatabaseManagerClient;
 class OriginLock;
 class SecurityOrigin;
 class SecurityOriginData;
+template<typename> class ExceptionOr;
 
 enum class CurrentQueryBehavior { Interrupt, RunToCompletion };
 
@@ -160,23 +164,23 @@ private:
 
     void deleteOriginLockFor(const SecurityOriginData&) WTF_REQUIRES_LOCK(m_databaseGuard);
 
-    using DatabaseSet = HashSet<Database*>;
-    using DatabaseNameMap = HashMap<String, DatabaseSet*>;
-    using DatabaseOriginMap = HashMap<SecurityOriginData, DatabaseNameMap*>;
+    using DatabaseSet = ThreadSafeWeakHashSet<Database>;
+    using DatabaseNameMap = HashMap<String, DatabaseSet>;
+    using DatabaseOriginMap = HashMap<SecurityOriginData, DatabaseNameMap>;
 
     Lock m_openDatabaseMapGuard;
-    mutable std::unique_ptr<DatabaseOriginMap> m_openDatabaseMap WTF_GUARDED_BY_LOCK(m_openDatabaseMapGuard);
+    mutable DatabaseOriginMap m_openDatabaseMap WTF_GUARDED_BY_LOCK(m_openDatabaseMapGuard);
 
     // This lock protects m_database, m_originLockMap, m_databaseDirectoryPath, m_originsBeingDeleted, m_beingCreated, and m_beingDeleted.
     Lock m_databaseGuard;
-    SQLiteDatabase m_database WTF_GUARDED_BY_LOCK(m_databaseGuard);
+    const UniqueRef<SQLiteDatabase> m_database WTF_GUARDED_BY_LOCK(m_databaseGuard);
 
     using OriginLockMap = HashMap<String, Ref<OriginLock>>;
     OriginLockMap m_originLockMap WTF_GUARDED_BY_LOCK(m_databaseGuard);
 
     String m_databaseDirectoryPath;
 
-    DatabaseManagerClient* m_client { nullptr };
+    WeakPtr<DatabaseManagerClient> m_client;
 
     HashMap<SecurityOriginData, HashCountedSet<String>> m_beingCreated WTF_GUARDED_BY_LOCK(m_databaseGuard);
     HashMap<SecurityOriginData, MemoryCompactRobinHoodHashSet<String>> m_beingDeleted WTF_GUARDED_BY_LOCK(m_databaseGuard);

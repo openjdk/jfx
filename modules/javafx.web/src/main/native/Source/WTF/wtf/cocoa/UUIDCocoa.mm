@@ -24,16 +24,16 @@
  */
 
 #import "config.h"
-#import "UUID.h"
+#import <wtf/UUID.h>
 
-#import "RetainPtr.h"
-#import "TypeCastsCocoa.h"
+#import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {
 
-UUID::operator NSUUID *() const
+RetainPtr<NSUUID> UUID::createNSUUID() const
 {
-    return [[NSUUID alloc] initWithUUIDString:toString()];
+    return adoptNS([[NSUUID alloc] initWithUUIDString:toString().createNSString().get()]);
 }
 
 std::optional<UUID> UUID::fromNSUUID(NSUUID *nsUUID)

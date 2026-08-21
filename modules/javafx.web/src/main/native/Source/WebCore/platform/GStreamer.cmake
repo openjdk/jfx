@@ -1,11 +1,16 @@
 include(CheckCXXSymbolExists)
 
 if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
+    list(APPEND WebCore_LIBRARIES
+        GLib::GioUnix
+    )
+
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/Modules/mediastream/gstreamer"
         "${WEBCORE_DIR}/platform/graphics/gstreamer"
         "${WEBCORE_DIR}/platform/graphics/gstreamer/mse"
         "${WEBCORE_DIR}/platform/graphics/gstreamer/eme"
+        "${WEBCORE_DIR}/platform/graphics/gstreamer/telemetry"
         "${WEBCORE_DIR}/platform/gstreamer"
         "${WEBCORE_DIR}/platform/mediarecorder/gstreamer"
     )
@@ -28,6 +33,16 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/mediastream/libwebrtc/gstreamer/GStreamerVideoEncoderFactory.h
         platform/mediastream/libwebrtc/gstreamer/LibWebRTCProviderGStreamer.h
     )
+
+    if (ENABLE_MEDIA_TELEMETRY)
+      list(APPEND WebCore_SOURCES
+        platform/graphics/gstreamer/telemetry/MediaTelemetry.cpp
+      )
+      list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/gstreamer/telemetry/MediaTelemetry.h
+        platform/graphics/gstreamer/telemetry/MediaTelemetryReportPrivateMembers.h
+      )
+    endif ()
 
     if (USE_GSTREAMER_FULL)
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -64,17 +79,6 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     endif ()
 endif ()
 
-if (USE_GSTREAMER_TRANSCODER)
-    if (NOT USE_GSTREAMER_FULL)
-    list(APPEND WebCore_LIBRARIES
-        ${GSTREAMER_TRANSCODER_LIBRARIES}
-    )
-    endif ()
-    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${GSTREAMER_TRANSCODER_INCLUDE_DIRS}
-    )
-endif ()
-
 if (ENABLE_VIDEO)
     list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
         ${GSTREAMER_TAG_INCLUDE_DIRS}
@@ -96,14 +100,6 @@ if (ENABLE_VIDEO)
             ${GSTREAMER_MPEGTS_LIBRARIES}
         )
     endif ()
-    if (USE_GSTREAMER_GL AND NOT USE_GSTREAMER_FULL)
-            list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-                ${GSTREAMER_GL_INCLUDE_DIRS}
-            )
-            list(APPEND WebCore_LIBRARIES
-                ${GSTREAMER_GL_LIBRARIES}
-            )
-        endif ()
 
     if (USE_GSTREAMER_GL AND NOT USE_GSTREAMER_FULL)
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -138,6 +134,22 @@ if (ENABLE_VIDEO)
         endif ()
 
         list(APPEND WebCore_LIBRARIES OpenSSL::Crypto)
+
+        if (USE_LIBRICE)
+            list(APPEND WebCore_LIBRARIES Rice::Proto)
+            list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+                Modules/mediastream/gstreamer/GStreamerIceAgent.h
+
+                platform/rice/GRefPtrRice.h
+                platform/rice/GUniquePtrRice.h
+                platform/rice/RiceUtilities.h
+                platform/rice/RiceVersioning.h
+            )
+            list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+                "${WEBCORE_DIR}/Modules/mediastream/gstreamer"
+                "${WEBCORE_DIR}/platform/rice"
+              )
+        endif ()
     endif ()
 endif ()
 
@@ -200,3 +212,4 @@ if (ENABLE_SPEECH_SYNTHESIS)
         )
     endif ()
 endif ()
+

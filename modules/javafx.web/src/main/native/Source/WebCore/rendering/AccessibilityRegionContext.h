@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "InlineIteratorTextBox.h"
-#include "LayoutRect.h"
-#include "RegionContext.h"
+#include <WebCore/InlineIteratorTextBox.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/RegionContext.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -49,14 +49,11 @@ public:
     // This group of methods takes paint-time geometry and uses it directly.
     void takeBounds(const RenderBox&, LayoutPoint /* paintOffset */);
     void takeBounds(const RenderBox&, FloatRect /* paintRect */);
-    void takeBounds(const RenderInline* renderInline, LayoutRect&& paintRect)
-    {
-        if (renderInline)
-            takeBounds(*renderInline, WTFMove(paintRect));
-    };
+    void takeBounds(const RenderInline*, LayoutRect&&);
     void takeBounds(const RenderInline&, LayoutRect&& /* paintRect */);
-    void takeBounds(const RenderText&, FloatRect /* paintRect */);
+    void takeBounds(const RenderText&, FloatRect /* paintRect */, size_t /* lineIndex */);
     void takeBounds(const RenderView&, LayoutPoint&& /* paintOffset */);
+    void takeBounds(const RenderLineBreak*, const LayoutPoint& /* paintOffset */);
 
     // This group of methods serves only as a notification that the given object is
     // being painted. From there, we construct the geometry we need ourselves

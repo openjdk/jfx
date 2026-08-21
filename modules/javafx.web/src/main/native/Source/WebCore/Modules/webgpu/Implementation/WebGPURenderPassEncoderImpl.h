@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ class RenderPassEncoderImpl final : public RenderPassEncoder {
 public:
     static Ref<RenderPassEncoderImpl> create(WebGPUPtr<WGPURenderPassEncoder>&& renderPassEncoder, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new RenderPassEncoderImpl(WTFMove(renderPassEncoder), convertToBackingContext));
+        return adoptRef(*new RenderPassEncoderImpl(WTF::move(renderPassEncoder), convertToBackingContext));
     }
 
     virtual ~RenderPassEncoderImpl();
@@ -57,6 +57,7 @@ private:
     RenderPassEncoderImpl& operator=(RenderPassEncoderImpl&&) = delete;
 
     WGPURenderPassEncoder backing() const { return m_backing.get(); }
+    bool isRenderPassEncoderImpl() const final { return true; }
 
     void setPipeline(const RenderPipeline&) final;
 
@@ -73,10 +74,10 @@ private:
     void drawIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) final;
     void drawIndexedIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets) final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) final;
@@ -103,12 +104,14 @@ private:
 
     void setLabelInternal(const String&) final;
 
-    Ref<ConvertToBackingContext> protectedConvertToBackingContext() const { return m_convertToBackingContext; }
-
     WebGPUPtr<WGPURenderPassEncoder> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::RenderPassEncoderImpl)
+    static bool isType(const WebCore::WebGPU::RenderPassEncoder& encoder) { return encoder.isRenderPassEncoderImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

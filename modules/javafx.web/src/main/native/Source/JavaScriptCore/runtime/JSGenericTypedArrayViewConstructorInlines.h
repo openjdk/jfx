@@ -89,7 +89,7 @@ inline JSObject* constructGenericTypedArrayViewFromIterator(JSGlobalObject* glob
     MarkedArgumentBuffer storage;
     forEachInIterable(*globalObject, iterable, iteratorMethod, [&] (VM&, JSGlobalObject&, JSValue value) {
         storage.append(value);
-        if (UNLIKELY(storage.hasOverflowed())) {
+        if (storage.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
@@ -98,7 +98,7 @@ inline JSObject* constructGenericTypedArrayViewFromIterator(JSGlobalObject* glob
 
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, storage.size());
     EXCEPTION_ASSERT(!!scope.exception() == !result);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
 
     for (unsigned i = 0; i < storage.size(); ++i) {
@@ -131,12 +131,12 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
         else {
             size_t byteLength = buffer->byteLength();
             if (buffer->isResizableOrGrowableShared()) {
-                if (UNLIKELY(offset > byteLength)) {
+                if (offset > byteLength) [[unlikely]] {
                     throwRangeError(globalObject, scope, "byteOffset exceeds source ArrayBuffer byteLength"_s);
                     return nullptr;
                 }
             } else {
-                if (UNLIKELY((byteLength - offset) % ViewClass::elementSize)) {
+                if ((byteLength - offset) % ViewClass::elementSize) [[unlikely]] {
                 throwRangeError(globalObject, scope, "ArrayBuffer length minus the byteOffset is not a multiple of the element size"_s);
                 return nullptr;
             }
@@ -144,7 +144,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             }
         }
 
-        RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, WTFMove(buffer), offset, length));
+        RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, WTF::move(buffer), offset, length));
     }
     ASSERT(!offset && !lengthOpt);
 
@@ -168,7 +168,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
             ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
             EXCEPTION_ASSERT(!!scope.exception() == !result);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return nullptr;
 
             IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
@@ -190,7 +190,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
             // This getPropertySlot operation should not be observed by the Proxy.
             // So we use VMInquiry. And purge the opaque object cases (proxy and namespace object) by isTaintedByOpaqueObject() guard.
-        if (JSArray* array = jsDynamicCast<JSArray*>(object); LIKELY(array && isJSArray(array) && array->isIteratorProtocolFastAndNonObservable()))
+        if (JSArray* array = jsDynamicCast<JSArray*>(object); array && isJSArray(array) && array->isIteratorProtocolFastAndNonObservable()) [[likely]]
             length = array->length();
         else {
             PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
@@ -228,7 +228,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
         ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
         EXCEPTION_ASSERT(!!scope.exception() == !result);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return nullptr;
 
         scope.release();
@@ -237,7 +237,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
         return result;
     }
 
-    size_t length = firstValue.toTypedArrayIndex(globalObject, "length"_s);
+    size_t length = firstValue.toIndex(globalObject, "length"_s);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     RELEASE_AND_RETURN(scope, ViewClass::create(globalObject, structure, length));
@@ -269,12 +269,12 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
     std::optional<size_t> length;
     if (auto* arrayBuffer = jsDynamicCast<JSArrayBuffer*>(firstValue)) {
         if (argCount > 1) {
-            offset = callFrame->uncheckedArgument(1).toTypedArrayIndex(globalObject, "byteOffset"_s);
+            offset = callFrame->uncheckedArgument(1).toIndex(globalObject, "byteOffset"_s);
             RETURN_IF_EXCEPTION(scope, { });
 
             if constexpr (ViewClass::TypedArrayStorageType == TypeDataView) {
                 RefPtr<ArrayBuffer> buffer = arrayBuffer->impl();
-                if (UNLIKELY(offset > buffer->byteLength())) {
+                if (offset > buffer->byteLength()) [[unlikely]] {
                     throwRangeError(globalObject, scope, "byteOffset exceeds source ArrayBuffer byteLength"_s);
                     RETURN_IF_EXCEPTION(scope, { });
                 }
@@ -293,7 +293,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
             // If the length value is present but undefined, treat it as missing.
             JSValue lengthValue = callFrame->uncheckedArgument(2);
             if (!lengthValue.isUndefined()) {
-                    length = lengthValue.toTypedArrayIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength"_s : "length"_s);
+                length = lengthValue.toIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength"_s : "length"_s);
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
         }

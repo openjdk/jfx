@@ -25,33 +25,35 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if PLATFORM(COCOA) && USE(LIBWEBRTC)
 
-#include "VideoFrame.h"
+#include <WebCore/LibWebRTCUtils.h>
+#include <WebCore/VideoFrame.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// FIXME: Modularize WebRTC
+IGNORE_CLANG_WARNINGS_BEGIN("non-modular-include-in-module")
 #include <webrtc/api/video/video_frame.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitUtilities.h>
+IGNORE_CLANG_WARNINGS_END
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-using CVPixelBufferRef = struct __CVBuffer*;
-
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 
 namespace WebCore {
 
 class VideoFrameLibWebRTC final : public VideoFrame {
 public:
     using ConversionCallback = std::function<RetainPtr<CVPixelBufferRef>(webrtc::VideoFrameBuffer&)>;
-    static RefPtr<VideoFrameLibWebRTC> create(MediaTime, bool isMirrored, Rotation, std::optional<PlatformVideoColorSpace>&&, rtc::scoped_refptr<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
+    static RefPtr<VideoFrameLibWebRTC> create(MediaTime, bool isMirrored, Rotation, std::optional<PlatformVideoColorSpace>&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
 
-    rtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer() const { return m_buffer; }
-
-    static std::optional<PlatformVideoColorSpace> colorSpaceFromFrame(const webrtc::VideoFrame&);
+    webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer() const { return webrtc::scoped_refptr { m_buffer.ptr() }; }
 
 private:
-    VideoFrameLibWebRTC(MediaTime, bool isMirrored, Rotation, PlatformVideoColorSpace&&, rtc::scoped_refptr<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
+    VideoFrameLibWebRTC(MediaTime, bool isMirrored, Rotation, PlatformVideoColorSpace&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
 
     // VideoFrame
     IntSize presentationSize() const final { return m_size; }
@@ -60,7 +62,7 @@ private:
 
     Ref<VideoFrame> clone() final;
 
-    const rtc::scoped_refptr<webrtc::VideoFrameBuffer> m_buffer;
+    const Ref<webrtc::VideoFrameBuffer> m_buffer;
     IntSize m_size;
     uint32_t m_videoPixelFormat { 0 };
 

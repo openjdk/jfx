@@ -129,6 +129,9 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
         case MatchElement::ParentSibling:
         case MatchElement::AncestorSibling:
         case MatchElement::HasChild:
+        case MatchElement::HasChildParent:
+        case MatchElement::HasChildAncestor:
+        case MatchElement::HasDescendantParent:
         case MatchElement::HasDescendant:
         case MatchElement::HasSibling:
         case MatchElement::HasSiblingDescendant:
@@ -170,7 +173,7 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
 
     collect(m_element->styleResolver().ruleSets());
 
-    if (auto* shadowRoot = m_element->shadowRoot())
+    if (RefPtr shadowRoot = m_element->shadowRoot())
         collect(shadowRoot->styleScope().resolver().ruleSets(), MatchElement::Host);
 }
 

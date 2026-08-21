@@ -21,7 +21,6 @@
 #include "LegacyRootInlineBox.h"
 
 #include "BidiResolver.h"
-#include "CSSLineBoxContainValue.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
@@ -41,14 +40,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRootInlineBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRootInlineBox);
 
 struct SameSizeAsLegacyRootInlineBox : LegacyInlineFlowBox, CanMakeWeakPtr<LegacyRootInlineBox>, CanMakeCheckedPtr<SameSizeAsLegacyRootInlineBox> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(SameSizeAsLegacyRootInlineBox);
     WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(SameSizeAsLegacyRootInlineBox);
 
     int layoutUnits[4];
 };
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(SameSizeAsLegacyRootInlineBox);
 
 static_assert(sizeof(LegacyRootInlineBox) == sizeof(SameSizeAsLegacyRootInlineBox), "LegacyRootInlineBox should stay small");
 #if !ASSERT_ENABLED
@@ -63,16 +64,6 @@ LegacyRootInlineBox::LegacyRootInlineBox(RenderBlockFlow& block)
 
 LegacyRootInlineBox::~LegacyRootInlineBox()
 {
-}
-
-LayoutUnit LegacyRootInlineBox::baselinePosition(FontBaseline baselineType) const
-{
-    return renderer().baselinePosition(baselineType, isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
-}
-
-LayoutUnit LegacyRootInlineBox::lineHeight() const
-{
-    return renderer().lineHeight(isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
 }
 
 void LegacyRootInlineBox::adjustPosition(float dx, float dy)

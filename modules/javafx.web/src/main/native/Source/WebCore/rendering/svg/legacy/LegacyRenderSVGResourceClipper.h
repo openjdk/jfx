@@ -31,7 +31,7 @@ class GraphicsContext;
 class SVGClipPathElement;
 
 struct ClipperData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ClipperData);
 
     struct Inputs {
         bool operator==(const Inputs& other) const = default;
@@ -57,7 +57,7 @@ struct ClipperData {
 };
 
 class LegacyRenderSVGResourceClipper final : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceClipper);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGResourceClipper);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceClipper);
 public:
     LegacyRenderSVGResourceClipper(SVGClipPathElement&, RenderStyle&&);
@@ -66,8 +66,8 @@ public:
     inline SVGClipPathElement& clipPathElement() const;
     inline Ref<SVGClipPathElement> protectedClipPathElement() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
+    void removeAllClientsFromCache() override;
+    void removeClientFromCache(RenderElement&) override;
 
     OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
 
@@ -106,4 +106,5 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LegacyRenderSVGResourceClipper)
 static bool isType(const WebCore::RenderObject& renderer) { return renderer.isLegacyRenderSVGResourceClipper(); }
 static bool isType(const WebCore::LegacyRenderSVGResource& resource) { return resource.resourceType() == WebCore::ClipperResourceType; }
+static bool isType(const WebCore::LegacyRenderSVGResourceContainer& resource) { return resource.resourceType() == WebCore::ClipperResourceType; }
 SPECIALIZE_TYPE_TRAITS_END()

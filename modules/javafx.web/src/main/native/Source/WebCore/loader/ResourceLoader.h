@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,22 +28,23 @@
 
 #pragma once
 
-#include "CachedResourceHandle.h"
-#include "FrameLoaderTypes.h"
-#include "ResourceHandleClient.h"
-#include "ResourceLoadTiming.h"
-#include "ResourceLoaderIdentifier.h"
-#include "ResourceLoaderOptions.h"
-#include "ResourceLoaderTypes.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/ResourceHandleClient.h>
+#include <WebCore/ResourceLoadTiming.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/ResourceLoaderTypes.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
-#include "ResourceLoadInfo.h"
+#include <WebCore/ResourceLoadInfo.h>
 #endif
 
 namespace WTF {
@@ -64,9 +65,9 @@ class NetworkLoadMetrics;
 class ResourceMonitor;
 #endif
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CoreResourceLoader);
 class ResourceLoader : public RefCountedAndCanMakeWeakPtr<ResourceLoader>, protected ResourceHandleClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader, CoreResourceLoader);
 public:
     virtual ~ResourceLoader() = 0;
 
@@ -74,7 +75,7 @@ public:
 
     virtual void init(ResourceRequest&&, CompletionHandler<void(bool)>&&);
 
-    void deliverResponseAndData(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>&&);
+    void deliverResponseAndData(ResourceResponse&&, RefPtr<FragmentedSharedBuffer>&&);
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startLoading()
@@ -99,6 +100,8 @@ public:
     ResourceError cannotShowURLError();
     ResourceError httpsUpgradeRedirectLoopError();
 
+    static bool isPortAllowed(const URL&);
+
     virtual void setDefersLoading(bool);
     bool defersLoading() const { return m_defersLoading; }
 
@@ -117,7 +120,7 @@ public:
 
     virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler);
+    virtual void didReceiveResponse(ResourceResponse&&, CompletionHandler<void()>&& policyCompletionHandler);
     virtual void didReceiveData(const SharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didFinishLoading(const NetworkLoadMetrics&);
@@ -133,7 +136,7 @@ public:
 
 #if USE(QUICK_LOOK)
     bool isQuickLookResource() const;
-    virtual void didReceivePreviewResponse(const ResourceResponse&) { };
+    virtual void didReceivePreviewResponse(ResourceResponse&&) { };
 #endif
 
     const URL& url() const { return m_request.url(); }
@@ -151,7 +154,7 @@ public:
     bool reachedTerminalState() const { return m_reachedTerminalState; }
 
     const ResourceRequest& request() const { return m_request; }
-    void setRequest(ResourceRequest&& request) { m_request = WTFMove(request); }
+    void setRequest(ResourceRequest&& request) { m_request = WTF::move(request); }
 
     void setDataBufferingPolicy(DataBufferingPolicy);
 
@@ -201,7 +204,7 @@ protected:
     ResourceResponse m_response;
     ResourceLoadTiming m_loadTiming;
 #if USE(QUICK_LOOK)
-    std::unique_ptr<LegacyPreviewLoader> m_previewLoader;
+    const RefPtr<LegacyPreviewLoader> m_previewLoader;
 #endif
     bool m_canCrossOriginRequestsAskUserForCredentials { true };
 

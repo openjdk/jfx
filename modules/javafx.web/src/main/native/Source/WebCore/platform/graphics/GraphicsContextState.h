@@ -27,10 +27,10 @@
 #if PLATFORM(JAVA)
 #include "FloatRect.h"
 #endif
-#include "GraphicsStyle.h"
-#include "GraphicsTypes.h"
-#include "SourceBrush.h"
-#include "WindRule.h"
+#include <WebCore/GraphicsStyle.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/SourceBrush.h>
+#include <WebCore/WindRule.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
 
@@ -63,7 +63,6 @@ public:
         ShouldSubpixelQuantizeFonts = 1 << 13,
         ShadowsIgnoreTransforms     = 1 << 14,
         DrawLuminanceMask           = 1 << 15,
-        UseDarkAppearance           = 1 << 16,
     };
     using ChangeFlags = OptionSet<Change>;
 
@@ -95,8 +94,8 @@ public:
     const SourceBrush& fillBrush() const { return m_fillBrush; }
     void setFillBrush(const SourceBrush& brush) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, brush); }
     void setFillColor(const Color& color) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, { color }); }
-    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_fillBrush.setGradient(WTFMove(gradient), spaceTransform); m_changeFlags.add(Change::FillBrush); }
-    void setFillPattern(Ref<Pattern>&& pattern) { m_fillBrush.setPattern(WTFMove(pattern)); m_changeFlags.add(Change::FillBrush); }
+    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_fillBrush.setGradient(WTF::move(gradient), spaceTransform); m_changeFlags.add(Change::FillBrush); }
+    void setFillPattern(Ref<Pattern>&& pattern) { m_fillBrush.setPattern(WTF::move(pattern)); m_changeFlags.add(Change::FillBrush); }
 
     WindRule fillRule() const { return m_fillRule; }
     void setFillRule(WindRule fillRule) { setProperty(Change::FillRule, &GraphicsContextState::m_fillRule, fillRule); }
@@ -105,8 +104,8 @@ public:
     const SourceBrush& strokeBrush() const { return m_strokeBrush; }
     void setStrokeBrush(const SourceBrush& brush) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, brush); }
     void setStrokeColor(const Color& color) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, { color }); }
-    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_strokeBrush.setGradient(WTFMove(gradient), spaceTransform); m_changeFlags.add(Change::StrokeBrush); }
-    void setStrokePattern(Ref<Pattern>&& pattern) { m_strokeBrush.setPattern(WTFMove(pattern)); m_changeFlags.add(Change::StrokeBrush); }
+    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_strokeBrush.setGradient(WTF::move(gradient), spaceTransform); m_changeFlags.add(Change::StrokeBrush); }
+    void setStrokePattern(Ref<Pattern>&& pattern) { m_strokeBrush.setPattern(WTF::move(pattern)); m_changeFlags.add(Change::StrokeBrush); }
 
     float strokeThickness() const { return m_strokeThickness; }
     void setStrokeThickness(float strokeThickness) { setProperty(Change::StrokeThickness, &GraphicsContextState::m_strokeThickness, strokeThickness); }
@@ -147,11 +146,6 @@ public:
     bool drawLuminanceMask() const { return m_drawLuminanceMask; }
     void setDrawLuminanceMask(bool drawLuminanceMask) { setProperty(Change::DrawLuminanceMask, &GraphicsContextState::m_drawLuminanceMask, drawLuminanceMask); }
 
-    bool useDarkAppearance() const { return m_useDarkAppearance; }
-    void setUseDarkAppearance(bool useDarkAppearance) { setProperty(Change::UseDarkAppearance, &GraphicsContextState::m_useDarkAppearance, useDarkAppearance); }
-
-    bool containsOnlyInlineChanges() const;
-    bool containsOnlyInlineStrokeChanges() const;
     void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
     void mergeSingleChange(const GraphicsContextState&, ChangeIndex, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
     void mergeAllChanges(const GraphicsContextState&);
@@ -164,7 +158,7 @@ public:
     FloatRect clipBounds;
 #endif
 private:
-    friend struct IPC::ArgumentCoder<GraphicsContextState, void>;
+    friend struct IPC::ArgumentCoder<GraphicsContextState>;
 
     template<typename T>
     void setProperty(Change change, T GraphicsContextState::*property, const T& value)
@@ -208,7 +202,6 @@ private:
     bool m_shouldSubpixelQuantizeFonts { true };
     bool m_shadowsIgnoreTransforms { false };
     bool m_drawLuminanceMask { false };
-    bool m_useDarkAppearance { false };
 
     Purpose m_purpose { Purpose::Initial };
 };

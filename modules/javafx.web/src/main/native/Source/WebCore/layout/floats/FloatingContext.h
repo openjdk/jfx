@@ -26,8 +26,8 @@
 #pragma once
 
 #include "FormattingContext.h"
-#include "LayoutElementBox.h"
-#include "PlacedFloats.h"
+#include <WebCore/LayoutElementBox.h>
+#include <WebCore/PlacedFloats.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -41,7 +41,7 @@ class Box;
 // Note that a FloatingContext's inline direction always matches the root's inline direction but it may
 // not match the PlacedFloats's inline direction (i.e. PlacedFloats may be constructed by a parent BFC with mismatching inline direction).
 class FloatingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FloatingContext);
+    WTF_MAKE_TZONE_ALLOCATED(FloatingContext);
 public:
     FloatingContext(const ElementBox& formattingContextRoot, const LayoutState&, const PlacedFloats&);
 
@@ -75,7 +75,7 @@ private:
 
     const ElementBox& root() const { return m_formattingContextRoot; }
     // FIXME: Turn this into an actual geometry cache.
-    const LayoutState& containingBlockGeometries() const { return m_layoutState; }
+    const LayoutState& containingBlockGeometries() const;
 
     void findPositionForFormattingContextRoot(FloatAvoider&, BoxGeometry::HorizontalEdges containingBlockContentBoxEdges) const;
 
@@ -85,7 +85,7 @@ private:
     Point mapPointFromFloatingContextRootToBlockFormattingContextRoot(Point) const;
 
     CheckedRef<const ElementBox> m_formattingContextRoot;
-    const LayoutState& m_layoutState;
+    const CheckedRef<const LayoutState> m_layoutState;
     const PlacedFloats& m_placedFloats;
 };
 

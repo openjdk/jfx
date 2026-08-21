@@ -25,12 +25,15 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
 struct FrameIdentifierType;
-using FrameIdentifier = ProcessQualified<ObjectIdentifier<FrameIdentifierType>>;
+using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
+
+WEBCORE_EXPORT FrameIdentifier generateFrameIdentifier();
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, FrameIdentifier);
 
 }

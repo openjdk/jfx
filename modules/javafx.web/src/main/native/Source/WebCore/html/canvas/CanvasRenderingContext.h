@@ -49,21 +49,22 @@ class HTMLVideoElement;
 class ImageBitmap;
 class SVGImageElement;
 class WebGLObject;
-enum class ImageBufferPixelFormat : uint8_t;
+enum class PixelFormat : uint8_t;
 
 class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext> {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(CanvasRenderingContext);
 public:
     virtual ~CanvasRenderingContext();
 
-    static UncheckedKeyHashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
+    static HashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
     static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
 
     CanvasBase& canvasBase() const { return m_canvas; }
+    Ref<CanvasBase> protectedCanvasBase() const { return m_canvas.get(); }
 
     bool is2dBase() const { return is2d() || isOffscreen2d() || isPaint(); }
     bool is2d() const { return m_type == Type::CanvasElement2D; }
@@ -79,6 +80,10 @@ public:
 
     virtual void clearAccumulatedDirtyRect() { }
 
+    // Called when the canvas size properties are assigned.
+    // The canvas will already have the new size.
+    virtual void didUpdateCanvasSizeProperties(bool sizeChanged) = 0;
+
     // Canvas 2DContext drawing buffer is the same as display buffer.
     // WebGL, WebGPU draws to drawing buffer. The draw buffer is then swapped to
     // display buffer during preparation and compositor composites the display buffer.
@@ -90,8 +95,8 @@ public:
     };
 
     // Draws the source buffer to the canvasBase().buffer().
-    virtual RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer);
-    virtual bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const;
+    virtual RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) = 0;
+    virtual bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const = 0;
     bool delegatesDisplay() const;
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
     virtual void setContentsToLayer(GraphicsLayer&);
@@ -113,17 +118,26 @@ public:
     // Swaps the current drawing buffer to display buffer.
     virtual void prepareForDisplay() { }
 
-    virtual ImageBufferPixelFormat pixelFormat() const;
+    virtual PixelFormat pixelFormat() const;
     virtual DestinationColorSpace colorSpace() const;
+    virtual bool isOpaque() const;
     virtual bool willReadFrequently() const;
     virtual std::optional<RenderingMode> renderingModeForTesting() const { return std::nullopt; }
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    bool isHDR() const { return pixelFormat() == ImageBufferPixelFormat::RGBA16F; }
+    bool isHDR() const { return pixelFormat() == PixelFormat::RGBA16F; }
+    virtual void setDynamicRangeLimit(PlatformDynamicRangeLimit) { };
 #endif
+    virtual std::optional<double> getEffectiveDynamicRangeLimitValue() const { return std::nullopt; };
 
     void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }
     bool isInPreparationForDisplayOrFlush() const { return m_isInPreparationForDisplayOrFlush; }
+
+    void updateMemoryCost(size_t newMemoryCost) const;
+    size_t memoryCost() const;
+#if ENABLE(RESOURCE_USAGE)
+    size_t externalMemoryCost() const;
+#endif
 
 protected:
     enum class Type : uint8_t {
@@ -155,6 +169,8 @@ protected:
     void checkOrigin(const URL&);
     void checkOrigin(const CSSStyleImageValue&);
 
+    mutable std::atomic<size_t> m_memoryCost { 0 };
+
     bool m_isInPreparationForDisplayOrFlush { false };
     bool m_hasActiveInspectorCanvasCallTracer { false };
 
@@ -163,6 +179,7 @@ private:
 
     WeakRef<CanvasBase> m_canvas;
     const Type m_type;
+
 };
 
 } // namespace WebCore

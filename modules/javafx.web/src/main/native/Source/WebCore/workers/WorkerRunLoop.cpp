@@ -34,7 +34,10 @@
 
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMGlobalObject.h"
+#include "Logging.h"
+#include "SWServer.h"
 #include "ScriptExecutionContext.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "SharedTimer.h"
 #include "ThreadGlobalData.h"
 #include "ThreadTimers.h"
@@ -48,6 +51,10 @@
 #include <wtf/AutodrainedPool.h>
 #include <wtf/TZoneMallocInlines.h>
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 #if USE(GLIB)
 #include <glib.h>
 #endif
@@ -57,12 +64,14 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerRunLoop);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop::Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerMainRunLoop);
 
 class WorkerSharedTimer final : public SharedTimer {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkerSharedTimer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerSharedTimer);
 public:
     // SharedTimer interface.
-    void setFiredFunction(Function<void()>&& function) final { m_sharedTimerFunction = WTFMove(function); }
+    void setFiredFunction(Function<void()>&& function) final { m_sharedTimerFunction = WTF::move(function); }
     void setFireInterval(Seconds interval) final { m_nextFireTime = MonotonicTime::now() + interval; }
     void stop() final { m_nextFireTime = MonotonicTime { }; }
 
@@ -78,7 +87,7 @@ private:
 class ModePredicate {
 public:
     explicit ModePredicate(String&& mode, bool allowEventLoopTasks)
-        : m_mode(WTFMove(mode))
+        : m_mode(WTF::move(mode))
         , m_defaultMode(m_mode == WorkerRunLoop::defaultMode())
         , m_allowEventLoopTasks(allowEventLoopTasks)
     {
@@ -106,7 +115,6 @@ private:
 };
 
 WorkerDedicatedRunLoop::WorkerDedicatedRunLoop()
-    : m_sharedTimer(makeUnique<WorkerSharedTimer>())
 {
 }
 
@@ -133,8 +141,10 @@ public:
         : m_runLoop(runLoop)
         , m_isForDebugging(isForDebugging)
     {
-        if (!m_runLoop.m_nestedCount)
-            threadGlobalData().threadTimers().setSharedTimer(m_runLoop.m_sharedTimer.get());
+        if (!m_runLoop.m_nestedCount) {
+            m_runLoop.m_sharedTimer = makeUnique<WorkerSharedTimer>();
+            threadGlobalDataSingleton().threadTimers().setSharedTimer(m_runLoop.m_sharedTimer.get());
+        }
         m_runLoop.m_nestedCount++;
         if (m_isForDebugging == IsForDebugging::Yes)
             m_runLoop.m_debugCount++;
@@ -143,8 +153,10 @@ public:
     ~RunLoopSetup()
     {
         m_runLoop.m_nestedCount--;
-        if (!m_runLoop.m_nestedCount)
-            threadGlobalData().threadTimers().setSharedTimer(nullptr);
+        if (!m_runLoop.m_nestedCount) {
+            threadGlobalDataSingleton().threadTimers().setSharedTimer(nullptr);
+            m_runLoop.m_sharedTimer = nullptr;
+        }
         if (m_isForDebugging == IsForDebugging::Yes)
             m_runLoop.m_debugCount--;
     }
@@ -157,17 +169,88 @@ void WorkerDedicatedRunLoop::run(WorkerOrWorkletGlobalScope* context)
 {
     RunLoopSetup setup(*this, RunLoopSetup::IsForDebugging::No);
     ModePredicate modePredicate(defaultMode(), false);
-    MessageQueueWaitResult result;
+
+    // <rdar://155433911> - ServiceWorkers sometimes end up spinning their worker runloop endlessly,
+    // repeatedly timing out getting a task from the message queue, not firing the web shared timer,
+    // then firing their CFRunLoopTimers which do very little (or nothing).
+    // This spinning is wasteful and - we suspect - unproductive.
+    // For ServiceWorkers only, we will log this scenario to learn more.
+    // The requirements are:
+    // 1 - The RunLoop must spin repeatedly, never handling a message or firing the web shared timer
+    // 2 - It must do so spanning at least "defaultTerminationDelay" seconds
+    // 3 - It must do so at a frequency we expect to be bad. (I'm arbitrarily choosing 10hz)
+    struct RunLoopStatus {
+        enum class ShouldLogExcessiveRunLoopSpinning : bool { No, Yes };
+        ShouldLogExcessiveRunLoopSpinning addRunLoopSpin()
+        {
+            numberOfRunLoopSpinsInARow++;
+            auto now = MonotonicTime::now();
+
+            if (timeOfFirstRunLoopOnlySpin == MonotonicTime::infinity()) {
+                timeOfFirstRunLoopOnlySpin = now;
+                return ShouldLogExcessiveRunLoopSpinning::No;
+            }
+
+            static constexpr Seconds lengthOfAllowableSpinning = SWServer::defaultTerminationDelay;
+
+            auto timeSpinning = now - timeOfFirstRunLoopOnlySpin;
+            if (timeSpinning < lengthOfAllowableSpinning)
+                return ShouldLogExcessiveRunLoopSpinning::No;
+
+            static const double frequencyLimit = 10.0;
+            if (numberOfRunLoopSpinsInARow / timeSpinning.seconds() < frequencyLimit)
+                return ShouldLogExcessiveRunLoopSpinning::No;
+
+            return ShouldLogExcessiveRunLoopSpinning::Yes;
+        }
+
+        double secondsSpentSpinning()
+        {
+            return std::max(0.0, (MonotonicTime::now() - timeOfFirstRunLoopOnlySpin).seconds());
+        }
+
+    private:
+        MonotonicTime timeOfFirstRunLoopOnlySpin { MonotonicTime::infinity() };
+        size_t numberOfRunLoopSpinsInARow { 0 };
+    };
+    RunLoopStatus currentRunLoopStatus;
+    RunInModeResult result;
+
     do {
         result = runInMode(context, modePredicate);
-    } while (result != MessageQueueTerminated);
+
+        // Only do further RunLoop status tracking for ServiceWorker contexts.
+        if (!is<ServiceWorkerGlobalScope>(context))
+            continue;
+
+        // We consider the message queue handling a message or this thread's shared timer firing to signify
+        // web content "making progress", so either are an acceptable result;
+        if (result.messageQueueResult != MessageQueueTimeout || result.firedSharedTimer) {
+            currentRunLoopStatus = { };
+            continue;
+        }
+
+        if (currentRunLoopStatus.addRunLoopSpin() == RunLoopStatus::ShouldLogExcessiveRunLoopSpinning::No)
+            continue;
+
+        auto reason = makeString("ServiceWorker message queue spun excessively without making web content progress for "_s, currentRunLoopStatus.secondsSpentSpinning(), " seconds. Shared timer firing in "_s, m_sharedTimer->fireTimeDelay().seconds(), " seconds. RunLoop rimers before: "_s, result.activeRunLoopTimersBeforeFiring, ". RunLoop timers after: "_s, result.activeRunLoopTimersAfterFiring);
+        RELEASE_LOG(ServiceWorker, "%s", reason.utf8().data());
+
+#if PLATFORM(COCOA)
+        if (WTF::CocoaApplication::isAppleApplication())
+            RELEASE_LOG_FAULT_WITH_PAYLOAD(ServiceWorker, reason.utf8().data());
+#endif
+
+        // Reset status to start tracking a new sequence of spinning.
+        currentRunLoopStatus = { };
+    } while (result.messageQueueResult != MessageQueueTerminated);
     runCleanupTasks(context);
 }
 
 MessageQueueWaitResult WorkerDedicatedRunLoop::runInDebuggerMode(WorkerOrWorkletGlobalScope& context)
 {
     RunLoopSetup setup(*this, RunLoopSetup::IsForDebugging::Yes);
-    return runInMode(&context, ModePredicate { debuggerMode(), false });
+    return runInMode(&context, ModePredicate { debuggerMode(), false }).messageQueueResult;
 }
 
 bool WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, const String& mode, bool allowEventLoopTasks)
@@ -175,13 +258,13 @@ bool WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, cons
     ASSERT(mode != debuggerMode());
     RunLoopSetup setup(*this, RunLoopSetup::IsForDebugging::No);
     ModePredicate modePredicate(String { mode }, allowEventLoopTasks);
-    return runInMode(context, modePredicate) != MessageQueueWaitResult::MessageQueueTerminated;
+    return runInMode(context, modePredicate).messageQueueResult != MessageQueueWaitResult::MessageQueueTerminated;
 }
 
-MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, const ModePredicate& predicate)
+WorkerDedicatedRunLoop::RunInModeResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, const ModePredicate& predicate)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
 
     AutodrainedPool pool;
 
@@ -201,15 +284,17 @@ MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalSc
     Seconds timeoutDelay = Seconds::infinity();
 
 #if USE(CF)
-    CFAbsoluteTime nextCFRunLoopTimerFireDate = CFRunLoopGetNextTimerFireDate(CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+    CFAbsoluteTime nextCFRunLoopTimerFireDate = CFRunLoopGetNextTimerFireDate(RetainPtr { CFRunLoopGetCurrent() }.get(), kCFRunLoopDefaultMode);
     double timeUntilNextCFRunLoopTimerInSeconds = nextCFRunLoopTimerFireDate - CFAbsoluteTimeGetCurrent();
     timeoutDelay = std::max(0_s, Seconds(timeUntilNextCFRunLoopTimerInSeconds));
 #endif
 
+    CheckedPtr script = context->script();
+
 #if OS(WINDOWS)
     RunLoop::cycle();
 
-    if (auto* script = context->script()) {
+    if (script) {
         JSC::VM& vm = script->vm();
         timeoutDelay = vm.deferredWorkTimer->timeUntilFire().value_or(Seconds::infinity());
     }
@@ -218,19 +303,22 @@ MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalSc
     if (predicate.isDefaultMode() && m_sharedTimer->isActive())
         timeoutDelay = std::min(timeoutDelay, m_sharedTimer->fireTimeDelay());
 
-    if (auto* script = context->script()) {
+    if (script) {
         script->releaseHeapAccess();
         script->addTimerSetNotification(timerAddedTask);
     }
     MessageQueueWaitResult result;
     auto task = m_messageQueue.waitForMessageFilteredWithTimeout(result, predicate, timeoutDelay);
-    if (auto* script = context->script()) {
+    if (script) {
         script->acquireHeapAccess();
         script->removeTimerSetNotification(timerAddedTask);
     }
 
-    // If the context is closing, don't execute any further JavaScript tasks (per section 4.1.1 of the Web Workers spec).  However, there may be implementation cleanup tasks in the queue, so keep running through it.
+    RunInModeResult runInModeResult;
+    runInModeResult.messageQueueResult = result;
 
+    // If the context is closing, don't execute any further JavaScript tasks (per section 4.1.1 of the Web Workers spec).
+    // However, there may be implementation cleanup tasks in the queue, so keep running through it.
     switch (result) {
     case MessageQueueTerminated:
         break;
@@ -240,25 +328,44 @@ MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalSc
         break;
 
     case MessageQueueTimeout:
-        if (!context->isClosing() && !isBeingDebugged())
+        if (!context->isClosing() && !isBeingDebugged()) {
+            runInModeResult.firedSharedTimer = true;
             m_sharedTimer->fire();
+        }
         break;
     }
 
 #if USE(CF)
     if (result != MessageQueueTerminated) {
-        if (nextCFRunLoopTimerFireDate <= CFAbsoluteTimeGetCurrent())
-            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, /*returnAfterSourceHandled*/ false);
+        if (nextCFRunLoopTimerFireDate <= CFAbsoluteTimeGetCurrent()) {
+            runInModeResult.firedRunLoopTimer = true;
+
+            runInModeResult.activeRunLoopTimersBeforeFiring = RunLoop::currentSingleton().listActiveTimersForLogging();
+
+            // CFRunLoopGetNextTimerFireDate may return a date in the past even though the next fire
+            // date is in the future (rdar://163967161). This can happen if e.g. the system goes to
+            // sleep while a timer is armed.
+            //
+            // To mitigate this causing us to spin runInMode in an infinite loop, when we detect
+            // that there's a timer that should have fired in the distant past (more than one second
+            // ago), have the run loop block for up to 1 second. This should limit the number of
+            // wakeups to one per second.
+            //
+            // rdar://163967161 tracks fixing this correctly by using CFRunLoop to drive everything.
+            CFTimeInterval runLoopTimeoutInSeconds = (timeUntilNextCFRunLoopTimerInSeconds <= -1) ? 1 : 0;
+            CFRunLoopRunInMode(kCFRunLoopDefaultMode, runLoopTimeoutInSeconds, /*returnAfterSourceHandled*/ true);
+            runInModeResult.activeRunLoopTimersAfterFiring = RunLoop::currentSingleton().listActiveTimersForLogging();
+    }
     }
 #endif
 
-    return result;
+    return runInModeResult;
 }
 
 void WorkerDedicatedRunLoop::runCleanupTasks(WorkerOrWorkletGlobalScope* context)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
     ASSERT(m_messageQueue.killed());
 
     while (true) {
@@ -276,22 +383,22 @@ void WorkerDedicatedRunLoop::terminate()
 
 void WorkerRunLoop::postTask(ScriptExecutionContext::Task&& task)
 {
-    postTaskForMode(WTFMove(task), defaultMode());
+    postTaskForMode(WTF::move(task), defaultMode());
 }
 
 void WorkerDedicatedRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task&& task)
 {
-    m_messageQueue.appendAndKill(makeUnique<Task>(WTFMove(task), defaultMode()));
+    m_messageQueue.appendAndKill(makeUnique<Task>(WTF::move(task), defaultMode()));
 }
 
 void WorkerDedicatedRunLoop::postTaskForMode(ScriptExecutionContext::Task&& task, const String& mode)
 {
-    m_messageQueue.append(makeUnique<Task>(WTFMove(task), mode));
+    m_messageQueue.append(makeUnique<Task>(WTF::move(task), mode));
 }
 
 void WorkerRunLoop::postDebuggerTask(ScriptExecutionContext::Task&& task)
 {
-    postTaskForMode(WTFMove(task), debuggerMode());
+    postTaskForMode(WTF::move(task), debuggerMode());
 }
 
 void WorkerDedicatedRunLoop::Task::performTask(WorkerOrWorkletGlobalScope* context)
@@ -302,7 +409,7 @@ void WorkerDedicatedRunLoop::Task::performTask(WorkerOrWorkletGlobalScope* conte
         JSC::VM& vm = context->script()->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
         m_task.performTask(*context);
-        if (UNLIKELY(context->script() && scope.exception())) {
+        if (context->script() && scope.exception()) [[unlikely]] {
             if (vm.hasPendingTerminationException()) {
                 context->script()->forbidExecution();
                 return;
@@ -314,7 +421,7 @@ void WorkerDedicatedRunLoop::Task::performTask(WorkerOrWorkletGlobalScope* conte
 }
 
 WorkerDedicatedRunLoop::Task::Task(ScriptExecutionContext::Task&& task, const String& mode)
-    : m_task(WTFMove(task))
+    : m_task(WTF::move(task))
     , m_mode(mode.isolatedCopy())
 {
 }
@@ -333,12 +440,19 @@ void WorkerMainRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task&& task
     if (m_terminated)
         return;
 
-    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
-        if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
+    RunLoop::mainSingleton().dispatch([weakThis = WeakPtr { *this }, task = WTF::move(task)]() mutable {
+        RefPtr<WorkerOrWorkletGlobalScope> scope;
+        {
+            CheckedPtr checkedThis = weakThis.get();
+            if (!checkedThis || checkedThis->m_terminated)
+            return;
+            scope = checkedThis->m_workerOrWorkletGlobalScope.get();
+            if (!scope)
             return;
 
-        weakThis->m_terminated = true;
-        task.performTask(*weakThis->m_workerOrWorkletGlobalScope);
+            checkedThis->m_terminated = true;
+        }
+        task.performTask(*scope);
     });
 }
 
@@ -347,17 +461,23 @@ void WorkerMainRunLoop::postTaskForMode(ScriptExecutionContext::Task&& task, con
     if (m_terminated)
         return;
 
-    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
-        if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
+    RunLoop::mainSingleton().dispatch([weakThis = WeakPtr { *this }, task = WTF::move(task)]() mutable {
+        RefPtr<WorkerOrWorkletGlobalScope> scope;
+        {
+            CheckedPtr checkedThis = weakThis.get();
+            if (!checkedThis || checkedThis->m_terminated)
             return;
-
-        task.performTask(*weakThis->m_workerOrWorkletGlobalScope);
+            scope = checkedThis->m_workerOrWorkletGlobalScope.get();
+            if (!scope)
+            return;
+        }
+        task.performTask(*scope);
     });
 }
 
 bool WorkerMainRunLoop::runInMode(WorkerOrWorkletGlobalScope*, const String&, bool)
 {
-    RunLoop::main().cycle();
+    RunLoop::mainSingleton().cycle();
     return true;
 }
 

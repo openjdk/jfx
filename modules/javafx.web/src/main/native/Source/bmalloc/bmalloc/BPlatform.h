@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +32,25 @@
 #include <AvailabilityMacros.h>
 #include <TargetConditionals.h>
 #endif
-
 #define BPLATFORM_JAVA 1
+#if defined(__has_include)
+#if __has_include(<WebKitAdditions/pas_mte_additions.h>)
+// FIXME: Properly support using WKA in modules.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#include <WebKitAdditions/pas_mte_additions.h>
+#pragma clang diagnostic pop
+#endif // __has_include(<WebKitAdditions/pas_mte_additions.h>)
+#endif // defined(__has_include)
+
+#ifndef BASSERT_ENABLED
+#ifdef NDEBUG
+#define BASSERT_ENABLED 0
+#else
+#define BASSERT_ENABLED 1
+#endif
+#endif
+
 #define BPLATFORM(PLATFORM) (defined BPLATFORM_##PLATFORM && BPLATFORM_##PLATFORM)
 #define BOS(OS) (defined BOS_##OS && BOS_##OS)
 
@@ -107,19 +124,25 @@
 #define BPLATFORM_WIN 1
 #endif
 
+/* ==== Platform adaptation macros: these describe properties of the target environment. ==== */
+
+/* BHAVE() - specific system features (headers, functions or similar) that are present or not */
+#define BHAVE(_FEATURE) (defined BHAVE_##_FEATURE && BHAVE_##_FEATURE)
+
 /* ==== Feature decision macros: these define feature choices for a particular port. ==== */
 
-#define BENABLE(WTF_FEATURE) (defined BENABLE_##WTF_FEATURE && BENABLE_##WTF_FEATURE)
+/* BENABLE() - turn on a specific feature of bmalloc */
+#define BENABLE(_FEATURE) (defined BENABLE_##_FEATURE && BENABLE_##_FEATURE)
 
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
 /* BUSE() - use a particular third-party library or optional OS service */
-#define BUSE(FEATURE) (defined BUSE_##FEATURE && BUSE_##FEATURE)
+#define BUSE(_FEATURE) (defined BUSE_##_FEATURE && BUSE_##_FEATURE)
 
 /* ==== Compiler adaptation macros: these describe the capabilities of the compiler. ==== */
 
 /* BCOMPILER_SUPPORTS() - check for a compiler feature */
-#define BCOMPILER_SUPPORTS(FEATURE) (defined BCOMPILER_SUPPORTS_##FEATURE && BCOMPILER_SUPPORTS_##FEATURE)
+#define BCOMPILER_SUPPORTS(_FEATURE) (defined BCOMPILER_SUPPORTS_##_FEATURE && BCOMPILER_SUPPORTS_##_FEATURE)
 
 /* ==== Platform adaptation macros: these describe properties of the target environment. ==== */
 
@@ -299,13 +322,16 @@
 #endif
 
 #if BCPU(ADDRESS64)
-#if BOS(DARWIN) && !BPLATFORM(IOS_FAMILY_SIMULATOR)
+#if BHAVE(36BIT_ADDRESS)
+#define BOS_EFFECTIVE_ADDRESS_WIDTH 36
+/* iOS simulators lie about the size of the address space */
+#elif BOS(DARWIN) && !BPLATFORM(IOS_FAMILY_SIMULATOR)
 #define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
 #else
 /* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 48
 #endif
-#else
+#else /* not BCPU(ADDRESS64) */
 #define BOS_EFFECTIVE_ADDRESS_WIDTH 32
 #endif
 
@@ -333,14 +359,27 @@
 #endif
 
 /* Enable this to put each IsoHeap and other allocation categories into their own malloc heaps, so that tools like vmmap can show how big each heap is. */
+#if !defined(BENABLE_MALLOC_HEAP_BREAKDOWN)
 #define BENABLE_MALLOC_HEAP_BREAKDOWN 0
+#endif
+
+#if BPLATFORM(COCOA)
+/* Should be aligned with the definition in WTF/wtf/PlatformUse.h */
+#if defined __has_include && __has_include(<CoreFoundation/CFPriv.h>)
+#define BUSE_APPLE_INTERNAL_SDK 1
+#else
+#define BUSE_APPLE_INTERNAL_SDK 0
+#endif
+#else // BPLATFORM(COCOA)
+#define BUSE_APPLE_INTERNAL_SDK 0
+#endif // !BPLATFORM(COCOA)
 
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
 /* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
 #if !defined(BENABLE_LIBPAS)
-#if BCPU(ADDRESS64) && (BOS(DARWIN) || (BOS(LINUX) && (BCPU(X86_64) || BCPU(ARM64))) || BPLATFORM(PLAYSTATION))
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || BOS(WINDOWS) || (BOS(LINUX) && (BCPU(X86_64) || BCPU(ARM64))) || BPLATFORM(PLAYSTATION))
 #define BENABLE_LIBPAS 1
 #ifndef PAS_BMALLOC
 #define PAS_BMALLOC 1
@@ -359,6 +398,19 @@
 #endif
 #endif
 
+#if BUSE_LIBPAS
+#ifndef BUSE_OPENSOURCE_MTE
+#define BUSE_OPENSOURCE_MTE 1
+#endif // BUSE_OPENSOURCE_MTE
+
+#ifndef BENABLE_MTE
+#define BENABLE_MTE (BUSE(APPLE_INTERNAL_SDK) && BCPU(ARM64E) && BUSE_OPENSOURCE_MTE)
+#endif // !defined(BENABLE_MTE)
+#else // !BUSE_LIBPAS
+#define BENABLE_MTE 0
+#define BUSE_OPENSOURCE_MTE 0
+#endif // BUSE_LIBPAS
+
 #if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K)
 #define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K 1
 #endif
@@ -367,7 +419,7 @@
 #define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K 1
 #endif
 
-/* We only export the mallocSize and mallocGoodSize APIs if they're supported by the DebugHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
+/* We only export the mallocSize and mallocGoodSize APIs if they're supported by the SystemHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
 #if BUSE(LIBPAS) && BOS(DARWIN)
 #define BENABLE_MALLOC_SIZE 1
 #define BENABLE_MALLOC_GOOD_SIZE 1

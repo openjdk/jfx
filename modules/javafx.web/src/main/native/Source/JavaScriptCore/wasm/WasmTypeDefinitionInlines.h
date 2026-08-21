@@ -26,9 +26,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmTypeDefinition.h"
+#include <JavaScriptCore/WasmTypeDefinition.h>
 
 namespace JSC { namespace Wasm {
 
@@ -81,6 +83,13 @@ inline TypeIndex TypeInformation::get(const TypeDefinition& type)
         ASSERT_UNUSED(info, info.m_typeSet.contains(TypeHash { const_cast<TypeDefinition&>(type) }));
     }
     return type.index();
+}
+
+inline RefPtr<const TypeDefinition> TypeInformation::getRef(TypeIndex typeIndex)
+{
+    if (typeIndexIsType(typeIndex) || typeIndex == TypeDefinition::invalidIndex)
+        return nullptr;
+    return TypeInformation::get(typeIndex);
 }
 
 } } // namespace JSC::Wasm

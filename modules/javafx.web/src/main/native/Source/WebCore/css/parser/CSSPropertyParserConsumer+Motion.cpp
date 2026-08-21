@@ -30,14 +30,15 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParserConsumer+Angle.h"
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Shapes.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSRayValue.h"
 #include "CSSValueKeywords.h"
@@ -47,20 +48,19 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // ray( <angle> && <ray-size>? && contain? && [at <position>]? )
     // <ray-size> = closest-side | closest-corner | farthest-side | farthest-corner | sides
     // https://drafts.fxtf.org/motion-1/#ray-function
 
-    static constexpr std::pair<CSSValueID, CSS::RaySize> sizeMappings[] {
+    static constexpr SortedArrayMap sizeMap { std::to_array<std::pair<CSSValueID, CSS::RaySize>>({
         { CSSValueClosestSide, CSS::RaySize { CSS::Keyword::ClosestSide { } } },
         { CSSValueClosestCorner, CSS::RaySize { CSS::Keyword::ClosestCorner { } } },
         { CSSValueFarthestSide, CSS::RaySize { CSS::Keyword::FarthestSide { } } },
         { CSSValueFarthestCorner, CSS::RaySize { CSS::Keyword::FarthestCorner { } } },
         { CSSValueSides, CSS::RaySize { CSS::Keyword::Sides { } } },
-    };
-    static constexpr SortedArrayMap sizeMap { sizeMappings };
+    }) };
 
     if (range.peek().type() != FunctionToken || range.peek().functionId() != CSSValueRay)
         return { };
@@ -75,7 +75,7 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     auto consumeAngle = [&] -> bool {
         if (angle)
             return false;
-        angle = MetaConsumer<CSS::Angle<>>::consume(args, context, { }, { .parserMode = context.mode });
+        angle = MetaConsumer<CSS::Angle<>>::consume(args, state);
         return angle.has_value();
     };
     auto consumeSize = [&] -> bool {
@@ -93,7 +93,7 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     auto consumeAtPosition = [&] -> bool {
         if (position || !consumeIdentRaw<CSSValueAt>(args).has_value())
             return false;
-        position = consumePositionUnresolved(args, context);
+        position = consumePositionUnresolved(args, state);
         return position.has_value();
     };
 
@@ -110,16 +110,16 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     return CSSRayValue::create(
         CSS::RayFunction {
             .parameters = CSS::Ray {
-                WTFMove(*angle),
+                WTF::move(*angle),
                 size.value_or(CSS::RaySize { CSS::Keyword::ClosestSide { } }),
-                WTFMove(contain),
-                WTFMove(position)
+                WTF::move(contain),
+                WTF::move(position)
             }
         }
     );
 }
 
-RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'offset-path'> = none | <offset-path> || <coord-box>
     //
@@ -142,7 +142,7 @@ RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserCo
         return consumeIdent(range);
 
     // FIXME: It should be possible to consume both a <url> and <coord-box>.
-    if (auto url = consumeURL(range))
+    if (auto url = consumeURL(range, state, { }))
         return url;
 
     RefPtr<CSSValue> shapeOrRay;
@@ -151,13 +151,13 @@ RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserCo
     auto consumeRay = [&]() -> bool {
         if (shapeOrRay)
             return false;
-        shapeOrRay = consumeRayFunction(range, context);
+        shapeOrRay = consumeRayFunction(range, state);
         return !!shapeOrRay;
     };
     auto consumeShape = [&]() -> bool {
         if (shapeOrRay)
             return false;
-        shapeOrRay = consumeBasicShape(range, context, PathParsingOption::RejectPathFillRule);
+        shapeOrRay = consumeBasicShape(range, state, BasicShapeParsingOptions::RejectPathFunctionFillRule);
         return !!shapeOrRay;
     };
     auto consumeBox = [&]() -> bool {
@@ -188,25 +188,7 @@ RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserCo
     if (list.isEmpty())
         return nullptr;
 
-    return CSSValueList::createSpaceSeparated(WTFMove(list));
-}
-
-RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    auto rangeCopy = range;
-
-    // Attempt to parse the first token as the modifier (auto / reverse keyword). If
-    // successful, parse the second token as the angle. If not, try to parse the other
-    // way around.
-    auto modifier = consumeIdent<CSSValueAuto, CSSValueReverse>(rangeCopy);
-    auto angle = consumeAngle(rangeCopy, context);
-    if (!modifier)
-        modifier = consumeIdent<CSSValueAuto, CSSValueReverse>(rangeCopy);
-    if (!angle && !modifier)
-        return nullptr;
-
-    range = rangeCopy;
-    return CSSOffsetRotateValue::create(WTFMove(modifier), WTFMove(angle));
+    return CSSValueList::createSpaceSeparated(WTF::move(list));
 }
 
 } // namespace CSSPropertyParserHelpers

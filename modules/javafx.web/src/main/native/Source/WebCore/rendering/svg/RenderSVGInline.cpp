@@ -25,6 +25,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
@@ -32,14 +33,15 @@
 #include "SVGInlineFlowBox.h"
 #include "SVGRenderSupport.h"
 #include "SVGResourcesCache.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGInline);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGInline);
 
 RenderSVGInline::RenderSVGInline(Type type, SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderInline(type, element, WTFMove(style))
+    : RenderInline(type, element, WTF::move(style))
 {
     ASSERT(isRenderSVGInline());
 }
@@ -90,6 +92,14 @@ FloatRect RenderSVGInline::repaintRectInLocalCoordinates(RepaintRectCalculation 
     return FloatRect();
 }
 
+FloatRect RenderSVGInline::decoratedBoundingBox() const
+{
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        return textAncestor->decoratedBoundingBox();
+
+    return { };
+}
+
 LayoutRect RenderSVGInline::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
@@ -127,7 +137,7 @@ void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* ancestor
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderInline::pushMappingToContainer(ancestorToStopAt, geometryMap);
@@ -161,14 +171,14 @@ void RenderSVGInline::willBeDestroyed()
     RenderInline::willBeDestroyed();
 }
 
-void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGInline::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     if (document().settings().layerBasedSVGEngineEnabled()) {
         RenderInline::styleDidChange(diff, oldStyle);
         return;
     }
 
-    if (diff == StyleDifference::Layout)
+    if (diff == Style::DifferenceResult::Layout)
         invalidateCachedBoundaries();
     RenderInline::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());

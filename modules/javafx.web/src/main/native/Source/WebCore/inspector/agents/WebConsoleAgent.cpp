@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,13 +64,13 @@ WebConsoleAgent::WebConsoleAgent(WebAgentContext& context)
 
 void WebConsoleAgent::frameWindowDiscarded(LocalDOMWindow& window)
 {
-    if (auto* document = window.document()) {
+    if (RefPtr document = window.document()) {
         for (auto& message : m_consoleMessages) {
-            if (executionContext(message->globalObject()) == document)
+            if (executionContext(message->globalObject()) == document.get())
                 message->clear();
         }
     }
-    static_cast<WebInjectedScriptManager&>(m_injectedScriptManager).discardInjectedScriptsFor(window);
+    Ref { static_cast<WebInjectedScriptManager&>(m_injectedScriptManager) }->discardInjectedScriptsFor(window);
 }
 
 void WebConsoleAgent::didReceiveResponse(ResourceLoaderIdentifier requestIdentifier, const ResourceResponse& response)
@@ -97,7 +97,7 @@ void WebConsoleAgent::didFailLoading(ResourceLoaderIdentifier requestIdentifier,
     else
         level = MessageLevel::Info;
 
-    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, level, WTFMove(message), error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
+    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, level, WTF::move(message), error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
 }
 
 } // namespace WebCore

@@ -21,15 +21,15 @@
 
 #pragma once
 
-#include "AXObjectCache.h"
-#include "Cursor.h"
-#include "DisabledAdaptations.h"
-#include "FocusDirection.h"
-#include "HostWindow.h"
-#include "ImageBufferPixelFormat.h"
+#include <WebCore/Cursor.h>
+#include <WebCore/DisabledAdaptations.h>
+#include <WebCore/FocusDirection.h>
+#include <WebCore/HostWindow.h>
+#include <WebCore/ImageBufferFormat.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
@@ -54,6 +54,7 @@ namespace WebGPU {
 class GPU;
 }
 
+enum class BroadcastFocusedElement : bool;
 enum class PlatformEventModifier : uint8_t;
 enum class TextDirection : bool;
 
@@ -83,16 +84,22 @@ class SearchPopupMenu;
 class WorkerClient;
 
 struct AppHighlight;
+struct AriaNotifyData;
 struct ContactInfo;
 struct ContactsRequestData;
+struct FocusOptions;
+struct LiveRegionAnnouncementData;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
 struct WindowFeatures;
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
+class SecurityOriginData;
+
 struct DigitalCredentialsRequestData;
 struct DigitalCredentialsResponseData;
 struct ExceptionData;
+struct MobileDocumentRequest;
 #endif
 
 class Chrome : public HostWindow {
@@ -116,12 +123,14 @@ public:
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
 #if PLATFORM(IOS_FAMILY)
-    void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const override;
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const override;
+    void relayAriaNotifyNotification(AriaNotifyData&&) const;
+    void relayLiveRegionNotification(LiveRegionAnnouncementData&&) const;
 #endif
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferFormat) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
@@ -159,7 +168,7 @@ public:
     bool canTakeFocus(FocusDirection) const;
     void takeFocus(FocusDirection);
 
-    void focusedElementChanged(Element*);
+    void focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement);
     void focusedFrameChanged(Frame*);
 
     WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const String& openedMainFrameName, const WindowFeatures&, const NavigationAction&);
@@ -183,7 +192,7 @@ public:
     void setResizable(bool);
 
     bool canRunBeforeUnloadConfirmPanel();
-    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&);
+    bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&);
 
     void closeWindow();
 
@@ -209,8 +218,8 @@ public:
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
     void runOpenPanel(LocalFrame&, FileChooser&);
-    void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
-    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
+    void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&);
+    void showContactPicker(ContactsRequestData&&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
     void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&);
@@ -250,7 +259,7 @@ private:
     Ref<Page> protectedPage() const;
 
     WeakRef<Page> m_page;
-    UniqueRef<ChromeClient> m_client;
+    const UniqueRef<ChromeClient> m_client;
     Vector<WeakPtr<PopupOpeningObserver>> m_popupOpeningObservers;
 #if PLATFORM(IOS_FAMILY)
     bool m_isDispatchViewportDataDidChangeSuppressed { false };

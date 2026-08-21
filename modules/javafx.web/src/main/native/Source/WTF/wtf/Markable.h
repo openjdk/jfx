@@ -41,6 +41,8 @@
 
 namespace WTF {
 
+template<typename> struct MarkableTraits { };
+
 // Example:
 //     enum class Type { Value1, Value2, Value3 };
 //     Markable<Type, EnumMarkableTraits<Type, 42>> optional;
@@ -62,7 +64,11 @@ struct EnumMarkableTraits {
     }
 };
 
-template<typename IntegralType, IntegralType constant = 0>
+template<typename T>
+requires(std::is_enum_v<T>)
+struct MarkableTraits<T> : EnumMarkableTraits<T> { };
+
+template<typename IntegralType, IntegralType constant>
 struct IntegralMarkableTraits {
     static_assert(std::is_integral<IntegralType>::value);
     constexpr static bool isEmptyValue(IntegralType value)
@@ -76,15 +82,21 @@ struct IntegralMarkableTraits {
     }
 };
 
-struct FloatMarkableTraits {
-    constexpr static bool isEmptyValue(float value)
+template<typename T>
+requires(std::is_integral_v<T>)
+struct MarkableTraits<T> : IntegralMarkableTraits<T, static_cast<T>(-1)> { };
+
+template<typename T>
+requires(std::is_floating_point_v<T>)
+struct MarkableTraits<T> {
+    constexpr static bool isEmptyValue(T value)
     {
-        return value != value;
+        return std::isnan(value);
     }
 
-    constexpr static float emptyValue()
+    constexpr static T emptyValue()
     {
-        return std::numeric_limits<float>::quiet_NaN();
+        return std::numeric_limits<T>::quiet_NaN();
     }
 };
 
@@ -108,7 +120,7 @@ struct DoubleMarkableTraits {
 // Otherwise, you should use Optional.
 template<typename T, typename Traits>
 class Markable {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Markable);
 public:
     constexpr Markable()
         : m_value(Traits::emptyValue())
@@ -119,7 +131,7 @@ public:
     { }
 
     constexpr Markable(T&& value)
-        : m_value(WTFMove(value))
+        : m_value(WTF::move(value))
     { }
 
     constexpr Markable(const T& value)
@@ -136,7 +148,7 @@ public:
     { }
 
     constexpr Markable(std::optional<T>&& value)
-        : m_value(bool(value) ? WTFMove(*value) : Traits::emptyValue())
+        : m_value(bool(value) ? WTF::move(*value) : Traits::emptyValue())
     { }
 
     constexpr explicit operator bool() const { return !Traits::isEmptyValue(m_value); }
@@ -145,11 +157,11 @@ public:
 
     constexpr const T& value() const& { RELEASE_ASSERT(bool(*this)); return m_value; }
     constexpr T& value() & { RELEASE_ASSERT(bool(*this)); return m_value; }
-    constexpr T&& value() && { RELEASE_ASSERT(bool(*this)); return WTFMove(m_value); }
+    constexpr T&& value() && { RELEASE_ASSERT(bool(*this)); return WTF::move(m_value); }
 
     constexpr const T& unsafeValue() const& { return m_value; }
     constexpr T& unsafeValue() & { return m_value; }
-    constexpr T&& unsafeValue() && { return WTFMove(m_value); }
+    constexpr T&& unsafeValue() && { return WTF::move(m_value); }
 
     constexpr const T* operator->() const { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
     constexpr T* operator->() { RELEASE_ASSERT(bool(*this)); return std::addressof(m_value); }
@@ -167,7 +179,7 @@ public:
     operator std::optional<T>() &&
     {
         if (bool(*this))
-            return WTFMove(m_value);
+            return WTF::move(m_value);
         return std::nullopt;
     }
 
@@ -201,8 +213,6 @@ template <typename T, typename Traits> constexpr bool operator==(const Markable<
     return x.value() == y.value();
 }
 template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const T& v) { return bool(x) && x.value() == v; }
-template <typename T, typename Traits> constexpr bool operator==(const T& v, const Markable<T, Traits>& x) { return bool(x) && v == x.value(); }
-
 
 } // namespace WTF
 

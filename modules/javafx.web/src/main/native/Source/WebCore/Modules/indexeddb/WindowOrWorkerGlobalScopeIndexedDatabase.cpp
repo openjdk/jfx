@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
- * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,11 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 
-#include "Document.h"
+#include "DocumentPage.h"
 #include "IDBConnectionProxy.h"
 #include "IDBFactory.h"
 #include "LocalDOMWindow.h"
 #include "LocalDOMWindowProperty.h"
-#include "Page.h"
 #include "Supplementable.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -51,6 +50,7 @@ public:
 
 private:
     static ASCIILiteral supplementName() { return "DOMWindowIndexedDatabase"_s; }
+    bool isDOMWindowIndexedDatabase() const final { return true; }
 
     RefPtr<IDBFactory> m_idbFactory;
 };
@@ -63,13 +63,26 @@ public:
 
     static WorkerGlobalScopeIndexedDatabase* from(WorkerGlobalScope&);
     IDBFactory* indexedDB();
+    bool isWorkerGlobalScopeIndexedDatabase() const final { return true; }
 
 private:
     static ASCIILiteral supplementName() { return "WorkerGlobalScopeIndexedDatabase"_s; }
 
     RefPtr<IDBFactory> m_idbFactory;
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 };
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DOMWindowIndexedDatabase)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDOMWindowIndexedDatabase(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerGlobalScopeIndexedDatabase)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isWorkerGlobalScopeIndexedDatabase(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebCore {
 
 // DOMWindowIndexedDatabase supplement.
 
@@ -82,11 +95,11 @@ DOMWindowIndexedDatabase::DOMWindowIndexedDatabase(LocalDOMWindow& window)
 
 DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(LocalDOMWindow& window)
 {
-    auto* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
+    auto* supplement = downcast<DOMWindowIndexedDatabase>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMWindowIndexedDatabase>(window);
         supplement = newSupplement.get();
-        provideTo(&window, supplementName(), WTFMove(newSupplement));
+        provideTo(&window, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -104,15 +117,14 @@ IDBFactory* DOMWindowIndexedDatabase::indexedDB()
     if (!document)
         return nullptr;
 
-    auto* page = document->page();
-    if (!page)
+    if (!document->page())
         return nullptr;
 
     if (!window->isCurrentlyDisplayedInFrame())
         return nullptr;
 
     if (!m_idbFactory) {
-        auto* connectionProxy = document->idbConnectionProxy();
+        RefPtr connectionProxy = document->idbConnectionProxy();
         if (!connectionProxy)
             return nullptr;
 
@@ -140,13 +152,13 @@ WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(WorkerG
 #else /* PLATFORM(JAVA) */
     auto* supplement = static_cast<WorkerGlobalScopeIndexedDatabase*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
     if (!supplement) {
-        auto* connectionProxy = scope.idbConnectionProxy();
+        RefPtr connectionProxy = scope.idbConnectionProxy();
         if (!connectionProxy)
             return nullptr;
 
         auto newSupplement = makeUnique<WorkerGlobalScopeIndexedDatabase>(*connectionProxy);
         supplement = newSupplement.get();
-        provideTo(&scope, supplementName(), WTFMove(newSupplement));
+        provideTo(&scope, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 #endif /* PLATFORM(JAVA) */

@@ -23,20 +23,22 @@
 
 #pragma once
 
-#include "Autofill.h"
-#include "HTMLElement.h"
-#include "ValidatedFormListedElement.h"
+#include <WebCore/Autofill.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ValidatedFormListedElement.h>
 
 #if ENABLE(AUTOCAPITALIZE)
-#include "Autocapitalize.h"
+#include <WebCore/Autocapitalize.h>
 #endif
 
 namespace WebCore {
 
 class HTMLFormControlElement : public HTMLElement, public ValidatedFormListedElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFormControlElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormControlElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     virtual ~HTMLFormControlElement();
 
     bool isValidatedFormListedElement() const final { return true; }
@@ -51,18 +53,16 @@ public:
     bool supportsFocus() const override { return !isDisabled(); }
 
     WEBCORE_EXPORT String formEnctype() const;
-    WEBCORE_EXPORT void setFormEnctype(const AtomString&);
     WEBCORE_EXPORT String formMethod() const;
-    WEBCORE_EXPORT void setFormMethod(const AtomString&);
     bool formNoValidate() const;
     WEBCORE_EXPORT String formAction() const;
-    WEBCORE_EXPORT void setFormAction(const AtomString&);
 
     bool formControlValueMatchesRenderer() const { return m_valueMatchesRenderer; }
     void setFormControlValueMatchesRenderer(bool b) { m_valueMatchesRenderer = b; }
 
     bool wasChangedSinceLastFormControlChangeEvent() const { return m_wasChangedSinceLastFormControlChangeEvent; }
     void setChangedSinceLastFormControlChangeEvent(bool);
+    bool wasCreatedByTaintedScript() const { return m_wasCreatedByTaintedScript; }
 
     virtual void dispatchFormControlChangeEvent();
     void dispatchChangeEvent();
@@ -89,7 +89,6 @@ public:
 #endif
 
     WEBCORE_EXPORT String autocomplete() const;
-    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
 
     AutofillMantle autofillMantle() const;
 
@@ -101,9 +100,8 @@ public:
 
     RefPtr<HTMLElement> popoverTargetElement() const;
     const AtomString& popoverTargetAction() const;
-    void setPopoverTargetAction(const AtomString& value);
 
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
     using Node::ref;
     using Node::deref;
@@ -124,11 +122,11 @@ protected:
 
     bool isMouseFocusable() const override;
 
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
 
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
 
-    void handlePopoverTargetAction(const EventTarget*) const;
+    void handlePopoverTargetAction(const EventTarget*);
 
 private:
     void refFormAssociatedElement() const final { ref(); }
@@ -148,6 +146,7 @@ private:
     unsigned m_isRequired : 1;
     unsigned m_valueMatchesRenderer : 1;
     unsigned m_wasChangedSinceLastFormControlChangeEvent : 1;
+    unsigned m_wasCreatedByTaintedScript : 1;
 };
 
 } // namespace WebCore

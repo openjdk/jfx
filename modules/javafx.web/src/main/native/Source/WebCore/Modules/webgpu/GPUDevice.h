@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "GPUBindGroupEntry.h"
 #include "GPUComputePipeline.h"
 #include "GPUDeviceLostInfo.h"
@@ -34,7 +35,6 @@
 #include "GPUErrorFilter.h"
 #include "GPURenderPipeline.h"
 #include "GPUQueue.h"
-#include "HTMLVideoElement.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "ScriptExecutionContext.h"
 #include "WebGPUDevice.h"
@@ -48,6 +48,7 @@
 
 namespace WebCore {
 
+class GPUAdapterInfo;
 class GPUBindGroup;
 struct GPUBindGroupDescriptor;
 class GPUBindGroupLayout;
@@ -79,6 +80,7 @@ class GPUSupportedFeatures;
 class GPUSupportedLimits;
 class GPUTexture;
 struct GPUTextureDescriptor;
+class HTMLVideoElement;
 class WebXRSession;
 class XRGPUBinding;
 
@@ -87,17 +89,19 @@ class XRBinding;
 }
 
 class GPUDevice : public RefCounted<GPUDevice>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUDevice);
+    WTF_MAKE_TZONE_ALLOCATED(GPUDevice);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
-    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing, String&& queueLabel)
+    static Ref<GPUDevice> create(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU::Device>&& backing, String&& queueLabel, GPUAdapterInfo& info)
     {
-        return adoptRef(*new GPUDevice(scriptExecutionContext, WTFMove(backing), WTFMove(queueLabel)));
+        return adoptRef(*new GPUDevice(scriptExecutionContext, WTF::move(backing), WTF::move(queueLabel), info));
     }
 
     virtual ~GPUDevice();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     String label() const;
     void setLabel(String&&);
@@ -112,7 +116,7 @@ public:
     RefPtr<WebGPU::XRBinding> createXRBinding(const WebXRSession&);
     ExceptionOr<Ref<GPUBuffer>> createBuffer(const GPUBufferDescriptor&);
     ExceptionOr<Ref<GPUTexture>> createTexture(const GPUTextureDescriptor&);
-    bool isSupportedFormat(GPUTextureFormat) const;
+    std::optional<String> errorValidatingSupportedFormat(GPUTextureFormat) const;
     ExceptionOr<Ref<GPUSampler>> createSampler(const std::optional<GPUSamplerDescriptor>&);
     ExceptionOr<Ref<GPUExternalTexture>> importExternalTexture(const GPUExternalTextureDescriptor&);
 
@@ -146,26 +150,27 @@ public:
     const WebGPU::Device& backing() const { return m_backing; }
     void removeBufferToUnmap(GPUBuffer&);
     void addBufferToUnmap(GPUBuffer&);
+    Ref<GPUAdapterInfo> adapterInfo() const;
 
 #if ENABLE(VIDEO)
     WeakPtr<GPUExternalTexture> takeExternalTextureForVideoElement(const HTMLVideoElement&);
 #endif
 
 private:
-    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&, String&& queueLabel);
+    GPUDevice(ScriptExecutionContext*, Ref<WebGPU::Device>&&, String&& queueLabel, GPUAdapterInfo&);
 
     // FIXME: We probably need to override more methods to make this work properly.
     RefPtr<GPUPipelineLayout> createAutoPipelineLayout();
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::GPUDevice; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    UniqueRef<LostPromise> m_lostPromise;
-    Ref<WebGPU::Device> m_backing;
-    Ref<GPUQueue> m_queue;
+    const UniqueRef<LostPromise> m_lostPromise;
+    const Ref<WebGPU::Device> m_backing;
+    const Ref<GPUQueue> m_queue;
     RefPtr<GPUPipelineLayout> m_autoPipelineLayout;
     WeakHashSet<GPUBuffer> m_buffersToUnmap;
 
@@ -176,8 +181,13 @@ private:
     std::pair<RefPtr<HTMLVideoElement>, RefPtr<GPUExternalTexture>> m_previouslyImportedExternalTexture;
     std::pair<Vector<GPUBindGroupEntry>, RefPtr<GPUBindGroup>> m_lastCreatedExternalTextureBindGroup;
 #endif
+    Ref<GPUSupportedFeatures> m_features;
+    Ref<GPUSupportedLimits> m_limits;
+    Ref<GPUAdapterInfo> m_adapterInfo;
 
     bool m_waitingForDeviceLostPromise { false };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(GPUDevice)

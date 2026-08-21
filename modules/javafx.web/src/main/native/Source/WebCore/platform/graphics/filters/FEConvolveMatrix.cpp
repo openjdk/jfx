@@ -29,6 +29,10 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEConvolveMatrixCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEConvolveMatrix> FEConvolveMatrix::create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType edgeMode, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix, DestinationColorSpace colorSpace)
@@ -133,6 +137,25 @@ FloatRect FEConvolveMatrix::calculateImageRect(const Filter& filter, std::span<c
     return filter.maxEffectRect(primitiveSubregion);
 }
 
+OptionSet<FilterRenderingMode> FEConvolveMatrix::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    if (FEConvolveMatrixCoreImageApplier::supportsCoreImageRendering(*this))
+        modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEConvolveMatrix::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEConvolveMatrixCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEConvolveMatrix::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FEConvolveMatrixSoftwareApplier>(*this);
@@ -142,16 +165,16 @@ static TextStream& operator<<(TextStream& ts, const EdgeModeType& type)
 {
     switch (type) {
     case EdgeModeType::Unknown:
-        ts << "UNKNOWN";
+        ts << "UNKNOWN"_s;
         break;
     case EdgeModeType::Duplicate:
-        ts << "DUPLICATE";
+        ts << "DUPLICATE"_s;
         break;
     case EdgeModeType::Wrap:
-        ts << "WRAP";
+        ts << "WRAP"_s;
         break;
     case EdgeModeType::None:
-        ts << "NONE";
+        ts << "NONE"_s;
         break;
     }
     return ts;
@@ -159,19 +182,19 @@ static TextStream& operator<<(TextStream& ts, const EdgeModeType& type)
 
 TextStream& FEConvolveMatrix::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feConvolveMatrix";
+    ts << indent << "[feConvolveMatrix"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " order=\"" << m_kernelSize << "\"";
-    ts << " kernelMatrix=\"" << m_kernelMatrix  << "\"";
-    ts << " divisor=\"" << m_divisor << "\"";
-    ts << " bias=\"" << m_bias << "\"";
-    ts << " target=\"" << m_targetOffset << "\"";
-    ts << " edgeMode=\"" << m_edgeMode << "\"";
-    ts << " kernelUnitLength=\"" << m_kernelUnitLength << "\"";
-    ts << " preserveAlpha=\"" << m_preserveAlpha << "\"";
+    ts << " order=\"" << m_kernelSize << '"';
+    ts << " kernelMatrix=\"" << m_kernelMatrix  << '"';
+    ts << " divisor=\"" << m_divisor << '"';
+    ts << " bias=\"" << m_bias << '"';
+    ts << " target=\"" << m_targetOffset << '"';
+    ts << " edgeMode=\"" << m_edgeMode << '"';
+    ts << " kernelUnitLength=\"" << m_kernelUnitLength << '"';
+    ts << " preserveAlpha=\"" << m_preserveAlpha << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

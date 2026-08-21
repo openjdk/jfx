@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AutoFillButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AutoFillButtonElement);
 
 using namespace HTMLNames;
 
@@ -60,7 +60,8 @@ void AutoFillButtonElement::defaultEventHandler(Event& event)
     }
 
     if (isAnyClick(*mouseEvent)) {
-        m_owner.autoFillButtonElementWasClicked();
+        if (RefPtr owner = m_owner.get())
+            owner->autoFillButtonElementWasClicked();
         event.setDefaultHandled();
     }
 

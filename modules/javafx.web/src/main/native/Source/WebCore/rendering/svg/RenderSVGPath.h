@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google, Inc.
  * Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
  * Copyright (C) 2011 University of Szeged
@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class RenderSVGPath final : public RenderSVGShape {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGPath);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGPath);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGPath);
 public:
     RenderSVGPath(SVGGraphicsElement&, RenderStyle&&);
@@ -50,7 +50,7 @@ private:
     void strokeShape(GraphicsContext&) const override;
     bool shapeDependentStrokeContains(const FloatPoint&, PointCoordinateSpace = GlobalCoordinateSpace) override;
 
-    void styleDidChange(StyleDifference, const RenderStyle*) final;
+    void styleDidChange(Style::Difference, const RenderStyle*) final;
 
     bool shouldStrokeZeroLengthSubpath() const;
     Path* zeroLengthLinecapPath(const FloatPoint&) const;

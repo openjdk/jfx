@@ -27,7 +27,7 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollingTreeScrollingNode.h"
+#include <WebCore/ScrollingTreeScrollingNode.h>
 
 #include <wtf/TZoneMalloc.h>
 
@@ -39,9 +39,8 @@ public:
     WEBCORE_EXPORT explicit ScrollingTreeScrollingNodeDelegate(ScrollingTreeScrollingNode&);
     WEBCORE_EXPORT virtual ~ScrollingTreeScrollingNodeDelegate();
 
-    ScrollingTreeScrollingNode& scrollingNode() { return m_scrollingNode; }
-    const ScrollingTreeScrollingNode& scrollingNode() const { return m_scrollingNode; }
-    Ref<ScrollingTreeScrollingNode> protectedScrollingNode() const { return m_scrollingNode; }
+    Ref<ScrollingTreeScrollingNode> scrollingNode() { return m_scrollingNode.get(); }
+    Ref<const ScrollingTreeScrollingNode> scrollingNode() const { return m_scrollingNode.get(); }
 
     virtual bool startAnimatedScrollToPosition(FloatPoint) = 0;
     virtual void stopAnimatedScroll() = 0;
@@ -72,21 +71,21 @@ protected:
     WEBCORE_EXPORT FloatSize reachableContentsSize();
     WEBCORE_EXPORT IntPoint scrollOrigin() const;
 
-    FloatPoint currentScrollPosition() const { return m_scrollingNode.currentScrollPosition(); }
-    FloatPoint minimumScrollPosition() const { return m_scrollingNode.minimumScrollPosition(); }
-    FloatPoint maximumScrollPosition() const { return m_scrollingNode.maximumScrollPosition(); }
+    FloatPoint currentScrollPosition() const { return scrollingNode()->currentScrollPosition(); }
+    FloatPoint minimumScrollPosition() const { return scrollingNode()->minimumScrollPosition(); }
+    FloatPoint maximumScrollPosition() const { return scrollingNode()->maximumScrollPosition(); }
 
-    FloatSize scrollableAreaSize() const { return m_scrollingNode.scrollableAreaSize(); }
-    FloatSize totalContentsSize() const { return m_scrollingNode.totalContentsSize(); }
+    FloatSize scrollableAreaSize() const { return scrollingNode()->scrollableAreaSize(); }
+    FloatSize totalContentsSize() const { return scrollingNode()->totalContentsSize(); }
 
-    bool allowsHorizontalScrolling() const { return m_scrollingNode.allowsHorizontalScrolling(); }
-    bool allowsVerticalScrolling() const { return m_scrollingNode.allowsVerticalScrolling(); }
+    bool allowsHorizontalScrolling() const { return scrollingNode()->allowsHorizontalScrolling(); }
+    bool allowsVerticalScrolling() const { return scrollingNode()->allowsVerticalScrolling(); }
 
-    ScrollElasticity horizontalScrollElasticity() const { return m_scrollingNode.horizontalScrollElasticity(); }
-    ScrollElasticity verticalScrollElasticity() const { return m_scrollingNode.verticalScrollElasticity(); }
+    ScrollElasticity horizontalScrollElasticity() const { return scrollingNode()->horizontalScrollElasticity(); }
+    ScrollElasticity verticalScrollElasticity() const { return scrollingNode()->verticalScrollElasticity(); }
 
 private:
-    ScrollingTreeScrollingNode& m_scrollingNode; // FIXME : Should use a smart pointer.
+    ThreadSafeWeakRef<ScrollingTreeScrollingNode> m_scrollingNode;
 };
 
 } // namespace WebCore

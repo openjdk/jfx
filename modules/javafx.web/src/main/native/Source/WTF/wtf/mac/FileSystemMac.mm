@@ -29,6 +29,7 @@
 #if PLATFORM(MAC)
 
 #import <wtf/cocoa/NSURLExtras.h>
+#import <wtf/darwin/DispatchExtras.h>
 #import <wtf/spi/mac/MetadataSPI.h>
 #import <wtf/text/WTFString.h>
 
@@ -37,20 +38,20 @@ namespace WTF {
 void FileSystem::setMetadataURL(const String& path, const String& metadataURLString, const String& referrer)
 {
     String urlString;
-    if (NSURL *url = URLWithUserTypedString(metadataURLString))
-        urlString = userVisibleString(URLByRemovingUserInfo(url));
+    if (RetainPtr url = URLWithUserTypedString(metadataURLString.createNSString().get()))
+        urlString = userVisibleString(URLByRemovingUserInfo(url.get()));
     else
         urlString = metadataURLString;
 
     // Call Metadata API on a background queue because it can take some time.
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [path = path.isolatedCopy(), urlString = WTFMove(urlString).isolatedCopy(), referrer = referrer.isolatedCopy()] {
+    dispatch_async(globalDispatchQueueSingleton(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [path = path.isolatedCopy(), urlString = WTF::move(urlString).isolatedCopy(), referrer = referrer.isolatedCopy()] {
         auto item = adoptCF(MDItemCreate(kCFAllocatorDefault, path.createCFString().get()));
         if (!item)
             return;
 
-        auto whereFromAttribute = adoptNS([[NSMutableArray alloc] initWithObjects:urlString, nil]);
+        RetainPtr whereFromAttribute = adoptNS([[NSMutableArray alloc] initWithObjects:urlString.createNSString().get(), nil]);
         if (!referrer.isNull())
-            [whereFromAttribute addObject:referrer];
+            [whereFromAttribute addObject:referrer.createNSString().get()];
 
         MDItemSetAttribute(item.get(), kMDItemWhereFroms, (__bridge CFArrayRef)whereFromAttribute.get());
         MDItemSetAttribute(item.get(), kMDItemDownloadedDate, (__bridge CFArrayRef)@[ [NSDate date] ]);

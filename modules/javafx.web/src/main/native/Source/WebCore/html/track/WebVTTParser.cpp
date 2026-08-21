@@ -105,24 +105,24 @@ WebVTTParser::WebVTTParser(WebVTTParserClient& client, Document& document)
 
 Vector<Ref<WebVTTCueData>> WebVTTParser::takeCues()
 {
-    return WTFMove(m_cuelist);
+    return WTF::move(m_cuelist);
 }
 
 Vector<Ref<VTTRegion>> WebVTTParser::takeRegions()
 {
-    return WTFMove(m_regionList);
+    return WTF::move(m_regionList);
 }
 
 Vector<String> WebVTTParser::takeStyleSheets()
 {
-    return WTFMove(m_styleSheets);
+    return WTF::move(m_styleSheets);
 }
 
 void WebVTTParser::parseFileHeader(String&& data)
 {
     m_state = Initial;
     m_lineReader.reset();
-    m_lineReader.append(WTFMove(data));
+    m_lineReader.append(WTF::move(data));
     parse();
     if (!m_regionList.isEmpty())
         m_client.newRegionsParsed();
@@ -152,7 +152,7 @@ void WebVTTParser::parseCueData(const ISOWebVTTCue& data)
     if (WebVTTParser::collectTimeStamp(data.originalStartTime(), originalStartTime))
         cue->setOriginalStartTime(originalStartTime);
 
-    m_cuelist.append(WTFMove(cue));
+    m_cuelist.append(WTF::move(cue));
     m_client.newCuesParsed();
 }
 
@@ -236,7 +236,7 @@ void WebVTTParser::parse()
 void WebVTTParser::fileFinished()
 {
     ASSERT(m_state != Finished);
-    parseBytes("\n\n"_span8);
+    parseBytes(byteCast<uint8_t>("\n\n"_span));
     m_state = Finished;
 }
 
@@ -266,7 +266,7 @@ WebVTTParser::ParseState WebVTTParser::collectRegionSettings(const String& line)
     if (checkAndStoreRegion(line))
         return checkAndRecoverCue(line);
 
-    m_currentRegion->setRegionSettings(line);
+    Ref { *m_currentRegion }->setRegionSettings(line);
     return Region;
 }
 
@@ -288,7 +288,7 @@ WebVTTParser::ParseState WebVTTParser::collectWebVTTBlock(const String& line)
         if (!m_styleSheets.isEmpty())
             m_client.newStyleSheetsParsed();
         if (!m_previousLine.isEmpty() && !m_previousLine.contains("-->"_s))
-            m_currentId = AtomString { m_previousLine };
+            m_currentId = m_previousLine;
 
         return state;
     }
@@ -332,7 +332,7 @@ bool WebVTTParser::checkAndCreateRegion(StringView line)
     // zero or more U+0020 SPACE characters or U+0009 CHARACTER TABULATION
     // (tab) characters expected other than these characters it is invalid.
     if (line.startsWith("REGION"_s) && line.substring(regionIdentifierLength).containsOnly<isASCIIWhitespace>()) {
-        m_currentRegion = VTTRegion::create(m_document);
+        m_currentRegion = VTTRegion::create(protectedDocument().get());
         return true;
     }
     return false;
@@ -399,10 +399,10 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
             return true;
 
         const auto& selectorList = styleRule->selectorList();
-        if (selectorList.listSize() != 1)
+        if (selectorList.size() != 1)
             return true;
-        auto selector = selectorList.selectorAt(0);
-        auto selectorText = selector->selectorText();
+        auto& selector = selectorList.selectorAt(0);
+        auto selectorText = selector.selectorText();
 
         bool isCue = selectorText == "::cue"_s || selectorText.startsWith("::cue("_s);
         if (!isCue)
@@ -411,7 +411,7 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
         if (styleRule->properties().isEmpty())
             continue;
 
-        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->properties().asText(CSS::defaultSerializationContext()), "  }\n"_s);
+        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->protectedProperties()->asText(CSS::defaultSerializationContext()), "  }\n"_s);
     }
 
     // It would be more stylish to parse the stylesheet only once instead of serializing a sanitized version.
@@ -421,11 +421,16 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
     return true;
 }
 
+Ref<Document> WebVTTParser::protectedDocument() const
+{
+    return m_document.get();
+}
+
 WebVTTParser::ParseState WebVTTParser::collectCueId(const String& line)
 {
     if (line.contains("-->"_s))
         return collectTimingsAndSettings(line);
-    m_currentId = AtomString { line };
+    m_currentId = line;
     return TimingsAndSettings;
 }
 
@@ -438,25 +443,25 @@ WebVTTParser::ParseState WebVTTParser::collectTimingsAndSettings(const String& l
 
     // Collect WebVTT cue timings and settings. (5.3 WebVTT cue timings and settings parsing.)
     // Steps 1 - 3 - Let input be the string being parsed and position be a pointer into input
-    input.skipWhile<isASCIIWhitespace<UChar>>();
+    input.skipWhile<isASCIIWhitespace<char16_t>>();
 
     // Steps 4 - 5 - Collect a WebVTT timestamp. If that fails, then abort and return failure. Otherwise, let cue's text track cue start time be the collected time.
     if (!collectTimeStamp(input, m_currentStartTime))
         return BadCue;
 
-    input.skipWhile<isASCIIWhitespace<UChar>>();
+    input.skipWhile<isASCIIWhitespace<char16_t>>();
 
     // Steps 6 - 9 - If the next three characters are not "-->", abort and return failure.
     if (!input.scan("-->"_span8))
         return BadCue;
 
-    input.skipWhile<isASCIIWhitespace<UChar>>();
+    input.skipWhile<isASCIIWhitespace<char16_t>>();
 
     // Steps 10 - 11 - Collect a WebVTT timestamp. If that fails, then abort and return failure. Otherwise, let cue's text track cue end time be the collected time.
     if (!collectTimeStamp(input, m_currentEndTime))
         return BadCue;
 
-    input.skipWhile<isASCIIWhitespace<UChar>>();
+    input.skipWhile<isASCIIWhitespace<char16_t>>();
 
     // Step 12 - Parse the WebVTT settings for the cue (conducted in TextTrackCue).
     m_currentSettings = input.restOfInputAsString();
@@ -515,12 +520,13 @@ private:
     void constructTreeFromToken(Document&);
 
     WebVTTNodeType currentType() const { return m_typeStack.isEmpty() ? WebVTTNodeTypeNone : m_typeStack.last(); }
+    RefPtr<ContainerNode> protectedCurrentNode() const { return m_currentNode.get(); }
 
     WebVTTToken m_token;
     Vector<WebVTTNodeType> m_typeStack;
     RefPtr<ContainerNode> m_currentNode;
     Vector<AtomString> m_languageStack;
-    Document& m_document;
+    const Ref<Document> m_document;
 };
 
 Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
@@ -528,10 +534,10 @@ Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
     // Cue text processing based on
     // 5.4 WebVTT cue text parsing rules, and
     // 5.5 WebVTT cue text DOM construction rules.
-    auto fragment = DocumentFragment::create(m_document);
+    auto fragment = DocumentFragment::create(m_document.get());
 
     if (cueText.isEmpty()) {
-        fragment->parserAppendChild(Text::create(m_document, String { emptyString() }));
+        fragment->parserAppendChild(Text::create(m_document.get(), String { emptyString() }));
         return fragment;
     }
 
@@ -541,7 +547,7 @@ Ref<DocumentFragment> WebVTTTreeBuilder::buildFromString(const String& cueText)
     m_languageStack.clear();
     m_typeStack.clear();
     while (tokenizer.nextToken(m_token))
-        constructTreeFromToken(m_document);
+        constructTreeFromToken(m_document.get());
 
     return fragment;
 }
@@ -561,13 +567,13 @@ void WebVTTParser::createNewCue()
     cue->setId(m_currentId);
     cue->setSettings(m_currentSettings);
 
-    m_cuelist.append(WTFMove(cue));
+    m_cuelist.append(WTF::move(cue));
     m_client.newCuesParsed();
 }
 
 void WebVTTParser::resetCueValues()
 {
-    m_currentId = emptyAtom();
+    m_currentId = emptyString();
     m_currentSettings = emptyString();
     m_currentStartTime = MediaTime::zeroTime();
     m_currentEndTime = MediaTime::zeroTime();
@@ -694,7 +700,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
 
     switch (m_token.type()) {
     case WebVTTTokenTypes::Character: {
-        m_currentNode->parserAppendChild(Text::create(document, String { m_token.characters() }));
+        protectedCurrentNode()->parserAppendChild(Text::create(document, String { m_token.characters() }));
         break;
     }
     case WebVTTTokenTypes::StartTag: {
@@ -717,8 +723,8 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
             m_languageStack.append(m_token.annotation());
             child->setAttributeWithoutSynchronization(WebVTTElement::langAttributeName(), m_languageStack.last());
         }
-        m_currentNode->parserAppendChild(child);
-        m_currentNode = WTFMove(child);
+        protectedCurrentNode()->parserAppendChild(child);
+        m_currentNode = WTF::move(child);
         m_typeStack.append(nodeType);
         break;
     }
@@ -754,7 +760,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
     case WebVTTTokenTypes::TimestampTag: {
         MediaTime parsedTimeStamp;
         if (WebVTTParser::collectTimeStamp(m_token.characters(), parsedTimeStamp))
-            m_currentNode->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, serializeTimestamp(parsedTimeStamp.toDouble())));
+            protectedCurrentNode()->parserAppendChild(ProcessingInstruction::create(document, "timestamp"_s, serializeTimestamp(parsedTimeStamp.toDouble())));
         break;
     }
     default:

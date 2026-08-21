@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,7 +77,7 @@ public:
 
 private:
     PolymorphicAccessJITStubRoutine* m_owner;
-    Ref<WatchpointSet> m_watchpointSet;
+    const Ref<WatchpointSet> m_watchpointSet;
     ObjectPropertyCondition m_key;
 };
 
@@ -86,6 +86,7 @@ class AdaptiveValueStructureStubClearingWatchpoint final : public AdaptiveInferr
     WTF_MAKE_NONCOPYABLE(AdaptiveValueStructureStubClearingWatchpoint);
     WTF_MAKE_TZONE_ALLOCATED(AdaptiveValueStructureStubClearingWatchpoint);
 
+    bool isValid() const final { return !m_owner->ownerIsDead(); }
     void handleFire(VM&, const FireDetail&) final;
 
 public:
@@ -100,7 +101,7 @@ public:
 
 private:
     PolymorphicAccessJITStubRoutine* m_owner;
-    Ref<WatchpointSet> m_watchpointSet;
+    const Ref<WatchpointSet> m_watchpointSet;
 };
 
 } // namespace JSC

@@ -25,18 +25,18 @@
 #include "config.h"
 #include "MediaQueryFeatures.h"
 
-#include "CalculationCategory.h"
+#include "CSSPrimitiveNumericCategory.h"
 #include "Chrome.h"
 #include "ComputedStyleDependencies.h"
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentView.h"
+#include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "MediaQueryEvaluator.h"
-#include "Page.h"
-#include "Quirks.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderLayerCompositor.h"
 #include "RenderView.h"
 #include "ScreenProperties.h"
@@ -46,9 +46,6 @@
 #include <wtf/Function.h>
 
 namespace WebCore::MQ {
-
-MediaProgressProviding::~MediaProgressProviding() = default;
-
 namespace Features {
 
 struct BooleanSchema : public FeatureSchema {
@@ -56,7 +53,7 @@ struct BooleanSchema : public FeatureSchema {
 
     BooleanSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Integer, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -71,12 +68,12 @@ private:
     ValueFunction valueFunction;
 };
 
-struct IntegerSchema : public FeatureSchema, public MediaProgressProviding {
+struct IntegerSchema : public FeatureSchema {
     using ValueFunction = Function<int(const FeatureEvaluationContext&)>;
 
     IntegerSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Range, FeatureSchema::ValueType::Integer, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -87,39 +84,16 @@ struct IntegerSchema : public FeatureSchema, public MediaProgressProviding {
         return evaluateIntegerFeature(feature, valueFunction(context), context.conversionData);
     }
 
-    // MediaProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Integer;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        if (this->dependencies.contains(MediaQueryDynamicDependency::Viewport))
-            dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const FeatureEvaluationContext& context) const override
-    {
-        return valueFunction(context);
-    }
-
 private:
     ValueFunction valueFunction;
 };
 
-struct NumberSchema : public FeatureSchema, public MediaProgressProviding {
+struct NumberSchema : public FeatureSchema {
     using ValueFunction = Function<double(const FeatureEvaluationContext&)>;
 
     NumberSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Range, FeatureSchema::ValueType::Number, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -130,39 +104,16 @@ struct NumberSchema : public FeatureSchema, public MediaProgressProviding {
         return evaluateNumberFeature(feature, valueFunction(context), context.conversionData);
     }
 
-    // MediaProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Number;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        if (this->dependencies.contains(MediaQueryDynamicDependency::Viewport))
-            dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const FeatureEvaluationContext& context) const override
-    {
-        return valueFunction(context);
-    }
-
 private:
     ValueFunction valueFunction;
 };
 
-struct LengthSchema : public FeatureSchema, public MediaProgressProviding {
+struct LengthSchema : public FeatureSchema {
     using ValueFunction = Function<LayoutUnit(const FeatureEvaluationContext&)>;
 
     LengthSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -171,29 +122,6 @@ struct LengthSchema : public FeatureSchema, public MediaProgressProviding {
     EvaluationResult evaluate(const Feature& feature, const FeatureEvaluationContext& context) const override
     {
         return evaluateLengthFeature(feature, valueFunction(context), context.conversionData);
-    }
-
-    // MediaProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Length;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        if (this->dependencies.contains(MediaQueryDynamicDependency::Viewport))
-            dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const FeatureEvaluationContext& context) const override
-    {
-        return valueFunction(context);
     }
 
 private:
@@ -205,7 +133,7 @@ struct RatioSchema : public FeatureSchema {
 
     RatioSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Range, FeatureSchema::ValueType::Ratio, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -220,12 +148,12 @@ private:
     ValueFunction valueFunction;
 };
 
-struct ResolutionSchema : public FeatureSchema, public MediaProgressProviding {
+struct ResolutionSchema : public FeatureSchema {
     using ValueFunction = Function<float(const FeatureEvaluationContext&)>;
 
     ResolutionSchema(const AtomString& name, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
         : FeatureSchema(name, FeatureSchema::Type::Range, FeatureSchema::ValueType::Resolution, dependencies)
-        , valueFunction(WTFMove(valueFunction))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -234,29 +162,6 @@ struct ResolutionSchema : public FeatureSchema, public MediaProgressProviding {
     EvaluationResult evaluate(const Feature& feature, const FeatureEvaluationContext& context) const override
     {
         return evaluateResolutionFeature(feature, valueFunction(context), context.conversionData);
-    }
-
-    // MediaProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Resolution;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        if (this->dependencies.contains(MediaQueryDynamicDependency::Viewport))
-            dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const FeatureEvaluationContext& context) const override
-    {
-        return valueFunction(context);
     }
 
 private:
@@ -269,8 +174,8 @@ struct IdentifierSchema : public FeatureSchema {
     using ValueFunction = Function<MatchingIdentifiers(const FeatureEvaluationContext&)>;
 
     IdentifierSchema(const AtomString& name, FixedVector<CSSValueID>&& valueIdentifiers, OptionSet<MediaQueryDynamicDependency> dependencies, ValueFunction&& valueFunction)
-        : FeatureSchema(name, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, dependencies, WTFMove(valueIdentifiers))
-        , valueFunction(WTFMove(valueFunction))
+        : FeatureSchema(name, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, dependencies, WTF::move(valueIdentifiers))
+        , valueFunction(WTF::move(valueFunction))
     {
     }
 
@@ -291,11 +196,11 @@ private:
 
 static float deviceScaleFactor(const FeatureEvaluationContext& context)
 {
-    auto& frame = *context.document->frame();
-    auto mediaType = frame.view()->mediaType();
+    Ref frame = *context.document->frame();
+    auto mediaType = frame->protectedView()->mediaType();
 
     if (mediaType == screenAtom())
-        return frame.page() ? frame.page()->deviceScaleFactor() : 1;
+        return frame->page() ? frame->page()->deviceScaleFactor() : 1;
 
     if (mediaType == printAtom()) {
         // The resolution of images while printing should not depend on the dpi
@@ -325,6 +230,8 @@ static const IdentifierSchema& anyHoverFeatureSchema()
         FixedVector { CSSValueNone, CSSValueHover },
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
+            if (context.document->quirks().shouldSupportHoverMediaQueries())
+                return MatchingIdentifiers { CSSValueHover };
             RefPtr page = context.document->frame()->page();
             bool isSupported = page && page->chrome().client().hoverSupportedByAnyAvailablePointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };
@@ -535,6 +442,8 @@ static const IdentifierSchema& hoverFeatureSchema()
         FixedVector { CSSValueNone, CSSValueHover },
         OptionSet<MediaQueryDynamicDependency>(),
         [](auto& context) {
+            if (context.document->quirks().shouldSupportHoverMediaQueries())
+                return MatchingIdentifiers { CSSValueHover };
             RefPtr page = context.document->frame()->page();
             bool isSupported =  page && page->chrome().client().hoverSupportedByPrimaryPointingDevice();
             return MatchingIdentifiers { isSupported ? CSSValueHover : CSSValueNone };
@@ -1134,21 +1043,6 @@ Vector<const FeatureSchema*> allSchemas()
 #if ENABLE(DARK_MODE_CSS)
         &prefersColorScheme(),
 #endif
-    };
-}
-
-Vector<const MediaProgressProviding*> allMediaProgressProvidingSchemas()
-{
-    return {
-        &colorFeatureSchema(),
-        &colorIndexFeatureSchema(),
-        &deviceHeightFeatureSchema(),
-        &devicePixelRatioFeatureSchema(),
-        &deviceWidthFeatureSchema(),
-        &heightFeatureSchema(),
-        &monochromeFeatureSchema(),
-        &resolutionFeatureSchema(),
-        &widthFeatureSchema(),
     };
 }
 

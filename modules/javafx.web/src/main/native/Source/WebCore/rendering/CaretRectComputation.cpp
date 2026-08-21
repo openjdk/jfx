@@ -39,6 +39,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderText.h"
 
@@ -69,26 +70,26 @@ static LayoutRect computeCaretRectForEmptyElement(const RenderBoxModelObject& re
     enum CaretAlignment { AlignLogicalLeft, AlignLogicalRight, AlignCenter };
     CaretAlignment alignment;
     switch (currentStyle.textAlign()) {
-    case TextAlignMode::Left:
-    case TextAlignMode::WebKitLeft:
+    case Style::TextAlign::Left:
+    case Style::TextAlign::WebKitLeft:
         alignment = writingMode.isLogicalLeftLineLeft()
             ? AlignLogicalLeft : AlignLogicalRight;
         break;
-    case TextAlignMode::Center:
-    case TextAlignMode::WebKitCenter:
+    case Style::TextAlign::Center:
+    case Style::TextAlign::WebKitCenter:
         alignment = AlignCenter;
         break;
-    case TextAlignMode::Right:
-    case TextAlignMode::WebKitRight:
+    case Style::TextAlign::Right:
+    case Style::TextAlign::WebKitRight:
         alignment = writingMode.isLogicalLeftLineLeft()
             ? AlignLogicalRight : AlignLogicalLeft;
         break;
-    case TextAlignMode::Justify:
-    case TextAlignMode::Start:
+    case Style::TextAlign::Justify:
+    case Style::TextAlign::Start:
         alignment = writingMode.isLogicalLeftInlineStart()
             ? AlignLogicalLeft : AlignLogicalRight;
         break;
-    case TextAlignMode::End:
+    case Style::TextAlign::End:
         alignment = writingMode.isLogicalLeftInlineStart()
             ? AlignLogicalRight : AlignLogicalLeft;
         break;
@@ -117,7 +118,7 @@ static LayoutRect computeCaretRectForEmptyElement(const RenderBoxModelObject& re
     }
     x = std::min(x, std::max<LayoutUnit>(maxX - caretWidth(), 0));
 
-    auto lineHeight = renderer.lineHeight(true, writingMode.isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
+    auto lineHeight = LayoutUnit::fromFloatCeil(currentStyle.computedLineHeight());
     auto height = std::min(lineHeight, LayoutUnit { currentStyle.metricsOfPrimaryFont().height() });
     auto y = renderer.borderAndPaddingBefore() + (lineHeight > height ? (lineHeight - height) / 2 : LayoutUnit { });
 
@@ -150,21 +151,21 @@ static LayoutRect computeCaretRectForLinePosition(const InlineIterator::LineBoxI
 
     bool rightAligned = false;
     switch (root.style().textAlign()) {
-    case TextAlignMode::Right:
-    case TextAlignMode::WebKitRight:
+    case Style::TextAlign::Right:
+    case Style::TextAlign::WebKitRight:
         rightAligned = writingMode.isLogicalLeftLineLeft();
         break;
-    case TextAlignMode::Left:
-    case TextAlignMode::WebKitLeft:
-    case TextAlignMode::Center:
-    case TextAlignMode::WebKitCenter:
+    case Style::TextAlign::Left:
+    case Style::TextAlign::WebKitLeft:
+    case Style::TextAlign::Center:
+    case Style::TextAlign::WebKitCenter:
         rightAligned = !writingMode.isLogicalLeftLineLeft();
         break;
-    case TextAlignMode::Justify:
-    case TextAlignMode::Start:
+    case Style::TextAlign::Justify:
+    case Style::TextAlign::Start:
         rightAligned = !writingMode.isLogicalLeftInlineStart();
         break;
-    case TextAlignMode::End:
+    case Style::TextAlign::End:
         rightAligned = writingMode.isLogicalLeftInlineStart();
         break;
     }
@@ -295,7 +296,7 @@ static LayoutRect computeCaretRectForBox(const RenderBox& renderer, const Inline
     //
     // FIXME: ignoring :first-line, missing good reason to take care of
     auto fontHeight = renderer.style().metricsOfPrimaryFont().height();
-    if (fontHeight > rect.height() || (!renderer.isReplacedOrAtomicInline() && !renderer.isRenderTable()))
+    if (fontHeight > rect.height() || (!renderer.isBlockLevelReplacedOrAtomicInline() && !renderer.isRenderTable()))
         rect.setHeight(fontHeight);
 
     // Move to local coords

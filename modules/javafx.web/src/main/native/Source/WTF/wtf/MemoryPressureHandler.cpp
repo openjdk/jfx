@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,16 @@
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <ranges>
 #include <wtf/Logging.h>
+#include <wtf/MathExtras.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RAMSize.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/darwin/DispatchExtras.h>
+#endif
 
 namespace WTF {
 
@@ -48,16 +54,11 @@ static const double s_strictThresholdFraction = 0.5;
 static const std::optional<double> s_killThresholdFraction;
 static const Seconds s_pollInterval = 30_s;
 
-static std::atomic<bool> s_hasCreatedMemoryPressureHandler;
+static std::atomic<bool> s_hasCreatedMemoryPressureHandler { true };
 
 MemoryPressureHandler& MemoryPressureHandler::singleton()
 {
-    static LazyNeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        memoryPressureHandler.construct();
-        s_hasCreatedMemoryPressureHandler.store(true);
-    });
+    static NeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
     return memoryPressureHandler;
 }
 
@@ -68,9 +69,9 @@ static MemoryPressureHandler* memoryPressureHandlerIfExists()
 
 MemoryPressureHandler::MemoryPressureHandler()
 #if OS(LINUX) || OS(FREEBSD) || OS(HAIKU) || OS(QNX)
-    : m_holdOffTimer(RunLoop::main(), this, &MemoryPressureHandler::holdOffTimerFired)
+    : m_holdOffTimer(RunLoop::mainSingleton(), "MemoryPressureHandler::HoldOffTimer"_s, this, &MemoryPressureHandler::holdOffTimerFired)
 #elif OS(WINDOWS)
-    : m_windowsMeasurementTimer(RunLoop::main(), this, &MemoryPressureHandler::windowsMeasurementTimerFired)
+    : m_windowsMeasurementTimer(RunLoop::mainSingleton(), "MemoryPressureHandler::WindowsMeasurementTimer"_s, this, &MemoryPressureHandler::windowsMeasurementTimerFired)
 #endif
 {
 #if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
@@ -86,7 +87,7 @@ void MemoryPressureHandler::setMemoryFootprintPollIntervalForTesting(Seconds pol
 void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
 {
     if (use) {
-        m_measurementTimer = makeUnique<RunLoop::Timer>(RunLoop::main(), this, &MemoryPressureHandler::measurementTimerFired);
+        m_measurementTimer = makeUnique<RunLoop::Timer>(RunLoop::mainSingleton(), "MemoryPressureHandler::MeasurementTimer"_s, this, &MemoryPressureHandler::measurementTimerFired);
         m_measurementTimer->startRepeating(m_configuration.pollInterval);
     } else
         m_measurementTimer = nullptr;
@@ -112,7 +113,7 @@ static size_t thresholdForMemoryKillOfActiveProcess(unsigned tabCount)
     return baseThreshold + tabCount * GB;
 #else
     UNUSED_PARAM(tabCount);
-    return std::min(3 * GB, static_cast<size_t>(ramSize() * 0.9));
+    return std::min(3 * GB, static_cast<size_t>(truncateDoubleToUint64(ramSize() * 0.9)));
 #endif
 }
 
@@ -123,7 +124,7 @@ static size_t thresholdForMemoryKillOfInactiveProcess(unsigned tabCount)
 #else
     size_t baseThreshold = tabCount > 1 ? 3 * GB : 2 * GB;
 #endif
-    return std::min(baseThreshold, static_cast<size_t>(ramSize() * 0.9));
+    return std::min(baseThreshold, static_cast<size_t>(truncateDoubleToUint64(ramSize() * 0.9)));
 }
 
 void MemoryPressureHandler::setPageCount(unsigned pageCount)
@@ -210,14 +211,14 @@ void MemoryPressureHandler::setMemoryUsagePolicyBasedOnFootprint(size_t footprin
     memoryPressureStatusChanged();
 }
 
-void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds, WTF::Function<void(size_t)>&& handler)
+void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<uint64_t>&& thresholds, WTF::Function<void(uint64_t)>&& handler)
 {
     if (thresholds.isEmpty() || !handler)
         return;
 
-    std::sort(thresholds.begin(), thresholds.end(), std::greater<>());
-    m_memoryFootprintNotificationThresholds = WTFMove(thresholds);
-    m_memoryFootprintNotificationHandler = WTFMove(handler);
+    std::ranges::sort(thresholds, std::greater<>());
+    m_memoryFootprintNotificationThresholds = WTF::move(thresholds);
+    m_memoryFootprintNotificationHandler = WTF::move(handler);
 }
 
 
@@ -262,7 +263,7 @@ void MemoryPressureHandler::setProcessState(WebsamProcessState state)
 
 ASCIILiteral MemoryPressureHandler::processStateDescription()
 {
-    if (auto handler = memoryPressureHandlerIfExists()) {
+    if (RefPtr handler = memoryPressureHandlerIfExists()) {
         switch (handler->processState()) {
         case WebsamProcessState::Active:
             return "active"_s;
@@ -374,7 +375,7 @@ MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration()
 {
 }
 
-MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(uint64_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
     : baseThreshold(base)
     , conservativeThresholdFraction(conservative)
     , strictThresholdFraction(strict)

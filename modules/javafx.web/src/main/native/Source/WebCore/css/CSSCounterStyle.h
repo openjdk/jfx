@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CSSCounterStyleDescriptors.h"
-#include "WritingMode.h"
+#include <WebCore/CSSCounterStyleDescriptors.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
@@ -74,7 +74,7 @@ public:
     void setSpeakAs(CSSCounterStyleDescriptors::SpeakAs speakAs) { m_descriptors.m_speakAs = speakAs; }
     void setFirstSymbolValueForFixedSystem(int firstSymbolValue) { m_descriptors.m_fixedSystemFirstSymbolValue = firstSymbolValue; }
 
-    void setFallbackReference(RefPtr<CSSCounterStyle>&&);
+    void setFallbackReference(Ref<CSSCounterStyle>&&);
     bool isFallbackUnresolved() { return !m_fallbackReference; }
     bool isExtendsUnresolved() { return !m_descriptors.m_isExtendedResolved; };
     bool isExtendsSystem() const { return system() == CSSCounterStyleDescriptors::System::Extends; }

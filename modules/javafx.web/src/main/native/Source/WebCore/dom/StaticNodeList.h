@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,27 +34,26 @@
 
 namespace WebCore {
 
-class WEBCORE_EXPORT StaticNodeList final : public NodeList {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(StaticNodeList, WEBCORE_EXPORT);
+class StaticNodeList final : public NodeList {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(StaticNodeList, WEBCORE_EXPORT);
 public:
+    WEBCORE_EXPORT virtual ~StaticNodeList() = default;
+
     static Ref<StaticNodeList> create(Vector<Ref<Node>>&& nodes = { })
     {
-        return adoptRef(*new StaticNodeList(WTFMove(nodes)));
+        return adoptRef(*new StaticNodeList(WTF::move(nodes)));
     }
 
-    unsigned length() const override;
-    Node* item(unsigned index) const override;
+    WEBCORE_EXPORT unsigned length() const override;
+    WEBCORE_EXPORT Node* item(unsigned index) const override;
 
 private:
-    StaticNodeList(Vector<Ref<Node>>&& nodes)
-        : m_nodes(WTFMove(nodes))
-    { }
-
+    WEBCORE_EXPORT StaticNodeList(Vector<Ref<Node>>&& nodes);
     Vector<Ref<Node>> m_nodes;
 };
 
 class StaticWrapperNodeList final : public NodeList {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StaticWrapperNodeList);
+    WTF_MAKE_TZONE_ALLOCATED(StaticWrapperNodeList);
 public:
     static Ref<StaticWrapperNodeList> create(NodeList& nodeList)
     {
@@ -69,15 +68,15 @@ private:
         : m_nodeList(nodeList)
     { }
 
-    Ref<NodeList>  m_nodeList;
+    const Ref<NodeList> m_nodeList;
 };
 
 class StaticElementList final : public NodeList {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StaticElementList);
+    WTF_MAKE_TZONE_ALLOCATED(StaticElementList);
 public:
     static Ref<StaticElementList> create(Vector<Ref<Element>>&& elements = { })
     {
-        return adoptRef(*new StaticElementList(WTFMove(elements)));
+        return adoptRef(*new StaticElementList(WTF::move(elements)));
     }
 
     unsigned length() const override;
@@ -85,10 +84,10 @@ public:
 
 private:
     StaticElementList(Vector<Ref<Element>>&& elements)
-        : m_elements(WTFMove(elements))
+        : m_elements(WTF::move(elements))
     { }
 
-    Vector<Ref<Element>> m_elements;
+    const Vector<Ref<Element>> m_elements;
 };
 
 } // namespace WebCore

@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "CharacterData.h"
+#include <WebCore/CharacterData.h>
 
 namespace WebCore {
 
 class Comment final : public CharacterData {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Comment);
+    WTF_MAKE_TZONE_ALLOCATED(Comment);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Comment);
 public:
     static Ref<Comment> create(Document&, String&&);
@@ -36,7 +36,8 @@ private:
     Comment(Document&, String&&);
 
     String nodeName() const override;
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const override;
+    SerializedNode serializeNode(CloningOperation) const override;
 };
 
 } // namespace WebCore

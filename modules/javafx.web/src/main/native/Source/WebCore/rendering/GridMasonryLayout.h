@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,17 @@
 #pragma once
 
 #include "GridArea.h"
-#include "GridPositionsResolver.h"
 #include "GridTrackSizingAlgorithm.h"
 #include "LayoutUnit.h"
 #include "RenderBox.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+
+namespace Style {
+enum class GridTrackSizingDirection : bool;
+}
 
 class RenderGrid;
 
@@ -48,20 +52,18 @@ public:
         MaxContentPhase
     };
 
-    void initializeMasonry(unsigned gridAxisTracks, GridTrackSizingDirection masonryAxisDirection);
-    void performMasonryPlacement(const GridTrackSizingAlgorithm&, unsigned gridAxisTracks, GridTrackSizingDirection masonryAxisDirection, GridMasonryLayout::MasonryLayoutPhase);
+    void initializeMasonry(unsigned gridAxisTracks, Style::GridTrackSizingDirection masonryAxisDirection);
+    void performMasonryPlacement(const GridTrackSizingAlgorithm&, unsigned gridAxisTracks, Style::GridTrackSizingDirection masonryAxisDirection, GridMasonryLayout::MasonryLayoutPhase);
     LayoutUnit offsetForGridItem(const RenderBox&) const;
     LayoutUnit gridContentSize() const { return m_gridContentSize; };
     LayoutUnit gridGap() const { return m_masonryAxisGridGap; };
 
 private:
-    GridSpan gridAxisPositionUsingPackAutoFlow(const RenderBox& item) const;
-    GridSpan gridAxisPositionUsingNextAutoFlow(const RenderBox& item);
     GridArea gridAreaForIndefiniteGridAxisItem(const RenderBox& item);
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
     void placeMasonryItems(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
-    void setItemGridAxisContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
+    void setItemContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
     void insertIntoGridAndLayoutItem(const GridTrackSizingAlgorithm&, RenderBox&, const GridArea&, GridMasonryLayout::MasonryLayoutPhase);
     LayoutUnit calculateMasonryIntrinsicLogicalWidth(RenderBox&, GridMasonryLayout::MasonryLayoutPhase);
 
@@ -69,22 +71,22 @@ private:
     LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& gridItem);
     void updateRunningPositions(const RenderBox& gridItem, const GridArea&);
     void updateItemOffset(const RenderBox& gridItem, LayoutUnit offset);
-    inline GridTrackSizingDirection gridAxisDirection() const;
+    LayoutUnit maxRunningPositionForSpan(unsigned startLine, unsigned spanLength) const;
+    inline Style::GridTrackSizingDirection gridAxisDirection() const;
 
-    bool hasDefiniteGridAxisPosition(const RenderBox& gridItem, GridTrackSizingDirection masonryDirection) const;
+    bool hasDefiniteGridAxisPosition(const RenderBox& gridItem, Style::GridTrackSizingDirection masonryDirection) const;
     GridArea masonryGridAreaFromGridAxisSpan(const GridSpan&) const;
     GridSpan gridAxisSpanFromArea(const GridArea&) const;
-    bool hasEnoughSpaceAtPosition(unsigned startingPosition, unsigned spanLength) const;
 
     unsigned m_gridAxisTracksCount;
 
     Vector<LayoutUnit> m_runningPositions;
-    UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
-    RenderGrid& m_renderGrid;
+    HashMap<SingleThreadWeakRef<const RenderBox>, LayoutUnit> m_itemOffsets;
+    const CheckedRef<RenderGrid> m_renderGrid;
     LayoutUnit m_masonryAxisGridGap;
     LayoutUnit m_gridContentSize;
 
-    GridTrackSizingDirection m_masonryAxisDirection;
+    Style::GridTrackSizingDirection m_masonryAxisDirection;
     const GridSpan m_masonryAxisSpan = GridSpan::masonryAxisTranslatedDefiniteGridSpan();
 
     unsigned m_autoFlowNextCursor;

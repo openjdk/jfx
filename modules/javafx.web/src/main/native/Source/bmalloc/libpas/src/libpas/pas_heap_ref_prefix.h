@@ -23,6 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+#include "pas_utils_prefix.h"
+
 __PAS_BEGIN_EXTERN_C;
 
 struct __pas_heap_ref;
@@ -36,6 +40,7 @@ struct __pas_heap_ref {
     const __pas_heap_type* type;
     __pas_heap* heap; /* initialize to NULL */
     unsigned allocator_index; /* initialize to 0 */
+    bool is_non_compact_heap; /* initialize to false */
 };
 
 __PAS_END_EXTERN_C;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ class RemoveNodeCommand : public SimpleEditCommand {
 public:
     static Ref<RemoveNodeCommand> create(Ref<Node>&& node, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction = EditAction::Unspecified)
     {
-        return adoptRef(*new RemoveNodeCommand(WTFMove(node), shouldAssumeContentIsAlwaysEditable, editingAction));
+        return adoptRef(*new RemoveNodeCommand(WTF::move(node), shouldAssumeContentIsAlwaysEditable, editingAction));
     }
 
 private:
@@ -46,9 +46,7 @@ private:
     void getNodesInCommand(NodeSet&) override;
 #endif
 
-    Ref<Node> protectedNode() const { return m_node; }
-
-    Ref<Node> m_node;
+    const Ref<Node> m_node;
     RefPtr<ContainerNode> m_parent;
     RefPtr<Node> m_refChild;
     ShouldAssumeContentIsAlwaysEditable m_shouldAssumeContentIsAlwaysEditable;

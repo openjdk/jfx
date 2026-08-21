@@ -29,7 +29,6 @@
 #include "StyleRule.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/VectorHash.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -37,6 +36,8 @@ namespace WebCore {
 
 class CSSSelector;
 class StyleSheetContents;
+class StyleRuleFunction;
+class StyleRulePositionTry;
 class StyleRuleViewTransition;
 
 namespace MQ {
@@ -67,7 +68,7 @@ struct DynamicMediaQueryEvaluationChanges {
         if (type == Type::ResetStyle)
             invalidationRuleSets.clear();
         else
-            invalidationRuleSets.appendVector(WTFMove(other.invalidationRuleSets));
+            invalidationRuleSets.appendVector(WTF::move(other.invalidationRuleSets));
     };
 };
 
@@ -79,7 +80,7 @@ public:
     ~RuleSet();
 
     typedef Vector<RuleData, 1> RuleDataVector;
-    typedef UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleDataVector>> AtomRuleMap;
+    typedef HashMap<AtomString, std::unique_ptr<RuleDataVector>> AtomRuleMap;
 
     void addRule(const StyleRule&, unsigned selectorIndex, unsigned selectorListIndex);
     void addPageRule(StyleRulePage&);
@@ -109,6 +110,7 @@ public:
     const RuleDataVector& slottedPseudoElementRules() const { return m_slottedPseudoElementRules; }
     const RuleDataVector& partPseudoElementRules() const { return m_partPseudoElementRules; }
     const RuleDataVector* focusPseudoClassRules() const { return &m_focusPseudoClassRules; }
+    const RuleDataVector* focusVisiblePseudoClassRules() const { return &m_focusVisiblePseudoClassRules; }
     const RuleDataVector* rootElementRules() const { return &m_rootElementRules; }
     const RuleDataVector* universalRules() const { return &m_universalRules; }
 
@@ -119,7 +121,7 @@ public:
     bool hasAttributeRules() const { return !m_attributeLocalNameRules.isEmpty(); }
     bool hasUserAgentPartRules() const { return !m_userAgentPartRules.isEmpty(); }
     bool hasHostPseudoClassRulesMatchingInShadowTree() const { return m_hasHostPseudoClassRulesMatchingInShadowTree; }
-    bool hasHostPseudoClassRulesInUniversalBucket() const { return m_hasHostPseudoClassRulesInUniversalBucket; }
+    bool hasHostOrScopePseudoClassRulesInUniversalBucket() const { return m_hasHostOrScopePseudoClassRulesInUniversalBucket; }
 
     static constexpr auto cascadeLayerPriorityForPresentationalHints = std::numeric_limits<CascadeLayerPriority>::min();
     static constexpr auto cascadeLayerPriorityForUnlayered = std::numeric_limits<CascadeLayerPriority>::max();
@@ -133,6 +135,10 @@ public:
     bool hasScopeRules() const { return !m_scopeRules.isEmpty(); }
     Vector<Ref<const StyleRuleScope>> scopeRulesFor(const RuleData&) const;
 
+    const RefPtr<const StyleRulePositionTry> positionTryRuleForName(const AtomString&) const;
+
+    String selectorsForDebugging() const;
+
 private:
     friend class RuleSetBuilder;
 
@@ -142,7 +148,7 @@ private:
     using ContainerQueryIdentifier = unsigned;
     using ScopeRuleIdentifier = unsigned;
 
-    void addRule(RuleData&&, CascadeLayerIdentifier, ContainerQueryIdentifier, ScopeRuleIdentifier);
+    void addRule(RuleData&&, CascadeLayerIdentifier, ContainerQueryIdentifier, ScopeRuleIdentifier, RuleFeatureSet::CollectionContext*);
 
     struct ResolverMutatingRule {
         Ref<StyleRuleBase> rule;
@@ -157,6 +163,7 @@ private:
     CollectedMediaQueryChanges evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator&, size_t startIndex);
 
     template<typename Function> void traverseRuleDatas(Function&&);
+    template<typename Function> void traverseRuleDatas(Function&&) const;
 
     struct CascadeLayer {
         CascadeLayerName resolvedName;
@@ -208,13 +215,14 @@ private:
     RuleDataVector m_slottedPseudoElementRules;
     RuleDataVector m_partPseudoElementRules;
     RuleDataVector m_focusPseudoClassRules;
+    RuleDataVector m_focusVisiblePseudoClassRules;
     RuleDataVector m_rootElementRules;
     RuleDataVector m_universalRules;
     Vector<StyleRulePage*> m_pageRules;
     RefPtr<StyleRuleViewTransition> m_viewTransitionRule;
     RuleFeatureSet m_features;
     Vector<DynamicMediaQueryRules> m_dynamicMediaQueryRules;
-    UncheckedKeyHashMap<Vector<size_t>, Ref<const RuleSet>> m_mediaQueryInvalidationRuleSetCache;
+    HashMap<Vector<size_t>, Ref<const RuleSet>> m_mediaQueryInvalidationRuleSetCache;
     unsigned m_ruleCount { 0 };
 
     Vector<CascadeLayer> m_cascadeLayers;
@@ -230,9 +238,12 @@ private:
     Vector<ScopeAndParent> m_scopeRules;
     Vector<ScopeRuleIdentifier> m_scopeRuleIdentifierForRulePosition;
 
+    // @position-try
+    HashMap<AtomString, Ref<const StyleRulePositionTry>> m_positionTryRules;
+
     bool m_hasHostPseudoClassRulesMatchingInShadowTree { false };
     bool m_hasViewportDependentMediaQueries { false };
-    bool m_hasHostPseudoClassRulesInUniversalBucket { false };
+    bool m_hasHostOrScopePseudoClassRulesInUniversalBucket { false };
 };
 
 inline const RuleSet::RuleDataVector* RuleSet::attributeRules(const AtomString& key, bool isHTMLName) const

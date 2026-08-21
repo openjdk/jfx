@@ -21,13 +21,14 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SVGStopElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGStopElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGStopElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGStopElement);
 public:
     static Ref<SVGStopElement> create(const QualifiedName&, Document&);

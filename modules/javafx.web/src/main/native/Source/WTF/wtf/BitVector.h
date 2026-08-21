@@ -37,8 +37,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace JSC {
 class CachedBitVector;
 }
@@ -71,7 +69,7 @@ class FixedBitVector;
 // If you know the length of the vector at compile-time,
 // please consider using WTF::BitSet instead.
 class BitVector final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BitVector);
 public:
     BitVector()
         : m_bitsOrPointer(makeInlineBits(0))
@@ -111,6 +109,9 @@ public:
 
     BitVector& operator=(const BitVector& other)
     {
+        if (&other == this)
+            return *this;
+
         if (isInline() && other.isInline())
             m_bitsOrPointer = other.m_bitsOrPointer;
         else
@@ -140,13 +141,13 @@ public:
     bool quickGet(size_t bit) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
-        return !!(bits()[bit / bitsInPointer()] & (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1))));
+        return !!(words()[bit / bitsInPointer()] & (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1))));
     }
 
     bool quickSet(size_t bit)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
-        uintptr_t& word = bits()[bit / bitsInPointer()];
+        uintptr_t& word = words()[bit / bitsInPointer()];
         uintptr_t mask = static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1));
         bool result = !!(word & mask);
         word |= mask;
@@ -156,7 +157,7 @@ public:
     bool quickClear(size_t bit)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
-        uintptr_t& word = bits()[bit / bitsInPointer()];
+        uintptr_t& word = words()[bit / bitsInPointer()];
         uintptr_t mask = static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1));
         bool result = !!(word & mask);
         word &= ~mask;
@@ -327,13 +328,9 @@ public:
     }
 
     class iterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
     public:
-        iterator()
-            : m_bitVector(nullptr)
-            , m_index(0)
-        {
-        }
+        iterator() = default;
 
         iterator(const BitVector& bitVector, size_t index)
             : m_bitVector(&bitVector)
@@ -367,13 +364,13 @@ public:
         }
 
     private:
-        const BitVector* m_bitVector;
-        size_t m_index;
+        const BitVector* m_bitVector { nullptr };
+        size_t m_index { 0 };
     };
 
     // Use this to iterate over set bits.
-    iterator begin() const { return iterator(*this, findBit(0, true)); }
-    iterator end() const { return iterator(*this, size()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(*this, findBit(0, true)); }
+    iterator end() const LIFETIME_BOUND { return iterator(*this, size()); }
 
     static unsigned outOfLineMemoryUse(size_t bitCount)
     {
@@ -470,10 +467,10 @@ private:
         size_t numBits() const { return m_numBits; }
         size_t numWords() const { return (m_numBits + bitsInPointer() - 1) / bitsInPointer(); }
 
-        std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(numBits())); }
-        std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(numBits())); }
-        std::span<const uintptr_t> wordsSpan() const { return unsafeMakeSpan(bits(), numWords()); }
-        std::span<uintptr_t> wordsSpan() { return unsafeMakeSpan(bits(), numWords()); }
+        std::span<const uint8_t> byteSpan() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(m_words), byteCount(numBits())); }
+        std::span<uint8_t> byteSpan() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(m_words), byteCount(numBits())); }
+        std::span<const uintptr_t> wordsSpan() const LIFETIME_BOUND { return unsafeMakeSpan(m_words, numWords()); }
+        std::span<uintptr_t> wordsSpan() LIFETIME_BOUND { return unsafeMakeSpan(m_words, numWords()); }
 
         static WTF_EXPORT_PRIVATE OutOfLineBits* create(size_t numBits);
 
@@ -485,10 +482,8 @@ private:
         {
         }
 
-        uintptr_t* bits() { return std::bit_cast<uintptr_t*>(this + 1); }
-        const uintptr_t* bits() const { return std::bit_cast<const uintptr_t*>(this + 1); }
-
         size_t m_numBits;
+        uintptr_t m_words[0];
     };
 
     bool isInline() const { return m_bitsOrPointer >> maxInlineBits(); }
@@ -511,22 +506,22 @@ private:
     bool equalsSlowCaseSimple(const BitVector& other) const;
     WTF_EXPORT_PRIVATE uintptr_t hashSlowCase() const;
 
-    uintptr_t* bits()
+    std::span<uintptr_t> words() LIFETIME_BOUND
     {
         if (isInline())
-            return &m_bitsOrPointer;
-        return outOfLineBits()->wordsSpan().data();
+            return singleElementSpan(m_bitsOrPointer);
+        return outOfLineBits()->wordsSpan();
     }
 
-    const uintptr_t* bits() const
+    std::span<const uintptr_t> words() const LIFETIME_BOUND
     {
         if (isInline())
-            return &m_bitsOrPointer;
-        return outOfLineBits()->wordsSpan().data();
+            return singleElementSpan(m_bitsOrPointer);
+        return outOfLineBits()->wordsSpan();
     }
 
-    std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(size())); }
-    std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(size())); }
+    std::span<uint8_t> byteSpan() LIFETIME_BOUND { return asMutableByteSpan(words()).first(byteCount(size())); }
+    std::span<const uint8_t> byteSpan() const LIFETIME_BOUND { return asByteSpan(words()).first(byteCount(size())); }
 
     uintptr_t m_bitsOrPointer;
 };
@@ -561,5 +556,3 @@ template<> struct HashTraits<BitVector> : public CustomHashTraits<BitVector> { }
 } // namespace WTF
 
 using WTF::BitVector;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

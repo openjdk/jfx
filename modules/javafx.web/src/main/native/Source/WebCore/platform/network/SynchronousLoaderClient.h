@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ResourceError.h"
-#include "ResourceHandleClient.h"
-#include "ResourceResponse.h"
+#include <WebCore/ResourceError.h>
+#include <WebCore/ResourceHandleClient.h>
+#include <WebCore/ResourceResponse.h>
 #include <wtf/Function.h>
 #include <wtf/MessageQueue.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -40,7 +40,7 @@ class SynchronousLoaderMessageQueue : public ThreadSafeRefCounted<SynchronousLoa
 public:
     static Ref<SynchronousLoaderMessageQueue> create() { return adoptRef(*new SynchronousLoaderMessageQueue); }
 
-    void append(std::unique_ptr<Function<void()>>&& task) { m_queue.append(WTFMove(task)); }
+    void append(std::unique_ptr<Function<void()>>&& task) { m_queue.append(WTF::move(task)); }
     void kill() { m_queue.kill(); }
     bool killed() const { return m_queue.killed(); }
     std::unique_ptr<Function<void()>> waitForMessage() { return m_queue.waitForMessage(); }
@@ -79,6 +79,6 @@ private:
     ResourceResponse m_response;
     Vector<uint8_t> m_data;
     ResourceError m_error;
-    Ref<SynchronousLoaderMessageQueue> m_messageQueue;
+    const Ref<SynchronousLoaderMessageQueue> m_messageQueue;
 };
 }

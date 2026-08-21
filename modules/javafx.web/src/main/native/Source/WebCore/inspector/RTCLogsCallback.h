@@ -27,7 +27,6 @@
 
 #include "ActiveDOMCallback.h"
 #include "CallbackResult.h"
-#include "ContextDestructionObserverInlines.h"
 #include "RTCPeerConnection.h"
 
 namespace WebCore {
@@ -36,6 +35,10 @@ class RTCLogsCallback : public RefCounted<RTCLogsCallback>, public ActiveDOMCall
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     struct Logs {
         String type;
         String message;
@@ -43,8 +46,8 @@ public:
         RefPtr<RTCPeerConnection> connection;
     };
 
-    virtual CallbackResult<void> handleEvent(const Logs&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(const Logs&) = 0;
+    virtual CallbackResult<void> invoke(const Logs&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(const Logs&) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

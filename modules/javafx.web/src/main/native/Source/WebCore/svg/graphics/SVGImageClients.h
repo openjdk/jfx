@@ -58,6 +58,16 @@ private:
         m_image = nullptr;
     }
 
+    void didFinishLoadingImageForSVGImage(SVGImageElement&) final
+    {
+        RefPtr image { m_image.get() };
+        if (!image || !image->internalPage())
+            return;
+
+        if (RefPtr imageObserver = image->imageObserver())
+            imageObserver->imageContentChanged(*image);
+    }
+
     void invalidateContentsAndRootView(const IntRect& rect) final
     {
         RefPtr image { m_image.get() };

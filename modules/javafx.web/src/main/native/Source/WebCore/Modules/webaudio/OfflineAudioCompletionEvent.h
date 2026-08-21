@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@ class AudioBuffer;
 struct OfflineAudioCompletionEventInit;
 
 class OfflineAudioCompletionEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OfflineAudioCompletionEvent);
+    WTF_MAKE_TZONE_ALLOCATED(OfflineAudioCompletionEvent);
 public:
     static Ref<OfflineAudioCompletionEvent> create(Ref<AudioBuffer>&& renderedBuffer);
     static Ref<OfflineAudioCompletionEvent> create(const AtomString& eventType, OfflineAudioCompletionEventInit&&);
@@ -45,7 +45,7 @@ private:
     explicit OfflineAudioCompletionEvent(Ref<AudioBuffer>&& renderedBuffer);
     OfflineAudioCompletionEvent(const AtomString& eventType, OfflineAudioCompletionEventInit&&);
 
-    Ref<AudioBuffer> m_renderedBuffer;
+    const Ref<AudioBuffer> m_renderedBuffer;
 };
 
 } // namespace WebCore

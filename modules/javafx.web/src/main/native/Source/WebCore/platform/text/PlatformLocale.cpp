@@ -54,7 +54,7 @@ public:
 private:
     // DateTimeFormat::TokenHandler functions.
     void visitField(DateTimeFormat::FieldType, int) final;
-    void visitLiteral(String&&) final;
+    void visitLiteral(const String&) final;
 
     String zeroPadString(const String&, size_t width);
     void appendNumber(int number, size_t width);
@@ -169,10 +169,10 @@ void DateTimeStringBuilder::visitField(DateTimeFormat::FieldType fieldType, int 
     }
 }
 
-void DateTimeStringBuilder::visitLiteral(String&& text)
+void DateTimeStringBuilder::visitLiteral(const String& text)
 {
     ASSERT(text.length());
-    m_builder.append(WTFMove(text));
+    m_builder.append(text);
 }
 
 String DateTimeStringBuilder::toString()
@@ -323,7 +323,7 @@ String Locale::convertFromLocalizedNumber(const String& localized)
         else if (symbolIndex == GroupSeparatorIndex)
             return input;
         else
-            builder.append(static_cast<UChar>('0' + symbolIndex));
+            builder.append(static_cast<char16_t>('0' + symbolIndex));
     }
     String converted = builder.toString();
     // Ignore trailing '.', but will reject '.'-only string later.
@@ -366,10 +366,30 @@ String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
     return builder.toString();
 }
 
-String Locale::localizedDecimalSeparator()
+const String& Locale::localizedDecimalSeparator()
 {
     initializeLocaleData();
     return m_decimalSymbols[DecimalSeparatorIndex];
+}
+
+String Locale::localizeNumberCharacters(const String& input)
+{
+    initializeLocaleData();
+    if (!m_hasLocaleData || input.isEmpty())
+        return input;
+
+    StringBuilder builder;
+    builder.reserveCapacity(input.length());
+    for (unsigned i = 0; i < input.length(); ++i) {
+        auto character = input[i];
+        if (character >= '0' && character <= '9')
+            builder.append(m_decimalSymbols[character - '0']);
+        else if (character == '.')
+            builder.append(m_decimalSymbols[DecimalSeparatorIndex]);
+        else
+            builder.append(character);
+    }
+    return builder.toString();
 }
 
 }

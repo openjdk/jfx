@@ -56,6 +56,7 @@ class Device;
 class RenderBundleEncoder;
 class RenderPassEncoder;
 class RenderPipeline;
+class TextureOrTextureView;
 class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderbundle
@@ -64,9 +65,9 @@ class RenderBundle : public WGPURenderBundleImpl, public RefCounted<RenderBundle
 public:
     using MinVertexCountsContainer = HashMap<uint64_t, IndexBufferAndIndexData, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
     using ResourcesContainer = NSMapTable<id<MTLResource>, ResourceUsageAndRenderStage*>;
-    static Ref<RenderBundle> create(NSArray<RenderBundleICBWithResources*> *resources, RefPtr<WebGPU::RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
+    static Ref<RenderBundle> create(NSArray<RenderBundleICBWithResources*> *resources, Vector<WebGPU::BindableResources>&& bindableResources, RefPtr<WebGPU::RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
     {
-        return adoptRef(*new RenderBundle(resources, encoder, descriptor, commandCount, makeSubmitInvalid, WTFMove(bindGroups), device));
+        return adoptRef(*new RenderBundle(resources, WTF::move(bindableResources), encoder, descriptor, commandCount, makeSubmitInvalid, WTF::move(bindGroups), device));
     }
     static Ref<RenderBundle> createInvalid(Device& device, NSString* errorString)
     {
@@ -84,23 +85,25 @@ public:
 
     void replayCommands(RenderPassEncoder&) const;
     void updateMinMaxDepths(float minDepth, float maxDepth);
-    bool validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor&, const Vector<RefPtr<TextureView>>&, const RefPtr<TextureView>&) const;
+    bool validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor&, const Vector<TextureOrTextureView>&, const std::optional<TextureOrTextureView>&) const;
     bool validatePipeline(const RenderPipeline*);
     uint64_t drawCount() const;
     NSString* lastError() const;
     bool requiresCommandReplay() const;
     bool makeSubmitInvalid() const;
     bool rebindSamplersIfNeeded() const;
+    const Vector<WebGPU::BindableResources>& resources() { return m_resources; }
 
 private:
-    RenderBundle(NSArray<RenderBundleICBWithResources*> *, RefPtr<RenderBundleEncoder>, const WGPURenderBundleEncoderDescriptor&, uint64_t, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&&, Device&);
+    RenderBundle(NSArray<RenderBundleICBWithResources*> *, Vector<WebGPU::BindableResources>&&, RefPtr<RenderBundleEncoder>, const WGPURenderBundleEncoderDescriptor&, uint64_t, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&&, Device&);
     RenderBundle(Device&, NSString*);
 
     const Ref<Device> m_device;
     RefPtr<RenderBundleEncoder> m_renderBundleEncoder;
     NSArray<RenderBundleICBWithResources*> *m_renderBundlesResources;
+    Vector<WebGPU::BindableResources> m_resources;
     WGPURenderBundleEncoderDescriptor m_descriptor;
-    Vector<WGPUTextureFormat> m_descriptorColorFormats;
+    const Vector<WGPUTextureFormat> m_descriptorColorFormats;
     HashSet<RefPtr<const BindGroup>> m_bindGroups;
 
     NSString* m_lastErrorString { nil };

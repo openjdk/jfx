@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
@@ -44,9 +46,10 @@ public:
     typedef void TimerNotificationType();
     using TimerNotificationCallback = RefPtr<WTF::SharedTask<TimerNotificationType>>;
 
-    class Manager {
+    class Manager final : public CanMakeThreadSafeCheckedPtr<Manager> {
         WTF_MAKE_NONCOPYABLE(Manager);
         WTF_MAKE_TZONE_ALLOCATED(Manager);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Manager);
         void timerDidFireCallback();
 
         Manager() = default;
@@ -55,6 +58,7 @@ public:
 
     public:
         static Manager& singleton();
+
         void registerVM(VM&);
         void unregisterVM(VM&);
         void scheduleTimer(JSRunLoopTimer&, Seconds nextFireTime);
@@ -70,7 +74,7 @@ public:
         Lock m_lock;
 
         class PerVMData {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PerVMData);
             WTF_MAKE_NONCOPYABLE(PerVMData);
         public:
             PerVMData(Manager&, WTF::RunLoop&);
@@ -103,7 +107,7 @@ public:
 
 protected:
     static constexpr Seconds s_decade { 60 * 60 * 24 * 365 * 10 };
-    Ref<JSLock> m_apiLock;
+    const Ref<JSLock> m_apiLock;
 
 private:
     friend class Manager;

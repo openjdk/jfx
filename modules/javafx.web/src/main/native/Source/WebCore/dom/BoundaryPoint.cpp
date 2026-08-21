@@ -27,6 +27,7 @@
 #include "BoundaryPoint.h"
 #include "ContainerNode.h"
 #include "Document.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -73,14 +74,14 @@ template<TreeType treeType> std::partial_ordering treeOrderInternal(const Bounda
         RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == a.container.ptr())
             return isOffsetBeforeChild(*nextAncestor, a.offset, *ancestor) ? std::strong_ordering::less : std::strong_ordering::greater;
-        ancestor = WTFMove(nextAncestor);
+        ancestor = WTF::move(nextAncestor);
     }
 
     for (RefPtr ancestor = a.container.copyRef(); ancestor; ) {
         RefPtr nextAncestor = parent<treeType>(*ancestor);
         if (nextAncestor == b.container.ptr())
             return isOffsetBeforeChild(*nextAncestor, b.offset, *ancestor) ? std::strong_ordering::greater : std::strong_ordering::less;
-        ancestor = WTFMove(nextAncestor);
+        ancestor = WTF::move(nextAncestor);
     }
 
     return treeOrder<treeType>(a.container, b.container);
@@ -114,14 +115,14 @@ TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
 {
     TextStream::GroupScope scope(stream);
     stream << "BoundaryPoint ";
-    stream.dumpProperty("node", boundaryPoint.container->debugDescription());
-    stream.dumpProperty("offset", boundaryPoint.offset);
+    stream.dumpProperty("node"_s, boundaryPoint.container->debugDescription());
+    stream.dumpProperty("offset"_s, boundaryPoint.offset);
     return stream;
 }
 
-Ref<Document> BoundaryPoint::protectedDocument() const
+String BoundaryPoint::debugDescription() const
 {
-    return document();
+    return makeString('{', container->debugDescription().utf8(), ", offset: "_s, offset, '}');
 }
 
 }

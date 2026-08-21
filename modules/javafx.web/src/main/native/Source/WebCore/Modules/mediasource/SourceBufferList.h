@@ -34,6 +34,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -43,13 +44,15 @@ class SourceBuffer;
 class WebCoreOpaqueRoot;
 
 class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SourceBufferList);
+    WTF_MAKE_TZONE_ALLOCATED(SourceBufferList);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     unsigned length() const { return m_list.size(); }
@@ -62,15 +65,15 @@ public:
     void clear();
     void replaceWith(Vector<Ref<SourceBuffer>>&&);
 
-    auto begin() { return m_list.begin(); }
-    auto end() { return m_list.end(); }
-    auto begin() const { return m_list.begin(); }
-    auto end() const { return m_list.end(); }
+    auto begin() LIFETIME_BOUND { return m_list.begin(); }
+    auto end() LIFETIME_BOUND { return m_list.end(); }
+    auto begin() const LIFETIME_BOUND { return m_list.begin(); }
+    auto end() const LIFETIME_BOUND { return m_list.end(); }
     size_t size() const { return m_list.size(); }
 
     // EventTarget interface
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SourceBufferList; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     explicit SourceBufferList(ScriptExecutionContext*);
@@ -86,5 +89,7 @@ private:
 WebCoreOpaqueRoot root(SourceBufferList*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(SourceBufferList)
 
 #endif // ENABLE(MEDIA_SOURCE)

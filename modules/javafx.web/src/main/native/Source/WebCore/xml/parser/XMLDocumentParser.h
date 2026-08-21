@@ -30,13 +30,8 @@
 #include "ScriptableDocumentParser.h"
 #include "SegmentedString.h"
 #include "XMLErrors.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/tree.h>
 #include <libxml/xmlstring.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -79,7 +74,7 @@ public:
     }
     static Ref<XMLDocumentParser> create(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, OptionSet<ParserContentPolicy> parserContentPolicy)
     {
-        return adoptRef(*new XMLDocumentParser(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
+        return adoptRef(*new XMLDocumentParser(fragment, WTF::move(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
     }
 
     XMLDocumentParser() = delete;
@@ -107,6 +102,7 @@ private:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     void insert(SegmentedString&&) final;
     void append(RefPtr<StringImpl>&&) final;
@@ -158,6 +154,8 @@ private:
     void doWrite(const String&);
     void doEnd();
 
+    RefPtr<Text> protectedLeafTextNode() const { return m_leafTextNode; }
+
     xmlParserCtxtPtr context() const { return m_context ? m_context->context() : nullptr; };
 
     IsInFrameView m_isInFrameView { IsInFrameView::No };
@@ -165,11 +163,11 @@ private:
     SegmentedString m_originalSourceForTransform;
 
     RefPtr<XMLParserContext> m_context;
-    std::unique_ptr<PendingCallbacks> m_pendingCallbacks;
+    const UniqueRef<PendingCallbacks> m_pendingCallbacks;
     Vector<xmlChar> m_bufferedText;
 
-    CheckedPtr<ContainerNode> m_currentNode;
-    Vector<CheckedPtr<ContainerNode>> m_currentNodeStack;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_currentNode;
+    Vector<WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData>> m_currentNodeStack;
 
     RefPtr<Text> m_leafTextNode;
 

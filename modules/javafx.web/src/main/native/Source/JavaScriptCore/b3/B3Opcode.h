@@ -90,6 +90,8 @@ enum Opcode : uint8_t {
     UDiv,
     Mod, // All bets are off as to what will happen when you execute this for -2^31%-1 and x%0.
     UMod,
+    MulHigh,
+    UMulHigh,
 
     // Polymorphic negation. Note that we only need this for floating point, since integer negation
     // is exactly like Sub(0, x). But that's not true for floating point. Sub(0, 0) is 0, while
@@ -293,6 +295,12 @@ enum Opcode : uint8_t {
     // We do WasmAddress(ZExt32(ptr), ...) so that we can avoid generating extraneous moves in Air.
     WasmAddress,
 
+    // This is used for Wasm bulk memory operation `memory.copy`
+    MemoryCopy,
+
+    // This is used for Wasm bulk memory operation `memory.fill`
+    MemoryFill,
+
     // This is used to represent standalone fences - i.e. fences that are not part of other
     // instructions. It's expressive enough to expose mfence on x86 and dmb ish/ishst on ARM. On
     // x86, it also acts as a compiler store-store fence in those cases where it would have been a
@@ -380,6 +388,8 @@ enum Opcode : uint8_t {
     VectorAddSat,
     VectorSubSat,
     VectorMul,
+    VectorMulHigh,
+    VectorMulLow,
     VectorDotProduct,
     VectorDiv,
     VectorMin,
@@ -634,13 +644,4 @@ inline Opcode signExtendOpcode(Width width)
 JS_EXPORT_PRIVATE Opcode storeOpcode(Bank bank, Width width);
 
 } } // namespace JSC::B3
-
-namespace WTF {
-
-class PrintStream;
-
-JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Opcode);
-
-} // namespace WTF
-
 #endif // ENABLE(B3_JIT)

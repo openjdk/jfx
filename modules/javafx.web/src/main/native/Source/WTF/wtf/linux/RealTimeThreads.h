@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/ThreadGroup.h>
 
@@ -32,8 +33,8 @@ typedef struct _GDBusProxy GDBusProxy;
 
 namespace WTF {
 
-class RealTimeThreads {
-    WTF_MAKE_FAST_ALLOCATED;
+class RealTimeThreads : public CanMakeWeakPtr<RealTimeThreads> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RealTimeThreads);
     friend class LazyNeverDestroyed<RealTimeThreads>;
 public:
     WTF_EXPORT_PRIVATE static RealTimeThreads& singleton();
@@ -57,9 +58,11 @@ private:
     void realTimeKitMakeThreadRealTime(uint64_t processID, uint64_t threadID, uint32_t priority);
     void scheduleDiscardRealTimeKitProxy();
     void discardRealTimeKitProxyTimerFired();
+    void setupSignalHandler();
+    static gboolean signalCallback(gint, GIOCondition, gpointer);
 #endif
 
-    std::shared_ptr<ThreadGroup> m_threadGroup;
+    Ref<ThreadGroup> m_threadGroup;
     bool m_enabled { true };
 #if USE(GLIB)
     std::optional<GRefPtr<GDBusProxy>> m_realTimeKitProxy;

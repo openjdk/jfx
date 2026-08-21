@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,11 @@
 
 #pragma once
 
+#include <WebCore/CachedResource.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-
-class CachedResource;
 
 class CachedResourceHandleBase {
 public:
@@ -65,7 +64,13 @@ public:
     CachedResourceHandle(const CachedResourceHandle<R>& o) : CachedResourceHandleBase(o) { }
     template<typename U> CachedResourceHandle(const CachedResourceHandle<U>& o) : CachedResourceHandleBase(o.get()) { }
 
-    R* get() const { return reinterpret_cast<R*>(CachedResourceHandleBase::get()); }
+    R* get() const
+    {
+        if constexpr (std::same_as<R, CachedResource>)
+            return CachedResourceHandleBase::get();
+        else
+            return downcast<R>(CachedResourceHandleBase::get());
+    }
     R* operator->() const { return get(); }
     R& operator*() const { ASSERT(get()); return *get(); }
 
@@ -78,10 +83,6 @@ public:
 };
 
 template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, const RR* res)
-{
-    return h.get() == res;
-}
-template <class R, class RR> bool operator==(const RR* res, const CachedResourceHandle<R>& h)
 {
     return h.get() == res;
 }

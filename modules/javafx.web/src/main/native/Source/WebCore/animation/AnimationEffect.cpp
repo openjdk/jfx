@@ -36,13 +36,14 @@
 #include "JSComputedEffectTiming.h"
 #include "ScriptExecutionContext.h"
 #include "ScrollTimeline.h"
+#include "StyleSingleAnimationRange.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AnimationEffect);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationEffect);
 
 AnimationEffect::AnimationEffect() = default;
 
@@ -59,7 +60,7 @@ void AnimationEffect::setAnimation(WebAnimation* animation)
 
 EffectTiming AnimationEffect::getBindingsTiming() const
 {
-    if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
+    if (RefPtr styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
         styleOriginatedAnimation->flushPendingStyleChanges();
 
     EffectTiming timing;
@@ -73,11 +74,11 @@ EffectTiming AnimationEffect::getBindingsTiming() const
     else
         timing.duration = autoAtom();
     timing.direction = m_timing.direction;
-    timing.easing = m_timing.timingFunction->cssText();
+    timing.easing = RefPtr { m_timing.timingFunction }->cssText();
     return timing;
 }
 
-AnimationEffectTiming::ResolutionData AnimationEffect::resolutionData(std::optional<WebAnimationTime> startTime) const
+AnimationEffectTiming::ResolutionData AnimationEffect::resolutionData(UseCachedCurrentTime useCachedCurrentTime, EndpointInclusiveActiveInterval endpointInclusiveActiveInterval) const
 {
     if (!m_animation)
         return { };
@@ -85,32 +86,33 @@ AnimationEffectTiming::ResolutionData AnimationEffect::resolutionData(std::optio
     RefPtr animation = m_animation.get();
     RefPtr timeline = animation->timeline();
     return {
-        timeline ? timeline->currentTime() : std::nullopt,
+        timeline ? timeline->currentTime(useCachedCurrentTime) : std::nullopt,
         timeline ? timeline->duration() : std::nullopt,
-        startTime ? startTime : animation->startTime(),
-        animation->currentTime(startTime),
+        animation->startTime(),
+        animation->currentTime(useCachedCurrentTime),
+        endpointInclusiveActiveInterval,
         animation->playbackRate()
     };
 }
 
-BasicEffectTiming AnimationEffect::getBasicTiming(std::optional<WebAnimationTime> startTime)
+BasicEffectTiming AnimationEffect::getBasicTiming()
 {
     updateComputedTimingPropertiesIfNeeded();
-    return m_timing.getBasicTiming(resolutionData(startTime));
+    return m_timing.getBasicTiming(resolutionData());
 }
 
 ComputedEffectTiming AnimationEffect::getBindingsComputedTiming()
 {
-    if (auto* styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
+    if (RefPtr styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation()))
         styleOriginatedAnimation->flushPendingStyleChanges();
     return getComputedTiming();
 }
 
-ComputedEffectTiming AnimationEffect::getComputedTiming(std::optional<WebAnimationTime> startTime)
+ComputedEffectTiming AnimationEffect::getComputedTiming(UseCachedCurrentTime useCachedCurrentTime, EndpointInclusiveActiveInterval endpointInclusiveActiveInterval)
 {
     updateComputedTimingPropertiesIfNeeded();
 
-    auto data = resolutionData(startTime);
+    auto data = resolutionData(useCachedCurrentTime, endpointInclusiveActiveInterval);
     auto resolvedTiming = m_timing.resolve(data);
 
     // https://drafts.csswg.org/web-animations-2/#dom-animationeffect-getcomputedtiming
@@ -134,7 +136,7 @@ ComputedEffectTiming AnimationEffect::getComputedTiming(std::optional<WebAnimati
     computedTiming.iterations = m_timing.iterations;
     computedTiming.duration = computedDuration;
     computedTiming.direction = m_timing.direction;
-    computedTiming.easing = m_timing.timingFunction->cssText();
+    computedTiming.easing = RefPtr { m_timing.timingFunction }->cssText();
     computedTiming.endTime = m_timing.endTime;
     computedTiming.activeDuration = m_timing.activeDuration;
     computedTiming.localTime = data.localTime;
@@ -150,7 +152,7 @@ ExceptionOr<void> AnimationEffect::bindingsUpdateTiming(Document& document, std:
 {
     auto retVal = updateTiming(document, timing);
     if (!retVal.hasException() && timing) {
-        if (auto* cssAnimation = dynamicDowncast<CSSAnimation>(animation()))
+        if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(animation()))
             cssAnimation->effectTimingWasUpdatedUsingBindings(*timing);
     }
     return retVal;
@@ -209,7 +211,7 @@ ExceptionOr<void> AnimationEffect::updateTiming(Document& document, std::optiona
         auto timingFunctionResult = CSSPropertyParserHelpers::parseEasingFunctionDeprecated(timing->easing, parsingContext);
         if (!timingFunctionResult)
             return Exception { ExceptionCode::TypeError };
-        setTimingFunction(WTFMove(timingFunctionResult));
+        setTimingFunction(WTF::move(timingFunctionResult));
     }
 
     // 5. Assign each member present in input to the corresponding timing property of effect as follows:
@@ -248,8 +250,8 @@ ExceptionOr<void> AnimationEffect::updateTiming(Document& document, std::optiona
     if (auto direction = timing->direction)
         setDirection(*direction);
 
-    if (m_animation)
-        m_animation->effectTimingDidChange();
+    if (RefPtr animation = m_animation.get())
+        animation->effectTimingDidChange();
 
     return { };
 }
@@ -331,6 +333,12 @@ WebAnimationTime AnimationEffect::iterationDuration()
     return m_timing.iterationDuration;
 }
 
+WebAnimationTime AnimationEffect::iterationDuration() const
+{
+    ASSERT(!m_timingDidMutate);
+    return m_timing.iterationDuration;
+}
+
 void AnimationEffect::setIterationDuration(const std::optional<Seconds>& duration)
 {
     if (m_timing.specifiedIterationDuration == duration)
@@ -406,7 +414,7 @@ Seconds AnimationEffect::timeToNextTick(const BasicEffectTiming& timing)
     return Seconds::infinity();
 }
 
-void AnimationEffect::animationTimelineDidChange(const AnimationTimeline*)
+void AnimationEffect::animationTimelineDidChange()
 {
     m_timingDidMutate = true;
 }
@@ -416,7 +424,7 @@ void AnimationEffect::animationPlaybackRateDidChange()
     m_timingDidMutate = true;
 }
 
-void AnimationEffect::animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange& animationAttachmentRange)
+void AnimationEffect::animationProgressBasedTimelineSourceDidChangeMetrics(const Style::SingleAnimationRange& animationAttachmentRange)
 {
     if (!animationAttachmentRange.isDefault())
         m_timingDidMutate = true;
@@ -441,15 +449,16 @@ void AnimationEffect::updateComputedTimingPropertiesIfNeeded()
     }();
 
     auto rangeDuration = [&] -> std::optional<WebAnimationTime> {
-        if (!m_animation)
+        RefPtr animation = m_animation.get();
+        if (!animation)
             return std::nullopt;
 
-        RefPtr timeline = m_animation->timeline();
+        RefPtr timeline = animation->timeline();
         if (!timeline)
             return std::nullopt;
 
         if (RefPtr scrollTimeline = dynamicDowncast<ScrollTimeline>(timeline)) {
-            auto interval = scrollTimeline->intervalForAttachmentRange(m_animation->range());
+            auto interval = scrollTimeline->intervalForAttachmentRange(animation->range());
             return interval.second - interval.first;
         }
 

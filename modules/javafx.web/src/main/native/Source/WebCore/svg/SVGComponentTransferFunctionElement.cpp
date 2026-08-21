@@ -26,18 +26,20 @@
 #include "SVGComponentTransferFunctionElementInlines.h"
 #include "SVGFEComponentTransferElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGComponentTransferFunctionElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGComponentTransferFunctionElement);
 
 SVGComponentTransferFunctionElement::SVGComponentTransferFunctionElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::typeAttr, ComponentTransferType, &SVGComponentTransferFunctionElement::m_type>();
         PropertyRegistry::registerProperty<SVGNames::tableValuesAttr, &SVGComponentTransferFunctionElement::m_tableValues>();
         PropertyRegistry::registerProperty<SVGNames::slopeAttr, &SVGComponentTransferFunctionElement::m_slope>();
@@ -45,14 +47,14 @@ SVGComponentTransferFunctionElement::SVGComponentTransferFunctionElement(const Q
         PropertyRegistry::registerProperty<SVGNames::amplitudeAttr, &SVGComponentTransferFunctionElement::m_amplitude>();
         PropertyRegistry::registerProperty<SVGNames::exponentAttr, &SVGComponentTransferFunctionElement::m_exponent>();
         PropertyRegistry::registerProperty<SVGNames::offsetAttr, &SVGComponentTransferFunctionElement::m_offset>();
-    });
+    };
 }
 
 void SVGComponentTransferFunctionElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     switch (name.nodeName()) {
     case AttributeNames::typeAttr: {
-        ComponentTransferType propertyValue = SVGPropertyTraits<ComponentTransferType>::fromString(newValue);
+        ComponentTransferType propertyValue = SVGPropertyTraits<ComponentTransferType>::fromString(*this, newValue);
         if (enumToUnderlyingType(propertyValue))
             m_type->setBaseValInternal<ComponentTransferType>(propertyValue);
         break;

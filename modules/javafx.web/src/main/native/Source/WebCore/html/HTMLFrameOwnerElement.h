@@ -21,10 +21,11 @@
 
 #pragma once
 
-#include "Frame.h"
-#include "HTMLElement.h"
-#include "ReferrerPolicy.h"
-#include "SecurityContext.h"
+#include <WebCore/Document.h>
+#include <WebCore/Frame.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/SecurityContext.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -33,7 +34,7 @@ namespace WebCore {
 class RenderWidget;
 
 class HTMLFrameOwnerElement : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFrameOwnerElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFrameOwnerElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameOwnerElement);
 public:
     virtual ~HTMLFrameOwnerElement();
@@ -73,7 +74,7 @@ protected:
     HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void setSandboxFlags(SandboxFlags);
     bool isProhibitedSelfReference(const URL&) const;
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
 private:
     bool isHTMLFrameOwnerElement() const final { return true; }
@@ -108,16 +109,6 @@ private:
 
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
 };
-
-inline HTMLFrameOwnerElement* Frame::ownerElement() const
-{
-    return m_ownerElement.get();
-}
-
-inline RefPtr<HTMLFrameOwnerElement> Frame::protectedOwnerElement() const
-{
-    return m_ownerElement.get();
-}
 
 } // namespace WebCore
 

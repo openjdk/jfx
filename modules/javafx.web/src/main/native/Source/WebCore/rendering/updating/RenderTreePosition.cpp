@@ -27,9 +27,13 @@
 #include "RenderTreePosition.h"
 
 #include "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #include "PseudoElement.h"
+#include "RenderBlockFlow.h"
+#include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderObject.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ShadowRoot.h"
 
 namespace WebCore {

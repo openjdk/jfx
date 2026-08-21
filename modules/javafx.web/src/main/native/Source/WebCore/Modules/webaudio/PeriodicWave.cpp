@@ -34,9 +34,11 @@
 
 #include <JavaScriptCore/TypedArrays.h>
 #include "BaseAudioContext.h"
+#include "ExceptionOr.h"
 #include "FFTFrame.h"
 #include "VectorMath.h"
 #include <algorithm>
+#include <numbers>
 #include <wtf/StdLibExtras.h>
 
 // The number of bands per octave. Each octave will have this many entries in the wave tables.
@@ -71,17 +73,17 @@ ExceptionOr<Ref<PeriodicWave>> PeriodicWave::create(BaseAudioContext& context, P
             return Exception { ExceptionCode::IndexSizeError, "real's length cannot be less than 2"_s };
         if (options.imag->size() < 2)
             return Exception { ExceptionCode::IndexSizeError, "imag's length cannot be less than 2"_s };
-        real = WTFMove(*options.real);
-        imag = WTFMove(*options.imag);
+        real = WTF::move(*options.real);
+        imag = WTF::move(*options.imag);
     } else if (options.real) {
         if (options.real->size() < 2)
             return Exception { ExceptionCode::IndexSizeError, "real's length cannot be less than 2"_s };
-        real = WTFMove(*options.real);
+        real = WTF::move(*options.real);
         imag.fill(0, real.size());
     } else if (options.imag) {
         if (options.imag->size() < 2)
             return Exception { ExceptionCode::IndexSizeError, "imag's length cannot be less than 2"_s };
-        imag = WTFMove(*options.imag);
+        imag = WTF::move(*options.imag);
         real.fill(0, imag.size());
     } else {
         real.fill(0, 2);
@@ -264,7 +266,7 @@ void PeriodicWave::generateBasicWaveform(Type shape)
     imagP[0] = 0;
 
     for (unsigned n = 1; n < halfSize; ++n) {
-        float piFactor = 2 / (n * piFloat);
+        float piFactor = 2 / (n * std::numbers::pi_v<float>);
 
         // All waveforms are odd functions with a positive slope at time 0. Hence
         // the coefficients for cos() are always 0.

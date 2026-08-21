@@ -30,7 +30,7 @@
 #include "config.h"
 #include "JSElement.h"
 
-#include "Document.h"
+#include "DocumentQuirks.h"
 #include "HTMLFrameElementBase.h"
 #include "HTMLNames.h"
 #include "JSAttr.h"
@@ -45,6 +45,7 @@
 #include "MathMLElement.h"
 #include "NodeList.h"
 #include "SVGElement.h"
+#include "Settings.h"
 #include "WebCoreJSClientData.h"
 
 
@@ -63,7 +64,7 @@ static JSValue createNewElementWrapper(JSDOMGlobalObject* globalObject, Ref<Elem
     if (auto* mathmlElement = dynamicDowncast<MathMLElement>(element.get()))
         return createJSMathMLWrapper(globalObject, *mathmlElement);
 #endif
-    return createWrapper<Element>(globalObject, WTFMove(element));
+    return createWrapper<Element>(globalObject, WTF::move(element));
 }
 
 JSValue toJS(JSGlobalObject*, JSDOMGlobalObject* globalObject, Element& element)
@@ -82,7 +83,7 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<E
         ASSERT(!globalObject->vm().exceptionForInspection());
     }
     ASSERT(!getCachedWrapper(globalObject->world(), element));
-    return createNewElementWrapper(globalObject, WTFMove(element));
+    return createNewElementWrapper(globalObject, WTF::move(element));
 }
 
 static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, const JSElement& thisObject, const QualifiedName& attributeName)
@@ -146,6 +147,24 @@ JSValue JSElement::ariaLabelledByElements(JSGlobalObject& lexicalGlobalObject) c
 JSValue JSElement::ariaOwnsElements(JSGlobalObject& lexicalGlobalObject) const
 {
     return getElementsArrayAttribute(lexicalGlobalObject, *this, WebCore::HTMLNames::aria_ownsAttr);
+}
+
+bool JSElement::shouldEnableWebkitRequestFullScreen(ScriptExecutionContext* context)
+{
+#if ENABLE(FULLSCREEN_API)
+    RefPtr document = dynamicDowncast<Document>(context);
+    if (!document)
+        return false;
+
+    if (document->quirks().shouldDisableElementFullscreenQuirk())
+        return false;
+
+    return document->settings().fullScreenEnabled()
+        || document->quirks().shouldEnterNativeFullscreenWhenCallingElementRequestFullscreenQuirk();
+#else
+    UNUSED_PARAM(context);
+    return false;
+#endif
 }
 
 } // namespace WebCore

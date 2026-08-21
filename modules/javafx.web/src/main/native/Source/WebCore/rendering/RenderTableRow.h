@@ -33,7 +33,7 @@ static const unsigned unsetRowIndex = 0x7FFFFFFF;
 static const unsigned maxRowIndex = 0x7FFFFFFE; // 2,147,483,646
 
 class RenderTableRow final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableRow);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableRow);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableRow);
 public:
     RenderTableRow(Element&, RenderStyle&&);
@@ -49,9 +49,6 @@ public:
     RenderTable* table() const;
 
     void paintOutlineForRowIfNeeded(PaintInfo&, const LayoutPoint&);
-
-    static RenderPtr<RenderTableRow> createAnonymousWithParentRenderer(const RenderTableSection&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
     void setRowIndex(unsigned);
     bool rowIndexWasSet() const { return m_rowIndex != unsetRowIndex; }
@@ -76,7 +73,7 @@ public:
 private:
     static RenderPtr<RenderTableRow> createTableRowWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s; }
+    ASCIILiteral renderName() const override;
     bool canHaveChildren() const override { return true; }
     void willBeRemovedFromTree() override;
     void layout() override;
@@ -88,7 +85,7 @@ private:
     bool requiresLayer() const final;
     void paint(PaintInfo&, const LayoutPoint&) override;
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void firstChild() const = delete;
     void lastChild() const = delete;
@@ -100,7 +97,7 @@ private:
 
 inline void RenderTableRow::setRowIndex(unsigned rowIndex)
 {
-    if (UNLIKELY(rowIndex > maxRowIndex))
+    if (rowIndex > maxRowIndex) [[unlikely]]
         CRASH();
     m_rowIndex = rowIndex;
 }

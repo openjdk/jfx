@@ -24,6 +24,7 @@
 #include "config.h"
 #include "RenderListItem.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSFontSelector.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
@@ -33,11 +34,11 @@
 #include "PseudoElement.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderElementInlines.h"
-#include "RenderStyleSetters.h"
+#include "RenderElementStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
-#include "StyleInheritedData.h"
 #include "UnicodeBidi.h"
 #include <wtf/StackStats.h>
 #include <wtf/StdLibExtras.h>
@@ -47,10 +48,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderListItem);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderListItem);
 
 RenderListItem::RenderListItem(Element& element, RenderStyle&& style)
-    : RenderBlockFlow(Type::ListItem, element, WTFMove(style))
+    : RenderBlockFlow(Type::ListItem, element, WTF::move(style))
 {
     ASSERT(isRenderListItem());
     setInline(false);
@@ -65,7 +66,7 @@ RenderListItem::~RenderListItem()
 RenderStyle RenderListItem::computeMarkerStyle() const
 {
     if (!is<PseudoElement>(element())) {
-        if (auto markerStyle = getCachedPseudoStyle({ PseudoId::Marker }, &style()))
+        if (auto markerStyle = getCachedPseudoStyle({ PseudoElementType::Marker }, &style()))
             return RenderStyle::clone(*markerStyle);
     }
 
@@ -79,7 +80,7 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     // ::after::marker. See bugs.webkit.org/b/218897.
     auto fontDescription = style().fontDescription();
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
-    markerStyle.setFontDescription(WTFMove(fontDescription));
+    markerStyle.setFontDescription(WTF::move(fontDescription));
     markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
     markerStyle.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
     markerStyle.setTextWrapMode(TextWrapMode::NoWrap);
@@ -95,9 +96,9 @@ bool isHTMLListElement(const Node& node)
 // Returns the enclosing list with respect to the DOM order.
 static Element* enclosingList(const RenderListItem& listItem)
 {
-    auto& element = listItem.element();
+    auto* element = listItem.element();
     auto* pseudoElement = dynamicDowncast<PseudoElement>(element);
-    auto* parent = pseudoElement ? pseudoElement->hostElement() : element.parentElement();
+    auto* parent = pseudoElement ? pseudoElement->hostElement() : element->parentElement();
     for (auto* ancestor = parent; ancestor; ancestor = ancestor->parentElement()) {
         if (isHTMLListElement(*ancestor) || (ancestor->renderer() && ancestor->renderer()->shouldApplyStyleContainment()))
             return ancestor;
@@ -144,7 +145,7 @@ static RenderListItem* nextListItemHelper(const Element& list, const Element& el
 
 static inline RenderListItem* nextListItem(const Element& list, const RenderListItem& item)
 {
-    return nextListItemHelper(list, item.element());
+    return nextListItemHelper(list, *item.element());
 }
 
 static inline RenderListItem* firstListItem(const Element& list)
@@ -154,7 +155,7 @@ static inline RenderListItem* firstListItem(const Element& list)
 
 static RenderListItem* previousListItem(const Element& list, const RenderListItem& item)
 {
-    auto* current = &item.element();
+    auto* current = item.element();
     auto advance = [&] {
         current = ElementTraversal::previousIncludingPseudo(*current, &list);
     };
@@ -230,13 +231,13 @@ void RenderListItem::updateValueNow() const
         // Take in account enclosing list counter-reset.
         // FIXME: This can be a lot more simple when lists use presentational hints.
         if (list && list->renderer()) {
-            auto listDirectives = list->renderer()->style().counterDirectives().map.get("list-item"_s);
+            auto listDirectives = list->renderer()->style().usedCounterDirectives().map.get("list-item"_s);
             if (listDirectives.resetValue)
                 startValue = *listDirectives.resetValue;
             else
                 startValue = orderedList ? orderedList->start() - defaultIncrement : 0;
         }
-        auto directives = startItem->style().counterDirectives().map.get("list-item"_s);
+        auto directives = startItem->style().usedCounterDirectives().map.get("list-item"_s);
         startValue = valueForItem(startValue.value_or(0), directives);
     }
 
@@ -244,7 +245,7 @@ void RenderListItem::updateValueNow() const
 
     for (auto* item = startItem; item != this; ) {
         item = nextListItem(*list, *item);
-        auto directives = item->style().counterDirectives().map.get("list-item"_s);
+        auto directives = item->style().usedCounterDirectives().map.get("list-item"_s);
         item->m_value = valueForItem(value, directives);
         // counter-reset creates a new nested counter, so it should not be counted towards the current counter.
         if (!directives.resetValue)
@@ -256,21 +257,21 @@ void RenderListItem::updateValue()
 {
         m_value = std::nullopt;
         if (m_marker)
-            m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 }
 
-void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderListItem::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
 
-    if (diff == StyleDifference::Layout && oldStyle && oldStyle->counterDirectives().map.get("list-item"_s) != style().counterDirectives().map.get("list-item"_s))
-    counterDirectivesChanged();
+    if (diff == Style::DifferenceResult::Layout && oldStyle && oldStyle->usedCounterDirectives().map.get("list-item"_s) != style().usedCounterDirectives().map.get("list-item"_s))
+        usedCounterDirectivesChanged();
 }
 
 void RenderListItem::computePreferredLogicalWidths()
 {
     // FIXME: RenderListMarker::updateInlineMargins() mutates margin style which affects preferred widths.
-    if (m_marker && m_marker->preferredLogicalWidthsDirty())
+    if (m_marker && m_marker->needsPreferredLogicalWidthsUpdate())
         m_marker->updateInlineMarginsAndContent();
 
     RenderBlockFlow::computePreferredLogicalWidths();
@@ -298,10 +299,10 @@ String RenderListItem::markerTextWithSuffix() const
     return m_marker->textWithSuffix();
 }
 
-void RenderListItem::counterDirectivesChanged()
+void RenderListItem::usedCounterDirectivesChanged()
 {
     if (m_marker)
-        m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 
     updateValue();
     auto* list = enclosingList(*this);

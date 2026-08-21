@@ -21,32 +21,34 @@
 #include "config.h"
 #include "SVGFEDiffuseLightingElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "FEDiffuseLighting.h"
 #include "NodeName.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGFELightElement.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-#include "SVGRenderStyle.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEDiffuseLightingElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEDiffuseLightingElement);
 
 inline SVGFEDiffuseLightingElement::SVGFEDiffuseLightingElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feDiffuseLightingTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEDiffuseLightingElement::m_in1>();
         PropertyRegistry::registerProperty<SVGNames::diffuseConstantAttr, &SVGFEDiffuseLightingElement::m_diffuseConstant>();
         PropertyRegistry::registerProperty<SVGNames::surfaceScaleAttr, &SVGFEDiffuseLightingElement::m_surfaceScale>();
         PropertyRegistry::registerProperty<SVGNames::kernelUnitLengthAttr, &SVGFEDiffuseLightingElement::m_kernelUnitLengthX, &SVGFEDiffuseLightingElement::m_kernelUnitLengthY>();
-    });
+    }
 }
 
 Ref<SVGFEDiffuseLightingElement> SVGFEDiffuseLightingElement::create(const QualifiedName& tagName, Document& document)
@@ -87,35 +89,32 @@ bool SVGFEDiffuseLightingElement::setFilterEffectAttribute(FilterEffect& filterE
     };
 
     switch (attrName.nodeName()) {
-    case AttributeNames::lighting_colorAttr: {
-        auto& style = renderer()->style();
-        auto color = style.colorWithColorFilter(style.svgStyle().lightingColor());
-        return effect.setLightingColor(color);
-    }
+    case AttributeNames::lighting_colorAttr:
+        return effect.setLightingColor(renderer()->checkedStyle()->lightingColorResolvingCurrentColorApplyingColorFilter());
     case AttributeNames::surfaceScaleAttr:
         return effect.setSurfaceScale(surfaceScale());
     case AttributeNames::diffuseConstantAttr:
         return effect.setDiffuseConstant(diffuseConstant());
     case AttributeNames::azimuthAttr:
-        return effect.lightSource()->setAzimuth(lightElement()->azimuth());
+        return effect.lightSource().setAzimuth(lightElement()->azimuth());
     case AttributeNames::elevationAttr:
-        return effect.lightSource()->setElevation(lightElement()->elevation());
+        return effect.lightSource().setElevation(lightElement()->elevation());
     case AttributeNames::xAttr:
-        return effect.lightSource()->setX(lightElement()->x());
+        return effect.lightSource().setX(lightElement()->x());
     case AttributeNames::yAttr:
-        return effect.lightSource()->setY(lightElement()->y());
+        return effect.lightSource().setY(lightElement()->y());
     case AttributeNames::zAttr:
-        return effect.lightSource()->setZ(lightElement()->z());
+        return effect.lightSource().setZ(lightElement()->z());
     case AttributeNames::pointsAtXAttr:
-        return effect.lightSource()->setPointsAtX(lightElement()->pointsAtX());
+        return effect.lightSource().setPointsAtX(lightElement()->pointsAtX());
     case AttributeNames::pointsAtYAttr:
-        return effect.lightSource()->setPointsAtY(lightElement()->pointsAtY());
+        return effect.lightSource().setPointsAtY(lightElement()->pointsAtY());
     case AttributeNames::pointsAtZAttr:
-        return effect.lightSource()->setPointsAtZ(lightElement()->pointsAtZ());
+        return effect.lightSource().setPointsAtZ(lightElement()->pointsAtZ());
     case AttributeNames::specularExponentAttr:
-        return effect.lightSource()->setSpecularExponent(lightElement()->specularExponent());
+        return effect.lightSource().setSpecularExponent(lightElement()->specularExponent());
     case AttributeNames::limitingConeAngleAttr:
-        return effect.lightSource()->setLimitingConeAngle(lightElement()->limitingConeAngle());
+        return effect.lightSource().setLimitingConeAngle(lightElement()->limitingConeAngle());
     default:
         break;
     }
@@ -164,11 +163,7 @@ RefPtr<FilterEffect> SVGFEDiffuseLightingElement::createFilterEffect(const Filte
         return nullptr;
 
     Ref lightSource = lightElement->lightSource();
-    auto& style = renderer->style();
-
-    Color color = style.colorWithColorFilter(style.svgStyle().lightingColor());
-
-    return FEDiffuseLighting::create(color, surfaceScale(), diffuseConstant(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
+    return FEDiffuseLighting::create(renderer->checkedStyle()->lightingColorResolvingCurrentColorApplyingColorFilter(), surfaceScale(), diffuseConstant(), kernelUnitLengthX(), kernelUnitLengthY(), WTF::move(lightSource));
 }
 
 } // namespace WebCore

@@ -23,14 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- typedef USVString CSSOMString;
+// https://www.w3.org/TR/css-view-transitions-2/#cssviewtransitionrule
 
-// https://www.w3.org/TR/css-view-transitions-2/#view-transition-rule
+typedef USVString CSSOMString;
+
 [
     EnabledBySetting=CrossDocumentViewTransitionsEnabled,
     Exposed=Window
-]
-interface CSSViewTransitionRule : CSSRule {
+] interface CSSViewTransitionRule : CSSRule {
   readonly attribute [AtomString] CSSOMString navigation;
   readonly attribute FrozenArray<[AtomString] CSSOMString> types;
 };

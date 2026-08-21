@@ -39,7 +39,7 @@ class RenderMathMLOperator;
 class MathMLPresentationElement;
 
 class RenderMathMLBlock : public RenderBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLBlock);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLBlock);
 public:
     RenderMathMLBlock(Type, MathMLPresentationElement&, RenderStyle&&);
@@ -59,10 +59,8 @@ public:
     // https://bugs.webkit.org/show_bug.cgi?id=78617.
     virtual RenderMathMLOperator* unembellishedOperator() const { return nullptr; }
 
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
-
 protected:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     inline LayoutUnit ruleThicknessFallback() const;
 
@@ -103,11 +101,11 @@ private:
     bool canDropAnonymousBlockChild() const final { return false; }
     void layoutItems(RelayoutChildren);
 
-    Ref<MathMLStyle> m_mathMLStyle;
+    const Ref<MathMLStyle> m_mathMLStyle;
 };
 
 class RenderMathMLTable final : public RenderTable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLTable);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLTable);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLTable);
 public:
     inline RenderMathMLTable(MathMLElement&, RenderStyle&&);
@@ -119,7 +117,7 @@ private:
     ASCIILiteral renderName() const final { return "RenderMathMLTable"_s; }
     std::optional<LayoutUnit> firstLineBaseline() const final;
 
-    Ref<MathMLStyle> m_mathMLStyle;
+    const Ref<MathMLStyle> m_mathMLStyle;
 };
 
 LayoutUnit toUserUnits(const MathMLElement::Length&, const RenderStyle&, const LayoutUnit& referenceValue);

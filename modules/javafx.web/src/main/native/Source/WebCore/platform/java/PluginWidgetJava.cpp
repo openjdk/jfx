@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include "ContainerNodeInlines.h"
 #include "EventNames.h"
 #include "FocusController.h"
 #include "FrameView.h"
@@ -34,6 +35,7 @@
 #include "PluginWidgetJava.h"
 #include "RenderBox.h"
 #include "StringJava.h"
+#include "NodeDocument.h"
 
 #include "com_sun_webkit_WCPluginWidget.h"
 

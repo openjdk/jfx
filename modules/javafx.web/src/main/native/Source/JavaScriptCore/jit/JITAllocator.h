@@ -25,33 +25,31 @@
 
 #pragma once
 
-#include "Allocator.h"
+#include <JavaScriptCore/Allocator.h>
+#include <wtf/Assertions.h>
 
 namespace JSC {
 
 class JITAllocator {
 public:
-    enum Kind {
+    enum class Kind {
         Constant,
-        Variable
+        Variable,
+        VariableNonNull,
     };
+    using enum Kind;
 
-    JITAllocator() { }
+    JITAllocator() = default;
 
     static JITAllocator constant(Allocator allocator)
     {
-        JITAllocator result;
-        result.m_kind = Constant;
+        JITAllocator result(Constant);
         result.m_allocator = allocator;
         return result;
     }
 
-    static JITAllocator variable()
-    {
-        JITAllocator result;
-        result.m_kind = Variable;
-        return result;
-    }
+    static JITAllocator variable() { return JITAllocator(Variable); }
+    static JITAllocator variableNonNull() { return JITAllocator(VariableNonNull); }
 
     friend bool operator==(const JITAllocator&, const JITAllocator&) = default;
 
@@ -62,7 +60,7 @@ public:
 
     Kind kind() const { return m_kind; }
     bool isConstant() const { return m_kind == Constant; }
-    bool isVariable() const { return m_kind == Variable; }
+    bool isVariable() const { return m_kind != Constant; }
 
     Allocator allocator() const
     {
@@ -71,6 +69,10 @@ public:
     }
 
 private:
+    JITAllocator(Kind kind)
+        : m_kind(kind)
+    { }
+
     Kind m_kind { Constant };
     Allocator m_allocator;
 };

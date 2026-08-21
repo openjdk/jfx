@@ -41,7 +41,7 @@ public:
     BufferSource salt;
     unsigned long iterations;
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
 
     const Vector<uint8_t>& saltVector() const

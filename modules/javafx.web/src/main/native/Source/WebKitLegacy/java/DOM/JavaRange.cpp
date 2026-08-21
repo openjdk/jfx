@@ -31,6 +31,7 @@
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/Node.h>
 #include <WebCore/Range.h>
+#include "BoundaryPointInlines.h"
 #include <WebCore/SimpleRange.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/JSExecState.h>

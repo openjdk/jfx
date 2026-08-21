@@ -42,10 +42,10 @@ FECompositeSoftwareApplier::FECompositeSoftwareApplier(const FEComposite& effect
     ASSERT(m_effect->operation() != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
 }
 
-bool FECompositeSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
-    Ref input2 = inputs[1];
+    Ref input = inputs[0].get();
+    Ref input2 = inputs[1].get();
 
     RefPtr resultImage = result.imageBuffer();
     if (!resultImage)

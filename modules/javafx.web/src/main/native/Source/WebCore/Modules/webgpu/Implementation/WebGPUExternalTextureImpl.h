@@ -45,12 +45,13 @@ class ExternalTextureImpl final : public ExternalTexture {
 public:
     static Ref<ExternalTextureImpl> create(WebGPUPtr<WGPUExternalTexture>&& externalTexture, const ExternalTextureDescriptor& descriptor, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new ExternalTextureImpl(WTFMove(externalTexture), descriptor, convertToBackingContext));
+        return adoptRef(*new ExternalTextureImpl(WTF::move(externalTexture), descriptor, convertToBackingContext));
     }
 
     virtual ~ExternalTextureImpl();
 
     WGPUExternalTexture backing() const { return m_backing.get(); };
+    bool isExternalTextureImpl() const final { return true; }
 
 private:
     friend class DowncastConvertToBackingContext;
@@ -65,14 +66,20 @@ private:
     void setLabelInternal(const String&) final;
     void destroy() final;
     void undestroy() final;
+#if PLATFORM(COCOA)
     void updateExternalTexture(CVPixelBufferRef) final;
+#endif
 
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 
     WebGPUPtr<WGPUExternalTexture> m_backing;
     PredefinedColorSpace m_colorSpace;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::ExternalTextureImpl)
+    static bool isType(const WebCore::WebGPU::ExternalTexture& texture) { return texture.isExternalTextureImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

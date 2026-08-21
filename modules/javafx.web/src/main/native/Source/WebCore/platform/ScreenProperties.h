@@ -25,14 +25,26 @@
 
 #pragma once
 
-#include "DestinationColorSpace.h"
-#include "FloatRect.h"
-#include "PlatformScreen.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FloatRect.h>
 #include <wtf/HashMap.h>
+#include <wtf/Platform.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+using PlatformGPUID = uint64_t; // On MAC, global IOKit registryID that can identify a GPU across process boundaries.
+
+using PlatformDisplayID = uint32_t;
+
+enum class DynamicRangeMode : uint8_t {
+    None,
+    Standard,
+    HLG,
+    HDR10,
+    DolbyVisionPQ,
+};
 
 struct ScreenData {
     FloatRect screenAvailableRect;
@@ -43,6 +55,12 @@ struct ScreenData {
     bool screenSupportsExtendedColor { false };
     bool screenHasInvertedColors { false };
     bool screenSupportsHighDynamicRange { false };
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=297729 - Move EDR screen properties to their own container
+    bool suppressEDR { false };
+    float currentEDRHeadroom { 1 };
+    float maxEDRHeadroom { 1 };
+#endif
 #if PLATFORM(MAC)
     FloatSize screenSize; // In millimeters.
     bool screenIsMonochrome { false };
@@ -59,6 +77,8 @@ struct ScreenData {
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
     float scaleFactor { 1 };
 #endif
+
+    bool operator==(const ScreenData&) const = default;
 };
 
 using ScreenDataMap = HashMap<PlatformDisplayID, ScreenData>;
@@ -69,6 +89,11 @@ struct ScreenProperties {
 #if HAVE(SUPPORT_HDR_DISPLAY)
     OptionSet<ContentsFormat> screenContentsFormatsForTesting;
 #endif
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(GTK)
+    bool screenHasTouchDevice { true };
+#endif
+
+    bool operator==(const ScreenProperties&) const = default;
 };
 
 } // namespace WebCore

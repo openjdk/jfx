@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SQLValue.h"
-#include "SQLiteDatabase.h"
+#include <WebCore/SQLValue.h>
+#include <WebCore/SQLiteDatabase.h>
 #include <span>
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
@@ -82,7 +82,7 @@ public:
     WEBCORE_EXPORT Vector<uint8_t> columnBlob(int col);
 
     // The returned Span stays valid until the next step() / reset() or destruction of the statement.
-    std::span<const uint8_t> columnBlobAsSpan(int col);
+    std::span<const uint8_t> columnBlobAsSpan(int col) LIFETIME_BOUND;
 
     SQLiteDatabase& database() { return m_database.get(); }
 
@@ -96,7 +96,7 @@ private:
     template<typename T, typename... Args> bool bindImpl(int i, T first, Args&&... args);
     template<typename T> bool bindImpl(int, T);
 
-    CheckedRef<SQLiteDatabase> m_database;
+    const CheckedRef<SQLiteDatabase> m_database;
     sqlite3_stmt* m_statement;
 };
 

@@ -57,7 +57,7 @@ RefPtr<MediaSession> NavigatorMediaSession::mediaSessionIfExists(Navigator& navi
 MediaSession& NavigatorMediaSession::mediaSession()
 {
     if (!m_mediaSession)
-        m_mediaSession = MediaSession::create(Ref { m_navigator.get() });
+        lazyInitialize(m_mediaSession, MediaSession::create(Ref { m_navigator.get() }));
     return *m_mediaSession;
 }
 
@@ -68,20 +68,15 @@ RefPtr<MediaSession> NavigatorMediaSession::mediaSessionIfExists()
 
 NavigatorMediaSession* NavigatorMediaSession::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorMediaSession*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorMediaSession>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorMediaSession>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral NavigatorMediaSession::supplementName()
-{
-    return "NavigatorMediaSession"_s;
-}
-
-}
+} // namespace WebCore
 
 #endif // ENABLE(MEDIA_SESSION)

@@ -24,9 +24,11 @@
 
 #pragma once
 
-#include "AbstractRange.h"
-#include "RangeBoundaryPoint.h"
+#include <WebCore/AbstractRange.h>
+#include <WebCore/RangeBoundaryPoint.h>
 #include <wtf/CheckedRef.h>
+#include <wtf/Lock.h>
+#include <wtf/Locker.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -42,17 +44,17 @@ class TrustedHTML;
 struct SimpleRange;
 
 class Range final : public AbstractRange, public CanMakeSingleThreadWeakPtr<Range> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Range, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Range, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
     WEBCORE_EXPORT ~Range();
 
     Node& startContainer() const final { return m_start.container(); }
-    Ref<Node> protectedStartContainer() const;
+    WEBCORE_EXPORT Ref<Node> protectedStartContainer() const;
     unsigned startOffset() const final { return m_start.offset(); }
     Node& endContainer() const final { return m_end.container(); }
-    Ref<Node> protectedEndContainer() const;
+    WEBCORE_EXPORT Ref<Node> protectedEndContainer() const;
     unsigned endOffset() const final { return m_end.offset(); }
     bool collapsed() const final { return m_start == m_end; }
     WEBCORE_EXPORT Node* commonAncestorContainer() const;
@@ -92,7 +94,7 @@ public:
     Ref<DOMRect> getBoundingClientRect() const;
     static Ref<DOMRect> boundingClientRect(const SimpleRange&);
 
-    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& fragment);
+    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(Variant<RefPtr<TrustedHTML>, String>&& fragment);
 
     // Expand range to a unit (word or sentence or block or document) boundary.
     // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5 for details.
@@ -131,7 +133,7 @@ public:
     String debugDescription() const;
 #endif
 
-    void visitNodesConcurrently(JSC::AbstractSlotVisitor&) const;
+    void visitNodesInGCThread(JSC::AbstractSlotVisitor&) const;
 
     enum ActionType : uint8_t { Delete, Extract, Clone };
 
@@ -149,6 +151,7 @@ private:
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
+    mutable Lock m_boundaryPointLock;
     bool m_isAssociatedWithSelection { false };
     bool m_didChangeForHighlight { false };
     bool m_isAssociatedWithHighlight { false };

@@ -1,6 +1,5 @@
 /**
  * Copyright (C) 2023 Apple Inc. All rights reserved.
->>>>>>>> webkit-2.42:Source/WebCore/style/ResolvedStyle.h
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,6 +18,7 @@
  */
 
 #pragma once
+
 #include "MatchResult.h"
 #include "RenderStyle.h"
 #include "StyleRelations.h"
@@ -26,10 +26,16 @@
 namespace WebCore {
 namespace Style {
 
+struct UnadjustedStyle {
+    std::unique_ptr<RenderStyle> style;
+    std::unique_ptr<Relations> relations { };
+    RefPtr<const MatchResult> matchResult { };
+};
+
 struct ResolvedStyle {
     std::unique_ptr<RenderStyle> style;
     std::unique_ptr<Relations> relations { };
-    std::unique_ptr<MatchResult> matchResult { };
+    RefPtr<const MatchResult> matchResult { };
 };
 
 } // namespace Style

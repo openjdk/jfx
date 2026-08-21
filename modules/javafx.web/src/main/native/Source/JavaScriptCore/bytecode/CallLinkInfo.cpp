@@ -88,7 +88,7 @@ void CallLinkInfo::clearStub()
     if (!stub())
         return;
 
-    m_stub->clearCallNodesFor(this);
+    m_stub->unlinkForcefully();
     m_stub = nullptr;
 }
 
@@ -106,7 +106,7 @@ void CallLinkInfo::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, CodeBloc
     case Mode::Monomorphic: {
         if (newCodeBlock && oldCodeBlock == m_codeBlock) {
             // Upgrading Monomorphic DataIC with newCodeBlock.
-            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckNotRequired) == m_monomorphicCallDestination ? ArityCheckNotRequired : MustCheckArity;
+            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckMode::ArityCheckNotRequired) == m_monomorphicCallDestination ? ArityCheckMode::ArityCheckNotRequired : ArityCheckMode::MustCheckArity;
             auto target = newCodeBlock->jitCode()->addressForCall(arityCheck);
             m_codeBlock = newCodeBlock;
             m_monomorphicCallDestination = target;
@@ -240,7 +240,7 @@ void DataOnlyCallLinkInfo::initialize(VM& vm, CodeBlock* owner, CallType callTyp
     m_codeOrigin = codeOrigin;
     m_callType = callType;
     m_mode = static_cast<unsigned>(Mode::Init);
-    if (UNLIKELY(!Options::useLLIntICs()))
+    if (!Options::useLLIntICs()) [[unlikely]]
         setVirtualCall(vm);
 }
 
@@ -269,7 +269,7 @@ void CallLinkInfo::reset(VM&)
 
 void CallLinkInfo::revertCall(VM& vm)
 {
-    if (UNLIKELY(!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly))
+    if (!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly) [[unlikely]]
         setVirtualCall(vm);
     else
         reset(vm);
@@ -304,7 +304,7 @@ JSGlobalObject* CallLinkInfo::globalObjectForSlowPath(JSCell* owner)
 void CallLinkInfo::setStub(Ref<PolymorphicCallStubRoutine>&& newStub)
 {
     clearStub();
-    m_stub = WTFMove(newStub);
+    m_stub = WTF::move(newStub);
 
     m_callee.clear();
     *std::bit_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
@@ -372,7 +372,7 @@ void CallLinkInfo::emitDataICFastPath(CCallHelpers& jit)
 
 void CallLinkInfo::emitTailCallDataICFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
 {
-    emitFastPathImpl(nullptr, jit, true, WTFMove(prepareForTailCall));
+    emitFastPathImpl(nullptr, jit, true, WTF::move(prepareForTailCall));
 }
 
 void CallLinkInfo::emitFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo)
@@ -386,9 +386,9 @@ void CallLinkInfo::emitFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callL
 void CallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, ScopedLambda<void()>&& prepareForTailCall)
 {
     if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
-        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallFastPath(jit, WTFMove(prepareForTailCall));
+        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallFastPath(jit, WTF::move(prepareForTailCall));
 
-    return CallLinkInfo::emitTailCallDataICFastPath(jit, WTFMove(prepareForTailCall));
+    return CallLinkInfo::emitTailCallDataICFastPath(jit, WTF::move(prepareForTailCall));
 }
 
 void OptimizingCallLinkInfo::emitFastPath(CCallHelpers& jit)
@@ -400,7 +400,7 @@ void OptimizingCallLinkInfo::emitFastPath(CCallHelpers& jit)
 void OptimizingCallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
 {
     RELEASE_ASSERT(isTailCall());
-    emitFastPathImpl(this, jit, isTailCall(), WTFMove(prepareForTailCall));
+    emitFastPathImpl(this, jit, isTailCall(), WTF::move(prepareForTailCall));
 }
 
 #if ENABLE(DFG_JIT)
@@ -431,7 +431,7 @@ void DirectCallLinkInfo::unlinkOrUpgradeImpl(VM&, CodeBlock* oldCodeBlock, CodeB
 
     if (!!m_target) {
         if (m_codeBlock && newCodeBlock && oldCodeBlock == m_codeBlock) {
-            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckNotRequired) == m_target ? ArityCheckNotRequired : MustCheckArity;
+            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckMode::ArityCheckNotRequired) == m_target ? ArityCheckMode::ArityCheckNotRequired : ArityCheckMode::MustCheckArity;
             auto target = newCodeBlock->jitCode()->addressForCall(arityCheck);
             setCallTarget(newCodeBlock, CodeLocationLabel { target });
             newCodeBlock->linkIncomingCall(nullptr, this); // This is just relinking. So owner and caller frame can be nullptr.
@@ -568,7 +568,7 @@ CodeBlock* DirectCallLinkInfo::retrieveCodeBlock(FunctionExecutable* functionExe
 CodePtr<JSEntryPtrTag> DirectCallLinkInfo::retrieveCodePtr(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
 {
     unsigned argumentStackSlots = maxArgumentCountIncludingThis();
-    ArityCheckMode arityCheckMode = (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters())) ? MustCheckArity : ArityCheckNotRequired;
+    ArityCheckMode arityCheckMode = (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters())) ? ArityCheckMode::MustCheckArity : ArityCheckMode::ArityCheckNotRequired;
     return codeBlock->addressForCallConcurrently(locker, arityCheckMode);
 }
 
@@ -577,7 +577,7 @@ void DirectCallLinkInfo::repatchSpeculatively()
     if (m_executable->isHostFunction()) {
         CodeSpecializationKind kind = specializationKind();
         CodePtr<JSEntryPtrTag> codePtr;
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             codePtr = m_executable->generatedJITCodeWithArityCheckForCall();
         else
             codePtr = m_executable->generatedJITCodeWithArityCheckForConstruct();

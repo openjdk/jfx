@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "CryptoKey.h"
-#include "CryptoKeyPair.h"
-#include "ExceptionOr.h"
+#include <WebCore/CryptoKey.h>
+#include <WebCore/CryptoKeyPair.h>
 
 #if ENABLE(WEB_CRYPTO)
 
 namespace WebCore {
 
 struct JsonWebKey;
+template<typename> class ExceptionOr;
 
 class CryptoKeyOKP final : public CryptoKey {
 public:

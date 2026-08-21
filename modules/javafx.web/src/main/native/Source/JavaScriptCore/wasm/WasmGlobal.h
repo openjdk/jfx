@@ -25,12 +25,15 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "SlotVisitorMacros.h"
-#include "WasmFormat.h"
-#include "WasmLimits.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <JavaScriptCore/WasmFormat.h>
+#include <JavaScriptCore/WasmLimits.h>
+#include <JavaScriptCore/WasmTypeDefinition.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -52,8 +55,11 @@ public:
         uint64_t m_primitive;
         WriteBarrierBase<Unknown> m_externref;
         Value* m_pointer;
+
+        static constexpr ptrdiff_t offsetOfValue() { return 0; }
+        static constexpr ptrdiff_t offsetOfOwner() { return Global::offsetOfOwner() - Global::offsetOfValue(); }
     };
-    static_assert(sizeof(Value) == 16, "Update LLInt if this changes");
+    static_assert(sizeof(Value) == 16, "Update IPInt if this changes");
 
     static Ref<Global> create(Wasm::Type type, Wasm::Mutability mutability, uint64_t initialValue = 0)
     {
@@ -97,6 +103,8 @@ private:
         , m_mutability(mutability)
     {
         ASSERT(m_type != Types::V128);
+        if (auto typeDefinition = TypeInformation::getRef(type.index))
+            m_typeDependencies.emplace(Ref { *typeDefinition });
         m_value.m_primitive = initialValue;
     }
 
@@ -105,10 +113,15 @@ private:
         , m_mutability(mutability)
     {
         ASSERT(m_type == Types::V128);
+        if (auto typeDefinition = TypeInformation::getRef(type.index))
+            m_typeDependencies.emplace(Ref { *typeDefinition });
         m_value.m_vector = initialValue;
     }
 
     Wasm::Type m_type;
+    // If m_type came from a TypeDefinition, the following retains the definition
+    // and all transitively reachable types to prevent dangling TypeIndex values.
+    std::optional<WebAssemblyGCTypeDependencies> m_typeDependencies;
     Wasm::Mutability m_mutability;
     JSWebAssemblyGlobal* m_owner { nullptr };
     Value m_value;

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2006-2024 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2010 Zoltan Herczeg (zherczeg@inf.u-szeged.hu)
  *  Copyright (C) 2012 Mathias Bynens (mathias@qiwi.be)
@@ -32,9 +32,9 @@
 #include "ParseInt.h"
 #include <limits.h>
 #include <string.h>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
+#include <wtf/MathExtras.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/MakeString.h>
 
@@ -43,7 +43,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC {
 
 constinit const WTF::BitSet<256> whiteSpaceTable = makeLatin1CharacterBitSet(
-    [](LChar ch) {
+    [](Latin1Character ch) {
         return ch == ' ' || ch == '\t' || ch == 0xB || ch == 0xC || ch == 0xA0;
     });
 
@@ -57,13 +57,18 @@ enum CharacterType : uint8_t {
 
     // The first three types are fixed, and also used for identifying
     // ASCII alpha and alphanumeric characters (see isIdentStart and isIdentPart).
-    CharacterIdentifierStart,
+    CharacterLatin1IdentifierStart,
     CharacterZero,
     CharacterNumber,
 
     // For single-byte characters grandfathered into Other_ID_Continue -- namely just U+00B7 MIDDLE DOT.
     // (http://unicode.org/reports/tr31/#Backward_Compatibility)
+    //
+    // Character types are divided into two groups depending on whether they can be part of an
+    // identifier or not. Those whose type value is less or equal than CharacterOtherIdentifierPart can be
+    // part of an identifier. (See the CharacterType definition for more details.)
     CharacterOtherIdentifierPart,
+    CharacterBackSlash, // Keep the ordering until this. We use this ordering to detect identifier-part or back-slash quickly.
 
     CharacterInvalid,
     CharacterLineTerminator,
@@ -80,7 +85,6 @@ enum CharacterType : uint8_t {
     CharacterBackQuote,
     CharacterDot,
     CharacterSlash,
-    CharacterBackSlash,
     CharacterSemicolon,
     CharacterOpenBrace,
     CharacterCloseBrace,
@@ -99,7 +103,8 @@ enum CharacterType : uint8_t {
     // Other types (only one so far)
     CharacterWhiteSpace,
     CharacterHash,
-    CharacterPrivateIdentifierStart
+    CharacterPrivateIdentifierStart,
+    CharacterNonLatin1IdentifierStart,
 };
 
 // 256 Latin-1 codes
@@ -140,7 +145,7 @@ static constexpr const CharacterType typesOfLatin1Characters[256] = {
 /*  33 - !                  */ CharacterExclamationMark,
 /*  34 - "                  */ CharacterQuote,
 /*  35 - #                  */ CharacterHash,
-/*  36 - $                  */ CharacterIdentifierStart,
+/*  36 - $                  */ CharacterLatin1IdentifierStart,
 /*  37 - %                  */ CharacterModulo,
 /*  38 - &                  */ CharacterAnd,
 /*  39 - '                  */ CharacterQuote,
@@ -169,64 +174,64 @@ static constexpr const CharacterType typesOfLatin1Characters[256] = {
 /*  62 - >                  */ CharacterGreater,
 /*  63 - ?                  */ CharacterQuestion,
 /*  64 - @                  */ CharacterPrivateIdentifierStart,
-/*  65 - A                  */ CharacterIdentifierStart,
-/*  66 - B                  */ CharacterIdentifierStart,
-/*  67 - C                  */ CharacterIdentifierStart,
-/*  68 - D                  */ CharacterIdentifierStart,
-/*  69 - E                  */ CharacterIdentifierStart,
-/*  70 - F                  */ CharacterIdentifierStart,
-/*  71 - G                  */ CharacterIdentifierStart,
-/*  72 - H                  */ CharacterIdentifierStart,
-/*  73 - I                  */ CharacterIdentifierStart,
-/*  74 - J                  */ CharacterIdentifierStart,
-/*  75 - K                  */ CharacterIdentifierStart,
-/*  76 - L                  */ CharacterIdentifierStart,
-/*  77 - M                  */ CharacterIdentifierStart,
-/*  78 - N                  */ CharacterIdentifierStart,
-/*  79 - O                  */ CharacterIdentifierStart,
-/*  80 - P                  */ CharacterIdentifierStart,
-/*  81 - Q                  */ CharacterIdentifierStart,
-/*  82 - R                  */ CharacterIdentifierStart,
-/*  83 - S                  */ CharacterIdentifierStart,
-/*  84 - T                  */ CharacterIdentifierStart,
-/*  85 - U                  */ CharacterIdentifierStart,
-/*  86 - V                  */ CharacterIdentifierStart,
-/*  87 - W                  */ CharacterIdentifierStart,
-/*  88 - X                  */ CharacterIdentifierStart,
-/*  89 - Y                  */ CharacterIdentifierStart,
-/*  90 - Z                  */ CharacterIdentifierStart,
+/*  65 - A                  */ CharacterLatin1IdentifierStart,
+/*  66 - B                  */ CharacterLatin1IdentifierStart,
+/*  67 - C                  */ CharacterLatin1IdentifierStart,
+/*  68 - D                  */ CharacterLatin1IdentifierStart,
+/*  69 - E                  */ CharacterLatin1IdentifierStart,
+/*  70 - F                  */ CharacterLatin1IdentifierStart,
+/*  71 - G                  */ CharacterLatin1IdentifierStart,
+/*  72 - H                  */ CharacterLatin1IdentifierStart,
+/*  73 - I                  */ CharacterLatin1IdentifierStart,
+/*  74 - J                  */ CharacterLatin1IdentifierStart,
+/*  75 - K                  */ CharacterLatin1IdentifierStart,
+/*  76 - L                  */ CharacterLatin1IdentifierStart,
+/*  77 - M                  */ CharacterLatin1IdentifierStart,
+/*  78 - N                  */ CharacterLatin1IdentifierStart,
+/*  79 - O                  */ CharacterLatin1IdentifierStart,
+/*  80 - P                  */ CharacterLatin1IdentifierStart,
+/*  81 - Q                  */ CharacterLatin1IdentifierStart,
+/*  82 - R                  */ CharacterLatin1IdentifierStart,
+/*  83 - S                  */ CharacterLatin1IdentifierStart,
+/*  84 - T                  */ CharacterLatin1IdentifierStart,
+/*  85 - U                  */ CharacterLatin1IdentifierStart,
+/*  86 - V                  */ CharacterLatin1IdentifierStart,
+/*  87 - W                  */ CharacterLatin1IdentifierStart,
+/*  88 - X                  */ CharacterLatin1IdentifierStart,
+/*  89 - Y                  */ CharacterLatin1IdentifierStart,
+/*  90 - Z                  */ CharacterLatin1IdentifierStart,
 /*  91 - [                  */ CharacterOpenBracket,
 /*  92 - \                  */ CharacterBackSlash,
 /*  93 - ]                  */ CharacterCloseBracket,
 /*  94 - ^                  */ CharacterXor,
-/*  95 - _                  */ CharacterIdentifierStart,
+/*  95 - _                  */ CharacterLatin1IdentifierStart,
 /*  96 - `                  */ CharacterBackQuote,
-/*  97 - a                  */ CharacterIdentifierStart,
-/*  98 - b                  */ CharacterIdentifierStart,
-/*  99 - c                  */ CharacterIdentifierStart,
-/* 100 - d                  */ CharacterIdentifierStart,
-/* 101 - e                  */ CharacterIdentifierStart,
-/* 102 - f                  */ CharacterIdentifierStart,
-/* 103 - g                  */ CharacterIdentifierStart,
-/* 104 - h                  */ CharacterIdentifierStart,
-/* 105 - i                  */ CharacterIdentifierStart,
-/* 106 - j                  */ CharacterIdentifierStart,
-/* 107 - k                  */ CharacterIdentifierStart,
-/* 108 - l                  */ CharacterIdentifierStart,
-/* 109 - m                  */ CharacterIdentifierStart,
-/* 110 - n                  */ CharacterIdentifierStart,
-/* 111 - o                  */ CharacterIdentifierStart,
-/* 112 - p                  */ CharacterIdentifierStart,
-/* 113 - q                  */ CharacterIdentifierStart,
-/* 114 - r                  */ CharacterIdentifierStart,
-/* 115 - s                  */ CharacterIdentifierStart,
-/* 116 - t                  */ CharacterIdentifierStart,
-/* 117 - u                  */ CharacterIdentifierStart,
-/* 118 - v                  */ CharacterIdentifierStart,
-/* 119 - w                  */ CharacterIdentifierStart,
-/* 120 - x                  */ CharacterIdentifierStart,
-/* 121 - y                  */ CharacterIdentifierStart,
-/* 122 - z                  */ CharacterIdentifierStart,
+/*  97 - a                  */ CharacterLatin1IdentifierStart,
+/*  98 - b                  */ CharacterLatin1IdentifierStart,
+/*  99 - c                  */ CharacterLatin1IdentifierStart,
+/* 100 - d                  */ CharacterLatin1IdentifierStart,
+/* 101 - e                  */ CharacterLatin1IdentifierStart,
+/* 102 - f                  */ CharacterLatin1IdentifierStart,
+/* 103 - g                  */ CharacterLatin1IdentifierStart,
+/* 104 - h                  */ CharacterLatin1IdentifierStart,
+/* 105 - i                  */ CharacterLatin1IdentifierStart,
+/* 106 - j                  */ CharacterLatin1IdentifierStart,
+/* 107 - k                  */ CharacterLatin1IdentifierStart,
+/* 108 - l                  */ CharacterLatin1IdentifierStart,
+/* 109 - m                  */ CharacterLatin1IdentifierStart,
+/* 110 - n                  */ CharacterLatin1IdentifierStart,
+/* 111 - o                  */ CharacterLatin1IdentifierStart,
+/* 112 - p                  */ CharacterLatin1IdentifierStart,
+/* 113 - q                  */ CharacterLatin1IdentifierStart,
+/* 114 - r                  */ CharacterLatin1IdentifierStart,
+/* 115 - s                  */ CharacterLatin1IdentifierStart,
+/* 116 - t                  */ CharacterLatin1IdentifierStart,
+/* 117 - u                  */ CharacterLatin1IdentifierStart,
+/* 118 - v                  */ CharacterLatin1IdentifierStart,
+/* 119 - w                  */ CharacterLatin1IdentifierStart,
+/* 120 - x                  */ CharacterLatin1IdentifierStart,
+/* 121 - y                  */ CharacterLatin1IdentifierStart,
+/* 122 - z                  */ CharacterLatin1IdentifierStart,
 /* 123 - {                  */ CharacterOpenBrace,
 /* 124 - |                  */ CharacterOr,
 /* 125 - }                  */ CharacterCloseBrace,
@@ -274,7 +279,7 @@ static constexpr const CharacterType typesOfLatin1Characters[256] = {
 /* 167 - So category        */ CharacterInvalid,
 /* 168 - Sk category        */ CharacterInvalid,
 /* 169 - So category        */ CharacterInvalid,
-/* 170 - Ll category        */ CharacterIdentifierStart,
+/* 170 - Ll category        */ CharacterLatin1IdentifierStart,
 /* 171 - Pi category        */ CharacterInvalid,
 /* 172 - Sm category        */ CharacterInvalid,
 /* 173 - Cf category        */ CharacterInvalid,
@@ -285,86 +290,86 @@ static constexpr const CharacterType typesOfLatin1Characters[256] = {
 /* 178 - No category        */ CharacterInvalid,
 /* 179 - No category        */ CharacterInvalid,
 /* 180 - Sk category        */ CharacterInvalid,
-/* 181 - Ll category        */ CharacterIdentifierStart,
+/* 181 - Ll category        */ CharacterLatin1IdentifierStart,
 /* 182 - So category        */ CharacterInvalid,
 /* 183 - Po category        */ CharacterOtherIdentifierPart,
 /* 184 - Sk category        */ CharacterInvalid,
 /* 185 - No category        */ CharacterInvalid,
-/* 186 - Ll category        */ CharacterIdentifierStart,
+/* 186 - Ll category        */ CharacterLatin1IdentifierStart,
 /* 187 - Pf category        */ CharacterInvalid,
 /* 188 - No category        */ CharacterInvalid,
 /* 189 - No category        */ CharacterInvalid,
 /* 190 - No category        */ CharacterInvalid,
 /* 191 - Po category        */ CharacterInvalid,
-/* 192 - Lu category        */ CharacterIdentifierStart,
-/* 193 - Lu category        */ CharacterIdentifierStart,
-/* 194 - Lu category        */ CharacterIdentifierStart,
-/* 195 - Lu category        */ CharacterIdentifierStart,
-/* 196 - Lu category        */ CharacterIdentifierStart,
-/* 197 - Lu category        */ CharacterIdentifierStart,
-/* 198 - Lu category        */ CharacterIdentifierStart,
-/* 199 - Lu category        */ CharacterIdentifierStart,
-/* 200 - Lu category        */ CharacterIdentifierStart,
-/* 201 - Lu category        */ CharacterIdentifierStart,
-/* 202 - Lu category        */ CharacterIdentifierStart,
-/* 203 - Lu category        */ CharacterIdentifierStart,
-/* 204 - Lu category        */ CharacterIdentifierStart,
-/* 205 - Lu category        */ CharacterIdentifierStart,
-/* 206 - Lu category        */ CharacterIdentifierStart,
-/* 207 - Lu category        */ CharacterIdentifierStart,
-/* 208 - Lu category        */ CharacterIdentifierStart,
-/* 209 - Lu category        */ CharacterIdentifierStart,
-/* 210 - Lu category        */ CharacterIdentifierStart,
-/* 211 - Lu category        */ CharacterIdentifierStart,
-/* 212 - Lu category        */ CharacterIdentifierStart,
-/* 213 - Lu category        */ CharacterIdentifierStart,
-/* 214 - Lu category        */ CharacterIdentifierStart,
+/* 192 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 193 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 194 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 195 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 196 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 197 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 198 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 199 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 200 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 201 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 202 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 203 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 204 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 205 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 206 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 207 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 208 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 209 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 210 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 211 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 212 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 213 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 214 - Lu category        */ CharacterLatin1IdentifierStart,
 /* 215 - Sm category        */ CharacterInvalid,
-/* 216 - Lu category        */ CharacterIdentifierStart,
-/* 217 - Lu category        */ CharacterIdentifierStart,
-/* 218 - Lu category        */ CharacterIdentifierStart,
-/* 219 - Lu category        */ CharacterIdentifierStart,
-/* 220 - Lu category        */ CharacterIdentifierStart,
-/* 221 - Lu category        */ CharacterIdentifierStart,
-/* 222 - Lu category        */ CharacterIdentifierStart,
-/* 223 - Ll category        */ CharacterIdentifierStart,
-/* 224 - Ll category        */ CharacterIdentifierStart,
-/* 225 - Ll category        */ CharacterIdentifierStart,
-/* 226 - Ll category        */ CharacterIdentifierStart,
-/* 227 - Ll category        */ CharacterIdentifierStart,
-/* 228 - Ll category        */ CharacterIdentifierStart,
-/* 229 - Ll category        */ CharacterIdentifierStart,
-/* 230 - Ll category        */ CharacterIdentifierStart,
-/* 231 - Ll category        */ CharacterIdentifierStart,
-/* 232 - Ll category        */ CharacterIdentifierStart,
-/* 233 - Ll category        */ CharacterIdentifierStart,
-/* 234 - Ll category        */ CharacterIdentifierStart,
-/* 235 - Ll category        */ CharacterIdentifierStart,
-/* 236 - Ll category        */ CharacterIdentifierStart,
-/* 237 - Ll category        */ CharacterIdentifierStart,
-/* 238 - Ll category        */ CharacterIdentifierStart,
-/* 239 - Ll category        */ CharacterIdentifierStart,
-/* 240 - Ll category        */ CharacterIdentifierStart,
-/* 241 - Ll category        */ CharacterIdentifierStart,
-/* 242 - Ll category        */ CharacterIdentifierStart,
-/* 243 - Ll category        */ CharacterIdentifierStart,
-/* 244 - Ll category        */ CharacterIdentifierStart,
-/* 245 - Ll category        */ CharacterIdentifierStart,
-/* 246 - Ll category        */ CharacterIdentifierStart,
+/* 216 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 217 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 218 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 219 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 220 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 221 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 222 - Lu category        */ CharacterLatin1IdentifierStart,
+/* 223 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 224 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 225 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 226 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 227 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 228 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 229 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 230 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 231 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 232 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 233 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 234 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 235 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 236 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 237 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 238 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 239 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 240 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 241 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 242 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 243 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 244 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 245 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 246 - Ll category        */ CharacterLatin1IdentifierStart,
 /* 247 - Sm category        */ CharacterInvalid,
-/* 248 - Ll category        */ CharacterIdentifierStart,
-/* 249 - Ll category        */ CharacterIdentifierStart,
-/* 250 - Ll category        */ CharacterIdentifierStart,
-/* 251 - Ll category        */ CharacterIdentifierStart,
-/* 252 - Ll category        */ CharacterIdentifierStart,
-/* 253 - Ll category        */ CharacterIdentifierStart,
-/* 254 - Ll category        */ CharacterIdentifierStart,
-/* 255 - Ll category        */ CharacterIdentifierStart
+/* 248 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 249 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 250 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 251 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 252 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 253 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 254 - Ll category        */ CharacterLatin1IdentifierStart,
+/* 255 - Ll category        */ CharacterLatin1IdentifierStart
 };
 
 // This table provides the character that results from \X where X is the index in the table beginning
 // with SPACE. A table value of 0 means that more processing needs to be done.
-static constexpr const LChar singleCharacterEscapeValuesForASCII[128] = {
+static constexpr const Latin1Character singleCharacterEscapeValuesForASCII[128] = {
 /*   0 - Null               */ 0,
 /*   1 - Start of Heading   */ 0,
 /*   2 - Start of Text      */ 0,
@@ -507,7 +512,7 @@ Lexer<T>::Lexer(VM& vm, JSParserBuiltinMode builtinMode, JSParserScriptMode scri
 
 static inline JSTokenType tokenTypeForIntegerLikeToken(double doubleValue)
 {
-    if ((doubleValue || !std::signbit(doubleValue)) && static_cast<int64_t>(doubleValue) == doubleValue)
+    if ((doubleValue || !std::signbit(doubleValue)) && truncateDoubleToInt64(doubleValue) == doubleValue)
         return INTEGER;
     return DOUBLE;
 }
@@ -578,7 +583,7 @@ void Lexer<T>::setCode(const SourceCode& source, ParserArena* arena)
     m_buffer16.reserveInitialCapacity(initialReadBufferCapacity);
     m_bufferForRawTemplateString16.reserveInitialCapacity(initialReadBufferCapacity);
 
-    if (LIKELY(m_code < m_codeEnd))
+    if (m_code < m_codeEnd) [[likely]]
         m_current = *m_code;
     else
         m_current = 0;
@@ -599,7 +604,7 @@ ALWAYS_INLINE void Lexer<T>::shift()
     // At one point timing showed that setting m_current to 0 unconditionally was faster than an if-else sequence.
     m_current = 0;
     ++m_code;
-    if (LIKELY(m_code < m_codeEnd))
+    if (m_code < m_codeEnd) [[likely]]
         m_current = *m_code;
 }
 
@@ -607,7 +612,11 @@ template <typename T>
 ALWAYS_INLINE bool Lexer<T>::atEnd() const
 {
     ASSERT(!m_current || m_code < m_codeEnd);
-    return UNLIKELY(UNLIKELY(!m_current) && m_code == m_codeEnd);
+    if (m_current) [[likely]]
+        return false;
+    if (m_code == m_codeEnd) [[unlikely]]
+        return true;
+    return false;
 }
 
 template <typename T>
@@ -683,7 +692,7 @@ ParsedUnicodeEscapeValue Lexer<CharacterType>::parseUnicodeEscape()
     auto character2 = peek(1);
     auto character3 = peek(2);
     auto character4 = peek(3);
-    if (UNLIKELY(!isASCIIHexDigit(m_current) || !isASCIIHexDigit(character2) || !isASCIIHexDigit(character3) || !isASCIIHexDigit(character4))) {
+    if (!isASCIIHexDigit(m_current) || !isASCIIHexDigit(character2) || !isASCIIHexDigit(character3) || !isASCIIHexDigit(character4)) [[unlikely]] {
         auto result = (m_code + 4) >= m_codeEnd ? ParsedUnicodeEscapeValue::Incomplete : ParsedUnicodeEscapeValue::Invalid;
 
         // For raw template literal syntax, we consume `NotEscapeSequence`.
@@ -744,29 +753,29 @@ static bool isNonLatin1IdentStart(char32_t c)
 template<typename CharacterType>
 static ALWAYS_INLINE bool isIdentStart(CharacterType c)
 {
-    static_assert(std::is_same_v<CharacterType, LChar> || std::is_same_v<CharacterType, char32_t>, "Call isSingleCharacterIdentStart for UChars that don't need to check for surrogate pairs");
+    static_assert(std::is_same_v<CharacterType, Latin1Character> || std::is_same_v<CharacterType, char32_t>, "For char16_t, call isSingleCharacterIdentStart, but beware it does not handle surrogate pairs");
     if (!isLatin1(c))
         return isNonLatin1IdentStart(c);
-    return typesOfLatin1Characters[static_cast<LChar>(c)] == CharacterIdentifierStart;
+    return typesOfLatin1Characters[static_cast<Latin1Character>(c)] == CharacterLatin1IdentifierStart;
 }
 
-static ALWAYS_INLINE UNUSED_FUNCTION bool isSingleCharacterIdentStart(UChar c)
+static ALWAYS_INLINE UNUSED_FUNCTION bool isSingleCharacterIdentStart(char16_t c)
 {
-    if (LIKELY(isLatin1(c)))
-        return isIdentStart(static_cast<LChar>(c));
+    if (isLatin1(c)) [[likely]]
+        return isIdentStart(static_cast<Latin1Character>(c));
     return !U16_IS_SURROGATE(c) && isIdentStart(static_cast<char32_t>(c));
 }
 
-static ALWAYS_INLINE bool cannotBeIdentStart(LChar c)
+static ALWAYS_INLINE bool cannotBeIdentStart(Latin1Character c)
 {
     return !isIdentStart(c) && c != '\\';
 }
 
-static ALWAYS_INLINE bool cannotBeIdentStart(UChar c)
+static ALWAYS_INLINE bool cannotBeIdentStart(char16_t c)
 {
-    if (LIKELY(isLatin1(c)))
-        return cannotBeIdentStart(static_cast<LChar>(c));
-    return Lexer<UChar>::isWhiteSpace(c) || Lexer<UChar>::isLineTerminator(c);
+    if (isLatin1(c)) [[likely]]
+        return cannotBeIdentStart(static_cast<Latin1Character>(c));
+    return Lexer<char16_t>::isWhiteSpace(c) || Lexer<char16_t>::isLineTerminator(c);
 }
 
 static NEVER_INLINE bool isNonLatin1IdentPart(char32_t c)
@@ -777,53 +786,53 @@ static NEVER_INLINE bool isNonLatin1IdentPart(char32_t c)
 template<typename CharacterType>
 static ALWAYS_INLINE bool isIdentPart(CharacterType c)
 {
-    static_assert(std::is_same_v<CharacterType, LChar> || std::is_same_v<CharacterType, char32_t>, "Call isSingleCharacterIdentPart for UChars that don't need to check for surrogate pairs");
+    static_assert(std::is_same_v<CharacterType, Latin1Character> || std::is_same_v<CharacterType, char32_t>, "For char16_t, call isSingleCharacterIdentPart, but beware it does not handle surrogate pairs");
     if (!isLatin1(c))
         return isNonLatin1IdentPart(c);
 
     // Character types are divided into two groups depending on whether they can be part of an
     // identifier or not. Those whose type value is less or equal than CharacterOtherIdentifierPart can be
     // part of an identifier. (See the CharacterType definition for more details.)
-    return typesOfLatin1Characters[static_cast<LChar>(c)] <= CharacterOtherIdentifierPart;
+    return typesOfLatin1Characters[static_cast<Latin1Character>(c)] <= CharacterOtherIdentifierPart;
 }
 
-static ALWAYS_INLINE bool isSingleCharacterIdentPart(UChar c)
+static ALWAYS_INLINE bool isSingleCharacterIdentPart(char16_t c)
 {
-    if (LIKELY(isLatin1(c)))
-        return isIdentPart(static_cast<LChar>(c));
+    if (isLatin1(c)) [[likely]]
+        return isIdentPart(static_cast<Latin1Character>(c));
     return !U16_IS_SURROGATE(c) && isIdentPart(static_cast<char32_t>(c));
 }
 
-static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(LChar c)
+static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(Latin1Character c)
 {
     return !isIdentPart(c) && c != '\\';
 }
 
 // NOTE: This may give give false negatives (for non-ascii) but won't give false posititves.
 // This means it can be used to detect the end of a keyword (all keywords are ascii)
-static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(UChar c)
+static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(char16_t c)
 {
-    if (LIKELY(isLatin1(c)))
-        return cannotBeIdentPartOrEscapeStart(static_cast<LChar>(c));
-    return Lexer<UChar>::isWhiteSpace(c) || Lexer<UChar>::isLineTerminator(c);
+    if (isLatin1(c)) [[likely]]
+        return cannotBeIdentPartOrEscapeStart(static_cast<Latin1Character>(c));
+    return Lexer<char16_t>::isWhiteSpace(c) || Lexer<char16_t>::isLineTerminator(c);
 }
 
 
 template<>
-ALWAYS_INLINE char32_t Lexer<LChar>::currentCodePoint() const
+ALWAYS_INLINE char32_t Lexer<Latin1Character>::currentCodePoint() const
 {
     return m_current;
 }
 
 template<>
-ALWAYS_INLINE char32_t Lexer<UChar>::currentCodePoint() const
+ALWAYS_INLINE char32_t Lexer<char16_t>::currentCodePoint() const
 {
     ASSERT_WITH_MESSAGE(!isIdentStart(errorCodePoint), "error values shouldn't appear as a valid identifier start code point");
     if (!U16_IS_SURROGATE(m_current))
         return m_current;
 
-    UChar trail = peek(1);
-    if (UNLIKELY(!U16_IS_LEAD(m_current) || !U16_IS_SURROGATE_TRAIL(trail)))
+    char16_t trail = peek(1);
+    if (!U16_IS_LEAD(m_current) || !U16_IS_SURROGATE_TRAIL(trail)) [[unlikely]]
         return errorCodePoint;
 
     return U16_GET_SUPPLEMENTARY(m_current, trail);
@@ -853,7 +862,7 @@ static inline bool isASCIIOctalDigitOrSeparator(CharacterType character)
     return isASCIIOctalDigit(character) || character == '_';
 }
 
-static inline LChar singleEscape(int c)
+static inline Latin1Character singleEscape(int c)
 {
     if (c < 128) {
         ASSERT(static_cast<size_t>(c) < std::size(singleCharacterEscapeValuesForASCII));
@@ -866,7 +875,7 @@ template <typename T>
 inline void Lexer<T>::record8(int c)
 {
     ASSERT(isLatin1(c));
-    m_buffer8.append(static_cast<LChar>(c));
+    m_buffer8.append(static_cast<Latin1Character>(c));
 }
 
 template <typename T>
@@ -874,7 +883,7 @@ inline void Lexer<T>::append8(std::span<const T> span)
 {
     size_t currentSize = m_buffer8.size();
     m_buffer8.grow(currentSize + span.size());
-    LChar* rawBuffer = m_buffer8.data() + currentSize;
+    Latin1Character* rawBuffer = m_buffer8.mutableSpan().data() + currentSize;
 
     for (size_t i = 0; i < span.size(); i++) {
         T c = span[i];
@@ -884,11 +893,11 @@ inline void Lexer<T>::append8(std::span<const T> span)
 }
 
 template <typename T>
-inline void Lexer<T>::append16(std::span<const LChar> span)
+inline void Lexer<T>::append16(std::span<const Latin1Character> span)
 {
     size_t currentSize = m_buffer16.size();
     m_buffer16.grow(currentSize + span.size());
-    UChar* rawBuffer = m_buffer16.data() + currentSize;
+    char16_t* rawBuffer = m_buffer16.mutableSpan().data() + currentSize;
 
     for (size_t i = 0; i < span.size(); i++)
         rawBuffer[i] = span[i];
@@ -905,16 +914,16 @@ inline void Lexer<T>::record16(int c)
 {
     ASSERT(c >= 0);
     ASSERT(c <= static_cast<int>(USHRT_MAX));
-    m_buffer16.append(static_cast<UChar>(c));
+    m_buffer16.append(static_cast<char16_t>(c));
 }
 
 template<typename CharacterType> inline void Lexer<CharacterType>::recordUnicodeCodePoint(char32_t codePoint)
 {
     ASSERT(codePoint <= UCHAR_MAX_VALUE);
     if (U_IS_BMP(codePoint))
-        record16(static_cast<UChar>(codePoint));
+        record16(static_cast<char16_t>(codePoint));
     else {
-        UChar codeUnits[2] = { U16_LEAD(codePoint), U16_TRAIL(codePoint) };
+        char16_t codeUnits[2] = { U16_LEAD(codePoint), U16_TRAIL(codePoint) };
         append16(codeUnits);
     }
 }
@@ -941,7 +950,7 @@ bool isSafeBuiltinIdentifier(VM& vm, const Identifier* ident)
 #endif // ASSERT_ENABLED
 
 template <>
-template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::parseIdentifier(JSTokenData* tokenData, OptionSet<LexerFlags> lexerFlags, bool strictMode)
+template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<Latin1Character>::parseIdentifier(JSTokenData* tokenData, OptionSet<LexerFlags> lexerFlags, bool strictMode)
 {
     tokenData->escaped = false;
     const ptrdiff_t remaining = m_codeEnd - m_code;
@@ -965,7 +974,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
         }
     }
 
-    const LChar* identifierStart = currentSourcePtr();
+    const Latin1Character* identifierStart = currentSourcePtr();
 
     if (isPrivateName)
         shift();
@@ -974,7 +983,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
     while (isIdentPart(m_current))
         shift();
 
-    if (UNLIKELY(m_current == '\\'))
+    if (m_current == '\\') [[unlikely]]
         return parseIdentifierSlowCase<shouldCreateIdentifier>(tokenData, lexerFlags, strictMode, identifierStart);
 
     const Identifier* ident = nullptr;
@@ -1004,7 +1013,8 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
         tokenData->ident = nullptr;
 
     auto identType = isPrivateName ? PRIVATENAME : IDENT;
-    if (UNLIKELY((remaining < maxTokenLength) && !lexerFlags.contains(LexerFlags::IgnoreReservedWords)) && !isBuiltinName) {
+    if ((remaining < maxTokenLength) && !lexerFlags.contains(LexerFlags::IgnoreReservedWords)) [[unlikely]] {
+        if (!isBuiltinName) {
         ASSERT(shouldCreateIdentifier);
         if (remaining < maxTokenLength) {
             const HashTableValue* entry = JSC::mainTable.entry(*ident);
@@ -1016,12 +1026,13 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
         }
         return identType;
     }
+    }
 
     return identType;
 }
 
 template <>
-template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::parseIdentifier(JSTokenData* tokenData, OptionSet<LexerFlags> lexerFlags, bool strictMode)
+template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<char16_t>::parseIdentifier(JSTokenData* tokenData, OptionSet<LexerFlags> lexerFlags, bool strictMode)
 {
     ASSERT(!m_parsingBuiltinFunction);
     tokenData->escaped = false;
@@ -1035,19 +1046,19 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
     }
 
     bool isPrivateName = m_current == '#';
-    const UChar* identifierStart = currentSourcePtr();
+    const char16_t* identifierStart = currentSourcePtr();
 
     if (isPrivateName)
         shift();
 
-    UChar orAllChars = 0;
+    char16_t orAllChars = 0;
     ASSERT(isSingleCharacterIdentStart(m_current) || U16_IS_SURROGATE(m_current) || m_current == '\\');
     while (isSingleCharacterIdentPart(m_current)) {
         orAllChars |= m_current;
         shift();
     }
 
-    if (UNLIKELY(U16_IS_SURROGATE(m_current) || m_current == '\\'))
+    if (U16_IS_SURROGATE(m_current) || m_current == '\\') [[unlikely]]
         return parseIdentifierSlowCase<shouldCreateIdentifier>(tokenData, lexerFlags, strictMode, identifierStart);
 
     bool isAll8Bit = !(orAllChars & ~0xff);
@@ -1055,7 +1066,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
 
     if (shouldCreateIdentifier) {
         if (isAll8Bit)
-            ident = makeIdentifierLCharFromUChar(std::span { identifierStart, currentSourcePtr() });
+            ident = makeLatin1Identifier(std::span { identifierStart, currentSourcePtr() });
         else
             ident = makeIdentifier(std::span { identifierStart, currentSourcePtr() });
         tokenData->ident = ident;
@@ -1065,7 +1076,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
     if (isPrivateName)
         return PRIVATENAME;
 
-    if (UNLIKELY((remaining < maxTokenLength) && !lexerFlags.contains(LexerFlags::IgnoreReservedWords))) {
+    if ((remaining < maxTokenLength) && !lexerFlags.contains(LexerFlags::IgnoreReservedWords)) [[unlikely]] {
         ASSERT(shouldCreateIdentifier);
         if (remaining < maxTokenLength) {
             const HashTableValue* entry = JSC::mainTable.entry(*ident);
@@ -1105,13 +1116,13 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
         if (m_current == '\\') {
             tokenData->escaped = true;
             shift();
-            if (UNLIKELY(m_current != 'u'))
+            if (m_current != 'u') [[unlikely]]
                 return atEnd() ? UNTERMINATED_IDENTIFIER_ESCAPE_ERRORTOK : INVALID_IDENTIFIER_ESCAPE_ERRORTOK;
             shift();
             auto character = parseUnicodeEscape();
-            if (UNLIKELY(!character.isValid()))
+            if (!character.isValid()) [[unlikely]]
                 return character.isIncomplete() ? UNTERMINATED_IDENTIFIER_UNICODE_ESCAPE_ERRORTOK : INVALID_IDENTIFIER_UNICODE_ESCAPE_ERRORTOK;
-            if (UNLIKELY(isStart ? !isIdentStart(character.value()) : !isIdentPart(character.value())))
+            if (isStart ? !isIdentStart(character.value()) : !isIdentPart(character.value())) [[unlikely]]
                 return INVALID_IDENTIFIER_UNICODE_ESCAPE_ERRORTOK;
             if (shouldCreateIdentifier)
                 recordUnicodeCodePoint(character.value());
@@ -1120,13 +1131,13 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
         }
 
         ASSERT(U16_IS_SURROGATE(m_current));
-        if (UNLIKELY(!U16_IS_SURROGATE_LEAD(m_current)))
+        if (!U16_IS_SURROGATE_LEAD(m_current)) [[unlikely]]
             return INVALID_UNICODE_ENCODING_ERRORTOK;
 
         char32_t codePoint = currentCodePoint();
-        if (UNLIKELY(codePoint == errorCodePoint))
+        if (codePoint == errorCodePoint) [[unlikely]]
             return INVALID_UNICODE_ENCODING_ERRORTOK;
-        if (UNLIKELY(isStart ? !isNonLatin1IdentStart(codePoint) : !isNonLatin1IdentPart(codePoint)))
+        if (isStart ? !isNonLatin1IdentStart(codePoint) : !isNonLatin1IdentPart(codePoint)) [[unlikely]]
             return INVALID_IDENTIFIER_UNICODE_ERRORTOK;
         append16({ m_code, 2 });
         shift();
@@ -1136,11 +1147,11 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
     };
 
     JSTokenType type = fillBuffer(identCharsStart == currentSourcePtr());
-    if (UNLIKELY(type & CanBeErrorTokenFlag))
+    if (type & CanBeErrorTokenFlag) [[unlikely]]
         return type;
 
     while (true) {
-        if (LIKELY(isSingleCharacterIdentPart(m_current))) {
+        if (isSingleCharacterIdentPart(m_current)) [[likely]] {
             shift();
             continue;
         }
@@ -1148,7 +1159,7 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
             break;
 
         type = fillBuffer();
-        if (UNLIKELY(type & CanBeErrorTokenFlag))
+        if (type & CanBeErrorTokenFlag) [[unlikely]]
             return type;
     }
 
@@ -1164,7 +1175,7 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
 
     m_buffer16.shrink(0);
 
-    if (LIKELY(!lexerFlags.contains(LexerFlags::IgnoreReservedWords))) {
+    if (!lexerFlags.contains(LexerFlags::IgnoreReservedWords)) [[likely]] {
         ASSERT(shouldCreateIdentifier);
         const HashTableValue* entry = JSC::mainTable.entry(*ident);
         if (!entry)
@@ -1177,12 +1188,12 @@ JSTokenType Lexer<CharacterType>::parseIdentifierSlowCase(JSTokenData* tokenData
     return identType;
 }
 
-static ALWAYS_INLINE bool characterRequiresParseStringSlowCase(LChar character)
+static ALWAYS_INLINE bool characterRequiresParseStringSlowCase(Latin1Character character)
 {
     return character < 0xE;
 }
 
-static ALWAYS_INLINE bool characterRequiresParseStringSlowCase(UChar character)
+static ALWAYS_INLINE bool characterRequiresParseStringSlowCase(char16_t character)
 {
     return character < 0xE || !isLatin1(character);
 }
@@ -1198,20 +1209,72 @@ template <bool shouldBuildStrings> ALWAYS_INLINE typename Lexer<T>::StringParseR
 
     const T* stringStart = currentSourcePtr();
 
+    using UnsignedType = SameSizeUnsignedInteger<T>;
+    auto quoteMask = SIMD::splat<UnsignedType>(stringQuoteCharacter);
+    constexpr auto escapeMask = SIMD::splat<UnsignedType>('\\');
+    constexpr auto controlMask = SIMD::splat<UnsignedType>(0xE);
+    constexpr auto nonLatin1Mask = SIMD::splat<UnsignedType>(0xff);
+    auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        auto quotes = SIMD::equal(input, quoteMask);
+        auto escapes = SIMD::equal(input, escapeMask);
+        auto controls = SIMD::lessThan(input, controlMask);
+        if constexpr (std::is_same_v<T, Latin1Character> || !shouldBuildStrings) {
+            auto mask = SIMD::bitOr(quotes, escapes, controls);
+            return SIMD::findFirstNonZeroIndex(mask);
+        } else {
+            auto nonLatin1 = SIMD::greaterThan(input, nonLatin1Mask);
+            auto mask = SIMD::bitOr(quotes, escapes, controls, nonLatin1);
+            return SIMD::findFirstNonZeroIndex(mask);
+        }
+    };
+
+    auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
+        if (character == stringQuoteCharacter)
+            return true;
+        if (character == '\\')
+            return true;
+        if (character < 0xE)
+            return true;
+
+        if constexpr (std::is_same_v<T, Latin1Character> || !shouldBuildStrings)
+            return false;
+        else
+            return !isLatin1(character);
+    };
+
+    const T* found = SIMD::find(std::span { stringStart, m_codeEnd }, vectorMatch, scalarMatch);
+    if (found == m_codeEnd) [[unlikely]] {
+        setOffset(startingOffset, startingLineStartOffset);
+        setLineNumber(startingLineNumber);
+        return parseStringSlowCase<shouldBuildStrings>(tokenData, strictMode);
+    }
+
+    m_code = found;
+    m_current = *found;
+    if (m_current == stringQuoteCharacter) [[likely]] {
+        if constexpr (shouldBuildStrings)
+            tokenData->ident = makeIdentifier(std::span { stringStart, found });
+        else
+            tokenData->ident = nullptr;
+        return StringParsedSuccessfully;
+    }
+
     while (m_current != stringQuoteCharacter) {
-        if (UNLIKELY(m_current == '\\')) {
-            if (stringStart != currentSourcePtr() && shouldBuildStrings)
+        if (m_current == '\\') [[unlikely]] {
+            if constexpr (shouldBuildStrings) {
+                if (stringStart != currentSourcePtr())
                 append8({ stringStart, currentSourcePtr() });
+            }
             shift();
 
-            LChar escape = singleEscape(m_current);
+            Latin1Character escape = singleEscape(m_current);
 
             // Most common escape sequences first.
             if (escape) {
-                if (shouldBuildStrings)
+                if constexpr (shouldBuildStrings)
                     record8(escape);
                 shift();
-            } else if (UNLIKELY(isLineTerminator(m_current)))
+            } else if (isLineTerminator(m_current)) [[unlikely]]
                 shiftLineTerminator();
             else if (m_current == 'x') {
                 shift();
@@ -1221,7 +1284,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE typename Lexer<T>::StringParseR
                 }
                 T prev = m_current;
                 shift();
-                if (shouldBuildStrings)
+                if constexpr (shouldBuildStrings)
                     record8(convertHex(prev, m_current));
                 shift();
             } else {
@@ -1234,7 +1297,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE typename Lexer<T>::StringParseR
             continue;
         }
 
-        if (UNLIKELY(characterRequiresParseStringSlowCase(m_current))) {
+        if (characterRequiresParseStringSlowCase(m_current)) [[unlikely]] {
             setOffset(startingOffset, startingLineStartOffset);
             setLineNumber(startingLineNumber);
             m_buffer8.shrink(0);
@@ -1244,9 +1307,9 @@ template <bool shouldBuildStrings> ALWAYS_INLINE typename Lexer<T>::StringParseR
         shift();
     }
 
-    if (currentSourcePtr() != stringStart && shouldBuildStrings)
+    if constexpr (shouldBuildStrings) {
+        if (currentSourcePtr() != stringStart)
         append8({ stringStart, currentSourcePtr() });
-    if (shouldBuildStrings) {
         tokenData->ident = makeIdentifier(m_buffer8.span());
         m_buffer8.shrink(0);
     } else
@@ -1276,7 +1339,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE auto Lexer<T>::parseComplexEsca
 
         T prev = m_current;
         shift();
-        if (shouldBuildStrings)
+        if constexpr (shouldBuildStrings)
             record16(convertHex(prev, m_current));
         shift();
 
@@ -1288,7 +1351,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE auto Lexer<T>::parseComplexEsca
 
         auto character = parseUnicodeEscape();
         if (character.isValid()) {
-            if (shouldBuildStrings)
+            if constexpr (shouldBuildStrings)
                 recordUnicodeCodePoint(character.value());
             return StringParsedSuccessfully;
         }
@@ -1314,7 +1377,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE auto Lexer<T>::parseComplexEsca
                 m_lexErrorMessage = "The only valid numeric escape in strict mode is '\\0'"_s;
                 return atEnd() ? StringUnterminated : StringCannotBeParsed;
             }
-            if (shouldBuildStrings)
+            if constexpr (shouldBuildStrings)
                 record16(0);
             return StringParsedSuccessfully;
         }
@@ -1328,15 +1391,15 @@ template <bool shouldBuildStrings> ALWAYS_INLINE auto Lexer<T>::parseComplexEsca
                 T character2 = m_current;
                 shift();
                 if (character1 >= '0' && character1 <= '3' && isASCIIOctalDigit(m_current)) {
-                    if (shouldBuildStrings)
+                    if constexpr (shouldBuildStrings)
                         record16((character1 - '0') * 64 + (character2 - '0') * 8 + m_current - '0');
                     shift();
                 } else {
-                    if (shouldBuildStrings)
+                    if constexpr (shouldBuildStrings)
                         record16((character1 - '0') * 8 + character2 - '0');
                 }
             } else {
-                if (shouldBuildStrings)
+                if constexpr (shouldBuildStrings)
                     record16(character1 - '0');
             }
             return StringParsedSuccessfully;
@@ -1344,7 +1407,7 @@ template <bool shouldBuildStrings> ALWAYS_INLINE auto Lexer<T>::parseComplexEsca
     }
 
     if (!atEnd()) {
-        if (shouldBuildStrings)
+        if constexpr (shouldBuildStrings)
             record16(m_current);
         shift();
         return StringParsedSuccessfully;
@@ -1363,19 +1426,21 @@ template <bool shouldBuildStrings> auto Lexer<T>::parseStringSlowCase(JSTokenDat
     const T* stringStart = currentSourcePtr();
 
     while (m_current != stringQuoteCharacter) {
-        if (UNLIKELY(m_current == '\\')) {
-            if (stringStart != currentSourcePtr() && shouldBuildStrings)
+        if (m_current == '\\') [[unlikely]] {
+            if constexpr (shouldBuildStrings) {
+                if (stringStart != currentSourcePtr())
                 append16({ stringStart, currentSourcePtr() });
+            }
             shift();
 
-            LChar escape = singleEscape(m_current);
+            Latin1Character escape = singleEscape(m_current);
 
             // Most common escape sequences first
             if (escape) {
-                if (shouldBuildStrings)
+                if constexpr (shouldBuildStrings)
                     record16(escape);
                 shift();
-            } else if (UNLIKELY(isLineTerminator(m_current)))
+            } else if (isLineTerminator(m_current)) [[unlikely]]
                 shiftLineTerminator();
             else {
                 StringParseResult result = parseComplexEscape<shouldBuildStrings>(strictMode);
@@ -1388,8 +1453,7 @@ template <bool shouldBuildStrings> auto Lexer<T>::parseStringSlowCase(JSTokenDat
         }
         // Fast check for characters that require special handling.
         // Catches 0, \n, and \r as efficiently as possible, and lets through all common ASCII characters.
-        static_assert(std::is_unsigned<T>::value, "Lexer expects an unsigned character type");
-        if (UNLIKELY(m_current < 0xE)) {
+        if (m_current < 0xE) [[unlikely]] {
             // New-line or end of input is not allowed
             if (atEnd() || m_current == '\r' || m_current == '\n') {
                 m_lexErrorMessage = "Unexpected EOF"_s;
@@ -1400,11 +1464,11 @@ template <bool shouldBuildStrings> auto Lexer<T>::parseStringSlowCase(JSTokenDat
         shift();
     }
 
-    if (currentSourcePtr() != stringStart && shouldBuildStrings)
+    if constexpr (shouldBuildStrings) {
+        if (currentSourcePtr() != stringStart)
         append16({ stringStart, currentSourcePtr() });
-    if (shouldBuildStrings)
         tokenData->ident = makeIdentifier(m_buffer16.span());
-    else
+    } else
         tokenData->ident = nullptr;
 
     m_buffer16.shrink(0);
@@ -1419,18 +1483,18 @@ typename Lexer<T>::StringParseResult Lexer<T>::parseTemplateLiteral(JSTokenData*
     const T* rawStringStart = currentSourcePtr();
 
     while (m_current != '`') {
-        if (UNLIKELY(m_current == '\\')) {
+        if (m_current == '\\') [[unlikely]] {
             if (stringStart != currentSourcePtr())
                 append16({ stringStart, currentSourcePtr() });
             shift();
 
-            LChar escape = singleEscape(m_current);
+            Latin1Character escape = singleEscape(m_current);
 
             // Most common escape sequences first.
             if (escape) {
                 record16(escape);
                 shift();
-            } else if (UNLIKELY(isLineTerminator(m_current))) {
+            } else if (isLineTerminator(m_current)) [[unlikely]] {
                 // Normalize <CR>, <CR><LF> to <LF>.
                 if (m_current == '\r') {
                     ASSERT_WITH_MESSAGE(rawStringStart != currentSourcePtr(), "We should have at least shifted the escape.");
@@ -1465,7 +1529,7 @@ typename Lexer<T>::StringParseResult Lexer<T>::parseTemplateLiteral(JSTokenData*
         // Fast check for characters that require special handling.
         // Catches 0, \n, \r, 0x2028, and 0x2029 as efficiently
         // as possible, and lets through all common ASCII characters.
-        if (UNLIKELY(((static_cast<unsigned>(m_current) - 0xE) & 0x2000))) {
+        if (((static_cast<unsigned>(m_current) - 0xE) & 0x2000)) [[unlikely]] {
             // End of input is not allowed.
             // Unlike String, line terminator is allowed.
             if (atEnd()) {
@@ -1543,7 +1607,7 @@ ALWAYS_INLINE auto Lexer<T>::parseHex() -> std::optional<NumberParseResult>
 
     do {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIHexDigit(peek(1))))
+            if (!isASCIIHexDigit(peek(1))) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1554,7 +1618,7 @@ ALWAYS_INLINE auto Lexer<T>::parseHex() -> std::optional<NumberParseResult>
         --maximumDigits;
     } while (isASCIIHexDigitOrSeparator(m_current) && maximumDigits >= 0);
 
-    if (LIKELY(maximumDigits >= 0 && m_current != 'n'))
+    if (maximumDigits >= 0 && m_current != 'n') [[likely]]
         return NumberParseResult { static_cast<double>(hexValue) };
 
     // No more place in the hexValue buffer.
@@ -1570,7 +1634,7 @@ ALWAYS_INLINE auto Lexer<T>::parseHex() -> std::optional<NumberParseResult>
 
     while (isASCIIHexDigitOrSeparator(m_current)) {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIHexDigit(peek(1))))
+            if (!isASCIIHexDigit(peek(1))) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1580,7 +1644,7 @@ ALWAYS_INLINE auto Lexer<T>::parseHex() -> std::optional<NumberParseResult>
         shift();
     }
 
-    if (UNLIKELY(m_current == 'n'))
+    if (m_current == 'n') [[unlikely]]
         return NumberParseResult { makeIdentifier(m_buffer8.span()) };
 
     return NumberParseResult { parseIntOverflow(m_buffer8.span(), 16) };
@@ -1597,11 +1661,11 @@ ALWAYS_INLINE auto Lexer<T>::parseBinary() -> std::optional<NumberParseResult>
     int digit = maximumDigits - 1;
     // Temporary buffer for the digits. Makes easier
     // to reconstruct the input characters when needed.
-    LChar digits[maximumDigits];
+    Latin1Character digits[maximumDigits];
 
     do {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIBinaryDigit(peek(1))))
+            if (!isASCIIBinaryDigit(peek(1))) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1613,7 +1677,7 @@ ALWAYS_INLINE auto Lexer<T>::parseBinary() -> std::optional<NumberParseResult>
         --digit;
     } while (isASCIIBinaryDigitOrSeparator(m_current) && digit >= 0);
 
-    if (LIKELY(!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n'))
+    if (!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n') [[likely]]
         return NumberParseResult { static_cast<double>(binaryValue) };
 
     for (int i = maximumDigits - 1; i > digit; --i)
@@ -1621,7 +1685,7 @@ ALWAYS_INLINE auto Lexer<T>::parseBinary() -> std::optional<NumberParseResult>
 
     while (isASCIIBinaryDigitOrSeparator(m_current)) {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIBinaryDigit(peek(1))))
+            if (!isASCIIBinaryDigit(peek(1))) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1631,7 +1695,7 @@ ALWAYS_INLINE auto Lexer<T>::parseBinary() -> std::optional<NumberParseResult>
         shift();
     }
 
-    if (UNLIKELY(m_current == 'n'))
+    if (m_current == 'n') [[unlikely]]
         return NumberParseResult { makeIdentifier(m_buffer8.span()) };
 
     if (isASCIIDigit(m_current))
@@ -1653,11 +1717,11 @@ ALWAYS_INLINE auto Lexer<T>::parseOctal() -> std::optional<NumberParseResult>
     int digit = maximumDigits - 1;
     // Temporary buffer for the digits. Makes easier
     // to reconstruct the input characters when needed.
-    LChar digits[maximumDigits];
+    Latin1Character digits[maximumDigits];
 
     do {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIOctalDigit(peek(1)) || isLegacyLiteral))
+            if (!isASCIIOctalDigit(peek(1)) || isLegacyLiteral) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1669,7 +1733,7 @@ ALWAYS_INLINE auto Lexer<T>::parseOctal() -> std::optional<NumberParseResult>
         --digit;
     } while (isASCIIOctalDigitOrSeparator(m_current) && digit >= 0);
 
-    if (LIKELY(!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n'))
+    if (!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n') [[likely]]
         return NumberParseResult { static_cast<double>(octalValue) };
 
     for (int i = maximumDigits - 1; i > digit; --i)
@@ -1677,7 +1741,7 @@ ALWAYS_INLINE auto Lexer<T>::parseOctal() -> std::optional<NumberParseResult>
 
     while (isASCIIOctalDigitOrSeparator(m_current)) {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIOctalDigit(peek(1)) || isLegacyLiteral))
+            if (!isASCIIOctalDigit(peek(1)) || isLegacyLiteral) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1687,8 +1751,10 @@ ALWAYS_INLINE auto Lexer<T>::parseOctal() -> std::optional<NumberParseResult>
         shift();
     }
 
-    if (UNLIKELY(m_current == 'n') && !isLegacyLiteral)
+    if (m_current == 'n') [[unlikely]] {
+        if (!isLegacyLiteral)
         return NumberParseResult { makeIdentifier(m_buffer8.span()) };
+    }
 
     if (isASCIIDigit(m_current))
         return std::nullopt;
@@ -1712,11 +1778,11 @@ ALWAYS_INLINE auto Lexer<T>::parseDecimal() -> std::optional<NumberParseResult>
         int digit = maximumDigits - 1;
         // Temporary buffer for the digits. Makes easier
         // to reconstruct the input characters when needed.
-        LChar digits[maximumDigits];
+        Latin1Character digits[maximumDigits];
 
         do {
             if (m_current == '_') {
-                if (UNLIKELY(!isASCIIDigit(peek(1)) || isLegacyLiteral))
+                if (!isASCIIDigit(peek(1)) || isLegacyLiteral) [[unlikely]]
                     return std::nullopt;
 
                 shift();
@@ -1737,7 +1803,7 @@ ALWAYS_INLINE auto Lexer<T>::parseDecimal() -> std::optional<NumberParseResult>
 
     while (isASCIIDigitOrSeparator(m_current)) {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIDigit(peek(1)) || isLegacyLiteral))
+            if (!isASCIIDigit(peek(1)) || isLegacyLiteral) [[unlikely]]
                 return std::nullopt;
 
             shift();
@@ -1747,7 +1813,7 @@ ALWAYS_INLINE auto Lexer<T>::parseDecimal() -> std::optional<NumberParseResult>
         shift();
     }
 
-    if (UNLIKELY(m_current == 'n' && !isLegacyLiteral))
+    if (m_current == 'n' && !isLegacyLiteral) [[unlikely]]
         return NumberParseResult { makeIdentifier(m_buffer8.span()) };
 
     return std::nullopt;
@@ -1761,7 +1827,7 @@ ALWAYS_INLINE bool Lexer<T>::parseNumberAfterDecimalPoint()
 
     do {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIDigit(peek(1))))
+            if (!isASCIIDigit(peek(1))) [[unlikely]]
                 return false;
 
             shift();
@@ -1789,7 +1855,7 @@ ALWAYS_INLINE bool Lexer<T>::parseNumberAfterExponentIndicator()
 
     do {
         if (m_current == '_') {
-            if (UNLIKELY(!isASCIIDigit(peek(1))))
+            if (!isASCIIDigit(peek(1))) [[unlikely]]
                 return false;
 
             shift();
@@ -1806,7 +1872,7 @@ template <typename T>
 ALWAYS_INLINE bool Lexer<T>::parseMultilineComment()
 {
     while (true) {
-        while (UNLIKELY(m_current == '*')) {
+        while (m_current == '*') [[unlikely]] {
             shift();
             if (m_current == '/') {
                 shift();
@@ -1843,16 +1909,57 @@ ALWAYS_INLINE void Lexer<T>::parseCommentDirective()
     }
 }
 
+ALWAYS_INLINE const Latin1Character* parseCommentDirectiveValueSIMD(const Latin1Character* start, const Latin1Character* end)
+{
+    constexpr auto controlMinChar = SIMD::splat<Latin1Character>(0x09); // '\t'
+    constexpr auto controlMaxChar = SIMD::splat<Latin1Character>(0x0D); // '\r'
+    constexpr auto spaceChar = SIMD::splat<Latin1Character>(0x20); // ' '
+    constexpr auto quoteChar = SIMD::splat<Latin1Character>(0x22); // '"'
+    constexpr auto squoteChar = SIMD::splat<Latin1Character>(0x27); // '\''
+    constexpr auto nbspChar = SIMD::splat<Latin1Character>(0xA0); // non-breaking space
+
+    auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+        auto controls = SIMD::bitAnd(
+            SIMD::greaterThanOrEqual(input, controlMinChar),
+            SIMD::lessThanOrEqual(input, controlMaxChar)
+        );
+        auto spaces = SIMD::equal(input, spaceChar);
+        auto quotes = SIMD::equal(input, quoteChar);
+        auto squotes = SIMD::equal(input, squoteChar);
+        auto nbsps = SIMD::equal(input, nbspChar);
+
+        auto mask = SIMD::bitOr(controls, spaces, quotes, squotes, nbsps);
+        return SIMD::findFirstNonZeroIndex(mask);
+    };
+
+    auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
+        return Lexer<Latin1Character>::isWhiteSpace(character)
+            || Lexer<Latin1Character>::isLineTerminator(character)
+            || character == '"'
+            || character == '\'';
+    };
+
+    return SIMD::find(std::span { start, end }, vectorMatch, scalarMatch);
+}
+
 IGNORE_WARNINGS_BEGIN("unused-but-set-variable")
 template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::parseCommentDirectiveValue()
 {
     skipWhitespace();
-    UChar mergedCharacterBits = 0;
+    char16_t mergedCharacterBits = 0;
     auto stringStart = currentSourcePtr();
+    if constexpr (std::is_same_v<CharacterType, Latin1Character>) {
+        m_code = parseCommentDirectiveValueSIMD(stringStart, m_codeEnd);
+        if (m_code < m_codeEnd)
+            m_current = *m_code;
+        else
+            m_current = 0;
+    } else {
     while (!isWhiteSpace(m_current) && !isLineTerminator(m_current) && m_current != '"' && m_current != '\'' && !atEnd()) {
-        if constexpr (std::is_same_v<CharacterType, UChar>)
+        if constexpr (std::is_same_v<CharacterType, char16_t>)
             mergedCharacterBits |= m_current;
         shift();
+    }
     }
     std::span commentDirective { stringStart, currentSourcePtr() };
 
@@ -1860,7 +1967,7 @@ template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::pars
     if (!isLineTerminator(m_current) && !atEnd())
         return String();
 
-    if constexpr (std::is_same_v<CharacterType, UChar>) {
+    if constexpr (std::is_same_v<CharacterType, char16_t>) {
         if (isLatin1(mergedCharacterBits))
             return String::make8Bit(commentDirective);
     }
@@ -1892,13 +1999,8 @@ bool Lexer<T>::nextTokenIsColon()
 }
 
 template <typename T>
-void Lexer<T>::fillTokenInfo(JSToken* tokenRecord, JSTokenType token, int lineNumber, int endOffset, int lineStartOffset, JSTextPosition endPosition)
+void Lexer<T>::fillTokenInfo(JSToken* tokenRecord, JSTokenType token, JSTextPosition endPosition)
 {
-    JSTokenLocation* tokenLocation = &tokenRecord->m_location;
-    tokenLocation->line = lineNumber;
-    tokenLocation->endOffset = endOffset;
-    tokenLocation->lineStartOffset = lineStartOffset;
-    ASSERT(tokenLocation->endOffset >= tokenLocation->lineStartOffset);
     tokenRecord->m_endPosition = endPosition;
     m_lastToken = token;
 }
@@ -1907,43 +2009,42 @@ template <typename T>
 JSTokenType Lexer<T>::lexWithoutClearingLineTerminator(JSToken* tokenRecord, OptionSet<LexerFlags> lexerFlags, bool strictMode)
 {
     JSTokenData* tokenData = &tokenRecord->m_data;
-    JSTokenLocation* tokenLocation = &tokenRecord->m_location;
-    m_lastTokenLocation = JSTokenLocation(tokenRecord->m_location);
-
     ASSERT(!m_error);
+    m_lastTokenLocation = tokenRecord->location();
     ASSERT(m_buffer8.isEmpty());
     ASSERT(m_buffer16.isEmpty());
-
     JSTokenType token = ERRORTOK;
 
 start:
     skipWhitespace();
 
-    tokenLocation->startOffset = currentOffset();
     ASSERT(currentOffset() >= currentLineStartOffset());
     tokenRecord->m_startPosition = currentPosition();
+
+    Latin1Character type = m_current;
 
     if (atEnd()) {
         token = EOFTOK;
         goto returnToken;
     }
 
-    CharacterType type;
-    if (LIKELY(isLatin1(m_current)))
-        type = static_cast<CharacterType>(typesOfLatin1Characters[m_current]);
-    else {
+    if constexpr (!std::is_same_v<T, Latin1Character>) {
+        if (!isLatin1(m_current)) [[unlikely]] {
         char32_t codePoint;
         U16_GET(m_code, 0, 0, m_codeEnd - m_code, codePoint);
-        if (isNonLatin1IdentStart(codePoint))
-            type = CharacterIdentifierStart;
-        else if (isLineTerminator(m_current))
-            type = CharacterLineTerminator;
+            if (isNonLatin1IdentStart(codePoint)) {
+                // We are hijacking white space characters for non-latin1 identifier start in the following dispatch since we will never see
+                // these characters in the switch because of `skipWhitespace()` call.
+                type = ' ';
+            } else if (isLineTerminator(m_current))
+                type = '\n';
         else
-            type = CharacterInvalid;
+                type = '\0';
+        }
     }
 
     switch (type) {
-    case CharacterGreater:
+    case  62 /* 62 = > CharacterGreater */: {
         shift();
         if (m_current == '>') {
             shift();
@@ -1972,7 +2073,9 @@ start:
         }
         token = GT;
         break;
-    case CharacterEqual: {
+    }
+
+    case  61 /* 61 = = CharacterEqual */: {
         if (peek(1) == '>') {
             token = ARROWFUNCTION;
             tokenData->line = lineNumber();
@@ -1998,7 +2101,8 @@ start:
         token = EQUAL;
         break;
     }
-    case CharacterLess:
+
+    case  60 /* 60 = < CharacterLess */: {
         shift();
         if (m_current == '!' && peek(1) == '-' && peek(2) == '-') {
             if (m_scriptMode == JSParserScriptMode::Classic) {
@@ -2023,7 +2127,9 @@ start:
         }
         token = LT;
         break;
-    case CharacterExclamationMark:
+    }
+
+    case  33 /* 33 = ! CharacterExclamationMark */: {
         shift();
         if (m_current == '=') {
             shift();
@@ -2037,7 +2143,9 @@ start:
         }
         token = EXCLAMATION;
         break;
-    case CharacterAdd:
+    }
+
+    case  43 /* 43 = + CharacterAdd */: {
         shift();
         if (m_current == '+') {
             shift();
@@ -2051,7 +2159,9 @@ start:
         }
         token = PLUS;
         break;
-    case CharacterSub:
+    }
+
+    case  45 /* 45 = - CharacterSub */: {
         shift();
         if (m_current == '-') {
             shift();
@@ -2071,7 +2181,9 @@ start:
         }
         token = MINUS;
         break;
-    case CharacterMultiply:
+    }
+
+    case  42 /* 42 = * CharacterMultiply */: {
         shift();
         if (m_current == '=') {
             shift();
@@ -2090,7 +2202,9 @@ start:
         }
         token = TIMES;
         break;
-    case CharacterSlash:
+    }
+
+    case  47 /* 47 = / CharacterSlash */: {
         shift();
         if (m_current == '/') {
             shift();
@@ -2098,14 +2212,12 @@ start:
         }
         if (m_current == '*') {
             shift();
-            auto startLineNumber = m_lineNumber;
-            auto startLineStartOffset = currentLineStartOffset();
             if (parseMultilineComment())
                 goto start;
             m_lexErrorMessage = "Multiline comment was not closed properly"_s;
             token = UNTERMINATED_MULTILINE_COMMENT_ERRORTOK;
             m_error = true;
-            fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+            fillTokenInfo(tokenRecord, token, currentPosition());
             return token;
         }
         if (m_current == '=') {
@@ -2115,7 +2227,9 @@ start:
         }
         token = DIVIDE;
         break;
-    case CharacterAnd:
+    }
+
+    case  38 /* 38 = & CharacterAnd */: {
         shift();
         if (m_current == '&') {
             shift();
@@ -2134,7 +2248,9 @@ start:
         }
         token = BITAND;
         break;
-    case CharacterXor:
+    }
+
+    case  94 /* 94 = ^ CharacterXor */: {
         shift();
         if (m_current == '=') {
             shift();
@@ -2143,7 +2259,9 @@ start:
         }
         token = BITXOR;
         break;
-    case CharacterModulo:
+    }
+
+    case  37 /* 37 = % CharacterModulo */: {
         shift();
         if (m_current == '=') {
             shift();
@@ -2152,7 +2270,9 @@ start:
         }
         token = MOD;
         break;
-    case CharacterOr:
+    }
+
+    case 124 /* 124 = | CharacterOr */: {
         shift();
         if (m_current == '=') {
             shift();
@@ -2171,34 +2291,48 @@ start:
         }
         token = BITOR;
         break;
-    case CharacterOpenParen:
+    }
+
+    case  40 /* 40 = ( CharacterOpenParen */: {
         token = OPENPAREN;
         tokenData->line = lineNumber();
         tokenData->offset = currentOffset();
         tokenData->lineStartOffset = currentLineStartOffset();
         shift();
         break;
-    case CharacterCloseParen:
+    }
+
+    case  41 /* 41 = ) CharacterCloseParen */: {
         token = CLOSEPAREN;
         shift();
         break;
-    case CharacterOpenBracket:
+    }
+
+    case  91 /* 91 = [ CharacterOpenBracket */: {
         token = OPENBRACKET;
         shift();
         break;
-    case CharacterCloseBracket:
+    }
+
+    case  93 /* 93 = ] CharacterCloseBracket */: {
         token = CLOSEBRACKET;
         shift();
         break;
-    case CharacterComma:
+    }
+
+    case  44 /* 44 = , CharacterComma */: {
         token = COMMA;
         shift();
         break;
-    case CharacterColon:
+    }
+
+    case  58 /* 58 = : CharacterColon */: {
         token = COLON;
         shift();
         break;
-    case CharacterQuestion:
+    }
+
+    case  63 /* 63 = ? CharacterQuestion */: {
         shift();
         if (m_current == '?') {
             shift();
@@ -2217,19 +2351,27 @@ start:
         }
         token = QUESTION;
         break;
-    case CharacterTilde:
+    }
+
+    case 126 /* 126 = ~ CharacterTilde */: {
         token = TILDE;
         shift();
         break;
-    case CharacterSemicolon:
+    }
+
+    case  59 /* 59 = ; CharacterSemicolon */: {
         shift();
         token = SEMICOLON;
         break;
-    case CharacterBackQuote:
+    }
+
+    case  96 /* 96 = ` CharacterBackQuote */: {
         shift();
         token = BACKQUOTE;
         break;
-    case CharacterOpenBrace:
+    }
+
+    case 123 /* 123 = { CharacterOpenBrace */: {
         tokenData->line = lineNumber();
         tokenData->offset = currentOffset();
         tokenData->lineStartOffset = currentLineStartOffset();
@@ -2237,7 +2379,9 @@ start:
         shift();
         token = OPENBRACE;
         break;
-    case CharacterCloseBrace:
+    }
+
+    case 125 /* 125 = } CharacterCloseBrace */: {
         tokenData->line = lineNumber();
         tokenData->offset = currentOffset();
         tokenData->lineStartOffset = currentLineStartOffset();
@@ -2245,10 +2389,12 @@ start:
         shift();
         token = CLOSEBRACE;
         break;
-    case CharacterDot:
+    }
+
+    case  46 /* 46 = . CharacterDot */: {
         shift();
         if (!isASCIIDigit(m_current)) {
-            if (UNLIKELY((m_current == '.') && (peek(1) == '.'))) {
+            if ((m_current == '.') && (peek(1) == '.')) [[unlikely]] {
                 shift();
                 shift();
                 token = DOTDOTDOT;
@@ -2257,13 +2403,13 @@ start:
             token = DOT;
             break;
         }
-        if (UNLIKELY(!parseNumberAfterDecimalPoint())) {
+        if (!parseNumberAfterDecimalPoint()) [[unlikely]] {
             m_lexErrorMessage = "Non-number found after decimal point"_s;
             token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
             goto returnError;
         }
         token = DOUBLE;
-        if (UNLIKELY(isASCIIAlphaCaselessEqual(m_current, 'e') && !parseNumberAfterExponentIndicator())) {
+        if (isASCIIAlphaCaselessEqual(m_current, 'e') && !parseNumberAfterExponentIndicator()) [[unlikely]] {
             m_lexErrorMessage = "Non-number found after exponent indicator"_s;
             token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
             goto returnError;
@@ -2273,22 +2419,24 @@ start:
         if (token == INTEGER)
             token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
 
-        if (LIKELY(cannotBeIdentStart(m_current))) {
+        if (cannotBeIdentStart(m_current)) [[likely]] {
             m_buffer8.shrink(0);
             break;
         }
 
-        if (UNLIKELY(isIdentStart(currentCodePoint()))) {
+        if (isIdentStart(currentCodePoint())) [[unlikely]] {
             m_lexErrorMessage = "No identifiers allowed directly after numeric literal"_s;
             token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
             goto returnError;
         }
         m_buffer8.shrink(0);
         break;
-    case CharacterZero:
+    }
+
+    case  48 /* 48 = 0 CharacterZero */: {
         shift();
         if (isASCIIAlphaCaselessEqual(m_current, 'x')) {
-            if (UNLIKELY(!isASCIIHexDigit(peek(1)))) {
+            if (!isASCIIHexDigit(peek(1))) [[unlikely]] {
                 m_lexErrorMessage = "No hexadecimal digits after '0x'"_s;
                 token = UNTERMINATED_HEX_NUMBER_ERRORTOK;
                 goto returnError;
@@ -2309,25 +2457,25 @@ start:
                 tokenData->radix = 16;
             }
 
-            if (LIKELY(cannotBeIdentStart(m_current))) {
-                if (LIKELY(token != BIGINT))
+            if (cannotBeIdentStart(m_current)) [[likely]] {
+                if (token != BIGINT) [[likely]]
                     token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
                 m_buffer8.shrink(0);
                 break;
             }
 
-            if (UNLIKELY(isIdentStart(currentCodePoint()))) {
+            if (isIdentStart(currentCodePoint())) [[unlikely]] {
                 m_lexErrorMessage = "No space between hexadecimal literal and identifier"_s;
                 token = UNTERMINATED_HEX_NUMBER_ERRORTOK;
                 goto returnError;
             }
-            if (LIKELY(token != BIGINT))
+            if (token != BIGINT) [[likely]]
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             m_buffer8.shrink(0);
             break;
         }
         if (isASCIIAlphaCaselessEqual(m_current, 'b')) {
-            if (UNLIKELY(!isASCIIBinaryDigit(peek(1)))) {
+            if (!isASCIIBinaryDigit(peek(1))) [[unlikely]] {
                 m_lexErrorMessage = "No binary digits after '0b'"_s;
                 token = UNTERMINATED_BINARY_NUMBER_ERRORTOK;
                 goto returnError;
@@ -2348,26 +2496,26 @@ start:
                 tokenData->radix = 2;
             }
 
-            if (LIKELY(cannotBeIdentStart(m_current))) {
-                if (LIKELY(token != BIGINT))
+            if (cannotBeIdentStart(m_current)) [[likely]] {
+                if (token != BIGINT) [[likely]]
                     token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
                 m_buffer8.shrink(0);
                 break;
             }
 
-            if (UNLIKELY(isIdentStart(currentCodePoint()))) {
+            if (isIdentStart(currentCodePoint())) [[unlikely]] {
                 m_lexErrorMessage = "No space between binary literal and identifier"_s;
                 token = UNTERMINATED_BINARY_NUMBER_ERRORTOK;
                 goto returnError;
             }
-            if (LIKELY(token != BIGINT))
+            if (token != BIGINT) [[likely]]
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             m_buffer8.shrink(0);
             break;
         }
 
         if (isASCIIAlphaCaselessEqual(m_current, 'o')) {
-            if (UNLIKELY(!isASCIIOctalDigit(peek(1)))) {
+            if (!isASCIIOctalDigit(peek(1))) [[unlikely]] {
                 m_lexErrorMessage = "No octal digits after '0o'"_s;
                 token = UNTERMINATED_OCTAL_NUMBER_ERRORTOK;
                 goto returnError;
@@ -2388,32 +2536,32 @@ start:
                 tokenData->radix = 8;
             }
 
-            if (LIKELY(cannotBeIdentStart(m_current))) {
-                if (LIKELY(token != BIGINT))
+            if (cannotBeIdentStart(m_current)) [[likely]] {
+                if (token != BIGINT) [[likely]]
                     token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
                 m_buffer8.shrink(0);
                 break;
             }
 
-            if (UNLIKELY(isIdentStart(currentCodePoint()))) {
+            if (isIdentStart(currentCodePoint())) [[unlikely]] {
                 m_lexErrorMessage = "No space between octal literal and identifier"_s;
                 token = UNTERMINATED_OCTAL_NUMBER_ERRORTOK;
                 goto returnError;
             }
-            if (LIKELY(token != BIGINT))
+            if (token != BIGINT) [[likely]]
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             m_buffer8.shrink(0);
             break;
         }
 
-        if (UNLIKELY(m_current == '_')) {
+        if (m_current == '_') [[unlikely]] {
             m_lexErrorMessage = "Numeric literals may not begin with 0_"_s;
             token = UNTERMINATED_OCTAL_NUMBER_ERRORTOK;
             goto returnError;
         }
 
         record8('0');
-        if (UNLIKELY(strictMode && isASCIIDigit(m_current))) {
+        if (strictMode && isASCIIDigit(m_current)) [[unlikely]] {
             m_lexErrorMessage = "Decimal integer literals with a leading zero are forbidden in strict mode"_s;
             token = UNTERMINATED_OCTAL_NUMBER_ERRORTOK;
             goto returnError;
@@ -2425,9 +2573,19 @@ start:
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             }
         }
-        FALLTHROUGH;
-    case CharacterNumber:
-        if (LIKELY(token != INTEGER && token != DOUBLE)) {
+        [[fallthrough]];
+    }
+
+    case  49 /* 49 = 1 CharacterNumber */:
+    case  50 /* 50 = 2 CharacterNumber */:
+    case  51 /* 51 = 3 CharacterNumber */:
+    case  52 /* 52 = 4 CharacterNumber */:
+    case  53 /* 53 = 5 CharacterNumber */:
+    case  54 /* 54 = 6 CharacterNumber */:
+    case  55 /* 55 = 7 CharacterNumber */:
+    case  56 /* 56 = 8 CharacterNumber */:
+    case  57 /* 57 = 9 CharacterNumber */: {
+        if (token != INTEGER && token != DOUBLE) [[likely]] {
             auto parseNumberResult = parseDecimal();
             if (parseNumberResult) {
                 if (std::holds_alternative<double>(*parseNumberResult)) {
@@ -2443,14 +2601,14 @@ start:
                 token = INTEGER;
                 if (m_current == '.') {
                     shift();
-                    if (UNLIKELY(isASCIIDigit(m_current) && !parseNumberAfterDecimalPoint())) {
+                    if (isASCIIDigit(m_current) && !parseNumberAfterDecimalPoint()) [[unlikely]] {
                         m_lexErrorMessage = "Non-number found after decimal point"_s;
                         token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
                         goto returnError;
                     }
                     token = DOUBLE;
                 }
-                if (UNLIKELY(isASCIIAlphaCaselessEqual(m_current, 'e') && !parseNumberAfterExponentIndicator())) {
+                if (isASCIIAlphaCaselessEqual(m_current, 'e') && !parseNumberAfterExponentIndicator()) [[unlikely]] {
                     m_lexErrorMessage = "Non-number found after exponent indicator"_s;
                     token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
                     goto returnError;
@@ -2462,61 +2620,214 @@ start:
             }
         }
 
-        if (LIKELY(cannotBeIdentStart(m_current))) {
+        if (cannotBeIdentStart(m_current)) [[likely]] {
             m_buffer8.shrink(0);
             break;
         }
 
-        if (UNLIKELY(isIdentStart(currentCodePoint()))) {
+        if (isIdentStart(currentCodePoint())) [[unlikely]] {
             m_lexErrorMessage = "No identifiers allowed directly after numeric literal"_s;
             token = atEnd() ? UNTERMINATED_NUMERIC_LITERAL_ERRORTOK : INVALID_NUMERIC_LITERAL_ERRORTOK;
             goto returnError;
         }
         m_buffer8.shrink(0);
         break;
-    case CharacterQuote: {
-        auto startLineNumber = m_lineNumber;
-        auto startLineStartOffset = currentLineStartOffset();
+    }
+
+    case  34 /* 34 = " CharacterQuote */:
+    case  39 /* 39 = ' CharacterQuote */: {
         StringParseResult result = StringCannotBeParsed;
         if (lexerFlags.contains(LexerFlags::DontBuildStrings))
             result = parseString<false>(tokenData, strictMode);
         else
             result = parseString<true>(tokenData, strictMode);
 
-        if (UNLIKELY(result != StringParsedSuccessfully)) {
+        if (result != StringParsedSuccessfully) [[unlikely]] {
             token = result == StringUnterminated ? UNTERMINATED_STRING_LITERAL_ERRORTOK : INVALID_STRING_LITERAL_ERRORTOK;
             m_error = true;
-            fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+            fillTokenInfo(tokenRecord, token, currentPosition());
             return token;
         }
         shift();
         token = STRING;
         m_atLineStart = false;
-        fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+        fillTokenInfo(tokenRecord, token, currentPosition());
         return token;
     }
-    case CharacterIdentifierStart: {
+
+    case  36 /*  36 = $           CharacterLatin1IdentifierStart */:
+    case  65 /*  65 = A           CharacterLatin1IdentifierStart */:
+    case  66 /*  66 = B           CharacterLatin1IdentifierStart */:
+    case  67 /*  67 = C           CharacterLatin1IdentifierStart */:
+    case  68 /*  68 = D           CharacterLatin1IdentifierStart */:
+    case  69 /*  69 = E           CharacterLatin1IdentifierStart */:
+    case  70 /*  70 = F           CharacterLatin1IdentifierStart */:
+    case  71 /*  71 = G           CharacterLatin1IdentifierStart */:
+    case  72 /*  72 = H           CharacterLatin1IdentifierStart */:
+    case  73 /*  73 = I           CharacterLatin1IdentifierStart */:
+    case  74 /*  74 = J           CharacterLatin1IdentifierStart */:
+    case  75 /*  75 = K           CharacterLatin1IdentifierStart */:
+    case  76 /*  76 = L           CharacterLatin1IdentifierStart */:
+    case  77 /*  77 = M           CharacterLatin1IdentifierStart */:
+    case  78 /*  78 = N           CharacterLatin1IdentifierStart */:
+    case  79 /*  79 = O           CharacterLatin1IdentifierStart */:
+    case  80 /*  80 = P           CharacterLatin1IdentifierStart */:
+    case  81 /*  81 = Q           CharacterLatin1IdentifierStart */:
+    case  82 /*  82 = R           CharacterLatin1IdentifierStart */:
+    case  83 /*  83 = S           CharacterLatin1IdentifierStart */:
+    case  84 /*  84 = T           CharacterLatin1IdentifierStart */:
+    case  85 /*  85 = U           CharacterLatin1IdentifierStart */:
+    case  86 /*  86 = V           CharacterLatin1IdentifierStart */:
+    case  87 /*  87 = W           CharacterLatin1IdentifierStart */:
+    case  88 /*  88 = X           CharacterLatin1IdentifierStart */:
+    case  89 /*  89 = Y           CharacterLatin1IdentifierStart */:
+    case  90 /*  90 = Z           CharacterLatin1IdentifierStart */:
+    case  95 /*  95 = _           CharacterLatin1IdentifierStart */:
+    case  97 /*  97 = a           CharacterLatin1IdentifierStart */:
+    case  98 /*  98 = b           CharacterLatin1IdentifierStart */:
+    case  99 /*  99 = c           CharacterLatin1IdentifierStart */:
+    case 100 /* 100 = d           CharacterLatin1IdentifierStart */:
+    case 101 /* 101 = e           CharacterLatin1IdentifierStart */:
+    case 102 /* 102 = f           CharacterLatin1IdentifierStart */:
+    case 103 /* 103 = g           CharacterLatin1IdentifierStart */:
+    case 104 /* 104 = h           CharacterLatin1IdentifierStart */:
+    case 105 /* 105 = i           CharacterLatin1IdentifierStart */:
+    case 106 /* 106 = j           CharacterLatin1IdentifierStart */:
+    case 107 /* 107 = k           CharacterLatin1IdentifierStart */:
+    case 108 /* 108 = l           CharacterLatin1IdentifierStart */:
+    case 109 /* 109 = m           CharacterLatin1IdentifierStart */:
+    case 110 /* 110 = n           CharacterLatin1IdentifierStart */:
+    case 111 /* 111 = o           CharacterLatin1IdentifierStart */:
+    case 112 /* 112 = p           CharacterLatin1IdentifierStart */:
+    case 113 /* 113 = q           CharacterLatin1IdentifierStart */:
+    case 114 /* 114 = r           CharacterLatin1IdentifierStart */:
+    case 115 /* 115 = s           CharacterLatin1IdentifierStart */:
+    case 116 /* 116 = t           CharacterLatin1IdentifierStart */:
+    case 117 /* 117 = u           CharacterLatin1IdentifierStart */:
+    case 118 /* 118 = v           CharacterLatin1IdentifierStart */:
+    case 119 /* 119 = w           CharacterLatin1IdentifierStart */:
+    case 120 /* 120 = x           CharacterLatin1IdentifierStart */:
+    case 121 /* 121 = y           CharacterLatin1IdentifierStart */:
+    case 122 /* 122 = z           CharacterLatin1IdentifierStart */:
+    case 170 /* 170 = Ll category CharacterLatin1IdentifierStart */:
+    case 181 /* 181 = Ll category CharacterLatin1IdentifierStart */:
+    case 186 /* 186 = Ll category CharacterLatin1IdentifierStart */:
+    case 192 /* 192 = Lu category CharacterLatin1IdentifierStart */:
+    case 193 /* 193 = Lu category CharacterLatin1IdentifierStart */:
+    case 194 /* 194 = Lu category CharacterLatin1IdentifierStart */:
+    case 195 /* 195 = Lu category CharacterLatin1IdentifierStart */:
+    case 196 /* 196 = Lu category CharacterLatin1IdentifierStart */:
+    case 197 /* 197 = Lu category CharacterLatin1IdentifierStart */:
+    case 198 /* 198 = Lu category CharacterLatin1IdentifierStart */:
+    case 199 /* 199 = Lu category CharacterLatin1IdentifierStart */:
+    case 200 /* 200 = Lu category CharacterLatin1IdentifierStart */:
+    case 201 /* 201 = Lu category CharacterLatin1IdentifierStart */:
+    case 202 /* 202 = Lu category CharacterLatin1IdentifierStart */:
+    case 203 /* 203 = Lu category CharacterLatin1IdentifierStart */:
+    case 204 /* 204 = Lu category CharacterLatin1IdentifierStart */:
+    case 205 /* 205 = Lu category CharacterLatin1IdentifierStart */:
+    case 206 /* 206 = Lu category CharacterLatin1IdentifierStart */:
+    case 207 /* 207 = Lu category CharacterLatin1IdentifierStart */:
+    case 208 /* 208 = Lu category CharacterLatin1IdentifierStart */:
+    case 209 /* 209 = Lu category CharacterLatin1IdentifierStart */:
+    case 210 /* 210 = Lu category CharacterLatin1IdentifierStart */:
+    case 211 /* 211 = Lu category CharacterLatin1IdentifierStart */:
+    case 212 /* 212 = Lu category CharacterLatin1IdentifierStart */:
+    case 213 /* 213 = Lu category CharacterLatin1IdentifierStart */:
+    case 214 /* 214 = Lu category CharacterLatin1IdentifierStart */:
+    case 216 /* 216 = Lu category CharacterLatin1IdentifierStart */:
+    case 217 /* 217 = Lu category CharacterLatin1IdentifierStart */:
+    case 218 /* 218 = Lu category CharacterLatin1IdentifierStart */:
+    case 219 /* 219 = Lu category CharacterLatin1IdentifierStart */:
+    case 220 /* 220 = Lu category CharacterLatin1IdentifierStart */:
+    case 221 /* 221 = Lu category CharacterLatin1IdentifierStart */:
+    case 222 /* 222 = Lu category CharacterLatin1IdentifierStart */:
+    case 223 /* 223 = Ll category CharacterLatin1IdentifierStart */:
+    case 224 /* 224 = Ll category CharacterLatin1IdentifierStart */:
+    case 225 /* 225 = Ll category CharacterLatin1IdentifierStart */:
+    case 226 /* 226 = Ll category CharacterLatin1IdentifierStart */:
+    case 227 /* 227 = Ll category CharacterLatin1IdentifierStart */:
+    case 228 /* 228 = Ll category CharacterLatin1IdentifierStart */:
+    case 229 /* 229 = Ll category CharacterLatin1IdentifierStart */:
+    case 230 /* 230 = Ll category CharacterLatin1IdentifierStart */:
+    case 231 /* 231 = Ll category CharacterLatin1IdentifierStart */:
+    case 232 /* 232 = Ll category CharacterLatin1IdentifierStart */:
+    case 233 /* 233 = Ll category CharacterLatin1IdentifierStart */:
+    case 234 /* 234 = Ll category CharacterLatin1IdentifierStart */:
+    case 235 /* 235 = Ll category CharacterLatin1IdentifierStart */:
+    case 236 /* 236 = Ll category CharacterLatin1IdentifierStart */:
+    case 237 /* 237 = Ll category CharacterLatin1IdentifierStart */:
+    case 238 /* 238 = Ll category CharacterLatin1IdentifierStart */:
+    case 239 /* 239 = Ll category CharacterLatin1IdentifierStart */:
+    case 240 /* 240 = Ll category CharacterLatin1IdentifierStart */:
+    case 241 /* 241 = Ll category CharacterLatin1IdentifierStart */:
+    case 242 /* 242 = Ll category CharacterLatin1IdentifierStart */:
+    case 243 /* 243 = Ll category CharacterLatin1IdentifierStart */:
+    case 244 /* 244 = Ll category CharacterLatin1IdentifierStart */:
+    case 245 /* 245 = Ll category CharacterLatin1IdentifierStart */:
+    case 246 /* 246 = Ll category CharacterLatin1IdentifierStart */:
+    case 248 /* 248 = Ll category CharacterLatin1IdentifierStart */:
+    case 249 /* 249 = Ll category CharacterLatin1IdentifierStart */:
+    case 250 /* 250 = Ll category CharacterLatin1IdentifierStart */:
+    case 251 /* 251 = Ll category CharacterLatin1IdentifierStart */:
+    case 252 /* 252 = Ll category CharacterLatin1IdentifierStart */:
+    case 253 /* 253 = Ll category CharacterLatin1IdentifierStart */:
+    case 254 /* 254 = Ll category CharacterLatin1IdentifierStart */:
+    case 255 /* 255 = Ll category CharacterLatin1IdentifierStart */: {
+        // We observe one character identifier very frequently because real world web pages are shipping minified JavaScript.
+        // This path handles it in a fast path.
+        auto nextCharacter = peek(1);
+        if (isLatin1(nextCharacter)) [[likely]] {
+            // This quickly detects the character is not a part of identifier-part *and* back-slash.
+            if (typesOfLatin1Characters[static_cast<Latin1Character>(nextCharacter)] > CharacterBackSlash) {
+                const auto character = m_current;
+                shift();
+                if (lexerFlags.contains(LexerFlags::DontBuildKeywords))
+                    tokenData->ident = nullptr;
+                else
+                    tokenData->ident = makeIdentifier(std::span { &character, 1 });
+                token = IDENT;
+                break;
+            }
+        }
+        [[fallthrough]];
+    }
+
+    // They are not used for whitespaces, but we are hijacking this for non-latin1 identifiers.
+    // When we are dispatching this switch, we will never see these characters since we already skipped them before reaching here.
+    // So it is safe to use these characters for the different purpose.
+    case   9 /*   9 = Horizontal Tab     CharacterWhiteSpace */:
+    case  11 /*  11 = Vertical Tab       CharacterWhiteSpace */:
+    case  12 /*  12 = Form Feed          CharacterWhiteSpace */:
+    case  32 /*  32 = Space              CharacterWhiteSpace */:
+    case 160 /* 160 = Zs category (nbsp) CharacterWhiteSpace */: {
         if constexpr (ASSERT_ENABLED) {
             char32_t codePoint;
             U16_GET(m_code, 0, 0, m_codeEnd - m_code, codePoint);
             ASSERT(isIdentStart(codePoint));
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
-    case CharacterBackSlash:
+
+    case  92 /* 92 = \ CharacterBackSlash */: {
         parseIdent:
         if (lexerFlags.contains(LexerFlags::DontBuildKeywords))
             token = parseIdentifier<false>(tokenData, lexerFlags, strictMode);
         else
             token = parseIdentifier<true>(tokenData, lexerFlags, strictMode);
         break;
-    case CharacterLineTerminator:
+    }
+
+    case  10 /* 10 = Line Feed       CharacterLineTerminator */:
+    case  13 /* 13 = Carriage Return CharacterLineTerminator */: {
         ASSERT(isLineTerminator(m_current));
         shiftLineTerminator();
         m_atLineStart = true;
         m_hasLineTerminatorBeforeToken = true;
         goto start;
-    case CharacterHash: {
+    }
+
+    case  35 /* 35 = # CharacterHash */: {
         // Hashbang is only permitted at the start of the source text.
         auto next = peek(1);
         if (next == '!' && !currentOffset()) {
@@ -2526,8 +2837,8 @@ start:
         }
 
         bool isValidPrivateName;
-        if (LIKELY(isLatin1(next)))
-            isValidPrivateName = typesOfLatin1Characters[static_cast<LChar>(next)] == CharacterIdentifierStart || next == '\\';
+        if (isLatin1(next)) [[likely]]
+            isValidPrivateName = typesOfLatin1Characters[static_cast<Latin1Character>(next)] == CharacterLatin1IdentifierStart || next == '\\';
         else {
             ASSERT(m_code + 1 < m_codeEnd);
             char32_t codePoint;
@@ -2541,18 +2852,105 @@ start:
         }
         goto invalidCharacter;
     }
-    case CharacterPrivateIdentifierStart:
+
+    case  64 /* 64 = @ CharacterPrivateIdentifierStart */: {
         if (m_parsingBuiltinFunction)
             goto parseIdent;
         goto invalidCharacter;
-    case CharacterOtherIdentifierPart:
-    case CharacterInvalid:
+    }
+
+    case 183 /* 183 = Po category      CharacterOtherIdentifierPart */:
+    case   0 /*   0 = Null             CharacterInvalid */:
+    case   1 /*   1 = Start of Heading CharacterInvalid */:
+    case   2 /*   2 = Start of Text    CharacterInvalid */:
+    case   3 /*   3 = End of Text      CharacterInvalid */:
+    case   4 /*   4 = End of Transm.   CharacterInvalid */:
+    case   5 /*   5 = Enquiry          CharacterInvalid */:
+    case   6 /*   6 = Acknowledgment   CharacterInvalid */:
+    case   7 /*   7 = Bell             CharacterInvalid */:
+    case   8 /*   8 = Back Space       CharacterInvalid */:
+    case  14 /*  14 = Shift Out        CharacterInvalid */:
+    case  15 /*  15 = Shift In         CharacterInvalid */:
+    case  16 /*  16 = Data Line Escape CharacterInvalid */:
+    case  17 /*  17 = Device Control 1 CharacterInvalid */:
+    case  18 /*  18 = Device Control 2 CharacterInvalid */:
+    case  19 /*  19 = Device Control 3 CharacterInvalid */:
+    case  20 /*  20 = Device Control 4 CharacterInvalid */:
+    case  21 /*  21 = Negative Ack.    CharacterInvalid */:
+    case  22 /*  22 = Synchronous Idle CharacterInvalid */:
+    case  23 /*  23 = End of Transmit  CharacterInvalid */:
+    case  24 /*  24 = Cancel           CharacterInvalid */:
+    case  25 /*  25 = End of Medium    CharacterInvalid */:
+    case  26 /*  26 = Substitute       CharacterInvalid */:
+    case  27 /*  27 = Escape           CharacterInvalid */:
+    case  28 /*  28 = File Separator   CharacterInvalid */:
+    case  29 /*  29 = Group Separator  CharacterInvalid */:
+    case  30 /*  30 = Record Separator CharacterInvalid */:
+    case  31 /*  31 = Unit Separator   CharacterInvalid */:
+    case 127 /* 127 = Delete           CharacterInvalid */:
+    case 128 /* 128 = Cc category      CharacterInvalid */:
+    case 129 /* 129 = Cc category      CharacterInvalid */:
+    case 130 /* 130 = Cc category      CharacterInvalid */:
+    case 131 /* 131 = Cc category      CharacterInvalid */:
+    case 132 /* 132 = Cc category      CharacterInvalid */:
+    case 133 /* 133 = Cc category      CharacterInvalid */:
+    case 134 /* 134 = Cc category      CharacterInvalid */:
+    case 135 /* 135 = Cc category      CharacterInvalid */:
+    case 136 /* 136 = Cc category      CharacterInvalid */:
+    case 137 /* 137 = Cc category      CharacterInvalid */:
+    case 138 /* 138 = Cc category      CharacterInvalid */:
+    case 139 /* 139 = Cc category      CharacterInvalid */:
+    case 140 /* 140 = Cc category      CharacterInvalid */:
+    case 141 /* 141 = Cc category      CharacterInvalid */:
+    case 142 /* 142 = Cc category      CharacterInvalid */:
+    case 143 /* 143 = Cc category      CharacterInvalid */:
+    case 144 /* 144 = Cc category      CharacterInvalid */:
+    case 145 /* 145 = Cc category      CharacterInvalid */:
+    case 146 /* 146 = Cc category      CharacterInvalid */:
+    case 147 /* 147 = Cc category      CharacterInvalid */:
+    case 148 /* 148 = Cc category      CharacterInvalid */:
+    case 149 /* 149 = Cc category      CharacterInvalid */:
+    case 150 /* 150 = Cc category      CharacterInvalid */:
+    case 151 /* 151 = Cc category      CharacterInvalid */:
+    case 152 /* 152 = Cc category      CharacterInvalid */:
+    case 153 /* 153 = Cc category      CharacterInvalid */:
+    case 154 /* 154 = Cc category      CharacterInvalid */:
+    case 155 /* 155 = Cc category      CharacterInvalid */:
+    case 156 /* 156 = Cc category      CharacterInvalid */:
+    case 157 /* 157 = Cc category      CharacterInvalid */:
+    case 158 /* 158 = Cc category      CharacterInvalid */:
+    case 159 /* 159 = Cc category      CharacterInvalid */:
+    case 161 /* 161 = Po category      CharacterInvalid */:
+    case 162 /* 162 = Sc category      CharacterInvalid */:
+    case 163 /* 163 = Sc category      CharacterInvalid */:
+    case 164 /* 164 = Sc category      CharacterInvalid */:
+    case 165 /* 165 = Sc category      CharacterInvalid */:
+    case 166 /* 166 = So category      CharacterInvalid */:
+    case 167 /* 167 = So category      CharacterInvalid */:
+    case 168 /* 168 = Sk category      CharacterInvalid */:
+    case 169 /* 169 = So category      CharacterInvalid */:
+    case 171 /* 171 = Pi category      CharacterInvalid */:
+    case 172 /* 172 = Sm category      CharacterInvalid */:
+    case 173 /* 173 = Cf category      CharacterInvalid */:
+    case 174 /* 174 = So category      CharacterInvalid */:
+    case 175 /* 175 = Sk category      CharacterInvalid */:
+    case 176 /* 176 = So category      CharacterInvalid */:
+    case 177 /* 177 = Sm category      CharacterInvalid */:
+    case 178 /* 178 = No category      CharacterInvalid */:
+    case 179 /* 179 = No category      CharacterInvalid */:
+    case 180 /* 180 = Sk category      CharacterInvalid */:
+    case 182 /* 182 = So category      CharacterInvalid */:
+    case 184 /* 184 = Sk category      CharacterInvalid */:
+    case 185 /* 185 = No category      CharacterInvalid */:
+    case 187 /* 187 = Pf category      CharacterInvalid */:
+    case 188 /* 188 = No category      CharacterInvalid */:
+    case 189 /* 189 = No category      CharacterInvalid */:
+    case 190 /* 190 = No category      CharacterInvalid */:
+    case 191 /* 191 = Po category      CharacterInvalid */:
+    case 215 /* 215 = Sm category      CharacterInvalid */:
+    case 247 /* 247 = Sm category      CharacterInvalid */: {
         goto invalidCharacter;
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-        m_lexErrorMessage = "Internal Error"_s;
-        token = ERRORTOK;
-        goto returnError;
+    }
     }
 
     m_atLineStart = false;
@@ -2560,7 +2958,7 @@ start:
 
 inSingleLineCommentCheckForDirectives:
     // Script comment directives like "//# sourceURL=test.js".
-    if (UNLIKELY((m_current == '#' || m_current == '@') && isWhiteSpace(peek(1)))) {
+    if ((m_current == '#' || m_current == '@') && isWhiteSpace(peek(1))) [[unlikely]] {
         shift();
         shift();
         parseCommentDirective();
@@ -2569,19 +2967,40 @@ inSingleLineCommentCheckForDirectives:
 
 inSingleLineComment:
     {
-        auto lineNumber = m_lineNumber;
-        auto endOffset = currentOffset();
-        auto lineStartOffset = currentLineStartOffset();
         auto endPosition = currentPosition();
 
-        while (!isLineTerminator(m_current)) {
-            if (atEnd()) {
+        using UnsignedType = SameSizeUnsignedInteger<T>;
+        constexpr auto lineFeedMask = SIMD::splat<UnsignedType>('\n');
+        constexpr auto carriageReturnMask = SIMD::splat<UnsignedType>('\r');
+        constexpr auto u2028Mask = SIMD::splat<UnsignedType>(static_cast<UnsignedType>(0x2028));
+        constexpr auto u2029Mask = SIMD::splat<UnsignedType>(static_cast<UnsignedType>(0x2029));
+        auto vectorMatch = [&](auto input) ALWAYS_INLINE_LAMBDA {
+            auto lineFeed = SIMD::equal(input, lineFeedMask);
+            auto carriageReturn = SIMD::equal(input, carriageReturnMask);
+            if constexpr (std::is_same_v<T, Latin1Character>) {
+                auto mask = SIMD::bitOr(lineFeed, carriageReturn);
+                return SIMD::findFirstNonZeroIndex(mask);
+            } else {
+                auto u2028 = SIMD::equal(input, u2028Mask);
+                auto u2029 = SIMD::equal(input, u2029Mask);
+                auto mask = SIMD::bitOr(lineFeed, carriageReturn, u2028, u2029);
+                return SIMD::findFirstNonZeroIndex(mask);
+            }
+        };
+
+        auto scalarMatch = [&](auto character) ALWAYS_INLINE_LAMBDA {
+            return isLineTerminator(character);
+        };
+
+        m_code = SIMD::find(std::span { currentSourcePtr(), m_codeEnd }, vectorMatch, scalarMatch);
+        if (m_code == m_codeEnd) {
+            m_current = 0;
                 token = EOFTOK;
-                fillTokenInfo(tokenRecord, token, lineNumber, endOffset, lineStartOffset, endPosition);
+            fillTokenInfo(tokenRecord, token, endPosition);
                 return token;
             }
-            shift();
-        }
+
+        m_current = *m_code;
         shiftLineTerminator();
         m_atLineStart = true;
         m_hasLineTerminatorBeforeToken = true;
@@ -2589,12 +3008,12 @@ inSingleLineComment:
             goto start;
 
         token = SEMICOLON;
-        fillTokenInfo(tokenRecord, token, lineNumber, endOffset, lineStartOffset, endPosition);
+        fillTokenInfo(tokenRecord, token, endPosition);
         return token;
     }
 
 returnToken:
-    fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+    fillTokenInfo(tokenRecord, token, currentPosition());
     return token;
 
 invalidCharacter:
@@ -2604,32 +3023,32 @@ invalidCharacter:
 
 returnError:
     m_error = true;
-    fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+    fillTokenInfo(tokenRecord, token, currentPosition());
     RELEASE_ASSERT(token & CanBeErrorTokenFlag);
     return token;
 }
 
 template <typename T>
-static inline void orCharacter(UChar&, UChar);
+static inline void orCharacter(char16_t&, char16_t);
 
 template <>
-inline void orCharacter<LChar>(UChar&, UChar) { }
+inline void orCharacter<Latin1Character>(char16_t&, char16_t) { }
 
 template <>
-inline void orCharacter<UChar>(UChar& orAccumulator, UChar character)
+inline void orCharacter<char16_t>(char16_t& orAccumulator, char16_t character)
 {
     orAccumulator |= character;
 }
 
 template <typename T>
-JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
+JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, char16_t patternPrefix)
 {
     JSTokenData* tokenData = &tokenRecord->m_data;
     ASSERT(m_buffer16.isEmpty());
 
     bool lastWasEscape = false;
     bool inBrackets = false;
-    UChar charactersOredTogether = 0;
+    char16_t charactersOredTogether = 0;
 
     if (patternPrefix) {
         ASSERT(!isLineTerminator(patternPrefix));
@@ -2642,7 +3061,7 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
         if (isLineTerminator(m_current) || atEnd()) {
             m_buffer16.shrink(0);
             JSTokenType token = UNTERMINATED_REGEXP_LITERAL_ERRORTOK;
-            fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+            fillTokenInfo(tokenRecord, token, currentPosition());
             m_error = true;
             m_lexErrorMessage = makeString("Unterminated regular expression literal '"_s, getToken(*tokenRecord), '\'');
             return token;
@@ -2680,16 +3099,18 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
     m_buffer16.shrink(0);
 
     ASSERT(m_buffer8.isEmpty());
-    while (LIKELY(isLatin1(m_current)) && isIdentPart(static_cast<LChar>(m_current))) {
-        record8(static_cast<LChar>(m_current));
+    while (isLatin1(m_current)) [[likely]] {
+        if (!isIdentPart(static_cast<Latin1Character>(m_current)))
+            break;
+        record8(static_cast<Latin1Character>(m_current));
         shift();
     }
 
     // Normally this would not be a lex error but dealing with surrogate pairs here is annoying and it's going to be an error anyway...
-    if (UNLIKELY(!isLatin1(m_current) && !isWhiteSpace(m_current) && !isLineTerminator(m_current))) {
+    if (!isLatin1(m_current) && !isWhiteSpace(m_current) && !isLineTerminator(m_current)) [[unlikely]] {
         m_buffer8.shrink(0);
         JSTokenType token = INVALID_IDENTIFIER_UNICODE_ERRORTOK;
-        fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+        fillTokenInfo(tokenRecord, token, currentPosition());
         m_error = true;
         String codePoint = String::fromCodePoint(currentCodePoint());
         if (!codePoint)
@@ -2705,7 +3126,7 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
     m_atLineStart = false;
 
     JSTokenType token = REGEXP;
-    fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+    fillTokenInfo(tokenRecord, token, currentPosition());
     return token;
 }
 
@@ -2716,14 +3137,11 @@ JSTokenType Lexer<T>::scanTemplateString(JSToken* tokenRecord, RawStringsBuildMo
     ASSERT(!m_error);
     ASSERT(m_buffer16.isEmpty());
 
-    int startingLineStartOffset = currentLineStartOffset();
-    int startingLineNumber = lineNumber();
-
     // Leading backquote ` (for template head) or closing brace } (for template trailing) are already shifted in the previous token scan.
     // So in this re-scan phase, shift() is not needed here.
     StringParseResult result = parseTemplateLiteral(tokenData, rawStringsBuildMode);
     JSTokenType token = ERRORTOK;
-    if (UNLIKELY(result != StringParsedSuccessfully)) {
+    if (result != StringParsedSuccessfully) [[unlikely]] {
         token = result == StringUnterminated ? UNTERMINATED_TEMPLATE_LITERAL_ERRORTOK : INVALID_TEMPLATE_LITERAL_ERRORTOK;
         m_error = true;
     } else
@@ -2731,7 +3149,7 @@ JSTokenType Lexer<T>::scanTemplateString(JSToken* tokenRecord, RawStringsBuildMo
 
     // Since TemplateString always ends with ` or }, m_atLineStart always becomes false.
     m_atLineStart = false;
-    fillTokenInfo(tokenRecord, token, startingLineNumber, currentOffset(), startingLineStartOffset, currentPosition());
+    fillTokenInfo(tokenRecord, token, currentPosition());
     return token;
 }
 
@@ -2740,21 +3158,21 @@ void Lexer<T>::clear()
 {
     m_arena = nullptr;
 
-    Vector<LChar> newBuffer8;
+    Vector<Latin1Character> newBuffer8;
     m_buffer8.swap(newBuffer8);
 
-    Vector<UChar> newBuffer16;
+    Vector<char16_t> newBuffer16;
     m_buffer16.swap(newBuffer16);
 
-    Vector<UChar> newBufferForRawTemplateString16;
+    Vector<char16_t> newBufferForRawTemplateString16;
     m_bufferForRawTemplateString16.swap(newBufferForRawTemplateString16);
 
     m_isReparsingFunction = false;
 }
 
 // Instantiate the two flavors of Lexer we need instead of putting most of this file in Lexer.h
-template class Lexer<LChar>;
-template class Lexer<UChar>;
+template class Lexer<Latin1Character>;
+template class Lexer<char16_t>;
 
 } // namespace JSC
 

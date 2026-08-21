@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #include "WaveShaperProcessor.h"
 
 #include "WaveShaperDSPKernel.h"
-#include <JavaScriptCore/Float32Array.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -52,13 +51,13 @@ std::unique_ptr<AudioDSPKernel> WaveShaperProcessor::createKernel()
     return makeUnique<WaveShaperDSPKernel>(this);
 }
 
-void WaveShaperProcessor::setCurveForBindings(Float32Array* curve)
+void WaveShaperProcessor::setCurveForBindings(Vector<float>&& curve)
 {
     ASSERT(isMainThread());
     // This synchronizes with process().
     Locker locker { m_processLock };
 
-    m_curve = curve;
+    m_curve = WTF::move(curve);
 }
 
 void WaveShaperProcessor::setOversampleForBindings(OverSampleType oversample)
@@ -73,17 +72,17 @@ void WaveShaperProcessor::setOversampleForBindings(OverSampleType oversample)
         return;
 
     for (auto& audioDSPKernel : m_kernels)
-        static_cast<WaveShaperDSPKernel&>(*audioDSPKernel).lazyInitializeOversampling();
+        downcast<WaveShaperDSPKernel>(*audioDSPKernel).lazyInitializeOversampling();
 }
 
-void WaveShaperProcessor::process(const AudioBus* source, AudioBus* destination, size_t framesToProcess)
+void WaveShaperProcessor::process(const AudioBus& source, AudioBus& destination, size_t framesToProcess)
 {
     if (!isInitialized()) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
-    bool channelCountMatches = source->numberOfChannels() == destination->numberOfChannels() && source->numberOfChannels() == m_kernels.size();
+    bool channelCountMatches = source.numberOfChannels() == destination.numberOfChannels() && source.numberOfChannels() == m_kernels.size();
     ASSERT(channelCountMatches);
     if (!channelCountMatches)
         return;
@@ -91,14 +90,14 @@ void WaveShaperProcessor::process(const AudioBus* source, AudioBus* destination,
     // The audio thread can't block on this lock, so we use tryLock() instead.
     if (!m_processLock.tryLock()) {
         // Too bad - tryLock() failed. We must be in the middle of a setCurve() call.
-        destination->zero();
+        destination.zero();
         return;
     }
     Locker locker { AdoptLock, m_processLock };
 
     // For each channel of our input, process using the corresponding WaveShaperDSPKernel into the output channel.
     for (size_t i = 0; i < m_kernels.size(); ++i)
-        static_cast<WaveShaperDSPKernel&>(*m_kernels[i]).process(source->channel(i)->span().first(framesToProcess), destination->channel(i)->mutableSpan());
+        downcast<WaveShaperDSPKernel>(*m_kernels[i]).process(source.channel(i)->span().first(framesToProcess), destination.channel(i)->mutableSpan());
 }
 
 } // namespace WebCore

@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "DisplayListItems.h"
-#include "DisplayListResourceHeap.h"
+#include <WebCore/DisplayListItems.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,35 +40,34 @@ class TextStream;
 namespace WebCore {
 namespace DisplayList {
 
-class DisplayList {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DisplayList, WEBCORE_EXPORT);
+// Note: currently this class is not usable from multiple threads due to the underlying objects, such
+// Font instances, not being thread-safe.
+class DisplayList final : public ThreadSafeRefCounted<DisplayList>, public CanMakeThreadSafeCheckedPtr<DisplayList> {
+    WTF_MAKE_TZONE_ALLOCATED(DisplayList);
     WTF_MAKE_NONCOPYABLE(DisplayList);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DisplayList);
 public:
-    DisplayList() = default;
+    static Ref<const DisplayList> create(Vector<Item>&& items)
+    {
+        return adoptRef(*new DisplayList(WTF::move(items)));
+    }
+    WEBCORE_EXPORT ~DisplayList();
 
-    WEBCORE_EXPORT void append(Item&&);
-    void shrinkToFit();
-
-    WEBCORE_EXPORT void clear();
-    WEBCORE_EXPORT bool isEmpty() const;
-
-    const Vector<Item>& items() const { return m_items; }
-    Vector<Item>& items() { return m_items; }
-    const ResourceHeap& resourceHeap() const { return m_resourceHeap; }
-
-    void cacheImageBuffer(ImageBuffer&);
-    void cacheNativeImage(NativeImage&);
-    void cacheFont(Font&);
-    void cacheDecomposedGlyphs(DecomposedGlyphs&);
-    void cacheGradient(Gradient&);
-    void cacheFilter(Filter&);
+    std::span<const Item> items() const LIFETIME_BOUND { return m_items.span(); }
 
     WEBCORE_EXPORT String asText(OptionSet<AsTextFlag>) const;
     void dump(WTF::TextStream&) const;
 
+    void addObserver(WeakRef<RenderingResourceObserver>&& observer) const
+    {
+        m_observers.add(WTF::move(observer));
+    }
+
 private:
+    WEBCORE_EXPORT DisplayList(Vector<Item>&& items);
+
     Vector<Item> m_items;
-    ResourceHeap m_resourceHeap;
+    mutable WeakHashSet<RenderingResourceObserver> m_observers;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);

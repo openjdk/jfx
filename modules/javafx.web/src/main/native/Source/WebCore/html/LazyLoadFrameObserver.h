@@ -45,6 +45,8 @@ public:
     AtomString frameURL() const { return m_frameURL; }
     ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
 
+    void update(const AtomString& frameURL, const ReferrerPolicy&);
+
 private:
     IntersectionObserver* intersectionObserver(Document&);
     bool isObserved(Element&) const;

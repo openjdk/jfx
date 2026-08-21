@@ -40,11 +40,11 @@ std::unique_ptr<RTCRtpTransform> RTCRtpTransform::from(std::optional<Internal>&&
 {
     if (!internal)
         return nullptr;
-    return makeUnique<RTCRtpTransform>(WTFMove(*internal));
+    return makeUnique<RTCRtpTransform>(WTF::move(*internal));
 }
 
 RTCRtpTransform::RTCRtpTransform(Internal&& transform)
-    : m_transform(WTFMove(transform))
+    : m_transform(WTF::move(transform))
 {
 }
 
@@ -87,7 +87,7 @@ void RTCRtpTransform::attachToSender(RTCRtpSender& sender, RTCRtpTransform* prev
 
     if (previousTransform)
         m_backend = previousTransform->takeBackend();
-    else if (auto* backend = sender.backend())
+    else if (RefPtr backend = sender.backend())
         m_backend = backend->rtcRtpTransformBackend();
 
     if (!m_backend)

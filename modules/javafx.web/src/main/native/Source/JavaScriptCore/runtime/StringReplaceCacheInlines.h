@@ -53,7 +53,7 @@ inline StringReplaceCache::Entry* StringReplaceCache::get(const String& subject,
     return nullptr;
 }
 
-inline void StringReplaceCache::set(const String& subject, RegExp* regExp, JSImmutableButterfly* result, MatchResult matchResult, const Vector<int>& lastMatch)
+inline void StringReplaceCache::set(const String& subject, RegExp* regExp, JSCellButterfly* result, MatchResult matchResult, const Vector<int>& lastMatch)
 {
     AssertNoGC assertNoGC;
     if (!subject.impl() || !subject.impl()->isAtom())
@@ -88,16 +88,5 @@ inline void StringReplaceCache::set(const String& subject, RegExp* regExp, JSImm
         }
     }
 }
-
-template<typename Visitor>
-inline void StringReplaceCache::visitAggregateImpl(Visitor& visitor)
-{
-    for (auto& entry : m_entries) {
-        visitor.appendUnbarriered(entry.m_regExp);
-        visitor.appendUnbarriered(entry.m_result);
-    }
-}
-
-DEFINE_VISIT_AGGREGATE(StringReplaceCache);
 
 } // namespace JSC

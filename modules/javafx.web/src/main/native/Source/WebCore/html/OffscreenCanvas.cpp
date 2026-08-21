@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,13 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "BitmapImage.h"
-#include "CSSParserContext.h"
 #include "CSSValuePool.h"
 #include "CanvasRenderingContext.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Chrome.h"
 #include "Document.h"
 #include "EventDispatcher.h"
+#include "EventNames.h"
 #include "GPU.h"
 #include "GPUCanvasContext.h"
 #include "HTMLCanvasElement.h"
@@ -47,7 +48,7 @@
 #include "OffscreenCanvasRenderingContext2D.h"
 #include "Page.h"
 #include "PlaceholderRenderingContext.h"
-#include "ScriptTelemetryCategory.h"
+#include "ScriptTrackingPrivacyCategory.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerNavigator.h"
@@ -67,10 +68,10 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DetachedOffscreenCanvas);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OffscreenCanvas);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OffscreenCanvas);
 
 DetachedOffscreenCanvas::DetachedOffscreenCanvas(const IntSize& size, bool originClean, RefPtr<PlaceholderRenderingContextSource>&& placeholderSource)
-    : m_placeholderSource(WTFMove(placeholderSource))
+    : m_placeholderSource(WTF::move(placeholderSource))
     , m_size(size)
     , m_originClean(originClean)
 {
@@ -80,7 +81,7 @@ DetachedOffscreenCanvas::~DetachedOffscreenCanvas() = default;
 
 RefPtr<PlaceholderRenderingContextSource> DetachedOffscreenCanvas::takePlaceholderSource()
 {
-    return WTFMove(m_placeholderSource);
+    return WTF::move(m_placeholderSource);
 }
 
 bool OffscreenCanvas::enabledForContext(ScriptExecutionContext& context)
@@ -114,15 +115,15 @@ Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecu
 
 Ref<OffscreenCanvas> OffscreenCanvas::create(ScriptExecutionContext& scriptExecutionContext, PlaceholderRenderingContext& placeholder)
 {
-    auto offscreen = adoptRef(*new OffscreenCanvas(scriptExecutionContext, placeholder.size(), placeholder.source().ptr()));
+    auto offscreen = adoptRef(*new OffscreenCanvas(scriptExecutionContext, placeholder.size(), &placeholder.source()));
     offscreen->suspendIfNeeded();
     return offscreen;
 }
 
 OffscreenCanvas::OffscreenCanvas(ScriptExecutionContext& scriptExecutionContext, IntSize size, RefPtr<PlaceholderRenderingContextSource>&& placeholderSource)
     : ActiveDOMObject(&scriptExecutionContext)
-    , CanvasBase(WTFMove(size), scriptExecutionContext)
-    , m_placeholderSource(WTFMove(placeholderSource))
+    , CanvasBase(WTF::move(size), scriptExecutionContext)
+    , m_placeholderSource(WTF::move(placeholderSource))
 {
 }
 
@@ -130,32 +131,46 @@ OffscreenCanvas::~OffscreenCanvas()
 {
     notifyObserversCanvasDestroyed();
     removeCanvasNeedingPreparationForDisplayOrFlush();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 void OffscreenCanvas::setWidth(unsigned newWidth)
 {
     if (m_detached)
         return;
-    setSize(IntSize(newWidth, height()));
+    IntSize newSize(newWidth, height());
+    bool sizeChanged = newSize != size();
+    if (sizeChanged)
+        setSize(newSize);
+    didUpdateSizeProperties(sizeChanged);
 }
 
 void OffscreenCanvas::setHeight(unsigned newHeight)
 {
     if (m_detached)
         return;
-    setSize(IntSize(width(), newHeight));
+    IntSize newSize(width(), newHeight);
+    bool sizeChanged = newSize != size();
+    if (sizeChanged)
+        setSize(newSize);
+    didUpdateSizeProperties(sizeChanged);
 }
 
-void OffscreenCanvas::setSize(const IntSize& newSize)
+void OffscreenCanvas::setSizeForControllingContext(IntSize newSize)
 {
-    CanvasBase::setSize(newSize);
-    reset();
+    // Controlling context size change semantics are different to width, height assignment.
+    if (size() == newSize)
+        return;
+    setSize(newSize);
+    didUpdateSizeProperties(true);
+}
 
-    if (RefPtr context = dynamicDowncast<GPUBasedCanvasRenderingContext>(m_context.get()))
-        context->reshape();
+void OffscreenCanvas::didUpdateSizeProperties(bool sizeChanged)
+{
+    clearCopiedImage();
+    if (m_context)
+        m_context->didUpdateCanvasSizeProperties(sizeChanged);
+    notifyObserversCanvasResized();
+    scheduleCommitToPlaceholderCanvas();
 }
 
 #if ENABLE(WEBGL)
@@ -168,7 +183,7 @@ static bool requiresAcceleratedCompositingForWebGL()
 #endif
 }
 
-static bool shouldEnableWebGL(const Settings::Values& settings, bool isWorker)
+static bool shouldEnableWebGL(const SettingsValues& settings, bool isWorker)
 {
     if (!settings.webGLEnabled)
         return false;
@@ -196,18 +211,28 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
     if (m_detached)
         return Exception { ExceptionCode::InvalidStateError };
 
+    // Dictionary conversion may run script, which may have detached this canvas.
+    auto shouldThrowForDetachedCanvas = [&]() -> ExceptionOr<void> {
+        if (m_detached) [[unlikely]]
+            return Exception { ExceptionCode::InvalidStateError };
+        return { };
+    };
+
     if (contextType == RenderingContextType::_2d) {
         if (!m_context) {
         auto scope = DECLARE_THROW_SCOPE(state.vm());
 
         auto settings = convert<IDLDictionary<CanvasRenderingContext2DSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(settings.hasException(scope)))
+            if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
+            if (!m_context)
             m_context = OffscreenCanvasRenderingContext2D::create(*this, settings.releaseReturnValue());
         }
         if (RefPtr context = dynamicDowncast<OffscreenCanvasRenderingContext2D>(m_context.get()))
-            return { { WTFMove(context) } };
+            return { { WTF::move(context) } };
             return { { std::nullopt } };
         }
     if (contextType == RenderingContextType::Bitmaprenderer) {
@@ -215,14 +240,18 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
         auto scope = DECLARE_THROW_SCOPE(state.vm());
 
         auto settings = convert<IDLDictionary<ImageBitmapRenderingContextSettings>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(settings.hasException(scope)))
+            if (settings.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
+            if (!m_context) {
             m_context = ImageBitmapRenderingContext::create(*this, settings.releaseReturnValue());
             downcast<ImageBitmapRenderingContext>(m_context.get())->transferFromImageBitmap(nullptr);
         }
+        }
         if (RefPtr context = dynamicDowncast<ImageBitmapRenderingContext>(m_context.get()))
-            return { { WTFMove(context) } };
+            return { { WTF::move(context) } };
             return { { std::nullopt } };
     }
     if (contextType == RenderingContextType::Webgpu) {
@@ -232,17 +261,17 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
             RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
             Ref scriptExecutionContext = *this->scriptExecutionContext();
             if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext)) {
-                if (auto* gpu = globalScope->navigator().gpu())
-                    m_context = GPUCanvasContext::create(*this, *gpu);
+                if (auto* gpu = globalScope->protectedNavigator()->gpu())
+                    m_context = GPUCanvasContext::create(*this, *gpu, nullptr);
             } else if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-                if (RefPtr domWindow = document->domWindow()) {
-                    if (auto* gpu = domWindow->navigator().gpu())
-                        m_context = GPUCanvasContext::create(*this, *gpu);
+                if (RefPtr window = document->window()) {
+                    if (auto* gpu = window->protectedNavigator()->gpu())
+                        m_context = GPUCanvasContext::create(*this, *gpu, document.get());
                 }
             }
         }
         if (RefPtr context = dynamicDowncast<GPUCanvasContext>(m_context.get()))
-            return { { WTFMove(context) } };
+            return { { WTF::move(context) } };
 #endif
             return { { std::nullopt } };
         }
@@ -253,19 +282,21 @@ ExceptionOr<std::optional<OffscreenRenderingContext>> OffscreenCanvas::getContex
         auto scope = DECLARE_THROW_SCOPE(state.vm());
 
         auto attributes = convert<IDLDictionary<WebGLContextAttributes>>(state, arguments.isEmpty() ? JSC::jsUndefined() : (arguments[0].isObject() ? arguments[0].get() : JSC::jsNull()));
-            if (UNLIKELY(attributes.hasException(scope)))
+            if (attributes.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
 
-            auto* scriptExecutionContext = this->scriptExecutionContext();
-            if (shouldEnableWebGL(scriptExecutionContext->settingsValues(), is<WorkerGlobalScope>(scriptExecutionContext)))
+            if (auto result = shouldThrowForDetachedCanvas(); result.hasException())
+                return result.releaseException();
+            RefPtr scriptExecutionContext = this->scriptExecutionContext();
+            if (!m_context && shouldEnableWebGL(scriptExecutionContext->settingsValues(), is<WorkerGlobalScope>(scriptExecutionContext)))
                 m_context = WebGLRenderingContextBase::create(*this, attributes.releaseReturnValue(), webGLVersion);
         }
         if (webGLVersion == WebGLVersion::WebGL1) {
             if (RefPtr context = dynamicDowncast<WebGLRenderingContext>(m_context.get()))
-                return { { WTFMove(context) } };
+                return { { WTF::move(context) } };
         } else {
             if (RefPtr context = dynamicDowncast<WebGL2RenderingContext>(m_context.get()))
-                return { { WTFMove(context) } };
+                return { { WTF::move(context) } };
         }
             return { { std::nullopt } };
     }
@@ -281,10 +312,11 @@ ExceptionOr<RefPtr<ImageBitmap>> OffscreenCanvas::transferToImageBitmap()
     if (size().isEmpty())
             return { RefPtr<ImageBitmap> { nullptr } };
         clearCopiedImage();
+    bool bitmapOriginClean = originClean();
     RefPtr buffer = m_context->transferToImageBuffer();
         if (!buffer)
         return Exception { ExceptionCode::UnknownError }; // UnknownError is used for DOM out-of-memory.
-        return { ImageBitmap::create(buffer.releaseNonNull(), originClean()) };
+    return { ImageBitmap::create(buffer.releaseNonNull(), bitmapOriginClean) };
 }
 
 static String toEncodingMimeType(const String& mimeType)
@@ -321,13 +353,13 @@ void OffscreenCanvas::convertToBlob(ImageEncodeOptions&& options, Ref<DeferredPr
     auto quality = qualityFromDouble(options.quality);
 
     RefPtr context = canvasBaseScriptExecutionContext();
-    if (context && context->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::Canvas)) {
+    if (context && context->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::Canvas)) {
         RefPtr buffer = createImageForNoiseInjection();
         auto blobData = buffer->toData(encodingMIMEType, quality);
         if (blobData.isEmpty())
             promise->reject(ExceptionCode::EncodingError);
         else
-            promise->resolveWithNewlyCreated<IDLInterface<Blob>>(Blob::create(context.get(), WTFMove(blobData), encodingMIMEType));
+            promise->resolveWithNewlyCreated<IDLInterface<Blob>>(Blob::create(context.get(), WTF::move(blobData), encodingMIMEType));
         return;
     }
 
@@ -343,8 +375,8 @@ void OffscreenCanvas::convertToBlob(ImageEncodeOptions&& options, Ref<DeferredPr
         return;
     }
 
-    Ref<Blob> blob = Blob::create(context.get(), WTFMove(blobData), encodingMIMEType);
-    promise->resolveWithNewlyCreated<IDLInterface<Blob>>(WTFMove(blob));
+    Ref<Blob> blob = Blob::create(context.get(), WTF::move(blobData), encodingMIMEType);
+    promise->resolveWithNewlyCreated<IDLInterface<Blob>>(WTF::move(blob));
 }
 
 void OffscreenCanvas::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
@@ -374,11 +406,11 @@ void OffscreenCanvas::clearCopiedImage() const
 
 SecurityOrigin* OffscreenCanvas::securityOrigin() const
 {
-    auto& scriptExecutionContext = *canvasBaseScriptExecutionContext();
-    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
+    Ref scriptExecutionContext = *canvasBaseScriptExecutionContext();
+    if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext.get()))
         return &globalScope->topOrigin();
 
-    return &downcast<Document>(scriptExecutionContext).securityOrigin();
+    return &downcast<Document>(scriptExecutionContext)->securityOrigin();
 }
 
 bool OffscreenCanvas::canDetach() const
@@ -395,7 +427,7 @@ std::unique_ptr<DetachedOffscreenCanvas> OffscreenCanvas::detach()
 
     m_detached = true;
 
-    auto detached = makeUnique<DetachedOffscreenCanvas>(size(), originClean(), WTFMove(m_placeholderSource));
+    auto detached = makeUnique<DetachedOffscreenCanvas>(size(), originClean(), WTF::move(m_placeholderSource));
     setSize(IntSize(0, 0));
     return detached;
 }
@@ -411,8 +443,8 @@ void OffscreenCanvas::commitToPlaceholderCanvas()
     RefPtr imageBuffer = m_context->surfaceBufferToImageBuffer(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
     if (!imageBuffer)
         return;
-    m_placeholderSource->setPlaceholderBuffer(*imageBuffer);
-    }
+    m_placeholderSource->setPlaceholderBuffer(*imageBuffer, m_context->canvasBase().originClean(), m_context->isOpaque());
+}
 
 void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
 {
@@ -426,50 +458,55 @@ void OffscreenCanvas::scheduleCommitToPlaceholderCanvas()
     }
 }
 
-void OffscreenCanvas::createImageBuffer() const
+void OffscreenCanvas::queueTaskKeepingObjectAlive(TaskSource source, Function<void(CanvasBase&)>&& task)
 {
-    const_cast<OffscreenCanvas*>(this)->setHasCreatedImageBuffer(true);
-    setImageBuffer(allocateImageBuffer());
-}
-
-void OffscreenCanvas::setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&& buffer)
-{
-    setHasCreatedImageBuffer(true);
-    setImageBuffer(WTFMove(buffer));
-
-    CanvasBase::didDraw(FloatRect(FloatPoint(), size()));
-}
-
-void OffscreenCanvas::reset()
-{
-    resetGraphicsContextState();
-    if (RefPtr context = dynamicDowncast<OffscreenCanvasRenderingContext2D>(m_context.get()))
-        context->reset();
-
-    setHasCreatedImageBuffer(false);
-    setImageBuffer(nullptr);
-    clearCopiedImage();
-
-    notifyObserversCanvasResized();
-    scheduleCommitToPlaceholderCanvas();
-}
-
-void OffscreenCanvas::queueTaskKeepingObjectAlive(TaskSource source, Function<void()>&& task)
-{
-    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, WTFMove(task));
+    ActiveDOMObject::queueTaskKeepingObjectAlive(*this, source, [task = WTF::move(task)](auto& canvas) mutable {
+        task(canvas);
+    });
 }
 
 void OffscreenCanvas::dispatchEvent(Event& event)
 {
-    EventDispatcher::dispatchEvent({ this }, event);
+    EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
 }
 
-const CSSParserContext& OffscreenCanvas::cssParserContext() const
+std::unique_ptr<CSSParserContext> OffscreenCanvas::createCSSParserContext() const
 {
     // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
-    if (!m_cssParserContext)
-        m_cssParserContext = WTF::makeUnique<CSSParserContext>(HTMLStandardMode);
-    return *m_cssParserContext;
+    return makeUnique<CSSParserContext>(HTMLStandardMode);
+}
+
+ScriptExecutionContext* OffscreenCanvas::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+}
+
+ScriptExecutionContext* OffscreenCanvas::canvasBaseScriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+}
+
+bool OffscreenCanvas::virtualHasPendingActivity() const
+{
+#if ENABLE(WEBGL)
+    if (m_hasRelevantWebGLEventListener) {
+        // This runs on a GC thread.
+        SUPPRESS_UNCOUNTED_LOCAL auto* context = dynamicDowncast<WebGLRenderingContextBase>(m_context.get());
+        // WebGL rendering context may fire contextlost / contextrestored events at any point.
+        return context && !context->isContextUnrecoverablyLost();
+    }
+#endif
+
+    return false;
+}
+
+void OffscreenCanvas::eventListenersDidChange()
+{
+#if ENABLE(WEBGL)
+    auto& eventNames = WebCore::eventNames();
+    m_hasRelevantWebGLEventListener = hasEventListeners(eventNames.webglcontextlostEvent)
+        || hasEventListeners(eventNames.webglcontextrestoredEvent);
+#endif
 }
 
 }

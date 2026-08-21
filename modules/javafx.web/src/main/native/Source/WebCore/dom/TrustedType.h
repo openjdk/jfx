@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "TrustedHTML.h"
-#include "TrustedScript.h"
-#include "TrustedScriptURL.h"
+#include <WebCore/TrustedHTML.h>
+#include <WebCore/TrustedScript.h>
+#include <WebCore/TrustedScriptURL.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
@@ -43,6 +43,9 @@ namespace WebCore {
 class Exception;
 class ScriptExecutionContext;
 class QualifiedName;
+template<typename> class ExceptionOr;
+
+using TrustedTypeOrString = Variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
 
 enum class TrustedType : int8_t {
     TrustedHTML,
@@ -59,22 +62,24 @@ ASCIILiteral trustedTypeToString(TrustedType);
 TrustedType stringToTrustedType(String);
 ASCIILiteral trustedTypeToCallbackName(TrustedType);
 
-WEBCORE_EXPORT std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext&, TrustedType, const String& input, const String& sink);
+WEBCORE_EXPORT Variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext&, TrustedType, const String& input, const String& sink);
 
 WEBCORE_EXPORT ExceptionOr<String> trustedTypeCompliantString(TrustedType, ScriptExecutionContext&, const String& input, const String& sink);
 
 WEBCORE_EXPORT ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecutionContext&, const String& urlString);
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedHTML>, String>&&, const String& sink);
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, Variant<RefPtr<TrustedHTML>, String>&&, const String& sink);
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedScript>, String>&&, const String& sink);
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, Variant<RefPtr<TrustedScript>, String>&&, const String& sink);
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, std::variant<RefPtr<TrustedScriptURL>, String>&&, const String& sink);
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext&, Variant<RefPtr<TrustedScriptURL>, String>&&, const String& sink);
 
 WEBCORE_EXPORT AttributeTypeAndSink trustedTypeForAttribute(const String& elementName, const String& attributeName, const String& elementNamespace, const String& attributeNamespace);
 
 ExceptionOr<bool> canCompile(ScriptExecutionContext&, JSC::CompilationType, String codeString, const JSC::ArgList& args);
 
 bool isEventHandlerAttribute(const QualifiedName& attributeName);
+
+ExceptionOr<AtomString> trustedTypesCompliantAttributeValue(ScriptExecutionContext&, const String& attributeType, const TrustedTypeOrString& value, const String& sink);
 
 } // namespace WebCore

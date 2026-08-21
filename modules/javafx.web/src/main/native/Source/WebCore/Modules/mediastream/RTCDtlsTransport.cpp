@@ -31,6 +31,7 @@
 #include "Blob.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "RTCDtlsTransportBackend.h"
@@ -41,19 +42,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDtlsTransport);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDtlsTransport);
 
 Ref<RTCDtlsTransport> RTCDtlsTransport::create(ScriptExecutionContext& context, UniqueRef<RTCDtlsTransportBackend>&& backend, Ref<RTCIceTransport>&& iceTransport)
 {
-    auto result = adoptRef(*new RTCDtlsTransport(context, WTFMove(backend), WTFMove(iceTransport)));
+    auto result = adoptRef(*new RTCDtlsTransport(context, WTF::move(backend), WTF::move(iceTransport)));
     result->suspendIfNeeded();
     return result;
 }
 
 RTCDtlsTransport::RTCDtlsTransport(ScriptExecutionContext& context, UniqueRef<RTCDtlsTransportBackend>&& backend, Ref<RTCIceTransport>&& iceTransport)
     : ActiveDOMObject(&context)
-    , m_backend(WTFMove(backend))
-    , m_iceTransport(WTFMove(iceTransport))
+    , m_backend(WTF::move(backend))
+    , m_iceTransport(WTF::move(iceTransport))
 {
     m_backend->registerClient(*this);
 }
@@ -61,6 +62,11 @@ RTCDtlsTransport::RTCDtlsTransport(ScriptExecutionContext& context, UniqueRef<RT
 RTCDtlsTransport::~RTCDtlsTransport()
 {
     m_backend->unregisterClient();
+}
+
+ScriptExecutionContext* RTCDtlsTransport::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 Vector<Ref<JSC::ArrayBuffer>> RTCDtlsTransport::getRemoteCertificates()
@@ -80,18 +86,18 @@ bool RTCDtlsTransport::virtualHasPendingActivity() const
 
 void RTCDtlsTransport::onStateChanged(RTCDtlsTransportState state, Vector<Ref<JSC::ArrayBuffer>>&& certificates)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, certificates = WTFMove(certificates)]() mutable {
-        if (m_state == RTCDtlsTransportState::Closed)
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [state, certificates = WTF::move(certificates)](auto& transport) mutable {
+        if (transport.m_state == RTCDtlsTransportState::Closed)
             return;
 
-        if (m_remoteCertificates != certificates)
-            m_remoteCertificates = WTFMove(certificates);
+        if (transport.m_remoteCertificates != certificates)
+            transport.m_remoteCertificates = WTF::move(certificates);
 
-        if (m_state != state) {
-            m_state = state;
-            if (RefPtr connection = m_iceTransport->connection())
+        if (transport.m_state != state) {
+            transport.m_state = state;
+            if (RefPtr connection = transport.m_iceTransport->connection())
                 connection->updateConnectionState();
-            dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+            transport.dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
         }
     });
 }

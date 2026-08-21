@@ -251,16 +251,27 @@ void dumpSpeculation(PrintStream& outStream, SpeculatedType value)
 
         if ((value & SpecString) == SpecString)
             strOut.print("String");
+        else if ((value & SpecStringResolved) == SpecStringResolved)
+            strOut.print("StringResolved");
         else {
             if (value & SpecStringIdent)
                 strOut.print("StringIdent");
             else
                 isTop = false;
 
-            if (value & SpecStringVar)
+            if ((value & SpecStringVar) == SpecStringVar)
                 strOut.print("StringVar");
+            else {
+                if (value & SpecStringResolvedVar)
+                    strOut.print("StringResolvedVar");
             else
                 isTop = false;
+
+                if (value & SpecStringUnresolvedVar)
+                    strOut.print("StringUnresolvedVar");
+                else
+                    isTop = false;
+        }
         }
 
         if (value & SpecSymbol)
@@ -583,7 +594,7 @@ SpeculatedType speculationFromStructure(Structure* structure)
 SpeculatedType speculationFromCell(JSCell* cell)
 {
     // FIXME: rdar://69036888: remove isSanePointer checks when no longer needed.
-    if (UNLIKELY(!Integrity::isSanePointer(cell))) {
+    if (!Integrity::isSanePointer(cell)) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return SpecNone;
     }
@@ -591,12 +602,13 @@ SpeculatedType speculationFromCell(JSCell* cell)
     if (cell->isString()) {
         JSString* string = jsCast<JSString*>(cell);
         if (const StringImpl* impl = string->tryGetValueImpl()) {
-            if (UNLIKELY(!Integrity::isSanePointer(impl))) {
+            if (!Integrity::isSanePointer(impl)) [[unlikely]] {
                 ASSERT_NOT_REACHED();
                 return SpecNone;
             }
             if (impl->isAtom())
                 return SpecStringIdent;
+            return SpecStringResolved;
         }
         return SpecString;
     }
@@ -719,8 +731,9 @@ std::optional<SpeculatedType> speculationFromJSType(JSType type)
     case DataViewType:
         return SpecDataViewObject;
     case JSMapIteratorType:
+        return SpecMapIteratorObject;
     case JSSetIteratorType:
-        return SpecObjectOther;
+        return SpecSetIteratorObject;
     default:
         return std::nullopt;
     }
@@ -855,7 +868,9 @@ SpeculatedType typeOfDoubleNegation(SpeculatedType value)
 {
     // Changing bits can make pure NaN impure and vice versa:
     // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
-    if (value & SpecDoubleNaN)
+    // But we don't allow such pure NaN patterns. Thus we don't
+    // need any special handling for those pure NaNs
+    if (value & SpecDoubleImpureNaN)
         value |= SpecDoubleNaN;
     // We could get negative zero, which mixes SpecAnyIntAsDouble and SpecNotIntAsDouble.
     // We could also overflow a large negative int into something that is no longer
@@ -872,9 +887,8 @@ SpeculatedType typeOfDoubleAbs(SpeculatedType value)
 
 SpeculatedType typeOfDoubleRounding(SpeculatedType value)
 {
-    // Double Pure NaN can becomes impure when converted back from Float.
-    // and vice versa.
-    if (value & SpecDoubleNaN)
+    // Impure NaN can become pure when rounding but none of the pure NaNs we produce will convert to an impure NaN.
+    if (value & SpecDoubleImpureNaN)
         value |= SpecDoubleNaN;
     // We might lose bits, which leads to a value becoming integer-representable.
     if (value & SpecNonIntAsDouble)

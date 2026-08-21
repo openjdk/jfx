@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "CustomPaintImage.h"
+#include "ContextDestructionObserverInlines.h"
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImageValue.h"
@@ -42,8 +43,13 @@
 #include "JSCSSPaintCallback.h"
 #include "JSDOMExceptionHandling.h"
 #include "MainThreadStylePropertyMapReadOnly.h"
+#include "NodeInlines.h"
 #include "PaintRenderingContext2D.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StyleExtractor.h"
 #include <JavaScriptCore/ConstructData.h>
 
 namespace WebCore {
@@ -61,7 +67,7 @@ CustomPaintImage::~CustomPaintImage() = default;
 
 static RefPtr<CSSValue> extractComputedProperty(const AtomString& name, Element& element)
 {
-    ComputedStyleExtractor extractor(&element);
+    Style::Extractor extractor(&element);
 
     if (isCustomPropertyName(name))
         return extractor.customPropertyValue(name);
@@ -70,23 +76,25 @@ static RefPtr<CSSValue> extractComputedProperty(const AtomString& name, Element&
     if (!propertyID)
         return nullptr;
 
-    return extractor.propertyValue(propertyID, ComputedStyleExtractor::UpdateLayout::No);
+    return extractor.propertyValue(propertyID, Style::Extractor::UpdateLayout::No);
 }
 
 ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, const FloatSize& destSize)
 {
-    if (!m_element || !m_element->element() || !m_paintDefinition)
+    CheckedPtr renderElement = m_element.get();
+    CheckedPtr paintDefinition = m_paintDefinition.get();
+    if (!renderElement || !renderElement->element() || !paintDefinition)
         return ImageDrawResult::DidNothing;
 
-    JSC::JSValue paintConstructor = m_paintDefinition->paintConstructor;
+    JSC::JSValue paintConstructor = paintDefinition->paintConstructor;
 
     if (!paintConstructor)
         return ImageDrawResult::DidNothing;
 
-    ASSERT(!m_element->needsLayout());
-    ASSERT(!m_element->element()->document().needsStyleRecalc());
+    ASSERT(!renderElement->needsLayout());
+    ASSERT(!renderElement->element()->document().needsStyleRecalc());
 
-    Ref callback = static_cast<JSCSSPaintCallback&>(m_paintDefinition->paintCallback.get());
+    Ref callback = paintDefinition->paintCallback.get();
     RefPtr scriptExecutionContext = callback->scriptExecutionContext();
     if (!scriptExecutionContext)
         return ImageDrawResult::DidNothing;
@@ -94,15 +102,15 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     Ref canvas = CustomPaintCanvas::create(*scriptExecutionContext, destSize.width(), destSize.height());
     RefPtr context = canvas->getContext();
 
-    UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>> propertyValues;
+    HashMap<AtomString, RefPtr<CSSValue>> propertyValues;
 
-    if (auto* element = m_element->element()) {
+    if (RefPtr element = renderElement->element()) {
         for (auto& name : m_inputProperties)
             propertyValues.add(name, extractComputedProperty(name, *element));
     }
 
     auto size = CSSPaintSize::create(destSize.width(), destSize.height());
-    Ref<StylePropertyMapReadOnly> propertyMap = HashMapStylePropertyMapReadOnly::create(WTFMove(propertyValues));
+    Ref<StylePropertyMapReadOnly> propertyMap = HashMapStylePropertyMapReadOnly::create(WTF::move(propertyValues));
 
     auto& vm = paintConstructor.getObject()->vm();
     JSC::JSLockHolder lock(vm);
@@ -113,12 +121,12 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     JSC::ArgList noArgs;
     JSC::JSValue thisObject = { JSC::construct(&lexicalGlobalObject, paintConstructor, noArgs, "Failed to construct paint class"_s) };
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         reportException(&lexicalGlobalObject, scope.exception());
         return ImageDrawResult::DidNothing;
     }
 
-    auto result = callback->handleEvent(WTFMove(thisObject), *context, size, propertyMap, m_arguments);
+    auto result = callback->invoke(WTF::move(thisObject), *context, size, propertyMap, m_arguments);
     if (result.type() != CallbackResultType::Success)
         return ImageDrawResult::DidNothing;
 

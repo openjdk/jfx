@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2010-2023 Google Inc. All rights reserved.
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,35 +41,30 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
-#include "ScrollbarColor.h"
-#include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
+#include "StyleScrollbarGutter.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
-
-namespace WebCore {
-struct SameSizeAsScrollableArea;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SameSizeAsScrollableArea> : std::true_type { };
-}
 
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollableArea);
 
-struct SameSizeAsScrollableArea final : public CanMakeWeakPtr<SameSizeAsScrollableArea> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+struct SameSizeAsScrollableArea : public CanMakeWeakPtr<SameSizeAsScrollableArea>, public AbstractCanMakeCheckedPtr {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SameSizeAsScrollableArea);
 
-    ~SameSizeAsScrollableArea() { }
+    virtual ~SameSizeAsScrollableArea() { }
     SameSizeAsScrollableArea() { }
-    void* pointer[3];
-    IntPoint origin;
-    Markable<ScrollingNodeID> testID;
-    bool bytes[9];
+    void* pointer[2];
+    IntPoint scrollOrigin;
+    bool scrollClamping;
+    uint8_t scrollElasticity[2];
+    uint8_t scrollbarOverlayStyle;
+    bool currentScrollType;
+    uint8_t scrollAnimationStatus;
+    bool bytes[4];
+    Markable<ScrollingNodeID> scrollingNodeIDForTesting;
 };
 
 #if CPU(ADDRESS64)
@@ -101,7 +96,7 @@ void ScrollableArea::internalCreateScrollbarsController()
         auto mockController = makeUnique<ScrollbarsControllerMock>(const_cast<ScrollableArea&>(*this), [this](const String& message) {
                 logMockScrollbarsControllerMessage(message);
             });
-        setScrollbarsController(WTFMove(mockController));
+        setScrollbarsController(WTF::move(mockController));
         } else
         createScrollbarsController();
 }
@@ -109,12 +104,12 @@ void ScrollableArea::internalCreateScrollbarsController()
 void ScrollableArea::createScrollbarsController()
 {
     auto controller = ScrollbarsController::create(const_cast<ScrollableArea&>(*this));
-    setScrollbarsController(WTFMove(controller));
+    setScrollbarsController(WTF::move(controller));
 }
 
 void ScrollableArea::setScrollbarsController(std::unique_ptr<ScrollbarsController>&& scrollbarsController)
 {
-    m_scrollbarsController = WTFMove(scrollbarsController);
+    m_scrollbarsController = WTF::move(scrollbarsController);
 }
 
 void ScrollableArea::setScrollOrigin(const IntPoint& origin)
@@ -266,6 +261,7 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
         scrollbarsController().notifyContentAreaScrolled(scrollPosition() - oldPosition);
         invalidateScrollAnchoringElement();
         updateScrollAnchoringElement();
+        updateAnchorPositionedAfterScroll();
     }
 }
 
@@ -289,6 +285,17 @@ void ScrollableArea::stopKeyboardScrollAnimation()
 bool ScrollableArea::handleTouchEvent(const PlatformTouchEvent& touchEvent)
 {
     return scrollAnimator().handleTouchEvent(touchEvent);
+}
+#endif
+
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+float ScrollableArea::scrollbarOpacity() const
+{
+    if (auto scrollbar = verticalScrollbar())
+        return scrollbar->opacity();
+    if (auto scrollbar = horizontalScrollbar())
+        return scrollbar->opacity();
+    return 1;
 }
 #endif
 
@@ -397,12 +404,12 @@ void ScrollableArea::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation 
     setScrollbarOverlayStyle(scrollbarOverlayStyle());
 }
 
-void ScrollableArea::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
+void ScrollableArea::willRemoveScrollbar(Scrollbar& scrollbar, ScrollbarOrientation orientation)
 {
     if (orientation == ScrollbarOrientation::Vertical)
-        scrollbarsController().willRemoveVerticalScrollbar(scrollbar);
+        scrollbarsController().willRemoveVerticalScrollbar(&scrollbar);
     else
-        scrollbarsController().willRemoveHorizontalScrollbar(scrollbar);
+        scrollbarsController().willRemoveHorizontalScrollbar(&scrollbar);
 }
 
 void ScrollableArea::contentsResized()
@@ -459,7 +466,7 @@ void ScrollableArea::invalidateScrollbars()
 bool ScrollableArea::useDarkAppearanceForScrollbars() const
 {
     // If dark appearance is used or the overlay style is light (because of a dark page background), set the dark appearance.
-    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyleLight;
+    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyle::Light;
 }
 
 void ScrollableArea::invalidateScrollbar(Scrollbar& scrollbar, const IntRect& rect)
@@ -551,9 +558,9 @@ Color ScrollableArea::scrollbarTrackColorStyle() const
     return { };
 }
 
-ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
+Style::ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
 {
-    return { };
+    return CSS::Keyword::Auto { };
 }
 
 const LayoutScrollSnapOffsetsInfo* ScrollableArea::snapOffsetsInfo() const
@@ -1024,6 +1031,11 @@ ScrollingNodeID ScrollableArea::scrollingNodeIDForTesting()
     if (!testingNodeID)
         m_scrollingNodeIDForTesting = testingNodeID = ScrollingNodeID::generate();
     return *testingNodeID;
+}
+
+void ScrollableArea::scrollbarColorDidChange(std::optional<ScrollbarColor> scrollbarColor)
+{
+    scrollbarsController().scrollbarColorChanged(scrollbarColor);
 }
 
 } // namespace WebCore

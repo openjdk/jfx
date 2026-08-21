@@ -26,51 +26,49 @@
 #pragma once
 
 #include "CommonAtomStrings.h"
+#include "ExceptionOr.h"
 #include "SVGAngleValue.h"
 #include "SVGPropertyTraits.h"
 
 namespace WebCore {
 
-enum SVGMarkerUnitsType {
-    SVGMarkerUnitsUnknown = 0,
-    SVGMarkerUnitsUserSpaceOnUse,
-    SVGMarkerUnitsStrokeWidth
+enum class SVGMarkerUnitsType : uint8_t {
+    Unknown = 0,
+    UserSpaceOnUse,
+    StrokeWidth,
 };
 
 enum SVGMarkerOrientType {
     SVGMarkerOrientUnknown = 0,
     SVGMarkerOrientAuto,
     SVGMarkerOrientAngle,
-
-    // The DOM can't set the property 'orientType' to this value. It is used only
-    // internally when setting the 'orient' attribute to "auto-start-reverse".
-    SVGMarkerOrientAutoStartReverse = SVGMarkerOrientUnknown
+    SVGMarkerOrientAutoStartReverse
 };
 
 template<>
 struct SVGPropertyTraits<SVGMarkerUnitsType> {
-    static unsigned highestEnumValue() { return SVGMarkerUnitsStrokeWidth; }
+    static unsigned highestEnumValue() { return std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::StrokeWidth); }
     static String toString(SVGMarkerUnitsType type)
     {
         switch (type) {
-        case SVGMarkerUnitsUnknown:
+        case SVGMarkerUnitsType::Unknown:
             return emptyString();
-        case SVGMarkerUnitsUserSpaceOnUse:
+        case SVGMarkerUnitsType::UserSpaceOnUse:
             return "userSpaceOnUse"_s;
-        case SVGMarkerUnitsStrokeWidth:
+        case SVGMarkerUnitsType::StrokeWidth:
             return "strokeWidth"_s;
         }
 
         ASSERT_NOT_REACHED();
         return emptyString();
     }
-    static SVGMarkerUnitsType fromString(const String& value)
+    static SVGMarkerUnitsType fromString(SVGElement&, const String& value)
     {
         if (value == "userSpaceOnUse"_s)
-            return SVGMarkerUnitsUserSpaceOnUse;
+            return SVGMarkerUnitsType::UserSpaceOnUse;
         if (value == "strokeWidth"_s)
-            return SVGMarkerUnitsStrokeWidth;
-        return SVGMarkerUnitsUnknown;
+            return SVGMarkerUnitsType::StrokeWidth;
+        return SVGMarkerUnitsType::Unknown;
     }
 };
 
@@ -81,8 +79,8 @@ struct SVGPropertyTraits<SVGMarkerOrientType> {
         static const NeverDestroyed<String> autoStartReverseString = MAKE_STATIC_STRING_IMPL("auto-start-reverse");
         return autoStartReverseString;
     }
-    static unsigned highestEnumValue() { return SVGMarkerOrientAngle; }
-    static SVGMarkerOrientType fromString(const String& string)
+    static unsigned highestEnumValue() { return SVGMarkerOrientAutoStartReverse; }
+    static SVGMarkerOrientType fromString(SVGElement&, const String& string)
     {
         if (string == autoAtom())
             return SVGMarkerOrientAuto;
@@ -102,10 +100,10 @@ struct SVGPropertyTraits<SVGMarkerOrientType> {
 
 template<>
 struct SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>> {
-    static std::pair<SVGAngleValue, SVGMarkerOrientType> fromString(const String& string)
+    static std::pair<SVGAngleValue, SVGMarkerOrientType> fromString(SVGElement& targetElement, const String& string)
     {
         SVGAngleValue angle;
-        SVGMarkerOrientType orientType = SVGPropertyTraits<SVGMarkerOrientType>::fromString(string);
+        SVGMarkerOrientType orientType = SVGPropertyTraits<SVGMarkerOrientType>::fromString(targetElement, string);
         if (orientType == SVGMarkerOrientUnknown) {
             auto result = angle.setValueAsString(string);
             if (!result.hasException())

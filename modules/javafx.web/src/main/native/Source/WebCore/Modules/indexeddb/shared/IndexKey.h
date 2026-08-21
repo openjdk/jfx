@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IDBIndexIdentifier.h"
-#include "IDBKeyData.h"
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBKeyData.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
@@ -34,7 +34,7 @@ namespace WebCore {
 
 class IndexKey {
 public:
-    using Data = std::variant<std::nullptr_t, IDBKeyData, Vector<IDBKeyData>>;
+    using Data = Variant<std::nullptr_t, IDBKeyData, Vector<IDBKeyData>>;
     WEBCORE_EXPORT IndexKey();
     WEBCORE_EXPORT IndexKey(Data&&);
 

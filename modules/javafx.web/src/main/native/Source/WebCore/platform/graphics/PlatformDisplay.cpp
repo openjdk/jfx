@@ -63,7 +63,7 @@ IGNORE_CLANG_WARNINGS_END
 void PlatformDisplay::setSharedDisplay(std::unique_ptr<PlatformDisplay>&& display)
 {
     RELEASE_ASSERT(!s_sharedDisplay);
-    s_sharedDisplay = WTFMove(display);
+    s_sharedDisplay = WTF::move(display);
 }
 
 PlatformDisplay& PlatformDisplay::sharedDisplay()
@@ -78,17 +78,15 @@ PlatformDisplay* PlatformDisplay::sharedDisplayIfExists()
 }
 #endif
 
-static UncheckedKeyHashSet<PlatformDisplay*>& eglDisplays()
+static HashSet<PlatformDisplay*>& eglDisplays()
 {
-    static NeverDestroyed<UncheckedKeyHashSet<PlatformDisplay*>> displays;
+    static NeverDestroyed<HashSet<PlatformDisplay*>> displays;
     return displays;
 }
 
-PlatformDisplay::PlatformDisplay(std::unique_ptr<GLDisplay>&& glDisplay)
-    : m_eglDisplay(WTFMove(glDisplay))
+PlatformDisplay::PlatformDisplay(Ref<GLDisplay>&& glDisplay)
+    : m_eglDisplay(WTF::move(glDisplay))
 {
-    RELEASE_ASSERT(m_eglDisplay);
-
     eglDisplays().add(this);
 
 #if !PLATFORM(WIN)
@@ -134,9 +132,6 @@ void PlatformDisplay::clearGLContexts()
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     m_gstGLContext = nullptr;
 #endif
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
-    clearANGLESharingGLContext();
-#endif
     m_sharingGLContext = nullptr;
 }
 
@@ -176,18 +171,18 @@ bool PlatformDisplay::destroyEGLImage(EGLImage image) const
     return m_eglDisplay->destroyImage(image);
 }
 
-#if USE(GBM)
-const Vector<GLDisplay::DMABufFormat>& PlatformDisplay::dmabufFormats()
+#if USE(GBM) || OS(ANDROID)
+const Vector<GLDisplay::BufferFormat>& PlatformDisplay::bufferFormats()
 {
-    return m_eglDisplay->dmabufFormats();
+    return m_eglDisplay->bufferFormats();
 }
+#endif // USE(GBM) || OS(ANDROID)
 
-#if USE(GSTREAMER)
-const Vector<GLDisplay::DMABufFormat>& PlatformDisplay::dmabufFormatsForVideo()
+#if USE(GBM) && USE(GSTREAMER)
+const Vector<GLDisplay::BufferFormat>& PlatformDisplay::bufferFormatsForVideo()
 {
-    return m_eglDisplay->dmabufFormatsForVideo();
+    return m_eglDisplay->bufferFormatsForVideo();
 }
-#endif
-#endif // USE(GBM)
+#endif // USE(GBM) && USE(GSTREAMER)
 
 } // namespace WebCore

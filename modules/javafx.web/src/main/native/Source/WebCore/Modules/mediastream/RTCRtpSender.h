@@ -45,7 +45,10 @@ namespace WebCore {
 
 class MediaStream;
 class RTCDTMFSender;
+class RTCEncodedStreamProducer;
 class RTCPeerConnection;
+
+struct RTCEncodedStreams;
 struct RTCRtpCapabilities;
 
 class RTCRtpSender final : public RefCounted<RTCRtpSender>
@@ -55,10 +58,10 @@ class RTCRtpSender final : public RefCounted<RTCRtpSender>
     , private LoggerHelper
 #endif
     {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCRtpSender);
+    WTF_MAKE_TZONE_ALLOCATED(RTCRtpSender);
 public:
-    static Ref<RTCRtpSender> create(RTCPeerConnection&, Ref<MediaStreamTrack>&&, std::unique_ptr<RTCRtpSenderBackend>&&);
-    static Ref<RTCRtpSender> create(RTCPeerConnection&, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&&);
+    static Ref<RTCRtpSender> create(RTCPeerConnection&, Ref<MediaStreamTrack>&&, Ref<RTCRtpSenderBackend>&&);
+    static Ref<RTCRtpSender> create(RTCPeerConnection&, String&& trackKind, Ref<RTCRtpSenderBackend>&&);
     virtual ~RTCRtpSender();
 
     static std::optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
@@ -66,7 +69,7 @@ public:
     MediaStreamTrack* track() { return m_track.get(); }
 
     RTCDtlsTransport* transport() { return m_transport.get(); }
-    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTFMove(transport); }
+    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTF::move(transport); }
 
     const String& trackId() const { return m_trackId; }
     const String& trackKind() const { return m_trackKind; }
@@ -96,8 +99,10 @@ public:
     std::optional<RTCRtpTransform::Internal> transform();
     ExceptionOr<void> setTransform(std::unique_ptr<RTCRtpTransform>&&);
 
+    ExceptionOr<RTCEncodedStreams> createEncodedStreams(ScriptExecutionContext&);
+
 private:
-    RTCRtpSender(RTCPeerConnection&, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&&);
+    RTCRtpSender(RTCPeerConnection&, String&& trackKind, Ref<RTCRtpSenderBackend>&&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
@@ -110,12 +115,13 @@ private:
     RefPtr<RTCDtlsTransport> m_transport;
     String m_trackId;
     String m_trackKind;
-    std::unique_ptr<RTCRtpSenderBackend> m_backend;
+    RefPtr<RTCRtpSenderBackend> m_backend;
     WeakPtr<RTCPeerConnection, WeakPtrImplWithEventTargetData> m_connection;
     RefPtr<RTCDTMFSender> m_dtmfSender;
     std::unique_ptr<RTCRtpTransform> m_transform;
+    const RefPtr<RTCEncodedStreamProducer> m_encodedStreamProducer;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };
 #endif
 };

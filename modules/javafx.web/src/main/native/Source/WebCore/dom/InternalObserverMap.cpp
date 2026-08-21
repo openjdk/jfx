@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverMap.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "MapperCallback.h"
 #include "Observable.h"
@@ -53,7 +54,7 @@ public:
             return adoptRef(*new InternalObserverMap::SubscriberCallbackMap(context, source, mapper));
         }
 
-        CallbackResult<void> handleEvent(Subscriber& subscriber) final
+        CallbackResult<void> invoke(Subscriber& subscriber) final
         {
             RefPtr context = scriptExecutionContext();
 
@@ -63,15 +64,15 @@ public:
             }
 
             SubscribeOptions options;
-            options.signal = &subscriber.signal();
+            options.signal = subscriber.signal();
             m_sourceObservable->subscribeInternal(*context, InternalObserverMap::create(*context, subscriber, m_mapper), options);
 
             return { };
         }
 
-        CallbackResult<void> handleEventRethrowingException(Subscriber& subscriber) final
+        CallbackResult<void> invokeRethrowingException(Subscriber& subscriber) final
         {
-            return handleEvent(subscriber);
+            return invoke(subscriber);
         }
 
     private:
@@ -102,7 +103,7 @@ private:
         JSC::Exception* previousException = nullptr;
         {
             auto catchScope = DECLARE_CATCH_SCOPE(vm);
-            auto result = protectedMapper()->handleEventRethrowingException(value, m_idx);
+            auto result = protectedMapper()->invokeRethrowingException(value, m_idx);
             previousException = catchScope.exception();
             if (previousException) {
                 catchScope.clearException();

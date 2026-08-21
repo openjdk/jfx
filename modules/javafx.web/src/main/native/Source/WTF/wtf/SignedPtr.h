@@ -35,7 +35,7 @@ namespace WTF {
 template<typename T, const uintptr_t Tag>
 class SignedPtr {
 public:
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SignedPtr);
 public:
     constexpr SignedPtr()
         : m_value(nullptr)
@@ -81,8 +81,9 @@ public:
 
     T* operator->() const { return get(); }
 
-    template <typename U = T>
-    typename std::enable_if<!std::is_void_v<U>, U&>::type operator*() const { return *get(); }
+    template<typename U = T>
+        requires (!std::is_void_v<U>)
+    U& operator*() const { return *get(); }
 
     bool operator!() const { return !m_value; }
 

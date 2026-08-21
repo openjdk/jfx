@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "CSSRule.h"
+#include <WebCore/CSSRule.h>
 #include <memory>
 #include <wtf/Vector.h>
 
@@ -40,11 +40,14 @@ public:
     WEBCORE_EXPORT ExceptionOr<void> deleteRule(unsigned index);
     unsigned length() const;
     CSSRule* item(unsigned index) const;
+    virtual bool isCSSConditionRule() const { return false; }
 
 protected:
     CSSGroupingRule(StyleRuleGroup&, CSSStyleSheet* parent);
     const StyleRuleGroup& groupRule() const { return m_groupRule; }
     StyleRuleGroup& groupRule() { return m_groupRule; }
+    Ref<const StyleRuleGroup> protectedGroupRule() const;
+    Ref<StyleRuleGroup> protectedGroupRule();
     void reattach(StyleRuleBase&) override;
     void appendCSSTextForItems(StringBuilder&) const;
     void appendCSSTextWithReplacementURLsForItems(StringBuilder&, const CSS::SerializationContext&) const;
@@ -58,7 +61,7 @@ private:
 
     Ref<StyleRuleGroup> m_groupRule;
     mutable Vector<RefPtr<CSSRule>> m_childRuleCSSOMWrappers;
-    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
+    const std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
 } // namespace WebCore

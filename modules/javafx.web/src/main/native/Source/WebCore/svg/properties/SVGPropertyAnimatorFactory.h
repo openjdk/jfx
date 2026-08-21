@@ -69,10 +69,10 @@ public:
     }
 
 private:
-    // This UncheckedKeyHashMap maps an attribute name to a pair of static methods. The first one creates a shared
+    // This HashMap maps an attribute name to a pair of static methods. The first one creates a shared
     // Ref<SVGProperty> for the value type of this attribute. The second creates the animator given the
     // attribute name and the shared Ref<SVGProperty>.
-    using AttributeAnimatorCreator = UncheckedKeyHashMap<
+    using AttributeAnimatorCreator = HashMap<
         QualifiedName::QualifiedNameImpl*,
         std::pair<
             Function<Ref<SVGProperty>()>,
@@ -82,27 +82,27 @@ private:
 
     static auto createColorAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGColorAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGColorAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createLengthAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGLengthAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGLengthAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createLengthListAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGLengthListAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGLengthListAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createNumberAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGNumberAnimator::create(attributeName,  WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGNumberAnimator::create(attributeName,  WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createStringAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGStringAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGStringAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static const AttributeAnimatorCreator& attributeAnimatorCreator()
@@ -169,7 +169,7 @@ private:
         return map;
     }
 
-    using AttributeProperty = UncheckedKeyHashMap<QualifiedName, Ref<SVGProperty>>;
+    using AttributeProperty = HashMap<QualifiedName, Ref<SVGProperty>>;
     AttributeProperty m_attributeProperty;
 };
 

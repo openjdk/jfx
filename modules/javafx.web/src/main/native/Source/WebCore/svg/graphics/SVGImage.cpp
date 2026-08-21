@@ -31,9 +31,13 @@
 #include "CacheStorageProvider.h"
 #include "Chrome.h"
 #include "CommonVM.h"
+#include "ContainerNodeInlines.h"
 #include "DOMParser.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
 #include "DocumentSVG.h"
+#include "DocumentView.h"
 #include "EditorClient.h"
 #include "FrameLoader.h"
 #include "ImageBuffer.h"
@@ -42,12 +46,13 @@
 #include "JSDOMWindowBase.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
+#include "NativeImage.h"
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "RenderSVGRoot.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFEImageElement.h"
@@ -105,13 +110,13 @@ bool SVGImage::renderingTaintsOrigin() const
     // FIXME: Once foreignObject elements within SVG images are updated to not leak cross-origin data
     // (e.g., visited links, spellcheck) we can remove the SVGForeignObjectElement check here and
     // research if we can remove the Image::renderingTaintsOrigin mechanism entirely.
-    for (auto& element : descendantsOfType<SVGElement>(*rootElement)) {
-        if (is<SVGForeignObjectElement>(element))
+    for (Ref element : descendantsOfType<SVGElement>(*rootElement)) {
+        if (is<SVGForeignObjectElement>(element.get()))
             return true;
-        if (RefPtr svgImage = dynamicDowncast<SVGImageElement>(element)) {
+        if (RefPtr svgImage = dynamicDowncast<SVGImageElement>(element.get())) {
             if (svgImage->renderingTaintsOrigin())
                 return true;
-        } else if (RefPtr svgFEImage = dynamicDowncast<SVGFEImageElement>(element)) {
+        } else if (RefPtr svgFEImage = dynamicDowncast<SVGFEImageElement>(element.get())) {
             if (svgFEImage->renderingTaintsOrigin())
                 return true;
         }
@@ -137,7 +142,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
     }
 
     if (CheckedPtr renderer = dynamicDowncast<RenderSVGRoot>(rootElement->renderer())) {
-    renderer->setContainerSize(IntSize(size));
+        renderer->setContainerSize(IntSize(size));
         return;
     }
 }
@@ -204,8 +209,20 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
 
     ImageDrawResult result = draw(context, dstRect, scaledSrc, options);
 
-    setImageObserver(WTFMove(observer));
+    setImageObserver(WTF::move(observer));
     return result;
+}
+
+bool SVGImage::hasHDRContent() const
+{
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (!m_page)
+        return false;
+
+    if (RefPtr localTopDocument = m_page->localTopDocument())
+        return localTopDocument->hasHDRContent();
+#endif
+    return false;
 }
 
 RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpace)
@@ -224,7 +241,7 @@ RefPtr<NativeImage> SVGImage::nativeImage(const FloatSize& size, const Destinati
     if (CheckedPtr contentRenderer = embeddedContentBox())
         hostWindow = contentRenderer->hostWindow();
 
-    RefPtr imageBuffer = ImageBuffer::create(size, renderingMode, RenderingPurpose::DOM, 1, colorSpace, ImageBufferPixelFormat::BGRA8, hostWindow);
+    RefPtr imageBuffer = ImageBuffer::create(size, renderingMode, RenderingPurpose::DOM, 1, colorSpace, PixelFormat::BGRA8, hostWindow);
     if (!imageBuffer)
         return nullptr;
 
@@ -234,8 +251,8 @@ RefPtr<NativeImage> SVGImage::nativeImage(const FloatSize& size, const Destinati
 
     imageBuffer->context().drawImage(*this, FloatPoint(0, 0));
 
-    setImageObserver(WTFMove(observer));
-    return ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
+    setImageObserver(WTF::move(observer));
+    return ImageBuffer::sinkIntoNativeImage(WTF::move(imageBuffer));
 }
 
 void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect,
@@ -290,7 +307,11 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
         context.setCompositeOperation(CompositeOperator::SourceOver, BlendMode::Normal);
     }
 
-    // FIXME: We should honor options.orientation(), since ImageBitmap's flipY handling relies on it. https://bugs.webkit.org/show_bug.cgi?id=231001
+    auto orientation = options.orientation();
+    // SVG images don't have intrinsic orientation metadata like EXIF, so FromImage defaults to None.
+    if (orientation == ImageOrientation::Orientation::FromImage)
+        orientation = ImageOrientation::Orientation::None;
+
     FloatSize scale(dstRect.size() / srcRect.size());
 
     // We can only draw the entire frame, clipped to the rect we want. So compute where the top left
@@ -300,6 +321,13 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 
     context.translate(destOffset);
     context.scale(scale);
+
+    // Apply orientation transformation if needed.
+    if (orientation != ImageOrientation::Orientation::None) {
+        auto containerSizeForTransform = containerSize();
+        auto orientationTransform = ImageOrientation(orientation).transformFromDefault(FloatSize(containerSizeForTransform));
+        context.concatCTM(orientationTransform);
+    }
 
     view->resize(containerSize());
 
@@ -353,21 +381,17 @@ RefPtr<LocalFrameView> SVGImage::protectedFrameView() const
 
 bool SVGImage::hasRelativeWidth() const
 {
-    RefPtr rootElement = this->rootElement();
-    if (!rootElement)
+    // FIXME: This seems wrong.
         return false;
-    return rootElement->intrinsicWidth().isPercentOrCalculated();
 }
 
 bool SVGImage::hasRelativeHeight() const
 {
-    RefPtr rootElement = this->rootElement();
-    if (!rootElement)
+    // FIXME: This seems wrong.
         return false;
-    return rootElement->intrinsicHeight().isPercentOrCalculated();
 }
 
-void SVGImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
+void SVGImage::computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     RefPtr rootElement = this->rootElement();
     if (!rootElement)
@@ -375,12 +399,13 @@ void SVGImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrin
 
     intrinsicWidth = rootElement->intrinsicWidth();
     intrinsicHeight = rootElement->intrinsicHeight();
+
     if (rootElement->preserveAspectRatio().align() == SVGPreserveAspectRatioValue::SVG_PRESERVEASPECTRATIO_NONE)
         return;
 
     intrinsicRatio = rootElement->viewBox().size();
-    if (intrinsicRatio.isEmpty() && intrinsicWidth.isFixed() && intrinsicHeight.isFixed())
-        intrinsicRatio = FloatSize(floatValueForLength(intrinsicWidth, 0), floatValueForLength(intrinsicHeight, 0));
+    if (intrinsicRatio.isEmpty())
+        intrinsicRatio = FloatSize { intrinsicWidth, intrinsicHeight };
 }
 
 void SVGImage::startAnimationTimerFired()
@@ -469,7 +494,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         // This will become an issue when SVGImage will be able to load other
         // SVGImage objects, but we're safe now, because SVGImage can only be
         // loaded by a top-level document.
-        m_page = Page::create(WTFMove(pageConfiguration));
+        m_page = Page::create(WTF::move(pageConfiguration));
 #if ENABLE(VIDEO)
         m_page->settings().setMediaEnabled(false);
 #endif
@@ -481,7 +506,9 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
             if (RefPtr parentSettings = observer->settings()) {
                 m_page->settings().setLayerBasedSVGEngineEnabled(parentSettings->layerBasedSVGEngineEnabled());
                 m_page->settings().fontGenericFamilies() = parentSettings->fontGenericFamilies();
+                m_page->settings().setCSSDPropertyEnabled(parentSettings->cssDPropertyEnabled());
             }
+            m_page->setUseColorAppearance(observer->useSystemDarkAppearance(), false);
         }
 
         RefPtr localMainFrame = m_page->localMainFrame();
@@ -532,14 +559,30 @@ bool isInSVGImage(const Element* element)
     return page->chrome().client().isSVGImageChromeClient();
 }
 
-RefPtr<SVGImage> SVGImage::tryCreateFromData(std::span<const uint8_t> data)
+void SVGImage::subresourcesAreFinished(Document* embedderDocument, CompletionHandler<void()>&& completionHandler)
+{
+    ASSERT(rootElement());
+    if (embedderDocument)
+        embedderDocument->incrementLoadEventDelayCount();
+    internalPage()->localTopDocument()->whenWindowLoadEventOrDestroyed([embedderDocument = WeakPtr { embedderDocument }, completionHandler = WTF::move(completionHandler)]() mutable {
+        if (RefPtr document = embedderDocument.get())
+            document->decrementLoadEventDelayCount();
+        completionHandler();
+    });
+}
+
+void SVGImage::tryCreateFromData(std::span<const uint8_t> data, CompletionHandler<void(RefPtr<SVGImage>&&)>&& completionHandler)
 {
     Ref svgImage = SVGImage::create(nullptr);
-    Ref buffer = FragmentedSharedBuffer::create(data);
+    Ref buffer = SharedBuffer::create(data);
     svgImage->setData(buffer.ptr(), true);
-    if (!svgImage->rootElement())
-        return nullptr;
-    return svgImage;
+    if (!svgImage->rootElement()) {
+        completionHandler(nullptr);
+        return;
+    }
+    svgImage->subresourcesAreFinished(nullptr, [svgImage, completionHandler = WTF::move(completionHandler)]() mutable {
+        completionHandler(WTF::move(svgImage));
+    });
 }
 
 bool SVGImage::isDataDecodable(const Settings& settings, std::span<const uint8_t> data)

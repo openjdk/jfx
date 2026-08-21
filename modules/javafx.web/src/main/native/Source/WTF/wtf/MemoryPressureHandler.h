@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All Rights Reserved.
- * Copyright (C) 2014 Raspberry Pi Foundation. All Rights Reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Raspberry Pi Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include <atomic>
 #include <ctime>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
@@ -71,20 +72,20 @@ enum class Synchronous : bool { No, Yes };
 typedef WTF::Function<void(Critical, Synchronous)> LowMemoryHandler;
 
 struct MemoryPressureHandlerConfiguration {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(MemoryPressureHandlerConfiguration);
     WTF_EXPORT_PRIVATE MemoryPressureHandlerConfiguration();
-    WTF_EXPORT_PRIVATE MemoryPressureHandlerConfiguration(size_t, double, double, std::optional<double>, Seconds);
+    WTF_EXPORT_PRIVATE MemoryPressureHandlerConfiguration(uint64_t, double, double, std::optional<double>, Seconds);
 
-    size_t baseThreshold;
+    uint64_t baseThreshold;
     double conservativeThresholdFraction;
     double strictThresholdFraction;
     std::optional<double> killThresholdFraction;
     Seconds pollInterval;
 };
 
-class MemoryPressureHandler {
-    WTF_MAKE_FAST_ALLOCATED;
-    friend class WTF::LazyNeverDestroyed<MemoryPressureHandler>;
+class MemoryPressureHandler : public CanMakeWeakPtr<MemoryPressureHandler> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MemoryPressureHandler);
+    friend class WTF::NeverDestroyed<MemoryPressureHandler>;
 public:
     WTF_EXPORT_PRIVATE static MemoryPressureHandler& singleton();
 
@@ -97,17 +98,17 @@ public:
     WTF_EXPORT_PRIVATE void setMemoryFootprintPollIntervalForTesting(Seconds);
     WTF_EXPORT_PRIVATE void setShouldUsePeriodicMemoryMonitor(bool);
 
-#if OS(LINUX) || OS(FREEBSD) || OS(QNX)
+#if OS(LINUX) || OS(FREEBSD) || OS(HAIKU) || OS(QNX)
     WTF_EXPORT_PRIVATE void triggerMemoryPressureEvent(bool isCritical);
 #endif
 
-    void setMemoryKillCallback(WTF::Function<void()>&& function) { m_memoryKillCallback = WTFMove(function); }
-    void setMemoryPressureStatusChangedCallback(WTF::Function<void()>&& function) { m_memoryPressureStatusChangedCallback = WTFMove(function); }
-    void setDidExceedProcessMemoryLimitCallback(WTF::Function<void(ProcessMemoryLimit)>&& function) { m_didExceedProcessMemoryLimitCallback = WTFMove(function); }
+    void setMemoryKillCallback(WTF::Function<void()>&& function) { m_memoryKillCallback = WTF::move(function); }
+    void setMemoryPressureStatusChangedCallback(WTF::Function<void()>&& function) { m_memoryPressureStatusChangedCallback = WTF::move(function); }
+    void setDidExceedProcessMemoryLimitCallback(WTF::Function<void(ProcessMemoryLimit)>&& function) { m_didExceedProcessMemoryLimitCallback = WTF::move(function); }
 
     void setLowMemoryHandler(LowMemoryHandler&& handler)
     {
-        m_lowMemoryHandler = WTFMove(handler);
+        m_lowMemoryHandler = WTF::move(handler);
     }
 
     bool isUnderMemoryWarning() const
@@ -140,12 +141,12 @@ public:
     void setDispatchQueue(OSObjectPtr<dispatch_queue_t>&& queue)
     {
         RELEASE_ASSERT(!m_installed);
-        m_dispatchQueue = WTFMove(queue);
+        m_dispatchQueue = WTF::move(queue);
     }
 #endif
 
     class ReliefLogger {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ReliefLogger);
     public:
         explicit ReliefLogger(const char *log)
             : m_logString(log)
@@ -173,7 +174,7 @@ public:
 
     private:
         struct MemoryUsage {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(MemoryUsage);
             MemoryUsage() = default;
             MemoryUsage(size_t resident, size_t physical)
                 : resident(resident)
@@ -194,7 +195,7 @@ public:
 
     using Configuration = MemoryPressureHandlerConfiguration;
 
-    void setConfiguration(Configuration&& configuration) { m_configuration = WTFMove(configuration); }
+    void setConfiguration(Configuration&& configuration) { m_configuration = WTF::move(configuration); }
     void setConfiguration(const Configuration& configuration) { m_configuration = configuration; }
 
     WTF_EXPORT_PRIVATE void releaseMemory(Critical, Synchronous = Synchronous::No);
@@ -215,7 +216,7 @@ public:
 
     // Runs the provided callback the first time that this process's footprint exceeds any of the given thresholds.
     // Only works in processes that use PeriodicMemoryMonitor.
-    WTF_EXPORT_PRIVATE void setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds, WTF::Function<void(size_t)>&&);
+    WTF_EXPORT_PRIVATE void setMemoryFootprintNotificationThresholds(Vector<uint64_t>&& thresholds, WTF::Function<void(uint64_t)>&&);
 
 private:
     std::optional<size_t> thresholdForMemoryKill();
@@ -257,8 +258,8 @@ private:
     WTF::Function<void()> m_memoryPressureStatusChangedCallback;
     WTF::Function<void(ProcessMemoryLimit)> m_didExceedProcessMemoryLimitCallback;
     LowMemoryHandler m_lowMemoryHandler;
-    Vector<size_t> m_memoryFootprintNotificationThresholds;
-    WTF::Function<void(size_t)> m_memoryFootprintNotificationHandler;
+    Vector<uint64_t> m_memoryFootprintNotificationThresholds;
+    WTF::Function<void(uint64_t)> m_memoryFootprintNotificationHandler;
 
     Configuration m_configuration;
 

@@ -31,14 +31,15 @@
 namespace WebCore {
 
 class CSSFunctionValue;
+class Document;
 
 template<typename> class ExceptionOr;
 
 class CSSSkewY : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSSkewY);
+    WTF_MAKE_TZONE_ALLOCATED(CSSSkewY);
 public:
     static ExceptionOr<Ref<CSSSkewY>> create(Ref<CSSNumericValue>);
-    static ExceptionOr<Ref<CSSSkewY>> create(Ref<const CSSFunctionValue>);
+    static ExceptionOr<Ref<CSSSkewY>> create(Ref<const CSSFunctionValue>, Document&);
 
     const CSSNumericValue& ay() const { return m_ay.get(); }
     ExceptionOr<void> setAy(Ref<CSSNumericValue>);
@@ -47,7 +48,7 @@ public:
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
     void setIs2D(bool) final { };
 
-    CSSTransformType getType() const final { return CSSTransformType::SkewY; }
+    CSSTransformType transformType() const final { return CSSTransformType::SkewY; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -60,5 +61,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSSkewY)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::SkewY; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::SkewY; }
 SPECIALIZE_TYPE_TRAITS_END()

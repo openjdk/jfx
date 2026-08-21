@@ -27,10 +27,10 @@
 #include "CSSKeyframeRule.h"
 
 #include "CSSKeyframesRule.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "MutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
 #include <wtf/text/MakeString.h>
@@ -57,20 +57,20 @@ void StyleRuleKeyframe::Key::writeToString(StringBuilder& str) const
 
 StyleRuleKeyframe::StyleRuleKeyframe(Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
-    , m_properties(WTFMove(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 
 StyleRuleKeyframe::StyleRuleKeyframe(Vector<Key>&& keys, Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
-    , m_properties(WTFMove(properties))
-    , m_keys(WTFMove(keys))
+    , m_properties(WTF::move(properties))
+    , m_keys(WTF::move(keys))
 {
 }
 
 Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRuleKeyframe(WTFMove(properties)));
+    return adoptRef(*new StyleRuleKeyframe(WTF::move(properties)));
 }
 
 Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<std::pair<CSSValueID, double>>&& keys, Ref<StyleProperties>&& properties)
@@ -78,19 +78,16 @@ Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<std::pair<CSSValueID, do
     auto keyStructs = keys.map([](auto& pair) -> Key {
         return { pair.first, pair.second };
     });
-    return adoptRef(*new StyleRuleKeyframe(WTFMove(keyStructs), WTFMove(properties)));
+    return adoptRef(*new StyleRuleKeyframe(WTF::move(keyStructs), WTF::move(properties)));
 }
 
 StyleRuleKeyframe::~StyleRuleKeyframe() = default;
 
 MutableStyleProperties& StyleRuleKeyframe::mutableProperties()
 {
-    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
-        return *mutableProperties;
-    Ref mutableProperties = m_properties->mutableCopy();
-    auto& mutablePropertiesRef = mutableProperties.get();
-    m_properties = WTFMove(mutableProperties);
-    return mutablePropertiesRef;
+    if (!is<MutableStyleProperties>(m_properties))
+        m_properties = m_properties->mutableCopy();
+    return uncheckedDowncast<MutableStyleProperties>(m_properties.get());
 }
 
 String StyleRuleKeyframe::keyText() const
@@ -107,7 +104,7 @@ String StyleRuleKeyframe::keyText() const
 bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
-    auto keys = CSSParser::parseKeyframeKeyList(keyText, strictCSSParserContext());
+    auto keys = CSSPropertyParserHelpers::parseKeyframeKeyList(keyText, strictCSSParserContext());
     if (keys.isEmpty())
         return false;
     m_keys = keys.map([](auto& pair) -> Key {
@@ -136,10 +133,10 @@ CSSKeyframeRule::~CSSKeyframeRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSKeyframeRule::style()
+CSSStyleProperties& CSSKeyframeRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_keyframe->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleProperties::create(m_keyframe->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 

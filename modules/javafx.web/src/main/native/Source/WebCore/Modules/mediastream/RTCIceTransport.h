@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "RTCIceCandidate.h"
 #include "RTCIceGatheringState.h"
 #include "RTCIceTransportBackend.h"
@@ -48,13 +49,15 @@ namespace WebCore {
 class RTCPeerConnection;
 
 class RTCIceTransport : public RefCounted<RTCIceTransport>, public ActiveDOMObject, public EventTarget, public RTCIceTransportBackendClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCIceTransport);
+    WTF_MAKE_TZONE_ALLOCATED(RTCIceTransport);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<RTCIceTransport> create(ScriptExecutionContext&, UniqueRef<RTCIceTransportBackend>&&, RTCPeerConnection&);
     ~RTCIceTransport();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     RTCIceTransportState state() const { return m_transportState; }
     RTCIceGatheringState gatheringState() const { return m_gatheringState; }
@@ -73,7 +76,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCIceTransport; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -87,7 +90,7 @@ private:
     void onSelectedCandidatePairChanged(RefPtr<RTCIceCandidate>&&, RefPtr<RTCIceCandidate>&&) final;
 
     bool m_isStopped { false };
-    UniqueRef<RTCIceTransportBackend> m_backend;
+    const UniqueRef<RTCIceTransportBackend> m_backend;
     WeakPtr<RTCPeerConnection, WeakPtrImplWithEventTargetData> m_connection;
     RTCIceTransportState m_transportState { RTCIceTransportState::New };
     RTCIceGatheringState m_gatheringState { RTCIceGatheringState::New };
@@ -95,5 +98,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(RTCIceTransport)
 
 #endif // ENABLE(WEB_RTC)

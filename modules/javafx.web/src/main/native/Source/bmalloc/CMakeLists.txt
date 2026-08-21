@@ -13,7 +13,7 @@ set(bmalloc_SOURCES
     bmalloc/Cache.cpp
     bmalloc/CryptoRandom.cpp
     bmalloc/Deallocator.cpp
-    bmalloc/DebugHeap.cpp
+    bmalloc/SystemHeap.cpp
     bmalloc/Environment.cpp
     bmalloc/FreeList.cpp
     bmalloc/Gigacage.cpp
@@ -148,9 +148,13 @@ set(bmalloc_C_SOURCES
     libpas/src/libpas/pas_lock_free_read_ptr_ptr_hashtable.c
     libpas/src/libpas/pas_log.c
     libpas/src/libpas/pas_malloc_stack_logging.c
+    libpas/src/libpas/pas_mar_registry.c
+    libpas/src/libpas/pas_mar_report_crash.c
     libpas/src/libpas/pas_medium_megapage_cache.c
     libpas/src/libpas/pas_megapage_cache.c
     libpas/src/libpas/pas_monotonic_time.c
+    libpas/src/libpas/pas_mte.c
+    libpas/src/libpas/pas_mte_config.c
     libpas/src/libpas/pas_page_base.c
     libpas/src/libpas/pas_page_base_config.c
     libpas/src/libpas/pas_page_header_table.c
@@ -188,9 +192,11 @@ set(bmalloc_C_SOURCES
     libpas/src/libpas/pas_simple_type.c
     libpas/src/libpas/pas_small_medium_bootstrap_free_heap.c
     libpas/src/libpas/pas_small_medium_bootstrap_heap_page_provider.c
+    libpas/src/libpas/pas_stats.c
     libpas/src/libpas/pas_status_reporter.c
     libpas/src/libpas/pas_stream.c
     libpas/src/libpas/pas_string_stream.c
+    libpas/src/libpas/pas_thread.c
     libpas/src/libpas/pas_thread_local_cache.c
     libpas/src/libpas/pas_thread_local_cache_layout.c
     libpas/src/libpas/pas_thread_local_cache_layout_node.c
@@ -229,7 +235,7 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/Chunk.h
     bmalloc/CryptoRandom.h
     bmalloc/Deallocator.h
-    bmalloc/DebugHeap.h
+    bmalloc/SystemHeap.h
     bmalloc/DeferredDecommit.h
     bmalloc/DeferredDecommitInlines.h
     bmalloc/DeferredTrigger.h
@@ -439,7 +445,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_deallocator.h
     libpas/src/libpas/pas_deallocator_scavenge_action.h
     libpas/src/libpas/pas_decommit_exclusion_range.h
-    libpas/src/libpas/pas_debug_heap.h
+    libpas/src/libpas/pas_system_heap.h
     libpas/src/libpas/pas_debug_spectrum.h
     libpas/src/libpas/pas_deferred_decommit_log.h
     libpas/src/libpas/pas_designated_intrinsic_heap.h
@@ -544,11 +550,16 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_lock.h
     libpas/src/libpas/pas_log.h
     libpas/src/libpas/pas_malloc_stack_logging.h
+    libpas/src/libpas/pas_mar_crash_reporter_report.h
+    libpas/src/libpas/pas_mar_registry.h
+    libpas/src/libpas/pas_mar_report_crash.h
     libpas/src/libpas/pas_medium_megapage_cache.h
     libpas/src/libpas/pas_megapage_cache.h
     libpas/src/libpas/pas_min_heap.h
     libpas/src/libpas/pas_mmap_capability.h
     libpas/src/libpas/pas_monotonic_time.h
+    libpas/src/libpas/pas_mte.h
+    libpas/src/libpas/pas_mte_config.h
     libpas/src/libpas/pas_mutation_count.h
     libpas/src/libpas/pas_object_kind.h
     libpas/src/libpas/pas_page_base_and_kind.h
@@ -652,9 +663,11 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_small_medium_bootstrap_free_heap.h
     libpas/src/libpas/pas_small_medium_bootstrap_heap_page_provider.h
     libpas/src/libpas/pas_snprintf.h
+    libpas/src/libpas/pas_stats.h
     libpas/src/libpas/pas_status_reporter.h
     libpas/src/libpas/pas_stream.h
     libpas/src/libpas/pas_string_stream.h
+    libpas/src/libpas/pas_thread.h
     libpas/src/libpas/pas_thread_suspend_lock.h
     libpas/src/libpas/pas_thread_local_cache.h
     libpas/src/libpas/pas_thread_local_cache_layout.h
@@ -680,6 +693,7 @@ set(bmalloc_PUBLIC_HEADERS
     libpas/src/libpas/pas_versioned_field.h
     libpas/src/libpas/pas_virtual_range.h
     libpas/src/libpas/pas_virtual_range_min_heap.h
+    libpas/src/libpas/pas_zero_memory.h
     libpas/src/libpas/pas_zero_mode.h
     libpas/src/libpas/thingy_heap_config.h
     libpas/src/libpas/thingy_heap.h
@@ -688,6 +702,7 @@ set(bmalloc_PUBLIC_HEADERS
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     list(APPEND bmalloc_SOURCES
+        bmalloc/TZoneLog.cpp
         bmalloc/Zone.cpp
     )
 endif ()
@@ -696,8 +711,28 @@ set(bmalloc_LIBRARIES
     ${CMAKE_DL_LIBS}
 )
 
-if (NOT UNIX AND ATOMICS_REQUIRE_LIBATOMIC)
+if (ENABLE_MALLOC_HEAP_BREAKDOWN)
+    list(APPEND bmalloc_DEFINITIONS BENABLE_MALLOC_HEAP_BREAKDOWN=1)
+    list(APPEND bmalloc_LIBRARIES ${MALLOC_HEAP_BREAKDOWN_LIBRARIES})
+endif ()
+
+if (ATOMICS_REQUIRE_LIBATOMIC)
     list(APPEND bmalloc_LIBRARIES atomic)
+endif ()
+
+
+# GCC fails to compile with -O1 due to always_inline and unresolved indirect calls.
+# But it works either with -O0 (skips inlining) or with -O2 (resolves the callee).
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    string(TOUPPER "${CMAKE_BUILD_TYPE}" _BUILD_TYPE_UPPER)
+    set(_all_c_flags "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${_BUILD_TYPE_UPPER}}")
+    if (_all_c_flags MATCHES "-O1")
+        set_source_files_properties(
+            libpas/src/libpas/pas_fast_large_free_heap.c
+            libpas/src/libpas/pas_simple_large_free_heap.c
+            PROPERTIES COMPILE_OPTIONS "-O2"
+        )
+    endif ()
 endif ()
 
 set(bmalloc_COMPILE_OPTIONS
@@ -709,12 +744,12 @@ set(bmalloc_INTERFACE_LIBRARIES bmalloc)
 set(bmalloc_INTERFACE_INCLUDE_DIRECTORIES ${bmalloc_FRAMEWORK_HEADERS_DIR})
 set(bmalloc_INTERFACE_DEPENDENCIES bmalloc_CopyHeaders)
 
-
 add_definitions(-D_GNU_SOURCE)
 add_definitions(-DPAS_BMALLOC=1)
 
 if (MSVC)
     add_compile_options(/wd4206)
+    add_compile_options(-mcx16)
 endif ()
 
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)

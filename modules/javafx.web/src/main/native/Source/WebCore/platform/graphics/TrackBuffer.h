@@ -53,42 +53,42 @@ public:
     void addBufferedRange(const MediaTime& start, const MediaTime& end, AddTimeRangeOption = AddTimeRangeOption::None);
     void addSample(MediaSample&);
 
-    bool updateMinimumUpcomingPresentationTime();
-
     bool reenqueueMediaForTime(const MediaTime&, const MediaTime& timeFudgeFactor, bool isEnded = false);
     MediaTime findSeekTimeForTargetTime(const MediaTime& targetTime, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
     int64_t removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime);
     PlatformTimeRanges removeSamples(const DecodeOrderSampleMap::MapType&, ASCIILiteral);
     int64_t codedFramesIntervalSize(const MediaTime& start, const MediaTime& end);
 
+    RefPtr<MediaSample> nextSample();
+    size_t remainingSamples() const { return decodeQueue().size(); }
+
     void resetTimestampOffset();
     void reset();
     void clearSamples();
 
     const MediaTime& lastDecodeTimestamp() const { return m_lastDecodeTimestamp; }
-    void setLastDecodeTimestamp(MediaTime timestamp) { m_lastDecodeTimestamp = WTFMove(timestamp); }
+    void setLastDecodeTimestamp(MediaTime timestamp) { m_lastDecodeTimestamp = WTF::move(timestamp); }
 
     const MediaTime& greatestFrameDuration() const { return m_greatestFrameDuration; }
-    void setGreatestFrameDuration(MediaTime duration) { m_greatestFrameDuration = WTFMove(duration); }
+    void setGreatestFrameDuration(MediaTime duration) { m_greatestFrameDuration = WTF::move(duration); }
     const MediaTime& lastFrameDuration() const { return m_lastFrameDuration; }
-    void setLastFrameDuration(MediaTime duration) { m_lastFrameDuration = WTFMove(duration); }
+    void setLastFrameDuration(MediaTime duration) { m_lastFrameDuration = WTF::move(duration); }
 
     const MediaTime& highestPresentationTimestamp() const { return m_highestPresentationTimestamp; }
-    void setHighestPresentationTimestamp(MediaTime timestamp) { m_highestPresentationTimestamp = WTFMove(timestamp); }
+    void setHighestPresentationTimestamp(MediaTime timestamp) { m_highestPresentationTimestamp = WTF::move(timestamp); }
 
     const MediaTime& highestEnqueuedPresentationTime() const { return m_highestEnqueuedPresentationTime; }
-    void setHighestEnqueuedPresentationTime(MediaTime timestamp) { m_highestEnqueuedPresentationTime = WTFMove(timestamp); }
+    void setHighestEnqueuedPresentationTime(MediaTime timestamp) { m_highestEnqueuedPresentationTime = WTF::move(timestamp); }
     const MediaTime& minimumEnqueuedPresentationTime() const { return m_minimumEnqueuedPresentationTime; }
-    void setMinimumEnqueuedPresentationTime(MediaTime timestamp) { m_minimumEnqueuedPresentationTime = WTFMove(timestamp); }
 
     const DecodeOrderSampleMap::KeyType& lastEnqueuedDecodeKey() const { return m_lastEnqueuedDecodeKey; }
-    void setLastEnqueuedDecodeKey(DecodeOrderSampleMap::KeyType key) { m_lastEnqueuedDecodeKey = WTFMove(key); }
+    void setLastEnqueuedDecodeKey(DecodeOrderSampleMap::KeyType key) { m_lastEnqueuedDecodeKey = WTF::move(key); }
 
     const MediaTime& enqueueDiscontinuityBoundary() const { return m_enqueueDiscontinuityBoundary; }
-    void setEnqueueDiscontinuityBoundary(MediaTime boundary) { m_enqueueDiscontinuityBoundary = WTFMove(boundary); }
+    void setEnqueueDiscontinuityBoundary(MediaTime boundary) { m_enqueueDiscontinuityBoundary = WTF::move(boundary); }
 
     const MediaTime& roundedTimestampOffset() const { return m_roundedTimestampOffset; }
-    void setRoundedTimestampOffset(MediaTime offset) { m_roundedTimestampOffset = WTFMove(offset); }
+    void setRoundedTimestampOffset(MediaTime offset) { m_roundedTimestampOffset = WTF::move(offset); }
     void setRoundedTimestampOffset(const MediaTime&, uint32_t, const MediaTime&);
 
     uint32_t lastFrameTimescale() const { return m_lastFrameTimescale; }
@@ -99,13 +99,9 @@ public:
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool needsReenqueueing() const { return m_needsReenqueueing; }
     void setNeedsReenqueueing(bool flag) { m_needsReenqueueing = flag; }
-    bool needsMinimumUpcomingPresentationTimeUpdating() const { return m_needsMinimumUpcomingPresentationTimeUpdating; }
-    void setNeedsMinimumUpcomingPresentationTimeUpdating(bool flag) { m_needsMinimumUpcomingPresentationTimeUpdating = flag; }
 
     const SampleMap& samples() const { return m_samples; }
     SampleMap& samples() { return m_samples; }
-    const DecodeOrderSampleMap::MapType& decodeQueue() const { return m_decodeQueue; }
-    DecodeOrderSampleMap::MapType& decodeQueue() { return m_decodeQueue; }
     const RefPtr<MediaDescription>& description() const { return m_description; }
     const PlatformTimeRanges& buffered() const { return m_buffered; }
     PlatformTimeRanges& buffered() { return m_buffered; }
@@ -121,6 +117,11 @@ public:
 private:
     friend UniqueRef<TrackBuffer> WTF::makeUniqueRefWithoutFastMallocCheck<TrackBuffer>(RefPtr<WebCore::MediaDescription>&&, const WTF::MediaTime&);
     TrackBuffer(RefPtr<MediaDescription>&&, const MediaTime&);
+
+    const DecodeOrderSampleMap::MapType& decodeQueue() const { return m_decodeQueue; }
+    DecodeOrderSampleMap::MapType& decodeQueue() { return m_decodeQueue; }
+    void updateMinimumUpcomingPresentationTime();
+    void clearDecodeQueue();
 
     SampleMap m_samples;
     DecodeOrderSampleMap::MapType m_decodeQueue;
@@ -153,7 +154,7 @@ private:
     bool m_needRandomAccessFlag { true };
     bool m_enabled { false };
     bool m_needsReenqueueing { false };
-    bool m_needsMinimumUpcomingPresentationTimeUpdating { false };
+    bool m_hasOutOfOrderFrames { false };
 };
 
 } // namespace WebCore

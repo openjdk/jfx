@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "DisabledAdaptations.h"
-#include "FloatSize.h"
-#include "IntSize.h"
-#include "ViewportArguments.h"
+#include <WebCore/DisabledAdaptations.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/ViewportArguments.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -62,6 +62,7 @@ public:
         bool ignoreInitialScaleForLayoutWidth { false };
 
         bool shouldHonorMinimumEffectiveDeviceWidthFromClient { true };
+        bool minimumScaleDoesNotAdaptToContent { false };
 
         friend bool operator==(const Parameters&, const Parameters&) = default;
     };
@@ -130,6 +131,7 @@ public:
 
     void setPrefersHorizontalScrollingBelowDesktopViewportWidths(bool value) { m_prefersHorizontalScrollingBelowDesktopViewportWidths = value; }
     void setCanIgnoreViewportArgumentsToAvoidExcessiveZoom(bool value) { m_canIgnoreViewportArgumentsToAvoidExcessiveZoom = value; }
+    void setCanIgnoreViewportArgumentsToAvoidEnlargedView(bool value) { m_canIgnoreViewportArgumentsToAvoidEnlargedView = value; }
 
     WEBCORE_EXPORT IntSize layoutSize() const;
     WEBCORE_EXPORT int layoutWidth() const;
@@ -217,6 +219,7 @@ private:
     bool m_isKnownToLayOutWiderThanViewport { false };
     bool m_prefersHorizontalScrollingBelowDesktopViewportWidths { false };
     bool m_canIgnoreViewportArgumentsToAvoidExcessiveZoom { false };
+    bool m_canIgnoreViewportArgumentsToAvoidEnlargedView { false };
     bool m_minimumEffectiveDeviceWidthWasSetByClient { false };
 };
 

@@ -25,12 +25,17 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
-#include "ScriptExecutionContext.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/ScriptExecutionContext.h>
 
 namespace WebCore {
 
 inline ScriptExecutionContext* ContextDestructionObserver::scriptExecutionContext() const
+{
+    return m_scriptExecutionContext.get();
+}
+
+inline RefPtr<ScriptExecutionContext> ContextDestructionObserver::protectedScriptExecutionContext() const
 {
     return m_scriptExecutionContext.get();
 }

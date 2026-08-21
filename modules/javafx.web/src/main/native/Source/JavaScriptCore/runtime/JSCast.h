@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSCell.h"
+#include <JavaScriptCore/JSCell.h>
 
 namespace JSC {
 
@@ -126,7 +126,7 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(JSBigUint64Array, JSType::BigUint64ArrayType, JSType::BigUint64ArrayType) \
 
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_FORWARD_DECLARED(macro) \
-    macro(JSImmutableButterfly, JSType::JSImmutableButterflyType, JSType::JSImmutableButterflyType) \
+    macro(JSCellButterfly, JSType::JSCellButterflyType, JSType::JSCellButterflyType) \
     macro(JSStringIterator, JSType::JSStringIteratorType, JSType::JSStringIteratorType) \
     macro(Structure, JSType::StructureType, JSType::StructureType) \
     macro(JSString, JSType::StringType, JSType::StringType) \
@@ -147,6 +147,9 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
     macro(JSIterator, JSType::JSIteratorType, JSType::JSIteratorType) \
     macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
+    macro(JSPromiseCombinatorsContext, JSType::JSPromiseCombinatorsContextType, JSType::JSPromiseCombinatorsContextType) \
+    macro(JSPromiseCombinatorsGlobalContext, JSType::JSPromiseCombinatorsGlobalContextType, JSType::JSPromiseCombinatorsGlobalContextType) \
+    macro(JSPromiseReaction, JSType::JSPromiseReactionType, JSType::JSPromiseReactionType) \
     macro(JSGlobalProxy, JSType::GlobalProxyType, JSType::GlobalProxyType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
     macro(JSMap, JSType::JSMapType, JSType::JSMapType) \
@@ -171,6 +174,9 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(StringObject, JSType::StringObjectType, JSType::DerivedStringObjectType) \
     macro(ShadowRealmObject, JSType::ShadowRealmType, JSType::ShadowRealmType) \
     macro(JSDataView, JSType::DataViewType, JSType::DataViewType) \
+    macro(JSGenerator, JSType::JSGeneratorType, JSType::JSGeneratorType) \
+    macro(JSAsyncGenerator, JSType::JSAsyncGeneratorType, JSType::JSAsyncGeneratorType) \
+    macro(WebAssemblyGCObjectBase, JSType::WebAssemblyGCObjectType, JSType::WebAssemblyGCObjectType) \
 
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD(macro) \
     FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_FORWARD_DECLARED(macro) \
@@ -255,7 +261,7 @@ template<typename To, typename From>
 To jsDynamicCast(From* from)
 {
     using Dispatcher = JSCastingHelpers::InheritsTraits<typename std::remove_cv<typename std::remove_pointer<To>::type>::type>;
-    if (LIKELY(Dispatcher::template inherits<>(from)))
+    if (Dispatcher::template inherits<>(from)) [[likely]]
         return static_cast<To>(from);
     return nullptr;
 }
@@ -263,7 +269,7 @@ To jsDynamicCast(From* from)
 template<typename To>
 To jsDynamicCast(JSValue from)
 {
-    if (UNLIKELY(!from.isCell()))
+    if (!from.isCell()) [[unlikely]]
         return nullptr;
     return jsDynamicCast<To>(from.asCell());
 }

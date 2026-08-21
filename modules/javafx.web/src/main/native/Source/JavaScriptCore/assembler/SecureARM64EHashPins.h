@@ -25,8 +25,13 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 #if CPU(ARM64E) && ENABLE(JIT)
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/Atomics.h>
 #include <wtf/BitSet.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

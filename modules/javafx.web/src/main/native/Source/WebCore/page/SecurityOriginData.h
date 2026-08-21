@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
+#include <WebCore/ProcessQualified.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
@@ -48,7 +48,7 @@ public:
 
         friend bool operator==(const Tuple&, const Tuple&) = default;
         Tuple isolatedCopy() const & { return { protocol.isolatedCopy(), host.isolatedCopy(), port }; }
-        Tuple isolatedCopy() && { return { WTFMove(protocol).isolatedCopy(), WTFMove(host).isolatedCopy(), port }; }
+        Tuple isolatedCopy() && { return { WTF::move(protocol).isolatedCopy(), WTF::move(host).isolatedCopy(), port }; }
     };
 
     SecurityOriginData() = default;
@@ -59,8 +59,8 @@ public:
     }
     explicit SecurityOriginData(ProcessQualified<OpaqueOriginIdentifier> opaqueOriginIdentifier)
         : m_data(opaqueOriginIdentifier) { }
-    explicit SecurityOriginData(std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
-        : m_data(WTFMove(data)) { }
+    explicit SecurityOriginData(Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
+        : m_data(WTF::move(data)) { }
     SecurityOriginData(WTF::HashTableDeletedValueType)
         : m_data { Tuple { WTF::HashTableDeletedValue, { }, { } } } { }
 
@@ -158,11 +158,11 @@ public:
     String debugString() const { return toString(); }
 #endif
 
-    static bool shouldTreatAsOpaqueOrigin(const URL&);
+    WEBCORE_EXPORT static bool shouldTreatAsOpaqueOrigin(const URL&);
 
-    const std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
+    const Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
 private:
-    std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
+    Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
 };
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);
@@ -191,10 +191,6 @@ struct SecurityOriginDataHash {
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
-struct SecurityOriginDataMarkableTraits {
-    static bool isEmptyValue(const SecurityOriginData& value) { return value.isNull(); }
-    static SecurityOriginData emptyValue() { return { }; }
-};
 } // namespace WebCore
 
 namespace WTF {
@@ -202,5 +198,11 @@ namespace WTF {
 template<> struct HashTraits<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHashTraits { };
 template<> struct DefaultHash<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHash { };
 template<> struct DefaultHash<std::optional<WebCore::SecurityOriginData>> : WebCore::SecurityOriginDataHash { };
+
+template<>
+struct MarkableTraits<WebCore::SecurityOriginData> {
+    static bool isEmptyValue(const WebCore::SecurityOriginData& value) { return value.isNull(); }
+    static WebCore::SecurityOriginData emptyValue() { return { }; }
+};
 
 } // namespace WTF

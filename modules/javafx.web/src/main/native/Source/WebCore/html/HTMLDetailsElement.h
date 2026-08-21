@@ -29,17 +29,19 @@ class HTMLSlotElement;
 class ToggleEventTask;
 
 class HTMLDetailsElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDetailsElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLDetailsElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDetailsElement);
 public:
     static Ref<HTMLDetailsElement> create(const QualifiedName& tagName, Document&);
     ~HTMLDetailsElement();
 
-    void toggleOpen() { setBooleanAttribute(HTMLNames::openAttr, !hasAttribute(HTMLNames::openAttr)); }
+    void toggleOpen();
 
     bool isActiveSummary(const HTMLSummaryElement&) const;
 
     void queueDetailsToggleEventTask(ToggleState oldState, ToggleState newState);
+
+    bool isOpen() const;
 
 private:
     HTMLDetailsElement(const QualifiedName&, Document&);
@@ -47,7 +49,7 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
 
-    Vector<RefPtr<HTMLDetailsElement>> otherElementsInNameGroup();
+    Vector<Ref<HTMLDetailsElement>> otherElementsInNameGroup();
     void ensureDetailsExclusivityAfterMutation();
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
@@ -57,6 +59,7 @@ private:
     WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_summarySlot;
     WeakPtr<HTMLSummaryElement, WeakPtrImplWithEventTargetData> m_defaultSummary;
     RefPtr<HTMLSlotElement> m_defaultSlot;
+    bool m_isOpen { false };
 
     RefPtr<ToggleEventTask> m_toggleEventTask;
 };

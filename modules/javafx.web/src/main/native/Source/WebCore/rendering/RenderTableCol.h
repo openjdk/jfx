@@ -33,14 +33,14 @@ class RenderTable;
 class RenderTableCell;
 
 class RenderTableCol final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableCol);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableCol);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableCol);
 public:
     RenderTableCol(Element&, RenderStyle&&);
     RenderTableCol(Document&, RenderStyle&&);
     virtual ~RenderTableCol();
 
-    void clearPreferredLogicalWidthsDirtyBits();
+    void clearNeedsPreferredLogicalWidthsUpdate();
 
     unsigned span() const { return m_span; }
     void setSpan(unsigned span) { m_span = span; }
@@ -84,10 +84,11 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
     void paint(PaintInfo&, const LayoutPoint&) override { }
 
     RenderTable* table() const;
+    CheckedPtr<RenderTable> checkedTable() const;
 
     unsigned m_span { 1 };
 };

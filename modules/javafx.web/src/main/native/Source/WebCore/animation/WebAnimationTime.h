@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSNumericValue.h"
+#include <WebCore/CSSNumericValue.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
@@ -39,7 +39,7 @@ public:
     WebAnimationTime(const CSSNumberish&);
 
     static WebAnimationTime fromMilliseconds(double);
-    static WebAnimationTime fromPercentage(double);
+    WEBCORE_EXPORT static WebAnimationTime fromPercentage(double);
 
     WEBCORE_EXPORT std::optional<Seconds> time() const;
     WEBCORE_EXPORT std::optional<double> percentage() const;
@@ -62,18 +62,13 @@ public:
     double operator/(const WebAnimationTime&) const;
     WebAnimationTime& operator+=(const WebAnimationTime&);
     WebAnimationTime& operator-=(const WebAnimationTime&);
-    bool operator<(const WebAnimationTime&) const;
-    bool operator<=(const WebAnimationTime&) const;
-    bool operator>(const WebAnimationTime&) const;
-    bool operator>=(const WebAnimationTime&) const;
-    bool operator==(const WebAnimationTime&) const;
+
+    friend bool operator==(const WebAnimationTime&, const WebAnimationTime&) = default;
+    friend std::partial_ordering operator<=>(const WebAnimationTime&, const WebAnimationTime&);
+    friend std::partial_ordering operator<=>(const WebAnimationTime&, Seconds);
 
     WebAnimationTime operator+(const Seconds&) const;
     WebAnimationTime operator-(const Seconds&) const;
-    bool operator<(const Seconds&) const;
-    bool operator<=(const Seconds&) const;
-    bool operator>(const Seconds&) const;
-    bool operator>=(const Seconds&) const;
     bool operator==(const Seconds&) const;
 
     WebAnimationTime operator*(double) const;

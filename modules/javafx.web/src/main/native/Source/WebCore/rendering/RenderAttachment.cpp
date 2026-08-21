@@ -28,13 +28,16 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "ContainerNodeInlines.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"
 #include "HTMLAttachmentElement.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
-#include "RenderStyleSetters.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTheme.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
@@ -43,10 +46,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderAttachment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderAttachment);
 
 RenderAttachment::RenderAttachment(HTMLAttachmentElement& element, RenderStyle&& style)
-    : RenderReplaced(Type::Attachment, element, WTFMove(style), LayoutSize())
+    : RenderReplaced(Type::Attachment, element, WTF::move(style), LayoutSize())
     , m_isWideLayout(element.isWideLayout())
 {
     ASSERT(isRenderAttachment());
@@ -100,20 +103,6 @@ void RenderAttachment::layout()
         layoutShadowContent(newIntrinsicSize);
 }
 
-LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
-{
-    if (auto* baselineElement = attachmentElement().wideLayoutImageElement()) {
-        if (auto* baselineElementRenderBox = baselineElement->renderBox()) {
-            // This is the bottom of the image assuming it is vertically centered.
-            return (height() + baselineElementRenderBox->height()) / 2;
-        }
-        // Fallback to the bottom of the attachment if there is no image.
-        return height();
-    }
-
-    return theme().attachmentBaseline(*this);
-}
-
 bool RenderAttachment::shouldDrawBorder() const
 {
     if (style().usedAppearance() == StyleAppearance::BorderlessAttachment)
@@ -121,8 +110,23 @@ bool RenderAttachment::shouldDrawBorder() const
     return m_shouldDrawBorder;
 }
 
+void RenderAttachment::setSelectionState(HighlightState state)
+{
+    RenderReplaced::setSelectionState(state);
+
+    // HTMLAttachmentElement::HighlightState is duck-typed to match these RenderObject::HighlightState underlying values.
+    static_assert(uint8_t(HTMLAttachmentElement::HighlightState::None) == uint8_t(RenderObject::HighlightState::None));
+    static_assert(uint8_t(HTMLAttachmentElement::HighlightState::Start) == uint8_t(RenderObject::HighlightState::Start));
+    static_assert(uint8_t(HTMLAttachmentElement::HighlightState::Inside) == uint8_t(RenderObject::HighlightState::Inside));
+    static_assert(uint8_t(HTMLAttachmentElement::HighlightState::End) == uint8_t(RenderObject::HighlightState::End));
+    static_assert(uint8_t(HTMLAttachmentElement::HighlightState::Both) == uint8_t(RenderObject::HighlightState::Both));
+    attachmentElement().addSelectionClasses(HTMLAttachmentElement::HighlightState(uint8_t(state)));
+}
+
 void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& offset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasUsedAppearance())
         return;
 
@@ -135,8 +139,8 @@ void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& of
 void RenderAttachment::layoutShadowContent(const LayoutSize& size)
 {
     for (auto& renderBox : childrenOfType<RenderBox>(*this)) {
-        renderBox.mutableStyle().setHeight(Length(size.height(), LengthType::Fixed));
-        renderBox.mutableStyle().setWidth(Length(size.width(), LengthType::Fixed));
+        renderBox.mutableStyle().setHeight(Style::PreferredSize::Fixed { size.height() });
+        renderBox.mutableStyle().setWidth(Style::PreferredSize::Fixed { size.width() });
         renderBox.setNeedsLayout(MarkOnlyThis);
         renderBox.layout();
     }

@@ -37,6 +37,9 @@
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSTokenizer.h"
+#include "CSSValueKeywords.h"
+#include "StyleCustomProperty.h"
+#include <stack>
 
 namespace WebCore {
 
@@ -55,52 +58,98 @@ static bool isValidConstantName(const CSSParserToken& token)
 
 static bool isValidVariableReference(CSSParserTokenRange, const CSSParserContext&);
 static bool isValidConstantReference(CSSParserTokenRange, const CSSParserContext&);
+static bool isValidDashedFunction(CSSParserTokenRange, const CSSParserContext&);
 
-static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& hasTopLevelBraceBlockMixedWithOtherValues, const CSSParserContext& parserContext, bool isTopLevelBlock = true)
+struct ClassifyBlockResult {
+    bool hasReferences { false };
+    bool hasTopLevelBraceBlockMixedWithOtherValues { false };
+    bool hasEmptyTopLevelBraceBlock { false };
+};
+
+static std::optional<ClassifyBlockResult> classifyBlock(CSSParserTokenRange range, const CSSParserContext& parserContext)
 {
+    struct ClassifyBlockState {
+        CSSParserTokenRange range;
+        bool isTopLevelBlock = true;
+        bool hasOtherValues = false;
     unsigned topLevelBraceBlocks = 0;
-    bool hasOtherValuesThanTopLevelBraceBlock = false;
+        bool doneWithThisRange = false;
+    };
+    ClassifyBlockState initialState { .range = range };
 
-    while (!range.atEnd()) {
-        if (isTopLevelBlock) {
-            auto tokenType = range.peek().type();
+    std::stack<ClassifyBlockState> stack;
+    stack.push(initialState);
+
+    auto result = ClassifyBlockResult { };
+
+    while (!stack.empty()) {
+        auto& current = stack.top();
+        if (current.doneWithThisRange) {
+            // If there is a top level brace block, the value should contains only that.
+            if (current.topLevelBraceBlocks > 1 || (current.topLevelBraceBlocks == 1 && current.hasOtherValues))
+                result.hasTopLevelBraceBlockMixedWithOtherValues = true;
+            stack.pop();
+            continue;
+        }
+
+        if (current.range.atEnd()) {
+            current.doneWithThisRange = true;
+            continue;
+        }
+
+        if (current.isTopLevelBlock) {
+            auto tokenType = current.range.peek().type();
             if (!CSSTokenizer::isWhitespace(tokenType)) {
                 if (tokenType == LeftBraceToken)
-                    topLevelBraceBlocks++;
+                    current.topLevelBraceBlocks++;
                 else
-                    hasOtherValuesThanTopLevelBraceBlock = true;
+                    current.hasOtherValues = true;
             }
         }
 
-        if (range.peek().getBlockType() == CSSParserToken::BlockStart) {
-            const CSSParserToken& token = range.peek();
-            CSSParserTokenRange block = range.consumeBlock();
+        if (current.range.peek().getBlockType() == CSSParserToken::BlockStart) {
+            const CSSParserToken& token = current.range.peek();
+            CSSParserTokenRange block = current.range.consumeBlock();
+            block.consumeWhitespace();
+
+            if (token.type() == LeftBraceToken && current.isTopLevelBlock && block.atEnd())
+                result.hasEmptyTopLevelBraceBlock = true;
+
             if (token.functionId() == CSSValueVar) {
                 if (!isValidVariableReference(block, parserContext))
-                    return false; // Bail if any references are invalid
-                hasReferences = true;
+                    return { };
+                result.hasReferences = true;
                 continue;
             }
             if (token.functionId() == CSSValueEnv) {
                 if (!isValidConstantReference(block, parserContext))
-                    return false; // Bail if any references are invalid
-                hasReferences = true;
+                    return { };
+                result.hasReferences = true;
                 continue;
             }
-            if (!classifyBlock(block, hasReferences, hasTopLevelBraceBlockMixedWithOtherValues, parserContext, false))
-                return false;
+            if (token.type() == FunctionToken && isCustomPropertyName(token.value()) && parserContext.propertySettings.cssFunctionAtRuleEnabled) {
+                // https://drafts.csswg.org/css-mixins/#typedef-dashed-function
+                if (!isValidDashedFunction(block, parserContext))
+                    return { };
+                result.hasReferences = true;
+                continue;
+            }
+            stack.push(ClassifyBlockState {
+                .range = block,
+                .isTopLevelBlock = false, // Nested block, not top-level
+            });
             continue;
         }
 
-        ASSERT(range.peek().getBlockType() != CSSParserToken::BlockEnd);
+        ASSERT(current.range.peek().getBlockType() != CSSParserToken::BlockEnd);
 
-        const CSSParserToken& token = range.consume();
+        const CSSParserToken& token = current.range.consume();
         switch (token.type()) {
         case AtKeywordToken:
             break;
         case DelimiterToken: {
-            if (token.delimiter() == '!' && isTopLevelBlock)
-                return false;
+            if (token.delimiter() == '!' && current.isTopLevelBlock)
+                return { };
             break;
         }
         case RightParenthesisToken:
@@ -108,21 +157,18 @@ static bool classifyBlock(CSSParserTokenRange range, bool& hasReferences, bool& 
         case RightBracketToken:
         case BadStringToken:
         case BadUrlToken:
-            return false;
+            return { };
         case SemicolonToken:
-            if (isTopLevelBlock)
-                return false;
+            if (current.isTopLevelBlock)
+                return { };
             break;
         default:
             break;
         }
+
     }
 
-    // If there is a top level brace block, the value should contains only that.
-    if (topLevelBraceBlocks > 1 || (topLevelBraceBlocks == 1 && hasOtherValuesThanTopLevelBraceBlock))
-        hasTopLevelBraceBlockMixedWithOtherValues = true;
-
-    return true;
+    return result;
 }
 
 bool isValidVariableReference(CSSParserTokenRange range, const CSSParserContext& parserContext)
@@ -138,9 +184,7 @@ bool isValidVariableReference(CSSParserTokenRange range, const CSSParserContext&
     if (range.atEnd())
         return true;
 
-    bool hasReferences = false;
-    bool hasTopLevelBraceBlock = false;
-    return classifyBlock(range, hasReferences, hasTopLevelBraceBlock, parserContext);
+    return !!classifyBlock(range, parserContext);
 }
 
 bool isValidConstantReference(CSSParserTokenRange range, const CSSParserContext& parserContext)
@@ -156,15 +200,36 @@ bool isValidConstantReference(CSSParserTokenRange range, const CSSParserContext&
     if (range.atEnd())
         return true;
 
-    bool hasReferences = false;
-    bool hasTopLevelBraceBlock = false;
-    return classifyBlock(range, hasReferences, hasTopLevelBraceBlock, parserContext);
+    return !!classifyBlock(range, parserContext);
+}
+
+bool isValidDashedFunction(CSSParserTokenRange range, const CSSParserContext& parserContext)
+{
+    // <dashed-function> --*( <declaration-value>#? )
+    range.consumeWhitespace();
+
+    auto validateArgument = [&](auto argumentRange) {
+        if (argumentRange.atEnd())
+            return false;
+
+        // https://drafts.csswg.org/css-values-5/#component-function-commas
+        // Empty brace blocks are just empty values.
+        auto result = classifyBlock(argumentRange, parserContext);
+        return result && !result->hasTopLevelBraceBlockMixedWithOtherValues && !result->hasEmptyTopLevelBraceBlock;
+    };
+
+    unsigned index = 0;
+    while (auto argumentRange = CSSPropertyParserHelpers::consumeArgument(range, index)) {
+        if (!validateArgument(*argumentRange))
+            return false;
+        ++index;
+    }
+    return true;
 }
 
 struct VariableType {
-    std::optional<CSSValueID> cssWideKeyword { };
-    bool hasReferences { false };
-    bool hasTopLevelBraceBlockWithOtherValues { false };
+    std::optional<CSSWideKeyword> cssWideKeyword { };
+    ClassifyBlockResult classifyBlockResult { };
 };
 
 static std::optional<VariableType> classifyVariableRange(CSSParserTokenRange range, const CSSParserContext& parserContext)
@@ -174,17 +239,17 @@ static std::optional<VariableType> classifyVariableRange(CSSParserTokenRange ran
     if (range.peek().type() == IdentToken) {
         auto rangeCopy = range;
         CSSValueID id = range.consumeIncludingWhitespace().id();
-        if (range.atEnd() && isCSSWideKeyword(id))
-            return VariableType { id };
+        if (auto keyword = parseCSSWideKeyword(id); range.atEnd() && keyword)
+            return VariableType { *keyword };
         // No fast path, restart with the complete range.
         range = rangeCopy;
     }
 
-    VariableType type;
-    if (!classifyBlock(range, type.hasReferences, type.hasTopLevelBraceBlockWithOtherValues, parserContext))
+    auto classifyBlockResult = classifyBlock(range, parserContext);
+    if (!classifyBlockResult)
         return { };
 
-    return type;
+    return VariableType { { }, WTF::move(*classifyBlockResult) };
 }
 
 bool CSSVariableParser::containsValidVariableReferences(CSSParserTokenRange range, const CSSParserContext& parserContext)
@@ -193,39 +258,32 @@ bool CSSVariableParser::containsValidVariableReferences(CSSParserTokenRange rang
     if (!type)
         return false;
 
-    return type->hasReferences && !type->hasTopLevelBraceBlockWithOtherValues;
+    return type->classifyBlockResult.hasReferences && !type->classifyBlockResult.hasTopLevelBraceBlockMixedWithOtherValues;
 }
 
 RefPtr<CSSCustomPropertyValue> CSSVariableParser::parseDeclarationValue(const AtomString& variableName, CSSParserTokenRange range, const CSSParserContext& parserContext)
 {
-    if (range.atEnd())
-        return nullptr;
-
     auto type = classifyVariableRange(range, parserContext);
-
     if (!type)
         return nullptr;
 
     if (type->cssWideKeyword)
-        return CSSCustomPropertyValue::createWithID(variableName, *type->cssWideKeyword);
+        return CSSCustomPropertyValue::createWithCSSWideKeyword(variableName, *type->cssWideKeyword);
 
-    if (type->hasReferences)
+    if (type->classifyBlockResult.hasReferences)
         return CSSCustomPropertyValue::createUnresolved(variableName, CSSVariableReferenceValue::create(range, parserContext));
 
     return CSSCustomPropertyValue::createSyntaxAll(variableName, CSSVariableData::create(range, parserContext));
 }
 
-RefPtr<CSSCustomPropertyValue> CSSVariableParser::parseInitialValueForUniversalSyntax(const AtomString& variableName, CSSParserTokenRange range)
+RefPtr<const Style::CustomProperty> CSSVariableParser::parseInitialValueForUniversalSyntax(const AtomString& variableName, CSSParserTokenRange range)
 {
-    if (range.atEnd())
-        return nullptr;
-
     auto type = classifyVariableRange(range, strictCSSParserContext());
 
-    if (!type || type->cssWideKeyword || type->hasReferences)
+    if (!type || type->cssWideKeyword || type->classifyBlockResult.hasReferences)
         return nullptr;
 
-    return CSSCustomPropertyValue::createSyntaxAll(variableName, CSSVariableData::create(range));
+    return Style::CustomProperty::createForVariableData(variableName, CSSVariableData::create(range));
 }
 
 } // namespace WebCore

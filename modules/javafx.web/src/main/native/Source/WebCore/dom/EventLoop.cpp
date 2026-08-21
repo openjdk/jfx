@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,11 @@
 #include "config.h"
 #include "EventLoop.h"
 
+#include "JSExecState.h"
 #include "Microtasks.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/MicrotaskQueueInlines.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -41,7 +44,7 @@ class EventLoopTimer final : public RefCountedAndCanMakeWeakPtr<EventLoopTimer>,
     WTF_MAKE_TZONE_ALLOCATED(EventLoopTimer);
 public:
     enum class Type : bool { OneShot, Repeating };
-    static Ref<EventLoopTimer> create(Type type, std::unique_ptr<EventLoopTask>&& task) { return adoptRef(*new EventLoopTimer(type, WTFMove(task))); }
+    static Ref<EventLoopTimer> create(Type type, std::unique_ptr<EventLoopTask>&& task) { return adoptRef(*new EventLoopTimer(type, WTF::move(task))); }
 
     Type type() const { return m_type; }
     EventLoopTaskGroup* group() const { return m_task ? m_task->group() : nullptr; }
@@ -129,7 +132,7 @@ public:
 
 private:
     EventLoopTimer(Type type, std::unique_ptr<EventLoopTask>&& task)
-        : m_task(WTFMove(task))
+        : m_task(WTF::move(task))
         , m_type(type)
     {
     }
@@ -194,12 +197,12 @@ void EventLoop::queueTask(std::unique_ptr<EventLoopTask>&& task)
     ASSERT(task->group());
     ASSERT(isContextThread());
     scheduleToRunIfNeeded();
-    m_tasks.append(WTFMove(task));
+    m_tasks.append(WTF::move(task));
 }
 
 EventLoopTimerHandle EventLoop::scheduleTask(Seconds timeout, TimerAlignment* alignment, HasReachedMaxNestingLevel hasReachedMaxNestingLevel, std::unique_ptr<EventLoopTask>&& action)
 {
-    auto timer = EventLoopTimer::create(EventLoopTimer::Type::OneShot, WTFMove(action));
+    auto timer = EventLoopTimer::create(EventLoopTimer::Type::OneShot, WTF::move(action));
     if (alignment)
         timer->setTimerAlignment(*alignment);
     timer->setHasReachedMaxNestingLevel(hasReachedMaxNestingLevel == HasReachedMaxNestingLevel::Yes);
@@ -225,7 +228,7 @@ void EventLoop::removeScheduledTimer(EventLoopTimer& timer)
 
 EventLoopTimerHandle EventLoop::scheduleRepeatingTask(Seconds nextTimeout, Seconds interval, TimerAlignment* alignment, HasReachedMaxNestingLevel hasReachedMaxNestingLevel, std::unique_ptr<EventLoopTask>&& action)
 {
-    auto timer = EventLoopTimer::create(EventLoopTimer::Type::Repeating, WTFMove(action));
+    auto timer = EventLoopTimer::create(EventLoopTimer::Type::Repeating, WTF::move(action));
     if (alignment)
         timer->setTimerAlignment(*alignment);
     timer->setHasReachedMaxNestingLevel(hasReachedMaxNestingLevel == HasReachedMaxNestingLevel::Yes);
@@ -249,10 +252,9 @@ void EventLoop::removeRepeatingTimer(EventLoopTimer& timer)
     invalidateNextTimerFireTimeCache();
 }
 
-void EventLoop::queueMicrotask(std::unique_ptr<EventLoopTask>&& microtask)
+void EventLoop::queueMicrotask(JSC::QueuedTask&& microtask)
 {
-    ASSERT(microtask->taskSource() == TaskSource::Microtask);
-    microtaskQueue().append(WTFMove(microtask));
+    microtaskQueue().append(WTF::move(microtask));
     scheduleToRunIfNeeded(); // FIXME: Remove this once everything is integrated with the event loop.
 }
 
@@ -318,7 +320,7 @@ void EventLoop::run(std::optional<ApproximateTime> deadline)
     if (!m_tasks.isEmpty()) {
         auto tasks = std::exchange(m_tasks, { });
         m_groupsWithSuspendedTasks.clear();
-        Vector<std::unique_ptr<EventLoopTask>> remainingTasks;
+        TaskVector remainingTasks;
         bool hasReachedDeadline = false;
         for (auto& task : tasks) {
             auto* group = task->group();
@@ -328,17 +330,17 @@ void EventLoop::run(std::optional<ApproximateTime> deadline)
             hasReachedDeadline = hasReachedDeadline || (deadline && ApproximateTime::now() > *deadline);
             if (group->isSuspended() || hasReachedDeadline) {
                 m_groupsWithSuspendedTasks.add(*group);
-                remainingTasks.append(WTFMove(task));
+                remainingTasks.append(WTF::move(task));
                 continue;
             }
 
             task->execute();
             didPerformMicrotaskCheckpoint = true;
-            microtaskQueue().performMicrotaskCheckpoint();
+            performMicrotaskCheckpoint();
         }
         for (auto& task : m_tasks)
-            remainingTasks.append(WTFMove(task));
-        m_tasks = WTFMove(remainingTasks);
+            remainingTasks.append(WTF::move(task));
+        m_tasks = WTF::move(remainingTasks);
 
         if (!m_tasks.isEmpty() && hasReachedDeadline)
             scheduleToRunIfNeeded();
@@ -346,7 +348,7 @@ void EventLoop::run(std::optional<ApproximateTime> deadline)
 
     // FIXME: Remove this once everything is integrated with the event loop.
     if (!didPerformMicrotaskCheckpoint)
-        microtaskQueue().performMicrotaskCheckpoint();
+        performMicrotaskCheckpoint();
 }
 
 void EventLoop::clearAllTasks()
@@ -406,6 +408,77 @@ Markable<MonotonicTime> EventLoop::nextTimerFireTime() const
     return m_nextTimerFireTimeCache;
 }
 
+class JSMicrotaskDispatcher final : public WebCoreMicrotaskDispatcher {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(JSMicrotaskDispatcher);
+public:
+    JSMicrotaskDispatcher(EventLoopTaskGroup& group)
+        : WebCoreMicrotaskDispatcher(Type::WebCoreJS, group)
+    {
+    }
+
+    ~JSMicrotaskDispatcher() final = default;
+
+    JSC::QueuedTask::Result run(JSC::QueuedTask& task) final
+    {
+        auto runnability = currentRunnability();
+        if (runnability == JSC::QueuedTask::Result::Executed)
+            JSExecState::runTask(task.globalObject(), task);
+        return runnability;
+    }
+
+    static Ref<JSMicrotaskDispatcher> create(EventLoopTaskGroup& group)
+    {
+        return adoptRef(*new JSMicrotaskDispatcher(group));
+    }
+};
+
+class JSDebuggableMicrotaskDispatcher final : public WebCoreMicrotaskDispatcher {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(JSDebuggableMicrotaskDispatcher);
+public:
+    JSDebuggableMicrotaskDispatcher(EventLoopTaskGroup& group)
+        : WebCoreMicrotaskDispatcher(Type::WebCoreJSDebuggable, group)
+    {
+    }
+
+    ~JSDebuggableMicrotaskDispatcher() final = default;
+
+    JSC::QueuedTask::Result run(JSC::QueuedTask& task) final
+    {
+        auto runnability = currentRunnability();
+        if (runnability == JSC::QueuedTask::Result::Executed)
+            JSExecState::runTaskWithDebugger(task.globalObject(), task);
+        return runnability;
+    }
+
+    static Ref<JSDebuggableMicrotaskDispatcher> create(EventLoopTaskGroup& group)
+    {
+        return adoptRef(*new JSDebuggableMicrotaskDispatcher(group));
+    }
+};
+
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(JSMicrotaskDispatcher);
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(JSDebuggableMicrotaskDispatcher);
+
+EventLoopTaskGroup::EventLoopTaskGroup(EventLoop& eventLoop)
+    : m_eventLoop(eventLoop)
+    , m_jsMicrotaskDispatcher(JSMicrotaskDispatcher::create(*this))
+{
+    eventLoop.registerGroup(*this);
+}
+
+EventLoopTaskGroup::~EventLoopTaskGroup()
+{
+    if (RefPtr eventLoop = m_eventLoop.get())
+        eventLoop->unregisterGroup(*this);
+}
+
+Ref<JSC::MicrotaskDispatcher> EventLoopTaskGroup::jsMicrotaskDispatcher(JSC::QueuedTask& task)
+{
+    if (task.globalObject()->debugger()) [[unlikely]]
+        return JSDebuggableMicrotaskDispatcher::create(*this);
+    return m_jsMicrotaskDispatcher;
+}
+
 void EventLoopTaskGroup::markAsReadyToStop()
 {
     if (isReadyToStop() || isStoppedPermanently())
@@ -463,7 +536,7 @@ void EventLoopTaskGroup::queueTask(std::unique_ptr<EventLoopTask>&& task)
     if (m_state == State::Stopped || !m_eventLoop)
         return;
     ASSERT(task->group() == this);
-    protectedEventLoop()->queueTask(WTFMove(task));
+    protectedEventLoop()->queueTask(WTF::move(task));
 }
 
 class EventLoopFunctionDispatchTask : public EventLoopTask {
@@ -471,7 +544,7 @@ class EventLoopFunctionDispatchTask : public EventLoopTask {
 public:
     EventLoopFunctionDispatchTask(TaskSource source, EventLoopTaskGroup& group, EventLoop::TaskFunction&& function)
         : EventLoopTask(source, group)
-        , m_function(WTFMove(function))
+        , m_function(WTF::move(function))
     {
     }
 
@@ -485,14 +558,50 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(EventLoopFunctionDispatchTask);
 
 void EventLoopTaskGroup::queueTask(TaskSource source, EventLoop::TaskFunction&& function)
 {
-    return queueTask(makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTFMove(function)));
+    return queueTask(makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTF::move(function)));
 }
+
+class EventLoopFunctionMicrotaskDispatcher final : public WebCoreMicrotaskDispatcher {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(EventLoopFunctionMicrotaskDispatcher);
+public:
+    EventLoopFunctionMicrotaskDispatcher(EventLoopTaskGroup& group, EventLoop::TaskFunction&& function)
+        : WebCoreMicrotaskDispatcher(Type::WebCoreFunction, group)
+        , m_function(WTF::move(function))
+    {
+    }
+
+    ~EventLoopFunctionMicrotaskDispatcher() final = default;
+
+    JSC::QueuedTask::Result run(JSC::QueuedTask&) final
+    {
+        auto runnability = currentRunnability();
+        if (runnability == JSC::QueuedTask::Result::Executed)
+            m_function();
+        return runnability;
+    }
+
+    static Ref<EventLoopFunctionMicrotaskDispatcher> create(EventLoopTaskGroup& group, EventLoop::TaskFunction&& function)
+    {
+        return adoptRef(*new EventLoopFunctionMicrotaskDispatcher(group, WTF::move(function)));
+    }
+
+private:
+    EventLoop::TaskFunction m_function;
+};
+
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(EventLoopFunctionMicrotaskDispatcher);
 
 void EventLoopTaskGroup::queueMicrotask(EventLoop::TaskFunction&& function)
 {
+    queueMicrotask(JSC::QueuedTask { EventLoopFunctionMicrotaskDispatcher::create(*this, WTF::move(function)) });
+}
+
+void EventLoopTaskGroup::queueMicrotask(JSC::QueuedTask&& task)
+{
     if (m_state == State::Stopped || !m_eventLoop)
         return;
-    protectedEventLoop()->queueMicrotask(makeUnique<EventLoopFunctionDispatchTask>(TaskSource::Microtask, *this, WTFMove(function)));
+
+    protectedEventLoop()->queueMicrotask(WTF::move(task));
 }
 
 void EventLoopTaskGroup::performMicrotaskCheckpoint()
@@ -506,21 +615,21 @@ void EventLoopTaskGroup::runAtEndOfMicrotaskCheckpoint(EventLoop::TaskFunction&&
     if (m_state == State::Stopped || !m_eventLoop)
         return;
 
-    microtaskQueue().addCheckpointTask(makeUnique<EventLoopFunctionDispatchTask>(TaskSource::IndexedDB, *this, WTFMove(function)));
+    microtaskQueue().addCheckpointTask(makeUnique<EventLoopFunctionDispatchTask>(TaskSource::IndexedDB, *this, WTF::move(function)));
 }
 
 EventLoopTimerHandle EventLoopTaskGroup::scheduleTask(Seconds timeout, TaskSource source, EventLoop::TaskFunction&& function)
 {
     if (m_state == State::Stopped || !m_eventLoop)
         return { };
-    return protectedEventLoop()->scheduleTask(timeout, nullptr, HasReachedMaxNestingLevel::No, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTFMove(function)));
+    return protectedEventLoop()->scheduleTask(timeout, nullptr, HasReachedMaxNestingLevel::No, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTF::move(function)));
 }
 
 EventLoopTimerHandle EventLoopTaskGroup::scheduleTask(Seconds timeout, TimerAlignment& alignment, HasReachedMaxNestingLevel hasReachedMaxNestingLevel, TaskSource source, EventLoop::TaskFunction&& function)
 {
     if (m_state == State::Stopped || !m_eventLoop)
         return { };
-    return protectedEventLoop()->scheduleTask(timeout, &alignment, hasReachedMaxNestingLevel, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTFMove(function)));
+    return protectedEventLoop()->scheduleTask(timeout, &alignment, hasReachedMaxNestingLevel, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTF::move(function)));
 }
 
 void EventLoopTaskGroup::removeScheduledTimer(EventLoopTimer& timer)
@@ -535,14 +644,14 @@ EventLoopTimerHandle EventLoopTaskGroup::scheduleRepeatingTask(Seconds nextTimeo
 {
     if (m_state == State::Stopped || !m_eventLoop)
         return { };
-    return protectedEventLoop()->scheduleRepeatingTask(nextTimeout, interval, nullptr, HasReachedMaxNestingLevel::No, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTFMove(function)));
+    return protectedEventLoop()->scheduleRepeatingTask(nextTimeout, interval, nullptr, HasReachedMaxNestingLevel::No, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTF::move(function)));
 }
 
 EventLoopTimerHandle EventLoopTaskGroup::scheduleRepeatingTask(Seconds nextTimeout, Seconds interval, TimerAlignment& alignment, HasReachedMaxNestingLevel hasReachedMaxNestingLevel, TaskSource source, EventLoop::TaskFunction&& function)
 {
     if (m_state == State::Stopped || !m_eventLoop)
         return { };
-    return protectedEventLoop()->scheduleRepeatingTask(nextTimeout, interval, &alignment, hasReachedMaxNestingLevel, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTFMove(function)));
+    return protectedEventLoop()->scheduleRepeatingTask(nextTimeout, interval, &alignment, hasReachedMaxNestingLevel, makeUnique<EventLoopFunctionDispatchTask>(source, *this, WTF::move(function)));
 }
 
 void EventLoopTaskGroup::removeRepeatingTimer(EventLoopTimer& timer)

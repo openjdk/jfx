@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "RouterCondition.h"
-#include "RouterSourceDict.h"
-#include "RouterSourceEnum.h"
+#include <WebCore/RouterCondition.h>
+#include <WebCore/RouterSourceDict.h>
+#include <WebCore/RouterSourceEnum.h>
 
 namespace WebCore {
 
 struct RouterRule {
     RouterCondition condition;
-    std::variant<RouterSourceDict, RouterSourceEnum> source;
+    Variant<RouterSourceDict, RouterSourceEnum> source;
 };
 
 } // namespace WebCore

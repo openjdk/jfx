@@ -50,35 +50,30 @@ String CSSGridLineValue::customCSSText(const CSS::SerializationContext& context)
 
 CSSGridLineValue::CSSGridLineValue(RefPtr<CSSPrimitiveValue>&& spanValue, RefPtr<CSSPrimitiveValue>&& numericValue, RefPtr<CSSPrimitiveValue>&& gridLineName)
     : CSSValue(ClassType::GridLineValue)
-    , m_spanValue(WTFMove(spanValue))
-    , m_numericValue(WTFMove(numericValue))
-    , m_gridLineName(WTFMove(gridLineName))
+    , m_spanValue(WTF::move(spanValue))
+    , m_numericValue(WTF::move(numericValue))
+    , m_gridLineName(WTF::move(gridLineName))
 {
 }
 
 Ref<CSSGridLineValue> CSSGridLineValue::create(RefPtr<CSSPrimitiveValue>&& spanValue, RefPtr<CSSPrimitiveValue>&& numericValue, RefPtr<CSSPrimitiveValue>&& gridLineName)
 {
-    return adoptRef(*new CSSGridLineValue(WTFMove(spanValue), WTFMove(numericValue), WTFMove(gridLineName)));
+    return adoptRef(*new CSSGridLineValue(WTF::move(spanValue), WTF::move(numericValue), WTF::move(gridLineName)));
 }
 
 bool CSSGridLineValue::equals(const CSSGridLineValue& other) const
 {
-    if (m_spanValue) {
-        if (!other.m_spanValue || !m_spanValue->equals(*other.m_spanValue))
+    auto equals = [](CSSPrimitiveValue* value, CSSPrimitiveValue* otherValue) {
+        if ((!value && otherValue) || (value && !otherValue))
             return false;
-    } else if (other.m_spanValue)
-        return false;
+        return (!value && !otherValue) || value->equals(*otherValue);
+    };
 
-    if (m_numericValue) {
-        if (!other.m_numericValue || !m_numericValue->equals(*other.m_numericValue))
+    if (!equals(protectedSpanValue().get(), other.protectedSpanValue().get()))
             return false;
-    } else if (other.m_numericValue)
+    if (!equals(protectedNumericValue().get(), other.protectedNumericValue().get()))
         return false;
-
-    if (m_gridLineName) {
-        if (!other.m_gridLineName || !m_gridLineName->equals(*other.m_gridLineName))
-            return false;
-    } else if (other.m_gridLineName)
+    if (!equals(protectedGridLineName().get(), other.protectedGridLineName().get()))
         return false;
 
     return true;

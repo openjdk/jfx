@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -43,10 +44,15 @@ public:
 
 private:
     static WorkerNavigatorPermissions& from(WorkerNavigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "WorkerNavigatorPermissions"_s; }
+    bool isWorkerNavigatorPermissions() const final { return true; }
 
-    RefPtr<Permissions> m_permissions;
-    WorkerNavigator& m_navigator;
+    const RefPtr<Permissions> m_permissions;
+    const CheckedRef<WorkerNavigator> m_navigator;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerNavigatorPermissions)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isWorkerNavigatorPermissions(); }
+SPECIALIZE_TYPE_TRAITS_END()

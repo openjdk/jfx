@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "PlatformWheelEvent.h"
-#include "ScrollingNodeID.h"
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/ScrollingNodeID.h>
 #include <functional>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -70,13 +70,13 @@ public:
 
     void checkShouldFireCallbacks();
 
-    using ScrollableAreaReasonMap = UncheckedKeyHashMap<ScrollingNodeID, OptionSet<DeferReason>>;
+    using ScrollableAreaReasonMap = HashMap<ScrollingNodeID, OptionSet<DeferReason>>;
 
 private:
     void scheduleCallbackCheck();
 
     Function<void()> m_completionCallback;
-    Page& m_page;
+    WeakRef<Page> m_page;
 
     Lock m_lock;
     ScrollableAreaReasonMap m_deferCompletionReasons WTF_GUARDED_BY_LOCK(m_lock);
@@ -89,7 +89,7 @@ private:
 
 class WheelEventTestMonitorCompletionDeferrer {
     WTF_MAKE_NONCOPYABLE(WheelEventTestMonitorCompletionDeferrer);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WheelEventTestMonitorCompletionDeferrer);
 public:
     WheelEventTestMonitorCompletionDeferrer(WheelEventTestMonitor* monitor, ScrollingNodeID identifier, WheelEventTestMonitor::DeferReason reason)
         : m_monitor(monitor)
@@ -101,7 +101,7 @@ public:
     }
 
     WheelEventTestMonitorCompletionDeferrer(WheelEventTestMonitorCompletionDeferrer&& other)
-        : m_monitor(WTFMove(other.m_monitor))
+        : m_monitor(WTF::move(other.m_monitor))
         , m_identifier(other.m_identifier)
         , m_reason(other.m_reason)
     {

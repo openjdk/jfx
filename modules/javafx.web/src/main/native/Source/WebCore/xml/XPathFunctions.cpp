@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
@@ -43,12 +43,11 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
-namespace WebCore {
-namespace XPath {
+namespace WebCore::XPath {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Function);
 
-static inline bool isWhitespace(UChar c)
+static inline bool isWhitespace(char16_t c)
 {
     return c == ' ' || c == '\n' || c == '\r' || c == '\t';
 }
@@ -326,7 +325,7 @@ void Function::setArguments(const String& name, Vector<std::unique_ptr<Expressio
     if (name != "lang"_s && !arguments.isEmpty())
         setIsContextNodeSensitive(false);
 
-    setSubexpressions(WTFMove(arguments));
+    setSubexpressions(WTF::move(arguments));
 }
 
 Value FunLast::evaluate() const
@@ -353,7 +352,7 @@ Value FunId::evaluate() const
         }
     }
 
-    TreeScope& contextScope = evaluationContext().node->treeScope();
+    Ref contextScope = evaluationContext().node->treeScope();
     NodeSet result;
     HashSet<Ref<Node>> resultSet;
 
@@ -372,16 +371,16 @@ Value FunId::evaluate() const
 
         // If there are several nodes with the same id, id() should return the first one.
         // In WebKit, getElementById behaves so, too, although its behavior in this case is formally undefined.
-        RefPtr node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
+        RefPtr node = contextScope->getElementById(StringView(idList).substring(startPos, endPos - startPos));
         if (node && resultSet.add(*node).isNewEntry)
-            result.append(WTFMove(node));
+            result.append(node.releaseNonNull());
 
         startPos = endPos;
     }
 
     result.markSorted(false);
 
-    return Value(WTFMove(result));
+    return Value(WTF::move(result));
 }
 
 static inline String expandedNameLocalPart(Node& node)
@@ -404,11 +403,11 @@ Value FunLocalName::evaluate() const
         if (!a.isNodeSet())
             return emptyString();
 
-        auto* node = a.toNodeSet().firstNode();
+        RefPtr node = a.toNodeSet().firstNode();
         return node ? expandedNameLocalPart(*node) : emptyString();
     }
 
-    return expandedNameLocalPart(*evaluationContext().node);
+    return expandedNameLocalPart(*evaluationContext().protectedNode());
 }
 
 Value FunNamespaceURI::evaluate() const
@@ -418,11 +417,11 @@ Value FunNamespaceURI::evaluate() const
         if (!a.isNodeSet())
             return emptyString();
 
-        Node* node = a.toNodeSet().firstNode();
+        RefPtr node = a.toNodeSet().firstNode();
         return node ? node->namespaceURI().string() : emptyString();
     }
 
-    return evaluationContext().node->namespaceURI().string();
+    return evaluationContext().protectedNode()->namespaceURI().string();
 }
 
 Value FunName::evaluate() const
@@ -432,11 +431,11 @@ Value FunName::evaluate() const
         if (!a.isNodeSet())
             return emptyString();
 
-        auto* node = a.toNodeSet().firstNode();
+        RefPtr node = a.toNodeSet().firstNode();
         return node ? expandedName(*node) : emptyString();
     }
 
-    return expandedName(*evaluationContext().node);
+    return expandedName(*evaluationContext().protectedNode());
 }
 
 Value FunCount::evaluate() const
@@ -449,7 +448,7 @@ Value FunCount::evaluate() const
 Value FunString::evaluate() const
 {
     if (!argumentCount())
-        return Value(Expression::evaluationContext().node.get()).toString();
+        return Value(NodeSet(*Expression::evaluationContext().node)).toString();
     return argument(0).evaluate().toString();
 }
 
@@ -602,7 +601,7 @@ Value FunSubstring::evaluate() const
 Value FunStringLength::evaluate() const
 {
     if (!argumentCount())
-        return Value(Expression::evaluationContext().node.get()).toString().length();
+        return Value(NodeSet(*Expression::evaluationContext().node)).toString().length();
     return argument(0).evaluate().toString().length();
 }
 
@@ -610,11 +609,11 @@ Value FunNormalizeSpace::evaluate() const
 {
     // https://www.w3.org/TR/1999/REC-xpath-19991116/#function-normalize-space
     if (!argumentCount()) {
-        String s = Value(Expression::evaluationContext().node.get()).toString();
-        return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
+        String s = Value(NodeSet(*Expression::evaluationContext().node)).toString();
+        return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<char16_t>);
     }
     String s = argument(0).evaluate().toString();
-    return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
+    return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<char16_t>);
 }
 
 Value FunTranslate::evaluate() const
@@ -636,7 +635,7 @@ Value FunTranslate::evaluate() const
     StringBuilder result;
 
     for (unsigned i1 = 0; i1 < s1.length(); ++i1) {
-        UChar ch = s1[i1];
+        char16_t ch = s1[i1];
         size_t i2 = s2.find(ch);
 
         if (i2 == notFound)
@@ -668,7 +667,7 @@ Value FunLang::evaluate() const
     String lang = argument(0).evaluate().toString();
 
     const Attribute* languageAttribute = nullptr;
-    Node* node = evaluationContext().node.get();
+    RefPtr node = evaluationContext().node.get();
     while (node) {
         if (RefPtr element = dynamicDowncast<Element>(*node)) {
             if (element->hasAttributes())
@@ -705,7 +704,7 @@ Value FunFalse::evaluate() const
 Value FunNumber::evaluate() const
 {
     if (!argumentCount())
-        return Value(Expression::evaluationContext().node.get()).toNumber();
+        return Value(NodeSet(*Expression::evaluationContext().node)).toNumber();
     return argument(0).evaluate().toNumber();
 }
 
@@ -738,7 +737,7 @@ Value FunCeiling::evaluate() const
 
 double FunRound::round(double val)
 {
-    if (!std::isnan(val) && !std::isinf(val)) {
+    if (std::isfinite(val)) {
         if (std::signbit(val) && val >= -0.5)
             val *= 0; // negative zero
         else
@@ -764,7 +763,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, FunctionMapValue> createF
         FunctionMapValue function;
     };
 
-    static const FunctionMapping functions[] = {
+    static const auto functions = std::to_array<FunctionMapping>({
         { "boolean"_s, { createFunctionBoolean, 1 } },
         { "ceiling"_s, { createFunctionCeiling, 1 } },
         { "concat"_s, { createFunctionConcat, Interval(2, Interval::Inf) } },
@@ -792,7 +791,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, FunctionMapValue> createF
         { "sum"_s, { createFunctionSum, 1 } },
         { "translate"_s, { createFunctionTranslate, 3 } },
         { "true"_s, { createFunctionTrue, 0 } },
-    };
+    });
 
     MemoryCompactLookupOnlyRobinHoodHashMap<String, FunctionMapValue> map;
     for (auto& function : functions)
@@ -823,9 +822,8 @@ std::unique_ptr<Function> Function::create(const String& name, Vector<std::uniqu
 {
     auto function = create(name, arguments.size());
     if (function)
-        function->setArguments(name, WTFMove(arguments));
+        function->setArguments(name, WTF::move(arguments));
     return function;
 }
 
-} // namespace XPath
-} // namespace WebCore
+} // namespace WebCore::XPath

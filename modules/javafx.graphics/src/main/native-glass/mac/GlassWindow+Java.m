@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,6 +183,11 @@ extern NSSize maxScreenDimensions;
     s_grabWindow = nil; // unconditionally
 }
 
++ (BOOL)_hasGrab
+{
+    return s_grabWindow != nil;
+}
+
 - (void)_checkUngrab
 {
     if (!s_grabWindow) {
@@ -320,6 +325,12 @@ extern NSSize maxScreenDimensions;
         // send back the actual position to notify the WindowStage,
         // as it is possible that the windowDidMove event is not triggered.
         [self _sendJavaWindowMoveEventForFrame:flipFrame];
+    }
+    if (newW != flipFrame.size.width || newH != flipFrame.size.height) {
+        // The frame may not have changed due min/max limits. In that case we
+        // need to send back the actual size since the windowDidResize
+        // notification was not triggered.
+        [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:flipFrame];
     }
 }
 

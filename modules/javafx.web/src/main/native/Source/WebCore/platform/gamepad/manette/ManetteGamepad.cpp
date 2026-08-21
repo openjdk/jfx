@@ -31,9 +31,15 @@
 #include "ManetteGamepadProvider.h"
 #include <linux/input-event-codes.h>
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ManetteGamepad);
+
+static constexpr size_t standardGamepadAxisCount = static_cast<size_t>(ManetteGamepad::StandardGamepadAxis::RightStickY) + 1;
+static constexpr size_t standardGamepadButtonCount = static_cast<size_t>(ManetteGamepad::StandardGamepadButton::Mode) + 1;
 
 static ManetteGamepad::StandardGamepadAxis toStandardGamepadAxis(uint16_t axis)
 {
@@ -49,7 +55,9 @@ static ManetteGamepad::StandardGamepadAxis toStandardGamepadAxis(uint16_t axis)
     default:
         break;
     }
-    return ManetteGamepad::StandardGamepadAxis::Unknown;
+    // In case could not map axis to a StandardGamepadAxis value, return
+    // a valid StandardGamepadAxis value anyway.
+    return static_cast<ManetteGamepad::StandardGamepadAxis>(axis % standardGamepadAxisCount);
 }
 
 static void onAbsoluteAxisEvent(ManetteDevice* device, ManetteEvent* event, ManetteGamepad* gamepad)
@@ -102,7 +110,9 @@ static ManetteGamepad::StandardGamepadButton toStandardGamepadButton(uint16_t ma
     default:
         break;
     }
-    return ManetteGamepad::StandardGamepadButton::Unknown;
+    // In case could not map button to a StandardGamepadButton value, return
+    // a valid StandardGamepadButton value anyway.
+    return static_cast<ManetteGamepad::StandardGamepadButton>(manetteButton % standardGamepadButtonCount);
 }
 
 static void onButtonPressEvent(ManetteDevice* device, ManetteEvent* event, ManetteGamepad* gamepad)
@@ -134,11 +144,11 @@ ManetteGamepad::ManetteGamepad(ManetteDevice* device, unsigned index)
     m_id = String::fromUTF8(manette_device_get_name(m_device.get()));
     m_mapping = String::fromUTF8("standard");
 
-    m_axisValues.resize(static_cast<size_t>(StandardGamepadAxis::Count));
+    m_axisValues.resize(static_cast<size_t>(standardGamepadAxisCount));
     for (auto& value : m_axisValues)
         value.setValue(0.0);
 
-    m_buttonValues.resize(static_cast<size_t>(StandardGamepadButton::Count));
+    m_buttonValues.resize(static_cast<size_t>(standardGamepadButtonCount));
     for (auto& value : m_buttonValues)
         value.setValue(0.0);
 
@@ -154,9 +164,6 @@ ManetteGamepad::~ManetteGamepad()
 
 void ManetteGamepad::buttonPressedOrReleased(ManetteDevice*, StandardGamepadButton button, bool pressed)
 {
-    if (button == StandardGamepadButton::Unknown)
-        return;
-
     m_lastUpdateTime = MonotonicTime::now();
     m_buttonValues[static_cast<int>(button)].setValue(pressed ? 1.0 : 0.0);
 
@@ -165,9 +172,6 @@ void ManetteGamepad::buttonPressedOrReleased(ManetteDevice*, StandardGamepadButt
 
 void ManetteGamepad::absoluteAxisChanged(ManetteDevice*, StandardGamepadAxis axis, double value)
 {
-    if (axis == StandardGamepadAxis::Unknown)
-        return;
-
     m_lastUpdateTime = MonotonicTime::now();
     m_axisValues[static_cast<int>(axis)].setValue(value);
 

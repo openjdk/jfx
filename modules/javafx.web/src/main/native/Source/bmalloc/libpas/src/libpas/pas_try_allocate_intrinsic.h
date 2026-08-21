@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "pas_intrinsic_heap_support.h"
 #include "pas_try_allocate_common.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 /* This is for global, singleton, process-wide heaps -- so the "not isoheaped" heap, the thing
@@ -49,6 +51,7 @@ PAS_BEGIN_EXTERN_C;
 
 #define PAS_INTRINSIC_SEGREGATED_HEAP_INITIALIZER(parent_heap_ptr, support, passed_runtime_config) { \
         .runtime_config = (passed_runtime_config), \
+        .parent_heap = parent_heap_ptr, \
         .index_to_small_allocator_index = (support).index_to_allocator_index, \
         .index_to_small_size_directory = (support).index_to_size_directory, \
         .basic_size_directory_and_head = PAS_COMPACT_ATOMIC_PTR_INITIALIZER, \
@@ -78,6 +81,7 @@ PAS_BEGIN_EXTERN_C;
         .heap_ref = NULL, \
         .next_heap = PAS_COMPACT_PTR_INITIALIZER, \
         .config_kind = (passed_config).kind, \
+        .is_non_compact_heap = true, \
     }
 
 static PAS_ALWAYS_INLINE pas_allocation_result
@@ -108,11 +112,11 @@ pas_try_allocate_intrinsic_impl_casual_case(
     if (!pas_is_power_of_2(alignment))
         return pas_allocation_result_create_failure();
 
-    if (PAS_UNLIKELY(pas_debug_heap_is_enabled(config.kind)))
-        return pas_debug_heap_allocate(size, alignment, allocation_mode);
+    if (PAS_UNLIKELY(pas_system_heap_should_supplant_bmalloc(config.kind)))
+        return pas_system_heap_allocate(size, alignment, allocation_mode);
 
     if (verbose)
-        pas_log("not doing debug heap in impl_casual_case for %s\n", pas_heap_config_kind_get_string(config.kind));
+        pas_log("not doing system heap in impl_casual_case for %s\n", pas_heap_config_kind_get_string(config.kind));
 
     aligned_size = pas_try_allocate_compute_aligned_size(size, alignment);
 
@@ -178,6 +182,7 @@ pas_try_allocate_intrinsic_impl_casual_case(
     fake_heap_ref.type = heap->type;
     fake_heap_ref.heap = heap;
     fake_heap_ref.allocator_index = 0;
+    fake_heap_ref.is_non_compact_heap = true;
 
     return try_allocate_common_slow(&fake_heap_ref, aligned_size, alignment, allocation_mode);
 }
@@ -329,5 +334,5 @@ typedef pas_allocation_result (*pas_try_allocate_intrinsic_for_realloc)(size_t s
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_TRY_ALLOCATE_INTRINSIC_H */
-

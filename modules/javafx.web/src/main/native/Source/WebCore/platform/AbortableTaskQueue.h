@@ -128,7 +128,7 @@ public:
         if (m_aborting)
             return;
 
-        postTask(WTFMove(mainThreadTaskHandler));
+        postTask(WTF::move(mainThreadTaskHandler));
     }
 
     // Enqueue a task to be run on the main thread and wait for it to return. The return value of the task is
@@ -153,7 +153,7 @@ public:
             R responseValue = mainThreadTaskHandler();
             Locker locker { m_lock };
             if (!m_aborting)
-                response = WTFMove(responseValue);
+                response = WTF::move(responseValue);
             m_abortedOrResponseSet.notifyAll();
         });
         m_abortedOrResponseSet.wait(m_lock, [this, &response]() {
@@ -174,11 +174,11 @@ private:
     //   Background threads: read only. Reads must be made with the lock.
     class Task : public ThreadSafeRefCounted<Task> {
         WTF_MAKE_NONCOPYABLE(Task);
-        WTF_MAKE_FAST_ALLOCATED(Task);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Task);
     public:
         static Ref<Task> create(AbortableTaskQueue* taskQueue, Function<void()>&& taskCallback)
         {
-            return adoptRef(*new Task(taskQueue, WTFMove(taskCallback)));
+            return adoptRef(*new Task(taskQueue, WTF::move(taskCallback)));
         }
 
         bool isCancelled() const
@@ -212,16 +212,16 @@ private:
         Function<void()> m_taskCallback;
 
         Task(AbortableTaskQueue* taskQueue, Function<void()>&& taskCallback)
-            : m_taskQueue(taskQueue), m_taskCallback(WTFMove(taskCallback))
+            : m_taskQueue(taskQueue), m_taskCallback(WTF::move(taskCallback))
         { }
     };
 
     void postTask(Function<void()>&& callback) WTF_REQUIRES_LOCK(m_lock)
     {
         ASSERT(m_lock.isHeld());
-        Ref<Task> task = Task::create(this, WTFMove(callback));
+        Ref<Task> task = Task::create(this, WTF::move(callback));
         m_channel.append(task.copyRef());
-        RunLoop::protectedMain()->dispatch([task = WTFMove(task)]() { task->dispatch(); });
+        RunLoop::mainSingleton().dispatch([task = WTF::move(task)]() { task->dispatch(); });
     }
 
     void cancelAllTasks() WTF_REQUIRES_LOCK(m_lock)

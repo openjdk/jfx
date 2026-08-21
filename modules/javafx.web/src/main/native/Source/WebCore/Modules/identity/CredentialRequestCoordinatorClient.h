@@ -27,24 +27,38 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include <WebCore/DigitalCredentialsProtocols.h>
+#include <WebCore/UnvalidatedDigitalCredentialRequest.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-struct ExceptionData;
-struct DigitalCredentialsResponseData;
-struct DigitalCredentialsRequestData;
+class SecurityOrigin;
+class SecurityOriginData;
+class Document;
+template<typename T> class ExceptionOr;
 
-class CredentialRequestCoordinatorClient {
+struct DigitalCredentialsRequestData;
+struct DigitalCredentialsResponseData;
+struct DigitalCredentialsRevalidationResult;
+struct ExceptionData;
+struct MobileDocumentRequest;
+
+class CredentialRequestCoordinatorClient : public RefCounted<CredentialRequestCoordinatorClient> {
     WTF_MAKE_TZONE_ALLOCATED(CredentialRequestCoordinatorClient);
     WTF_MAKE_NONCOPYABLE(CredentialRequestCoordinatorClient);
 
 public:
     CredentialRequestCoordinatorClient() = default;
     virtual ~CredentialRequestCoordinatorClient() = default;
-    virtual void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&&) = 0;
+    virtual void showDigitalCredentialsPicker(Vector<UnvalidatedDigitalCredentialRequest>&&, const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&&) = 0;
     virtual void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&&) = 0;
+    virtual ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&) = 0;
+
+    void ref() const { RefCounted::ref(); }
+    void deref() const { RefCounted::deref(); }
 };
 
 } // namespace WebCore

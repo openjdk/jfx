@@ -55,7 +55,7 @@ ALWAYS_INLINE uint32_t toNonWrappingUint32(JSGlobalObject* globalObject, JSValue
     double doubleValue = value.toNumber(globalObject);
     RETURN_IF_EXCEPTION(throwScope, { });
 
-    if (!std::isnan(doubleValue) && !std::isinf(doubleValue)) {
+    if (std::isfinite(doubleValue)) {
         double truncedValue = trunc(doubleValue);
         if (truncedValue >= 0 && truncedValue <= UINT_MAX)
             return static_cast<uint32_t>(truncedValue);
@@ -69,7 +69,7 @@ ALWAYS_INLINE uint32_t toNonWrappingUint32(JSGlobalObject* globalObject, JSValue
     return { };
 }
 
-ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value, const WebAssemblySourceProviderBufferGuard&)
+ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value, const SourceProviderBufferGuard&)
 {
     VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -94,7 +94,7 @@ ALWAYS_INLINE std::span<const uint8_t> getWasmBufferFromValue(JSGlobalObject* gl
             RETURN_IF_EXCEPTION(throwScope, { });
         } else {
             IdempotentArrayBufferByteLengthGetter<std::memory_order_relaxed> getter;
-            if (UNLIKELY(!jsCast<JSDataView*>(arrayBufferView)->viewByteLength(getter))) {
+            if (!jsCast<JSDataView*>(arrayBufferView)->viewByteLength(getter)) [[unlikely]] {
                 throwTypeError(globalObject, throwScope, typedArrayBufferHasBeenDetachedErrorMessage);
                 return { };
             }
@@ -116,7 +116,7 @@ ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, JSGlobalObject
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard bufferGuard(provider);
+    SourceProviderBufferGuard bufferGuard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, bufferGuard);
     RETURN_IF_EXCEPTION(throwScope, { });
@@ -229,7 +229,7 @@ ALWAYS_INLINE uint64_t toWebAssemblyValue(JSGlobalObject* globalObject, const Wa
             RELEASE_ASSERT_NOT_REACHED();
         else {
             value = Wasm::internalizeExternref(value);
-            if (!Wasm::TypeInformation::castReference(value, type.isNullable(), type.index)) {
+            if (!Wasm::TypeInformation::isReferenceValueAssignable(value, type.isNullable(), type.index)) {
                 // FIXME: provide a better error message here
                 // https://bugs.webkit.org/show_bug.cgi?id=247746
                 return throwVMTypeError(globalObject, scope, "Argument value did not match the reference type"_s);

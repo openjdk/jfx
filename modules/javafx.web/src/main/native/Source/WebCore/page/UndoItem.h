@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class Document;
 class UndoManager;
 
 class UndoItem : public RefCountedAndCanMakeWeakPtr<UndoItem> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(UndoItem);
+    WTF_MAKE_TZONE_ALLOCATED(UndoItem);
 public:
     struct Init {
         String label;
@@ -48,10 +48,10 @@ public:
 
     static Ref<UndoItem> create(Init&& init)
     {
-        return adoptRef(*new UndoItem(WTFMove(init)));
+        return adoptRef(*new UndoItem(WTF::move(init)));
     }
 
-    bool isValid() const;
+    bool isValid() const { return !!m_undoManager; }
     void invalidate();
 
     Document* document() const;
@@ -65,16 +65,16 @@ public:
     VoidCallback& redoHandler() const { return m_redoHandler.get(); }
 
 private:
-    UndoItem(Init&& init)
-        : m_label(WTFMove(init.label))
+    explicit UndoItem(Init&& init)
+        : m_label(WTF::move(init.label))
         , m_undoHandler(init.undo.releaseNonNull())
         , m_redoHandler(init.redo.releaseNonNull())
     {
     }
 
     String m_label;
-    Ref<VoidCallback> m_undoHandler;
-    Ref<VoidCallback> m_redoHandler;
+    const Ref<VoidCallback> m_undoHandler;
+    const Ref<VoidCallback> m_redoHandler;
     WeakPtr<UndoManager> m_undoManager;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };

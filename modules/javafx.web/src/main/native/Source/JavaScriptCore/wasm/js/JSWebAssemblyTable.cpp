@@ -39,7 +39,7 @@ const ClassInfo JSWebAssemblyTable::s_info = { "WebAssembly.Table"_s, &Base::s_i
 
 JSWebAssemblyTable* JSWebAssemblyTable::create(VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
 {
-    auto* instance = new (NotNull, allocateCell<JSWebAssemblyTable>(vm)) JSWebAssemblyTable(vm, structure, WTFMove(table));
+    auto* instance = new (NotNull, allocateCell<JSWebAssemblyTable>(vm)) JSWebAssemblyTable(vm, structure, WTF::move(table));
     instance->table()->setOwner(instance);
     instance->finishCreation(vm);
     return instance;
@@ -52,7 +52,7 @@ Structure* JSWebAssemblyTable::createStructure(VM& vm, JSGlobalObject* globalObj
 
 JSWebAssemblyTable::JSWebAssemblyTable(VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
     : Base(vm, structure)
-    , m_table(WTFMove(table))
+    , m_table(WTF::move(table))
 {
 }
 
@@ -79,7 +79,7 @@ std::optional<uint32_t> JSWebAssemblyTable::grow(JSGlobalObject* globalObject, u
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     uint64_t wasmValue = 0;
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         if (!defaultValue.isNull()) {
             throwTypeError(globalObject, scope, "Table.grow cannot handle exnref table"_s);
             return { };
@@ -98,7 +98,7 @@ JSValue JSWebAssemblyTable::get(JSGlobalObject* globalObject, uint32_t index)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Table.get cannot handle exnref table"_s);
         return { };
     }
@@ -111,7 +111,7 @@ void JSWebAssemblyTable::set(JSGlobalObject* globalObject, uint32_t index, JSVal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Table.set cannot handle exnref table"_s);
         return;
     }

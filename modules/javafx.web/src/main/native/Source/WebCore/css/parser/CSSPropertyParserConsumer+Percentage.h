@@ -25,7 +25,6 @@
 #pragma once
 
 #include "CSSPropertyParserOptions.h"
-#include "Length.h"
 #include <optional>
 #include <wtf/RefPtr.h>
 
@@ -34,17 +33,16 @@ namespace WebCore {
 class CSSPrimitiveValue;
 class CSSParserTokenRange;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: - Consumer functions
 
-// MARK: - Percent
-RefPtr<CSSPrimitiveValue> consumePercentage(CSSParserTokenRange&, const CSSParserContext&, ValueRange = ValueRange::All);
-
 // FIXME: Users of this function are likely getting incorrect results when used with calc() producing a percent, as it is not getting divided by 100.
-RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange&, const CSSParserContext&, ValueRange = ValueRange::All);
+RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

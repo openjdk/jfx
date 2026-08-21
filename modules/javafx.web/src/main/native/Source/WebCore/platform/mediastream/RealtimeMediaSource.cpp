@@ -50,6 +50,7 @@
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
+#include "ImageRotationSessionVT.h"
 #include "ImageTransferSessionVT.h"
 #include "VideoFrameCV.h"
 #endif
@@ -61,7 +62,7 @@
 namespace WebCore {
 
 struct VideoFrameAdaptor {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(VideoFrameAdaptor);
 
     VideoFrameAdaptor(IntSize size, double frameRate)
         : size(size)
@@ -104,7 +105,7 @@ RealtimeMediaSourceObserver::~RealtimeMediaSourceObserver() = default;
 
 RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : m_pageIdentifier(pageIdentifier)
-    , m_idHashSalts(WTFMove(hashSalts))
+    , m_idHashSalts(WTF::move(hashSalts))
     , m_type(toSourceType(device.type()))
     , m_name({ device.label() })
     , m_device(device)
@@ -255,7 +256,7 @@ void RealtimeMediaSource::notifySettingsDidChangeObservers(OptionSet<RealtimeMed
 
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, flags);
 
-    scheduleDeferredTask([this] {
+    scheduleDeferredTask([this, protectedThis = Ref { *this }] {
         m_pendingSettingsDidChangeNotification = false;
         forEachObserver([](auto& observer) {
             observer.sourceSettingsChanged();
@@ -338,6 +339,27 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
     updateHasStartedProducingData();
 
     Locker locker { m_videoFrameObserversLock };
+
+    bool shouldSwapAdaptorSize = false;
+    Ref currentVideoFrame = [&] -> Ref<VideoFrame> {
+#if PLATFORM(COCOA)
+        if (!m_isApplyingRotation || videoFrame.hasNoTransformation())
+            return videoFrame;
+
+        if (!m_rotationSession)
+            m_rotationSession = makeUnique<ImageRotationSessionVT>(m_canUseIOSurface ? ImageRotationSessionVT::ShouldUseIOSurface::Yes : ImageRotationSessionVT::ShouldUseIOSurface::No);
+
+        RefPtr rotatedVideoFrame = m_rotationSession->applyRotation(videoFrame);
+        if (!rotatedVideoFrame)
+            return videoFrame;
+
+        shouldSwapAdaptorSize = videoFrame.has90DegreeRotation();
+        return rotatedVideoFrame.releaseNonNull();
+#else
+        return videoFrame;
+#endif
+    }();
+
     for (auto& [key, value] : m_videoFrameObservers) {
         if (auto* adaptor = value.get()) {
             if (adaptor->frameDecimation > 1 && ++adaptor->frameDecimationCounter % adaptor->frameDecimation)
@@ -348,18 +370,21 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
                 adaptor->frameDecimation = 1;
 
             if (!adaptor->size.isZero()) {
-                auto actualSize = expandedIntSize(videoFrame.presentationSize());
-                auto desiredSize = computeResizedVideoFrameSize(adaptor->size, actualSize);
+                auto actualSize = expandedIntSize(currentVideoFrame->presentationSize());
+                auto adaptorSize = adaptor->size;
+                if (shouldSwapAdaptorSize)
+                    adaptorSize = adaptorSize.transposedSize();
+                auto desiredSize = computeResizedVideoFrameSize(adaptorSize, actualSize);
 
                 if (desiredSize != actualSize) {
-                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, videoFrame, desiredSize)) {
+                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, currentVideoFrame, desiredSize)) {
                         key->videoFrameAvailable(*newVideoFrame, metadata);
                         continue;
                     }
                 }
             }
         }
-        key->videoFrameAvailable(videoFrame, metadata);
+        key->videoFrameAvailable(currentVideoFrame, metadata);
     }
 }
 
@@ -446,7 +471,7 @@ void RealtimeMediaSource::registerOwnerCallback(OwnerCallback&& callback)
 {
     ASSERT(isMainThread());
     ASSERT(!m_registerOwnerCallback);
-    m_registerOwnerCallback = WTFMove(callback);
+    m_registerOwnerCallback = WTF::move(callback);
 }
 
 void RealtimeMediaSource::captureFailed()
@@ -893,7 +918,7 @@ void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, co
             return false;
         };
 
-        auto modeString = downcast<StringConstraint>(constraint).find(WTFMove(filter));
+        auto modeString = downcast<StringConstraint>(constraint).find(WTF::move(filter));
         if (!modeString.isEmpty())
             setFacingMode(RealtimeMediaSourceSettings::videoFacingModeEnum(modeString));
         break;
@@ -1326,7 +1351,7 @@ void RealtimeMediaSource::setIntrinsicSize(const IntSize& intrinsicSize, bool no
 
     m_intrinsicSize = intrinsicSize;
     if (notifyObservers) {
-        scheduleDeferredTask([this] {
+        scheduleDeferredTask([this, protectedThis = Ref { *this }] {
             notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
         });
     }
@@ -1448,7 +1473,7 @@ void RealtimeMediaSource::setEchoCancellation(bool echoCancellation)
 void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
 {
     ASSERT(function);
-    callOnMainThread([protectedThis = Ref { *this }, function = WTFMove(function)] {
+    callOnMainThread([protectedThis = Ref { *this }, function = WTF::move(function)] {
         function();
     });
 }
@@ -1476,7 +1501,7 @@ void RealtimeMediaSource::setType(Type type)
 
     m_type = type;
 
-    scheduleDeferredTask([this] {
+    scheduleDeferredTask([this, protectedThis = Ref { *this }] {
         forEachObserver([](auto& observer) {
             observer.sourceSettingsChanged();
         });
@@ -1505,10 +1530,31 @@ std::pair<GstClockTime, GstClockTime> RealtimeMediaSource::queryCaptureLatency()
 }
 #endif
 
+void RealtimeMediaSource::configurationChanged()
+{
+    forEachObserver([](auto& observer) {
+        observer.sourceConfigurationChanged();
+    });
+}
+
+void RealtimeMediaSource::setShouldApplyRotation()
+{
+    ASSERT(isMainThread());
+
+#if PLATFORM(COCOA)
+    m_isApplyingRotation = true;
+#endif
+}
+
+bool RealtimeMediaSource::isApplyingRotation() const
+{
+    return m_isApplyingRotation;
+}
+
 #if !RELEASE_LOG_DISABLED
 void RealtimeMediaSource::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", name(), ", ", m_hashedID, ", ", m_ephemeralHashedID);
 }

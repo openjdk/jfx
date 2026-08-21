@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "Options.h"
+#include <JavaScriptCore/GCAwareJITStubRoutine.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Options.h>
 
 namespace JSC {
 
@@ -48,6 +49,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         DollarVMAssertScope assertScope;
@@ -63,6 +66,11 @@ public:
     }
 
     Structure* objectDoingSideEffectPutWithoutCorrectSlotStatusStructure() { return m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID.get(); }
+    Structure* testCustomGetterSetterStructure() { return m_testCustomGetterSetterStructureID.get(); }
+
+#if ENABLE(JIT)
+    RefPtr<PolymorphicAccessJITStubRoutine> m_testStubRoutine;
+#endif
 
 private:
     JSDollarVM(VM& vm, Structure* structure)
@@ -75,11 +83,10 @@ private:
     void addFunction(VM&, JSGlobalObject*, ASCIILiteral name, NativeFunction, unsigned arguments);
     void addConstructibleFunction(VM&, JSGlobalObject*, ASCIILiteral name, NativeFunction, unsigned arguments);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-
-    DECLARE_VISIT_CHILDREN;
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     WriteBarrierStructureID m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID;
+    WriteBarrierStructureID m_testCustomGetterSetterStructureID;
 };
 
 } // namespace JSC

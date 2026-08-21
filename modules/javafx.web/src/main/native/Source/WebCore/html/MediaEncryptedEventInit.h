@@ -30,8 +30,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "Event.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <WebCore/Event.h>
 
 namespace WebCore {
 
@@ -41,7 +41,7 @@ struct MediaEncryptedEventInit : EventInit {
     MediaEncryptedEventInit(const String& initDataType, RefPtr<JSC::ArrayBuffer>&& initData)
         : EventInit()
         , initDataType(initDataType)
-        , initData(WTFMove(initData))
+        , initData(WTF::move(initData))
     { }
 
     String initDataType;

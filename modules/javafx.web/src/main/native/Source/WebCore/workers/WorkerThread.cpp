@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,38 +124,19 @@ WorkerThread::~WorkerThread()
     --workerThreadCounter;
 }
 
-WorkerLoaderProxy* WorkerThread::workerLoaderProxy()
-{
-    return m_workerLoaderProxy.get();
-}
-
-WorkerBadgeProxy* WorkerThread::workerBadgeProxy() const
-{
-    return m_workerBadgeProxy.get();
-}
-
-WorkerDebuggerProxy* WorkerThread::workerDebuggerProxy() const
-{
-    return m_workerDebuggerProxy.get();
-}
-
-WorkerReportingProxy* WorkerThread::workerReportingProxy() const
-{
-    return m_workerReportingProxy.get();
-}
-
 Ref<Thread> WorkerThread::createThread()
 {
     if (is<WorkerMainRunLoop>(runLoop())) {
         // This worker should run on the main thread.
-        RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
+        RunLoop::mainSingleton().dispatch([protectedThis = Ref { *this }] {
             protectedThis->workerOrWorkletThread();
         });
         ASSERT(isMainThread());
-        return Thread::current();
+        return Thread::currentSingleton();
     }
 
-    return Thread::create(threadName(), [this] {
+    // WorkerOrWorkletThread::workerOrWorkletThread destroys the worker and expects a single reference to this.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return Thread::create(threadName(), [this] {
         workerOrWorkletThread();
     }, ThreadType::JavaScript);
 }
@@ -165,7 +146,7 @@ RefPtr<WorkerOrWorkletGlobalScope> WorkerThread::createGlobalScope()
 #if PLATFORM(JAVA)
     WTF::AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
-    return createWorkerGlobalScope(m_startupData->params, WTFMove(m_startupData->origin), WTFMove(m_startupData->topOrigin));
+    return createWorkerGlobalScope(m_startupData->params, WTF::move(m_startupData->origin), WTF::move(m_startupData->topOrigin));
 }
 
 bool WorkerThread::shouldWaitForWebInspectorOnStartup() const
@@ -185,14 +166,14 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
     WeakPtr<ScriptBufferSourceProvider> sourceProvider;
     if (m_startupData->params.workerType == WorkerType::Classic) {
         ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL));
-        sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
+        sourceProvider = downcast<ScriptBufferSourceProvider>(sourceCode.provider());
         globalScope->script()->evaluate(sourceCode, &exceptionMessage);
         finishedEvaluatingScript();
     } else {
         auto parameters = ModuleFetchParameters::create(JSC::ScriptFetchParameters::Type::JavaScript, emptyString(), /* isTopLevelModule */ true);
-        auto scriptFetcher = WorkerScriptFetcher::create(WTFMove(parameters), globalScope->credentials(), globalScope->destination(), globalScope->referrerPolicy());
+        auto scriptFetcher = WorkerScriptFetcher::create(WTF::move(parameters), globalScope->credentials(), globalScope->destination(), globalScope->referrerPolicy());
         ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL), { }, { }, JSC::SourceProviderSourceType::Module, scriptFetcher.copyRef());
-        sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
+        sourceProvider = downcast<ScriptBufferSourceProvider>(sourceCode.provider());
         bool success = globalScope->script()->loadModuleSynchronously(scriptFetcher.get(), sourceCode);
         if (success) {
             if (auto error = scriptFetcher->error()) {
@@ -216,19 +197,9 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
     m_startupData = nullptr;
 }
 
-IDBClient::IDBConnectionProxy* WorkerThread::idbConnectionProxy()
-{
-    return m_idbConnectionProxy.get();
-}
-
-SocketProvider* WorkerThread::socketProvider()
-{
-    return m_socketProvider.get();
-}
-
 WorkerGlobalScope* WorkerThread::globalScope()
 {
-    ASSERT(!thread() || thread() == &Thread::current());
+    ASSERT(!thread() || thread() == &Thread::currentSingleton());
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
 }
 

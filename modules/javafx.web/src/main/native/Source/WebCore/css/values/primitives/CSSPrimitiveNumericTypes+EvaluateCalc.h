@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "CSSNoConversionDataRequiredToken.h"
-#include "CSSPrimitiveNumericTypes.h"
-#include "CSSUnevaluatedCalc.h"
+#include <WebCore/CSSNoConversionDataRequiredToken.h>
+#include <WebCore/CSSPrimitiveNumericTypes.h>
+#include <WebCore/CSSUnevaluatedCalc.h>
 
 namespace WebCore {
 namespace CSS {
@@ -52,9 +52,9 @@ template<typename T> constexpr auto evaluateCalc(const T& component, NoConversio
     return component;
 }
 
-template<typename... Ts> auto evaluateCalcIfNoConversionDataRequired(const std::variant<Ts...>& component, const CSSCalcSymbolTable& symbolTable) -> std::variant<Ts...>
+template<typename... Ts> auto evaluateCalcIfNoConversionDataRequired(const Variant<Ts...>& component, const CSSCalcSymbolTable& symbolTable) -> Variant<Ts...>
 {
-    return WTF::switchOn(component, [&](const auto& alternative) -> std::variant<Ts...> {
+    return WTF::switchOn(component, [&](const auto& alternative) -> Variant<Ts...> {
         if (requiresConversionData(alternative))
             return alternative;
         return evaluateCalc(alternative, NoConversionDataRequiredToken { }, symbolTable);

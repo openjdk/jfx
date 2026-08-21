@@ -27,6 +27,7 @@
 #pragma once
 
 #include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
@@ -165,7 +166,16 @@ enum ContextMenuAction {
     ContextMenuItemPDFTwoPagesContinuous,
     ContextMenuItemTagShowMediaStats,
     ContextMenuItemTagCopyLinkWithHighlight,
-    ContextMenuItemLastNonCustomTag = ContextMenuItemTagCopyLinkWithHighlight,
+    ContextMenuItemTagProofread,
+    ContextMenuItemTagRewrite,
+    ContextMenuItemTagSummarize,
+    ContextMenuItemCaptionDisplayStyleSubmenu,
+#if PLATFORM(COCOA)
+    ContextMenuItemTagSmartLists,
+    ContextMenuItemLastNonCustomTag = ContextMenuItemTagSmartLists,
+#else
+    ContextMenuItemLastNonCustomTag = ContextMenuItemCaptionDisplayStyleSubmenu,
+#endif
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -208,6 +218,7 @@ public:
 
     bool isNull() const;
 
+    void setTitle(String&& title) { m_title = WTF::move(title); }
     void setTitle(const String& title) { m_title = title; }
     const String& title() const { return m_title; }
 

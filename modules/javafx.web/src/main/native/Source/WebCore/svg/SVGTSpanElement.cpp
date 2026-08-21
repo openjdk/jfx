@@ -25,11 +25,12 @@
 #include "RenderSVGTSpan.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTSpanElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGTSpanElement);
 
 inline SVGTSpanElement::SVGTSpanElement(const QualifiedName& tagName, Document& document)
     : SVGTextPositioningElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -44,7 +45,7 @@ Ref<SVGTSpanElement> SVGTSpanElement::create(const QualifiedName& tagName, Docum
 
 RenderPtr<RenderElement> SVGTSpanElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGTSpan>(*this, WTFMove(style));
+    return createRenderer<RenderSVGTSpan>(*this, WTF::move(style));
 }
 
 bool SVGTSpanElement::childShouldCreateRenderer(const Node& child) const

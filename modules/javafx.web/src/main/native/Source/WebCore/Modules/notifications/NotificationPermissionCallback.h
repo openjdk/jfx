@@ -27,9 +27,9 @@
 
 #if ENABLE(NOTIFICATIONS)
 
-#include "ActiveDOMCallback.h"
-#include "CallbackResult.h"
-#include "Notification.h"
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/CallbackResult.h>
+#include <WebCore/Notification.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -39,8 +39,12 @@ class NotificationPermissionCallback : public RefCounted<NotificationPermissionC
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(Notification::Permission) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(Notification::Permission) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(Notification::Permission) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(Notification::Permission) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

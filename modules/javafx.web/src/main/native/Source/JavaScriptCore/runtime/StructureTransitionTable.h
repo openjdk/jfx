@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "IndexingType.h"
-#include "WeakGCMap.h"
+#include <JavaScriptCore/CollectionScope.h>
+#include <JavaScriptCore/IndexingType.h>
+#include <JavaScriptCore/WeakGCMap.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/text/UniquedStringImpl.h>
 
@@ -231,7 +232,7 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static Key createFromStructure(Structure*);
+        static Key createKeyFromStructure(Structure*);
         static Key createKey(PointerKey impl, unsigned attributes, TransitionKind transitionKind)
         {
             return Key { impl, attributes, transitionKind };
@@ -254,7 +255,7 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static Key createFromStructure(Structure*);
+        static Key createKeyFromStructure(Structure*);
         static Key createKey(PointerKey impl, unsigned attributes, TransitionKind transitionKind)
         {
             return Key { impl.pointer(), attributes, transitionKind };

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <optional>
 #include <wtf/Ref.h>
@@ -49,7 +49,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -59,10 +59,10 @@ public:
 
     virtual void end() = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&&) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) = 0;
@@ -70,6 +70,8 @@ public:
     virtual void pushDebugGroup(String&& groupLabel) = 0;
     virtual void popDebugGroup() = 0;
     virtual void insertDebugMarker(String&& markerLabel) = 0;
+    virtual bool isRemoteComputePassEncoderProxy() const { return false; }
+    virtual bool isComputePassEncoderImpl() const { return false; }
 
 protected:
     ComputePassEncoder() = default;

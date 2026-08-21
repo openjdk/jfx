@@ -27,10 +27,12 @@
 #include "SpeechRecognition.h"
 
 #include "ClientOrigin.h"
-#include "Document.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
-#include "Page.h"
 #include "PermissionsPolicy.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionErrorEvent.h"
@@ -41,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechRecognition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechRecognition);
 
 Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 {
@@ -53,8 +55,8 @@ Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 SpeechRecognition::SpeechRecognition(Document& document)
     : ActiveDOMObject(document)
 {
-    if (auto* page = document.page()) {
-        m_connection = &page->speechRecognitionConnection();
+    if (RefPtr page = document.page()) {
+        lazyInitialize(m_connection, Ref { page->speechRecognitionConnection() });
         m_connection->registerClient(*this);
     }
 }
@@ -114,8 +116,8 @@ void SpeechRecognition::stop()
         return;
     m_connection->unregisterClient(*this);
 
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 }
 
 void SpeechRecognition::didStart()
@@ -128,8 +130,8 @@ void SpeechRecognition::didStart()
 
 void SpeechRecognition::didStartCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(this);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(this);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audiostartEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -156,8 +158,8 @@ void SpeechRecognition::didStopCapturingSound()
 
 void SpeechRecognition::didStopCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audioendEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -176,18 +178,18 @@ void SpeechRecognition::didReceiveResult(Vector<SpeechRecognitionResultData>&& r
     auto firstChangedIndex = allResults.size();
     for (auto resultData : resultDatas) {
         auto alternatives = WTF::map(resultData.alternatives, [](auto& alternativeData) {
-            return SpeechRecognitionAlternative::create(WTFMove(alternativeData.transcript), alternativeData.confidence);
+            return SpeechRecognitionAlternative::create(WTF::move(alternativeData.transcript), alternativeData.confidence);
         });
 
-        auto newResult = SpeechRecognitionResult::create(WTFMove(alternatives), resultData.isFinal);
+        auto newResult = SpeechRecognitionResult::create(WTF::move(alternatives), resultData.isFinal);
         if (resultData.isFinal)
             m_finalResults.append(newResult);
 
-        allResults.append(WTFMove(newResult));
+        allResults.append(WTF::move(newResult));
     }
 
-    auto resultList = SpeechRecognitionResultList::create(WTFMove(allResults));
-    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTFMove(resultList)));
+    auto resultList = SpeechRecognitionResultList::create(WTF::move(allResults));
+    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTF::move(resultList)));
 }
 
 void SpeechRecognition::didError(const SpeechRecognitionError& error)
@@ -207,6 +209,11 @@ void SpeechRecognition::didEnd()
 }
 
 SpeechRecognition::~SpeechRecognition() = default;
+
+ScriptExecutionContext* SpeechRecognition::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
 
 bool SpeechRecognition::virtualHasPendingActivity() const
 {

@@ -29,6 +29,7 @@
 #include "config.h"
 #include "XPathParser.h"
 
+#include "ExceptionOr.h"
 #include "XPathEvaluator.h"
 #include "XPathNSResolver.h"
 #include "XPathPath.h"
@@ -48,7 +49,7 @@ namespace XPath {
 
 struct Parser::Token {
     int type;
-    using TokenValue = std::variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
+    using TokenValue = Variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
     TokenValue value;
 
     Token() = delete;
@@ -57,7 +58,7 @@ struct Parser::Token {
         : type(type)
     { }
     Token(int type, TokenValue&& value)
-        : type(type), value(WTFMove(value))
+        : type(type), value(WTF::move(value))
     { }
 
     String& string() { return std::get<String>(value); }
@@ -68,7 +69,7 @@ struct Parser::Token {
 
 enum XMLCat { NameStart, NameCont, NotPartOfName };
 
-static XMLCat charCat(UChar character)
+static XMLCat charCat(char16_t character)
 {
     if (character == '_')
         return NameStart;
@@ -89,7 +90,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNam
         ASCIILiteral name;
         Step::Axis axis;
     };
-    const AxisName axisNameList[] = {
+    static constexpr auto axisNameList = std::to_array<AxisName>({
         { "ancestor"_s, Step::AncestorAxis },
         { "ancestor-or-self"_s, Step::AncestorOrSelfAxis },
         { "attribute"_s, Step::AttributeAxis },
@@ -103,7 +104,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNam
         { "preceding"_s, Step::PrecedingAxis },
         { "preceding-sibling"_s, Step::PrecedingSiblingAxis },
         { "self"_s, Step::SelfAxis }
-    };
+    });
     MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> map;
     for (auto& axisName : axisNameList)
         map.add(axisName.name, axisName.axis);
@@ -168,7 +169,7 @@ char Parser::peekAheadHelper()
 {
     if (m_nextPos + 1 >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos + 1];
+    char16_t next = m_data[m_nextPos + 1];
     if (next >= 0xff)
         return 0;
     return next;
@@ -178,7 +179,7 @@ char Parser::peekCurHelper()
 {
     if (m_nextPos >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos];
+    char16_t next = m_data[m_nextPos];
     if (next >= 0xff)
         return 0;
     return next;
@@ -186,7 +187,7 @@ char Parser::peekCurHelper()
 
 Parser::Token Parser::lexString()
 {
-    UChar delimiter = m_data[m_nextPos];
+    char16_t delimiter = m_data[m_nextPos];
     int startPos = m_nextPos + 1;
 
     for (m_nextPos = startPos; m_nextPos < m_data.length(); ++m_nextPos) {
@@ -210,7 +211,7 @@ Parser::Token Parser::lexNumber()
 
     // Go until end or a non-digits character.
     for (; m_nextPos < m_data.length(); ++m_nextPos) {
-        UChar aChar = m_data[m_nextPos];
+        char16_t aChar = m_data[m_nextPos];
         if (aChar >= 0xff) break;
 
         if (!isASCIIDigit(aChar)) {
@@ -406,7 +407,7 @@ inline Parser::Token Parser::nextToken()
 
 Parser::Parser(const String& statement, RefPtr<XPathNSResolver>&& resolver)
     : m_data(statement)
-    , m_resolver(WTFMove(resolver))
+    , m_resolver(WTF::move(resolver))
 {
 }
 
@@ -459,7 +460,7 @@ bool Parser::expandQualifiedName(const String& qualifiedName, AtomString& localN
 
 ExceptionOr<std::unique_ptr<Expression>> Parser::parseStatement(const String& statement, RefPtr<XPathNSResolver>&& resolver)
 {
-    Parser parser { statement, WTFMove(resolver) };
+    Parser parser { statement, WTF::move(resolver) };
 
     int parseError = xpathyyparse(parser);
 
@@ -469,7 +470,7 @@ ExceptionOr<std::unique_ptr<Expression>> Parser::parseStatement(const String& st
     if (parseError)
         return Exception { ExceptionCode::SyntaxError };
 
-    return WTFMove(parser.m_result);
+    return WTF::move(parser.m_result);
 }
 
 } // namespace XPath

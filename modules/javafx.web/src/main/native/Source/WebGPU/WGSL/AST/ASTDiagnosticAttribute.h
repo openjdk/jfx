@@ -36,10 +36,12 @@ class DiagnosticAttribute final : public Attribute {
 public:
     NodeKind kind() const override;
 
+    Diagnostic& diagnostic() { return m_diagnostic; }
+
 private:
     DiagnosticAttribute(SourceSpan span, Diagnostic&& diagnostic)
         : Attribute(span)
-        , m_diagnostic(WTFMove(diagnostic))
+        , m_diagnostic(WTF::move(diagnostic))
     { }
 
     Diagnostic m_diagnostic;

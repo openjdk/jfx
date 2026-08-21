@@ -31,11 +31,11 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct AnglePercentageValidator {
-    static constexpr std::optional<CSS::AnglePercentageUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions options)
+    static constexpr std::optional<CSS::AnglePercentageUnit> validate(CSSUnitType unitType, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
     {
         // NOTE: Percentages are handled explicitly by the PercentageValidator, so this only
         // needs to be concerned with the Angle units.
-        if (auto result = AngleValidator::validate(unitType, options))
+        if (auto result = AngleValidator::validate(unitType, state, options))
             return static_cast<CSS::AnglePercentageUnit>(*result);
         return std::nullopt;
     }
@@ -44,6 +44,11 @@ struct AnglePercentageValidator {
     {
         // Values other than 0 and +/-∞ are not supported for <angle-percentage> numeric ranges currently.
         return isValidNonCanonicalizableDimensionValue(raw);
+    }
+
+    static bool shouldAcceptUnitlessValue(double value, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
+    {
+        return AngleValidator::shouldAcceptUnitlessValue(value, state, options);
     }
 };
 

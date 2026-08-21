@@ -53,8 +53,8 @@ void WebSocketExtensionDispatcher::addProcessor(std::unique_ptr<WebSocketExtensi
     }
     ASSERT(processor->handshakeString().length());
     ASSERT(!processor->handshakeString().contains('\n'));
-    ASSERT(!processor->handshakeString().contains(static_cast<UChar>('\0')));
-    m_processors.append(WTFMove(processor));
+    ASSERT(!processor->handshakeString().contains(static_cast<char16_t>('\0')));
+    m_processors.append(WTF::move(processor));
 }
 
 const String WebSocketExtensionDispatcher::createHeaderValue() const

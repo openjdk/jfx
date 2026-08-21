@@ -44,12 +44,12 @@ static ServiceWorkerClientFrameType toServiceWorkerClientFrameType(ScriptExecuti
     if (!document)
         return ServiceWorkerClientFrameType::None;
 
-    auto* frame = document->frame();
+    RefPtr frame = document->frame();
     if (!frame)
         return ServiceWorkerClientFrameType::None;
 
     if (frame->isMainFrame()) {
-        if (RefPtr window = document->domWindow()) {
+        if (RefPtr window = document->window()) {
             if (window->opener())
                 return ServiceWorkerClientFrameType::Auxiliary;
         }
@@ -65,19 +65,19 @@ ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() const &
 
 ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() &&
 {
-    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
+    return { identifier, type, frameType, WTF::move(url).isolatedCopy(), WTF::move(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, advancedPrivacyProtections, isVisible, isFocused, focusOrder, crossThreadCopy(WTF::move(ancestorOrigins)) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& context)
 {
-    if (auto* document = dynamicDowncast<Document>(context)) {
+    if (RefPtr document = dynamicDowncast<Document>(context)) {
         auto lastNavigationWasAppInitiated = document->loader() && document->loader()->lastNavigationWasAppInitiated() ? LastNavigationWasAppInitiated::Yes : LastNavigationWasAppInitiated::No;
 
         Vector<String> ancestorOrigins;
-        if (auto* frame = document->frame()) {
-            for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
-                if (auto* ancestorFrame = dynamicDowncast<LocalFrame>(ancestor))
-                    ancestorOrigins.append(ancestorFrame->document()->securityOrigin().toString());
+        if (RefPtr frame = document->frame()) {
+            for (RefPtr ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
+                if (RefPtr origin = ancestor->frameDocumentSecurityOrigin())
+                    ancestorOrigins.append(origin->toString());
             }
         }
 
@@ -94,7 +94,7 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
             !document->hidden(),
             document->hasFocus(),
             0,
-            WTFMove(ancestorOrigins)
+            WTF::move(ancestorOrigins)
         };
     }
 

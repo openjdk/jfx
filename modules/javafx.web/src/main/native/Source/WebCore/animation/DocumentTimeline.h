@@ -25,11 +25,10 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "AnimationTimeline.h"
-#include "DocumentTimelineOptions.h"
-#include "ExceptionOr.h"
-#include "Timer.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/AnimationTimeline.h>
+#include <WebCore/DocumentTimelineOptions.h>
+#include <WebCore/Timer.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
 
@@ -56,10 +55,10 @@ public:
 
     virtual ~DocumentTimeline();
 
-    Document* document() const { return m_document.get(); }
+    Document* document() const;
 
-    std::optional<WebAnimationTime> currentTime() override;
-    ExceptionOr<Ref<WebAnimation>> animate(Ref<CustomEffectCallback>&&, std::optional<std::variant<double, CustomAnimationOptions>>&&);
+    std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) override;
+    ExceptionOr<Ref<WebAnimation>> animate(Ref<CustomEffectCallback>&&, std::optional<Variant<double, CustomAnimationOptions>>&&);
 
     void animationTimingDidChange(WebAnimation&) override;
     void removeAnimation(WebAnimation&) override;
@@ -76,17 +75,21 @@ public:
     AnimationEvents prepareForPendingAnimationEventsDispatch();
     void documentDidUpdateAnimationsAndSendEvents();
     void styleOriginatedAnimationsWereCreated();
+    void pendingStartTimeWasSetOnAnimation();
 
     WEBCORE_EXPORT Seconds animationInterval() const;
     void suspendAnimations() override;
     void resumeAnimations() override;
     WEBCORE_EXPORT unsigned numberOfActiveAnimationsForTesting() const;
-    WEBCORE_EXPORT Vector<std::pair<String, double>> acceleratedAnimationsForElement(Element&) const;
     WEBCORE_EXPORT unsigned numberOfAnimationTimelineInvalidationsForTesting() const;
 
     Seconds convertTimelineTimeToOriginRelativeTime(Seconds) const;
 
     std::optional<FramesPerSecond> maximumFrameRate() const;
+
+#if ENABLE(THREADED_ANIMATIONS)
+    void scheduleAcceleratedEffectStackUpdate();
+#endif
 
 private:
     DocumentTimeline(Document&, Seconds);
@@ -94,6 +97,11 @@ private:
     bool isDocumentTimeline() const final { return true; }
 
     AnimationTimelinesController* controller() const override;
+#if ENABLE(THREADED_ANIMATIONS)
+    bool computeCanBeAccelerated() const final { return true; }
+    Ref<AcceleratedTimeline> createAcceleratedRepresentation() const final;
+#endif
+
     void applyPendingAcceleratedAnimations();
     void scheduleInvalidationTaskIfNeeded();
     void scheduleAnimationResolution();
@@ -104,7 +112,7 @@ private:
     bool shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const;
 
     Timer m_tickScheduleTimer;
-    UncheckedKeyHashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
+    HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
     AnimationEvents m_pendingAnimationEvents;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     Seconds m_originTime;

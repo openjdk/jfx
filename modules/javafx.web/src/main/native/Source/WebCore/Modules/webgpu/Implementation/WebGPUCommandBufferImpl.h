@@ -41,7 +41,7 @@ class CommandBufferImpl final : public CommandBuffer {
 public:
     static Ref<CommandBufferImpl> create(WebGPUPtr<WGPUCommandBuffer>&& commandBuffer, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new CommandBufferImpl(WTFMove(commandBuffer), convertToBackingContext));
+        return adoptRef(*new CommandBufferImpl(WTF::move(commandBuffer), convertToBackingContext));
     }
 
     virtual ~CommandBufferImpl();
@@ -57,13 +57,18 @@ private:
     CommandBufferImpl& operator=(CommandBufferImpl&&) = delete;
 
     WGPUCommandBuffer backing() const { return m_backing.get(); }
+    bool isCommandBufferImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUCommandBuffer> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::CommandBufferImpl)
+    static bool isType(const WebCore::WebGPU::CommandBuffer& commandBuffer) { return commandBuffer.isCommandBufferImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

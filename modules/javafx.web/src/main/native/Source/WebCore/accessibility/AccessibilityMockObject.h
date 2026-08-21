@@ -30,7 +30,6 @@
 namespace WebCore {
 
 class AccessibilityMockObject : public AccessibilityObject {
-
 public:
     virtual ~AccessibilityMockObject();
 
@@ -39,7 +38,7 @@ public:
     bool isEnabled() const override { return true; }
 
 protected:
-    explicit AccessibilityMockObject(AXID);
+    explicit AccessibilityMockObject(AXID, AXObjectCache&);
 
     WeakPtr<AccessibilityObject> m_parent;
 

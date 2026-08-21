@@ -9,10 +9,12 @@ if (WIN32)
 
         win/CPUTimeWin.cpp
         win/DbgHelperWin.cpp
+        win/FileHandleWin.cpp
         win/FileSystemWin.cpp
         win/LanguageWin.cpp
         win/LoggingWin.cpp
         win/MainThreadWin.cpp
+        win/MappedFileDataWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
         win/SignalsWin.cpp
@@ -54,7 +56,9 @@ else ()
     endif ()
 
         list(APPEND WTF_SOURCES
+        posix/FileHandlePOSIX.cpp
             posix/FileSystemPOSIX.cpp
+        posix/MappedFileDataPOSIX.cpp
 
             unix/UniStdExtrasUnix.cpp
         )
@@ -109,6 +113,7 @@ endif ()
 if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
     list(APPEND WTF_PUBLIC_HEADERS
         glib/GRefPtr.h
+        glib/GSpanExtras.h
         glib/GTypedefs.h
         glib/RunLoopSourcePriority.h
     )
@@ -117,21 +122,26 @@ if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
         glib/RunLoopGLib.cpp
     )
     if (ENABLE_REMOTE_INSPECTOR)
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GSocketMonitor.h
+            glib/GUniquePtr.h
+            glib/SocketConnection.h
+        )
         list(APPEND WTF_SOURCES
             glib/GSocketMonitor.cpp
+            glib/GSpanExtras.cpp
             glib/SocketConnection.cpp
         )
     endif ()
-
-    list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
-        ${GIO_UNIX_INCLUDE_DIRS}
-        ${GLIB_INCLUDE_DIRS}
+    if (ENABLE_JSC_GLIB_API)
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GUniquePtr.h
+            glib/GWeakPtr.h
+            glib/WTFGType.h
     )
+    endif ()
     list(APPEND WTF_LIBRARIES
-        ${GIO_UNIX_LIBRARIES}
-        ${GLIB_GIO_LIBRARIES}
-        ${GLIB_GOBJECT_LIBRARIES}
-        ${GLIB_LIBRARIES}
+        GLib::GioUnix
     )
 else ()
     list(APPEND WTF_SOURCES

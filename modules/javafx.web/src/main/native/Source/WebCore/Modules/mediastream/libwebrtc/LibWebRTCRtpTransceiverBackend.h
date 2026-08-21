@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,18 +27,10 @@
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "LibWebRTCRefWrappers.h"
 #include "LibWebRTCRtpSenderBackend.h"
 #include "RTCRtpTransceiverBackend.h"
 #include <wtf/TZoneMalloc.h>
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-
-#include <webrtc/api/rtp_transceiver_interface.h>
-#include <webrtc/api/scoped_refptr.h>
-
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
@@ -47,17 +39,19 @@ class LibWebRTCRtpReceiverBackend;
 class LibWebRTCRtpTransceiverBackend final : public RTCRtpTransceiverBackend {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpTransceiverBackend);
 public:
-    explicit LibWebRTCRtpTransceiverBackend(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>&& rtcTransceiver)
-        : m_rtcTransceiver(WTFMove(rtcTransceiver))
+    explicit LibWebRTCRtpTransceiverBackend(Ref<webrtc::RtpTransceiverInterface>&& rtcTransceiver)
+        : m_rtcTransceiver(WTF::move(rtcTransceiver))
     {
     }
 
     std::unique_ptr<LibWebRTCRtpReceiverBackend> createReceiverBackend();
-    std::unique_ptr<LibWebRTCRtpSenderBackend> createSenderBackend(LibWebRTCPeerConnectionBackend&, LibWebRTCRtpSenderBackend::Source&&);
+    Ref<LibWebRTCRtpSenderBackend> createSenderBackend(LibWebRTCPeerConnectionBackend&, LibWebRTCRtpSenderBackend::Source&&);
 
-    webrtc::RtpTransceiverInterface* rtcTransceiver() { return m_rtcTransceiver.get(); }
+    webrtc::RtpTransceiverInterface* rtcTransceiver() { return m_rtcTransceiver.ptr(); }
 
 private:
+    bool isLibWebRTCRtpTransceiverBackend() const final { return true; }
+
     RTCRtpTransceiverDirection direction() const final;
     std::optional<RTCRtpTransceiverDirection> currentDirection() const final;
     void setDirection(RTCRtpTransceiverDirection) final;
@@ -66,9 +60,13 @@ private:
     bool stopped() const final;
     ExceptionOr<void> setCodecPreferences(const Vector<RTCRtpCodecCapability>&) final;
 
-    rtc::scoped_refptr<webrtc::RtpTransceiverInterface> m_rtcTransceiver;
+    const Ref<webrtc::RtpTransceiverInterface> m_rtcTransceiver;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LibWebRTCRtpTransceiverBackend)
+    static bool isType(const WebCore::RTCRtpTransceiverBackend& backend) { return backend.isLibWebRTCRtpTransceiverBackend(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

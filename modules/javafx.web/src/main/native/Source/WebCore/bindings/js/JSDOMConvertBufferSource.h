@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "BufferSource.h"
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
-#include "JSDOMWrapperCache.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/JSTypedArrays.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
+#include <WebCore/JSDOMWrapperCache.h>
 
 namespace WebCore {
 
@@ -185,14 +185,14 @@ struct BufferSourceConverter {
         auto scope = DECLARE_THROW_SCOPE(vm);
         if constexpr (mode == BufferSourceConverterAllowSharedMode::Allow) {
             RefPtr object = WrapperType::toWrappedAllowShared(vm, value);
-            if (UNLIKELY(!object)) {
+            if (!object) [[unlikely]] {
             exceptionThrower(lexicalGlobalObject, scope);
                 return Result::exception();
     }
             return Result { object.releaseNonNull() };
         } else {
             RefPtr object = WrapperType::toWrapped(vm, value);
-            if (UNLIKELY(!object)) {
+            if (!object) [[unlikely]] {
                 exceptionThrower(lexicalGlobalObject, scope);
                 return Result::exception();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -55,7 +56,7 @@ public:
 private:
     static void getPlatformMemoryUsageStatistics(Vector<std::pair<ASCIILiteral, size_t>>&);
 
-    Page& m_page;
+    WeakRef<Page> m_page;
 };
 
 }

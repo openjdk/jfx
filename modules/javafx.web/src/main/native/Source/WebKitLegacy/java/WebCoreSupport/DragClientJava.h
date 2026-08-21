@@ -27,6 +27,7 @@
 
 #include <WebCore/DragClient.h>
 #include <WebCore/PlatformJavaClasses.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class Image;
 class HTMLImageElement;
 
 class DragClientJava final : public DragClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DragClientJava);
 public:
     DragClientJava(const JLObject &webPage);
     ~DragClientJava() override;
@@ -47,7 +48,7 @@ public:
     //We work in window rather than view coordinates here
     OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
 
-    void startDrag(DragItem, DataTransfer&, Frame&) override;
+    void startDrag(DragItem, DataTransfer&, Frame&, const std::optional<NodeIdentifier>& nodeIdentifier) override;
 private:
     JGObject m_webPage;
 };

@@ -26,22 +26,21 @@
 #include "CSSCalcTree+Evaluation.h"
 
 #include "AnchorPositionEvaluator.h"
+#include "CSSCalcExecutor.h"
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCalcSymbolTable.h"
-#include "CSSCalcTree+ContainerProgressEvaluator.h"
 #include "CSSCalcTree+Mappings.h"
-#include "CSSCalcTree+MediaProgressEvaluator.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree.h"
-#include "CalculationExecutor.h"
+#include "CSSUnevaluatedCalc.h"
 #include "RenderStyle.h"
-#include "RenderStyleInlines.h"
 #include "StyleBuilderState.h"
 
 namespace WebCore {
 namespace CSSCalc {
 
-static auto evaluate(const CSS::Keyword::None&, const EvaluationOptions&) -> std::optional<Calculation::None>;
-static auto evaluate(const ChildOrNone&, const EvaluationOptions&) -> std::optional<std::variant<double, Calculation::None>>;
+static auto evaluate(const CSS::Keyword::None&, const EvaluationOptions&) -> std::optional<CSS::Keyword::None>;
+static auto evaluate(const ChildOrNone&, const EvaluationOptions&) -> std::optional<Variant<double, CSS::Keyword::None>>;
 static auto evaluate(const std::optional<Child>&, const EvaluationOptions&) -> std::optional<std::optional<double>>;
 static auto evaluate(const Child&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const Number&, const EvaluationOptions&) -> std::optional<double>;
@@ -49,14 +48,14 @@ static auto evaluate(const Percentage&, const EvaluationOptions&) -> std::option
 static auto evaluate(const CanonicalDimension&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const NonCanonicalDimension&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const Symbol&, const EvaluationOptions&) -> std::optional<double>;
+static auto evaluate(const SiblingCount&, const EvaluationOptions&) -> std::optional<double>;
+static auto evaluate(const SiblingIndex&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Sum>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Product>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Min>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Max>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Hypot>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Random>&, const EvaluationOptions&) -> std::optional<double>;
-static auto evaluate(const IndirectNode<MediaProgress>&, const EvaluationOptions&) -> std::optional<double>;
-static auto evaluate(const IndirectNode<ContainerProgress>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<Anchor>&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const IndirectNode<AnchorSize>&, const EvaluationOptions&) -> std::optional<double>;
 template<typename Op>
@@ -69,13 +68,13 @@ template<typename Op, typename... Args> static std::optional<double> executeMath
     if ((!args.has_value() || ...))
         return std::nullopt;
 
-    return Calculation::executeOperation<ToCalculationTreeOp<Op>>(args.value()...);
+    return executeOperation<ToCalculationTreeOp<Op>::op>(args.value()...);
 }
 
 template<typename Op> static std::optional<double> executeVariadicMathOperationAfterUnwrapping(const IndirectNode<Op>& op, const EvaluationOptions& options)
 {
     bool failure = false;
-    auto result = Calculation::executeOperation<ToCalculationTreeOp<Op>>(op->children.value, [&](const auto& child) -> double {
+    auto result = executeOperation<ToCalculationTreeOp<Op>::op>(op->children.value, [&](const auto& child) -> double {
         if (auto value = evaluate(child, options))
             return *value;
         failure = true;
@@ -88,17 +87,17 @@ template<typename Op> static std::optional<double> executeVariadicMathOperationA
     return result;
 }
 
-std::optional<Calculation::None> evaluate(const CSS::Keyword::None&, const EvaluationOptions&)
+std::optional<CSS::Keyword::None> evaluate(const CSS::Keyword::None& none, const EvaluationOptions&)
 {
-    return Calculation::None { };
+    return none;
 }
 
-std::optional<std::variant<double, Calculation::None>> evaluate(const ChildOrNone& root, const EvaluationOptions& options)
+std::optional<Variant<double, CSS::Keyword::None>> evaluate(const ChildOrNone& root, const EvaluationOptions& options)
 {
     return WTF::switchOn(root,
-        [&](const auto& root) -> std::optional<std::variant<double, Calculation::None>> {
+        [&](const auto& root) -> std::optional<Variant<double, CSS::Keyword::None>> {
             if (auto value = evaluate(root, options))
-                return std::variant<double, Calculation::None> { *value };
+                return Variant<double, CSS::Keyword::None> { *value };
             return std::nullopt;
         }
     );
@@ -148,6 +147,26 @@ std::optional<double> evaluate(const Symbol& root, const EvaluationOptions& opti
     return std::nullopt;
 }
 
+std::optional<double> evaluate(const SiblingCount&, const EvaluationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (!options.conversionData->styleBuilderState()->element())
+        return { };
+
+    return options.conversionData->protectedStyleBuilderState()->siblingCount();
+}
+
+std::optional<double> evaluate(const SiblingIndex&, const EvaluationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (!options.conversionData->styleBuilderState()->element())
+        return { };
+
+    return options.conversionData->protectedStyleBuilderState()->siblingIndex();
+}
+
 std::optional<double> evaluate(const IndirectNode<Sum>& root, const EvaluationOptions& options)
 {
     return executeVariadicMathOperationAfterUnwrapping(root, options);
@@ -177,77 +196,44 @@ std::optional<double> evaluate(const IndirectNode<Random>& root, const Evaluatio
 {
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
-    if (root->cachingOptions.perElement && !options.conversionData->styleBuilderState()->element())
-        return { };
 
     auto min = evaluate(root->min, options);
     if (!min)
         return { };
 
     auto max = evaluate(root->max, options);
-    if (!min)
+    if (!max)
         return { };
 
     auto step = evaluate(root->step, options);
     if (!step)
         return { };
 
-    // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
-    // the result is always NaN if either is NaN, so we can return early here.
-    if (std::isnan(*min) || std::isnan(*max))
-        return std::numeric_limits<double>::quiet_NaN();
+    auto randomBaseValue = WTF::switchOn(root->sharing,
+        [&](const Random::SharingOptions& sharingOptions) -> std::optional<double> {
+            if (!sharingOptions.elementShared.has_value() && !options.conversionData->styleBuilderState()->element())
+                return { };
 
-    auto keyMap = options.conversionData->styleBuilderState()->randomKeyMap(
-        root->cachingOptions.perElement
+            return options.conversionData->protectedStyleBuilderState()->lookupCSSRandomBaseValue(
+                sharingOptions.identifier,
+                sharingOptions.elementShared
     );
-
-    auto randomUnitInterval = keyMap->lookupUnitInterval(
-        root->cachingOptions.identifier,
-        *min,
-        *max,
-        *step
+        },
+        [&](const Random::SharingFixed& sharingFixed) -> std::optional<double> {
+            return WTF::switchOn(sharingFixed.value,
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Raw& raw) -> std::optional<double> {
+                    return raw.value;
+                },
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Calc& calc) -> std::optional<double> {
+                    return calc.evaluate(CSS::Category::Number, *options.conversionData->protectedStyleBuilderState());
+                }
     );
-
-    return Calculation::executeOperation<ToCalculationTreeOp<Random>>(randomUnitInterval, *min, *max, *step);
-}
-
-std::optional<double> evaluate(const IndirectNode<MediaProgress>& root, const EvaluationOptions& options)
-{
-    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        }
+    );
+    if (!randomBaseValue)
         return { };
 
-    auto start = evaluate(root->start, options);
-    if (!start)
-        return { };
-
-    auto end = evaluate(root->end, options);
-    if (!end)
-        return { };
-
-    Ref document = options.conversionData->styleBuilderState()->document();
-    auto value = evaluateMediaProgress(root, document, *options.conversionData);
-    return Calculation::executeOperation<ToCalculationTreeOp<Progress>>(value, *start, *end);
-}
-
-std::optional<double> evaluate(const IndirectNode<ContainerProgress>& root, const EvaluationOptions& options)
-{
-    if (!options.conversionData || !options.conversionData->styleBuilderState() || !options.conversionData->styleBuilderState()->element())
-        return { };
-
-    auto start = evaluate(root->start, options);
-    if (!start)
-        return { };
-
-    auto end = evaluate(root->end, options);
-    if (!end)
-        return { };
-
-    Ref element = *options.conversionData->styleBuilderState()->element();
-    auto value = evaluateContainerProgress(root, element, *options.conversionData);
-    if (!value)
-        return { };
-
-    return Calculation::executeOperation<ToCalculationTreeOp<Progress>>(*value, *start, *end);
+    return executeOperation<ToCalculationTreeOp<Random>::op>(*randomBaseValue, *min, *max, *step);
 }
 
 std::optional<double> evaluate(const IndirectNode<Anchor>& anchor, const EvaluationOptions& options)
@@ -264,7 +250,7 @@ std::optional<double> evaluate(const IndirectNode<Anchor>& anchor, const Evaluat
         result = evaluate(*anchor->fallback, options);
 
     if (!result)
-        options.conversionData->styleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
+        options.conversionData->protectedStyleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
 
     return result;
 }
@@ -274,23 +260,23 @@ std::optional<double> evaluate(const IndirectNode<AnchorSize>& anchorSize, const
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
 
-    auto& builderState = *options.conversionData->styleBuilderState();
+    CheckedPtr builderState = options.conversionData->styleBuilderState();
 
     std::optional<Style::ScopedName> anchorSizeScopedName;
     if (!anchorSize->elementName.isNull()) {
         anchorSizeScopedName = Style::ScopedName {
             .name = anchorSize->elementName,
-            .scopeOrdinal = builderState.styleScopeOrdinal()
+            .scopeOrdinal = builderState->styleScopeOrdinal()
         };
     }
 
-    auto result = Style::AnchorPositionEvaluator::evaluateSize(builderState, anchorSizeScopedName, anchorSize->dimension);
+    auto result = Style::AnchorPositionEvaluator::evaluateSize(*builderState, anchorSizeScopedName, anchorSize->dimension);
 
     if (!result && anchorSize->fallback)
         result = evaluate(*anchorSize->fallback, options);
 
     if (!result)
-        options.conversionData->styleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
+        options.conversionData->protectedStyleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
 
     return result;
 }
@@ -307,12 +293,13 @@ std::optional<double> evaluateDouble(const Tree& tree, const EvaluationOptions& 
 
 std::optional<double> evaluateWithoutFallback(const Anchor& anchor, const EvaluationOptions& options)
 {
-    auto& builderState = *options.conversionData->styleBuilderState();
+    CheckedPtr builderState = options.conversionData->styleBuilderState();
 
     auto side = WTF::switchOn(anchor.side,
         [&](const Child& percentage) -> Style::AnchorPositionEvaluator::Side {
             return evaluate(percentage, options).value_or(0) / 100;
-        }, [&](CSSValueID sideID) -> Style::AnchorPositionEvaluator::Side {
+        },
+        [&](CSSValueID sideID) -> Style::AnchorPositionEvaluator::Side {
             return sideID;
         }
     );
@@ -321,11 +308,11 @@ std::optional<double> evaluateWithoutFallback(const Anchor& anchor, const Evalua
     if (!anchor.elementName.isNull()) {
         anchorScopedName = Style::ScopedName {
             .name = anchor.elementName,
-            .scopeOrdinal = builderState.styleScopeOrdinal()
+            .scopeOrdinal = builderState->styleScopeOrdinal()
         };
     }
 
-    return Style::AnchorPositionEvaluator::evaluate(builderState, anchorScopedName, side);
+    return Style::AnchorPositionEvaluator::evaluate(*builderState, anchorScopedName, side);
 }
 
 } // namespace CSSCalc

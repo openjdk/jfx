@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2016-2024 Apple, Inc. All Rights Reserved.
+* Copyright (C) 2016-2024 Apple, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -40,7 +40,9 @@
 
 // https://w3c.github.io/uievents/#idl-inputeventinit
 
-dictionary InputEventInit : UIEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary InputEventInit : UIEventInit {
     DOMString? data = null;
     boolean isComposing = false;
     DOMString inputType = "";

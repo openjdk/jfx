@@ -35,11 +35,11 @@ namespace WTF {
 
 template<typename T>
 class LocklessBag final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LocklessBag);
     WTF_MAKE_NONCOPYABLE(LocklessBag);
 public:
     struct Node {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Node);
     public:
         T data;
         Node* next;
@@ -82,7 +82,7 @@ public:
     void consumeAll(NOESCAPE const Invocable<void(T&&)> auto& func)
     {
         consumeAllWithNode([&] (T&& data, Node* node) {
-            func(WTFMove(data));
+            func(WTF::move(data));
             delete node;
         });
     }
@@ -93,7 +93,7 @@ public:
         while (node) {
             Node* oldNode = node;
             node = node->next;
-            func(WTFMove(oldNode->data), oldNode);
+            func(WTF::move(oldNode->data), oldNode);
         }
     }
 

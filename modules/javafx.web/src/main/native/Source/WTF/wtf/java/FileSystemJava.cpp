@@ -24,15 +24,51 @@
  */
 
 #include "config.h"
+#include "FileHandle.h"
 #include "FileSystem.h"
+#include "MappedFileData.h"
 #include "FileMetadata.h"
+#include <optional>
 #include <wtf/java/JavaEnv.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
+
+#if OS(WINDOWS)
+    #include <windows.h>
+#else
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+#endif
 
 namespace WTF {
 
 namespace FileSystemImpl {
 
+static inline bool isHandleValid(PlatformFileHandle handle)
+{
+    return handle != invalidPlatformFileHandle;
+}
+
+#if HAVE(MMAP)
+MappedFileData::MappedFileData(MmapSpan<uint8_t>&& fileData)
+    : m_fileData(WTF::move(fileData))
+{ }
+
+MappedFileData::~MappedFileData() = default;
+
+#elif OS(WINDOWS)
+MappedFileData::MappedFileData(std::span<uint8_t> fileData, Win32Handle&& fileMapping)
+    : m_fileData(fileData)
+    , m_fileMapping(WTF::move(fileMapping))
+{
+}
+
+MappedFileData::~MappedFileData()
+{
+
+}
+#endif
 
 // -----------------------------------------------------------------------
 //  Below methods use Java calls to implement the intended functionality.
@@ -133,14 +169,13 @@ std::optional<WallTime> fileModificationTime(const String& path)
     return getFileModificationTime(path);
 }
 
-String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+String pathByAppendingComponents(StringView path, std::span<const StringView> components)
 {
     String result = path.toString();
     // FIXME-java: Use nio.file.Paths.get(...)
     for (const auto& component : components) {
         result = pathByAppendingComponent(result, component.toString());
     }
-
     return result;
 }
 
@@ -209,10 +244,10 @@ CString fileSystemRepresentation(const String& s)
     return CString(s.latin1().data());
 }
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, OptionSet<FileLockMode> , bool failIfFileExists)
 {
     if (mode != FileOpenMode::Read) {
-        return invalidPlatformFileHandle;
+        return FileHandle::adopt(invalidPlatformFileHandle);
     }
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetStaticMethodID(
@@ -227,8 +262,11 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
             (jstring)path.toJavaString(env), (jstring)(env->NewStringUTF("r")));
 
     WTF::CheckAndClearException(env);
-    return result ? result : invalidPlatformFileHandle;
+    PlatformFileHandle handle = result ? result : invalidPlatformFileHandle;
+    return FileHandle::adopt(handle);
+
 }
+
 
 void closeFile(PlatformFileHandle& handle)
 {
@@ -250,7 +288,7 @@ void closeFile(PlatformFileHandle& handle)
 
 int readFromFile(PlatformFileHandle handle, void* data, int length)
 {
-    if (length < 0 || !isHandleValid(handle) || data == nullptr) {
+    if (length < 0 || data == nullptr) {
         return -1;
     }
     JNIEnv* env = WTF::GetJavaEnv();
@@ -272,6 +310,55 @@ int readFromFile(PlatformFileHandle handle, void* data, int length)
     }
     return result;
 }
+
+std::optional<PlatformFileID> FileHandle::id()
+{
+    return std::nullopt;
+}
+
+std::optional<MappedFileData> FileHandle::map(MappedFileMode mapMode, FileOpenMode openMode)
+{
+   return std::nullopt;
+}
+
+std::optional<uint64_t> FileHandle::read(std::span<uint8_t> data)
+{
+    if (!m_handle || data.empty())
+        return std::nullopt;
+
+    int result = readFromFile(platformHandle(), data.data(), data.size());
+    if (result < 0)
+        return std::nullopt;
+
+    return static_cast<uint64_t>(result);
+}
+
+std::optional<uint64_t> FileHandle::write(std::span<const uint8_t> data)
+{
+    return { };
+}
+
+bool FileHandle::truncate(int64_t offset)
+{
+    return false;
+}
+
+bool FileHandle::flush()
+{
+    return false;
+}
+
+
+void FileHandle::close()
+{
+   closeFile(m_handle.unsafeValue());
+}
+
+std::optional<uint64_t> FileHandle::size()
+{
+   return {};
+}
+
 
 String pathFileName(const String& path)
 {
@@ -316,6 +403,15 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin)
     return offset;
 }
 
+std::optional<uint64_t> FileHandle::seek(int64_t offset, FileSeekOrigin origin)
+{
+    long long pos = seekFile(m_handle.unsafeValue(), offset, origin);
+
+    if (pos < 0)
+        return std::nullopt;
+
+    return static_cast<uint64_t>(pos);
+}
 
 // -----------------------------------------------------------------------
 // Below methods are stubs as of now.
@@ -378,11 +474,6 @@ std::optional<int32_t> getFileDeviceId(const String&)
     return {};
 }
 
-bool MappedFileData::mapFileHandle(PlatformFileHandle, FileOpenMode, MappedFileMode)
-{
-    fprintf(stderr, "MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode) NOT IMPLEMENTED\n");
-    return false;
-}
 
 bool unmapViewOfFile(void* , size_t)
 {
@@ -390,13 +481,6 @@ bool unmapViewOfFile(void* , size_t)
     return false;
 }
 
-MappedFileData::~MappedFileData()
-{
-#if !OS(WINDOWS)
-    if (!m_fileData)
-        return;
-#endif
-}
 
 bool deleteFile(const String&)
 {
@@ -410,13 +494,13 @@ bool deleteEmptyDirectory(String const &)
     return false;
 }
 
-String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix, const String& temporaryDirectory)
 {
     fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
-    handle = invalidPlatformFileHandle;
-        UNUSED_PARAM(prefix);
-        UNUSED_PARAM(suffix);
-    return String();
+    UNUSED_PARAM(prefix);
+    UNUSED_PARAM(suffix);
+    UNUSED_PARAM(temporaryDirectory);
+    return { String(), FileHandle() };
 }
 
 String parentPath(const String& path)
@@ -522,10 +606,10 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     return true;
 }
 
-int overwriteEntireFile(const String& path, std::span<const uint8_t>)
+std::optional<uint64_t> overwriteEntireFile(const String& path, std::span<const uint8_t>)
 {
     fprintf(stderr, "overwriteEntireFile(const String& path, std::span<const uint8_t>) NOT IMPLEMENTED\n");
-    return 0;
+    return {};
 }
 
 int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data)
@@ -540,10 +624,13 @@ int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data)
       return 0;
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+FileHandle createDumpFile(StringView filename, StringView extension, StringView path)
 {
-     fprintf(stderr, "openTemporaryFile(StringView prefix, StringView suffix) return { String(), nullptr}\n");
-     return { String(), nullptr};
+    if (path.isEmpty()) {
+        auto [p, handle] = openTemporaryFile(filename, extension);
+        return WTF::move(handle);
+    }
+    return openFile(makeString(path, pathSeparator, filename, extension), FileOpenMode::Truncate);
 }
 
 } // namespace FileSystemImpl

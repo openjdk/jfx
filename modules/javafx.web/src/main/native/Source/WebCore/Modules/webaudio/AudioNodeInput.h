@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "AudioBus.h"
 #include "AudioNode.h"
 #include "AudioSummingJunction.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -40,11 +41,12 @@ class AudioNodeOutput;
 // In the case of multiple connections, the input will act as a unity-gain summing junction, mixing all the outputs.
 // The number of channels of the input's bus is the maximum of the number of channels of all its connections.
 
-class AudioNodeInput final : public AudioSummingJunction {
+class AudioNodeInput final : public AudioSummingJunction, public ThreadSafeRefCounted<AudioNodeInput> {
     WTF_MAKE_NONCOPYABLE(AudioNodeInput);
     WTF_MAKE_TZONE_ALLOCATED(AudioNodeInput);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioNodeInput);
 public:
-    explicit AudioNodeInput(AudioNode*);
+    static Ref<AudioNodeInput> create(AudioNode*);
 
     // AudioSummingJunction
     bool canUpdateState() override { return !node()->isMarkedForDeletion(); }
@@ -52,6 +54,7 @@ public:
 
     // Can be called from any thread.
     AudioNode* node() const { return m_node.get(); }
+    CheckedPtr<AudioNode> checkedNode() const { return m_node.get(); }
 
     // Must be called with the context's graph lock.
     void connect(AudioNodeOutput*);
@@ -68,11 +71,11 @@ public:
     // In the single connection case, it allows in-place processing where possible using inPlaceBus.
     // It returns the bus which it rendered into, returning inPlaceBus if in-place processing was performed.
     // Called from context's audio thread.
-    AudioBus* pull(AudioBus* inPlaceBus, size_t framesToProcess);
+    AudioBus& pull(AudioBus* inPlaceBus, size_t framesToProcess);
 
     // bus() contains the rendered audio after pull() has been called for each time quantum.
     // Called from context's audio thread.
-    AudioBus* bus();
+    AudioBus& bus() LIFETIME_BOUND;
 
     // updateInternalBus() updates m_internalSummingBus appropriately for the number of channels.
     // This must be called when we own the context's graph lock in the audio thread at the very start or end of the render quantum.
@@ -82,6 +85,8 @@ public:
     unsigned numberOfChannels() const;
 
 private:
+    explicit AudioNodeInput(AudioNode*);
+
     WeakPtr<AudioNode, WeakPtrImplWithEventTargetData> m_node;
 
     // m_disabledOutputs contains the AudioNodeOutputs which are disabled (will not be processed) by the audio graph rendering.
@@ -90,10 +95,10 @@ private:
     HashSet<AudioNodeOutput*> m_disabledOutputs;
 
     // Called from context's audio thread.
-    AudioBus* internalSummingBus();
-    void sumAllConnections(AudioBus* summingBus, size_t framesToProcess);
+    AudioBus& internalSummingBus();
+    void sumAllConnections(AudioBus& summingBus, size_t framesToProcess);
 
-    RefPtr<AudioBus> m_internalSummingBus;
+    Ref<AudioBus> m_internalSummingBus;
 };
 
 } // namespace WebCore

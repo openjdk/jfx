@@ -19,19 +19,161 @@
 
 #pragma once
 
-#include "Document.h"
-#include "RenderObject.h"
-#include "RenderStyleInlines.h"
-#include "RenderView.h"
+#include <WebCore/DocumentPage.h>
+#include <WebCore/FloatQuad.h>
+#include <WebCore/FrameDestructionObserverInlines.h>
+#include <WebCore/LocalFrameInlines.h>
+#include <WebCore/RenderElement.h>
+#include <WebCore/RenderIFrame.h>
+#include <WebCore/RenderObject.h>
+#include <WebCore/RenderObjectDocument.h>
+#include <WebCore/RenderObjectNode.h>
+#include <WebCore/RenderObjectStyle.h>
+#include <WebCore/RenderReplaced.h>
+#include <WebCore/RenderStyle+GettersInlines.h>
+#include <WebCore/RenderView.h>
+#include <WebCore/VisibleRectContext.h>
 
 namespace WebCore {
 
 inline bool RenderObject::hasTransformOrPerspective() const { return hasTransformRelatedProperty() && (isTransformed() || style().hasPerspective()); }
-inline bool RenderObject::isAtomicInlineLevelBox() const { return style().isDisplayInlineType() && !(style().display() == DisplayType::Inline && !isReplacedOrAtomicInline()); }
-inline bool RenderObject::isBlockLevelBox() const { return style().isDisplayBlockLevel(); }
+inline bool RenderObject::isAtomicInlineLevelBox() const { return style().isDisplayInlineType() && !(style().display() == DisplayType::Inline && !isBlockLevelReplacedOrAtomicInline()); }
 inline bool RenderObject::isTransformed() const { return hasTransformRelatedProperty() && (style().affectsTransform() || hasSVGTransform()); }
-inline bool RenderObject::preservesNewline() const { return !isRenderSVGInlineText() && style().preserveNewline(); }
-inline Ref<Document> RenderObject::protectedDocument() const { return document(); }
-inline const LocalFrameViewLayoutContext& RenderObject::layoutContext() const { return view().frameView().layoutContext(); }
+inline LocalFrameViewLayoutContext& RenderObject::layoutContext() const { return view().frameView().layoutContext(); }
+inline TreeScope& RenderObject::treeScopeForSVGReferences() const { return Ref { m_node.get() }->treeScopeForSVGReferences(); }
+
+inline const RenderStyle& RenderObject::firstLineStyle() const
+{
+    if (isRenderText())
+        return checkedParent()->firstLineStyle();
+    return downcast<RenderElement>(*this).firstLineStyle();
+}
+
+inline Ref<TreeScope> RenderObject::protectedTreeScopeForSVGReferences() const
+{
+    return treeScopeForSVGReferences();
+}
+
+inline LocalFrame& RenderObject::frame() const
+{
+    return *document().frame();
+}
+
+inline Ref<LocalFrame> RenderObject::protectedFrame() const
+{
+    return frame();
+}
+
+inline Page& RenderObject::page() const
+{
+    // The render tree will always be torn down before Frame is disconnected from Page,
+    // so it's safe to assume Frame::page() is non-null as long as there are live RenderObjects.
+    ASSERT(frame().page());
+    return *frame().page();
+}
+
+inline Ref<Page> RenderObject::protectedPage() const
+{
+    return page();
+}
+
+inline FloatQuad RenderObject::localToAbsoluteQuad(const FloatQuad& quad, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
+{
+    return localToContainerQuad(quad, nullptr, mode, wasFixed);
+}
+
+inline void RenderObject::setNeedsLayout(MarkingBehavior markParents)
+{
+    ASSERT(!isSetNeedsLayoutForbidden());
+    if (selfNeedsLayout())
+        return;
+    m_stateBitfields.setFlag(StateFlag::NeedsLayout);
+    if (markParents == MarkContainingBlockChain)
+        scheduleLayout(CheckedPtr { markContainingBlocksForLayout() });
+    if (hasLayer())
+        setLayerNeedsFullRepaint();
+}
+
+inline void RenderObject::setNeedsLayoutAndPreferredWidthsUpdate()
+{
+    setNeedsLayout();
+    setNeedsPreferredWidthsUpdate();
+}
+
+inline bool RenderObject::isNonReplacedAtomicInlineLevelBox() const
+{
+    // FIXME: Check if iframe should really behave like non-replaced here.
+    return (is<RenderIFrame>(*this) && isInline()) || (!is<RenderReplaced>(*this) && isAtomicInlineLevelBox());
+}
+
+inline auto RenderObject::visibleRectContextForRepaint() -> VisibleRectContext
+{
+    return {
+        .hasPositionFixedDescendant = false,
+        .dirtyRectIsFlipped = false,
+        .descendantNeedsEnclosingIntRect = false,
+        .options = {
+            VisibleRectContext::Option::ApplyContainerClip,
+            VisibleRectContext::Option::ApplyCompositedContainerScrolls
+        },
+        .scrollMargin = { },
+    };
+}
+
+inline auto RenderObject::visibleRectContextForSpatialNavigation() -> VisibleRectContext
+{
+    return {
+        .hasPositionFixedDescendant = false,
+        .dirtyRectIsFlipped = false,
+        .descendantNeedsEnclosingIntRect = false,
+        .options = {
+            VisibleRectContext::Option::ApplyContainerClip,
+            VisibleRectContext::Option::ApplyCompositedContainerScrolls,
+            VisibleRectContext::Option::ApplyCompositedClips
+        },
+        .scrollMargin = { },
+    };
+}
+
+inline auto RenderObject::visibleRectContextForRenderTreeAsText() -> VisibleRectContext
+{
+    return {
+        .hasPositionFixedDescendant = false,
+        .dirtyRectIsFlipped = false,
+        .descendantNeedsEnclosingIntRect = false,
+        .options = {
+            VisibleRectContext::Option::ApplyContainerClip,
+            VisibleRectContext::Option::ApplyCompositedContainerScrolls,
+            VisibleRectContext::Option::ApplyCompositedClips,
+            VisibleRectContext::Option::CalculateAccurateRepaintRect
+        },
+        .scrollMargin = { },
+    };
+}
+
+inline LayoutRect RenderObject::absoluteClippedOverflowRectForRepaint() const
+{
+    return clippedOverflowRect(nullptr, visibleRectContextForRepaint());
+}
+
+inline LayoutRect RenderObject::absoluteClippedOverflowRectForSpatialNavigation() const
+{
+    return clippedOverflowRect(nullptr, visibleRectContextForSpatialNavigation());
+}
+
+inline LayoutRect RenderObject::absoluteClippedOverflowRectForRenderTreeAsText() const
+{
+    return clippedOverflowRect(nullptr, visibleRectContextForRenderTreeAsText());
+}
+
+inline LayoutRect RenderObject::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
+{
+    return clippedOverflowRect(repaintContainer, visibleRectContextForRepaint());
+}
+
+inline LayoutRect RenderObject::computeRectForRepaint(const LayoutRect& rect, const RenderLayerModelObject* repaintContainer) const
+{
+    return computeRects({ rect }, repaintContainer, visibleRectContextForRepaint()).clippedOverflowRect;
+}
 
 } // namespace WebCore

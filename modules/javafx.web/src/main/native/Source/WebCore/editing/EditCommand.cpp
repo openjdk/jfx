@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2013 Apple, Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "CompositeEditCommand.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "Element.h"
@@ -136,7 +136,7 @@ bool isInputMethodComposingForEditingAction(EditAction action)
 }
 
 EditCommand::EditCommand(Ref<Document>&& document, EditAction editingAction)
-    : m_document { WTFMove(document) }
+    : m_document { WTF::move(document) }
     , m_startingSelection { m_document->selection().selection() }
     , m_endingSelection { m_startingSelection }
     , m_editingAction { editingAction }
@@ -144,7 +144,7 @@ EditCommand::EditCommand(Ref<Document>&& document, EditAction editingAction)
 }
 
 EditCommand::EditCommand(Ref<Document>&& document, const VisibleSelection& startingSelection, const VisibleSelection& endingSelection)
-    : m_document { WTFMove(document) }
+    : m_document { WTF::move(document) }
     , m_startingSelection { startingSelection }
     , m_endingSelection { endingSelection }
 {
@@ -191,7 +191,7 @@ void EditCommand::setEndingSelection(const VisibleSelection& selection)
 void EditCommand::setParent(RefPtr<CompositeEditCommand>&& parent)
 {
     ASSERT((parent && !m_parent) || (!parent && m_parent));
-    m_parent = WTFMove(parent);
+    m_parent = WTF::move(parent);
     if (m_parent) {
         m_startingSelection = m_parent->m_endingSelection;
         m_endingSelection = m_parent->m_endingSelection;
@@ -211,8 +211,7 @@ void EditCommand::postTextStateChangeNotification(AXTextEditType type, const Str
         return;
     if (!text.length())
         return;
-    auto document = protectedDocument();
-    CheckedPtr cache = document->existingAXObjectCache();
+    CheckedPtr cache = document().existingAXObjectCache();
     if (!cache)
         return;
     RefPtr node { highestEditableRoot(position.deepEquivalent(), HasEditableAXRole) };
@@ -220,7 +219,7 @@ void EditCommand::postTextStateChangeNotification(AXTextEditType type, const Str
 }
 
 SimpleEditCommand::SimpleEditCommand(Ref<Document>&& document, EditAction editingAction)
-    : EditCommand(WTFMove(document), editingAction)
+    : EditCommand(WTF::move(document), editingAction)
 {
 }
 

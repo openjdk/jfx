@@ -27,6 +27,7 @@
 #include "InlineContentAligner.h"
 
 #include "InlineFormattingContext.h"
+#include "LayoutBoxInlines.h"
 #include "TextUtil.h"
 
 namespace WebCore {
@@ -36,8 +37,11 @@ static inline void shiftDisplayBox(InlineDisplay::Box& displayBox, InlineLayoutU
 {
     if (!offset)
         return;
-    auto isHorizontalWritingMode = inlineFormattingContext.root().style().writingMode().isHorizontal();
-    isHorizontalWritingMode ? displayBox.moveHorizontally(offset) : displayBox.moveVertically(offset);
+    auto writingMode = inlineFormattingContext.root().style().writingMode();
+    if (writingMode.isLineOverLeft())
+        displayBox.moveVertically(-offset);
+    else
+        writingMode.isHorizontal() ? displayBox.moveHorizontally(offset) : displayBox.moveVertically(offset);
     if (!displayBox.isTextOrSoftLineBreak() && !displayBox.isRootInlineBox())
         inlineFormattingContext.geometryForBox(displayBox.layoutBox()).moveHorizontally(LayoutUnit { offset });
 }
@@ -50,8 +54,13 @@ static inline void expandInlineBox(InlineLayoutUnit expansion, InlineDisplay::Bo
     }
     if (!expansion)
         return;
-    inlineFormattingContext.root().writingMode().isHorizontal() ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
+    auto writingMode = inlineFormattingContext.root().writingMode();
+    writingMode.isHorizontal() ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
     auto& boxGeometry = inlineFormattingContext.geometryForBox(displayBox.layoutBox());
+    if (writingMode.isLineOverLeft()) {
+        displayBox.setTop(displayBox.top() - expansion);
+        boxGeometry.setLeft(BoxGeometry::borderBoxLeft(boxGeometry) - LayoutUnit { expansion });
+    }
     boxGeometry.setContentBoxWidth(boxGeometry.contentBoxWidth() + LayoutUnit { expansion });
 }
 
@@ -65,7 +74,7 @@ struct InlineBoxIndexAndExpansion {
     size_t index { 0 };
     InlineLayoutUnit expansion { 0.f };
 };
-static InlineBoxIndexAndExpansion expandInlineBoxWithDescendants(size_t inlineBoxIndex, InlineDisplay::Boxes& displayBoxes, const UncheckedKeyHashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList,  InlineFormattingContext& inlineFormattingContext)
+static InlineBoxIndexAndExpansion expandInlineBoxWithDescendants(size_t inlineBoxIndex, InlineDisplay::Boxes& displayBoxes, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList,  InlineFormattingContext& inlineFormattingContext)
 {
     if (inlineBoxIndex >= displayBoxes.size() || !displayBoxes[inlineBoxIndex].isInlineBox()) {
         ASSERT_NOT_REACHED();
@@ -95,7 +104,7 @@ struct BaseIndexAndOffset {
     size_t index { 0 };
     InlineLayoutUnit offset { 0.f };
 };
-static BaseIndexAndOffset shiftRubyBaseContentByAlignmentOffset(BaseIndexAndOffset baseIndexAndOffset, InlineDisplay::Boxes& displayBoxes, const UncheckedKeyHashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, InlineContentAligner::AdjustContentOnlyInsideRubyBase adjustContentOnlyInsideRubyBase, InlineFormattingContext& inlineFormattingContext)
+static BaseIndexAndOffset shiftRubyBaseContentByAlignmentOffset(BaseIndexAndOffset baseIndexAndOffset, InlineDisplay::Boxes& displayBoxes, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, InlineContentAligner::AdjustContentOnlyInsideRubyBase adjustContentOnlyInsideRubyBase, InlineFormattingContext& inlineFormattingContext)
 {
     auto baseIndex = baseIndexAndOffset.index;
     if (baseIndex >= displayBoxes.size() || !displayBoxes[baseIndex].layoutBox().isRubyBase()) {
@@ -194,16 +203,13 @@ static void computedExpansions(const Line::RunList& runs, WTF::Range<size_t> run
         auto expansionBehavior = ExpansionBehavior::defaultBehavior();
         size_t expansionOpportunitiesInRun = 0;
 
-        // According to the CSS3 spec, a UA can determine whether or not
-        // it wishes to apply text-align: justify to text with collapsible spaces (and this behavior matches Blink).
-        auto mayAlterSpacingWithinText = !TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingTrailingWhitespaceLength;
-        if (run.isText() && mayAlterSpacingWithinText) {
+        if (run.isText()) {
             if (run.hasTextCombine())
                 expansionBehavior = ExpansionBehavior::forbidAll();
             else {
                 expansionBehavior.left = runIsAfterExpansion ? ExpansionBehavior::Behavior::Forbid : ExpansionBehavior::Behavior::Allow;
                 expansionBehavior.right = ExpansionBehavior::Behavior::Allow;
-                auto& textContent = *run.textContent();
+                auto& textContent = run.textContent();
                 auto length = textContent.length;
                 if (lastTextRunIndexForTrimming && runIndex() == *lastTextRunIndexForTrimming) {
                     // Trailing hanging whitespace sequence is ignored when computing the expansion opportunities.
@@ -334,7 +340,7 @@ InlineLayoutUnit InlineContentAligner::applyRubyAlign(RubyAlign rubyAlign, Line:
     }
 }
 
-void InlineContentAligner::applyRubyBaseAlignmentOffset(InlineDisplay::Boxes& displayBoxes, const UncheckedKeyHashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, AdjustContentOnlyInsideRubyBase adjustContentOnlyInsideRubyBase, InlineFormattingContext& inlineFormattingContext)
+void InlineContentAligner::applyRubyBaseAlignmentOffset(InlineDisplay::Boxes& displayBoxes, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, AdjustContentOnlyInsideRubyBase adjustContentOnlyInsideRubyBase, InlineFormattingContext& inlineFormattingContext)
 {
     ASSERT(!alignmentOffsetList.isEmpty());
 

@@ -36,6 +36,7 @@
 #include "pas_segregated_size_directory.h"
 #include "pas_segregated_view.h"
 #include "pas_utility_heap.h"
+#include "pas_zero_memory.h"
 
 #if PAS_LOCAL_ALLOCATOR_MEASURE_REFILL_EFFICIENCY
 double pas_local_allocator_refill_efficiency_sum = 0.;
@@ -228,7 +229,7 @@ bool pas_local_allocator_stop(
                 allocator->scavenger_data.is_in_use ? "yes" : "no");
         pas_log("at time of assert: allocator->scavenger_data.is_in_use = %s\n",
                 is_in_use ? "yes" : "no");
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
     }
 
     /* Doing this check before setting is_in_use guards against situations where calling stop would

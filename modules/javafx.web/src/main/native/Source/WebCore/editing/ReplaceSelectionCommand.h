@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ public:
 
     static Ref<ReplaceSelectionCommand> create(Ref<Document>&& document, RefPtr<DocumentFragment>&& fragment, OptionSet<CommandOption> options, EditAction editingAction = EditAction::Insert)
     {
-        return adoptRef(*new ReplaceSelectionCommand(WTFMove(document), WTFMove(fragment), options, editingAction));
+        return adoptRef(*new ReplaceSelectionCommand(WTF::move(document), WTF::move(fragment), options, editingAction));
     }
 
     virtual ~ReplaceSelectionCommand();
@@ -127,7 +127,9 @@ private:
     ReplacementFragment* ensureReplacementFragment();
     bool performTrivialReplace(const ReplacementFragment&);
 
-    void updateDirectionForStartOfInsertedContentIfNeeded();
+    void updateDirectionForStartOfInsertedContentIfNeeded(const InsertedNodes&);
+
+    void removeForegroundColorsInDarkModeIfNeeded(const InsertedNodes&);
 
     RefPtr<DocumentFragment> protectedDocumentFragment() const { return m_documentFragment; }
 
@@ -138,7 +140,7 @@ private:
     bool m_selectReplacement;
     bool m_smartReplace;
     bool m_matchStyle;
-    RefPtr<DocumentFragment> m_documentFragment;
+    const RefPtr<DocumentFragment> m_documentFragment;
     std::unique_ptr<ReplacementFragment> m_replacementFragment;
     String m_documentFragmentHTMLMarkup;
     String m_documentFragmentPlainText;

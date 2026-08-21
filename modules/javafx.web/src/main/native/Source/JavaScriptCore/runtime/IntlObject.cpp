@@ -194,51 +194,51 @@ void UFieldPositionIteratorDeleter::operator()(UFieldPositionIterator* iterator)
 }
 
 const MeasureUnit simpleUnits[45] = {
-    { "area"_s, "acre"_s },
-    { "digital"_s, "bit"_s },
-    { "digital"_s, "byte"_s },
-    { "temperature"_s, "celsius"_s },
-    { "length"_s, "centimeter"_s },
-    { "duration"_s, "day"_s },
-    { "angle"_s, "degree"_s },
-    { "temperature"_s, "fahrenheit"_s },
-    { "volume"_s, "fluid-ounce"_s },
-    { "length"_s, "foot"_s },
-    { "volume"_s, "gallon"_s },
-    { "digital"_s, "gigabit"_s },
-    { "digital"_s, "gigabyte"_s },
-    { "mass"_s, "gram"_s },
-    { "area"_s, "hectare"_s },
-    { "duration"_s, "hour"_s },
-    { "length"_s, "inch"_s },
-    { "digital"_s, "kilobit"_s },
-    { "digital"_s, "kilobyte"_s },
-    { "mass"_s, "kilogram"_s },
-    { "length"_s, "kilometer"_s },
-    { "volume"_s, "liter"_s },
-    { "digital"_s, "megabit"_s },
-    { "digital"_s, "megabyte"_s },
-    { "length"_s, "meter"_s },
-    { "duration"_s, "microsecond"_s },
-    { "length"_s, "mile"_s },
-    { "length"_s, "mile-scandinavian"_s },
-    { "volume"_s, "milliliter"_s },
-    { "length"_s, "millimeter"_s },
-    { "duration"_s, "millisecond"_s },
-    { "duration"_s, "minute"_s },
-    { "duration"_s, "month"_s },
-    { "duration"_s, "nanosecond"_s },
-    { "mass"_s, "ounce"_s },
-    { "concentr"_s, "percent"_s },
-    { "digital"_s, "petabyte"_s },
-    { "mass"_s, "pound"_s },
-    { "duration"_s, "second"_s },
-    { "mass"_s, "stone"_s },
-    { "digital"_s, "terabit"_s },
-    { "digital"_s, "terabyte"_s },
-    { "duration"_s, "week"_s },
-    { "length"_s, "yard"_s },
-    { "duration"_s, "year"_s },
+    { "acre"_s },
+    { "bit"_s },
+    { "byte"_s },
+    { "celsius"_s },
+    { "centimeter"_s },
+    { "day"_s },
+    { "degree"_s },
+    { "fahrenheit"_s },
+    { "fluid-ounce"_s },
+    { "foot"_s },
+    { "gallon"_s },
+    { "gigabit"_s },
+    { "gigabyte"_s },
+    { "gram"_s },
+    { "hectare"_s },
+    { "hour"_s },
+    { "inch"_s },
+    { "kilobit"_s },
+    { "kilobyte"_s },
+    { "kilogram"_s },
+    { "kilometer"_s },
+    { "liter"_s },
+    { "megabit"_s },
+    { "megabyte"_s },
+    { "meter"_s },
+    { "microsecond"_s },
+    { "mile"_s },
+    { "mile-scandinavian"_s },
+    { "milliliter"_s },
+    { "millimeter"_s },
+    { "millisecond"_s },
+    { "minute"_s },
+    { "month"_s },
+    { "nanosecond"_s },
+    { "ounce"_s },
+    { "percent"_s },
+    { "petabyte"_s },
+    { "pound"_s },
+    { "second"_s },
+    { "stone"_s },
+    { "terabit"_s },
+    { "terabyte"_s },
+    { "week"_s },
+    { "yard"_s },
+    { "year"_s },
 };
 
 IntlObject::IntlObject(VM& vm, Structure* structure)
@@ -314,12 +314,12 @@ Vector<char, 32> localeIDBufferForLanguageTagWithNullTerminator(const CString& t
     UErrorCode status = U_ZERO_ERROR;
     Vector<char, 32> buffer(32);
     int32_t parsedLength;
-    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.data(), buffer.size(), &parsedLength, &status);
+    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), buffer.size(), &parsedLength, &status);
     if (needsToGrowToProduceCString(status)) {
         // Before ICU 64, there's a chance uloc_forLanguageTag will "buffer overflow" while requesting a *smaller* size.
         buffer.resize(bufferLength + 1);
         status = U_ZERO_ERROR;
-        uloc_forLanguageTag(tag.data(), buffer.data(), bufferLength + 1, &parsedLength, &status);
+        uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), bufferLength + 1, &parsedLength, &status);
     }
     if (U_FAILURE(status) || parsedLength != static_cast<int32_t>(tag.length()))
         return { };
@@ -334,7 +334,7 @@ Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vec
     ASSERT(locale.is8Bit());
     size_t extensionIndex = locale.find("-u-"_s);
     if (extensionIndex == notFound)
-        return WTFMove(buffer);
+        return WTF::move(buffer);
 
     // Since ICU's canonicalization is incomplete, we need to perform some of canonicalization here.
     size_t extensionLength = locale.length() - extensionIndex;
@@ -405,7 +405,7 @@ String languageTagForLocaleID(const char* localeID, bool isImmortal)
         return buffer.span();
     };
 
-    return createResult(canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer)));
+    return createResult(canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTF::move(buffer)));
 }
 
 // Ensure we have xx-ZZ whenever we have xx-Yyyy-ZZ.
@@ -723,12 +723,12 @@ String canonicalizeUnicodeLocaleID(const CString& tag)
     auto buffer = localeIDBufferForLanguageTagWithNullTerminator(tag);
     if (buffer.isEmpty())
         return String();
-    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.data());
+    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.span().data());
     if (!canonicalized)
         return String();
     canonicalized->append('\0');
     ASSERT(canonicalized->contains('\0'));
-    return languageTagForLocaleID(canonicalized->data());
+    return languageTagForLocaleID(canonicalized->span().data());
 }
 
 Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue locales)
@@ -803,7 +803,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
             }
 
             String errorMessage = tryMakeString("invalid language tag: "_s, tag);
-            if (UNLIKELY(!errorMessage)) {
+            if (!errorMessage) [[unlikely]] {
                 throwException(globalObject, scope, createOutOfMemoryError(globalObject));
                 return { };
             }
@@ -1004,7 +1004,7 @@ ResolvedLocale resolveLocale(JSGlobalObject* globalObject, const LocaleSet& avai
         foundLocale = makeString(foundLocaleView.left(matcherResult.extensionIndex), supportedExtension.toString(), foundLocaleView.substring(matcherResult.extensionIndex));
     }
 
-    resolved.locale = WTFMove(foundLocale);
+    resolved.locale = WTF::move(foundLocale);
     return resolved;
 }
 
@@ -1074,28 +1074,25 @@ Vector<String> numberingSystemsForLocale(const String& locale)
         availableNumberingSystems.construct();
         ASSERT(availableNumberingSystems->isEmpty());
         UErrorCode status = U_ZERO_ERROR;
-        UEnumeration* numberingSystemNames = unumsys_openAvailableNames(&status);
+        auto numberingSystemNames = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(unumsys_openAvailableNames(&status));
         ASSERT(U_SUCCESS(status));
 
         int32_t resultLength;
         // Numbering system names are always ASCII, so use char[].
-        while (const char* result = uenum_next(numberingSystemNames, &resultLength, &status)) {
+        while (const char* result = uenum_next(numberingSystemNames.get(), &resultLength, &status)) {
             ASSERT(U_SUCCESS(status));
-            auto numsys = unumsys_openByName(result, &status);
+            auto numsys = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_openByName(result, &status));
             ASSERT(U_SUCCESS(status));
             // Only support algorithmic if it is the default fot the locale, handled below.
-            if (!unumsys_isAlgorithmic(numsys))
+            if (!unumsys_isAlgorithmic(numsys.get()))
                 availableNumberingSystems->append(String(StringImpl::createStaticStringImpl({ result, static_cast<size_t>(resultLength) })));
-            unumsys_close(numsys);
         }
-        uenum_close(numberingSystemNames);
     });
 
     UErrorCode status = U_ZERO_ERROR;
-    UNumberingSystem* defaultSystem = unumsys_open(locale.utf8().data(), &status);
+    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(locale.utf8().data(), &status));
     ASSERT(U_SUCCESS(status));
-    auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem));
-    unumsys_close(defaultSystem);
+    auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem.get()));
 
     Vector<String> numberingSystems({ defaultSystemName });
     numberingSystems.appendVector(availableNumberingSystems.get());
@@ -1140,9 +1137,9 @@ static VariantCode parseVariantCode(StringView string)
     ASSERT(string.length() <= 8);
     ASSERT(string.length() >= 1);
     struct Code {
-        LChar characters[8] { };
+        Latin1Character characters[8] { };
     };
-    static_assert(std::is_unsigned_v<LChar>);
+    static_assert(std::is_unsigned_v<Latin1Character>);
     static_assert(sizeof(VariantCode) == sizeof(Code));
     Code code { };
     for (unsigned index = 0; index < string.length(); ++index)
@@ -1153,7 +1150,7 @@ static VariantCode parseVariantCode(StringView string)
     return result;
 }
 
-static unsigned convertToUnicodeSingletonIndex(UChar singleton)
+static unsigned convertToUnicodeSingletonIndex(char16_t singleton)
 {
     ASSERT(isASCIIAlphanumeric(singleton));
     singleton = toASCIILower(singleton);
@@ -1440,7 +1437,7 @@ bool LanguageTagParser::parseExtensionsAndPUExtensions()
     while (true) {
         if (m_current.length() != 1)
             return true;
-        UChar prefixCode = m_current[0];
+        char16_t prefixCode = m_current[0];
         if (!isASCIIAlphanumeric(prefixCode))
             return true;
 
@@ -1625,15 +1622,21 @@ const Vector<String>& intlAvailableCalendars()
             return StringImpl::createStaticStringImpl(string.span16());
         };
 
-        availableCalendars.construct(count, [&](size_t) {
+        availableCalendars.construct();
+        for (int32_t i = 0; i < count; ++i) {
             int32_t length = 0;
             const char* pointer = uenum_next(enumeration.get(), &length, &status);
             ASSERT(U_SUCCESS(status));
             String calendar(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
             if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
-                return createImmortalThreadSafeString(WTFMove(mapped.value()));
-            return createImmortalThreadSafeString(WTFMove(calendar));
-        });
+                calendar = WTF::move(mapped.value());
+
+            // Skip if the obtained calendar code is not meeting Unicode Locale Identifier's `type` definition
+            // as whole ECMAScript's i18n is relying on Unicode Local Identifiers.
+            if (!isUnicodeLocaleIdentifierType(calendar))
+                continue;
+            availableCalendars->append(createImmortalThreadSafeString(WTF::move(calendar)));
+        }
 
         // The AvailableCalendars abstract operation returns a List, ordered as if an Array of the same
         // values had been sorted using %Array.prototype.sort% using undefined as comparator
@@ -1704,21 +1707,18 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
         if (collation == "standard"_s || collation == "search"_s)
             continue;
         if (auto mapped = mapICUCollationKeywordToBCP47(collation))
-            elements.append(WTFMove(mapped.value()));
+            elements.append(WTF::move(mapped.value()));
         else
-            elements.append(WTFMove(collation));
+            elements.append(WTF::move(collation));
     }
 
     // The AvailableCollations abstract operation returns a List, ordered as if an Array of the same
     // values had been sorted using %Array.prototype.sort% using undefined as comparator
-    std::sort(elements.begin(), elements.end(),
-        [](const String& a, const String& b) {
-            return WTF::codePointCompare(a, b) < 0;
-        });
+    std::ranges::sort(elements, WTF::codePointCompareLessThan);
     auto end = std::unique(elements.begin(), elements.end());
     elements.shrink(elements.size() - (elements.end() - end));
 
-    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTF::move(elements)));
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availablecurrencies
@@ -1762,19 +1762,16 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
             continue;
         if (currency == "LSM"_s)
             continue;
-        elements.append(WTFMove(currency));
+        elements.append(WTF::move(currency));
     }
 
     // The AvailableCurrencies abstract operation returns a List, ordered as if an Array of the same
     // values had been sorted using %Array.prototype.sort% using undefined as comparator
-    std::sort(elements.begin(), elements.end(),
-        [](const String& a, const String& b) {
-            return WTF::codePointCompare(a, b) < 0;
-        });
+    std::ranges::sort(elements, WTF::codePointCompareLessThan);
     auto end = std::unique(elements.begin(), elements.end());
     elements.shrink(elements.size() - (elements.end() - end));
 
-    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTF::move(elements)));
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availablenumberingsystems
@@ -1817,12 +1814,9 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
 
     // The AvailableNumberingSystems abstract operation returns a List, ordered as if an Array of the same
     // values had been sorted using %Array.prototype.sort% using undefined as comprator
-    std::sort(elements.begin(), elements.end(),
-        [](const String& a, const String& b) {
-            return WTF::codePointCompare(a, b) < 0;
-        });
+    std::ranges::sort(elements, WTF::codePointCompareLessThan);
 
-    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTF::move(elements)));
 }
 
 static bool isValidTimeZoneNameFromICUTimeZone(StringView timeZoneName)
@@ -1832,7 +1826,7 @@ static bool isValidTimeZoneNameFromICUTimeZone(StringView timeZoneName)
     if (timeZoneName.startsWith("SystemV/"_s))
         return false;
     if (timeZoneName.startsWith("Etc/"_s))
-        return isUTCEquivalent(timeZoneName);
+        return true;
     // IANA time zone names include '/'. Some of them are not including, but it is in backward links.
     // And ICU already resolved these backward links.
     if (!timeZoneName.contains('/'))
@@ -1845,10 +1839,10 @@ static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(String&& ti
 {
     if (isUTCEquivalent(timeZoneName))
         return "UTC"_s;
-    return std::make_optional(WTFMove(timeZoneName));
+    return std::make_optional(WTF::move(timeZoneName));
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
+// https://tc39.es/ecma402/#sup-availablenamedtimezoneidentifiers
 const Vector<String>& intlAvailableTimeZones()
 {
     static LazyNeverDestroyed<Vector<String>> availableTimeZones;
@@ -1868,17 +1862,14 @@ const Vector<String>& intlAvailableTimeZones()
             ASSERT(U_SUCCESS(status));
             String timeZone(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
             if (isValidTimeZoneNameFromICUTimeZone(timeZone)) {
-                if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTFMove(timeZone)))
-                    temporary.append(WTFMove(mapped.value()));
+                if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTF::move(timeZone)))
+                    temporary.append(WTF::move(mapped.value()));
             }
         }
 
         // The AvailableTimeZones abstract operation returns a List, ordered as if an Array of the same
         // values had been sorted using %Array.prototype.sort% using undefined as comparator
-        std::sort(temporary.begin(), temporary.end(),
-            [](const String& a, const String& b) {
-                return WTF::codePointCompare(a, b) < 0;
-            });
+        std::ranges::sort(temporary, WTF::codePointCompareLessThan);
         auto end = std::unique(temporary.begin(), temporary.end());
         availableTimeZones.construct();
 
@@ -1888,7 +1879,7 @@ const Vector<String>& intlAvailableTimeZones()
             return StringImpl::createStaticStringImpl(string.span16());
         };
         availableTimeZones.get() = WTF::map(std::span(temporary.begin(), end), [&](auto&& string) -> String {
-            return createImmortalThreadSafeString(WTFMove(string));
+            return createImmortalThreadSafeString(WTF::move(string));
         });
     });
     return availableTimeZones;
@@ -1907,8 +1898,8 @@ TimeZoneID utcTimeZoneIDSlow()
     return utcTimeZoneIDStorage;
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
-static JSArray* availableTimeZones(JSGlobalObject* globalObject)
+// https://tc39.es/ecma402/#sec-availableprimarytimezoneidentifiers
+static JSArray* availablePrimaryTimeZoneIdentifiers(JSGlobalObject* globalObject)
 {
     return createArrayFromStringVector(globalObject, intlAvailableTimeZones());
 }
@@ -1939,7 +1930,7 @@ static JSArray* availableUnits(JSGlobalObject* globalObject)
     return result;
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-intl.supportedvaluesof
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
 JSC_DEFINE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -1961,7 +1952,7 @@ JSC_DEFINE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf, (JSGlobalObject* globa
         RELEASE_AND_RETURN(scope, JSValue::encode(availableNumberingSystems(globalObject)));
 
     if (key == "timeZone"_s)
-        RELEASE_AND_RETURN(scope, JSValue::encode(availableTimeZones(globalObject)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(availablePrimaryTimeZoneIdentifiers(globalObject)));
 
     if (key == "unit"_s)
         RELEASE_AND_RETURN(scope, JSValue::encode(availableUnits(globalObject)));

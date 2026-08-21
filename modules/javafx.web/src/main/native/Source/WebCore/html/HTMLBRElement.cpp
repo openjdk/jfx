@@ -27,12 +27,12 @@
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLBRElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLBRElement);
 
 using namespace HTMLNames;
 
@@ -76,10 +76,10 @@ void HTMLBRElement::collectPresentationalHintsForAttribute(const QualifiedName& 
 
 RenderPtr<RenderElement> HTMLBRElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (style.hasContent() && RenderElement::isContentDataSupported(*style.contentData()))
-        return RenderElement::createFor(*this, WTFMove(style));
+    if (RenderElement::isContentDataSupported(style.content()))
+        return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderLineBreak>(*this, WTFMove(style));
+    return createRenderer<RenderLineBreak>(*this, WTF::move(style));
 }
 
 }

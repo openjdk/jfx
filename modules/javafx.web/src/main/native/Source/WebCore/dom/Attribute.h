@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "CommonAtomStrings.h"
-#include "QualifiedName.h"
+#include <WebCore/CommonAtomStrings.h>
+#include <WebCore/QualifiedName.h>
 #include <wtf/Hasher.h>
 
 namespace WebCore {
@@ -38,6 +38,12 @@ public:
     Attribute(const QualifiedName& name, const AtomString& value)
         : m_name(name)
         , m_value(value)
+    {
+    }
+
+    Attribute(QualifiedName&& name, AtomString&& value)
+        : m_name(WTF::move(name))
+        , m_value(WTF::move(value))
     {
     }
 

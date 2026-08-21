@@ -29,6 +29,7 @@
 #include "IncrementalSweeper.h"
 #include "VM.h"
 #include <mutex>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/NoTailCalls.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -43,11 +44,10 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(JSRunLoopTimer::Manager);
 
 JSRunLoopTimer::Manager::PerVMData::PerVMData(Manager& manager, RunLoop& runLoop)
     : runLoop(runLoop)
-    , timer(makeUnique<RunLoop::Timer>(runLoop, &manager, &JSRunLoopTimer::Manager::timerDidFireCallback))
+    , timer(makeUnique<RunLoop::Timer>(runLoop, "JSRunLoopTimer::Manager::PerVMData::Timer"_s, &manager, &JSRunLoopTimer::Manager::timerDidFireCallback))
 {
 #if USE(GLIB_EVENT_LOOP)
     timer->setPriority(RunLoopSourcePriority::JavascriptTimer);
-    timer->setName("[JavaScriptCore] JSRunLoopTimer"_s);
 #endif
 }
 
@@ -61,7 +61,7 @@ JSRunLoopTimer::Manager::PerVMData::~PerVMData()
     // Because RunLoop::Timer is not reference counted, we need to deallocate it
     // on the same thread on which it fires; otherwise, we might deallocate it
     // while it's firing.
-    runLoop->dispatch([timer = WTFMove(timer)] {
+    runLoop->dispatch([timer = WTF::move(timer)] {
     });
 }
 
@@ -72,7 +72,7 @@ void JSRunLoopTimer::Manager::timerDidFire()
     {
         Locker locker { m_lock };
         if (!m_mapping.isEmpty()) {
-        RunLoop* currentRunLoop = &RunLoop::current();
+            RunLoop* currentRunLoop = &RunLoop::currentSingleton();
             MonotonicTime now = MonotonicTime::now();
         for (auto& entry : m_mapping) {
             PerVMData& data = *entry.value;
@@ -96,7 +96,7 @@ void JSRunLoopTimer::Manager::timerDidFire()
                 }
 
                 auto pair = data.timers.takeLast();
-                timersToFire.append(WTFMove(pair.first));
+                        timersToFire.append(WTF::move(pair.first));
             }
                     interval = std::max(0_s, scheduleTime - now);
                 }
@@ -111,12 +111,13 @@ void JSRunLoopTimer::Manager::timerDidFire()
 
 JSRunLoopTimer::Manager& JSRunLoopTimer::Manager::singleton()
 {
-    static Manager* manager;
+    static LazyNeverDestroyed<std::unique_ptr<Manager>> manager;
     static std::once_flag once;
     std::call_once(once, [&] {
-        manager = new Manager;
+        auto newManager = std::unique_ptr<Manager> { new Manager };
+        manager.construct(WTF::move(newManager));
     });
-    return *manager;
+    return *manager.get();
 }
 
 void JSRunLoopTimer::Manager::registerVM(VM& vm)
@@ -124,7 +125,7 @@ void JSRunLoopTimer::Manager::registerVM(VM& vm)
     auto data = makeUnique<PerVMData>(*this, vm.runLoop());
 
     Locker locker { m_lock };
-    auto addResult = m_mapping.add({ vm.apiLock() }, WTFMove(data));
+    auto addResult = m_mapping.add({ vm.apiLock() }, WTF::move(data));
     RELEASE_ASSERT(addResult.isNewEntry);
 }
 

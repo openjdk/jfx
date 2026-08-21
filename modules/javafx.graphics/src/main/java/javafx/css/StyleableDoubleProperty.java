@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
@@ -49,6 +50,15 @@ import javafx.scene.Node;
  */
 public abstract class StyleableDoubleProperty
     extends DoublePropertyBase implements StyleableProperty<Number> {
+
+    static {
+        StyleablePropertyHelper.setDoubleAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableDoubleProperty)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableDoubleProperty}.
@@ -114,6 +124,15 @@ public abstract class StyleableDoubleProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Double doubleValue)) {
+            return false;
+        }
+
+        double endValue = mediator != null ? mediator.endValue : get();
+        return Double.compare(doubleValue, endValue) == 0;
     }
 
     private StyleOrigin origin;

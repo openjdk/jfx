@@ -27,6 +27,7 @@
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "NativeImage.h"
 #include "Pattern.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -34,7 +35,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FETileSoftwareApplier);
 
-bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FETileSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     Ref input = inputs[0];
 
@@ -52,7 +53,7 @@ bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector&
     auto maxResultRect = result.maxEffectRect(filter);
     maxResultRect.scale(filter.filterScale());
 
-    auto tileImage = ImageBuffer::create(tileRect.size(), filter.renderingMode(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto tileImage = ImageBuffer::create(tileRect.size(), filter.renderingMode(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!tileImage)
         return false;
 
@@ -66,7 +67,7 @@ bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector&
     auto pattern = Pattern::create({ tileImage.releaseNonNull() }, { true, true, patternTransform });
 
     auto& resultContext = resultImage->context();
-    resultContext.setFillPattern(WTFMove(pattern));
+    resultContext.setFillPattern(WTF::move(pattern));
     resultContext.fillRect(FloatRect(FloatPoint(), resultImageRect.size()));
     return true;
 }

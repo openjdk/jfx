@@ -37,8 +37,6 @@
 
 namespace JSC {
 
-const double MacroAssembler::twoToThe32 = (double)0x100000000ull;
-
 void MacroAssembler::jitAssert(const ScopedLambda<Jump(void)>& functor)
 {
     if (Options::useJITDebugAssertions()) {
@@ -56,12 +54,7 @@ static void SYSV_ABI stdFunctionCallback(Probe::Context& context)
 
 void MacroAssembler::probeDebug(Function<void(Probe::Context&)> func)
 {
-    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTFMove(func)));
-}
-
-void MacroAssembler::probeDebugSIMD(Function<void(Probe::Context&)> func)
-{
-    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTFMove(func)), Probe::SavedFPWidth::SaveVectors);
+    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTF::move(func)));
 }
 
 } // namespace JSC

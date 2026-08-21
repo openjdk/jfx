@@ -30,18 +30,19 @@
 #include "StyleFontSizeFunctions.h"
 
 #include "CSSValueKeywords.h"
-#include "Document.h"
+#include "DocumentSettingsValues.h"
+#include "DocumentView.h"
 #include "FontMetrics.h"
+#include "FontSizeAdjust.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
-#include "RenderStyleInlines.h"
-#include "Settings.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 
 namespace Style {
 
-float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, float zoomFactor, MinimumFontSizeRule minimumSizeRule, const Settings::Values& settings)
+float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, float zoomFactor, MinimumFontSizeRule minimumSizeRule, const SettingsValues& settings)
 {
     // Text with a 0px font size should not be visible and therefore needs to be
     // exempt from minimum font size rules. Acid3 relies on this for pixel-perfect
@@ -82,16 +83,16 @@ float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize
     return std::min(maximumAllowedFontSize, zoomedSize);
 }
 
-float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, bool useSVGZoomRules, const RenderStyle* style, const Document& document)
+ComputedFontSize computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, bool useSVGZoomRules, const ComputedStyle& style, const Document& document)
 {
     float zoomFactor = 1.0f;
     if (!useSVGZoomRules) {
-        zoomFactor = style->usedZoom();
+        zoomFactor = style.usedZoom();
         auto* frame = document.frame();
-        if (frame && style->textZoom() != TextZoom::Reset)
+        if (frame && style.textZoom() != TextZoom::Reset)
             zoomFactor *= frame->textZoomFactor();
     }
-    return computedFontSizeFromSpecifiedSize(specifiedSize, isAbsoluteSize, zoomFactor, useSVGZoomRules ? MinimumFontSizeRule::None : MinimumFontSizeRule::AbsoluteAndRelative, document.settingsValues());
+    return { computedFontSizeFromSpecifiedSize(specifiedSize, isAbsoluteSize, zoomFactor, useSVGZoomRules ? MinimumFontSizeRule::None : MinimumFontSizeRule::AbsoluteAndRelative, document.settingsValues()), zoomFactor };
 }
 
 float computedFontSizeFromSpecifiedSizeForSVGInlineText(float specifiedSize, bool isAbsoluteSize, float zoomFactor, const Document& document)
@@ -138,7 +139,7 @@ static constexpr std::array strictFontSizeTable {
 // factors for each keyword value.
 static constexpr std::array fontSizeFactors { 0.60f, 0.75f, 0.89f, 1.0f, 1.2f, 1.5f, 2.0f, 3.0f };
 
-float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const Settings::Values& settings, bool inQuirksMode)
+float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const SettingsValues& settings, bool inQuirksMode)
 {
     int mediumSize = shouldUseFixedDefaultSize ? settings.defaultFixedFontSize : settings.defaultFontSize;
     if (mediumSize >= fontSizeTableMin && mediumSize <= fontSizeTableMax) {
@@ -183,6 +184,7 @@ int legacyFontSizeForPixelSize(int pixelFontSize, bool shouldUseFixedDefaultSize
 
 static float adjustedFontSize(float size, float sizeAdjust, float metricValue)
 {
+    ASSERT(sizeAdjust > 0);
     if (!size)
         return 0;
 
@@ -190,20 +192,20 @@ static float adjustedFontSize(float size, float sizeAdjust, float metricValue)
     return size * (sizeAdjust / aspectValue);
 }
 
-float adjustedFontSize(float size, const FontSizeAdjust& sizeAdjust, const FontMetrics& metrics)
+float adjustedFontSize(float size, const WebCore::FontSizeAdjust& sizeAdjust, const FontMetrics& metrics)
 {
     // FIXME: The behavior for missing metrics has yet to be defined.
     // https://github.com/w3c/csswg-drafts/issues/6384
     switch (sizeAdjust.metric) {
-    case FontSizeAdjust::Metric::CapHeight:
+    case WebCore::FontSizeAdjust::Metric::CapHeight:
         return metrics.capHeight() ? adjustedFontSize(size, *sizeAdjust.value, *metrics.capHeight()) : size;
-    case FontSizeAdjust::Metric::ChWidth:
+    case WebCore::FontSizeAdjust::Metric::ChWidth:
         return metrics.zeroWidth() ? adjustedFontSize(size, *sizeAdjust.value, *metrics.zeroWidth()) : size;
     // FIXME: Are ic-height and ic-width the same? Gecko treats them the same.
-    case FontSizeAdjust::Metric::IcWidth:
-    case FontSizeAdjust::Metric::IcHeight:
+    case WebCore::FontSizeAdjust::Metric::IcWidth:
+    case WebCore::FontSizeAdjust::Metric::IcHeight:
         return metrics.ideogramWidth() ? adjustedFontSize(size, *sizeAdjust.value, *metrics.ideogramWidth()) : size;
-    case FontSizeAdjust::Metric::ExHeight:
+    case WebCore::FontSizeAdjust::Metric::ExHeight:
     default:
         return metrics.xHeight() ? adjustedFontSize(size, *sizeAdjust.value, *metrics.xHeight()) : size;
     }

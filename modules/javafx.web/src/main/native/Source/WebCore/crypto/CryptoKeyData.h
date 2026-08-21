@@ -42,15 +42,15 @@ enum class CryptoKeyClass : uint8_t {
 };
 
 struct CryptoKeyData {
-    CryptoKeyData(CryptoKeyClass keyClass, CryptoAlgorithmIdentifier algorithmIdentifier, bool extractable, CryptoKeyUsageBitmap usages, std::optional<Vector<uint8_t>> key, std::optional<JsonWebKey> jwk = std::nullopt, std::optional<CryptoAlgorithmIdentifier> hashAlgorithmIdentifier = std::nullopt, std::optional<String>&& namedCurveString = std::nullopt, std::optional<size_t> lengthBits = std::nullopt, std::optional<CryptoKeyType> type = std::nullopt)
+    CryptoKeyData(CryptoKeyClass keyClass, CryptoAlgorithmIdentifier algorithmIdentifier, bool extractable, CryptoKeyUsageBitmap usages, std::optional<Vector<uint8_t>> key, std::optional<JsonWebKey> jwk = std::nullopt, std::optional<CryptoAlgorithmIdentifier> hashAlgorithmIdentifier = std::nullopt, std::optional<String>&& namedCurveString = std::nullopt, std::optional<uint64_t> lengthBits = std::nullopt, std::optional<CryptoKeyType> type = std::nullopt)
         : keyClass(keyClass)
         , algorithmIdentifier(algorithmIdentifier)
         , extractable(extractable)
         , usages(usages)
-        , key(WTFMove(key))
-        , jwk(WTFMove(jwk))
+        , key(WTF::move(key))
+        , jwk(WTF::move(jwk))
         , hashAlgorithmIdentifier(hashAlgorithmIdentifier)
-        , namedCurveString(WTFMove(namedCurveString))
+        , namedCurveString(WTF::move(namedCurveString))
         , lengthBits(lengthBits)
         , type(type)
     {
@@ -62,9 +62,9 @@ struct CryptoKeyData {
             extractable,
             usages,
             key,
-            crossThreadCopy(WTFMove(jwk)),
+            crossThreadCopy(WTF::move(jwk)),
             hashAlgorithmIdentifier,
-            crossThreadCopy(WTFMove(namedCurveString)),
+            crossThreadCopy(WTF::move(namedCurveString)),
             lengthBits,
             type
         };
@@ -78,7 +78,7 @@ struct CryptoKeyData {
     std::optional<JsonWebKey> jwk;
     std::optional<CryptoAlgorithmIdentifier> hashAlgorithmIdentifier;
     std::optional<String> namedCurveString;
-    std::optional<size_t> lengthBits;
+    std::optional<uint64_t> lengthBits;
     std::optional<CryptoKeyType> type;
 };
 

@@ -27,6 +27,7 @@
 #define PlatformLocale_h
 
 #include <wtf/Language.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
@@ -119,7 +120,13 @@ public:
     // December. These strings should not be abbreviations.
     virtual const Vector<String>& monthLabels() = 0;
 
-    String localizedDecimalSeparator();
+    const String& localizedDecimalSeparator();
+
+    // Converts digit and decimal separator characters to their localized
+    // equivalents, passing through all other characters unchanged. Unlike
+    // convertToLocalizedNumber, this handles partial input (e.g. containing
+    // 'e', '+') and does not add sign prefixes or suffixes.
+    String localizeNumberCharacters(const String&);
 
     enum FormatType { FormatTypeUnspecified, FormatTypeShort, FormatTypeMedium };
 

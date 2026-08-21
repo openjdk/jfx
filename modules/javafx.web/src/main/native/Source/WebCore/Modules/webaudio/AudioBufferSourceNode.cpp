@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
@@ -42,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioBufferSourceNode);
 
 constexpr double DefaultGrainDuration = 0.020; // 20ms
 
@@ -69,7 +70,7 @@ ExceptionOr<Ref<AudioBufferSourceNode>> AudioBufferSourceNode::create(BaseAudioC
     auto node = adoptRef(*new AudioBufferSourceNode(context));
     node->suspendIfNeeded();
 
-    node->setBufferForBindings(WTFMove(options.buffer));
+    node->setBufferForBindings(WTF::move(options.buffer));
     node->detune().setValue(options.detune);
     node->setLoopForBindings(options.loop);
     node->setLoopEndForBindings(options.loopEnd);
@@ -98,7 +99,8 @@ AudioBufferSourceNode::~AudioBufferSourceNode()
 
 void AudioBufferSourceNode::process(size_t framesToProcess)
 {
-    auto& outputBus = *output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    auto& outputBus = firstOutput->bus();
 
     if (!isInitialized()) {
         outputBus.zero();
@@ -140,7 +142,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
         m_destinationChannels[i] = outputBus.channel(i)->mutableSpan();
 
     // Render by reading directly from the buffer.
-    if (!renderFromBuffer(&outputBus, quantumFrameOffset, bufferFramesToProcess, startFrameOffset)) {
+    if (!renderFromBuffer(outputBus, quantumFrameOffset, bufferFramesToProcess, startFrameOffset)) {
         outputBus.zero();
         return;
     }
@@ -149,7 +151,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
 }
 
 // Returns true if we're finished.
-bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus*, unsigned index, size_t framesToProcess)
+bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus&, unsigned index, size_t framesToProcess)
 {
     if (!m_isLooping) {
         // If we're not looping, then stop playing when we get to the end.
@@ -168,18 +170,17 @@ bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus*, unsign
     return false;
 }
 
-bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset)
+bool AudioBufferSourceNode::renderFromBuffer(AudioBus& bus, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset)
 {
     ASSERT(context().isAudioThread());
 
     // Basic sanity checking
-    ASSERT(bus);
     ASSERT(m_buffer);
-    if (!bus || !m_buffer)
+    if (!m_buffer)
         return false;
 
     unsigned numberOfChannels = this->numberOfChannels();
-    unsigned busNumberOfChannels = bus->numberOfChannels();
+    unsigned busNumberOfChannels = bus.numberOfChannels();
 
     bool channelCountGood = numberOfChannels && numberOfChannels == busNumberOfChannels;
     ASSERT(channelCountGood);
@@ -187,7 +188,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         return false;
 
     // Sanity check destinationFrameOffset, numberOfFrames.
-    size_t destinationLength = bus->length();
+    size_t destinationLength = bus.length();
 
     bool isLengthGood = destinationLength <= 4096 && numberOfFrames <= 4096;
     ASSERT(isLengthGood);
@@ -212,6 +213,9 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     double bufferSampleRate = m_buffer->sampleRate();
     double pitchRate = totalPitchRate();
     bool reverse = pitchRate < 0;
+
+    if (!bufferLength)
+        return false;
 
     // Avoid converting from time to sample-frames twice by computing
     // the grain end time first before computing the sample frame.
@@ -248,7 +252,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
 
         // Wrap back to the beginning of the loop.
         m_virtualReadIndex = (m_loopStart < 0) ? 0 : (m_loopStart * m_buffer->sampleRate());
-        m_virtualReadIndex = std::min(m_virtualReadIndex, static_cast<double>(bufferLength - 1));
+        m_virtualReadIndex = std::min(m_virtualReadIndex, static_cast<double>(bufferLength) - 1);
     }
 
     // Sanity check that our playback rate isn't larger than the loop size.
@@ -339,6 +343,9 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         if (readIndex >= maxFrame)
             readIndex -= deltaFrames;
 
+        if (readIndex >= bufferLength)
+            return false;
+
         for (unsigned i = 0; i < numberOfChannels; ++i)
             std::ranges::fill(m_destinationChannels[i].subspan(writeIndex).first(framesToProcess), m_sourceChannels[i][readIndex]);
 
@@ -420,7 +427,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         }
     }
 
-    bus->clearSilentFlag();
+    bus.clearSilentFlag();
 
     m_virtualReadIndex = virtualReadIndex;
 
@@ -459,7 +466,7 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
         unsigned numberOfChannels = buffer->numberOfChannels();
         ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
 
-        output(0)->setNumberOfChannels(numberOfChannels);
+        checkedOutput(0)->setNumberOfChannels(numberOfChannels);
 
         m_sourceChannels = FixedVector<std::span<const float>>(numberOfChannels);
         m_destinationChannels = FixedVector<std::span<float>>(numberOfChannels);
@@ -469,13 +476,12 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     }
 
     m_virtualReadIndex = 0;
-    m_buffer = WTFMove(buffer);
+    m_buffer = WTF::move(buffer);
 
     // In case the buffer gets set after playback has started, we need to clamp the grain parameters now.
     if (m_isGrain)
         adjustGrainParameters();
 
-    if (isPlayingOrScheduled())
         acquireBufferContent();
 
     return { };

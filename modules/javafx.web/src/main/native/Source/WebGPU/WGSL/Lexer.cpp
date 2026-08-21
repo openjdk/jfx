@@ -27,6 +27,7 @@
 #include "Lexer.h"
 
 #include "ConstantValue.h"
+#include "Token.h"
 #include <charconv>
 #include <wtf/FastFloat.h>
 #include <wtf/SortedArrayMap.h>
@@ -37,7 +38,7 @@
 
 namespace WGSL {
 
-static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierStart(char16_t character, std::span<const char16_t> code)
 {
     if (character == '_')
         return 1;
@@ -50,7 +51,7 @@ static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
     return 0;
 }
 
-static unsigned isIdentifierContinue(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierContinue(char16_t character, std::span<const char16_t> code)
 {
     if (auto length = isIdentifierStart(character, code))
         return length;
@@ -63,17 +64,41 @@ static unsigned isIdentifierContinue(UChar character, std::span<const UChar> cod
     return 0;
 }
 
-static unsigned isIdentifierStart(LChar character, std::span<const LChar>)
+static unsigned isIdentifierStart(Latin1Character character, std::span<const Latin1Character>)
 {
     return isASCIIAlpha(character) || character == '_';
 }
 
-static unsigned isIdentifierContinue(LChar character, std::span<const LChar>)
+static unsigned isIdentifierContinue(Latin1Character character, std::span<const Latin1Character>)
 {
     return isASCIIAlphanumeric(character) || character == '_';
 }
 
-template <typename T>
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeToken(TokenType type)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength() };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeFloatToken(TokenType type, double floatValue)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength(), floatValue };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeIntegerToken(TokenType type, int64_t integerValue)
+{
+    return { type, m_tokenStartingPosition, currentTokenLength(), integerValue };
+}
+
+template<typename CharacterType>
+Token Lexer<CharacterType>::makeIdentifierToken(String&& identifier)
+{
+    return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTF::move(identifier) };
+}
+
+template<typename T>
 Vector<Token> Lexer<T>::lex()
 {
     Vector<Token> tokens;
@@ -84,9 +109,10 @@ Vector<Token> Lexer<T>::lex()
         switch (token.type) {
         case TokenType::GtGtEq:
             tokens.append(makeToken(TokenType::Placeholder));
-            FALLTHROUGH;
+            [[fallthrough]];
         case TokenType::GtGt:
         case TokenType::GtEq:
+        case TokenType::MinusMinus:
             tokens.append(makeToken(TokenType::Placeholder));
             break;
         default:
@@ -220,7 +246,6 @@ Token Lexer<T>::nextToken()
             shift();
             return makeToken(TokenType::StarEq);
         default:
-        // FIXME: Report unbalanced block comments, such as "this is an unbalanced comment. */"
         return makeToken(TokenType::Star);
         }
     case '/':
@@ -298,10 +323,9 @@ Token Lexer<T>::nextToken()
                 shift(consumed);
             }
 
-            // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             String view(StringImpl::createWithoutCopying(startOfToken.subspan(0, currentTokenLength())));
 
-            static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
+            static constexpr SortedArrayMap keywords { std::to_array<std::pair<ComparableASCIILiteral, TokenType>>({
                 { "_"_s, TokenType::Underbar },
 
 #define MAPPING_ENTRY(lexeme, name)\
@@ -309,11 +333,10 @@ Token Lexer<T>::nextToken()
 FOREACH_KEYWORD(MAPPING_ENTRY)
 #undef MAPPING_ENTRY
 
-            };
-            static constexpr SortedArrayMap keywords { keywordMappings };
+            }) };
 
             // https://www.w3.org/TR/WGSL/#reserved-words
-            static constexpr ComparableASCIILiteral reservedWords[] {
+            static constexpr SortedArraySet reservedWordSet { std::to_array<ComparableASCIILiteral>({
                 "NULL"_s,
                 "Self"_s,
                 "abstract"_s,
@@ -459,22 +482,21 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
                 "with"_s,
                 "writeonly"_s,
                 "yield"_s,
-            };
-            static constexpr SortedArraySet reservedWordSet { reservedWords };
+            }) };
 
             auto tokenType = keywords.get(view);
             if (tokenType != TokenType::Invalid)
                 return makeToken(tokenType);
 
-            if (UNLIKELY(reservedWordSet.contains(view)))
+            if (reservedWordSet.contains(view)) [[unlikely]]
                 return makeToken(TokenType::ReservedWord);
 
 
-            if (UNLIKELY(length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_'))
+            if (length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_') [[unlikely]]
                 return makeToken(TokenType::Invalid);
 
 
-            return makeIdentifierToken(WTFMove(view));
+            return makeIdentifierToken(WTF::move(view));
         }
         break;
     }
@@ -492,7 +514,7 @@ T Lexer<T>::shift(unsigned i)
     m_code.advanceBy(i);
     m_currentPosition.offset += i;
     m_currentPosition.lineOffset += i;
-    if (LIKELY(m_code.hasCharactersRemaining()))
+    if (m_code.hasCharactersRemaining()) [[likely]]
         m_current = m_code[0];
     return last;
 }
@@ -500,7 +522,7 @@ T Lexer<T>::shift(unsigned i)
 template <typename T>
 T Lexer<T>::peek(unsigned i)
 {
-    if (UNLIKELY(i >= m_code.lengthRemaining()))
+    if (i >= m_code.lengthRemaining()) [[unlikely]]
         return 0;
     return m_code[i];
 }
@@ -538,7 +560,6 @@ bool Lexer<T>::skipBlockComments()
             newLine();
     }
 
-    // FIXME: Report unbalanced block comments, such as "/* this is an unbalanced comment."
     return false;
 }
 
@@ -705,6 +726,7 @@ Token Lexer<T>::lexNumber()
     char suffix = '\0';
     char exponentSign = '\0';
     bool isHex = false;
+    auto start = m_code.span();
     auto integral = m_code.span();
     const T* fract = nullptr;
     const T* exponent = nullptr;
@@ -1023,12 +1045,21 @@ Token Lexer<T>::lexNumber()
         return convert(result);
     }
 
+    auto length = static_cast<size_t>(m_code.position() - start.data());
+    if (suffix)
+        length--;
+    Vector<char, 256> buffer(length + 1);
+    for (unsigned i = 0; i < length; ++i)
+        buffer[i] = start[i];
+    buffer[length] = '\0';
     size_t parsedLength;
-    double result = WTF::parseHexDouble(integral, parsedLength);
-    return convert(result);
+    auto maybeResult = stringToDouble(buffer.span(), parsedLength);
+    if (!maybeResult || parsedLength != length)
+        return makeToken(TokenType::Invalid);
+    return convert(*maybeResult);
 }
 
-template class Lexer<LChar>;
-template class Lexer<UChar>;
+template class Lexer<Latin1Character>;
+template class Lexer<char16_t>;
 
 }

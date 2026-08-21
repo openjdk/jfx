@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #include "InspectorEnvironment.h"
 #include "InspectorFrontendRouter.h"
 #include "Strong.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
@@ -61,15 +63,24 @@ struct JSAgentContext;
 
 class JSGlobalObjectInspectorController final
     : public InspectorEnvironment
+    , public CanMakeThreadSafeCheckedPtr<JSGlobalObjectInspectorController>
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
     , public AugmentableInspectorController
 #endif
 {
     WTF_MAKE_NONCOPYABLE(JSGlobalObjectInspectorController);
     WTF_MAKE_TZONE_ALLOCATED(JSGlobalObjectInspectorController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(JSGlobalObjectInspectorController);
 public:
     JSGlobalObjectInspectorController(JSC::JSGlobalObject&);
     ~JSGlobalObjectInspectorController() final;
+
+    // AbstractCanMakeCheckedPtr overrides
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     void connectFrontend(FrontendChannel&, bool isAutomaticInspection, bool immediatelyPause);
     void disconnectFrontend(FrontendChannel&);
@@ -83,7 +94,7 @@ public:
 
     void reportAPIException(JSC::JSGlobalObject*, JSC::Exception*);
 
-    WeakPtr<JSC::ConsoleClient> consoleClient() const;
+    CheckedPtr<JSC::ConsoleClient> consoleClient() const;
 
     bool developerExtrasEnabled() const final;
     bool canAccessInspectedScriptState(JSC::JSGlobalObject*) const final { return true; }
@@ -100,7 +111,7 @@ public:
 
     const FrontendRouter& frontendRouter() const final { return m_frontendRouter.get(); }
     BackendDispatcher& backendDispatcher() final { return m_backendDispatcher.get(); }
-    void registerAlternateAgent(std::unique_ptr<InspectorAgentBase>) final;
+    void registerAlternateAgent(UniqueRef<InspectorAgentBase>&&) final;
 #endif
 
 private:
@@ -113,20 +124,21 @@ private:
     void createLazyAgents();
 
     JSC::JSGlobalObject& m_globalObject;
-    std::unique_ptr<InjectedScriptManager> m_injectedScriptManager;
+    const UniqueRef<InjectedScriptManager> m_injectedScriptManager;
     std::unique_ptr<JSGlobalObjectConsoleClient> m_consoleClient;
-    Ref<WTF::Stopwatch> m_executionStopwatch;
+    const Ref<WTF::Stopwatch> m_executionStopwatch;
     std::unique_ptr<JSGlobalObjectDebugger> m_debugger;
 
-    AgentRegistry m_agents;
     InspectorConsoleAgent* m_consoleAgent { nullptr };
 
     // Lazy, but also on-demand agents.
-    InspectorAgent* m_inspectorAgent { nullptr };
+    CheckedPtr<InspectorAgent> m_inspectorAgent;
     InspectorDebuggerAgent* m_debuggerAgent { nullptr };
 
-    Ref<FrontendRouter> m_frontendRouter;
-    Ref<BackendDispatcher> m_backendDispatcher;
+    const Ref<FrontendRouter> m_frontendRouter;
+    const Ref<BackendDispatcher> m_backendDispatcher;
+
+    AgentRegistry m_agents;
 
     // Used to keep the JSGlobalObject and VM alive while we are debugging it.
     JSC::Strong<JSC::JSGlobalObject> m_strongGlobalObject;

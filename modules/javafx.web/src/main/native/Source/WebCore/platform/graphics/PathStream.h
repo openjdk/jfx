@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "PathImpl.h"
-#include "PathSegment.h"
+#include <WebCore/PathImpl.h>
+#include <WebCore/PathSegment.h>
 #include <wtf/DataRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -87,20 +87,7 @@ private:
 
     bool isPathStream() const final { return true; }
 
-    template<typename DataType>
-    std::optional<DataType> singleDataType() const;
-
     std::optional<PathSegment> singleSegment() const final;
-    std::optional<PathDataLine> singleDataLine() const final;
-    std::optional<PathRect> singleRect() const final;
-    std::optional<PathRoundedRect> singleRoundedRect() const final;
-    std::optional<PathContinuousRoundedRect> singleContinuousRoundedRect() const final;
-    std::optional<PathArc> singleArc() const final;
-    std::optional<PathClosedArc> singleClosedArc() const final;
-    std::optional<PathDataQuadCurve> singleQuadCurve() const final;
-    std::optional<PathDataBezierCurve> singleBezierCurve() const final;
-
-    bool isEmpty() const final { return m_segments.isEmpty(); }
 
     bool isClosed() const final;
     FloatPoint currentPoint() const final;

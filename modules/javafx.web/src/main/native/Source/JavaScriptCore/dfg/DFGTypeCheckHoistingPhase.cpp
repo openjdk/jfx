@@ -275,10 +275,12 @@ private:
                 case GetButterfly:
                 case EnumeratorGetByVal:
                 case GetByVal:
+                case MultiGetByVal:
                 case PutByValDirect:
                 case PutByVal:
-                case PutByValAlias:
+                case PutByValDirectResolved:
                 case PutByValMegamorphic:
+                case MultiPutByVal:
                 case EnumeratorPutByVal:
                 case GetArrayLength:
                 case GetUndetachedTypeArrayLength:
@@ -361,9 +363,10 @@ private:
                 case GetButterfly:
                 case EnumeratorGetByVal:
                 case GetByVal:
+                case MultiGetByVal:
                 case PutByValDirect:
                 case PutByVal:
-                case PutByValAlias:
+                case PutByValDirectResolved:
                 case PutByValMegamorphic:
                 case EnumeratorPutByVal:
                 case GetArrayLength:

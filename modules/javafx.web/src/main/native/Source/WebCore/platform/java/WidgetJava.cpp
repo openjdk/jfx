@@ -172,26 +172,10 @@ void Widget::setIsSelected(bool)
 {
     notImplemented();
 }
-
-IntRect Widget::convertFromRootToContainingWindow(const Widget*, const IntRect& rect)
-{
-    return rect;
-}
-
-IntRect Widget::convertFromContainingWindowToRoot(const Widget*, const IntRect& rect)
-{
-    return rect;
-}
-
-IntPoint Widget::convertFromRootToContainingWindow(const Widget*, const IntPoint& point)
-{
-    return point;
-}
-
-IntPoint Widget::convertFromContainingWindowToRoot(const Widget*, const IntPoint& point)
-{
-    return point;
-}
+IntPoint convertFromContainingWindowToRoot(const Widget* rootWidget, IntPoint point) { return point; }
+FloatPoint convertFromContainingWindowToRoot(const Widget* rootWidget, FloatPoint float_point) { return float_point; }
+IntRect convertFromContainingWindowToRoot(const Widget* rootWidget, const IntRect& int_rect) { return int_rect; }
+FloatRect convertFromContainingWindowToRoot(const Widget* rootWidget, const FloatRect& float_rect) { return float_rect; }
 
 void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy policy, RegionContext*)
 {

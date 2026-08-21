@@ -24,10 +24,12 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumeric.h"
-#include "StylePrimitiveNumericConcepts.h"
-#include "StyleUnevaluatedCalculation.h"
-#include "StyleValueTypes.h"
+#include <WebCore/CSSPrimitiveNumeric.h>
+#include <WebCore/StylePrimitiveNumeric+Forward.h>
+#include <WebCore/StylePrimitiveNumericConcepts.h>
+#include <WebCore/StyleUnevaluatedCalculation.h>
+#include <WebCore/StyleValueTypes.h>
+#include <WebCore/StyleZoomPrimitives.h>
 #include <algorithm>
 #include <wtf/CompactVariant.h>
 #include <wtf/Forward.h>
@@ -36,6 +38,13 @@ namespace WebCore {
 namespace Style {
 
 template<typename> struct DimensionPercentageMapping;
+
+struct PrimitiveNumericEmptyToken { constexpr bool operator==(const PrimitiveNumericEmptyToken&) const = default; };
+
+template<typename T> struct PrimitiveNumericMarkableTraits {
+    static bool isEmptyValue(const T& value) { return value.isEmpty(); }
+    static T emptyValue() { return T(PrimitiveNumericEmptyToken { }); }
+};
 
 // Default implementation of `PrimitiveNumeric` for non-composite numeric types.
 template<CSS::Numeric CSSType> struct PrimitiveNumeric {
@@ -60,10 +69,131 @@ template<CSS::Numeric CSSType> struct PrimitiveNumeric {
     {
     }
 
-    constexpr bool isZero() const { return !value; }
+    constexpr bool isZero() const requires (range.min <= 0 && range.max >= 0) { return !value; }
+    constexpr bool isKnownZero() const requires (range.min <= 0 && range.max >= 0) { return isZero(); }
+    constexpr bool isPositive() const requires (range.max > 0) { return value > 0; }
+    constexpr bool isKnownPositive() const requires (range.max > 0) { return isPositive(); }
+    constexpr bool isPositiveOrZero() const requires (range.max >= 0) { return value >= 0; }
+    constexpr bool isNegative() const requires (range.min < 0) { return value < 0; }
+    constexpr bool isKnownNegative() const requires (range.min < 0) { return isNegative(); }
+    constexpr bool isNegativeOrZero() const requires (range.min <= 0) { return value <= 0; }
 
     constexpr bool operator==(const PrimitiveNumeric&) const = default;
-    constexpr bool operator==(ResolvedValueType other) const { return value == other; };
+    constexpr bool operator==(ResolvedValueType other) const { return value == other; }
+
+    constexpr auto operator<=>(const PrimitiveNumeric&) const = default;
+
+private:
+    template<typename> friend struct PrimitiveNumericMarkableTraits;
+
+    // Markable is supported for numeric values that have free bits. These currently include:
+    //  - any floating point value (using NaN).
+    //  - any numeric value where the minimum allowed value is greater than 0 (using 0).
+    //  - any numeric value where the minimum allowed value is equal to 0 and the minimum representable value is not zero (using -1).
+    static consteval ResolvedValueType emptyValue()
+    {
+        if constexpr (std::floating_point<ResolvedValueType>)
+            return std::numeric_limits<ResolvedValueType>::quiet_NaN();
+        else if constexpr (range.min > 0)
+            return 0;
+        else if constexpr (range.min == 0 && std::numeric_limits<ResolvedValueType>::min() != 0)
+            return -1;
+    }
+
+    PrimitiveNumeric(PrimitiveNumericEmptyToken)
+        : value { emptyValue() }
+    {
+    }
+
+    bool isEmpty() const
+    {
+        if constexpr (std::floating_point<ResolvedValueType>)
+            return std::isnan(value);
+        else
+            return value == emptyValue();
+    }
+};
+
+// Specialization of `PrimitiveNumeric` for `CSS::Length` types.
+template<CSS::Range R, typename V> struct PrimitiveNumeric<CSS::Length<R, V>> {
+    using CSS = CSS::Length<R, V>;
+    using Raw = typename CSS::Raw;
+    using UnitType = typename CSS::UnitType;
+    using UnitTraits = typename CSS::UnitTraits;
+    using ResolvedValueType = typename CSS::ResolvedValueType;
+    static constexpr auto range = CSS::range;
+    static constexpr auto category = CSS::category;
+
+    static constexpr auto unit = UnitTraits::canonical;
+
+    constexpr PrimitiveNumeric(ResolvedValueType value)
+        : value { value }
+    {
+    }
+
+    constexpr PrimitiveNumeric(WebCore::CSS::ValueLiteral<UnitTraits::canonical> value)
+        : value { clampTo<ResolvedValueType>(value.value) }
+    {
+    }
+
+    constexpr auto resolveZoom(ZoomNeeded) const
+        requires (range.zoomOptions == WebCore::CSS::RangeZoomOptions::Default)
+    {
+        return value;
+    }
+
+    constexpr auto resolveZoom(ZoomFactor zoom) const
+        requires (range.zoomOptions == WebCore::CSS::RangeZoomOptions::Unzoomed)
+    {
+        return value * zoom.value;
+    }
+
+    constexpr auto unresolvedValue() const { return value; }
+
+    constexpr bool isZero() const requires (range.min <= 0 && range.max >= 0) { return !value; }
+    constexpr bool isKnownZero() const requires (range.min <= 0 && range.max >= 0) { return isZero(); }
+    constexpr bool isPositive() const requires (range.max > 0) { return value > 0; }
+    constexpr bool isKnownPositive() const requires (range.max > 0) { return isPositive(); }
+    constexpr bool isPositiveOrZero() const requires (range.max >= 0) { return value >= 0; }
+    constexpr bool isNegative() const requires (range.min < 0) { return value < 0; }
+    constexpr bool isKnownNegative() const requires (range.min < 0) { return isNegative(); }
+    constexpr bool isNegativeOrZero() const requires (range.min <= 0) { return value <= 0; }
+
+    constexpr bool operator==(const PrimitiveNumeric&) const = default;
+
+    constexpr auto operator<=>(const PrimitiveNumeric&) const = default;
+
+private:
+    template<typename> friend struct PrimitiveNumericMarkableTraits;
+
+    // Markable is supported for numeric values that have free bits. These currently include:
+    //  - any floating point value (using NaN).
+    //  - any numeric value where the minimum allowed value is greater than 0 (using 0).
+    //  - any numeric value where the minimum allowed value is equal to 0 and the minimum representable value is not zero (using -1).
+    static consteval ResolvedValueType emptyValue()
+    {
+        if constexpr (std::floating_point<ResolvedValueType>)
+            return std::numeric_limits<ResolvedValueType>::quiet_NaN();
+        else if constexpr (range.min > 0)
+            return 0;
+        else if constexpr (range.min == 0 && std::numeric_limits<ResolvedValueType>::min() != 0)
+            return -1;
+    }
+
+    PrimitiveNumeric(PrimitiveNumericEmptyToken)
+        : value { emptyValue() }
+    {
+    }
+
+    bool isEmpty() const
+    {
+        if constexpr (std::floating_point<ResolvedValueType>)
+            return std::isnan(value);
+        else
+            return value == emptyValue();
+    }
+
+    ResolvedValueType value { 0 };
 };
 
 // Specialization of `PrimitiveNumeric` for composite dimension-percentage types.
@@ -85,17 +215,17 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     using Representation = CompactVariant<Dimension, Percentage, Calc>;
 
     PrimitiveNumeric(Dimension dimension)
-        : m_value { WTFMove(dimension) }
+        : m_value { WTF::move(dimension) }
     {
     }
 
     PrimitiveNumeric(Percentage percentage)
-        : m_value { WTFMove(percentage) }
+        : m_value { WTF::move(percentage) }
     {
     }
 
     PrimitiveNumeric(Calc calc)
-        : m_value { WTFMove(calc) }
+        : m_value { WTF::move(calc) }
     {
     }
 
@@ -110,9 +240,9 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     }
 
     // NOTE: CalculatedValue is intentionally not part of IPCData.
-    using IPCData = std::variant<Dimension, Percentage>;
+    using IPCData = Variant<Dimension, Percentage>;
     PrimitiveNumeric(IPCData&& data)
-        : m_value { WTF::switchOn(WTFMove(data), [&](auto&& data) -> Representation { return { WTFMove(data) }; }) }
+        : m_value { WTF::switchOn(WTF::move(data), [&](auto&& data) -> Representation { return { WTF::move(data) }; }) }
     {
     }
 
@@ -143,7 +273,7 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
         return WTF::switchOn(m_value, std::forward<F>(functors)...);
     }
 
-    constexpr bool isZero() const
+    constexpr bool isKnownZero() const requires (range.min <= 0 && range.max >= 0)
     {
         return WTF::switchOn(m_value,
             []<HasIsZero T>(const T& alternative) { return alternative.isZero(); },
@@ -159,58 +289,71 @@ private:
 
 // MARK: Integer Primitive
 
-template<CSS::Range R = CSS::All, typename V = int> struct Integer : PrimitiveNumeric<CSS::Integer<R, V>> {
+template<CSS::Range R, typename V> struct Integer : PrimitiveNumeric<CSS::Integer<R, V>> {
     using Base = PrimitiveNumeric<CSS::Integer<R, V>>;
+    using Base::Base;
+
+    // Allow <integer> values to be initialized with number literals as well as integer literals.
+    constexpr Integer(WebCore::CSS::ValueLiteral<WebCore::CSS::NumberUnit::Number> value)
+        : Integer { clampTo<typename Base::ResolvedValueType>(value.value) }
+    {
+    }
 };
 
 // MARK: Number Primitive
 
-template<CSS::Range R = CSS::All, typename V = double> struct Number : PrimitiveNumeric<CSS::Number<R, V>> {
+template<CSS::Range R, typename V> struct Number : PrimitiveNumeric<CSS::Number<R, V>> {
     using Base = PrimitiveNumeric<CSS::Number<R, V>>;
     using Base::Base;
+
+    // Allow <number> values to be initialized with integer literals as well as number literals.
+    constexpr Number(WebCore::CSS::ValueLiteral<WebCore::CSS::IntegerUnit::Integer> value)
+        : Number { clampTo<typename Base::ResolvedValueType>(value.value) }
+    {
+    }
 };
 
 // MARK: Percentage Primitive
 
-template<CSS::Range R = CSS::All, typename V = double> struct Percentage : PrimitiveNumeric<CSS::Percentage<R, V>> {
+template<CSS::Range R, typename V> struct Percentage : PrimitiveNumeric<CSS::Percentage<R, V>> {
     using Base = PrimitiveNumeric<CSS::Percentage<R, V>>;
     using Base::Base;
 };
 
 // MARK: Dimension Primitives
 
-template<CSS::Range R = CSS::All, typename V = double> struct Angle : PrimitiveNumeric<CSS::Angle<R, V>> {
+template<CSS::Range R, typename V> struct Angle : PrimitiveNumeric<CSS::Angle<R, V>> {
     using Base = PrimitiveNumeric<CSS::Angle<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All, typename V = float> struct Length : PrimitiveNumeric<CSS::Length<R, V>> {
+template<CSS::Range R, typename V> struct Length : PrimitiveNumeric<CSS::Length<R, V>> {
     using Base = PrimitiveNumeric<CSS::Length<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All, typename V = double> struct Time : PrimitiveNumeric<CSS::Time<R, V>> {
+template<CSS::Range R, typename V> struct Time : PrimitiveNumeric<CSS::Time<R, V>> {
     using Base = PrimitiveNumeric<CSS::Time<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All, typename V = double> struct Frequency : PrimitiveNumeric<CSS::Frequency<R, V>> {
+template<CSS::Range R, typename V> struct Frequency : PrimitiveNumeric<CSS::Frequency<R, V>> {
     using Base = PrimitiveNumeric<CSS::Frequency<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::Nonnegative, typename V = double> struct Resolution : PrimitiveNumeric<CSS::Resolution<R, V>> {
+template<CSS::Range R, typename V> struct Resolution : PrimitiveNumeric<CSS::Resolution<R, V>> {
     using Base = PrimitiveNumeric<CSS::Resolution<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All, typename V = double> struct Flex : PrimitiveNumeric<CSS::Flex<R, V>> {
+template<CSS::Range R, typename V> struct Flex : PrimitiveNumeric<CSS::Flex<R, V>> {
     using Base = PrimitiveNumeric<CSS::Flex<R, V>>;
     using Base::Base;
 };
 
 // MARK: Dimension + Percentage Primitives
 
-template<CSS::Range R = CSS::All, typename V = float> struct AnglePercentage : PrimitiveNumeric<CSS::AnglePercentage<R, V>> {
+template<CSS::Range R, typename V> struct AnglePercentage : PrimitiveNumeric<CSS::AnglePercentage<R, V>> {
     using Base = PrimitiveNumeric<CSS::AnglePercentage<R, V>>;
     using Base::Base;
 };
-template<CSS::Range R = CSS::All, typename V = float> struct LengthPercentage : PrimitiveNumeric<CSS::LengthPercentage<R, V>> {
+template<CSS::Range R, typename V> struct LengthPercentage : PrimitiveNumeric<CSS::LengthPercentage<R, V>> {
     using Base = PrimitiveNumeric<CSS::LengthPercentage<R, V>>;
     using Base::Base;
 };
@@ -251,9 +394,10 @@ template<Numeric T> struct ToCSSMapping<T> {
 
 // MARK: Utility Concepts
 
-template<typename T> concept IsPercentageOrCalc =
-       std::same_as<T, Percentage<T::range, typename T::ResolvedValueType>>
-    || std::same_as<T, UnevaluatedCalculation<typename T::CSS>>;
+template<typename T> concept IsPercentage = std::same_as<T, Percentage<T::range, typename T::ResolvedValueType>>;
+template<typename T> concept IsCalc = std::same_as<T, UnevaluatedCalculation<typename T::CSS>>;
+
+template<typename T> concept IsPercentageOrCalc = IsPercentage<T> || IsCalc<T>;
 
 } // namespace Style
 } // namespace WebCore
@@ -262,6 +406,37 @@ template<WebCore::Style::DimensionPercentageNumeric T>
 struct WTF::FlatteningVariantTraits<T> {
     using TypeList = typename FlatteningVariantTraits<typename T::Representation>::TypeList;
 };
+
+namespace WTF {
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Integer<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Integer<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Number<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Number<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Percentage<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Percentage<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Angle<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Angle<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Length<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Length<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Time<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Time<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Frequency<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Frequency<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Resolution<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Resolution<R, V>> { };
+
+template<auto R, typename V>
+struct MarkableTraits<WebCore::Style::Flex<R, V>> : WebCore::Style::PrimitiveNumericMarkableTraits<WebCore::Style::Flex<R, V>> { };
+
+} // namespace WTF
 
 template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::AnglePercentage<R, V>> = true;
 template<auto R, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::LengthPercentage<R, V>> = true;

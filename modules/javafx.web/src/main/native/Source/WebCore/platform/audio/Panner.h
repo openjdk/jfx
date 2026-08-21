@@ -53,8 +53,8 @@ public:
 
     PanningModelType panningModel() const { return m_panningModel; }
 
-    virtual void pan(double azimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) = 0;
-    virtual void panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess) = 0;
+    virtual void pan(double azimuth, double elevation, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess) = 0;
+    virtual void panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess) = 0;
     virtual void reset() = 0;
 
     virtual double tailTime() const = 0;

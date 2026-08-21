@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CascadeLevel.h"
 #include "MatchResult.h"
 #include "WebAnimationTypes.h"
 #include <wtf/BitSet.h>
@@ -51,22 +50,40 @@ public:
         StartingStyle = 1 << 5,
         NonCacheable = 1 << 6,
     };
-    static constexpr OptionSet<PropertyType> normalProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
-    static constexpr OptionSet<PropertyType> startingStyleProperties() { return normalProperties() | PropertyType::StartingStyle; }
 
-    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* = nullptr);
-    PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
+    enum class Origin : uint8_t {
+        UserAgent,
+        User,
+        Author,
+        PositionFallback
+    };
+
+    static constexpr OptionSet<PropertyType> normalPropertyTypes() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
+    static constexpr OptionSet<PropertyType> startingStylePropertyTypes() { return normalPropertyTypes() | PropertyType::StartingStyle; }
+
+    struct IncludedProperties {
+        OptionSet<PropertyType> types;
+        // Ids are mutually exclusive with types. They are low-priority only and have any cascade aliases resolved.
+        Vector<CSSPropertyID, 4> ids { };
+
+        bool isEmpty() const { return !types && ids.isEmpty(); }
+    };
+
+    static IncludedProperties normalProperties() { return { normalPropertyTypes() }; }
+
+    PropertyCascade(const MatchResult&, IncludedProperties&&, const HashSet<AnimatableCSSProperty>* = nullptr, const StyleProperties* positionTryFallbackProperties = nullptr);
+    PropertyCascade(const PropertyCascade&, Origin, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
 
     struct Property {
         CSSPropertyID id;
-        CascadeLevel cascadeLevel;
+        Origin origin;
         ScopeOrdinal styleScopeOrdinal;
         CascadeLayerPriority cascadeLayerPriority;
         FromStyleAttribute fromStyleAttribute;
         std::array<CSSValue*, 3> cssValue; // Values for link match states MatchDefault, MatchLink and MatchVisited
-        std::array<CascadeLevel, 3> cascadeLevels;
+        std::array<Origin, 3> origins;
     };
 
     bool isEmpty() const { return m_propertyIsPresent.isEmpty() && !m_seenLogicalGroupPropertyCount; }
@@ -82,46 +99,51 @@ public:
     const Property& customProperty(const AtomString&) const;
 
     std::span<const CSSPropertyID> logicalGroupPropertyIDs() const;
-    const UncheckedKeyHashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
+    const HashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
 
-    const UncheckedKeyHashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const;
+    const HashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const;
 
     PropertyBitSet& propertyIsPresent() { return m_propertyIsPresent; }
     const PropertyBitSet& propertyIsPresent() const { return m_propertyIsPresent; }
 
+    bool applyLowPriorityOnly() const { return !m_includedProperties.ids.isEmpty(); }
+
 private:
     void buildCascade();
-    bool addNormalMatches(CascadeLevel);
-    void addImportantMatches(CascadeLevel);
-    bool addMatch(const MatchedProperties&, CascadeLevel, IsImportant);
+    bool addNormalMatches(Origin);
+    void addImportantMatches(Origin);
+    bool addMatch(const MatchedProperties&, Origin, IsImportant);
     bool shouldApplyAfterAnimation(const StyleProperties::PropertyReference&);
+    void addPositionTryFallbackProperties();
 
-    void set(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
-    void setLogicalGroupProperty(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
-    static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
+    void set(CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
+    void setLogicalGroupProperty(CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
+    static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
 
     bool hasProperty(CSSPropertyID, const CSSValue&);
+    bool mayOverrideExistingProperty(CSSPropertyID, const CSSValue&);
 
     unsigned logicalGroupPropertyIndex(CSSPropertyID) const;
     void setLogicalGroupPropertyIndex(CSSPropertyID, unsigned);
     void sortLogicalGroupPropertyIDs();
 
     const MatchResult& m_matchResult;
-    const OptionSet<PropertyType> m_includedProperties;
-    const CascadeLevel m_maximumCascadeLevel;
+    const IncludedProperties m_includedProperties;
+    const Origin m_maximumOrigin;
     const std::optional<ScopeOrdinal> m_rollbackScope;
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;
 
     struct AnimationLayer {
-        AnimationLayer(const UncheckedKeyHashSet<AnimatableCSSProperty>&);
+        AnimationLayer(const HashSet<AnimatableCSSProperty>&);
 
-        const UncheckedKeyHashSet<AnimatableCSSProperty>& properties;
-        UncheckedKeyHashSet<AnimatableCSSProperty> overriddenProperties;
+        const HashSet<AnimatableCSSProperty>& properties;
+        HashSet<AnimatableCSSProperty> overriddenProperties;
         bool hasCustomProperties { false };
         bool hasFontSize { false };
         bool hasLineHeight { false };
     };
     std::optional<AnimationLayer> m_animationLayer;
+    std::optional<MatchedProperties> m_positionTryFallbackProperties;
 
     // The CSSPropertyID enum is sorted like this:
     // 1. CSSPropertyInvalid and CSSPropertyCustom.
@@ -143,7 +165,7 @@ private:
     CSSPropertyID m_lowestSeenLogicalGroupProperty { lastLogicalGroupProperty };
     CSSPropertyID m_highestSeenLogicalGroupProperty { firstLogicalGroupProperty };
 
-    UncheckedKeyHashMap<AtomString, Property> m_customProperties;
+    HashMap<AtomString, Property> m_customProperties;
 };
 
 inline bool PropertyCascade::hasNormalProperty(CSSPropertyID id) const

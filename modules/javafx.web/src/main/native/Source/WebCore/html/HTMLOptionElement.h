@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
@@ -33,7 +33,7 @@ class HTMLSelectElement;
 enum class AllowStyleInvalidation : bool { No, Yes };
 
 class HTMLOptionElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLOptionElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLOptionElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLOptionElement);
 public:
     static Ref<HTMLOptionElement> create(Document&);
@@ -44,12 +44,11 @@ public:
     void setText(String&&);
 
     WEBCORE_EXPORT HTMLFormElement* form() const;
-    WEBCORE_EXPORT HTMLFormElement* formForBindings() const;
+    RefPtr<HTMLFormElement> formForBindings() const;
 
     WEBCORE_EXPORT int index() const;
 
     WEBCORE_EXPORT String value() const;
-    WEBCORE_EXPORT void setValue(const AtomString&);
 
     WEBCORE_EXPORT bool selected(AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
     WEBCORE_EXPORT void setSelected(bool);
@@ -58,7 +57,6 @@ public:
 
     WEBCORE_EXPORT String label() const;
     WEBCORE_EXPORT String displayLabel() const;
-    WEBCORE_EXPORT void setLabel(const AtomString&);
 
     bool ownElementDisabled() const { return m_disabled; }
 
@@ -71,6 +69,9 @@ public:
 
 private:
     HTMLOptionElement(const QualifiedName&, Document&);
+
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
 
     bool isFocusable() const final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
@@ -85,10 +86,12 @@ private:
     void willResetComputedStyle() final;
 
     String collectOptionInnerText() const;
+    String collectOptionInnerTextCollapsingWhitespace() const;
 
     bool m_disabled { false };
     bool m_isSelected { false };
     bool m_isDefault { false };
+    WeakPtr<HTMLSelectElement, WeakPtrImplWithEventTargetData> m_ownerSelect;
 };
 
 } // namespace

@@ -127,7 +127,7 @@ void LibWebRTCAudioModule::pollAudioData()
 
         pollFromSource();
     }
-    m_queue->dispatchAfter(computeDelayUntilNextPolling(), WTFMove(nextPollFunction));
+    m_queue->dispatchAfter(computeDelayUntilNextPolling(), WTF::move(nextPollFunction));
 }
 
 void LibWebRTCAudioModule::pollFromSource()
@@ -152,7 +152,7 @@ void LibWebRTCAudioModule::pollFromSource()
 BaseAudioMediaStreamTrackRendererUnit& LibWebRTCAudioModule::incomingAudioMediaStreamTrackRendererUnit()
 {
     if (!m_incomingAudioMediaStreamTrackRendererUnit)
-        m_incomingAudioMediaStreamTrackRendererUnit = makeUniqueWithoutRefCountedCheck<IncomingAudioMediaStreamTrackRendererUnit>(*this);
+        lazyInitialize(m_incomingAudioMediaStreamTrackRendererUnit, makeUniqueWithoutRefCountedCheck<IncomingAudioMediaStreamTrackRendererUnit>(*this));
     return *m_incomingAudioMediaStreamTrackRendererUnit;
 }
 #endif

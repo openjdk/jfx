@@ -147,14 +147,14 @@ void JSRopeString::resolveRopeInternalNoSubstring(std::span<CharacterType> buffe
     resolveToBuffer(fiber0(), fiber1(), fiber2(), buffer, stackLimit);
 }
 
-AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) const
+GCOwnedDataScope<AtomStringImpl*> JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto convertToAtomString = [](const String& string) -> AtomString {
+    auto convertToAtomString = [this](const String& string) -> GCOwnedDataScope<AtomStringImpl*> {
         ASSERT(!string.impl() || string.impl()->isAtom());
-        return static_cast<AtomStringImpl*>(string.impl());
+        return { this, static_cast<AtomStringImpl*>(string.impl()) };
     };
 
     if (length() > maxLengthForOnStackResolve) {
@@ -169,25 +169,25 @@ AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) c
     uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
     if (!isSubstring()) {
     if (is8Bit()) {
-            std::array<LChar, maxLengthForOnStackResolve> buffer;
+            std::array<Latin1Character, maxLengthForOnStackResolve> buffer;
             resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
-            atomString = std::span<const LChar> { buffer }.first(length());
+            atomString = std::span<const Latin1Character> { buffer }.first(length());
     } else {
-            std::array<UChar, maxLengthForOnStackResolve> buffer;
+            std::array<char16_t, maxLengthForOnStackResolve> buffer;
             resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
-            atomString = std::span<const UChar> { buffer }.first(length());
+            atomString = std::span<const char16_t> { buffer }.first(length());
     }
     } else
         atomString = StringView { substringBase()->valueInternal() }.substring(substringOffset(), length()).toAtomString();
 
     size_t sizeToReport = atomString.impl()->hasOneRef() ? atomString.impl()->cost() : 0;
-    convertToNonRope(String { atomString });
+    convertToNonRope(String { atomString.releaseImpl() });
     // If we resolved a string that didn't previously exist, notify the heap that we've grown.
     vm.heap.reportExtraMemoryAllocated(this, sizeToReport);
-    return atomString;
+    return { this, static_cast<AtomStringImpl*>(valueInternal().impl()) };
 }
 
-RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObject* globalObject) const
+GCOwnedDataScope<AtomStringImpl*> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -199,21 +199,21 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObj
             existingAtomString = AtomStringImpl::lookUp(newImpl.ptr());
             if (existingAtomString)
                 return Ref { *existingAtomString };
-            return WTFMove(newImpl);
+            return WTF::move(newImpl);
         });
-        RETURN_IF_EXCEPTION(scope, nullptr);
-        return existingAtomString;
+        RETURN_IF_EXCEPTION(scope, { });
+        return { this, existingAtomString.get() };
     }
 
     RefPtr<AtomStringImpl> existingAtomString;
     if (!isSubstring()) {
         uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
     if (is8Bit()) {
-            std::array<LChar, maxLengthForOnStackResolve> buffer;
+            std::array<Latin1Character, maxLengthForOnStackResolve> buffer;
             resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
             existingAtomString = AtomStringImpl::lookUp(std::span { buffer }.first(length()));
     } else {
-            std::array<UChar, maxLengthForOnStackResolve> buffer;
+            std::array<char16_t, maxLengthForOnStackResolve> buffer;
             resolveRopeInternalNoSubstring(std::span { buffer }.first(length()), stackLimit);
             existingAtomString = AtomStringImpl::lookUp(std::span { buffer }.first(length()));
     }
@@ -222,7 +222,7 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObj
 
     if (existingAtomString)
         convertToNonRope(*existingAtomString);
-    return existingAtomString;
+    return { this, existingAtomString.get() };
 }
 
 template<bool reportAllocation, typename Function>
@@ -239,7 +239,7 @@ const String& JSRopeString::resolveRopeWithFunction(JSGlobalObject* nullOrGlobal
     }
 
     if (is8Bit()) {
-        std::span<LChar> buffer;
+        std::span<Latin1Character> buffer;
         auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer);
         if (!newImpl) {
             outOfMemory(nullOrGlobalObjectForOOM);
@@ -255,7 +255,7 @@ const String& JSRopeString::resolveRopeWithFunction(JSGlobalObject* nullOrGlobal
         return valueInternal();
     }
 
-    std::span<UChar> buffer;
+    std::span<char16_t> buffer;
     auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer);
     if (!newImpl) {
         outOfMemory(nullOrGlobalObjectForOOM);
@@ -275,7 +275,7 @@ const String& JSRopeString::resolveRope(JSGlobalObject* nullOrGlobalObjectForOOM
 {
     constexpr bool reportAllocation = true;
     return resolveRopeWithFunction<reportAllocation>(nullOrGlobalObjectForOOM, [] (Ref<StringImpl>&& newImpl) {
-        return WTFMove(newImpl);
+        return WTF::move(newImpl);
     });
 }
 
@@ -283,7 +283,7 @@ const String& JSRopeString::resolveRopeWithoutGC() const
 {
     constexpr bool reportAllocation = false;
     return resolveRopeWithFunction<reportAllocation>(nullptr, [] (Ref<StringImpl>&& newImpl) {
-        return WTFMove(newImpl);
+        return WTF::move(newImpl);
     });
 }
 

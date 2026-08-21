@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include "BackgroundFetchInformation.h"
-#include "NotificationClient.h"
-#include "NotificationEventType.h"
-#include "PushSubscriptionData.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerContextData.h"
-#include "ServiceWorkerFetch.h"
-#include "ServiceWorkerIdentifier.h"
-#include "Settings.h"
-#include "Timer.h"
-#include "WorkerThread.h"
+#include <WebCore/BackgroundFetchInformation.h>
+#include <WebCore/NotificationClient.h>
+#include <WebCore/NotificationEventType.h>
+#include <WebCore/PushSubscriptionData.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerContextData.h>
+#include <WebCore/ServiceWorkerFetch.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/Settings.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WorkerThread.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -52,15 +53,12 @@ struct NotificationPayload;
 
 enum class AdvancedPrivacyProtections : uint16_t;
 
-class ServiceWorkerThread : public WorkerThread {
+class ServiceWorkerThread final : public WorkerThread {
 public:
-    template<typename... Args> static Ref<ServiceWorkerThread> create(Args&&... args)
-    {
-        return adoptRef(*new ServiceWorkerThread(std::forward<Args>(args)...));
-    }
+    static Ref<ServiceWorkerThread> create(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const SettingsValues&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>);
     virtual ~ServiceWorkerThread();
 
-    WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
+    WorkerObjectProxy& workerObjectProxy() const;
 
     void start(Function<void(const String&, bool)>&&);
 
@@ -100,10 +98,11 @@ protected:
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>);
+    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const SettingsValues&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>);
 
     ASCIILiteral threadName() const final { return "WebCore: ServiceWorker"_s; }
     void finishedEvaluatingScript() final;
+    bool isServiceWorkerThread() const final { return true; }
 
     void finishedFiringInstallEvent(bool hasRejectedAnyPromise);
     void finishedFiringActivateEvent();
@@ -119,7 +118,7 @@ private:
     std::optional<ServiceWorkerJobDataIdentifier> m_jobDataIdentifier;
     std::optional<ServiceWorkerContextData> m_contextData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
     std::optional<ServiceWorkerData> m_workerData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
-    WorkerObjectProxy& m_workerObjectProxy;
+    const CheckedRef<WorkerObjectProxy> m_workerObjectProxy;
     bool m_doesHandleFetch { false };
 
     bool m_isHandlingFetchEvent { false };
@@ -139,3 +138,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerThread)
+    static bool isType(const WebCore::WorkerOrWorkletThread& thread) { return thread.isServiceWorkerThread(); }
+SPECIALIZE_TYPE_TRAITS_END()

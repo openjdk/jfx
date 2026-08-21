@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "ExceptionOr.h"
 #include "FetchBody.h"
 #include "Supplementable.h"
 #include <wtf/CheckedRef.h>
@@ -40,6 +39,7 @@ class CachedRawResource;
 class Document;
 class Navigator;
 class ResourceError;
+template<typename> class ExceptionOr;
 
 class NavigatorBeacon final : public Supplement<Navigator>, private CachedRawResourceClient {
     WTF_MAKE_TZONE_ALLOCATED(NavigatorBeacon);
@@ -50,18 +50,27 @@ public:
 
     size_t inflightBeaconsCount() const { return m_inflightBeacons.size(); }
 
-    WEBCORE_EXPORT static NavigatorBeacon* from(Navigator&);
+    WEBCORE_EXPORT static Ref<NavigatorBeacon> from(Navigator&);
+
+    // CachedResourceClient.
+    WEBCORE_EXPORT void ref() const final;
+    WEBCORE_EXPORT void deref() const final;
 
 private:
     ExceptionOr<bool> sendBeacon(Document&, const String& url, std::optional<FetchBody::Init>&&);
 
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorBeacon"_s; }
+    bool isNavigatorBeacon() const final { return true; }
 
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void logError(const ResourceError&);
 
-    CheckedRef<Navigator> m_navigator;
+    const CheckedRef<Navigator> m_navigator;
     Vector<CachedResourceHandle<CachedRawResource>> m_inflightBeacons;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorBeacon)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorBeacon(); }
+SPECIALIZE_TYPE_TRAITS_END()

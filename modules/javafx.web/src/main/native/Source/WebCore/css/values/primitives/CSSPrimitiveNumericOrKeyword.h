@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumeric.h"
+#include <WebCore/CSSPrimitiveNumeric.h>
 
 namespace WebCore {
 namespace CSS {
@@ -51,7 +51,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     }
 
     PrimitiveNumericOrKeyword(Calc calc)
-        : m_data { WTFMove(calc) }
+        : m_data { WTF::move(calc) }
     {
     }
 
@@ -76,11 +76,11 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     }
 
     template<typename... U>
-    constexpr PrimitiveNumericOrKeyword(std::variant<U...>&& variant)
+    constexpr PrimitiveNumericOrKeyword(Variant<U...>&& variant)
         : m_data {
-            WTF::switchOn(WTFMove(variant),
+            WTF::switchOn(WTF::move(variant),
                 [](NumericType&& numeric) {
-                    return Data { WTFMove(numeric.m_data) };
+                    return Data { WTF::move(numeric.m_data) };
                 },
                 [](ValidKeywordForList<Keywords> auto keyword) {
                     return Data { keyword };
@@ -98,7 +98,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     }
 
     PrimitiveNumericOrKeyword(PrimitiveNumericOrKeyword&& other)
-        : m_data { WTFMove(other.m_data) }
+        : m_data { WTF::move(other.m_data) }
     {
     }
 
@@ -110,7 +110,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
 
     PrimitiveNumericOrKeyword& operator=(PrimitiveNumericOrKeyword&& other)
     {
-        m_data = WTFMove(other.m_data);
+        m_data = WTF::move(other.m_data);
         return *this;
     }
 
@@ -122,7 +122,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     }
 
     PrimitiveNumericOrKeyword(NumericType&& other)
-        : m_data { WTFMove(other.m_data) }
+        : m_data { WTF::move(other.m_data) }
     {
     }
 
@@ -134,7 +134,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
 
     PrimitiveNumericOrKeyword& operator=(NumericType&& other)
     {
-        m_data = WTFMove(other);
+        m_data = WTF::move(other);
         return *this;
     }
 
@@ -214,13 +214,8 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     bool isKeyword() const { return m_data.template isKeyword<Keyword>(); }
     bool isEmpty() const { return m_data.isEmpty(); }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const PrimitiveNumericOrKeyword& value) { return value.isEmpty(); }
-        static PrimitiveNumericOrKeyword emptyValue() { return { PrimitiveDataEmptyToken { } }; }
-    };
-
 private:
-    friend struct MarkableTraits;
+    friend struct MarkableTraits<PrimitiveNumericOrKeyword>;
 
     PrimitiveNumericOrKeyword(PrimitiveDataEmptyToken token)
         : m_data { token }
@@ -235,5 +230,15 @@ private:
 
 } // namespace CSS
 } // namespace WebCore
+
+namespace WTF {
+
+template<typename N, typename... Ks>
+struct MarkableTraits<WebCore::CSS::PrimitiveNumericOrKeyword<N, Ks...>> {
+    static bool isEmptyValue(const WebCore::CSS::PrimitiveNumericOrKeyword<N, Ks...>& value) { return value.isEmpty(); }
+    static WebCore::CSS::PrimitiveNumericOrKeyword<N, Ks...> emptyValue() { return { WebCore::CSS::PrimitiveDataEmptyToken { } }; }
+};
+
+} // namespace WTF
 
 template<typename N, typename... Ks> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::PrimitiveNumericOrKeyword<N, Ks...>> = true;

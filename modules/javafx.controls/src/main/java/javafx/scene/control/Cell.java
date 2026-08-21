@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -360,8 +360,6 @@ public class Cell<T> extends Labeled {
          */
         super.focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable property) {
-                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
-
                 // The user has shifted focus, so we should cancel the editing on this cell
                 if (!isFocused() && isEditing()) {
                     cancelEdit();
@@ -765,8 +763,6 @@ public class Cell<T> extends Labeled {
     private static final String DEFAULT_STYLE_CLASS = "cell";
     private static final PseudoClass PSEUDO_CLASS_SELECTED =
             PseudoClass.getPseudoClass("selected");
-    private static final PseudoClass PSEUDO_CLASS_FOCUSED =
-            PseudoClass.getPseudoClass("focused");
     private static final PseudoClass PSEUDO_CLASS_EMPTY =
             PseudoClass.getPseudoClass("empty");
     private static final PseudoClass PSEUDO_CLASS_FILLED =

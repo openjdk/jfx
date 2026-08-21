@@ -31,9 +31,10 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticatorSupportedOptions.h"
-#include "AuthenticatorTransport.h"
-#include "FidoConstants.h"
+#include <WebCore/AuthenticatorSupportedOptions.h>
+#include <WebCore/AuthenticatorTransport.h>
+#include <WebCore/FidoConstants.h>
+#include <WebCore/PublicKeyCredentialParameters.h>
 #include <wtf/StdSet.h>
 
 namespace fido {
@@ -50,34 +51,42 @@ public:
     AuthenticatorGetInfoResponse& operator=(AuthenticatorGetInfoResponse&& other) = default;
 
     AuthenticatorGetInfoResponse& setMaxMsgSize(uint32_t);
-    AuthenticatorGetInfoResponse& setPinProtocols(Vector<uint8_t>&&);
+    AuthenticatorGetInfoResponse& setPinProtocols(StdSet<PINUVAuthProtocol>&&);
     AuthenticatorGetInfoResponse& setExtensions(Vector<String>&&);
     AuthenticatorGetInfoResponse& setOptions(AuthenticatorSupportedOptions&&);
     AuthenticatorGetInfoResponse& setTransports(Vector<WebCore::AuthenticatorTransport>&&);
     AuthenticatorGetInfoResponse& setRemainingDiscoverableCredentials(uint32_t);
     AuthenticatorGetInfoResponse& setMinPINLength(uint32_t);
 
+    AuthenticatorGetInfoResponse& setMaxCredentialCountInList(uint32_t);
+    AuthenticatorGetInfoResponse& setMaxCredentialIDLength(uint32_t);
 
     const StdSet<ProtocolVersion>& versions() const { return m_versions; }
     const Vector<uint8_t>& aaguid() const { return m_aaguid; }
     const std::optional<uint32_t>& maxMsgSize() const { return m_maxMsgSize; }
-    const std::optional<Vector<uint8_t>>& pinProtocol() const { return m_pinProtocols; }
+    const std::optional<StdSet<PINUVAuthProtocol>>& pinProtocol() const { return m_pinProtocols; }
     const std::optional<Vector<String>>& extensions() const { return m_extensions; }
     const AuthenticatorSupportedOptions& options() const { return m_options; }
     AuthenticatorSupportedOptions& mutableOptions() { return m_options; }
     const std::optional<Vector<WebCore::AuthenticatorTransport>>& transports() const { return m_transports; }
+    const std::optional<Vector<WebCore::PublicKeyCredentialParameters>>& algorithms() const { return m_algorithms; }
     const std::optional<uint32_t>& remainingDiscoverableCredentials() const { return m_remainingDiscoverableCredentials; }
     const std::optional<uint32_t>& minPINLength() const { return m_minPINLength; }
+    const std::optional<uint32_t>& maxCredentialCountInList() const { return m_maxCredentialCountInList; }
+    const std::optional<uint32_t>& maxCredentialIDLength() const { return m_maxCredentialIdLength; }
 
 private:
     StdSet<ProtocolVersion> m_versions;
     Vector<uint8_t> m_aaguid;
     std::optional<uint32_t> m_maxMsgSize;
-    std::optional<Vector<uint8_t>> m_pinProtocols;
+    std::optional<StdSet<PINUVAuthProtocol>> m_pinProtocols;
+    std::optional<uint32_t> m_maxCredentialCountInList;
+    std::optional<uint32_t> m_maxCredentialIdLength;
     std::optional<Vector<String>> m_extensions;
     AuthenticatorSupportedOptions m_options;
     std::optional<Vector<WebCore::AuthenticatorTransport>> m_transports;
     std::optional<uint32_t> m_minPINLength;
+    std::optional<Vector<WebCore::PublicKeyCredentialParameters>> m_algorithms;
     std::optional<uint32_t> m_remainingDiscoverableCredentials;
 };
 

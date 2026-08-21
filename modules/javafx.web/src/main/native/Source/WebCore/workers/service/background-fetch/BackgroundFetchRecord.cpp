@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,18 +34,13 @@ namespace WebCore {
 
 BackgroundFetchRecord::BackgroundFetchRecord(ScriptExecutionContext& context, BackgroundFetchRecordInformation&& information)
     : m_responseReadyPromise(makeUniqueRef<ResponseReadyPromise>())
-    , m_request(FetchRequest::create(context, { }, FetchHeaders::create(information.guard, WTFMove(information.httpHeaders)), WTFMove(information.internalRequest), WTFMove(information.options), WTFMove(information.referrer)))
+    , m_request(FetchRequest::create(context, { }, FetchHeaders::create(information.guard, WTF::move(information.httpHeaders)), WTF::move(information.internalRequest), WTF::move(information.options), WTF::move(information.referrer)))
 {
     // FIXME: We should provide a body to the request.
 }
 
 BackgroundFetchRecord::~BackgroundFetchRecord()
 {
-}
-
-Ref<FetchRequest> BackgroundFetchRecord::request()
-{
-    return m_request;
 }
 
 void BackgroundFetchRecord::settleResponseReadyPromise(ExceptionOr<Ref<FetchResponse>>&& result)

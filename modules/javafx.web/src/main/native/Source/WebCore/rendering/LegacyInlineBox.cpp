@@ -28,7 +28,8 @@
 #include "RenderBlockFlow.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -38,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyInlineBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyInlineBox);
 
 struct SameSizeAsLegacyInlineBox {
     virtual ~SameSizeAsLegacyInlineBox() = default;
@@ -83,6 +84,11 @@ void LegacyInlineBox::invalidateParentChildList()
 }
 
 #endif
+
+const RenderStyle& LegacyInlineBox::lineStyle() const
+{
+    return m_bitfields.firstLine() ? renderer().firstLineStyle() : renderer().style();
+}
 
 void LegacyInlineBox::removeFromParent()
 {
@@ -144,16 +150,6 @@ float LegacyInlineBox::logicalHeight() const
     if (parent())
         result += flowObject->borderAndPaddingLogicalHeight();
     return result;
-}
-
-LayoutUnit LegacyInlineBox::baselinePosition(FontBaseline baselineType) const
-{
-    return boxModelObject()->baselinePosition(baselineType, m_bitfields.firstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
-}
-
-LayoutUnit LegacyInlineBox::lineHeight() const
-{
-    return boxModelObject()->lineHeight(m_bitfields.firstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
 
 int LegacyInlineBox::caretMinOffset() const
@@ -250,40 +246,49 @@ void LegacyInlineBox::clearKnownToHaveNoOverflow()
 
 FloatPoint LegacyInlineBox::locationIncludingFlipping() const
 {
-    if (!renderer().writingMode().isBlockFlipped())
+    auto& rootContainer = root().blockFlow();
+    auto writingMode = rootContainer.writingMode();
+    if (!writingMode.isBlockFlipped())
         return topLeft();
-    RenderBlockFlow& block = root().blockFlow();
-    if (block.writingMode().isHorizontal())
-        return { x(), block.height() - height() - y() };
-    return { block.width() - width() - x(), y() };
+    if (writingMode.isHorizontal())
+        return { x(), rootContainer.height() - height() - y() };
+    return { rootContainer.width() - width() - x(), y() };
 }
 
 void LegacyInlineBox::flipForWritingMode(FloatRect& rect) const
 {
-    if (!renderer().writingMode().isBlockFlipped())
+    auto& rootContainer = root().blockFlow();
+    auto writingMode = rootContainer.writingMode();
+    if (!writingMode.isBlockFlipped())
         return;
-    root().blockFlow().flipForWritingMode(rect);
+    rootContainer.flipForWritingMode(rect);
 }
 
 FloatPoint LegacyInlineBox::flipForWritingMode(const FloatPoint& point) const
 {
-    if (!renderer().writingMode().isBlockFlipped())
+    auto& rootContainer = root().blockFlow();
+    auto writingMode = rootContainer.writingMode();
+    if (!writingMode.isBlockFlipped())
         return point;
-    return root().blockFlow().flipForWritingMode(point);
+    return rootContainer.flipForWritingMode(point);
 }
 
 void LegacyInlineBox::flipForWritingMode(LayoutRect& rect) const
 {
-    if (!renderer().writingMode().isBlockFlipped())
+    auto& rootContainer = root().blockFlow();
+    auto writingMode = rootContainer.writingMode();
+    if (!writingMode.isBlockFlipped())
         return;
-    root().blockFlow().flipForWritingMode(rect);
+    rootContainer.flipForWritingMode(rect);
 }
 
 LayoutPoint LegacyInlineBox::flipForWritingMode(const LayoutPoint& point) const
 {
-    if (!renderer().writingMode().isBlockFlipped())
+    auto& rootContainer = root().blockFlow();
+    auto writingMode = rootContainer.writingMode();
+    if (!writingMode.isBlockFlipped())
         return point;
-    return root().blockFlow().flipForWritingMode(point);
+    return rootContainer.flipForWritingMode(point);
 }
 
 } // namespace WebCore

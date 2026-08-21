@@ -31,6 +31,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -171,6 +172,21 @@ public class TextFlowTest {
         // new implementation accounts for insets and line spacing
         checkNear(f.getCaretShape(first, true), 99, 99, 2, 14);
         checkNear(f.getCaretShape(second, true), 99, 161, 2, 14);
+    }
+
+    @Test
+    public void caretShapeNonText() {
+        TextFlow f = new TextFlow(text("\t"));
+        checkNear(f.caretShape(0, true), -1, -1, 2, 14);
+        checkNear(f.caretShape(0, false), 95, -1, 2, 14);
+
+        Region r = new Region();
+        r.setMaxWidth(100);
+        r.setMinWidth(100);
+        f.getChildren().add(r);
+
+        checkNear(f.caretShape(1, true), 95, -1, 2, 14);
+        checkNear(f.caretShape(1, false), 195, -1, 2, 14);
     }
 
     @Test

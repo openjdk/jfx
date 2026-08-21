@@ -22,9 +22,12 @@
 
 #if USE(ATSPI)
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
+#include "RenderElementInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <gio/gio.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
@@ -94,9 +97,9 @@ String AccessibilityObjectAtspi::documentAttribute(const String& name) const
     return { };
 }
 
-UncheckedKeyHashMap<String, String> AccessibilityObjectAtspi::documentAttributes() const
+HashMap<String, String> AccessibilityObjectAtspi::documentAttributes() const
 {
-    UncheckedKeyHashMap<String, String> map;
+    HashMap<String, String> map;
     if (!m_coreObject)
         return map;
 
@@ -109,15 +112,15 @@ UncheckedKeyHashMap<String, String> AccessibilityObjectAtspi::documentAttributes
 
     auto charset = document->charset();
     if (!charset.isEmpty())
-        map.add("Encoding"_s, WTFMove(charset));
+        map.add("Encoding"_s, WTF::move(charset));
 
     auto uri = document->documentURI();
     if (!uri.isEmpty())
-        map.add("URI"_s, WTFMove(uri));
+        map.add("URI"_s, WTF::move(uri));
 
     auto contentType = document->contentType();
     if (!contentType.isEmpty())
-        map.add("MimeType"_s, WTFMove(contentType));
+        map.add("MimeType"_s, WTF::move(contentType));
 
     const auto& title = document->title();
     if (!title.isEmpty())

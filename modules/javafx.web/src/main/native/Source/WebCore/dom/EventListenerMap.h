@@ -32,18 +32,30 @@
 
 #pragma once
 
-#include "RegisteredEventListener.h"
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/RegisteredEventListener.h>
 #include <atomic>
 #include <memory>
+#include <wtf/Assertions.h>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/Locker.h>
+#include <wtf/Platform.h>
+#include <wtf/Threading.h>
+#include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
+
+#if PLATFORM(IOS_FAMILY)
+#include <WebCore/WebCoreThread.h>
+#endif
 
 namespace WebCore {
 
 class EventTarget;
 
-using EventListenerVector = Vector<RefPtr<RegisteredEventListener>, 1, CrashOnOverflow, 2>;
+using EventListenerVector = Vector<Ref<RegisteredEventListener>, 1, CrashOnOverflow, 2>;
 
 class EventListenerMap {
 public:
@@ -57,6 +69,7 @@ public:
     void clear();
     void clearEntriesForTearDown()
     {
+        releaseAssertOrSetThreadUID();
         m_entries.clear();
     }
 
@@ -68,14 +81,14 @@ public:
     Vector<AtomString> eventTypes() const;
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(CallbackType callback) const
+    void enumerateEventListenerTypes(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries)
             callback(entry.first, entry.second.size());
     }
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(CallbackType callback) const
+    bool containsMatchingEventListener(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries) {
             if (callback(entry.first, m_entries))
@@ -91,8 +104,25 @@ public:
     Lock& lock() { return m_lock; }
 
 private:
+    void releaseAssertOrSetThreadUID()
+    {
+#if PLATFORM(IOS_FAMILY)
+        if (WebThreadIsEnabled())
+            return;
+#endif
+        if (!m_threadUID) {
+            ASSERT(!Thread::mayBeGCThread());
+            m_threadUID = Thread::currentSingleton().uid();
+            return;
+        }
+        if (m_threadUID == Thread::currentSingleton().uid()) [[likely]]
+            return;
+        RELEASE_ASSERT(Thread::mayBeGCThread());
+    }
+
     Vector<std::pair<AtomString, EventListenerVector>, 0, CrashOnOverflow, 4> m_entries;
     Lock m_lock;
+    uint32_t m_threadUID { 0 };
 };
 
 template<typename Visitor>

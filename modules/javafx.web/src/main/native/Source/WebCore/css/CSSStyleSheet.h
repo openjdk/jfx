@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,15 +20,16 @@
 
 #pragma once
 
-#include "CSSRuleList.h"
-#include "CommonAtomStrings.h"
-#include "ExceptionOr.h"
-#include "MediaList.h"
-#include "MediaQuery.h"
-#include "StyleSheet.h"
+#include <WebCore/CSSRuleList.h>
+#include <WebCore/CommonAtomStrings.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/MediaList.h>
+#include <WebCore/MediaQuery.h>
+#include <WebCore/StyleSheet.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 #include <memory>
-#include <variant>
 #include <wtf/CheckedPtr.h>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -62,7 +63,7 @@ class CSSStyleSheet final : public StyleSheet, public CanMakeSingleThreadWeakPtr
 public:
     struct Init {
         String baseURL;
-        std::variant<RefPtr<MediaList>, String> media { emptyString() };
+        Variant<RefPtr<MediaList>, String> media { emptyString() };
         bool disabled { false };
     };
     static Ref<CSSStyleSheet> create(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule = nullptr, std::optional<bool>isOriginClean = std::nullopt);
@@ -106,10 +107,11 @@ public:
     URL baseURL() const final;
     bool isLoading() const final;
 
-    void clearOwnerRule() { m_ownerRule = nullptr; }
+    void clearOwnerRule();
 
     void removeAdoptingTreeScope(ContainerNode&);
     void addAdoptingTreeScope(ContainerNode&);
+    const WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData>& adoptingTreeScopes() const { return m_adoptingTreeScopes; }
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -133,7 +135,7 @@ public:
         ~RuleMutationScope();
 
     private:
-        CSSStyleSheet* m_styleSheet;
+        RefPtr<CSSStyleSheet> m_styleSheet;
         RuleMutationType m_mutationType;
         ContentsClonedForMutation m_contentsClonedForMutation;
         RefPtr<StyleRuleKeyframes> m_insertedKeyframesRule;
@@ -160,7 +162,9 @@ public:
 
     String debugDescription() const final;
     String cssText(const CSS::SerializationContext&);
-    void getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>&);
+    void getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>&);
+
+    WebCoreOpaqueRoot opaqueRootForGCThread() override;
 
     bool isDetached() const;
 
@@ -188,8 +192,9 @@ private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_constructorDocument;
     WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData> m_adoptingTreeScopes;
 
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> m_ownerNode;
-    WeakPtr<CSSImportRule> m_ownerRule;
+    mutable Lock m_opaqueRootLockForGC;
+    CheckedPtr<Node> m_ownerNode;
+    CheckedPtr<CSSImportRule> m_ownerRule;
 
     TextPosition m_startPosition;
 

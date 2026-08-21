@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "Document.h"
 #include "Editing.h"
+#include "EditingInlines.h"
 #include "EditingStyle.h"
 #include "ElementInlines.h"
 #include "HTMLBRElement.h"
@@ -36,6 +37,8 @@
 #include "InsertLineBreakCommand.h"
 #include "NodeName.h"
 #include "NodeTraversal.h"
+#include "PositionInlines.h"
+#include "RenderObjectStyle.h"
 #include "RenderText.h"
 #include "Text.h"
 #include "VisibleUnits.h"
@@ -62,7 +65,7 @@ static RefPtr<Element> highestVisuallyEquivalentDivBelowRoot(Element* startBlock
 }
 
 InsertParagraphSeparatorCommand::InsertParagraphSeparatorCommand(Ref<Document>&& document, bool mustUseDefaultParagraphElement, bool pasteBlockqutoeIntoUnquotedArea, EditAction editingAction)
-    : CompositeEditCommand(WTFMove(document), editingAction)
+    : CompositeEditCommand(WTF::move(document), editingAction)
     , m_mustUseDefaultParagraphElement(mustUseDefaultParagraphElement)
     , m_pasteBlockqutoeIntoUnquotedArea(pasteBlockqutoeIntoUnquotedArea)
 {
@@ -82,7 +85,7 @@ void InsertParagraphSeparatorCommand::calculateStyleBeforeInsertion(const Positi
     if (!isStartOfParagraph(visiblePosition) && !isEndOfParagraph(visiblePosition))
         return;
 
-    m_style = EditingStyle::create(position, EditingStyle::EditingPropertiesInEffect);
+    m_style = EditingStyle::create(position, EditingStyle::PropertiesToInclude::EditingPropertiesInEffect);
     protectedStyle()->mergeTypingStyle(*position.document());
 }
 
@@ -97,7 +100,7 @@ void InsertParagraphSeparatorCommand::applyStyleAfterInsertion(Node* originalEnc
         originalEnclosingBlock->hasTagName(h5Tag))
         return;
 
-    auto style = protectedStyle();
+    RefPtr style = m_style;
     if (!style)
         return;
 
@@ -122,27 +125,27 @@ bool InsertParagraphSeparatorCommand::shouldUseDefaultParagraphElement(Node* enc
            enclosingBlock->hasTagName(h5Tag);
 }
 
-void InsertParagraphSeparatorCommand::getAncestorsInsideBlock(const Node* insertionNode, Element* outerBlock, Vector<RefPtr<Element>>& ancestors)
+void InsertParagraphSeparatorCommand::getAncestorsInsideBlock(const Node* insertionNode, Element* outerBlock, Vector<Ref<Element>>& ancestors)
 {
     ancestors.clear();
 
     // Build up list of ancestors elements between the insertion node and the outer block.
     if (insertionNode != outerBlock) {
-        for (Element* n = insertionNode->parentElement(); n && n != outerBlock; n = n->parentElement())
-            ancestors.append(n);
+        for (RefPtr element = insertionNode->parentElement(); element && element != outerBlock; element = element->parentElement())
+            ancestors.append(*element);
     }
 }
 
-Ref<Element> InsertParagraphSeparatorCommand::cloneHierarchyUnderNewBlock(const Vector<RefPtr<Element>>& ancestors, Ref<Element>&& blockToInsert)
+Ref<Element> InsertParagraphSeparatorCommand::cloneHierarchyUnderNewBlock(const Vector<Ref<Element>>& ancestors, Ref<Element>&& blockToInsert)
 {
     // Make clones of ancestors in between the start node and the start block.
-    RefPtr<Element> parent = WTFMove(blockToInsert);
+    RefPtr<Element> parent = WTF::move(blockToInsert);
     for (size_t i = ancestors.size(); i != 0; --i) {
         auto child = ancestors[i - 1]->cloneElementWithoutChildren(document(), nullptr);
         // It should always be okay to remove id from the cloned elements, since the originals are not deleted.
         child->removeAttribute(idAttr);
         appendNode(child.copyRef(), parent.releaseNonNull());
-        parent = WTFMove(child);
+        parent = WTF::move(child);
     }
 
     return parent.releaseNonNull();
@@ -242,7 +245,7 @@ void InsertParagraphSeparatorCommand::doApply()
         affinity = endingSelection().affinity();
     }
 
-    auto document = protectedDocument();
+    Ref document = this->document();
     // FIXME: The parentAnchoredEquivalent conversion needs to be moved into enclosingBlock.
     RefPtr<Element> startBlock = enclosingBlock(insertionPosition.parentAnchoredEquivalent().protectedContainerNode());
     Position canonicalPos = VisiblePosition(insertionPosition).deepEquivalent();
@@ -255,7 +258,7 @@ void InsertParagraphSeparatorCommand::doApply()
         // FIXME: If the node is hidden, we don't have a canonical position so we will do the wrong thing for tables and <hr>. https://bugs.webkit.org/show_bug.cgi?id=40342
         || (!canonicalPos.isNull() && canonicalPos.deprecatedNode()->renderer() && canonicalPos.deprecatedNode()->renderer()->isRenderTable())
         || (!canonicalPos.isNull() && canonicalPos.deprecatedNode()->hasTagName(hrTag))) {
-        applyCommandToComposite(InsertLineBreakCommand::create(WTFMove(document)));
+        applyCommandToComposite(InsertLineBreakCommand::create(WTF::move(document)));
         return;
     }
 
@@ -311,7 +314,7 @@ void InsertParagraphSeparatorCommand::doApply()
                 // represent the paragraph that we're leaving.
                 auto extraBlock = createDefaultParagraphElement(document);
                 appendNode(extraBlock.copyRef(), *startBlock);
-                if (!appendBlockPlaceholder(WTFMove(extraBlock)))
+                if (!appendBlockPlaceholder(WTF::move(extraBlock)))
                     return;
             }
             appendNode(*blockToInsert, *startBlock);
@@ -320,7 +323,7 @@ void InsertParagraphSeparatorCommand::doApply()
             // into an unquoted area. We then don't want the newline within the blockquote or else it will also be quoted.
             if (m_pasteBlockqutoeIntoUnquotedArea) {
                 if (RefPtr highestBlockquote = highestEnclosingNodeOfType(canonicalPos, &isMailBlockquote))
-                    startBlock = downcast<Element>(WTFMove(highestBlockquote));
+                    startBlock = downcast<Element>(WTF::move(highestBlockquote));
             }
 
             // Most of the time we want to stay at the nesting level of the startBlock (e.g., when nesting within lists).  However,
@@ -333,7 +336,7 @@ void InsertParagraphSeparatorCommand::doApply()
 
         // Recreate the same structure in the new paragraph.
 
-        Vector<RefPtr<Element>> ancestors;
+        Vector<Ref<Element>> ancestors;
         getAncestorsInsideBlock(positionOutsideTabSpan(insertionPosition).deprecatedNode(), startBlock.get(), ancestors);
         Ref parent = cloneHierarchyUnderNewBlock(ancestors, *blockToInsert);
 
@@ -372,11 +375,11 @@ void InsertParagraphSeparatorCommand::doApply()
 
         // Recreate the same structure in the new paragraph.
 
-        Vector<RefPtr<Element>> ancestors;
+        Vector<Ref<Element>> ancestors;
         getAncestorsInsideBlock(positionAvoidingSpecialElementBoundary(positionOutsideTabSpan(insertionPosition)).deprecatedNode(), startBlock.get(), ancestors);
 
         auto parent = cloneHierarchyUnderNewBlock(ancestors, *blockToInsert);
-        if (!appendBlockPlaceholder(WTFMove(parent)))
+        if (!appendBlockPlaceholder(WTF::move(parent)))
             return;
 
         // In this case, we need to set the new ending selection.
@@ -399,7 +402,7 @@ void InsertParagraphSeparatorCommand::doApply()
         insertionPosition = positionInParentAfterNode(br.ptr());
         // If the insertion point is a break element, there is nothing else
         // we need to do.
-        if (auto* renderer = visiblePos.deepEquivalent().anchorNode()->renderer(); renderer && renderer->isBR()) {
+        if (CheckedPtr renderer = visiblePos.deepEquivalent().anchorNode()->renderer(); renderer && renderer->isBR()) {
             setEndingSelection(VisibleSelection(VisiblePosition(insertionPosition, Affinity::Downstream), endingSelection().directionality()));
             return;
         }

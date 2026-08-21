@@ -26,12 +26,15 @@
 #include "config.h"
 #include "ServiceWorker.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MessagePort.h"
 #include "SWClientConnection.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SerializedScriptValue.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerContainer.h"
@@ -50,20 +53,20 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorker);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorker);
 
 Ref<ServiceWorker> ServiceWorker::getOrCreate(ScriptExecutionContext& context, ServiceWorkerData&& data)
 {
-    if (auto existingServiceWorker = context.serviceWorker(data.identifier))
-        return *existingServiceWorker;
-    auto serviceWorker = adoptRef(*new ServiceWorker(context, WTFMove(data)));
+    if (RefPtr existingServiceWorker = context.serviceWorker(data.identifier))
+        return existingServiceWorker.releaseNonNull();
+    Ref serviceWorker = adoptRef(*new ServiceWorker(context, WTF::move(data)));
     serviceWorker->suspendIfNeeded();
     return serviceWorker;
 }
 
 ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&& data)
     : ActiveDOMObject(&context)
-    , m_data(WTFMove(data))
+    , m_data(WTF::move(data))
 {
     context.registerServiceWorker(*this);
 
@@ -75,7 +78,10 @@ ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&
 
 ServiceWorker::~ServiceWorker()
 {
-    if (auto* context = scriptExecutionContext())
+    if (m_isStopped)
+        return;
+
+    if (RefPtr context = scriptExecutionContext())
         context->unregisterServiceWorker(*this);
 }
 
@@ -94,9 +100,14 @@ void ServiceWorker::updateState(State state)
 SWClientConnection& ServiceWorker::swConnection()
 {
     ASSERT(scriptExecutionContext());
-    if (auto* worker = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext()))
+    if (RefPtr worker = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext()))
         return worker->swClientConnection();
     return ServiceWorkerProvider::singleton().serviceWorkerConnection();
+}
+
+Ref<SWClientConnection> ServiceWorker::protectedSWConnection()
+{
+    return swConnection();
 }
 
 ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
@@ -105,25 +116,25 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
         return Exception { ExceptionCode::InvalidStateError };
 
     Vector<Ref<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
+    auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTF::move(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
     // Disentangle the port in preparation for sending it to the remote context.
-    auto portsOrException = MessagePort::disentanglePorts(WTFMove(ports));
+    auto portsOrException = MessagePort::disentanglePorts(WTF::move(ports));
     if (portsOrException.hasException())
         return portsOrException.releaseException();
 
-    auto& context = *scriptExecutionContext();
+    Ref context = *scriptExecutionContext();
     // FIXME: Maybe we could use a ScriptExecutionContextIdentifier for service workers too.
     ServiceWorkerOrClientIdentifier sourceIdentifier = [&]() -> ServiceWorkerOrClientIdentifier {
-    if (auto* serviceWorker = dynamicDowncast<ServiceWorkerGlobalScope>(context))
-            return serviceWorker->thread().identifier();
-        return context.identifier();
+        if (RefPtr serviceWorker = dynamicDowncast<ServiceWorkerGlobalScope>(context))
+            return serviceWorker->thread()->identifier();
+        return context->identifier();
     }();
 
     MessageWithMessagePorts message { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
-    swConnection().postMessageToServiceWorker(identifier(), WTFMove(message), sourceIdentifier);
+    protectedSWConnection()->postMessageToServiceWorker(identifier(), WTF::move(message), sourceIdentifier);
     return { };
 }
 
@@ -141,7 +152,7 @@ void ServiceWorker::stop()
 {
     m_isStopped = true;
     removeAllEventListeners();
-    scriptExecutionContext()->unregisterServiceWorker(*this);
+    protectedScriptExecutionContext()->unregisterServiceWorker(*this);
     updatePendingActivityForEventDispatch();
 }
 

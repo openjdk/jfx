@@ -31,12 +31,13 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext& context)
+RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, CSS::PropertyParserState& state)
 {
     // Standard says this should be:
     //
@@ -54,7 +55,7 @@ RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext& c
     CSSParserToken token = args.consumeIncludingWhitespace();
 
     AtomString attrName;
-    if (context.isHTMLDocument)
+    if (state.context.isHTMLDocument)
         attrName = token.value().convertToASCIILowercaseAtom();
     else
         attrName = token.value().toAtomString();
@@ -71,10 +72,10 @@ RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext& c
     if (!args.atEnd())
         return nullptr;
 
-    auto attr = CSSAttrValue::create(WTFMove(attrName), WTFMove(fallback));
+    auto attr = CSSAttrValue::create(WTF::move(attrName), WTF::move(fallback));
     // FIXME: Consider moving to a CSSFunctionValue with a custom-ident rather than a special CSS_ATTR primitive value.
 
-    return CSSPrimitiveValue::create(WTFMove(attr));
+    return CSSPrimitiveValue::create(WTF::move(attr));
 }
 
 } // namespace CSSPropertyParserHelpers

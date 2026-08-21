@@ -28,8 +28,10 @@
 #include "FloatRect.h"
 #include "GeometryUtilities.h"
 #include "Path.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
+#include <numbers>
 #include <wtf/TinyLRUCache.h>
 
 namespace WebCore {
@@ -62,14 +64,14 @@ static const WebCore::Path& cachedCirclePath(const FloatRect& rect)
 
 FloatPoint resolvePosition(const Circle& value, FloatSize boundingBox)
 {
-    return value.position ? evaluate(*value.position, boundingBox) : FloatPoint { boundingBox.width() / 2, boundingBox.height() / 2 };
+    return value.position ? evaluate<FloatPoint>(*value.position, boundingBox, Style::ZoomNeeded { }) : FloatPoint { boundingBox.width() / 2, boundingBox.height() / 2 };
 }
 
 float resolveRadius(const Circle& value, FloatSize boxSize, FloatPoint center)
 {
     return WTF::switchOn(value.radius,
         [&](const Circle::Length& length) -> float {
-            return evaluate(length, boxSize.diagonalLength() / sqrtOfTwoFloat);
+            return evaluate<float>(length, boxSize.diagonalLength() / std::numbers::sqrt2_v<float>, Style::ZoomNeeded { });
         },
         [&](const Circle::Extent& extent) -> float {
             return WTF::switchOn(extent,
@@ -112,7 +114,7 @@ WebCore::Path PathComputation<Circle>::operator()(const Circle& value, const Flo
 auto Blending<Circle>::canBlend(const Circle& a, const Circle& b) -> bool
 {
     auto canBlendRadius = [](const auto& radiusA, const auto& radiusB) {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [](const Circle::Length&, const Circle::Length&) {
                 return true;
             },
@@ -130,7 +132,7 @@ auto Blending<Circle>::canBlend(const Circle& a, const Circle& b) -> bool
 auto Blending<Circle>::blend(const Circle& a, const Circle& b, const BlendingContext& context) -> Circle
 {
     auto blendRadius = [](const auto& radiusA, const auto& radiusB, const BlendingContext& context) -> Circle::RadialSize {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&](const Circle::Length& lengthA, const Circle::Length& lengthB) -> Circle::RadialSize {
                 return WebCore::Style::blend(lengthA, lengthB, context);
             },

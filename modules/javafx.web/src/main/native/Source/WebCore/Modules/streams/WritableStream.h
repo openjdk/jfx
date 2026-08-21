@@ -25,17 +25,19 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/JSDOMGlobalObject.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Exception;
 class InternalWritableStream;
 class JSDOMGlobalObject;
 class WritableStreamSink;
+template<typename> class ExceptionOr;
 
 class WritableStream : public RefCountedAndCanMakeWeakPtr<WritableStream> {
 public:
@@ -50,20 +52,26 @@ public:
 
     void closeIfPossible();
     void errorIfPossible(Exception&&);
+    void errorIfPossible(JSC::JSGlobalObject&, JSC::JSValue);
 
     InternalWritableStream& internalWritableStream();
-    enum class Type : bool {
+    enum class Type : uint8_t {
         Default,
-        FileSystem
+        FileSystem,
+        WebTransport,
+        WebTransportDatagrams,
     };
     virtual Type type() const { return Type::Default; }
+
+    enum class State : uint8_t { Writable, Closed, Errored };
+    State state() const;
 
 protected:
     static ExceptionOr<Ref<WritableStream>> create(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue);
     static ExceptionOr<Ref<InternalWritableStream>> createInternalWritableStream(JSDOMGlobalObject&, Ref<WritableStreamSink>&&);
     explicit WritableStream(Ref<InternalWritableStream>&&);
 private:
-    Ref<InternalWritableStream> m_internalWritableStream;
+    const Ref<InternalWritableStream> m_internalWritableStream;
 };
 
 } // namespace WebCore

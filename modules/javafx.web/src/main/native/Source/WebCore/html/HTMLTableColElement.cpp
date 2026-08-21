@@ -25,18 +25,20 @@
 #include "config.h"
 #include "HTMLTableColElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCol.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableColElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableColElement);
 
 const unsigned defaultSpan { 1 };
 const unsigned minSpan { 1 };
@@ -85,7 +87,7 @@ void HTMLTableColElement::attributeChanged(const QualifiedName& name, const Atom
             if (CheckedPtr col = dynamicDowncast<RenderTableCol>(renderer())) {
                 int newWidth = parseHTMLInteger(newValue).value_or(0);
                 if (newWidth != col->width())
-                    col->setNeedsLayoutAndPrefWidthsRecalc();
+                    col->setNeedsLayoutAndPreferredWidthsUpdate();
             }
         }
     }

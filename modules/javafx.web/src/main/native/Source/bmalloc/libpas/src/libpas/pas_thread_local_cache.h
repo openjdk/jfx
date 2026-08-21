@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,11 @@
 #include "pas_malloc_stack_logging.h"
 #include "pas_segregated_page_config_kind_and_role.h"
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_zero_memory.h"
+
+#include "pas_thread.h"
+
+#if LIBPAS_ENABLED
 
 #define PAS_THREAD_LOCAL_CACHE_DESTROYED 1
 
@@ -85,7 +89,11 @@ PAS_API extern pas_fast_tls pas_thread_local_cache_fast_tls;
 #endif
 
 #if PAS_HAVE_THREAD_KEYWORD
+#if PAS_OS(WINDOWS)
+PAS_API extern __declspec(thread) void* pas_thread_local_cache_pointer;
+#else
 PAS_API extern __thread void* pas_thread_local_cache_pointer;
+#endif
 #define PAS_THREAD_LOCAL_KEY pas_thread_local_cache_pointer
 #endif
 
@@ -426,5 +434,5 @@ PAS_API void pas_thread_local_cache_shrink(pas_thread_local_cache* thread_local_
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_THREAD_LOCAL_CACHE_H */
-

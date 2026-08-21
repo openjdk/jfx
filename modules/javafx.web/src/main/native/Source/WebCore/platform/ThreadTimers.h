@@ -27,6 +27,7 @@
 #ifndef ThreadTimers_h
 #define ThreadTimers_h
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
@@ -41,7 +42,7 @@ class ThreadTimers;
 class TimerBase;
 
 struct ThreadTimerHeapItem;
-typedef Vector<RefPtr<ThreadTimerHeapItem>> ThreadTimerHeap;
+using ThreadTimerHeap = Vector<Ref<ThreadTimerHeapItem>>;
 
 // A collection of timers per thread. Kept in ThreadGlobalData.
 class ThreadTimers {
@@ -65,11 +66,13 @@ public:
     unsigned nextHeapInsertionCount() { return m_currentHeapInsertionOrder++; }
 
 private:
+    inline CheckedPtr<SharedTimer> checkedSharedTimer();
+
     void sharedTimerFiredInternal();
     void fireTimersInNestedEventLoopInternal();
 
     ThreadTimerHeap m_timerHeap;
-    SharedTimer* m_sharedTimer { nullptr }; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
+    CheckedPtr<SharedTimer> m_sharedTimer; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
     bool m_firingTimers { false };
     bool m_shouldBreakFireLoopForRenderingUpdate { false };
     unsigned m_currentHeapInsertionOrder { 0 };
@@ -77,7 +80,7 @@ private:
 };
 
 struct ThreadTimerHeapItem : ThreadSafeRefCounted<ThreadTimerHeapItem> {
-    WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED(ThreadTimerHeapItem);
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(ThreadTimerHeapItem);
 
 public:
     static RefPtr<ThreadTimerHeapItem> create(TimerBase&, MonotonicTime, unsigned);

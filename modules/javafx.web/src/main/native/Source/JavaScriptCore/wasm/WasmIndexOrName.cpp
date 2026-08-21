@@ -50,7 +50,7 @@ IndexOrName::IndexOrName(Index index, std::pair<const Name*, RefPtr<NameSection>
         m_kind = Kind::Index;
     }
 #endif
-    m_nameSection = WTFMove(name.second);
+    m_nameSection = WTF::move(name.second);
 }
 
 void IndexOrName::dump(PrintStream& out) const
@@ -76,7 +76,7 @@ String makeString(const IndexOrName& ion)
             return makeString("wasm-stub["_s, ion.index(), "]"_s);
         return "wasm-stub"_s;
     }
-    auto moduleName = ion.nameSection()->moduleName.size() ? ion.nameSection()->moduleName.span() : ion.nameSection()->moduleHash.span();
+    auto moduleName = ion.moduleName();
     if (ion.isIndex())
         return makeString(moduleName, ".wasm-function["_s, ion.index(), ']');
     return makeString(moduleName, ".wasm-function["_s, ion.name()->span(), ']');

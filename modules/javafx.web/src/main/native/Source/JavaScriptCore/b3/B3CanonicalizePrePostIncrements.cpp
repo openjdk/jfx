@@ -89,7 +89,7 @@ bool canonicalizePrePostIncrements(Procedure& proc)
                     // Double check the base and offset.
                     Value* addressBase = address->child(0);
                     MemoryValue::OffsetType addressOffset = static_cast<Value::OffsetType>(address->child(1)->asIntPtr());
-                    if (UNLIKELY(base != addressBase || offset != addressOffset))
+                    if (base != addressBase || offset != addressOffset) [[unlikely]]
                         continue;
                     // Skip the address if it's used before the memory.
                     auto uses = addressUses.find(address);
@@ -176,10 +176,15 @@ bool canonicalizePrePostIncrements(Procedure& proc)
                     // which is located just before the memory.
                     auto uses = addressUses.find(address);
                     ASSERT(uses != addressUses.end() && uses->value.size());
+                    bool allUsesDominated = true;
                     for (Value* use : uses->value) {
-                        if (!dominators.dominates(memory->owner, use->owner))
-                            continue;
+                        if (!dominators.dominates(memory->owner, use->owner)) {
+                            allUsesDominated = false;
+                            break;
         }
+                    }
+                    if (!allUsesDominated)
+                        continue;
 
                     unsigned index = memoryToIndex.get(memory);
                     Value* newAddress = insertionSet.insert<Value>(index, Add, memory->origin(), address->child(0), address->child(1));

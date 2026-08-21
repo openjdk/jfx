@@ -121,7 +121,7 @@ public:
             return false;
         if (offset + n > m_vector.size())
             m_vector.grow(offset + n);
-        m_vector.remove(offset, n);
+        m_vector.removeAt(offset, n);
         m_vector.insertSpan(offset, unsafeMakeSpan(static_cast<const uint8_t*>(data), n));
         return true;
     }
@@ -262,12 +262,12 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 
         // Write an sfnt table directory entry.
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-        uint32_t* sfntTableDirectoryPtr = reinterpret_cast_ptr<uint32_t*>(sfnt.data() + sfntTableDirectoryCursor);
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        uint32_t* sfntTableDirectoryPtr = reinterpret_cast_ptr<uint32_t*>(sfnt.mutableSpan().subspan(sfntTableDirectoryCursor).data());
         *sfntTableDirectoryPtr++ = htonl(tableTag);
         *sfntTableDirectoryPtr++ = htonl(tableOrigChecksum);
         *sfntTableDirectoryPtr++ = htonl(sfnt.size());
         *sfntTableDirectoryPtr++ = htonl(tableOrigLength);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         sfntTableDirectoryCursor += 4 * sizeof(uint32_t);
 
         if (tableCompLength == tableOrigLength) {
@@ -303,7 +303,7 @@ bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
 
     Vector<uint8_t> convertedFont;
     if (convertWOFFToSfnt(*buffer, convertedFont))
-        buffer = SharedBuffer::create(WTFMove(convertedFont));
+        buffer = SharedBuffer::create(WTF::move(convertedFont));
     else
         buffer = nullptr;
 

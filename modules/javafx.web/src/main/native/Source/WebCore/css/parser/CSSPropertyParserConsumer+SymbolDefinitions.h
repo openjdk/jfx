@@ -43,7 +43,7 @@ std::optional<CSS::SymbolRaw> validatedRange(CSS::SymbolRaw, CSSPropertyParserOp
 
 struct SymbolKnownTokenTypeIdentConsumer {
     static constexpr CSSParserTokenType tokenType = IdentToken;
-    static std::optional<CSS::SymbolRaw> consume(CSSParserTokenRange&, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
+    static std::optional<CSS::SymbolRaw> consume(CSSParserTokenRange&, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
 };
 
 template<> struct ConsumerDefinition<CSS::Symbol> {

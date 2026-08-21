@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -413,4 +413,29 @@ public class ListViewMouseInputTest {
         assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
     }
 
+    @Test public void testShiftClickRangeDeselect() {
+        sm.clearAndSelect(2);
+
+        // extend selection from anchor (2) down to row 6
+        VirtualFlowTestUtils.clickOnRow(listView, 6, KeyModifier.SHIFT);
+        assertTrue(isSelected(2, 3, 4, 5, 6), debug());
+
+        // contract back to anchor (2) - row 4; rows 5 and 6 must be deselected
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
+        assertTrue(isSelected(2, 3, 4), debug());
+        assertTrue(isNotSelected(5, 6), debug());
+    }
+
+    @Test public void testShiftClickToAnchor() {
+        sm.clearAndSelect(4);
+
+        // extend selection from anchor (4) to row 7
+        VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
+        assertTrue(isSelected(4, 5, 6, 7), debug());
+
+        // shift-click back on anchor — minRow == maxRow == 4, only row 4 should remain selected
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
+        assertTrue(isSelected(4), debug());
+        assertTrue(isNotSelected(5, 6, 7), debug());
+    }
 }

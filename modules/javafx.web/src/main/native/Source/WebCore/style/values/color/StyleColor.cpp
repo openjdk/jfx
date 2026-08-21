@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +33,11 @@
 #include "config.h"
 #include "StyleColor.h"
 
+#include "AnimationUtilities.h"
+#include "CSSColorValue.h"
 #include "CSSKeywordColor.h"
+#include "CSSValuePool.h"
+#include "ColorBlending.h"
 #include "Document.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
@@ -51,7 +56,7 @@ namespace WebCore {
 namespace Style {
 
 Color::Color(Color::ColorKind&& color)
-    : value { WTFMove(color) }
+    : value { WTF::move(color) }
 {
 }
 
@@ -65,8 +70,13 @@ Color::Color()
 {
 }
 
+Color::Color(CSS::Keyword::Currentcolor)
+    : value { CurrentColor { } }
+{
+}
+
 Color::Color(WebCore::Color color)
-    : value { ResolvedColor { WTFMove(color) } }
+    : value { ResolvedColor { WTF::move(color) } }
 {
 }
 
@@ -75,103 +85,123 @@ Color::Color(SRGBA<uint8_t> color)
 {
 }
 
+Color::Color(CSS::Keyword::Transparent)
+    : value { ResolvedColor { WebCore::Color::transparentBlack } }
+{
+}
+
+Color::Color(CSS::Keyword::Black)
+    : value { ResolvedColor { WebCore::Color::black } }
+{
+}
+
+Color::Color(CSS::Keyword::White)
+    : value { ResolvedColor { WebCore::Color::white } }
+{
+}
+
 Color::Color(ResolvedColor&& color)
-    : value { WTFMove(color) }
+    : value { WTF::move(color) }
 {
 }
 
 Color::Color(CurrentColor&& color)
-    : value { WTFMove(color) }
+    : value { WTF::move(color) }
 {
 }
 
 Color::Color(ColorLayers&& colorLayers)
-    : value { makeIndirectColor(WTFMove(colorLayers)) }
+    : value { makeIndirectColor(WTF::move(colorLayers)) }
 {
 }
 
 Color::Color(ColorMix&& colorMix)
-    : value { makeIndirectColor(WTFMove(colorMix)) }
+    : value { makeIndirectColor(WTF::move(colorMix)) }
 {
 }
 
 Color::Color(ContrastColor&& contrastColor)
-    : value { makeIndirectColor(WTFMove(contrastColor)) }
+    : value { makeIndirectColor(WTF::move(contrastColor)) }
 {
 }
 
 Color::Color(RelativeColor<RGBFunctionModernRelative>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<HSLFunctionModern>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<HWBFunction>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<LabFunction>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<LCHFunction>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<OKLabFunction>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<OKLCHFunction>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
+{
+}
+
+Color::Color(RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>&& relative)
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorRGBFunction<ExtendedLinearSRGBA<float>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorXYZFunction<XYZA<float, WhitePoint::D50>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
 Color::Color(RelativeColor<ColorXYZFunction<XYZA<float, WhitePoint::D65>>>&& relative)
-    : value { makeIndirectColor(WTFMove(relative)) }
+    : value { makeIndirectColor(WTF::move(relative)) }
 {
 }
 
@@ -193,9 +223,10 @@ Color::~Color() = default;
 
 bool Color::operator==(const Color& other) const = default;
 
-Color Color::currentColor()
+const Color& Color::currentColor()
 {
-    return Color { CurrentColor { } };
+    static NeverDestroyed<Style::Color> color { CurrentColor { } };
+    return color.get();
 }
 
 Color::ColorKind Color::copy(const Color::ColorKind& other)
@@ -253,6 +284,7 @@ bool Color::isRelativeColor() const
         || std::holds_alternative<UniqueRef<RelativeColor<OKLCHFunction>>>(value)
         || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>>>(value)
         || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>>>(value)
+        || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>>>(value)
         || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>>>(value)
         || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>>>(value)
         || std::holds_alternative<UniqueRef<RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>>>(value)
@@ -272,21 +304,14 @@ const WebCore::Color& Color::resolvedColor() const
     return std::get<ResolvedColor>(value).color;
 }
 
+bool Color::isKnownTransparent() const
+{
+    return isResolvedColor() && resolvedColor().isValid() && !resolvedColor().isVisible();
+}
+
 template<typename T> Color::ColorKind Color::makeIndirectColor(T&& colorType)
 {
-    return { makeUniqueRef<T>(WTFMove(colorType)) };
-}
-
-// MARK: - MarkableTraits
-
-bool Color::MarkableTraits::isEmptyValue(const Color& color)
-{
-    return std::holds_alternative<EmptyToken>(color.value);
-}
-
-Color Color::MarkableTraits::emptyValue()
-{
-    return Color(EmptyToken());
+    return { makeUniqueRef<T>(WTF::move(colorType)) };
 }
 
 WebCore::Color resolveColor(const Color& value, const WebCore::Color& currentColor)
@@ -301,23 +326,30 @@ bool containsCurrentColor(const Color& value)
 
 // MARK: - Serialization
 
-String serializationForCSS(const CSS::SerializationContext& context, const Color& value)
+String serializationForCSSTokenization(const CSS::SerializationContext& context, const Color& value)
 {
-    return WTF::switchOn(value, [&](const auto& kind) { return WebCore::Style::serializationForCSS(context, kind); });
+    return WTF::switchOn(value, [&](const auto& kind) { return WebCore::Style::serializationForCSSTokenization(context, kind); });
 }
 
-void serializationForCSS(StringBuilder& builder, const CSS::SerializationContext& context, const Color& value)
+void serializationForCSSTokenization(StringBuilder& builder, const CSS::SerializationContext& context, const Color& value)
 {
-    return WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSS(builder, context, kind); });
+    WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSSTokenization(builder, context, kind); });
+}
+
+void Serialize<Color>::operator()(StringBuilder& builder, const CSS::SerializationContext&, const RenderStyle& style, const Color& value)
+{
+    // NOTE: The specialization of Style::Serialize is used for computed value serialization, so the resolved "used" value is used.
+    ColorResolver colorResolver { style };
+    builder.append(WebCore::serializationForCSS(colorResolver.colorResolvingCurrentColor(value)));
 }
 
 // MARK: - TextStream.
 
 TextStream& operator<<(TextStream& ts, const Color& value)
 {
-    ts << "Style::Color[";
+    ts << "Style::Color["_s;
     WTF::switchOn(value, [&](const auto& kind) { ts << kind; });
-    ts << "]";
+    ts << ']';
 
     return ts;
 }
@@ -329,7 +361,7 @@ Color toStyleColor(const CSS::Color& value, ColorResolutionState& state)
     return WTF::switchOn(value, [&](const auto& color) { return toStyleColor(color, state); });
 }
 
-Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const RenderStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
+Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const ComputedStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
 {
     auto resolutionState = ColorResolutionState {
         .document = document,
@@ -340,21 +372,15 @@ Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const 
     return toStyleColor(value, resolutionState);
 }
 
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color& value, Ref<const Document> document, RenderStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
+Color toStyleColor(const CSS::Color& value, const BuilderState& builderState, ForVisitedLink forVisitedLink)
 {
-    // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (CSS::containsCurrentColor(value)) {
-        // Color is an inherited property so depending on it effectively makes the property inherited.
-        style.setHasExplicitlyInheritedProperties();
-        style.setDisallowsFastPathInheritance();
-    }
-
-    return toStyleColor(value, document, style, conversionData, forVisitedLink);
+    return toStyleColor(value, builderState.document(), builderState.style(), builderState.cssToLengthConversionData(), forVisitedLink);
 }
 
 auto ToCSS<Color>::operator()(const Color& value, const RenderStyle& style) -> CSS::Color
 {
-    return CSS::Color { CSS::ResolvedColor { style.colorResolvingCurrentColor(value) } };
+    ColorResolver colorResolver { style };
+    return CSS::Color { CSS::ResolvedColor { colorResolver.colorResolvingCurrentColor(value) } };
 }
 
 auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState, ForVisitedLink forVisitedLink) -> Color
@@ -365,6 +391,63 @@ auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState
 auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState) -> Color
 {
     return toStyle(value, builderState, ForVisitedLink::No);
+}
+
+auto CSSValueConversion<Color>::operator()(BuilderState& builderState, const CSSValue& value, ForVisitedLink forVisitedLink) -> Color
+{
+    if (!builderState.element() || !builderState.element()->isLink())
+        forVisitedLink = ForVisitedLink::No;
+
+    if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
+        return toStyle(color->color(), builderState, forVisitedLink);
+
+    if (CSS::isColorKeyword(value.valueID()))
+    return toStyle(CSS::Color { CSS::KeywordColor { value.valueID() } }, builderState, forVisitedLink);
+
+    builderState.setCurrentPropertyInvalidAtComputedValueTime();
+    return Color { WebCore::Color { } };
+}
+
+auto CSSValueConversion<Color>::operator()(BuilderState& builderState, const CSSValue& value) -> Color
+{
+    return this->operator()(builderState, value, ForVisitedLink::No);
+}
+
+Ref<CSSValue> CSSValueCreation<Color>::operator()(CSSValuePool& pool, const RenderStyle& style, const Color& value)
+{
+    ColorResolver colorResolver { style };
+    return pool.createColorValue(colorResolver.colorResolvingCurrentColor(value));
+}
+
+// MARK: - Blending
+
+auto Blending<Color>::equals(const Color& a, const Color& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+{
+    if (a.isCurrentColor() && b.isCurrentColor())
+        return true;
+
+    if (a.isResolvedColor() && b.isResolvedColor())
+        return a.resolvedColor() == b.resolvedColor();
+
+    ColorResolver aColorResolver { aStyle };
+    ColorResolver bColorResolver { bStyle };
+
+    return aColorResolver.colorResolvingCurrentColor(a) == bColorResolver.colorResolvingCurrentColor(b);
+}
+
+auto Blending<Color>::canBlend(const Color& a, const Color& b) -> bool
+{
+    // We don't animate on currentcolor-only transition.
+    // https://github.com/WebKit/WebKit/blob/main/LayoutTests/imported/w3c/web-platform-tests/css/css-transitions/currentcolor-animation-001.html#L27
+    return !(a.isCurrentColor() && b.isCurrentColor());
+}
+
+auto Blending<Color>::blend(const Color& a, const Color& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> Color
+{
+    ColorResolver aColorResolver { aStyle };
+    ColorResolver bColorResolver { bStyle };
+
+    return WebCore::blend(aColorResolver.colorResolvingCurrentColor(a), bColorResolver.colorResolvingCurrentColor(b), context);
 }
 
 } // namespace Style

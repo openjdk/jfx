@@ -53,8 +53,8 @@ enum class TextCodecSingleByte::Encoding : uint8_t {
     KOI8U,
 };
 
-using SingleByteDecodeTable = std::array<UChar, 128>;
-using SingleByteEncodeTableEntry = std::pair<UChar, uint8_t>;
+using SingleByteDecodeTable = std::array<char16_t, 128>;
+using SingleByteEncodeTableEntry = std::pair<char16_t, uint8_t>;
 using SingleByteEncodeTable = std::span<const SingleByteEncodeTableEntry>;
 
 // From https://encoding.spec.whatwg.org/index-iso-8859-3.txt with 0xFFFD filling the gaps
@@ -180,10 +180,8 @@ template<const SingleByteDecodeTable& decodeTable> SingleByteEncodeTable tableFo
 {
     // Allocate this at runtime because building it at compile time would make the binary much larger and this is often not used.
     static constexpr auto size = std::size(decodeTable) - std::count(std::begin(decodeTable), std::end(decodeTable), replacementCharacter);
-    static const std::array<SingleByteEncodeTableEntry, size>* entries;
-    static std::once_flag once;
-    std::call_once(once, [&] {
-        auto* mutableEntries = new std::array<SingleByteEncodeTableEntry, size>();
+    static const NeverDestroyed<std::unique_ptr<std::array<SingleByteEncodeTableEntry, size>>> entries = [] {
+        auto mutableEntries = std::make_unique<std::array<SingleByteEncodeTableEntry, size>>(); // NOLINT.
         size_t j = 0;
         for (size_t i = 0; i < std::size(decodeTable); ++i) {
             if (decodeTable[i] != replacementCharacter)
@@ -193,9 +191,9 @@ template<const SingleByteDecodeTable& decodeTable> SingleByteEncodeTable tableFo
         auto collection = std::span { *mutableEntries };
         sortByFirst(collection);
         ASSERT(sortedFirstsAreUnique(collection));
-        entries = mutableEntries;
-    });
-    return std::span { *entries };
+        return mutableEntries;
+    }();
+    return std::span { *entries.get() };
 }
 
 static SingleByteEncodeTable tableForEncoding(TextCodecSingleByte::Encoding encoding)
@@ -283,7 +281,7 @@ static String decode(const SingleByteDecodeTable& table, std::span<const uint8_t
             result.append(byte);
             return;
         }
-        UChar codePoint = table[byte - 0x80];
+        char16_t codePoint = table[byte - 0x80];
         if (codePoint == replacementCharacter)
             sawError = true;
         result.append(codePoint);

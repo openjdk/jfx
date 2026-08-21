@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,15 @@
 #include "config.h"
 #include "CommandEvent.h"
 
+#include "Document.h"
 #include "Element.h"
+#include "TreeScope.h"
 
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CommandEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandEvent);
 
 CommandEvent::CommandEvent()
     : Event(EventInterfaceType::CommandEvent)
@@ -56,22 +58,20 @@ Ref<CommandEvent> CommandEvent::createForBindings()
     return adoptRef(*new CommandEvent);
 }
 
-bool CommandEvent::isCommandEvent() const
-{
-    return true;
-}
-
 RefPtr<Element> CommandEvent::source() const
 {
     if (!m_source)
         return nullptr;
 
     if (RefPtr target = dynamicDowncast<Node>(currentTarget())) {
-        auto& treeScope = target->treeScope();
-        auto node = treeScope.retargetToScope(*m_source.get());
+        Ref treeScope = target->treeScope();
+        Ref node = treeScope->retargetToScope(*m_source);
         return &downcast<Element>(node).get();
     }
-    return m_source;
+
+    Ref treeScope = m_source->treeScope().documentScope();
+    Ref node = treeScope->retargetToScope(*m_source);
+    return &downcast<Element>(node).get();
 }
 
 } // namespace WebCore

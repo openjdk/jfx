@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/MonotonicTime.h>
@@ -56,7 +56,7 @@ public:
     ~InspectorConsoleAgent() override;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
     void discardValues() final;
 
@@ -67,8 +67,6 @@ public:
     Protocol::ErrorStringOr<void> setConsoleClearAPIEnabled(bool) override;
     Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Console::Channel>>> getLoggingChannels() override;
     Protocol::ErrorStringOr<void> setLoggingChannelLevel(Protocol::Console::ChannelSource, Protocol::Console::ChannelLevel) override;
-
-    void setHeapAgent(InspectorHeapAgent* agent) { m_heapAgent = agent; }
 
     bool enabled() const { return m_enabled; }
     bool developerExtrasEnabled() const;
@@ -81,18 +79,18 @@ public:
     void startTiming(JSC::JSGlobalObject*, const String& label);
     void logTiming(JSC::JSGlobalObject*, const String& label, Ref<ScriptArguments>&&);
     void stopTiming(JSC::JSGlobalObject*, const String& label);
-    void takeHeapSnapshot(const String& title);
     void count(JSC::JSGlobalObject*, const String& label);
     void countReset(JSC::JSGlobalObject*, const String& label);
+
+    void reportHeapSnapshot(double timestamp, const String& snapshotData, const String& title);
 
 protected:
     void addConsoleMessage(std::unique_ptr<ConsoleMessage>);
     void clearMessages(Protocol::Console::ClearReason);
 
     InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<ConsoleFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<ConsoleBackendDispatcher> m_backendDispatcher;
-    InspectorHeapAgent* m_heapAgent { nullptr };
+    const UniqueRef<ConsoleFrontendDispatcher> m_frontendDispatcher;
+    const Ref<ConsoleBackendDispatcher> m_backendDispatcher;
 
     Vector<std::unique_ptr<ConsoleMessage>> m_consoleMessages;
     int m_expiredConsoleMessageCount { 0 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "WebCoreJSClientData.h"
 
 #include "DOMGCOutputConstraint.h"
-#include "DocumentInlines.h"
+#include "ElementInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSAudioWorkletGlobalScope.h"
@@ -57,6 +57,7 @@
 #include "runtime_object.h"
 #include <mutex>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(COCOA)
 #include "objc_runtime.h"
@@ -100,7 +101,7 @@ JSHeapData::JSHeapData(Heap& heap)
     , m_runtimeObjectSpace ISO_SUBSPACE_INIT(heap, m_runtimeObjectHeapCellType, JSC::Bindings::RuntimeObject)
     , m_windowProxySpace ISO_SUBSPACE_INIT(heap, m_windowProxyHeapCellType, JSWindowProxy)
     , m_idbSerializationSpace ISO_SUBSPACE_INIT(heap, m_heapCellTypeForJSIDBSerializationGlobalObject, JSIDBSerializationGlobalObject)
-    , m_subspaces(makeUnique<ExtendedDOMIsoSubspaces>())
+    , m_subspaces(makeUniqueRef<ExtendedDOMIsoSubspaces>())
 {
 }
 
@@ -109,12 +110,8 @@ JSHeapData* JSHeapData::ensureHeapData(Heap& heap)
     if (!Options::useGlobalGC())
         return new JSHeapData(heap);
 
-    static JSHeapData* singleton = nullptr;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        singleton = new JSHeapData(heap);
-    });
-    return singleton;
+    static NeverDestroyed<UniqueRef<JSHeapData>> singleton = makeUniqueRef<JSHeapData>(heap);
+    return singleton.get().ptr();
 }
 
 #define CLIENT_ISO_SUBSPACE_INIT(subspace) subspace(m_heapData->subspace)
@@ -138,7 +135,7 @@ JSVMClientData::JSVMClientData(VM& vm)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeObjectSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_windowProxySpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_idbSerializationSpace)
-    , m_clientSubspaces(makeUnique<ExtendedDOMClientIsoSubspaces>())
+    , m_clientSubspaces(makeUniqueRef<ExtendedDOMClientIsoSubspaces>())
 {
 }
 
@@ -147,7 +144,7 @@ JSVMClientData::JSVMClientData(VM& vm)
 JSVMClientData::~JSVMClientData()
 {
     m_clients.forEach([](auto& client) {
-        client.willDestroyVM();
+        Ref { client }->willDestroyVM();
     });
 
     ASSERT(m_worldSet.contains(m_normalWorld.get()));
@@ -175,19 +172,19 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
         worlds.append(mainNormalWorld);
 
     // Add other normal worlds.
-    for (auto* world : m_worldSet) {
+    for (RefPtr world : m_worldSet) {
         if (world->type() != DOMWrapperWorld::Type::Normal)
             continue;
         if (world == &mainNormalWorld)
             continue;
-        worlds.append(*world);
+        worlds.append(world.releaseNonNull());
     }
 
     // Add non-normal worlds.
-    for (auto* world : m_worldSet) {
+    for (RefPtr world : m_worldSet) {
         if (world->type() == DOMWrapperWorld::Type::Normal)
             continue;
-        worlds.append(*world);
+        worlds.append(world.releaseNonNull());
     }
 }
 
@@ -214,7 +211,7 @@ String JSVMClientData::overrideSourceURL(const JSC::StackFrame& frame, const Str
     if (!globalObject->inherits<JSDOMWindowBase>())
         return nullString();
 
-    auto* document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal();
+    RefPtr document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal();
     if (!document)
         return nullString();
 

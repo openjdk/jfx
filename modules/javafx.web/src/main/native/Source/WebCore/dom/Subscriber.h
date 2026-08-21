@@ -31,14 +31,14 @@
 #include "ScriptWrappable.h"
 #include "SubscribeOptions.h"
 #include "VoidCallback.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
 
 class Subscriber final : public ActiveDOMObject, public ScriptWrappable, public RefCounted<Subscriber> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Subscriber);
+    WTF_MAKE_TZONE_ALLOCATED(Subscriber);
 
 public:
     void ref() const final { RefCounted::ref(); }
@@ -52,16 +52,13 @@ public:
     bool active() { return m_active; }
     AbortSignal& signal() { return m_signal.get(); }
 
-    Ref<AbortSignal> protectedSignal() const { return m_signal; }
-
     static Ref<Subscriber> create(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);
+
+    ~Subscriber();
 
     void reportErrorObject(JSC::JSValue);
 
-    // JSCustomMarkFunction; for JSSubscriberCustom
-    Vector<VoidCallback*> teardownCallbacksConcurrently();
-    InternalObserver* observerConcurrently();
-    void visitAdditionalChildren(JSC::AbstractSlotVisitor&);
+    template<typename Visitor> void visitAdditionalChildren(Visitor&);
 
 private:
     explicit Subscriber(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);
@@ -86,8 +83,8 @@ private:
 
     bool m_active = true;
     Lock m_teardownsLock;
-    Ref<AbortSignal> m_signal;
-    Ref<InternalObserver> m_observer;
+    const Ref<AbortSignal> m_signal;
+    const Ref<InternalObserver> m_observer;
     SubscribeOptions m_options;
     Vector<Ref<VoidCallback>> m_teardowns WTF_GUARDED_BY_LOCK(m_teardownsLock);
 };

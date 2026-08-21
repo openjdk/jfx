@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,89 +25,51 @@
 #include "config.h"
 #include "StyleScrollMargin.h"
 
-#include "ComputedStyleExtractor.h"
 #include "LayoutRect.h"
-#include "StyleBuilderConverter.h"
-#include "StyleBuilderState.h"
+#include "StylePrimitiveNumericTypes+CSSValueConversion.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 
 namespace WebCore {
 namespace Style {
 
-LayoutUnit ScrollMarginEdge::evaluate(LayoutUnit referenceLength) const
+// MARK: - Conversion
+
+auto CSSValueConversion<ScrollMarginEdge>::operator()(BuilderState& state, const CSSValue& value) -> ScrollMarginEdge
 {
-    switch (m_value.type()) {
-    case LengthType::Fixed:
-        return LayoutUnit(m_value.value());
-
-    case LengthType::Percent:
-        return LayoutUnit(static_cast<float>(referenceLength * m_value.percent() / 100.0f));
-
-    case LengthType::Calculated:
-        return LayoutUnit(m_value.nonNanCalculatedValue(referenceLength));
-
-    case LengthType::FillAvailable:
-    case LengthType::Auto:
-    case LengthType::Normal:
-    case LengthType::Content:
-    case LengthType::Relative:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::FitContent:
-    case LengthType::Undefined:
-        break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0_lu;
+    return ScrollMarginEdge { toStyleFromCSSValue<ScrollMarginEdge::Fixed>(state, value) };
 }
 
-float ScrollMarginEdge::evaluate(float referenceLength) const
+// MARK: - Evaluation
+
+auto Evaluation<ScrollMarginEdge, LayoutUnit>::operator()(const ScrollMarginEdge& edge, LayoutUnit, ZoomFactor zoom) -> LayoutUnit
 {
-    switch (m_value.type()) {
-    case LengthType::Fixed:
-        return m_value.value();
-
-    case LengthType::Percent:
-        return referenceLength * m_value.percent() / 100.0f;
-
-    case LengthType::Calculated:
-        return m_value.nonNanCalculatedValue(referenceLength);
-
-    case LengthType::FillAvailable:
-    case LengthType::Auto:
-    case LengthType::Normal:
-    case LengthType::Content:
-    case LengthType::Relative:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::FitContent:
-    case LengthType::Undefined:
-        break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0.0f;
+    return evaluate<LayoutUnit>(edge.m_value, zoom);
 }
 
-Ref<CSSValue> ScrollMarginEdge::toCSS(const RenderStyle& style) const
+auto Evaluation<ScrollMarginEdge, LayoutUnit>::operator()(const ScrollMarginEdge& edge, ZoomFactor zoom) -> LayoutUnit
 {
-    return ComputedStyleExtractor::zoomAdjustedPixelValueForLength(m_value, style);
+    return evaluate<LayoutUnit>(edge.m_value, zoom);
 }
 
-ScrollMarginEdge scrollMarginEdgeFromCSSValue(const CSSValue& value, BuilderState& state)
+auto Evaluation<ScrollMarginEdge, float>::operator()(const ScrollMarginEdge& edge, float, ZoomFactor zoom) -> float
 {
-    return ScrollMarginEdge { BuilderConverter::convertLength(state, value) };
+    return evaluate<float>(edge.m_value, zoom);
 }
 
-LayoutBoxExtent extentForRect(const ScrollMargin& margin, const LayoutRect& rect)
+auto Evaluation<ScrollMarginEdge, float>::operator()(const ScrollMarginEdge& edge, ZoomFactor zoom) -> float
+{
+    return evaluate<float>(edge.m_value, zoom);
+}
+
+// MARK: - Extent
+
+LayoutBoxExtent extentForRect(const ScrollMarginBox& margin, const LayoutRect& rect, ZoomFactor zoom)
 {
     return LayoutBoxExtent {
-        Style::evaluate(margin.top(), rect.height()),
-        Style::evaluate(margin.right(), rect.width()),
-        Style::evaluate(margin.bottom(), rect.height()),
-        Style::evaluate(margin.left(), rect.width()),
+        evaluate<LayoutUnit>(margin.top(), rect.height(), zoom),
+        evaluate<LayoutUnit>(margin.right(), rect.width(), zoom),
+        evaluate<LayoutUnit>(margin.bottom(), rect.height(), zoom),
+        evaluate<LayoutUnit>(margin.left(), rect.width(), zoom),
     };
 }
 

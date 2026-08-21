@@ -31,19 +31,11 @@
 
 #pragma once
 
-#include "ScriptExecutionContext.h"
+#include <WebCore/ScriptExecutionContext.h>
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/MessageQueue.h>
 #include <wtf/TZoneMalloc.h>
-
-namespace WebCore {
-class WorkerMainRunLoop;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::WorkerMainRunLoop> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -115,7 +107,15 @@ public:
 
 private:
     friend class RunLoopSetup;
-    MessageQueueWaitResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
+
+    struct RunInModeResult {
+        MessageQueueWaitResult messageQueueResult;
+        bool firedSharedTimer { false };
+        bool firedRunLoopTimer { false };
+        String activeRunLoopTimersBeforeFiring;
+        String activeRunLoopTimersAfterFiring;
+    };
+    RunInModeResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
 
     // Runs any clean up tasks that are currently in the queue and returns.
     // This should only be called when the context is closed or loop has been terminated.
@@ -129,7 +129,9 @@ private:
     int m_debugCount { 0 };
 };
 
-class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop, WeakPtrFactoryInitialization::Eager> {
+class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop, WeakPtrFactoryInitialization::Eager>, public CanMakeCheckedPtr<WorkerMainRunLoop> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerMainRunLoop);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerMainRunLoop);
 public:
     WorkerMainRunLoop();
 

@@ -80,8 +80,8 @@ public:
     void deleteSelection(bool smartDelete);
     void setCompositionType(TextCompositionType type) { m_compositionType = type; }
     void setIsAutocompletion(bool isAutocompletion) { m_isAutocompletion = isAutocompletion; }
-    bool triggeringEventWasCreatedFromBindings() const { return m_triggeringEventWasCreatedFromBindings; }
-    void setTriggeringEventWasCreatedFromBindings(bool value) { m_triggeringEventWasCreatedFromBindings = value; }
+    bool triggeringEventIsUntrusted() const { return m_triggeringEventIsUntrusted; }
+    void setTriggeringEventIsUntrusted(bool value) { m_triggeringEventIsUntrusted = value; }
 
 #if PLATFORM(IOS_FAMILY)
     void setEndingSelectionOnLastInsertCommand(const VisibleSelection& selection);
@@ -90,12 +90,12 @@ public:
 private:
     static Ref<TypingCommand> create(Ref<Document>&& document, Type command, const String& text = emptyString(), OptionSet<Option> options = { }, TextGranularity granularity = TextGranularity::CharacterGranularity, TextCompositionType compositionType = TextCompositionType::None)
     {
-        return adoptRef(*new TypingCommand(WTFMove(document), command, text, options, granularity, compositionType));
+        return adoptRef(*new TypingCommand(WTF::move(document), command, text, options, granularity, compositionType));
     }
 
     static Ref<TypingCommand> create(Ref<Document>&& document, Type command, const String& text, OptionSet<Option> options, TextCompositionType compositionType)
     {
-        return adoptRef(*new TypingCommand(WTFMove(document), command, text, options, TextGranularity::CharacterGranularity, compositionType));
+        return adoptRef(*new TypingCommand(WTF::move(document), command, text, options, TextGranularity::CharacterGranularity, compositionType));
     }
 
     TypingCommand(Ref<Document>&&, Type, const String& text, OptionSet<Option>, TextGranularity, TextCompositionType);
@@ -164,7 +164,7 @@ private:
 
     bool m_shouldRetainAutocorrectionIndicator;
     bool m_shouldPreventSpellChecking;
-    bool m_triggeringEventWasCreatedFromBindings { false };
+    bool m_triggeringEventIsUntrusted { false };
 };
 
 } // namespace WebCore

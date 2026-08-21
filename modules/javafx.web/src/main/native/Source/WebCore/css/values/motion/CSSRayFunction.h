@@ -24,13 +24,13 @@
 
 #pragma once
 
-#include "CSSPosition.h"
-#include "CSSPrimitiveNumericTypes.h"
+#include <WebCore/CSSPosition.h>
+#include <WebCore/CSSPrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace CSS {
 
-using RaySize = std::variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide, Keyword::Sides>;
+using RaySize = Variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide, Keyword::Sides>;
 
 // ray() = ray( <angle> && <ray-size>? && contain? && [at <position>]? )
 // <ray-size> = closest-side | closest-corner | farthest-side | farthest-corner | sides

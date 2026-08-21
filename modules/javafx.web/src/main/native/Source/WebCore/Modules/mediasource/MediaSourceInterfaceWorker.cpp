@@ -39,7 +39,7 @@
 namespace WebCore {
 
 MediaSourceInterfaceWorker::MediaSourceInterfaceWorker(Ref<MediaSourceHandle>&& handle)
-    : m_handle(WTFMove(handle))
+    : m_handle(WTF::move(handle))
     , m_client(m_handle->mediaSourcePrivateClient())
 {
 }
@@ -78,11 +78,11 @@ PlatformTimeRanges MediaSourceInterfaceWorker::buffered() const
     return PlatformTimeRanges::emptyRanges();
 }
 
-Ref<TimeRanges> MediaSourceInterfaceWorker::seekable() const
+PlatformTimeRanges MediaSourceInterfaceWorker::seekable() const
 {
     if (RefPtr mediaSourcePrivate = m_handle->mediaSourcePrivate(); mediaSourcePrivate && !isClosed())
-        return TimeRanges::create(mediaSourcePrivate->seekable());
-    return TimeRanges::create();
+        return mediaSourcePrivate->seekable();
+    return { };
 }
 
 bool MediaSourceInterfaceWorker::isStreamingContent() const
@@ -97,8 +97,8 @@ bool MediaSourceInterfaceWorker::attachToElement(WeakPtr<HTMLMediaElement>&& ele
         return false;
     m_handle->setHasEverBeenAssignedAsSrcObject();
     bool forceRun = true;
-    m_handle->ensureOnDispatcher([element = WTFMove(element)](MediaSource& mediaSource) mutable {
-        mediaSource.attachToElement(WTFMove(element));
+    m_handle->ensureOnDispatcher([element = WTF::move(element)](MediaSource& mediaSource) mutable {
+        mediaSource.attachToElement(WTF::move(element));
     }, forceRun);
     return true;
 }
@@ -149,6 +149,15 @@ void MediaSourceInterfaceWorker::memoryPressure()
 bool MediaSourceInterfaceWorker::detachable() const
 {
     return m_handle->detachable();
+}
+
+void MediaSourceInterfaceWorker::setLogIdentifier([[maybe_unused]] uint64_t identifier)
+{
+#if !RELEASE_LOG_DISABLED
+    m_handle->ensureOnDispatcher([identifier](MediaSource& mediaSource) {
+        mediaSource.setLogIdentifier(identifier);
+    });
+#endif
 }
 
 } // namespace WebCore

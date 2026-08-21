@@ -5,7 +5,7 @@
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
- * Copyright (C) 2016 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RenderTable.h"
+#include "StylePreferredSize.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -54,7 +55,7 @@ public:
 };
 
 class RenderTableSection final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableSection);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableSection);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableSection);
 public:
     RenderTableSection(Element&, RenderStyle&&);
@@ -85,12 +86,12 @@ public:
         bool hasCells() const { return cells.size() > 0; }
     };
 
-    typedef Vector<CellStruct> Row;
+    using Row = Vector<CellStruct>;
     struct RowStruct {
         Row row;
         RenderTableRow* rowRenderer { nullptr };
         LayoutUnit baseline;
-        Length logicalHeight;
+        Style::PreferredSize logicalHeight { CSS::Keyword::Auto { } };
     };
 
     inline const BorderValue& borderAdjoiningTableStart() const;
@@ -106,10 +107,10 @@ public:
     void appendColumn(unsigned pos);
     void splitColumn(unsigned pos, unsigned first);
 
-    LayoutUnit calcOuterBorderBefore() const;
-    LayoutUnit calcOuterBorderAfter() const;
-    LayoutUnit calcOuterBorderStart() const;
-    LayoutUnit calcOuterBorderEnd() const;
+    enum class BlockBorderSide { BorderBefore, BorderAfter };
+    LayoutUnit calcBlockDirectionOuterBorder(BlockBorderSide) const;
+    enum class InlineBorderSide { BorderStart, BorderEnd };
+    LayoutUnit calcInlineDirectionOuterBorder(InlineBorderSide) const;
     void recalcOuterBorder();
 
     LayoutUnit outerBorderBefore() const { return m_outerBorderBefore; }
@@ -143,9 +144,6 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
@@ -156,7 +154,7 @@ public:
     bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
 
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     static RenderPtr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
 
@@ -165,7 +163,7 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const override { return true; }
 
@@ -175,6 +173,7 @@ private:
 
     void paintCell(RenderTableCell*, PaintInfo&, const LayoutPoint&);
     void paintObject(PaintInfo&, const LayoutPoint&) override;
+    Color rowGroupBorderColor(CSSPropertyID borderColor) const;
     void paintRowGroupBorder(const PaintInfo&, bool antialias, LayoutRect, BoxSide, CSSPropertyID borderColor, BorderStyle, BorderStyle tableBorderStyle);
     void paintRowGroupBorderIfRequired(const PaintInfo&, const LayoutPoint& paintOffset, unsigned row, unsigned col, BoxSide, RenderTableCell* = 0);
     LayoutUnit offsetLeftForRowGroupBorder(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row);
@@ -197,7 +196,7 @@ private:
     void distributeExtraLogicalHeightToAutoRows(LayoutUnit& extraLogicalHeight, unsigned autoRowsCount);
     void distributeRemainingExtraLogicalHeight(LayoutUnit& extraLogicalHeight);
 
-    bool hasOverflowingCell() const { return m_overflowingCells.computeSize() || m_forceSlowPaintPathWithOverflowingCell; }
+    bool hasOverflowingCell() const;
     void computeOverflowFromCells(unsigned totalRows, unsigned nEffCols);
 
     CellSpan fullTableRowSpan() const;
@@ -219,6 +218,8 @@ private:
     CellSpan spannedColumns(const LayoutRect& flippedRect, ShouldIncludeAllIntersectingCells) const;
 
     void setLogicalPositionForCell(RenderTableCell*, unsigned effectiveColumn) const;
+
+    LayoutUnit cellLogicalWidthInTableDirectionIncludingColumnSpan(const RenderTableCell&, size_t startColumn, size_t numberOfColumns) const;
 
     void firstChild() const = delete;
     void lastChild() const = delete;
@@ -242,7 +243,7 @@ private:
 
     // This map holds the collapsed border values for cells with collapsed borders.
     // It is held at RenderTableSection level to spare memory consumption by table cells.
-    UncheckedKeyHashMap<std::pair<const RenderTableCell*, int>, CollapsedBorderValue > m_cellsCollapsedBorders;
+    HashMap<std::pair<const RenderTableCell*, int>, CollapsedBorderValue > m_cellsCollapsedBorders;
 
     bool m_forceSlowPaintPathWithOverflowingCell { false };
     bool m_hasMultipleCellLevels { false };
@@ -296,11 +297,6 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
 {
     ASSERT(!m_needsCellRecalc);
     return CellSpan(0, m_grid.size());
-}
-
-inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

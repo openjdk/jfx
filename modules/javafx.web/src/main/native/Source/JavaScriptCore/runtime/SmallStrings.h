@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include "CollectionScope.h"
-#include "TypeofType.h"
+#include <JavaScriptCore/CollectionScope.h>
+#include <JavaScriptCore/JSExportMacros.h>
+#include <JavaScriptCore/TypeofType.h>
+#include <wtf/Compiler.h>
 #include <wtf/Noncopyable.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -75,6 +77,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     JS_EXPORT_PRIVATE Ref<AtomStringImpl> singleCharacterStringRep(unsigned char character);
+    JS_EXPORT_PRIVATE AtomStringImpl* existingSingleCharacterStringRep(unsigned char character);
 
     void setIsInitialized(bool isInitialized) { m_isInitialized = isInitialized; }
 
@@ -134,6 +137,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     JSString* timedOutString() const { return m_timedOutString; }
     JSString* okString() const { return m_okString; }
     JSString* sentinelString() const { return m_sentinelString; }
+    JSString* fulfilledString() const { return m_fulfilledString; }
+    JSString* rejectedString() const { return m_rejectedString; }
 
     bool needsToBeVisited(CollectionScope scope) const
     {
@@ -170,6 +175,8 @@ private:
     JSString* m_timedOutString { nullptr };
     JSString* m_okString { nullptr };
     JSString* m_sentinelString { nullptr };
+    JSString* m_fulfilledString { nullptr };
+    JSString* m_rejectedString { nullptr };
     JSString* m_singleCharacterStrings[singleCharacterStringCount] { nullptr };
     bool m_needsToBeVisited { true };
     bool m_isInitialized { false };

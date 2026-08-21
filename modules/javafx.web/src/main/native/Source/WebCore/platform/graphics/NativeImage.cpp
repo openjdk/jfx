@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,89 +25,67 @@
 
 #include "config.h"
 #include "NativeImage.h"
+
+#include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
+#include "RenderingMode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NativeImage);
 
-NativeImageBackend::NativeImageBackend() = default;
-
-NativeImageBackend::~NativeImageBackend() = default;
-
-bool NativeImageBackend::isRemoteNativeImageBackendProxy() const
+#if !USE(CG) && !USE(SKIA)
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage)
 {
-    return false;
+    if (!platformImage)
+        return nullptr;
+    return adoptRef(*new NativeImage(WTF::move(platformImage)));
 }
 
-PlatformImageNativeImageBackend::~PlatformImageNativeImageBackend() = default;
+RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image)
+{
+    return create(WTF::move(image));
+}
+#endif
 
-const PlatformImagePtr& PlatformImageNativeImageBackend::platformImage() const
+#if !USE(SKIA)
+NativeImage::NativeImage(PlatformImagePtr&& platformImage)
+    : m_platformImage(WTF::move(platformImage))
+{
+    computeHeadroom();
+}
+#endif
+
+
+NativeImage::~NativeImage()
+{
+    for (CheckedRef observer : m_observers)
+        observer->willDestroyNativeImage(*this);
+}
+
+const PlatformImagePtr& NativeImage::platformImage() const
 {
     return m_platformImage;
 }
 
-PlatformImageNativeImageBackend::PlatformImageNativeImageBackend(PlatformImagePtr platformImage)
-    : m_platformImage(WTFMove(platformImage))
+bool NativeImage::hasHDRContent() const
 {
+    return colorSpace().usesITUR_2100TF();
+}
+
+void NativeImage::replacePlatformImage(PlatformImagePtr&& platformImage)
+{
+    ASSERT(platformImage);
+    m_platformImage = WTF::move(platformImage);
+    computeHeadroom();
 }
 
 #if !USE(CG)
-RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier identifier)
+void NativeImage::computeHeadroom()
 {
-    if (!platformImage)
-        return nullptr;
-    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(WTFMove(platformImage)) };
-    return adoptRef(*new NativeImage(WTFMove(backend), identifier));
-}
-
-RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, RenderingResourceIdentifier identifier)
-{
-    return create(WTFMove(image), identifier);
 }
 #endif
-
-NativeImage::NativeImage(UniqueRef<NativeImageBackend> backend, RenderingResourceIdentifier renderingResourceIdentifier)
-    : RenderingResource(renderingResourceIdentifier)
-    , m_backend(WTFMove(backend))
-{
-}
-
-#if PLATFORM(JAVA)
-void NativeImage::draw(GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-{
-    context.drawNativeImageInternal(*this, destRect, srcRect, options);
-}
-#endif
-NativeImage::~NativeImage() = default;
-
-const PlatformImagePtr& NativeImage::platformImage() const
-{
-    return m_backend->platformImage();
-}
-
-IntSize NativeImage::size() const
-{
-    return m_backend->size();
-}
-
-bool NativeImage::hasAlpha() const
-{
-    return m_backend->hasAlpha();
-}
-
-DestinationColorSpace NativeImage::colorSpace() const
-{
-    return m_backend->colorSpace();
-}
-
-Headroom NativeImage::headroom() const
-{
-    return m_backend->headroom();
-}
-
-void NativeImage::replaceBackend(UniqueRef<NativeImageBackend> backend)
-{
-    m_backend = WTFMove(backend);
-}
 
 } // namespace WebCore

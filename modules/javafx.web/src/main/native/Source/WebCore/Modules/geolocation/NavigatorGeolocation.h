@@ -38,20 +38,26 @@ public:
     virtual ~NavigatorGeolocation();
     static NavigatorGeolocation* from(Navigator&);
 
-    static Geolocation* geolocation(Navigator&);
-    Geolocation* geolocation() const;
+    static Geolocation& geolocation(Navigator&);
+    static Geolocation* optionalGeolocation(Navigator&);
+    Geolocation& geolocation() const;
 
 #if PLATFORM(IOS_FAMILY)
     void resetAllGeolocationPermission();
 #endif // PLATFORM(IOS_FAMILY)
 
 private:
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorGeolocation"_s; }
+    bool isNavigatorGeolocation() const final { return true; }
 
-    mutable RefPtr<Geolocation> m_geolocation;
-    CheckedRef<Navigator> m_navigator;
+    const RefPtr<Geolocation> m_geolocation;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorGeolocation)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorGeolocation(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GEOLOCATION)

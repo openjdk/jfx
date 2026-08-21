@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "IDBConnectionToClientDelegate.h"
+#include <WebCore/IDBConnectionToClientDelegate.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -47,7 +48,7 @@ class IDBConnectionToClient : public RefCounted<IDBConnectionToClient> {
 public:
     WEBCORE_EXPORT static Ref<IDBConnectionToClient> create(IDBConnectionToClientDelegate&);
 
-    IDBConnectionIdentifier identifier() const;
+    WEBCORE_EXPORT IDBConnectionIdentifier identifier() const;
 
     void didDeleteDatabase(const IDBResultData&);
     void didOpenDatabase(const IDBResultData&);
@@ -69,6 +70,7 @@ public:
     void didIterateCursor(const IDBResultData&);
 
     void fireVersionChangeEvent(UniqueIDBDatabaseConnection&, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
+    void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
     void didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError&);
     void didCloseFromServer(UniqueIDBDatabaseConnection&, const IDBError&);
 
@@ -86,7 +88,7 @@ private:
     IDBConnectionToClient(IDBConnectionToClientDelegate&);
 
     CheckedPtr<IDBConnectionToClientDelegate> m_delegate;
-    HashSet<UniqueIDBDatabaseConnection*> m_databaseConnections;
+    WeakHashSet<UniqueIDBDatabaseConnection> m_databaseConnections;
     bool m_isClosed { false };
 };
 

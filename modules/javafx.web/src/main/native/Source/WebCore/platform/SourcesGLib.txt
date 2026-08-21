@@ -31,6 +31,7 @@ platform/glib/KeyedDecoderGlib.cpp
 platform/glib/KeyedEncoderGlib.cpp
 platform/glib/LowPowerModeNotifierGLib.cpp
 platform/glib/RemoteCommandListenerGLib.cpp
+platform/glib/SelectionData.cpp
 platform/glib/SharedBufferGlib.cpp
 platform/glib/SystemSettings.cpp
 platform/glib/UserAgentGLib.cpp

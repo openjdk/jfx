@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Google Inc. All rights reserved.
+ * Copyright (c) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -110,7 +110,7 @@ void LayoutRect::uniteEvenIfEmpty(const LayoutRect& other)
     auto maxX = std::max(this->maxX(), other.maxX());
     auto maxY = std::max(this->maxY(), other.maxY());
 
-    setLocationAndSizeFromEdges(minX, minY, maxX, maxY);
+    shiftEdgesTo(minX, minY, maxX, maxY);
 }
 
 bool LayoutRect::checkedUnite(const LayoutRect& other)

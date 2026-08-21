@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "WebCodecsControlMessage.h"
@@ -36,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebCodecsBase);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebCodecsBase);
 
 WebCodecsBase::WebCodecsBase(ScriptExecutionContext& context)
     : ActiveDOMObject(&context)
@@ -45,13 +46,18 @@ WebCodecsBase::WebCodecsBase(ScriptExecutionContext& context)
 
 WebCodecsBase::~WebCodecsBase() = default;
 
+ScriptExecutionContext* WebCodecsBase::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 void WebCodecsBase::queueControlMessageAndProcess(WebCodecsControlMessage&& message)
 {
     if (m_isMessageQueueBlocked) {
-        m_controlMessageQueue.append(WTFMove(message));
+        m_controlMessageQueue.append(WTF::move(message));
         return;
     }
-    m_controlMessageQueue.append(WTFMove(message));
+    m_controlMessageQueue.append(WTF::move(message));
     processControlMessageQueue();
 }
 
@@ -59,7 +65,7 @@ void WebCodecsBase::queueCodecControlMessageAndProcess(WebCodecsControlMessage&&
 {
     incrementCodecQueueSize();
     // message holds a strong ref to ourselves already.
-    queueControlMessageAndProcess({ *this, [this, message = WTFMove(message)]() mutable {
+    queueControlMessageAndProcess({ *this, [this, message = WTF::move(message)]() mutable {
         if (isCodecSaturated())
             return WebCodecsControlMessageOutcome::NotProcessed;
         decrementCodecQueueSizeAndScheduleDequeueEvent();
@@ -73,9 +79,9 @@ void WebCodecsBase::scheduleDequeueEvent()
         return;
 
     m_dequeueEventScheduled = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this]() mutable {
-        dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        m_dequeueEventScheduled = false;
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& codecs) mutable {
+        codecs.dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        codecs.m_dequeueEventScheduled = false;
     });
 }
 
@@ -137,7 +143,7 @@ void WebCodecsBase::unblockControlMessageQueue()
 
 bool WebCodecsBase::virtualHasPendingActivity() const
 {
-    return m_state == WebCodecsCodecState::Configured && (m_codecControlMessagesPending || m_isMessageQueueBlocked);
+    return m_codecControlMessagesPending || m_isMessageQueueBlocked;
 }
 
 } // namespace WebCore

@@ -132,7 +132,8 @@ namespace JSC { namespace DFG {
     macro(ValueBitLShift, NodeResultJS | NodeMustGenerate) \
     macro(ArithBitRShift, NodeResultInt32) \
     macro(ValueBitRShift, NodeResultJS | NodeMustGenerate) \
-    macro(BitURShift, NodeResultInt32) \
+    macro(ArithBitURShift, NodeResultInt32) \
+    macro(ValueBitURShift, NodeResultInt32 | NodeMustGenerate) \
     /* Bitwise operators call ToInt32 on their operands. */\
     macro(ValueToInt32, NodeResultInt32) \
     /* Used to box the result of URShift nodes (result has range 0..2^32-1). */\
@@ -200,23 +201,29 @@ namespace JSC { namespace DFG {
     macro(StrCat, NodeResultJS | NodeMustGenerate) \
     \
     /* Property access. */\
-    /* PutByValAlias indicates a 'put' aliases a prior write to the same property. */\
-    /* Since a put to 'length' may invalidate optimizations here, */\
-    /* this must be the directly subsequent property put. Note that PutByVal */\
-    /* opcodes use VarArgs beause they may have up to 4 children. */\
     macro(GetByVal, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(GetByValMegamorphic, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(GetByValWithThis, NodeResultJS | NodeMustGenerate) \
     macro(GetByValWithThisMegamorphic, NodeResultJS | NodeMustGenerate) \
+    macro(MultiGetByVal, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(GetMyArgumentByVal, NodeResultJS | NodeMustGenerate) \
     macro(GetMyArgumentByValOutOfBounds, NodeResultJS | NodeMustGenerate) \
     macro(VarargsLength, NodeMustGenerate | NodeResultInt32) \
     macro(LoadVarargs, NodeMustGenerate) \
     macro(ForwardVarargs, NodeMustGenerate) \
-    macro(PutByValDirect, NodeMustGenerate | NodeHasVarArgs) \
+    /* Note that PutByVal opcodes use VarArgs because they may have up to */\
+    /* 5 children (? means optional): <cell>, <key>, <value>, <storage>?, and <length>?. */\
     macro(PutByVal, NodeMustGenerate | NodeHasVarArgs) \
-    macro(PutByValAlias, NodeMustGenerate | NodeHasVarArgs) \
+    macro(PutByValDirect, NodeMustGenerate | NodeHasVarArgs) \
+    /* TODO: PutByValDirectResolved indicates a 'put' will be to some indexed property that is already */\
+    /* known to be in bounds. e.g. this is used when: */\
+    /* 1) When materializing an Array and we need to break a cycle with some other materialized object. */\
+    /* 2) A PutByVal directly follows a prior access with the same key. Since a put to 'length' may invalidate */\
+    /*    optimizations here, this must be the directly subsequent property access. */\
+    /* FIXME: This could probably just be an ArrayMode on PutByValDirect. */\
+    macro(PutByValDirectResolved, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutByValMegamorphic, NodeMustGenerate | NodeHasVarArgs) \
+    macro(MultiPutByVal, NodeMustGenerate | NodeHasVarArgs) \
     macro(PutPrivateName, NodeMustGenerate) \
     macro(PutPrivateNameById, NodeMustGenerate) \
     macro(CheckPrivateBrand, NodeMustGenerate) \
@@ -280,6 +287,7 @@ namespace JSC { namespace DFG {
     macro(GetTypedArrayByteOffsetAsInt52, NodeResultInt52) \
     macro(GetWebAssemblyInstanceExports, NodeResultJS) \
     macro(GetScope, NodeResultJS) \
+    macro(GetEvalScope, NodeResultJS) \
     macro(SkipScope, NodeResultJS) \
     macro(ResolveScope, NodeResultJS | NodeMustGenerate) \
     macro(ResolveScopeForHoistingFuncDeclInEval, NodeResultJS | NodeMustGenerate) \
@@ -345,7 +353,9 @@ namespace JSC { namespace DFG {
     macro(RegExpTestInline, NodeResultJS | NodeMustGenerate) \
     macro(RegExpMatchFast, NodeResultJS | NodeMustGenerate) \
     macro(RegExpMatchFastGlobal, NodeResultJS) \
+    macro(RegExpSearch, NodeResultInt32 | NodeMustGenerate) \
     macro(StringReplace, NodeResultJS | NodeMustGenerate) \
+    macro(StringReplaceAll, NodeResultJS | NodeMustGenerate) \
     macro(StringReplaceRegExp, NodeResultJS | NodeMustGenerate) \
     macro(StringReplaceString, NodeResultJS | NodeMustGenerate) \
     macro(StringIndexOf, NodeResultInt32) \
@@ -384,6 +394,7 @@ namespace JSC { namespace DFG {
     macro(TailCallForwardVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
     macro(CallDirectEval, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(CallWasm, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(TailCallInlinedCallerWasm, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     \
     macro(CallCustomAccessorGetter, NodeResultJS | NodeMustGenerate) \
     macro(CallCustomAccessorSetter, NodeMustGenerate) \
@@ -396,16 +407,20 @@ namespace JSC { namespace DFG {
     macro(NewObject, NodeResultJS) \
     macro(NewGenerator, NodeResultJS) \
     macro(NewAsyncGenerator, NodeResultJS) \
+    /* FIXME: A lot of these could likely be consolidated but there's some subtle differences between them, particularly when having a bad time. */ \
     macro(NewArray, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpread, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpecies, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayWithSize, NodeResultJS | NodeMustGenerate) \
-    macro(NewArrayWithConstantSize, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayWithSizeAndStructure, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayBuffer, NodeResultJS) \
+    macro(NewArrayWithButterfly, NodeResultJS) \
+    macro(NewButterflyWithSize, NodeResultStorage) \
     macro(NewInternalFieldObject, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
-    macro(NewRegexp, NodeResultJS) \
+    macro(NewTypedArrayBuffer, NodeResultJS | NodeMustGenerate) \
+    macro(NewRegExp, NodeResultJS) \
+    macro(NewRegExpUntyped, NodeResultJS | NodeMustGenerate) \
     macro(NewSymbol, NodeResultJS | NodeMustGenerate) \
     macro(NewStringObject, NodeResultJS) \
     macro(NewMap, NodeResultJS) \
@@ -416,8 +431,10 @@ namespace JSC { namespace DFG {
     \
     macro(Spread, NodeResultJS | NodeMustGenerate) \
     /* Support for allocation sinking. */\
-    macro(PhantomNewArrayWithConstantSize, NodeResultJS | NodeMustGenerate) \
-    macro(MaterializeNewArrayWithConstantSize, NodeResultJS | NodeHasVarArgs) \
+    macro(PhantomNewButterflyWithSize, NodeResultStorage | NodeMustGenerate) \
+    /* PhantomNewButterflyWithSize can materialize back to NewButterflyWithSize since it doesn't track any properties */ \
+    macro(PhantomNewArrayWithButterfly, NodeResultJS | NodeMustGenerate) \
+    macro(MaterializeNewArrayWithButterfly, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomNewObject, NodeResultJS | NodeMustGenerate) \
     macro(PutHint, NodeMustGenerate) \
     macro(CheckStructureImmediate, NodeMustGenerate) \
@@ -430,7 +447,7 @@ namespace JSC { namespace DFG {
     macro(MaterializeNewInternalFieldObject, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomCreateActivation, NodeResultJS | NodeMustGenerate) \
     macro(MaterializeCreateActivation, NodeResultJS | NodeHasVarArgs) \
-    macro(PhantomNewRegexp, NodeResultJS | NodeMustGenerate) \
+    macro(PhantomNewRegExp, NodeResultJS | NodeMustGenerate) \
     \
     /* Nodes for misc operations. */\
     macro(OverridesHasInstance, NodeMustGenerate | NodeResultBoolean) \
@@ -453,7 +470,10 @@ namespace JSC { namespace DFG {
     macro(IsBigInt, NodeResultBoolean) \
     macro(GlobalIsNaN, NodeMustGenerate | NodeResultBoolean) \
     macro(NumberIsNaN, NodeResultBoolean) \
+    macro(GlobalIsFinite, NodeMustGenerate | NodeResultBoolean) \
+    macro(NumberIsFinite, NodeResultBoolean) \
     macro(NumberIsInteger, NodeResultBoolean) \
+    macro(NumberIsSafeInteger, NodeResultBoolean) \
     macro(IsObject, NodeResultBoolean) \
     macro(IsCallable, NodeResultBoolean) \
     macro(IsConstructor, NodeResultBoolean) \
@@ -569,11 +589,11 @@ namespace JSC { namespace DFG {
     macro(MapIteratorNext, NodeResultBoolean) \
     macro(MapIteratorKey, NodeResultJS) \
     macro(MapIteratorValue, NodeResultJS) \
-    macro(MapStorage, NodeResultJS) /* Get the map storage and materialize if needed. */ \
+    macro(MapStorage, NodeResultJS) /* Get the map storage if exists. */ \
     macro(MapStorageOrSentinel, NodeResultJS) /* If the map storage is not materialized, return the sentinel. */ \
     macro(MapIterationNext, NodeResultJS) \
     macro(MapIterationEntry, NodeResultJS) \
-    macro(MapIterationEntryKey, NodeResultInt32) \
+    macro(MapIterationEntryKey, NodeResultJS) \
     macro(MapIterationEntryValue, NodeResultJS) \
     macro(SetAdd, NodeMustGenerate) \
     macro(MapSet, NodeMustGenerate | NodeHasVarArgs) \
@@ -612,10 +632,19 @@ namespace JSC { namespace DFG {
     macro(DataViewGetInt, NodeMustGenerate | NodeResultJS) /* The gets are must generate for now because they do bounds checks */ \
     macro(DataViewGetFloat, NodeMustGenerate | NodeResultDouble) \
     macro(DataViewSet, NodeMustGenerate | NodeMustGenerate | NodeHasVarArgs) \
+    macro(DataViewGetByteLength, NodeResultInt32) \
+    macro(DataViewGetByteLengthAsInt52, NodeResultInt52) \
     /* Date access */ \
     macro(DateGetInt32OrNaN, NodeResultJS) \
     macro(DateGetTime, NodeResultDouble) \
     macro(DateSetTime, NodeMustGenerate | NodeResultDouble) \
+    /* Promise */ \
+    macro(ResolvePromiseFirstResolving, NodeMustGenerate) \
+    macro(RejectPromiseFirstResolving, NodeMustGenerate) \
+    macro(FulfillPromiseFirstResolving, NodeMustGenerate) \
+    macro(PromiseResolve, NodeMustGenerate | NodeResultJS) \
+    macro(PromiseReject, NodeMustGenerate | NodeResultJS) \
+    macro(PromiseThen, NodeMustGenerate | NodeResultJS) \
 
 
 // This enum generates a monotonically increasing id for all Node types,

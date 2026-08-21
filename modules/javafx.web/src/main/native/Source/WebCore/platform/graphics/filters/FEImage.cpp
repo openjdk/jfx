@@ -28,16 +28,20 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEImageCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEImage> FEImage::create(SourceImage&& sourceImage, const FloatRect& sourceImageRect, const SVGPreserveAspectRatioValue& preserveAspectRatio)
 {
-    return adoptRef(*new FEImage(WTFMove(sourceImage), sourceImageRect, preserveAspectRatio));
+    return adoptRef(*new FEImage(WTF::move(sourceImage), sourceImageRect, preserveAspectRatio));
 }
 
 FEImage::FEImage(SourceImage&& sourceImage, const FloatRect& sourceImageRect, const SVGPreserveAspectRatioValue& preserveAspectRatio)
     : FilterEffect(Type::FEImage)
-    , m_sourceImage(WTFMove(sourceImage))
+    , m_sourceImage(WTF::move(sourceImage))
     , m_sourceImageRect(sourceImageRect)
     , m_preserveAspectRatio(preserveAspectRatio)
 {
@@ -67,6 +71,24 @@ FloatRect FEImage::calculateImageRect(const Filter& filter, std::span<const Floa
     return FloatRect();
 }
 
+OptionSet<FilterRenderingMode> FEImage::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEImage::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEImageCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEImage::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FEImageSoftwareApplier>(*this);
@@ -74,13 +96,13 @@ std::unique_ptr<FilterEffectApplier> FEImage::createSoftwareApplier() const
 
 TextStream& FEImage::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feImage";
+    ts << indent << "[feImage"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " image-size=\"" << m_sourceImageRect.width() << "x" << m_sourceImageRect.height() << "\"";
+    ts << " image-size=\""_s << m_sourceImageRect.width() << 'x' << m_sourceImageRect.height() << '"';
     // FIXME: should this dump also object returned by FEImage::image() ?
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

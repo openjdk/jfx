@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CustomElementFormValue.h"
-#include "HTMLMaybeFormAssociatedCustomElement.h"
-#include "ValidatedFormListedElement.h"
-#include "ValidityStateFlags.h"
+#include <WebCore/CustomElementFormValue.h>
+#include <WebCore/HTMLMaybeFormAssociatedCustomElement.h>
+#include <WebCore/ValidatedFormListedElement.h>
+#include <WebCore/ValidityStateFlags.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -84,6 +84,7 @@ private:
     void didChangeForm() final;
     void invalidateElementsCollectionCachesInAncestors();
 
+    bool customError() const final { return m_validityStateFlags.customError; }
     bool hasBadInput() const final { return m_validityStateFlags.badInput; }
     bool patternMismatch() const final { return m_validityStateFlags.patternMismatch; }
     bool rangeOverflow() const final { return m_validityStateFlags.rangeOverflow; }

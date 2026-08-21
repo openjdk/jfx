@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "MediaStream.h"
 #include "MediaStreamAudioSource.h"
@@ -37,7 +38,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStreamAudioDestinationNode);
 
 ExceptionOr<Ref<MediaStreamAudioDestinationNode>> MediaStreamAudioDestinationNode::create(BaseAudioContext& context, const AudioNodeOptions& options)
 {
@@ -69,7 +70,14 @@ MediaStreamAudioDestinationNode::~MediaStreamAudioDestinationNode()
 
 void MediaStreamAudioDestinationNode::process(size_t numberOfFrames)
 {
-    m_source->consumeAudio(*input(0)->bus(), numberOfFrames);
+    m_source->consumeAudio(input(0)->bus(), numberOfFrames);
+}
+
+void MediaStreamAudioDestinationNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
+{
+    ASSERT(context().isAudioThread() && context().isGraphOwner());
+    m_source->setNumberOfChannels(input->numberOfChannels());
+    AudioBasicInspectorNode::checkNumberOfChannelsForInput(input);
 }
 
 } // namespace WebCore

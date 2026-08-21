@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "IDBDatabaseConnectionIdentifier.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "IndexKey.h"
+#include <WebCore/IDBDatabaseConnectionIdentifier.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IndexKey.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,11 +38,6 @@ namespace WebCore {
 namespace IDBClient {
 class IDBConnectionToServerDelegate;
 }
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::IDBClient::IDBConnectionToServerDelegate> : std::true_type { };
 }
 
 namespace WebCore {
@@ -70,7 +66,7 @@ struct IDBKeyRangeData;
 
 namespace IDBClient {
 
-class IDBConnectionToServerDelegate : public CanMakeWeakPtr<IDBConnectionToServerDelegate> {
+class IDBConnectionToServerDelegate : public AbstractRefCountedAndCanMakeWeakPtr<IDBConnectionToServerDelegate> {
 public:
     virtual ~IDBConnectionToServerDelegate() = default;
 
@@ -100,6 +96,7 @@ public:
     virtual void databaseConnectionClosed(IDBDatabaseConnectionIdentifier) = 0;
     virtual void abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>& transactionIdentifier) = 0;
     virtual void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer) = 0;
+    virtual void didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID) = 0;
     virtual void openDBRequestCancelled(const IDBOpenRequestData&) = 0;
 
     virtual void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) = 0;

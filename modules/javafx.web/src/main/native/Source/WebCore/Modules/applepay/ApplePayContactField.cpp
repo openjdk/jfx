@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "ApplePayContactField.h"
+
 #include "ApplePaySessionPaymentRequest.h"
+#include "ExceptionOr.h"
 
 #if ENABLE(APPLE_PAY)
 
@@ -57,7 +59,7 @@ ExceptionOr<ApplePaySessionPaymentRequestContactFields> convertAndValidate(unsig
         }
     }
 
-    return WTFMove(result);
+    return WTF::move(result);
 }
 
 } // namespace WebCore

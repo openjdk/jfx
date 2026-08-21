@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {

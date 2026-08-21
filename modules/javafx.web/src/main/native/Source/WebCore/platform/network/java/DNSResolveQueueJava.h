@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2018 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,10 +37,8 @@ public:
     DNSResolveQueueJava() = default;
     void resolve(const String& hostname, uint64_t identifier, DNSCompletionHandler&&) final;
     void stopResolve(uint64_t identifier) final;
-
-private:
-    void updateIsUsingProxy() final;
-    void platformResolve(const String&) final;
+    void updateIsUsingProxy() override;
+    void platformResolve(const String&) override;
 };
 
 using DNSResolveQueuePlatform = DNSResolveQueueJava;

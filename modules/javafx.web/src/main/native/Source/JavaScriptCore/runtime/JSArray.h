@@ -20,12 +20,12 @@
 
 #pragma once
 
-#include "ArgList.h"
-#include "ArrayConventions.h"
-#include "Butterfly.h"
-#include "JSCell.h"
-#include "JSObject.h"
-#include "ResourceExhaustion.h"
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/ArrayConventions.h>
+#include <JavaScriptCore/Butterfly.h>
+#include <JavaScriptCore/JSCell.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/ResourceExhaustion.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -127,6 +127,14 @@ public:
 
     std::optional<bool> fastIncludes(JSGlobalObject*, JSValue,  uint64_t fromIndex, uint64_t length);
 
+    bool fastCopyWithin(JSGlobalObject*, uint64_t from64, uint64_t to64, uint64_t count64, uint64_t length64);
+
+    JSArray* fastToSpliced(JSGlobalObject*, CallFrame*, uint64_t length, uint64_t newLength, uint64_t start, uint64_t deleteCount, uint64_t insertCount);
+
+    JSString* fastToString(JSGlobalObject*);
+
+    JSArray* fastFlat(JSGlobalObject*, uint64_t depth, uint64_t length);
+
     ALWAYS_INLINE bool definitelyNegativeOneMiss() const;
 
     enum ShiftCountMode {
@@ -162,6 +170,7 @@ public:
     JS_EXPORT_PRIVATE void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
 
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
+    bool isToPrimitiveFastAndNonObservable();
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
 
@@ -178,7 +187,7 @@ protected:
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
 private:
     bool isLengthWritable()
@@ -222,14 +231,14 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
 
     Butterfly* butterfly;
     IndexingType indexingType = structure->indexingType();
-    if (LIKELY(!hasAnyArrayStorage(indexingType))) {
+    if (!hasAnyArrayStorage(indexingType)) [[likely]] {
         ASSERT(
             hasUndecided(indexingType)
             || hasInt32(indexingType)
             || hasDouble(indexingType)
             || hasContiguous(indexingType));
 
-        if (UNLIKELY(vectorLengthHint > MAX_STORAGE_VECTOR_LENGTH))
+        if (vectorLengthHint > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
             return nullptr;
 
         unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, vectorLengthHint);
@@ -242,10 +251,7 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
         butterfly = Butterfly::fromBase(temp, 0, outOfLineStorage);
         butterfly->setVectorLength(vectorLength);
         butterfly->setPublicLength(initialLength);
-        if (hasDouble(indexingType))
-            clearArray(butterfly->contiguousDouble().data(), vectorLength);
-        else
-            clearArray(butterfly->contiguous().data(), vectorLength);
+        Butterfly::clearRange(indexingType, butterfly, 0, vectorLength);
     } else {
         ASSERT(
             indexingType == ArrayWithSlowPutArrayStorage
@@ -286,12 +292,18 @@ enum class ArrayFillMode {
     Empty,
 };
 
+enum class NeedsGCSafeOps {
+    No,
+    Yes,
+};
+
+
 template<ArrayFillMode fillMode>
 bool moveArrayElements(JSGlobalObject* globalObject, VM& vm, JSArray* target, unsigned targetOffset, JSArray* source, unsigned sourceLength)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (LIKELY(!hasAnyArrayStorage(source->indexingType()) && !source->holesMustForwardToPrototype())) {
+    if (!hasAnyArrayStorage(source->indexingType()) && !source->holesMustForwardToPrototype()) [[likely]] {
         for (unsigned i = 0; i < sourceLength; ++i) {
             JSValue value = source->tryGetIndexQuickly(i);
             if constexpr (fillMode == ArrayFillMode::Empty) {
@@ -331,8 +343,8 @@ void clearElement(T& element)
 template<>
 void clearElement(double& element);
 
-template<ArrayFillMode fillMode, typename T, typename U>
-ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceSize, IndexingType sourceType)
+template<ArrayFillMode fillMode, NeedsGCSafeOps needsGCSafeOps, typename T, typename U>
+ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsigned sourceOffset, unsigned sourceSize, IndexingType sourceType)
 {
     if (sourceType == ArrayWithUndecided) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
@@ -347,14 +359,16 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
 
     if constexpr (std::is_same_v<T, U>) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
-            if constexpr (std::is_same_v<T, double>)
-                memcpy(buffer + offset, source, sizeof(double) * sourceSize);
+            if constexpr (needsGCSafeOps == NeedsGCSafeOps::No && sizeof(T) == sizeof(U))
+                memcpy(buffer + offset, source + sourceOffset, sizeof(T) * sourceSize);
+            else if constexpr (std::is_same_v<T, double>)
+                memcpy(buffer + offset, source + sourceOffset, sizeof(double) * sourceSize);
             else
-                gcSafeMemcpy(buffer + offset, source, sizeof(JSValue) * sourceSize);
+                gcSafeMemcpy(buffer + offset, source + sourceOffset, sizeof(JSValue) * sourceSize);
             return;
         } else {
             for (unsigned i = 0; i < sourceSize; ++i) {
-                JSValue value = source[i].get();
+                JSValue value = source[i + sourceOffset].get();
                 if (!value)
                     value = jsUndefined();
                 buffer[i + offset].setWithoutWriteBarrier(value);
@@ -364,7 +378,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
         ASSERT(sourceType == ArrayWithInt32);
         static_assert(fillMode == ArrayFillMode::Empty);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            JSValue value = source[i].get();
+            JSValue value = source[i + sourceOffset].get();
             if (value)
                 buffer[i + offset] = value.asInt32();
             else
@@ -373,7 +387,7 @@ ALWAYS_INLINE void copyArrayElements(T* buffer, unsigned offset, U* source, unsi
     } else {
         static_assert(std::is_same_v<U, double>);
         for (unsigned i = 0; i < sourceSize; ++i) {
-            double value = source[i];
+            double value = source[i + sourceOffset];
             if (value == value)
                 buffer[i + offset].setWithoutWriteBarrier(JSValue(JSValue::EncodeAsDouble, value));
             else {
@@ -410,6 +424,7 @@ inline bool isJSArray(JSValue v) { return v.isCell() && isJSArray(v.asCell()); }
 JS_EXPORT_PRIVATE JSArray* constructArray(JSGlobalObject*, Structure*, const ArgList& values);
 JS_EXPORT_PRIVATE JSArray* constructArray(JSGlobalObject*, Structure*, const JSValue* values, unsigned length);
 JS_EXPORT_PRIVATE JSArray* constructArrayNegativeIndexed(JSGlobalObject*, Structure*, const JSValue* values, unsigned length);
+JS_EXPORT_PRIVATE JSArray* constructArrayPair(JSGlobalObject*, JSValue first, JSValue second);
 
 ALWAYS_INLINE uint64_t toLength(JSGlobalObject*, JSObject*);
 

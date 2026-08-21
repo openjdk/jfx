@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,11 +76,22 @@ public class TestScene extends Scene {
         this("SCENE", root);
     }
 
+    public TestScene(final Parent root, final double width, final double height) {
+        this("SCENE", root, width, height);
+    }
+
     public TestScene(final String name, final Parent root) {
-        super(root);
+        this(name, root, -1, -1);
+    }
+
+    public TestScene(final String name, final Parent root, final double width, final double height) {
+        super(root, width, height);
         this.name = name;
+
         // init size for camera to work
-        SceneHelper.preferredSize(this);
+        if (width < 0 || height < 0) {
+            SceneHelper.preferredSize(this);
+        }
     }
 
     public void set_window(final Window window) {

@@ -28,11 +28,10 @@
 #include "GPUInternalError.h"
 #include "GPUOutOfMemoryError.h"
 #include "GPUValidationError.h"
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-using GPUError = std::variant<RefPtr<GPUOutOfMemoryError>, RefPtr<GPUValidationError>, RefPtr<GPUInternalError>>;
+using GPUError = Variant<RefPtr<GPUOutOfMemoryError>, RefPtr<GPUValidationError>, RefPtr<GPUInternalError>>;
 
 }

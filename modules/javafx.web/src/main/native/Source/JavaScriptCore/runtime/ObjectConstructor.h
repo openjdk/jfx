@@ -20,9 +20,11 @@
 
 #pragma once
 
-#include "InternalFunction.h"
-#include "JSGlobalObject.h"
-#include "ObjectPrototype.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/ObjectPrototype.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -76,13 +78,6 @@ inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject, JSObjec
 inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject)
 {
     return JSFinalObject::createDefaultEmptyObject(globalObject);
-}
-
-inline JSObject* constructObject(JSGlobalObject* globalObject, JSValue arg)
-{
-    if (arg.isUndefinedOrNull())
-        return constructEmptyObject(globalObject, globalObject->objectPrototype());
-    return arg.toObject(globalObject);
 }
 
 JS_EXPORT_PRIVATE JSObject* constructObjectFromPropertyDescriptorSlow(JSGlobalObject*, const PropertyDescriptor&);

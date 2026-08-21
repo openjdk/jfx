@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,12 @@
 #include "JSWorkerGlobalScope.h"
 
 #include "JSDOMExceptionHandling.h"
-#include "JSDOMMicrotask.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLocation.h"
 #include "WorkerNavigator.h"
 #include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/GlobalObjectMethodTable.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -44,8 +44,9 @@ void JSWorkerGlobalScope::visitAdditionalChildren(Visitor& visitor)
         addWebCoreOpaqueRoot(visitor, *location);
     if (auto* navigator = wrapped().optionalNavigator())
         addWebCoreOpaqueRoot(visitor, *navigator);
-    ScriptExecutionContext& context = wrapped();
-    addWebCoreOpaqueRoot(visitor, context);
+
+    // We cannot ref the object here as this may get called on the GC thread.
+    SUPPRESS_UNCOUNTED_ARG addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
 
     // Normally JSEventTargetCustom.cpp's JSEventTarget::visitAdditionalChildren() would call this. But
     // even though WorkerGlobalScope is an EventTarget, JSWorkerGlobalScope does not subclass
@@ -60,15 +61,17 @@ JSValue JSWorkerGlobalScope::queueMicrotask(JSGlobalObject& lexicalGlobalObject,
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame.argumentCount() < 1))
+    if (callFrame.argumentCount() < 1) [[unlikely]]
         return throwException(&lexicalGlobalObject, scope, createNotEnoughArgumentsError(&lexicalGlobalObject));
 
     JSValue functionValue = callFrame.uncheckedArgument(0);
-    if (UNLIKELY(!functionValue.isCallable()))
+    if (!functionValue.isCallable()) [[unlikely]]
         return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback"_s, "WorkerGlobalScope"_s, "queueMicrotask"_s));
 
+    auto* globalObject = asObject(functionValue)->globalObject();
+
     scope.release();
-    Base::queueMicrotask(createJSDOMMicrotask(vm, asObject(functionValue)));
+    globalObjectMethodTable()->queueMicrotaskToEventLoop(*this, JSC::QueuedTask { nullptr, JSC::InternalMicrotask::InvokeFunctionJob, 0, globalObject, functionValue });
     return jsUndefined();
 }
 

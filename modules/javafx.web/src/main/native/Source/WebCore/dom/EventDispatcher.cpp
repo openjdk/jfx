@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010, 2011, 2012, 2013 Google Inc. All rights reserved.
@@ -27,7 +27,7 @@
 #include "EventDispatcher.h"
 
 #include "CompositionEvent.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
@@ -40,11 +40,15 @@
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "MouseEvent.h"
+#include "NodeDocument.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
+#include "page/LocalDOMWindow.h"
+#include <wtf/Scope.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -124,7 +128,7 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!localMainFrame)
         return false;
 
-    if (!localMainFrame->protectedLoader()->shouldSuppressTextInputFromEditing())
+    if (!localMainFrame->loader().shouldSuppressTextInputFromEditing())
         return false;
 
     if (auto* textEvent = dynamicDowncast<TextEvent>(event))
@@ -175,6 +179,15 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     auto typeInfo = eventNames().typeInfoForEvent(event.type());
     bool shouldDispatchEventToScripts = hasRelevantEventListener(document, event);
+
+    RefPtr window = document->window();
+    std::optional<PerformanceEventTimingCandidate> pendingEventTiming;
+    if (typeInfo.isInCategory(EventCategory::EventTimingEligible) && window && document->settings().eventTimingEnabled() && event.isTrusted())
+        pendingEventTiming = window->initializeEventTimingEntry(event, typeInfo.type());
+    auto finalizeEntry(WTF::makeScopeExit([&, event = Ref(event)] {
+        if (pendingEventTiming)
+            window->finalizeEventTimingEntry(*pendingEventTiming, event, typeInfo.type());
+    }));
 
     bool targetOrRelatedTargetIsInShadowTree = node.isInShadowTree() || isInShadowTree(event.relatedTarget());
     // FIXME: We should also check touch target list.
@@ -245,7 +258,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         RefPtr finalTarget = event.target();
         event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
-        event.setTarget(WTFMove(finalTarget));
+        event.setTarget(WTF::move(finalTarget));
     }
 
     if (shouldClearTargetsAfterDispatch)
@@ -253,20 +266,20 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 }
 
 template<typename T>
-static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
+static void dispatchEventWithType(std::span<T* const> targets, Event& event)
 {
     ASSERT(targets.size() >= 1);
-    ASSERT(*targets.begin());
+    ASSERT(targets.front());
 
     EventPath eventPath { targets };
-    event.setTarget(RefPtr { *targets.begin() });
+    event.setTarget(RefPtr { targets.front() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);
     event.resetAfterDispatch();
 }
 
-void EventDispatcher::dispatchEvent(const Vector<EventTarget*>& targets, Event& event)
+void EventDispatcher::dispatchEvent(std::span<EventTarget* const> targets, Event& event)
 {
     dispatchEventWithType<EventTarget>(targets, event);
 }

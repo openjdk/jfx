@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,10 @@
 #include "ContactsRequestData.h"
 #include "ContactsSelectOptions.h"
 #include "Document.h"
+#include "DocumentPage.h"
 #include "JSContactInfo.h"
 #include "JSDOMPromiseDeferred.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Navigator.h"
 #include "Page.h"
 #include "UserGestureIndicator.h"
@@ -44,7 +45,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ContactsManager);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContactsManager);
 
 Ref<ContactsManager> ContactsManager::create(Navigator& navigator)
 {
@@ -105,7 +106,7 @@ void ContactsManager::select(const Vector<ContactProperty>& properties, const Co
 
     m_contactPickerIsShowing = true;
 
-    frame->page()->chrome().showContactPicker(requestData, [promise = WTFMove(promise), weakThis = WeakPtr { *this }] (std::optional<Vector<ContactInfo>>&& info) {
+    frame->page()->chrome().showContactPicker(WTF::move(requestData), [promise = WTF::move(promise), weakThis = WeakPtr { *this }] (std::optional<Vector<ContactInfo>>&& info) {
         if (weakThis)
             weakThis->m_contactPickerIsShowing = false;
 

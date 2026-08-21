@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
-#include "WebGPUMapMode.h"
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPUMapMode.h>
 #include <cstdint>
 #include <optional>
 #include <wtf/CompletionHandler.h>
@@ -45,17 +45,21 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
     virtual void mapAsync(MapModeFlags, Size64 offset, std::optional<Size64>, CompletionHandler<void(bool)>&&) = 0;
-    virtual void getMappedRange(Size64 offset, std::optional<Size64>, Function<void(std::span<uint8_t>)>&&) = 0;
+    virtual void getMappedRange(Size64 offset, std::optional<Size64>, NOESCAPE const Function<void(std::span<uint8_t>)>&) = 0;
     virtual void unmap() = 0;
 
     virtual void destroy() = 0;
     virtual std::span<uint8_t> getBufferContents() = 0;
     virtual void copyFrom(std::span<const uint8_t>, size_t offset) = 0;
+
+    virtual bool isRemoteBufferProxy() const { return false; }
+    virtual bool isBufferImpl() const { return false; }
+
 protected:
     Buffer() = default;
 

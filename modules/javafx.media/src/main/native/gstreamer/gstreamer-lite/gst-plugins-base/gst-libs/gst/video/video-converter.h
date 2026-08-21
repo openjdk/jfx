@@ -319,6 +319,11 @@ const GstVideoInfo * gst_video_converter_get_in_info    (GstVideoConverter * con
 GST_VIDEO_API
 const GstVideoInfo * gst_video_converter_get_out_info   (GstVideoConverter * convert);
 
+GST_VIDEO_API
+gboolean gst_video_converter_transform_metas (GstVideoConverter * convert,
+    GstBuffer * src, GstBuffer * dest);
+
+
 G_END_DECLS
 
 #endif /* __GST_VIDEO_CONVERTER_H__ */

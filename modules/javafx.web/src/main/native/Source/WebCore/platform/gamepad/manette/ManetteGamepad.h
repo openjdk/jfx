@@ -31,11 +31,14 @@
 
 #include <libmanette.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/glib/GRefPtr.h>
 
 namespace WebCore {
 
 class ManetteGamepad final : public PlatformGamepad {
+    WTF_MAKE_TZONE_ALLOCATED(ManetteGamepad);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ManetteGamepad);
 public:
     // Refer https://www.w3.org/TR/gamepad/#gamepadbutton-interface
     enum class StandardGamepadAxis : int8_t {
@@ -44,7 +47,6 @@ public:
         LeftStickY,
         RightStickX,
         RightStickY,
-        Count,
     };
     enum class StandardGamepadButton : int8_t {
         Unknown = -1,
@@ -65,7 +67,6 @@ public:
         DPadLeft,
         DPadRight,
         Mode,
-        Count,
     };
 
     ManetteGamepad(ManetteDevice*, unsigned index);

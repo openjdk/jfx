@@ -25,11 +25,12 @@
 
 #include "config.h"
 #include "RenderGeometryMap.h"
+#include "RenderElementInlines.h"
 
 #include "RenderFragmentedFlow.h"
 #include "RenderLayer.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include "TransformState.h"
 #include <wtf/SetForScope.h>
@@ -48,7 +49,6 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
     // If the mapping includes something like columns, we have to go via renderers.
     if (hasNonUniformStep()) {
         m_mapping.last().m_renderer->mapLocalToContainer(container, transformState, ApplyContainerFlip | m_mapCoordinatesFlags);
-        transformState.flatten();
         return;
     }
 
@@ -57,7 +57,7 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
     bool foundContainer = !container || (m_mapping.size() && m_mapping[0].m_renderer == container);
 #endif
 
-    for (int i = m_mapping.size() - 1; i >= 0; --i) {
+    for (auto i = m_mapping.size(); i--;) {
         const RenderGeometryMapStep& currentStep = m_mapping[i];
 
         // If container is the RenderView (step 0) we want to apply its scroll offset.
@@ -94,7 +94,6 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
     }
 
     ASSERT(foundContainer);
-    transformState.flatten();
 }
 
 FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLayerModelObject* container) const
@@ -111,7 +110,7 @@ FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLa
     } else {
         TransformState transformState(TransformState::ApplyTransformDirection, p);
         mapToContainer(transformState, container);
-        result = transformState.lastPlanarPoint();
+        result = transformState.mappedPoint();
         ASSERT(m_accumulatedOffsetMightBeSaturated ||  areEssentiallyEqual(rendererMappedResult, result));
     }
 
@@ -128,13 +127,13 @@ FloatQuad RenderGeometryMap::mapToContainer(const FloatRect& rect, const RenderL
     } else {
         TransformState transformState(TransformState::ApplyTransformDirection, rect.center(), rect);
         mapToContainer(transformState, container);
-        result = transformState.lastPlanarQuad();
+        result = transformState.mappedQuad();
     }
 
     return result;
 }
 
-void RenderGeometryMap::pushMappingsToAncestor(const RenderObject* renderer, const RenderLayerModelObject* ancestorRenderer)
+void RenderGeometryMap::pushMappingsToAncestor(const RenderElement* renderer, const RenderLayerModelObject* ancestorRenderer)
 {
     // We need to push mappings in reverse order here, so do insertions rather than appends.
     SetForScope positionChange(m_insertionPosition, m_mapping.size());

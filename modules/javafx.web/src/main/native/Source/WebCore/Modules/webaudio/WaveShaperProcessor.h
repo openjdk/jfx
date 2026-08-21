@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,10 @@
 #include "AudioDSPKernel.h"
 #include "AudioDSPKernelProcessor.h"
 #include "AudioNode.h"
-#include <JavaScriptCore/Forward.h>
 #include <memory>
 #include <wtf/Lock.h>
-#include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -39,6 +38,7 @@ namespace WebCore {
 
 class WaveShaperProcessor final : public AudioDSPKernelProcessor {
     WTF_MAKE_TZONE_ALLOCATED(WaveShaperProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WaveShaperProcessor);
 public:
     enum OverSampleType {
         OverSampleNone,
@@ -52,11 +52,11 @@ public:
 
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) final;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) final;
 
-    void setCurveForBindings(Float32Array*);
-    Float32Array* curveForBindings() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_curve.get(); } // Doesn't grab the lock, only safe to call on the main thread.
-    Float32Array* curve() const WTF_REQUIRES_LOCK(m_processLock) { return m_curve.get(); }
+    void setCurveForBindings(Vector<float>&&);
+    const Vector<float>& curveForBindings() const LIFETIME_BOUND WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_curve; } // Doesn't grab the lock, only safe to call on the main thread.
+    const Vector<float>& curve() const LIFETIME_BOUND WTF_REQUIRES_LOCK(m_processLock) { return m_curve; }
 
     void setOversampleForBindings(OverSampleType);
     OverSampleType oversampleForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_oversample; } // Doesn't grab the lock, only safe to call on the main thread.
@@ -68,7 +68,7 @@ private:
     Type processorType() const final { return Type::WaveShaper; }
 
     // m_curve represents the non-linear shaping curve.
-    RefPtr<Float32Array> m_curve WTF_GUARDED_BY_LOCK(m_processLock);
+    Vector<float> m_curve WTF_GUARDED_BY_LOCK(m_processLock);
 
     OverSampleType m_oversample WTF_GUARDED_BY_LOCK(m_processLock) { OverSampleNone };
 

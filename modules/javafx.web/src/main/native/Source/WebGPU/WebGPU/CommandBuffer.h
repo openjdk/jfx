@@ -25,6 +25,7 @@
 
 #pragma once
 
+#import <Metal/Metal.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -45,9 +46,9 @@ class Device;
 class CommandBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<CommandBuffer>, public WGPUCommandBufferImpl {
     WTF_MAKE_TZONE_ALLOCATED(CommandBuffer);
 public:
-    static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&)>>&& onCommitHandlers, CommandEncoder& commandEncoder)
+    static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&, CommandEncoder&)>>&& onCommitHandlers, CommandEncoder& commandEncoder)
     {
-        return adoptRef(*new CommandBuffer(commandBuffer, device, sharedEvent, sharedEventSignalValue, WTFMove(onCommitHandlers), commandEncoder));
+        return adoptRef(*new CommandBuffer(commandBuffer, device, sharedEvent, sharedEventSignalValue, WTF::move(onCommitHandlers), commandEncoder));
     }
     static Ref<CommandBuffer> createInvalid(Device& device)
     {
@@ -75,7 +76,7 @@ public:
     void addPostCommitHandler(Function<void(id<MTLCommandBuffer>)>&&);
 
 private:
-    CommandBuffer(id<MTLCommandBuffer>, Device&, id<MTLSharedEvent>, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&)>>&&, CommandEncoder&);
+    CommandBuffer(id<MTLCommandBuffer>, Device&, id<MTLSharedEvent>, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&, CommandEncoder&)>>&&, CommandEncoder&);
     CommandBuffer(Device&);
     void retainTimestampsForOneUpdateLoop();
 
@@ -86,7 +87,7 @@ private:
     const Ref<Device> m_device;
     NSString* m_lastErrorString { nil };
     id<MTLSharedEvent> m_sharedEvent { nil };
-    Vector<Function<bool(CommandBuffer&)>> m_preCommitHandlers;
+    Vector<Function<bool(CommandBuffer&, CommandEncoder&)>> m_preCommitHandlers;
     Vector<Function<void(id<MTLCommandBuffer>)>> m_postCommitHandlers;
     const uint64_t m_sharedEventSignalValue { 0 };
     // FIXME: we should not need this semaphore - https://bugs.webkit.org/show_bug.cgi?id=272353

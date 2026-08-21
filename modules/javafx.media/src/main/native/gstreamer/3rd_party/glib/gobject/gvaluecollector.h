@@ -231,10 +231,14 @@ G_STMT_START {                    \
  *
  * Skip an argument of type @_value_type from @var_args.
  */
+#ifdef GSTREAMER_LITE
 #define G_VALUE_COLLECT_SKIP(_value_type, var_args)                                     \
 G_STMT_START {                                                                          \
-  GTypeValueTable *g_vcs_vtable = g_type_value_table_peek (_value_type);                        \
-  const gchar *g_vcs_collect_format = g_vcs_vtable->collect_format;                             \
+  GTypeValueTable *g_vcs_vtable = g_type_value_table_peek (_value_type);                \
+  if (g_vcs_vtable == NULL) {                                                           \
+    g_assert_not_reached ();                                                            \
+  }                                                                                     \
+  const gchar *g_vcs_collect_format = g_vcs_vtable->collect_format;                     \
                                                                                         \
   while (*g_vcs_collect_format)                                                         \
     {                                                                                   \
@@ -260,6 +264,37 @@ G_STMT_START {                                                                  
         }                                                                               \
     }                                                                                   \
 } G_STMT_END
+#else // GSTREAMER_LITE
+#define G_VALUE_COLLECT_SKIP(_value_type, var_args)                                     \
+G_STMT_START {                                                                          \
+  GTypeValueTable *g_vcs_vtable = g_type_value_table_peek (_value_type);                \
+  const gchar *g_vcs_collect_format = g_vcs_vtable->collect_format;                     \
+                                                                                        \
+  while (*g_vcs_collect_format)                                                         \
+    {                                                                                   \
+      switch (*g_vcs_collect_format++)                                                  \
+        {                                                                               \
+        case G_VALUE_COLLECT_INT:                                                       \
+          va_arg ((var_args), gint);                                                    \
+          break;                                                                        \
+        case G_VALUE_COLLECT_LONG:                                                      \
+          va_arg ((var_args), glong);                                                   \
+          break;                                                                        \
+        case G_VALUE_COLLECT_INT64:                                                     \
+          va_arg ((var_args), gint64);                                                  \
+          break;                                                                        \
+        case G_VALUE_COLLECT_DOUBLE:                                                    \
+          va_arg ((var_args), gdouble);                                                 \
+          break;                                                                        \
+        case G_VALUE_COLLECT_POINTER:                                                   \
+          va_arg ((var_args), gpointer);                                                \
+          break;                                                                        \
+        default:                                                                        \
+          g_assert_not_reached ();                                                      \
+        }                                                                               \
+    }                                                                                   \
+} G_STMT_END
+#endif // GSTREAMER_LITE
 
 /**
  * G_VALUE_LCOPY:

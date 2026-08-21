@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "HTMLFrameElementBase.h"
-#include "PermissionsPolicy.h"
+#include <WebCore/HTMLFrameElementBase.h>
+#include <WebCore/PermissionsPolicy.h>
+#include <WebCore/SubstituteData.h>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class RenderIFrame;
 class TrustedHTML;
 
 class HTMLIFrameElement final : public HTMLFrameElementBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLIFrameElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLIFrameElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLIFrameElement);
 public:
     static Ref<HTMLIFrameElement> create(const QualifiedName&, Document&);
@@ -42,19 +43,18 @@ public:
 
     DOMTokenList& sandbox();
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const final;
 
-    const AtomString& loading() const;
-    void setLoading(const AtomString&);
-
     String srcdoc() const;
-    ExceptionOr<void> setSrcdoc(std::variant<RefPtr<TrustedHTML>, String>&&);
+    ExceptionOr<void> setSrcdoc(Variant<RefPtr<TrustedHTML>, String>&&, SubstituteData::SessionHistoryVisibility = SubstituteData::SessionHistoryVisibility::Visible);
+    SubstituteData::SessionHistoryVisibility srcdocSessionHistoryVisibility() const { return m_srcdocSessionHistoryVisibility; };
 
     LazyLoadFrameObserver& lazyLoadFrameObserver();
 
     void loadDeferredFrame();
+
+    enum LoadingValues { Lazy, Eager };
 
 #if ENABLE(FULLSCREEN_API)
     bool hasIFrameFullscreenFlag() const { return m_IFrameFullscreenFlag; }
@@ -63,7 +63,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     const URL& initiatorSourceURL() const { return m_initiatorSourceURL; }
-    void setInitiatorSourceURL(URL&& url) { m_initiatorSourceURL = WTFMove(url); }
+    void setInitiatorSourceURL(URL&& url) { m_initiatorSourceURL = WTF::move(url); }
 #endif
 
 private:
@@ -78,18 +78,20 @@ private:
 
     bool rendererIsNeeded(const RenderStyle&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool isReplaced(const RenderStyle&) const final { return true; }
+    bool isReplaced(const RenderStyle* = nullptr) const final { return true; }
 
+    ReferrerPolicy referrerPolicyFromAttribute() const;
     bool shouldLoadFrameLazily() final;
     bool isLazyLoadObserverActive() const final;
 
-    std::unique_ptr<DOMTokenList> m_sandbox;
-#if ENABLE(FULLSCREEN_API)
-    bool m_IFrameFullscreenFlag { false };
-#endif
+    const std::unique_ptr<DOMTokenList> m_sandbox;
     std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
 #if ENABLE(CONTENT_EXTENSIONS)
     URL m_initiatorSourceURL;
+#endif
+    SubstituteData::SessionHistoryVisibility m_srcdocSessionHistoryVisibility { SubstituteData::SessionHistoryVisibility::Visible };
+#if ENABLE(FULLSCREEN_API)
+    bool m_IFrameFullscreenFlag { false };
 #endif
 };
 

@@ -39,7 +39,7 @@ DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Standard keyword)
 {
 }
 
-DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::ConstrainedHigh keyword)
+DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Constrained keyword)
     : value { keyword }
 {
 }
@@ -50,7 +50,7 @@ DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::NoLimit keyword)
 }
 
 DynamicRangeLimit::DynamicRangeLimit(DynamicRangeLimitMixFunction&& mix)
-    : value { WTF::makeUniqueRef<DynamicRangeLimitMixFunction>(WTFMove(mix)) }
+    : value { WTF::makeUniqueRef<DynamicRangeLimitMixFunction>(WTF::move(mix)) }
 {
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2010, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,10 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "MessagePort.h"
+#include "WorkerGlobalScopeProxy.h"
 #include "WorkerOptions.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerType.h"
@@ -51,21 +53,20 @@ class RTCRtpScriptTransform;
 class RTCRtpScriptTransformer;
 class ScriptExecutionContext;
 class TrustedScriptURL;
-class WorkerGlobalScopeProxy;
 class WorkerScriptLoader;
 
 struct StructuredSerializeOptions;
 struct WorkerOptions;
 
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worker);
+    WTF_MAKE_TZONE_ALLOCATED(Worker);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
     USING_CAN_MAKE_WEAKPTR(AbstractWorker);
 
-    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
+    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, Variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
     virtual ~Worker();
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
@@ -76,7 +77,8 @@ public:
     String identifier() const { return m_identifier; }
     const String& name() const { return m_options.name; }
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void dispatchEvent(Event&) final;
     void reportError(const String&);
@@ -123,3 +125,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Worker)

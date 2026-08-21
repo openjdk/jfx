@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2009 Michelangelo De Simone <micdesim@gmail.com>
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,9 +41,10 @@ using namespace HTMLNames;
 bool BaseTextInputType::patternMismatch(const String& value) const
 {
     ASSERT(element());
+    Ref element = *this->element();
     // FIXME: We should execute RegExp parser first to check validity instead of creating an actual RegularExpression.
     // https://bugs.webkit.org/show_bug.cgi?id=183361
-    const AtomString& rawPattern = element()->attributeWithoutSynchronization(patternAttr);
+    const AtomString& rawPattern = element->attributeWithoutSynchronization(patternAttr);
     if (rawPattern.isNull() || value.isEmpty() || !JSC::Yarr::RegularExpression(rawPattern, { JSC::Yarr::Flags::UnicodeSets }).isValid())
         return false;
 
@@ -56,7 +57,7 @@ bool BaseTextInputType::patternMismatch(const String& value) const
         return matchOffset || matchLength != valueLength;
     };
 
-    if (isEmailField() && element()->multiple()) {
+    if (isEmailField() && element->multiple()) {
         auto values = value.split(',');
         return values.findIf(valuePatternMismatch) != notFound;
     }

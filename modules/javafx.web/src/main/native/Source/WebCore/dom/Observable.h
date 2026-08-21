@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include "SubscriberCallback.h"
 #include "VoidCallback.h"
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -46,15 +46,17 @@ struct SubscribeOptions;
 struct SubscriptionObserver;
 
 class Observable final : public ScriptWrappable, public RefCounted<Observable> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Observable);
+    WTF_MAKE_TZONE_ALLOCATED(Observable);
 
 public:
-    using ObserverUnion = std::variant<RefPtr<JSSubscriptionObserverCallback>, SubscriptionObserver>;
-    using InspectorUnion = std::variant<RefPtr<JSSubscriptionObserverCallback>, ObservableInspector>;
+    using ObserverUnion = Variant<RefPtr<JSSubscriptionObserverCallback>, SubscriptionObserver>;
+    using InspectorUnion = Variant<RefPtr<JSSubscriptionObserverCallback>, ObservableInspector>;
 
     static Ref<Observable> create(Ref<SubscriberCallback>);
 
     explicit Observable(Ref<SubscriberCallback>);
+
+    ~Observable();
 
     void subscribe(ScriptExecutionContext&, std::optional<ObserverUnion>, SubscribeOptions);
     void subscribeInternal(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);
@@ -76,7 +78,7 @@ public:
     void reduce(ScriptExecutionContext&, Ref<ReducerCallback>&&, JSC::JSValue, const SubscribeOptions&, Ref<DeferredPromise>&&);
 
 private:
-    Ref<SubscriberCallback> m_subscriberCallback;
+    const Ref<SubscriberCallback> m_subscriberCallback;
 };
 
 } // namespace WebCore

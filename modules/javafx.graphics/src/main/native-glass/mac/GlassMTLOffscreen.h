@@ -41,5 +41,7 @@
           andIsSwPipe:(BOOL)isSwPipe;
 
 - (id<MTLTexture>)getMTLTexture;
+- (bool)tryLockTexture;
+- (void)unlockTexture;
 
 @end

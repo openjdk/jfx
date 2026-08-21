@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
 
 namespace JSC {
 
@@ -38,7 +38,7 @@ ExecutableAllocationFuzzResult doExecutableAllocationFuzzing();
 
 inline ExecutableAllocationFuzzResult doExecutableAllocationFuzzingIfEnabled()
 {
-    if (LIKELY(!Options::useExecutableAllocationFuzz()))
+    if (!Options::useExecutableAllocationFuzz()) [[likely]]
         return AllowNormalExecutableAllocation;
 
     return doExecutableAllocationFuzzing();

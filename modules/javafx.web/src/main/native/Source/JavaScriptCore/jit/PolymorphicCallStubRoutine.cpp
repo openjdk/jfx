@@ -31,6 +31,7 @@
 #include "CodeBlock.h"
 #include "FullCodeOrigin.h"
 #include "JSCJSValueInlines.h"
+#include "JSFunctionInlines.h"
 #include "LinkBuffer.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -55,9 +56,11 @@ void PolymorphicCallNode::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, C
     }
 }
 
-void PolymorphicCallNode::clear()
+void PolymorphicCallNode::unlinkForcefully()
 {
     m_cleared = true;
+    if (isOnList())
+        remove();
 }
 
 PolymorphicCallStubRoutine* PolymorphicCallNode::owner()
@@ -150,10 +153,10 @@ CallEdgeList PolymorphicCallStubRoutine::edges() const
     return result;
 }
 
-void PolymorphicCallStubRoutine::clearCallNodesFor(CallLinkInfo*)
+void PolymorphicCallStubRoutine::unlinkForcefully()
 {
     for (auto& callNode : leadingSpan())
-        callNode.clear();
+        callNode.unlinkForcefully();
 }
 
 bool PolymorphicCallStubRoutine::visitWeakImpl(VM& vm)

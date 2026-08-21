@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
 #include "ExceptionOr.h"
 #include "NodeList.h"
@@ -60,7 +59,7 @@ public:
 
 private:
     struct SelectorData {
-        const CSSSelector* selector;
+        const CSSSelector& selector;
 #if ENABLE(CSS_SELECTOR_JIT)
         mutable CompiledSelector compiledSelector { };
 #endif
@@ -83,7 +82,7 @@ private:
     static bool compileSelector(const SelectorData&);
 #endif // ENABLE(CSS_SELECTOR_JIT)
 
-    Vector<SelectorData> m_selectors;
+    FixedVector<SelectorData> m_selectors;
     mutable enum MatchType {
         CompilableSingle,
         CompilableSingleWithRootFilter,
@@ -130,7 +129,7 @@ public:
 
 private:
     using Key = std::tuple<String, CSSSelectorParserContext, SecurityOriginData>;
-    UncheckedKeyHashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
+    HashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
 };
 
 inline bool SelectorQuery::matches(Element& element) const

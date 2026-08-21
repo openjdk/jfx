@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "AnimationTimeline.h"
-#include "Element.h"
-#include "ScrollAxis.h"
-#include "ScrollTimelineOptions.h"
-#include "Styleable.h"
+#include <WebCore/AnimationTimeline.h>
+#include <WebCore/Element.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/ScrollAxis.h>
+#include <WebCore/ScrollTimelineOptions.h>
+#include <WebCore/Styleable.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -42,10 +43,6 @@ class Element;
 class RenderStyle;
 class ScrollableArea;
 
-struct TimelineRange;
-
-TextStream& operator<<(TextStream&, Scroller);
-
 class ScrollTimeline : public AnimationTimeline {
 public:
     static Ref<ScrollTimeline> create(Document&, ScrollTimelineOptions&& = { });
@@ -54,7 +51,8 @@ public:
     static Ref<ScrollTimeline> createInactiveStyleOriginatedTimeline(const AtomString& name);
 
     const WeakStyleable& sourceStyleable() const { return m_source; }
-    virtual Element* source() const;
+    virtual RefPtr<Element> bindingsSource() const;
+    virtual RefPtr<Element> source() const;
     void setSource(Element*);
     void setSource(const Styleable&);
 
@@ -67,16 +65,17 @@ public:
     bool isInactiveStyleOriginatedTimeline() const { return m_isInactiveStyleOriginatedTimeline; }
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
+    void updateCurrentTimeIfStale();
 
     AnimationTimelinesController* controller() const override;
 
-    std::optional<WebAnimationTime> currentTime() override;
-    TimelineRange defaultRange() const override;
+    std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) override;
+    Style::SingleAnimationRange defaultRange() const override;
     WeakPtr<Element, WeakPtrImplWithEventTargetData> timelineScopeDeclaredElement() const { return m_timelineScopeElement; }
     void setTimelineScopeElement(const Element&);
     void clearTimelineScopeDeclaredElement() { m_timelineScopeElement = nullptr; }
 
-    virtual std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const TimelineRange&) const;
+    virtual std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const Style::SingleAnimationRange&) const;
 
     void removeTimelineFromDocument(Element*);
 
@@ -84,6 +83,11 @@ public:
         bool isVertical;
         bool isReversed;
     };
+
+#if ENABLE(THREADED_ANIMATIONS)
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> scrollingNodeIDForTesting() const;
+    void updateAcceleratedRepresentation();
+#endif
 
 protected:
     explicit ScrollTimeline(const AtomString&, ScrollAxis);
@@ -93,18 +97,25 @@ protected:
         float rangeStart { 0 };
         float rangeEnd { 0 };
     };
-    static float floatValueForOffset(const Length&, float);
-    virtual Data computeTimelineData() const;
+    virtual Data computeTimelineData(UseCachedCurrentTime = UseCachedCurrentTime::Yes) const;
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
+    ResolvedScrollDirection resolvedScrollDirection() const;
+    void sourceMetricsDidChange();
 
-    std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
+#if ENABLE(THREADED_ANIMATIONS)
+    void scheduleAcceleratedRepresentationUpdate();
+#endif
 
 private:
     explicit ScrollTimeline();
     explicit ScrollTimeline(Scroller, ScrollAxis);
 
     bool isScrollTimeline() const final { return true; }
+#if ENABLE(THREADED_ANIMATIONS)
+    bool computeCanBeAccelerated() const final;
+    Ref<AcceleratedTimeline> createAcceleratedRepresentation() const final;
+#endif
 
     void animationTimingDidChange(WebAnimation&) override;
 
@@ -113,6 +124,10 @@ private:
         float maxScrollOffset { 0 };
     };
 
+#if ENABLE(THREADED_ANIMATIONS)
+    ProgressResolutionData computeProgressResolutionData() const;
+#endif
+    CurrentTimeData computeCurrentTimeData() const;
     void cacheCurrentTime();
 
     WeakStyleable m_source;
@@ -123,6 +138,8 @@ private:
     CurrentTimeData m_cachedCurrentTimeData { };
     bool m_isInactiveStyleOriginatedTimeline { false };
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const ScrollTimeline&);
 
 } // namespace WebCore
 

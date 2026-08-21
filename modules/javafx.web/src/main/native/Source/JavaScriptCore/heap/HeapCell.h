@@ -25,8 +25,11 @@
 
 #pragma once
 
-#include "DestructionMode.h"
-#include "EnsureStillAliveHere.h"
+#include <JavaScriptCore/DestructionMode.h>
+#include <JavaScriptCore/EnsureStillAliveHere.h>
+#include <bit>
+#include <cstdint>
+#include <wtf/Compiler.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -68,10 +71,10 @@ public:
     // been swept and therefore its destructor (if it has one) has not yet run.
     bool isPendingDestruction();
 
-    bool isPreciseAllocation() const;
+    ALWAYS_INLINE bool isPreciseAllocation() const;
     CellContainer cellContainer() const;
-    MarkedBlock& markedBlock() const;
-    PreciseAllocation& preciseAllocation() const;
+    ALWAYS_INLINE MarkedBlock& markedBlock() const;
+    ALWAYS_INLINE PreciseAllocation& preciseAllocation() const;
 
     // If you want performance and you know that your cell is small, you can do this instead:
     // ASSERT(!cell->isPreciseAllocation());

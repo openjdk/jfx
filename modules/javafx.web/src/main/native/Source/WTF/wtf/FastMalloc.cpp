@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2007, Google Inc. All rights reserved.
+ * Copyright (c) 2005, 2007 Google Inc. All rights reserved.
  * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +31,20 @@
 
 #if OS(DARWIN)
 #include <malloc/malloc.h>
+#include <wtf/darwin/DispatchExtras.h>
 #endif
 
 #if OS(WINDOWS)
 #include <windows.h>
+#include <psapi.h>
 #else
 #if HAVE(RESOURCE_H)
 #include <sys/resource.h>
 #endif // HAVE(RESOURCE_H)
+#endif
+
+#if OS(HAIKU)
+#include <OS.h>
 #endif
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
@@ -79,7 +85,7 @@ void fastSetMaxSingleAllocationSize(size_t size)
 #endif // ASSERT_ENABLED
 
 #define FAIL_IF_EXCEEDS_LIMIT(size) do { \
-        if (UNLIKELY((size) > maxSingleAllocationSize)) \
+        if ((size) > maxSingleAllocationSize) [[unlikely]] \
             return nullptr; \
     } while (false)
 
@@ -162,7 +168,7 @@ void* fastAlignedMalloc(size_t alignment, size_t size)
 {
     ASSERT_IS_WITHIN_LIMIT(size);
     void* p = _aligned_malloc(size, alignment);
-    if (UNLIKELY(!p))
+    if (!p) [[unlikely]]
         CRASH();
     return p;
 }
@@ -189,7 +195,7 @@ void* fastAlignedMalloc(size_t alignment, size_t size)
 #else
     void* p = aligned_alloc(alignment, size);
 #endif
-    if (UNLIKELY(!p))
+    if (!p) [[unlikely]]
         CRASH();
     return p;
 }
@@ -405,11 +411,7 @@ private:
 MallocCallTracker& MallocCallTracker::singleton()
 {
     AvoidRecordingScope avoidRecording;
-    static LazyNeverDestroyed<MallocCallTracker> tracker;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        tracker.construct();
-    });
+    static NeverDestroyed<MallocCallTracker> tracker;
     return tracker;
 }
 
@@ -417,7 +419,7 @@ MallocCallTracker& MallocCallTracker::singleton()
 MallocCallTracker::MallocCallTracker()
 {
     int token;
-    notify_register_dispatch("com.apple.WebKit.dumpUntrackedMallocs", &token, dispatch_get_main_queue(), ^(int) {
+    notify_register_dispatch("com.apple.WebKit.dumpUntrackedMallocs", &token, mainDispatchQueueSingleton(), ^(int) {
         MallocCallTracker::singleton().dumpStats();
     });
 }
@@ -431,7 +433,7 @@ void MallocCallTracker::recordMalloc(void* address, size_t allocationSize)
     auto siteData = std::make_unique<MallocSiteData>(stackSize, allocationSize);
 
     Locker locker { m_lock };
-    auto addResult = m_addressMallocSiteData.add(address, WTFMove(siteData));
+    auto addResult = m_addressMallocSiteData.add(address, WTF::move(siteData));
     UNUSED_PARAM(addResult);
 }
 
@@ -449,9 +451,9 @@ void MallocCallTracker::recordRealloc(void* oldAddress, void* newAddress, size_t
 
     it->value->size = newSize;
     if (oldAddress != newAddress) {
-        auto value = WTFMove(it->value);
+        auto value = WTF::move(it->value);
         m_addressMallocSiteData.remove(it);
-        auto addResult = m_addressMallocSiteData.add(newAddress, WTFMove(value));
+        auto addResult = m_addressMallocSiteData.add(newAddress, WTF::move(value));
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
     }
 }
@@ -502,7 +504,7 @@ void MallocCallTracker::dumpStats()
             stackHashes.append(key);
 
         // Sort by reverse total size.
-        std::sort(stackHashes.begin(), stackHashes.end(), [&] (unsigned a, unsigned b) {
+        std::ranges::sort(stackHashes, [&] (unsigned a, unsigned b) {
             const auto& aSiteTotals = callSiteToMallocData.get(a);
             const auto& bSiteTotals = callSiteToMallocData.get(b);
 
@@ -824,6 +826,12 @@ FastMallocStatistics fastMallocStatistics()
     PROCESS_MEMORY_COUNTERS resourceUsage;
     GetProcessMemoryInfo(GetCurrentProcess(), &resourceUsage, sizeof(resourceUsage));
     statistics.committedVMBytes = resourceUsage.PeakWorkingSetSize;
+#elif OS(HAIKU)
+    ssize_t cookie = nullptr;
+    statistics.committedVMBytes = 0;
+    area_info info;
+    while (get_next_area_info(B_CURRENT_TEAM, &cookie, &info) == B_OK)
+        statistics.committedVMBytes += info.ram_size;
 #elif HAVE(RESOURCE_H)
     struct rusage resourceUsage;
     getrusage(RUSAGE_SELF, &resourceUsage);

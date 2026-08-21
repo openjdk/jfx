@@ -73,7 +73,7 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
 
     std::unique_ptr<BlockDirectory> uniqueDirectory = makeUnique<BlockDirectory>(sizeClass);
     BlockDirectory* directory = uniqueDirectory.get();
-    m_directories.append(WTFMove(uniqueDirectory));
+    m_directories.append(WTF::move(uniqueDirectory));
 
     directory->setSubspace(this);
     m_space.addBlockDirectory(locker, directory);
@@ -81,7 +81,7 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
     std::unique_ptr<LocalAllocator> uniqueLocalAllocator =
         makeUnique<LocalAllocator>(directory);
     LocalAllocator* localAllocator = uniqueLocalAllocator.get();
-    m_localAllocators.append(WTFMove(uniqueLocalAllocator));
+    m_localAllocators.append(WTF::move(uniqueLocalAllocator));
 
     Allocator allocator(localAllocator);
 
@@ -106,8 +106,8 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
 void* CompleteSubspace::allocateSlow(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     void* result = tryAllocateSlow(vm, size, deferralContext);
-    if (failureMode == AllocationFailureMode::Assert)
-        RELEASE_ASSERT(result);
+    if (!result) [[unlikely]]
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(failureMode != AllocationFailureMode::Assert, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
     return result;
 }
 
@@ -129,8 +129,8 @@ void* CompleteSubspace::tryAllocateSlow(VM& vm, size_t size, GCDeferralContext* 
     }
 
     vm.heap.collectIfNecessaryOrDefer(deferralContext);
-    if (UNLIKELY(Options::maxHeapSizeAsRAMSizeMultiple())) {
-        if (vm.heap.capacity() > Options::maxHeapSizeAsRAMSizeMultiple() * WTF::ramSize())
+    if (Options::maxHeapSizeAsRAMSizeMultiple()) [[unlikely]] {
+        if (vm.heap.capacity() > static_cast<uint64_t>(Options::maxHeapSizeAsRAMSizeMultiple()) * static_cast<uint64_t>(WTF::ramSize()))
             return nullptr;
     }
 
@@ -161,8 +161,7 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
 
     sanitizeStackForVM(vm);
 
-    if (size <= Options::preciseAllocationCutoff()
-        && size <= MarkedSpace::largeCutoff) {
+    if (size <= Options::preciseAllocationCutoff() && size <= MarkedSpace::largeCutoff) [[unlikely]] {
         dataLog("FATAL: attampting to allocate small object using large allocation.\n");
         dataLog("Requested allocation size: ", size, "\n");
         RELEASE_ASSERT_NOT_REACHED();
@@ -177,8 +176,8 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
         oldAllocation->remove();
 
     PreciseAllocation* allocation = oldAllocation->tryReallocate(size, this);
-    if (!allocation) {
-        RELEASE_ASSERT(failureMode != AllocationFailureMode::Assert);
+    if (!allocation) [[unlikely]] {
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(failureMode != AllocationFailureMode::Assert, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         m_preciseAllocations.append(oldAllocation);
         return nullptr;
     }
@@ -186,7 +185,7 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
 
     // If reallocation changes the address, we should update HashSet.
     if (oldAllocation != allocation) {
-        if (auto* set = m_space.preciseAllocationSet()) {
+        if (auto& set = m_space.preciseAllocationSet()) {
             set->remove(oldAllocation->cell());
             set->add(allocation->cell());
         }
@@ -199,6 +198,15 @@ void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* 
     m_preciseAllocations.append(allocation);
 
     return allocation->cell();
+}
+
+void CompleteSubspace::prepareAllAllocators()
+{
+    for (unsigned i = MarkedSpace::numSizeClasses - 1; i--;) {
+        if (!m_allocatorForSizeStep[i])
+            allocatorForSlow(MarkedSpace::s_sizeClassForSizeStep[i]);
+        ASSERT(m_allocatorForSizeStep[i]);
+    }
 }
 
 } // namespace JSC

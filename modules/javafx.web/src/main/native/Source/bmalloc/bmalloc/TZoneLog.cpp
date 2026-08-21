@@ -29,7 +29,7 @@
 #if BUSE(TZONE)
 
 #include "BAssert.h"
-#include <mutex.h>
+#include <Mutex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -60,7 +60,7 @@ void TZoneLog::init()
     }
 }
 
-TZoneLog& TZoneLog::singleton()
+extern TZoneLog& TZoneLog::singleton()
 {
     if (!theTZoneLog)
         ensureSingleton();
@@ -76,10 +76,17 @@ extern void TZoneLog::log(const char* format, ...)
 
     va_list argList;
     va_start(argList, format);
+
+#if BUSE(OS_LOG)
     if (m_logDest == LogDestination::OSLog)
         osLogWithLineBuffer(format, argList);
     else if (m_logDest == LogDestination::Stderr)
         vfprintf(stderr, format, argList);
+#else
+    if (m_logDest == LogDestination::Stderr)
+        vfprintf(stderr, format, argList);
+#endif
+
     va_end(argList);
 }
 
@@ -125,3 +132,4 @@ void TZoneLog::ensureSingleton()
 } } // namespace bmalloc::api
 
 #endif // BUSE(TZONE)
+

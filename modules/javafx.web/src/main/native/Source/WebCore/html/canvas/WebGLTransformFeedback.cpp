@@ -37,11 +37,16 @@
 
 namespace WebCore {
 
-RefPtr<WebGLTransformFeedback> WebGLTransformFeedback::create(WebGL2RenderingContext& context)
+Ref<WebGLTransformFeedback> WebGLTransformFeedback::createLost()
 {
-    auto object = context.protectedGraphicsContextGL()->createTransformFeedback();
+    return adoptRef(*new WebGLTransformFeedback { });
+}
+
+Ref<WebGLTransformFeedback> WebGLTransformFeedback::create(WebGL2RenderingContext& context)
+{
+    auto object = context.graphicsContextGL()->createTransformFeedback();
     if (!object)
-        return nullptr;
+        return createLost();
     return adoptRef(*new WebGLTransformFeedback { context, object });
 }
 
@@ -59,6 +64,8 @@ WebGLTransformFeedback::WebGLTransformFeedback(WebGL2RenderingContext& context, 
     m_boundIndexedTransformFeedbackBuffers.grow(context.maxTransformFeedbackSeparateAttribs());
 }
 
+WebGLTransformFeedback::WebGLTransformFeedback() = default;
+
 void WebGLTransformFeedback::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject object)
 {
     context3d->deleteTransformFeedback(object);
@@ -66,7 +73,7 @@ void WebGLTransformFeedback::deleteObjectImpl(const AbstractLocker&, GraphicsCon
 
 void WebGLTransformFeedback::setProgram(const AbstractLocker&, WebGLProgram& program)
 {
-    m_program = &program;
+    m_program = program;
     m_programLinkCount = program.getLinkCount();
 }
 
@@ -98,11 +105,11 @@ bool WebGLTransformFeedback::hasEnoughBuffers(GCGLuint numRequired) const
 void WebGLTransformFeedback::addMembersToOpaqueRoots(const AbstractLocker& locker, JSC::AbstractSlotVisitor& visitor)
 {
     for (auto& buffer : m_boundIndexedTransformFeedbackBuffers)
-        addWebCoreOpaqueRoot(visitor, buffer.get());
+        SUPPRESS_UNCOUNTED_ARG addWebCoreOpaqueRoot(visitor, buffer.get());
 
     addWebCoreOpaqueRoot(visitor, m_program.get());
     if (m_program)
-        m_program->addMembersToOpaqueRoots(locker, visitor);
+        SUPPRESS_UNCOUNTED_ARG m_program->addMembersToOpaqueRoots(locker, visitor);
 }
 
 void WebGLTransformFeedback::unbindBuffer(const AbstractLocker&, WebGLBuffer& buffer)

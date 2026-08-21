@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LineColumn.h"
+#include <JavaScriptCore/LineColumn.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/IterationStatus.h>
@@ -42,7 +42,7 @@ namespace JSC {
 
 class ExpressionInfo {
     WTF_MAKE_NONCOPYABLE(ExpressionInfo);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ExpressionInfo);
 public:
     enum class FieldID : uint8_t { InstPC, Divot, Start, End, Line, Column };
 
@@ -91,7 +91,7 @@ public:
 
         Entry entry() const { return m_entry; }
 
-        MallocPtr<ExpressionInfo> createExpressionInfo();
+        std::unique_ptr<ExpressionInfo> createExpressionInfo();
 
         void dumpEncodedInfo() // For debugging use only.
         {
@@ -115,7 +115,7 @@ public:
         static EncodedInfo encodeMultiHeader(unsigned numWides, Wide*);
         static EncodedInfo encodeBasic(const Diff&);
 
-        void adjustInstPC(EncodedInfo*, unsigned instPCDelta);
+        void adjustInstPC(unsigned infoIndex, unsigned instPCDelta);
 
         template<unsigned bitCount> bool fits(Wide);
         template<typename T, unsigned bitCount> bool fits(T);
@@ -242,7 +242,7 @@ private:
         return std::bit_cast<unsigned*>(this + 1);
     }
 
-    static MallocPtr<ExpressionInfo> createUninitialized(unsigned numberOfChapters, unsigned numberOfEncodedInfo, unsigned numberOfEncodedInfoExtensions);
+    static std::unique_ptr<ExpressionInfo> createUninitialized(unsigned numberOfChapters, unsigned numberOfEncodedInfo, unsigned numberOfEncodedInfoExtensions);
 
     static constexpr unsigned bitsPerWord = sizeof(unsigned) * CHAR_BIT;
 

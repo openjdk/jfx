@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "ISOBox.h"
+#include <WebCore/ISOBox.h>
 
 namespace WebCore {
 
@@ -42,9 +42,9 @@ public:
 
     static std::optional<Vector<uint8_t>> peekSystemID(JSC::DataView&, unsigned offset);
 
-    Vector<uint8_t> systemID() const { return m_systemID; }
-    Vector<KeyID> keyIDs() const { return m_keyIDs; }
-    Vector<uint8_t> data() const { return m_data; }
+    const Vector<uint8_t>& systemID() const LIFETIME_BOUND { return m_systemID; }
+    const Vector<KeyID>& keyIDs() const LIFETIME_BOUND { return m_keyIDs; }
+    const Vector<uint8_t>& data() const LIFETIME_BOUND { return m_data; }
 
     bool parse(JSC::DataView&, unsigned& offset) override;
 

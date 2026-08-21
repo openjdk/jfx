@@ -27,9 +27,9 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySetupConfiguration.h"
-#include "JSDOMPromiseDeferred.h"
 #include <WebCore/ActiveDOMObject.h>
+#include <WebCore/ApplePaySetupConfiguration.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
 #include <WebCore/JSDOMPromiseDeferredForward.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
@@ -64,7 +64,6 @@ private:
     ApplePaySetupConfiguration m_configuration;
     std::optional<SetupFeaturesPromise> m_setupFeaturesPromise;
     std::optional<BeginPromise> m_beginPromise;
-    RefPtr<PendingActivity<ApplePaySetup>> m_pendingActivity;
 };
 
 } // namespace WebCore

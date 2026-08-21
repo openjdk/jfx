@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Apple Inc. All rights reserved.
- * Copyright (c) 2008, Google Inc. All rights reserved.
+ * Copyright (c) 2008 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,13 +41,13 @@ Ref<ScriptCallStack> ScriptCallStack::create()
 
 Ref<ScriptCallStack> ScriptCallStack::create(Vector<ScriptCallFrame>&& frames, bool truncated, AsyncStackTrace* parentStackTrace)
 {
-    return adoptRef(*new ScriptCallStack(WTFMove(frames), truncated, parentStackTrace));
+    return adoptRef(*new ScriptCallStack(WTF::move(frames), truncated, parentStackTrace));
 }
 
 ScriptCallStack::ScriptCallStack() = default;
 
 ScriptCallStack::ScriptCallStack(Vector<ScriptCallFrame>&& frames, bool truncated, AsyncStackTrace* parentStackTrace)
-    : m_frames(WTFMove(frames))
+    : m_frames(WTF::move(frames))
     , m_truncated(truncated)
     , m_parentStackTrace(parentStackTrace)
 {
@@ -122,14 +122,16 @@ Ref<Protocol::Console::StackTrace> ScriptCallStack::buildInspectorObject() const
         frames->addItem(item.buildInspectorObject());
 
     auto stackTrace = Protocol::Console::StackTrace::create()
-        .setCallFrames(WTFMove(frames))
+        .setCallFrames(WTF::move(frames))
         .release();
 
     if (m_truncated)
         stackTrace->setTruncated(true);
 
-    if (m_parentStackTrace)
-        stackTrace->setParentStackTrace(m_parentStackTrace->buildInspectorObject());
+    if (m_parentStackTrace) {
+        if (auto parentStackTrace = m_parentStackTrace->buildInspectorObject())
+            stackTrace->setParentStackTrace(parentStackTrace.releaseNonNull());
+    }
 
     return stackTrace;
 }

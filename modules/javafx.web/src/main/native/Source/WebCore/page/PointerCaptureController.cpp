@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,16 +27,24 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "EventTargetInlines.h"
+#include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "HitTestResult.h"
 #include "MouseEventTypes.h"
+#include "NodeDocument.h"
 #include "Page.h"
 #include "PointerEvent.h"
 #include "Quirks.h"
+#include "Settings.h"
+#include "TaskSource.h"
+#include <algorithm>
+#include <ranges>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -56,10 +64,9 @@ PointerCaptureController::PointerCaptureController(Page& page)
 
 Element* PointerCaptureController::pointerCaptureElement(Document* document, PointerID pointerId) const
 {
-    if (auto capturingData = m_activePointerIdsToCapturingData.get(pointerId)) {
-        auto pointerCaptureElement = capturingData->targetOverride;
-        if (pointerCaptureElement && &pointerCaptureElement->document() == document)
-            return pointerCaptureElement.get();
+    if (auto* capturingData = m_activePointerIdsToCapturingData.get(pointerId)) {
+        if (capturingData->targetOverride && &capturingData->targetOverride->document() == document)
+            return capturingData->targetOverride.get();
     }
     return nullptr;
 }
@@ -182,7 +189,7 @@ void PointerCaptureController::reset()
 
 void PointerCaptureController::updateHaveAnyCapturingElement()
 {
-    m_haveAnyCapturingElement = WTF::anyOf(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
+    m_haveAnyCapturingElement = std::ranges::any_of(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
         return capturingData->hasAnyElement();
     });
 }
@@ -205,7 +212,7 @@ bool PointerCaptureController::preventsCompatibilityMouseEventsForIdentifier(Poi
     return capturingData && capturingData->preventsCompatibilityMouseEvents;
 }
 
-#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
 static bool hierarchyHasCapturingEventListeners(Element* target, const AtomString& eventName)
 {
     for (RefPtr<ContainerNode> currentNode = target; currentNode; currentNode = currentNode->parentInComposedTree()) {
@@ -215,15 +222,15 @@ static bool hierarchyHasCapturingEventListeners(Element* target, const AtomStrin
     return false;
 }
 
-void PointerCaptureController::dispatchOverOrOutEvent(const AtomString& type, EventTarget* target, const PlatformTouchEvent& event, unsigned index, bool isPrimary, WindowProxy& view, IntPoint touchDelta)
+void PointerCaptureController::dispatchOverOrOutEvent(const AtomString& type, EventTarget* target, const PlatformTouchEvent& event, unsigned index, bool isPrimary, WindowProxy& view, DoublePoint touchDelta)
 {
     dispatchEvent(PointerEvent::create(type, event, { }, { }, index, isPrimary, view, touchDelta), target);
 }
 
-void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type, Element& targetElement, const PlatformTouchEvent& event, unsigned index, bool isPrimary, WindowProxy& view, IntPoint touchDelta)
+void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type, Element& targetElement, const PlatformTouchEvent& event, unsigned index, bool isPrimary, WindowProxy& view, DoublePoint touchDelta)
 {
         bool hasCapturingListenerInHierarchy = false;
-        for (RefPtr<ContainerNode> currentNode = &targetElement; currentNode; currentNode = currentNode->parentInComposedTree()) {
+    for (RefPtr<ContainerNode> currentNode = targetElement; currentNode; currentNode = currentNode->parentInComposedTree()) {
             if (currentNode->hasCapturingEventListeners(type)) {
                 hasCapturingListenerInHierarchy = true;
                 break;
@@ -231,13 +238,13 @@ void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type,
         }
 
         Vector<Ref<Element>, 32> targetChain;
-        for (RefPtr element = &targetElement; element; element = element->parentElementInComposedTree()) {
+    for (RefPtr element = targetElement; element; element = element->parentElementInComposedTree()) {
             if (hasCapturingListenerInHierarchy || element->hasEventListeners(type))
                 targetChain.append(*element);
         }
 
         if (type == eventNames().pointerenterEvent) {
-            for (auto& element : makeReversedRange(targetChain))
+        for (auto& element : targetChain | std::views::reverse)
             dispatchEvent(PointerEvent::create(type, event, { }, { }, index, isPrimary, view, touchDelta), element.ptr());
         } else {
             for (auto& element : targetChain)
@@ -245,7 +252,7 @@ void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type,
         }
 }
 
-void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target, const PlatformTouchEvent& platformTouchEvent, unsigned index, bool isPrimary, WindowProxy& view, const IntPoint& touchDelta)
+void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target, const PlatformTouchEvent& platformTouchEvent, unsigned index, bool isPrimary, WindowProxy& view, const DoublePoint& touchDelta)
 {
     RefPtr page = m_page.get();
     if (!page)
@@ -312,7 +319,7 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
         if (currentTarget)
             dispatchOverOrOutEvent(eventNames().pointeroverEvent, currentTarget.get(), platformTouchEvent, index, isPrimary, view, touchDelta);
 
-        for (auto& chain : makeReversedRange(enteredElementsChain)) {
+        for (auto& chain : enteredElementsChain | std::views::reverse) {
             if (hasCapturingPointerEnterListener || chain->hasEventListeners(eventNames().pointerenterEvent))
                 dispatchEvent(PointerEvent::create(eventNames().pointerenterEvent, platformTouchEvent, coalescedEvents, predictedEvents, index, isPrimary, view, touchDelta), chain.ptr());
         }
@@ -328,7 +335,7 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
 
 #if PLATFORM(IOS_FAMILY)
     if (pointerEvent->type() == eventNames().pointercancelEvent) {
-        cancelPointer(pointerEvent->pointerId(), platformTouchEvent.touchLocationInRootViewAtIndex(index), pointerEvent.ptr());
+        cancelPointer(pointerEvent->pointerId(), IntPoint(platformTouchEvent.touchLocationInRootViewAtIndex(index)), pointerEvent.ptr());
         return;
     }
 #endif
@@ -362,20 +369,26 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
     bool shouldWaitForSyntheticClick = [&] {
 #if PLATFORM(IOS_FAMILY)
         if (platformTouchEvent.isPotentialTap())
-            return currentTarget->protectedDocument()->quirks().shouldDispatchPointerOutAfterHandlingSyntheticClick();
+            return currentTarget->protectedDocument()->quirks().shouldDispatchPointerOutAndLeaveAfterHandlingSyntheticClick();
 #endif
         return false;
     }();
 
     if (shouldWaitForSyntheticClick)
-        page->chrome().client().callAfterPendingSyntheticClick(WTFMove(dispatchPointerOutAndLeave));
+        page->chrome().client().callAfterPendingSyntheticClick(WTF::move(dispatchPointerOutAndLeave));
     else
         dispatchPointerOutAndLeave(SyntheticClickResult::Failed);
 
     capturingData->state = CapturingData::State::Finished;
     capturingData->previousTarget = nullptr;
 }
-#endif // ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+#endif // ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
+
+void PointerCaptureController::clearUnmatchedMouseDown(PointerID pointerID)
+{
+    if (RefPtr capturingData = m_activePointerIdsToCapturingData.get(pointerID))
+        capturingData->pointerIsPressed = false;
+}
 
 RefPtr<PointerEvent> PointerCaptureController::pointerEventForMouseEvent(const MouseEvent& mouseEvent, PointerID pointerId, const String& pointerType)
 {
@@ -463,7 +476,7 @@ void PointerCaptureController::pointerEventWillBeDispatched(const PointerEvent& 
     // Let targetDocument be target's node document.
     // If the event is pointerdown, pointermove, or pointerup set active document for the event's pointerId to targetDocument.
     auto capturingData = ensureCapturingDataForPointerEvent(event);
-    capturingData->activeDocument = &element.document();
+    capturingData->activeDocument = element.document();
 
     if (isPointermove)
         return;
@@ -555,7 +568,7 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
     capturingData->pendingTargetOverride = nullptr;
     capturingData->state = CapturingData::State::Cancelled;
 
-#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
     capturingData->previousTarget = nullptr;
 #endif
 
@@ -566,7 +579,7 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
         RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return nullptr;
-        return localMainFrame->checkedEventHandler()->hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();
+        return localMainFrame->eventHandler().hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();
     }();
 
     if (!target)

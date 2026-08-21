@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/Deque.h>
 #include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -37,38 +37,43 @@ namespace WebCore {
 
 class DOMPromise;
 class ReadableStream;
-class WritableStream;
+class ScriptExecutionContext;
+class WebTransport;
+class WebTransportDatagramsWritable;
+class WebTransportSession;
+struct WebTransportSendOptions;
+template<typename> class ExceptionOr;
 
 class WebTransportDatagramDuplexStream : public RefCounted<WebTransportDatagramDuplexStream> {
 public:
-    static Ref<WebTransportDatagramDuplexStream> create(Ref<ReadableStream>&&, Ref<WritableStream>&&);
+    static Ref<WebTransportDatagramDuplexStream> create(Ref<ReadableStream>&&);
     ~WebTransportDatagramDuplexStream();
 
-    ReadableStream& readable();
-    WritableStream& writable();
-    unsigned maxDatagramSize();
-    double incomingMaxAge();
-    double outgoingMaxAge();
-    double incomingHighWaterMark();
-    double outgoingHighWaterMark();
-    ExceptionOr<void> setIncomingMaxAge(double);
-    ExceptionOr<void> setOutgoingMaxAge(double);
+    ReadableStream& readable() { return m_readable; }
+    ExceptionOr<Ref<WebTransportDatagramsWritable>> createWritable(ScriptExecutionContext&, WebTransportSendOptions&&);
+    unsigned maxDatagramSize() const { return std::numeric_limits<uint16_t>::max(); }
+    std::optional<double> incomingMaxAge() const { return m_incomingMaxAge; }
+    std::optional<double> outgoingMaxAge() const { return m_outgoingMaxAge; }
+    double incomingHighWaterMark() const { return m_incomingHighWaterMark; }
+    double outgoingHighWaterMark() const { return m_outgoingHighWaterMark; }
+    ExceptionOr<void> setIncomingMaxAge(std::optional<double>);
+    ExceptionOr<void> setOutgoingMaxAge(std::optional<double>);
     ExceptionOr<void> setIncomingHighWaterMark(double);
     ExceptionOr<void> setOutgoingHighWaterMark(double);
 
-private:
-    WebTransportDatagramDuplexStream(Ref<ReadableStream>&&, Ref<WritableStream>&&);
+    void attachTo(WebTransport&);
 
-    Ref<ReadableStream> m_readable;
-    Ref<WritableStream> m_writable;
-    Deque<std::pair<Vector<uint8_t>, MonotonicTime>> m_incomingDatagramsQueue;
-    RefPtr<DOMPromise> m_incomingDatagramsPullPromise;
-    double m_incomingDatagramsHighWaterMark { 1 };
-    double m_incomingDatagramsExpirationDuration { std::numeric_limits<double>::infinity() };
-    Deque<std::tuple<Vector<uint8_t>, MonotonicTime, Ref<DOMPromise>>> m_outgoingDatagramsQueue;
-    double m_outgoingDatagramsHighWaterMark { 1 };
-    double m_outgoingDatagramsExpirationDuration { std::numeric_limits<double>::infinity() };
-    size_t m_outgoingMaxDatagramSize { 1024 };
+private:
+    WebTransportDatagramDuplexStream(Ref<ReadableStream>&&);
+
+    RefPtr<WebTransportSession> session();
+
+    const Ref<ReadableStream> m_readable;
+    double m_incomingHighWaterMark { 1 };
+    double m_outgoingHighWaterMark { 1 };
+    std::optional<double> m_incomingMaxAge;
+    std::optional<double> m_outgoingMaxAge;
+    ThreadSafeWeakPtr<WebTransport> m_transport;
 };
 
 }

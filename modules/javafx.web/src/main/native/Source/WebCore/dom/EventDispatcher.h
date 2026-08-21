@@ -32,7 +32,7 @@ class Node;
 namespace EventDispatcher {
 
 void dispatchEvent(Node&, Event&);
-void dispatchEvent(const Vector<EventTarget*>&, Event&);
+void dispatchEvent(std::span<EventTarget* const>, Event&);
 
 void dispatchScopedEvent(Node&, Event&);
 

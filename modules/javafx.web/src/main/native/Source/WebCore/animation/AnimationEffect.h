@@ -25,19 +25,16 @@
 
 #pragma once
 
-#include "AnimationEffect.h"
-#include "AnimationEffectTiming.h"
-#include "BasicEffectTiming.h"
-#include "ComputedEffectTiming.h"
-#include "ExceptionOr.h"
-#include "FillMode.h"
-#include "KeyframeEffectOptions.h"
-#include "OptionalEffectTiming.h"
-#include "PlaybackDirection.h"
-#include "TimingFunction.h"
-#include "WebAnimation.h"
-#include "WebAnimationUtilities.h"
-#include <variant>
+#include <WebCore/AnimationEffectTiming.h>
+#include <WebCore/BasicEffectTiming.h>
+#include <WebCore/ComputedEffectTiming.h>
+#include <WebCore/FillMode.h>
+#include <WebCore/KeyframeEffectOptions.h>
+#include <WebCore/OptionalEffectTiming.h>
+#include <WebCore/PlaybackDirection.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/WebAnimation.h>
+#include <WebCore/WebAnimationUtilities.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -47,8 +44,12 @@
 
 namespace WebCore {
 
+namespace Style {
+struct SingleAnimationRange;
+}
+
 class AnimationEffect : public RefCountedAndCanMakeWeakPtr<AnimationEffect> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AnimationEffect);
+    WTF_MAKE_TZONE_ALLOCATED(AnimationEffect);
 public:
     virtual ~AnimationEffect();
 
@@ -56,9 +57,9 @@ public:
     virtual bool isKeyframeEffect() const { return false; }
 
     EffectTiming getBindingsTiming() const;
-    BasicEffectTiming getBasicTiming(std::optional<WebAnimationTime> = std::nullopt);
+    BasicEffectTiming getBasicTiming();
     ComputedEffectTiming getBindingsComputedTiming();
-    ComputedEffectTiming getComputedTiming(std::optional<WebAnimationTime> = std::nullopt);
+    ComputedEffectTiming getComputedTiming(UseCachedCurrentTime = UseCachedCurrentTime::Yes, EndpointInclusiveActiveInterval = EndpointInclusiveActiveInterval::No);
     ExceptionOr<void> bindingsUpdateTiming(Document&, std::optional<OptionalEffectTiming>);
     ExceptionOr<void> updateTiming(Document&, std::optional<OptionalEffectTiming>);
 
@@ -66,10 +67,10 @@ public:
     virtual void animationDidChangeTimingProperties() { };
     virtual void animationWasCanceled() { };
     virtual void animationSuspensionStateDidChange(bool) { };
-    virtual void animationTimelineDidChange(const AnimationTimeline*);
+    virtual void animationTimelineDidChange();
     virtual void animationDidFinish() { };
-    void animationPlaybackRateDidChange();
-    virtual void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&);
+    virtual void animationPlaybackRateDidChange();
+    virtual void animationProgressBasedTimelineSourceDidChangeMetrics(const Style::SingleAnimationRange&);
     void animationRangeDidChange();
 
     AnimationEffectTiming timing() const { return m_timing; }
@@ -95,6 +96,7 @@ public:
     ExceptionOr<void> setIterations(double);
 
     WebAnimationTime iterationDuration();
+    WebAnimationTime iterationDuration() const;
     std::optional<Seconds> specifiedIterationDuration() const { return m_timing.specifiedIterationDuration; }
     void setIterationDuration(const std::optional<Seconds>&);
 
@@ -118,7 +120,7 @@ protected:
     virtual std::optional<double> progressUntilNextStep(double) const;
 
 private:
-    AnimationEffectTiming::ResolutionData resolutionData(std::optional<WebAnimationTime>) const;
+    AnimationEffectTiming::ResolutionData resolutionData(UseCachedCurrentTime = UseCachedCurrentTime::Yes, EndpointInclusiveActiveInterval = EndpointInclusiveActiveInterval::No) const;
     void updateComputedTimingPropertiesIfNeeded();
 
     AnimationEffectTiming m_timing;

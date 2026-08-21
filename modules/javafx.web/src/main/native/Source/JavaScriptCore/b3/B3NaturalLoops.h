@@ -29,6 +29,7 @@
 
 #include "B3Dominators.h"
 #include <wtf/NaturalLoops.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 {
@@ -37,10 +38,15 @@ typedef WTF::NaturalLoop<CFG> NaturalLoop;
 
 class NaturalLoops : public WTF::NaturalLoops<CFG> {
     WTF_MAKE_NONCOPYABLE(NaturalLoops);
-    WTF_MAKE_TZONE_ALLOCATED(NaturalLoops);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(NaturalLoops);
 public:
     NaturalLoops(Procedure& proc)
         : WTF::NaturalLoops<CFG>(proc.cfg(), proc.dominators())
+    {
+    }
+
+    NaturalLoops(Procedure& proc, Dominators& dominators)
+        : WTF::NaturalLoops<CFG>(proc.cfg(), dominators)
     {
     }
 };

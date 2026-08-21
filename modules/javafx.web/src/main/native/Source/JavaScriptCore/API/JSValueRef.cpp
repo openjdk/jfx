@@ -30,6 +30,7 @@
 #include "APIUtils.h"
 #include "DateInstance.h"
 #include "JSAPIWrapperObject.h"
+#include "JSBigIntInlines.h"
 #include "JSCInlines.h"
 #include "JSCallbackObject.h"
 #include "JSONObject.h"
@@ -321,7 +322,7 @@ JSValueRef JSValueMakeUndefined(JSContextRef ctx)
     JSLockHolder locker(globalObject);
     return toRef(globalObject, jsUndefined());
 #else
-    return toRef(jsUndefined());
+    return toRefWithoutGlobalObject(jsUndefined());
 #endif
 }
 
@@ -336,7 +337,7 @@ JSValueRef JSValueMakeNull(JSContextRef ctx)
     JSLockHolder locker(globalObject);
     return toRef(globalObject, jsNull());
 #else
-    return toRef(jsNull());
+    return toRefWithoutGlobalObject(jsNull());
 #endif
 }
 
@@ -351,7 +352,7 @@ JSValueRef JSValueMakeBoolean(JSContextRef ctx, bool value)
     JSLockHolder locker(globalObject);
     return toRef(globalObject, jsBoolean(value));
 #else
-    return toRef(jsBoolean(value));
+    return toRefWithoutGlobalObject(jsBoolean(value));
 #endif
 }
 
@@ -366,7 +367,7 @@ JSValueRef JSValueMakeNumber(JSContextRef ctx, double value)
     JSLockHolder locker(globalObject);
     return toRef(globalObject, jsNumber(purifyNaN(value)));
 #else
-    return toRef(jsNumber(purifyNaN(value)));
+    return toRefWithoutGlobalObject(jsNumber(purifyNaN(value)));
 #endif
 }
 
@@ -697,10 +698,10 @@ JSValueRef JSValueMakeFromJSONString(JSContextRef ctx, JSStringRef string)
     JSLockHolder locker(globalObject);
     String str = string->string();
     if (str.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> parser(globalObject, str.span8(), StrictJSON);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> parser(globalObject, str.span8(), StrictJSON);
         return toRef(globalObject, parser.tryLiteralParse());
     }
-    LiteralParser<UChar, JSONReviverMode::Disabled> parser(globalObject, str.span16(), StrictJSON);
+    LiteralParser<char16_t, JSONReviverMode::Disabled> parser(globalObject, str.span16(), StrictJSON);
     return toRef(globalObject, parser.tryLiteralParse());
 }
 

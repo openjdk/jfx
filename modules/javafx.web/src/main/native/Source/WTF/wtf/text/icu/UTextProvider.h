@@ -25,7 +25,10 @@
 
 #pragma once
 
+#include <limits>
+#include <span>
 #include <unicode/utext.h>
+#include <wtf/Assertions.h>
 
 namespace WTF {
 
@@ -45,7 +48,7 @@ inline UTextProviderContext uTextProviderContext(const UText* text, int64_t nati
 }
 
 template<typename CharacterType>
-inline void initializeContextAwareUTextProvider(UText* text, const UTextFuncs* funcs, std::span<const CharacterType> string, std::span<const UChar> priorContext)
+inline void initializeContextAwareUTextProvider(UText* text, const UTextFuncs* funcs, std::span<const CharacterType> string, std::span<const char16_t> priorContext)
 {
     text->pFuncs = funcs;
     text->providerProperties = 1 << UTEXT_PROVIDER_STABLE_CHUNKS;

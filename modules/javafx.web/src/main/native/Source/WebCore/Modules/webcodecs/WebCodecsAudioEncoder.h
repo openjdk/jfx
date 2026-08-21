@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2023 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CODECS)
 
 #include "AudioEncoder.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "WebCodecsAudioEncoderConfig.h"
 #include "WebCodecsBase.h"
@@ -36,6 +37,7 @@
 
 namespace WebCore {
 
+class Exception;
 class WebCodecsEncodedAudioChunk;
 class WebCodecsErrorCallback;
 class WebCodecsEncodedAudioChunkOutputCallback;
@@ -43,7 +45,7 @@ class WebCodecsAudioData;
 struct WebCodecsEncodedAudioChunkMetadata;
 
 class WebCodecsAudioEncoder : public WebCodecsBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebCodecsAudioEncoder);
+    WTF_MAKE_TZONE_ALLOCATED(WebCodecsAudioEncoder);
 public:
     ~WebCodecsAudioEncoder();
 
@@ -82,8 +84,8 @@ private:
 
     WebCodecsEncodedAudioChunkMetadata createEncodedChunkMetadata();
 
-    Ref<WebCodecsEncodedAudioChunkOutputCallback> m_output;
-    Ref<WebCodecsErrorCallback> m_error;
+    const Ref<WebCodecsEncodedAudioChunkOutputCallback> m_output;
+    const Ref<WebCodecsErrorCallback> m_error;
     RefPtr<AudioEncoder> m_internalEncoder;
     Vector<Ref<DeferredPromise>> m_pendingFlushPromises;
     bool m_isKeyChunkRequired { false };
@@ -93,6 +95,8 @@ private:
     size_t m_encoderCount { 0 };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebCodecsAudioEncoder)
 
 #endif

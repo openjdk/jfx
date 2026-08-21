@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,14 @@ package jfx.incubator.scene.control.richtext.model;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.layout.Region;
+import com.sun.jfx.incubator.scene.control.richtext.Params;
+import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -43,19 +48,75 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * @since 24
  */
 public class RichTextModel extends StyledTextModel {
+
+    /**
+     * This value of the {@link #defaultTabStopsProperty()} results in a legacy behavior
+     * where the tab spacing corresponds to 8 spaces.
+     * This may result in milasigned columns when different text segments use different fonts.
+     * @since 27
+     */
+    public static final double DEFAULT_TAB_STOPS_FIXED = 0.0;
+
+    /**
+     * This value of the {@link #defaultTabStopsProperty()} disables the default tab stops, making a tab characters
+     * appear as a single space.
+     * @since 27
+     */
+    public static final double DEFAULT_TAB_STOPS_DISABLED = -1.0;
+
+    private static final String PROP_TABS = "tabs";
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttributeMap,StyleAttributeMap> styleCache = new HashMap<>();
+    private DoubleProperty defaultTabStops;
 
     /**
      * Constructs the empty model.
      */
     public RichTextModel() {
-        registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, true, 2000);
-        registerDataFormatHandler(RtfFormatHandler.getInstance(), true, true, 1000);
-        registerDataFormatHandler(HtmlExportFormatHandler.getInstance(), true, false, 100);
+        registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, true, 1000);
+        registerDataFormatHandler(RtfFormatHandler.getInstance(), true, true, 300);
+        registerDataFormatHandler(HtmlExportFormatHandler.getInstance(), true, false, 200);
+        registerDataFormatHandler(FileListFormatHandler.getInstance(), false, true, 100);
         registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, true, 0);
         // always has at least one paragraph
         paragraphs.add(new RParagraph());
+    }
+
+    /**
+     * Specifies the default tab stop interval for tabs beyond the last stop provided
+     * by the paragraph's
+     * {@link jfx.incubator.scene.control.richtext.model.StyleAttributeMap#TAB_STOPS StyleAttributeMap.TAB_STOPS}
+     * attribute, if any.
+     * This is a fixed repeating distance (in pixels) to the
+     * next tab stop computed at regular intervals relative to the document content leading edge.
+     * <p>
+     * Value {@link #DEFAULT_TAB_STOPS_FIXED} results in a legacy behavior where the tab spacing corresponds to 8 spaces.
+     * This may result in milasigned columns when different text segments use different fonts.
+     * The value {@link #DEFAULT_TAB_STOPS_DISABLED} disables the default interval,
+     * rendering tab character as a single space.
+     *
+     * @return the default tab stop interval property
+     * @defaultValue DEFAULT_TAB_STOPS_FIXED
+     * @since 27
+     */
+    public final DoubleProperty defaultTabStopsProperty() {
+        if (defaultTabStops == null) {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", DEFAULT_TAB_STOPS_FIXED) {
+                @Override
+                protected void invalidated() {
+                    fireStyleChangeEvent(TextPos.ZERO, getDocumentEnd());
+                }
+            };
+        }
+        return defaultTabStops;
+    }
+
+    public final void setDefaultTabStops(double value) {
+        defaultTabStopsProperty().set(value);
+    }
+
+    public final double getDefaultTabStops() {
+        return defaultTabStops == null ? DEFAULT_TAB_STOPS_FIXED : defaultTabStops.get();
     }
 
     @Override
@@ -80,8 +141,21 @@ public class RichTextModel extends StyledTextModel {
 
     @Override
     public RichParagraph getParagraph(int index) {
+        RichParagraph.Builder b = prepareParagraph(index);
+        return b.build();
+    }
+
+    /**
+     * Prepares the paragraph by populating a builder with the paragraph content.
+     * This method allows the custom model to add highlights and decorations
+     * without affecting the base class storage model.
+     * @param index the paragraph index
+     * @return the builder
+     * @since 26
+     */
+    protected RichParagraph.Builder prepareParagraph(int index) {
         RParagraph p = paragraphs.get(index);
-        return p.createRichParagraph();
+        return p.buildParagraph();
     }
 
     @Override
@@ -146,6 +220,11 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
+    protected void applyParagraphStyle(int index, StyleAttributeMap attrs) {
+        paragraphs.get(index).applyParagraphAttributes(attrs);
+    }
+
+    @Override
     protected void setParagraphStyle(int index, StyleAttributeMap attrs) {
         paragraphs.get(index).setParagraphAttributes(attrs);
     }
@@ -156,13 +235,14 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos, boolean forInsert) {
         int index = pos.index();
         if (index < paragraphs.size()) {
-            int off = pos.offset();
             RParagraph par = paragraphs.get(index);
             StyleAttributeMap pa = par.getParagraphAttributes();
-            StyleAttributeMap a = par.getStyleAttributeMap(off);
+            int cix = pos.charIndex();
+            boolean leading = pos.isLeading();
+            StyleAttributeMap a = par.getStyleAttributeMap(cix, leading, forInsert);
             if (pa == null) {
                 return a;
             } else {
@@ -197,6 +277,34 @@ public class RichTextModel extends StyledTextModel {
             out.println("    {text=\"" + s.text() + "\", attr=" + s.getStyleAttributeMap() + "},");
         }
         out.println("  ]}");
+    }
+
+    @Override
+    protected String versionString() {
+        return Params.VERSION_3;
+    }
+
+    @Override
+    protected Map<String,String> documentProperties() {
+        return Map.of(
+            PROP_TABS, Double.toString(getDefaultTabStops())
+        );
+    }
+
+    @Override
+    protected void handleDocumentProperties(Map<String, String> p, boolean completeReplacement) {
+        if (completeReplacement) {
+            // update default tab stops only when replacing the content completely
+            // (on load, paste to new, etc.)
+            String s = p.get(PROP_TABS);
+            if (s != null) {
+                try {
+                    double v = Double.parseDouble(s);
+                    setDefaultTabStops(v);
+                } catch (NumberFormatException ignore) {
+                }
+            }
+        }
     }
 
     /**
@@ -268,7 +376,7 @@ public class RichTextModel extends StyledTextModel {
     /**
      * Model paragraph is a list of RSegments.
      */
-    static class RParagraph extends ArrayList<RSegment> {
+    private static class RParagraph extends ArrayList<RSegment> {
 
         private StyleAttributeMap paragraphAttrs;
 
@@ -278,6 +386,14 @@ public class RichTextModel extends StyledTextModel {
 
         public StyleAttributeMap getParagraphAttributes() {
             return paragraphAttrs;
+        }
+
+        public void applyParagraphAttributes(StyleAttributeMap a) {
+            if (paragraphAttrs == null) {
+                paragraphAttrs = a;
+            } else {
+                paragraphAttrs = paragraphAttrs.combine(a);
+            }
         }
 
         public void setParagraphAttributes(StyleAttributeMap a) {
@@ -301,20 +417,34 @@ public class RichTextModel extends StyledTextModel {
         }
 
         /**
-         * Retrieves the style attributes from the previous character (or next, if at the beginning).
-         * @param offset the offset
-         * @return the style info
+         * Retrieves the style attributes at the specified position.
+         * @param charIndex the character index
+         * @param leading the leading/trailing bias
+         * @param forInsert whether to pick preceding style at the segment boundary
+         * @return the style attributes, non-null
          */
-        public StyleAttributeMap getStyleAttributeMap(int offset) {
-            int off = 0;
+        public StyleAttributeMap getStyleAttributeMap(int charIndex, boolean leading, boolean forInsert) {
+            int pos = 0;
             int ct = size();
+            int last = ct - 1;
             for (int i = 0; i < ct; i++) {
                 RSegment seg = get(i);
                 int len = seg.getTextLength();
-                if (offset < (off + len) || (i == ct - 1)) {
+                pos += len;
+
+                boolean use;
+                if (i == last) {
+                    use = true;
+                } else if (charIndex == pos) {
+                    // forInsert ? leading : false;
+                    use = forInsert && leading;
+                } else {
+                    use = charIndex < pos;
+                }
+
+                if (use) {
                     return seg.getStyleAttributeMap();
                 }
-                off += len;
             }
             return StyleAttributeMap.EMPTY;
         }
@@ -349,7 +479,7 @@ public class RichTextModel extends StyledTextModel {
                         }
                         if (ix < toSplit.length()) {
                             String s2 = toSplit.substring(ix);
-                            insertSegment2(i, s2, a);
+                            insertSegment2(i, s2, RichUtils.filterOutNodeAttributes(a));
                         }
                         return;
                     }
@@ -388,7 +518,7 @@ public class RichTextModel extends StyledTextModel {
                 }
             } else if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (a.equals(prev.attrs())) {
+                if (!RichUtils.containsInlineNodes(prev.attrs()) && a.equals(prev.attrs())) {
                     // combine
                     prev.append(text);
                     return false;
@@ -474,12 +604,14 @@ public class RichTextModel extends StyledTextModel {
             if (size() == 0) {
                 if (next.size() > 0) {
                     StyleAttributeMap a = next.get(0).getStyleAttributeMap();
+                    a = RichUtils.filterOutNodeAttributes(a);
                     add(new RSegment("", a));
                 }
             }
             if (next.size() == 0) {
                 if (size() > 0) {
                     StyleAttributeMap a = get(size() - 1).getStyleAttributeMap();
+                    a = RichUtils.filterOutNodeAttributes(a);
                     next.add(new RSegment("", a));
                 }
             }
@@ -582,7 +714,9 @@ public class RichTextModel extends StyledTextModel {
                     remove(ix0);
                     if (size() == 0) {
                         // keep attributes in a zero width segment
-                        add(new RSegment("", seg.getStyleAttributeMap()));
+                        StyleAttributeMap a = seg.getStyleAttributeMap();
+                        a = RichUtils.filterOutNodeAttributes(a);
+                        add(new RSegment("", a));
                     }
                 }
             } else {
@@ -610,7 +744,7 @@ public class RichTextModel extends StyledTextModel {
                 removeRange(ix0, ix1);
                 if (size() == 0) {
                     // keep attributes in a zero width segment
-                    add(new RSegment("", seg.getStyleAttributeMap()));
+                    add(new RSegment("", RichUtils.filterOutNodeAttributes(seg.getStyleAttributeMap())));
                 }
             }
         }
@@ -781,15 +915,20 @@ public class RichTextModel extends StyledTextModel {
             }
         }
 
-        private RichParagraph createRichParagraph() {
+        private RichParagraph.Builder buildParagraph() {
             RichParagraph.Builder b = RichParagraph.builder();
             for (RSegment seg : this) {
-                String text = seg.text();
                 StyleAttributeMap a = seg.attrs();
-                b.addSegment(text, a);
+                EmbeddedImage im = a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+                if (im == null) {
+                    String text = seg.text();
+                    b.addSegment(text, a);
+                } else {
+                    b.addInlineNode(im::createNode, a);
+                }
             }
             b.setParagraphAttributes(paragraphAttrs);
-            return b.build();
+            return b;
         }
     }
 }

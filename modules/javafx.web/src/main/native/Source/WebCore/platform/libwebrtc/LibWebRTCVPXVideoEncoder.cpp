@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if USE(LIBWEBRTC) && PLATFORM(COCOA)
 
+#include "LibWebRTCMacros.h"
 #include "VideoFrameLibWebRTC.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -41,7 +42,7 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/modules/video_coding/codecs/av1/libaom_av1_encoder.h>
 #include <webrtc/modules/video_coding/codecs/vp8/include/vp8.h>
 #include <webrtc/modules/video_coding/codecs/vp9/include/vp9.h>
-#include <webrtc/system_wrappers/include/cpu_info.h>
+#include <webrtc/rtc_base/cpu_info.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitEncoder.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
@@ -52,7 +53,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCVPXVideoEncoder);
 
 static constexpr double defaultFrameRate = 30.0;
 
-static WorkQueue& vpxEncoderQueue()
+static WorkQueue& vpxEncoderQueueSingleton()
 {
     static std::once_flag onceKey;
     static LazyNeverDestroyed<Ref<WorkQueue>> queue;
@@ -64,7 +65,7 @@ static WorkQueue& vpxEncoderQueue()
 
 class LibWebRTCVPXInternalVideoEncoder : public ThreadSafeRefCounted<LibWebRTCVPXInternalVideoEncoder> , public webrtc::EncodedImageCallback {
 public:
-    static Ref<LibWebRTCVPXInternalVideoEncoder> create(LibWebRTCVPXVideoEncoder::Type type, VideoEncoder::OutputCallback&& outputCallback) { return adoptRef(*new LibWebRTCVPXInternalVideoEncoder(type, WTFMove(outputCallback))); }
+    static Ref<LibWebRTCVPXInternalVideoEncoder> create(LibWebRTCVPXVideoEncoder::Type type, VideoEncoder::OutputCallback&& outputCallback) { return adoptRef(*new LibWebRTCVPXInternalVideoEncoder(type, WTF::move(outputCallback))); }
     ~LibWebRTCVPXInternalVideoEncoder() = default;
 
     int initialize(LibWebRTCVPXVideoEncoder::Type, const VideoEncoder::Config&);
@@ -79,7 +80,7 @@ private:
     void OnDroppedFrame(DropReason) final;
 
     VideoEncoder::OutputCallback m_outputCallback;
-    UniqueRef<webrtc::VideoEncoder> m_internalEncoder;
+    const UniqueRef<webrtc::VideoEncoder> m_internalEncoder;
     int64_t m_timestamp { 0 };
     int64_t m_timestampOffset { 0 };
     std::optional<uint64_t> m_duration;
@@ -92,22 +93,22 @@ private:
 
 void LibWebRTCVPXVideoEncoder::create(Type type, const VideoEncoder::Config& config, CreateCallback&& callback, DescriptionCallback&& descriptionCallback, OutputCallback&& outputCallback)
 {
-    Ref encoder = adoptRef(*new LibWebRTCVPXVideoEncoder(type, WTFMove(outputCallback)));
+    Ref encoder = adoptRef(*new LibWebRTCVPXVideoEncoder(type, WTF::move(outputCallback)));
     auto error = encoder->initialize(type, config);
 
             if (error) {
                 callback(makeUnexpected(makeString("VPx encoding initialization failed with error "_s, error)));
                 return;
             }
-    callback(Ref<VideoEncoder> { WTFMove(encoder) });
+    callback(Ref<VideoEncoder> { WTF::move(encoder) });
 
             VideoEncoder::ActiveConfiguration configuration;
             configuration.colorSpace = PlatformVideoColorSpace { PlatformVideoColorPrimaries::Bt709, PlatformVideoTransferCharacteristics::Bt709, PlatformVideoMatrixCoefficients::Bt709, false };
-            descriptionCallback(WTFMove(configuration));
+    descriptionCallback(WTF::move(configuration));
 }
 
 LibWebRTCVPXVideoEncoder::LibWebRTCVPXVideoEncoder(Type type, OutputCallback&& outputCallback)
-    : m_internalEncoder(LibWebRTCVPXInternalVideoEncoder::create(type, WTFMove(outputCallback)))
+    : m_internalEncoder(LibWebRTCVPXInternalVideoEncoder::create(type, WTF::move(outputCallback)))
 {
 }
 
@@ -122,14 +123,14 @@ int LibWebRTCVPXVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type type, co
 
 Ref<VideoEncoder::EncodePromise> LibWebRTCVPXVideoEncoder::encode(RawFrame&& frame, bool shouldGenerateKeyFrame)
 {
-    return invokeAsync(vpxEncoderQueue(), [frame = WTFMove(frame), shouldGenerateKeyFrame, encoder = m_internalEncoder]() mutable {
-        return encoder->encode(WTFMove(frame), shouldGenerateKeyFrame);
+    return invokeAsync(vpxEncoderQueueSingleton(), [frame = WTF::move(frame), shouldGenerateKeyFrame, encoder = m_internalEncoder]() mutable {
+        return encoder->encode(WTF::move(frame), shouldGenerateKeyFrame);
     });
 }
 
 Ref<GenericPromise> LibWebRTCVPXVideoEncoder::flush()
 {
-    return invokeAsync(vpxEncoderQueue(), [] {
+    return invokeAsync(vpxEncoderQueueSingleton(), [] {
         return GenericPromise::createAndResolve();
     });
 }
@@ -146,7 +147,7 @@ void LibWebRTCVPXVideoEncoder::close()
 
 Ref<GenericPromise> LibWebRTCVPXVideoEncoder::setRates(uint64_t bitRate, double frameRate)
 {
-    return invokeAsync(vpxEncoderQueue(), [encoder = m_internalEncoder, bitRate, frameRate] {
+    return invokeAsync(vpxEncoderQueueSingleton(), [encoder = m_internalEncoder, bitRate, frameRate] {
         encoder->setRates(bitRate, frameRate);
         return GenericPromise::createAndResolve();
     });
@@ -169,7 +170,7 @@ static UniqueRef<webrtc::VideoEncoder> createInternalEncoder(LibWebRTCVPXVideoEn
 }
 
 LibWebRTCVPXInternalVideoEncoder::LibWebRTCVPXInternalVideoEncoder(LibWebRTCVPXVideoEncoder::Type type, VideoEncoder::OutputCallback&& outputCallback)
-    : m_outputCallback(WTFMove(outputCallback))
+    : m_outputCallback(WTF::move(outputCallback))
     , m_internalEncoder(createInternalEncoder(type))
 {
 }
@@ -248,7 +249,7 @@ int LibWebRTCVPXInternalVideoEncoder::initialize(LibWebRTCVPXVideoEncoder::Type 
 #endif
     }
 
-    if (auto error = m_internalEncoder->InitEncode(&videoCodec, webrtc::VideoEncoder::Settings { webrtc::VideoEncoder::Capabilities { true }, static_cast<int>(webrtc::CpuInfo::DetectNumberOfCores()), defaultPayloadSize }))
+    if (auto error = m_internalEncoder->InitEncode(&videoCodec, webrtc::VideoEncoder::Settings { webrtc::VideoEncoder::Capabilities { true }, static_cast<int>(webrtc::cpu_info::DetectNumberOfCores()), defaultPayloadSize }))
         return error;
 
     m_isInitialized = true;
@@ -271,7 +272,8 @@ Ref<VideoEncoder::EncodePromise> LibWebRTCVPXInternalVideoEncoder::encode(VideoE
     auto frameType = (shouldGenerateKeyFrame || !m_hasEncoded) ? webrtc::VideoFrameType::kVideoFrameKey : webrtc::VideoFrameType::kVideoFrameDelta;
     std::vector<webrtc::VideoFrameType> frameTypes { frameType };
 
-    auto frameBuffer = webrtc::pixelBufferToFrame(rawFrame.frame->pixelBuffer());
+    RetainPtr buffer = Ref { rawFrame.frame }->pixelBuffer();
+    auto frameBuffer = webrtc::pixelBufferToFrame(buffer.get());
 
     if (m_config.width != static_cast<size_t>(frameBuffer->width()) || m_config.height != static_cast<size_t>(frameBuffer->height()))
         frameBuffer = frameBuffer->Scale(m_config.width, m_config.height);
@@ -316,7 +318,7 @@ webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncoded
         frameTemporalIndex
     };
 
-    m_outputCallback({ WTFMove(encodedFrame) });
+    m_outputCallback({ WTF::move(encodedFrame) });
     return EncodedImageCallback::Result { EncodedImageCallback::Result::OK };
 }
 

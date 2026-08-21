@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGTests.h"
@@ -31,7 +32,7 @@ namespace WebCore {
 enum class RepaintRectCalculation : bool;
 
 class SVGMaskElement final : public SVGElement, public SVGTests {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGMaskElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGMaskElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMaskElement);
 public:
     static Ref<SVGMaskElement> create(const QualifiedName&, Document&);

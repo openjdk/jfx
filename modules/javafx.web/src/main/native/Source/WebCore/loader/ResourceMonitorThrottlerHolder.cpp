@@ -40,11 +40,7 @@ namespace WebCore {
 
 Ref<WorkQueue> ResourceMonitorThrottlerHolder::sharedWorkQueueSingleton()
 {
-    static LazyNeverDestroyed<Ref<WorkQueue>> workQueue;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [] {
-        workQueue.construct(WorkQueue::create("ResourceMonitorThrottlerHolder Work Queue"_s));
-    });
+    static NeverDestroyed<Ref<WorkQueue>> workQueue = WorkQueue::create("ResourceMonitorThrottlerHolder Work Queue"_s);
     return workQueue.get();
 }
 
@@ -55,26 +51,26 @@ Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create()
 
 Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(size_t count, Seconds duration, size_t maxHosts)
 {
-    return create(SQLiteDatabase::inMemoryPath(), count, duration, maxHosts);
+    return create(emptyString(), count, duration, maxHosts);
 }
 
-Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databasePath)
+Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databaseDirectoryPath)
 {
-    return create(databasePath, ResourceMonitorThrottler::defaultThrottleAccessCount, ResourceMonitorThrottler::defaultThrottleDuration, ResourceMonitorThrottler::defaultMaxHosts);
+    return create(databaseDirectoryPath, ResourceMonitorThrottler::defaultThrottleAccessCount, ResourceMonitorThrottler::defaultThrottleDuration, ResourceMonitorThrottler::defaultMaxHosts);
 }
 
-Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databasePath, size_t count, Seconds duration, size_t maxHosts)
+Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts)
 {
-    return adoptRef(*new ResourceMonitorThrottlerHolder(databasePath, count, duration, maxHosts));
+    return adoptRef(*new ResourceMonitorThrottlerHolder(databaseDirectoryPath, count, duration, maxHosts));
 }
 
-ResourceMonitorThrottlerHolder::ResourceMonitorThrottlerHolder(const String& databasePath, size_t count, Seconds duration, size_t maxHosts)
+ResourceMonitorThrottlerHolder::ResourceMonitorThrottlerHolder(const String& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts)
 {
     ASSERT(isMainThread());
 
-    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, path = crossThreadCopy(databasePath), count, duration, maxHosts] mutable {
+    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, path = crossThreadCopy(databaseDirectoryPath), count, duration, maxHosts] mutable {
         if (RefPtr protectedThis = weakThis.get())
-            protectedThis->m_throttler = makeUnique<ResourceMonitorThrottler>(WTFMove(path), count, duration, maxHosts);
+            protectedThis->m_throttler = makeUnique<ResourceMonitorThrottler>(WTF::move(path), count, duration, maxHosts);
     });
 }
 
@@ -82,7 +78,7 @@ ResourceMonitorThrottlerHolder::~ResourceMonitorThrottlerHolder()
 {
     ASSERT(isMainThread());
 
-    sharedWorkQueueSingleton()->dispatch([container = WTFMove(m_throttler)] { });
+    sharedWorkQueueSingleton()->dispatch([container = WTF::move(m_throttler)] { });
 }
 
 void ResourceMonitorThrottlerHolder::tryAccess(const String& host, ContinuousApproximateTime time, CompletionHandler<void(bool)>&& completionHandler)
@@ -94,11 +90,11 @@ void ResourceMonitorThrottlerHolder::tryAccess(const String& host, ContinuousApp
         return;
     }
 
-    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, host = crossThreadCopy(host), time, completionHandler = WTFMove(completionHandler)] mutable {
+    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, host = crossThreadCopy(host), time, completionHandler = WTF::move(completionHandler)] mutable {
         RefPtr protectedThis = weakThis.get();
         bool wasGranted = protectedThis && protectedThis->m_throttler->tryAccess(host, time);
 
-        callOnMainThread([wasGranted, completionHandler = WTFMove(completionHandler)] mutable {
+        callOnMainThread([wasGranted, completionHandler = WTF::move(completionHandler)] mutable {
             completionHandler(wasGranted);
         });
     });
@@ -108,11 +104,11 @@ void ResourceMonitorThrottlerHolder::clearAllData(CompletionHandler<void()>&& co
 {
     ASSERT(isMainThread());
 
-    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, completionHandler = WTFMove(completionHandler)] mutable {
+    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, completionHandler = WTF::move(completionHandler)] mutable {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->m_throttler->clearAllData();
 
-        callOnMainThread(WTFMove(completionHandler));
+        callOnMainThread(WTF::move(completionHandler));
     });
 }
 

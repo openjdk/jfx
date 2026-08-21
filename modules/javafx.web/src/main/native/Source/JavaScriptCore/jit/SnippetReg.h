@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "Reg.h"
-#include <variant>
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Reg.h>
 
 #if ENABLE(JIT)
 
@@ -86,7 +87,7 @@ public:
     }
 
 private:
-    std::variant<GPRReg, FPRReg, JSValueRegs> m_variant;
+    Variant<GPRReg, FPRReg, JSValueRegs> m_variant;
 };
 
 }

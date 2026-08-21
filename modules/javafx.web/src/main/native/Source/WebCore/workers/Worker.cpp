@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
- * Copyright (C) 2009 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "Worker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DedicatedWorkerGlobalScope.h"
 #include "ErrorEvent.h"
 #include "Event.h"
@@ -56,10 +57,9 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
-
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Worker);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Worker);
 
 static Lock allWorkersLock;
 static HashSet<ScriptExecutionContextIdentifier>& allWorkerContexts() WTF_REQUIRES_LOCK(allWorkersLock)
@@ -82,7 +82,7 @@ void Worker::networkStateChanged(bool isOnline)
 
 Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, WorkerOptions&& options)
     : ActiveDOMObject(&context)
-    , m_options(WTFMove(options))
+    , m_options(WTF::move(options))
     , m_identifier(makeString("worker:"_s, Inspector::IdentifiersFactory::createIdentifier()))
     , m_contextProxy(WorkerGlobalScopeProxy::create(*this))
     , m_runtimeFlags(runtimeFlags)
@@ -99,19 +99,28 @@ Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, 
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
-ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&& url, WorkerOptions&& options)
+ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, Variant<RefPtr<TrustedScriptURL>, String>&& url, WorkerOptions&& options)
 {
-    auto compliantScriptURLString = trustedTypeCompliantString(context, WTFMove(url), "Worker constructor"_s);
+    auto compliantScriptURLString = trustedTypeCompliantString(context, WTF::move(url), "Worker constructor"_s);
     if (compliantScriptURLString.hasException())
         return compliantScriptURLString.releaseException();
 
-    auto worker = adoptRef(*new Worker(context, runtimeFlags, WTFMove(options)));
+    auto worker = adoptRef(*new Worker(context, runtimeFlags, WTF::move(options)));
 
     worker->suspendIfNeeded();
 
-    auto scriptURL = worker->resolveURL(compliantScriptURLString.releaseReturnValue());
-    if (scriptURL.hasException())
-        return scriptURL.releaseException();
+    auto scriptURLOrException = worker->resolveURL(compliantScriptURLString.releaseReturnValue());
+    if (scriptURLOrException.hasException())
+        return scriptURLOrException.releaseException();
+
+    auto scriptURL = scriptURLOrException.releaseReturnValue();
+    if (auto exception = validateURL(context, scriptURL)) {
+        if (!context.settingsValues().workerAsynchronousURLErrorHandlingEnabled)
+            return Exception { ExceptionCode::SecurityError };
+        worker->queueTaskToDispatchEvent(worker.get(), TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
+        return worker;
+    }
+
 
     bool shouldBypassMainWorldContentSecurityPolicy = context.shouldBypassMainWorldContentSecurityPolicy();
     worker->m_shouldBypassMainWorldContentSecurityPolicy = shouldBypassMainWorldContentSecurityPolicy;
@@ -119,14 +128,15 @@ ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::Ru
     // https://html.spec.whatwg.org/multipage/workers.html#official-moment-of-creation
     worker->m_workerCreationTime = MonotonicTime::now();
 
-    worker->m_scriptLoader = WorkerScriptLoader::create();
+    Ref scriptLoader = WorkerScriptLoader::create();
+    worker->m_scriptLoader = scriptLoader.copyRef();
     auto contentSecurityPolicyEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
 
-    ResourceRequest request { scriptURL.releaseReturnValue() };
+    ResourceRequest request { WTF::move(scriptURL) };
     request.setInitiatorIdentifier(worker->m_identifier);
 
     auto source = options.type == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
-    worker->m_scriptLoader->loadAsynchronously(context, WTFMove(request), source, workerFetchOptions(worker->m_options, FetchOptions::Destination::Worker), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, worker.get(), WorkerRunLoop::defaultMode(), worker->m_clientIdentifier);
+    scriptLoader->loadAsynchronously(context, WTF::move(request), source, workerFetchOptions(worker->m_options, FetchOptions::Destination::Worker), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, worker.get(), WorkerRunLoop::defaultMode(), worker->m_clientIdentifier);
 
     return worker;
 }
@@ -142,16 +152,13 @@ Worker::~Worker()
 
 ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
-    // When using skia, transferring ownership of accelerated ImageBitmaps causes GrDirectContext mismatches,
-    // threfore, we need to let ImageBitmap know so that it can act accordingly.
-
     Vector<Ref<MessagePort>> ports;
-    auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
+    auto message = SerializedScriptValue::create(state, messageValue, WTF::move(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (message.hasException())
         return message.releaseException();
 
     // Disentangle the port in preparation for sending it to the remote context.
-    auto channels = MessagePort::disentanglePorts(WTFMove(ports));
+    auto channels = MessagePort::disentanglePorts(WTF::move(ports));
     if (channels.hasException())
         return channels.releaseException();
 
@@ -197,7 +204,7 @@ void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIden
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIsFile() && !SecurityOrigin::create(responseURL)->isOpaque())
         m_contentSecurityPolicyResponseHeaders = ContentSecurityPolicyResponseHeaders(response);
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
             InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
@@ -210,7 +217,7 @@ void Worker::notifyFinished(std::optional<ScriptExecutionContextIdentifier> main
         m_scriptLoader = nullptr;
     });
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -218,30 +225,36 @@ void Worker::notifyFinished(std::optional<ScriptExecutionContextIdentifier> main
     if (!sessionID)
         return;
 
-    if (m_scriptLoader->failed()) {
+    Ref scriptLoader = *m_scriptLoader;
+    if (scriptLoader->failed()) {
         queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
         return;
     }
 
     const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->checkedContentSecurityPolicy()->responseHeaders();
     ReferrerPolicy referrerPolicy = ReferrerPolicy::EmptyString;
-    if (auto policy = parseReferrerPolicy(m_scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
+    if (auto policy = parseReferrerPolicy(scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
         referrerPolicy = *policy;
 
     m_didStartWorkerGlobalScope = true;
     WorkerInitializationData initializationData {
-        m_scriptLoader->takeServiceWorkerData(),
+        scriptLoader->takeServiceWorkerData(),
         m_clientIdentifier,
-        m_scriptLoader->advancedPrivacyProtections(),
-        context->userAgent(m_scriptLoader->responseURL())
+        scriptLoader->advancedPrivacyProtections(),
+        context->userAgent(scriptLoader->responseURL())
     };
-    m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
+    m_contextProxy.startWorkerGlobalScope(scriptLoader->responseURL(), *sessionID, m_options.name, WTF::move(initializationData), scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
-        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = scriptLoader->identifier(), script = scriptLoader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });
     }
+}
+
+ScriptExecutionContext* Worker::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void Worker::dispatchEvent(Event& event)
@@ -259,14 +272,14 @@ void Worker::reportError(const String& errorMessage)
     if (m_wasTerminated)
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, errorMessage] {
-        if (m_wasTerminated)
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [errorMessage](auto& worker) {
+        if (worker.m_wasTerminated)
             return;
 
-        auto event = Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
-        AbstractWorker::dispatchEvent(event);
-        if (!event->defaultPrevented() && scriptExecutionContext())
-            scriptExecutionContext()->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage));
+        Ref event = Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
+        worker.AbstractWorker::dispatchEvent(event);
+        if (!event->defaultPrevented() && worker.scriptExecutionContext())
+            worker.scriptExecutionContext()->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage));
     });
 }
 
@@ -276,17 +289,16 @@ void Worker::createRTCRtpScriptTransformer(RTCRtpScriptTransform& transform, Mes
     if (!scriptExecutionContext())
         return;
 
-    m_contextProxy.postTaskToWorkerGlobalScope([transform = Ref { transform }, options = WTFMove(options)](auto& context) mutable {
-        if (auto transformer = downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTFMove(options)))
+    m_contextProxy.postTaskToWorkerGlobalScope([transform = Ref { transform }, options = WTF::move(options)](ScriptExecutionContext& context) mutable {
+        if (RefPtr transformer = downcast<DedicatedWorkerGlobalScope>(context).createRTCRtpScriptTransformer(WTF::move(options)))
             transform->setTransformer(*transformer);
     });
-
 }
 #endif
 
 void Worker::postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&& task)
 {
-    m_contextProxy.postTaskToWorkerGlobalScope(WTFMove(task));
+    m_contextProxy.postTaskToWorkerGlobalScope(WTF::move(task));
 }
 
 void Worker::forEachWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>& callback)

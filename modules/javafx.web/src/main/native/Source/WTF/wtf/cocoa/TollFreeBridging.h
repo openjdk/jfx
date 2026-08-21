@@ -27,6 +27,7 @@
 
 #ifdef __OBJC__
 #import <CoreFoundation/CoreFoundation.h>
+#import <CoreText/CTFont.h>
 #import <Foundation/Foundation.h>
 #import <wtf/spi/cocoa/IOSurfaceSPI.h>
 #endif
@@ -53,12 +54,19 @@ WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFFileSecurity, NSFileSecurity)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFLocale, NSLocale)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFNull, NSNull)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFNumber, NSNumber)
+WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFReadStream, NSInputStream)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFSet, NSSet)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFString, NSString)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFTimeZone, NSTimeZone)
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFURL, NSURL)
+#if !PLATFORM(JAVA)
+#if USE(APPKIT)
+WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CTFont, NSFont)
+#else
+WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CTFont, UIFont)
+#endif
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(IOSurface, ::IOSurface)
-
+#endif
 template<> struct CFTollFreeBridgingTraits<CFBooleanRef> { using BridgedType = NSNumber *; };
 
 WTF_DECLARE_TOLL_FREE_BRIDGING_TRAITS(CFMutableArray, NSMutableArray)

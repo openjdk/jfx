@@ -31,6 +31,8 @@
 #include "BarcodeFormatInterface.h"
 #include "FaceDetectorInterface.h"
 #include "FaceDetectorOptionsInterface.h"
+#include "PointerLockController.h"
+#include "ScrollableArea.h"
 #include "ScrollbarsController.h"
 #include "ScrollingCoordinator.h"
 #include "TextDetectorInterface.h"
@@ -60,7 +62,7 @@ RefPtr<GraphicsContextGL> ChromeClient::createGraphicsContextGL(const GraphicsCo
 
 RefPtr<ImageBuffer> ChromeClient::sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer> imageBuffer)
 {
-    return SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(imageBuffer));
+    return SerializedImageBuffer::sinkIntoImageBuffer(WTF::move(imageBuffer));
 }
 
 void ChromeClient::ensureScrollbarsController(Page&, ScrollableArea& area, bool update) const
@@ -95,5 +97,42 @@ RefPtr<ShapeDetection::TextDetector> ChromeClient::createTextDetector() const
 {
     return nullptr;
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> ChromeClient::validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&)
+{
+    return Exception { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s };
+};
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+void ChromeClient::enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
+{
+    willEnterFullscreen({ });
+    didEnterFullscreen(false);
+}
+#endif
+
+#if ENABLE(POINTER_LOCK)
+void ChromeClient::requestPointerLock(CompletionHandler<void(PointerLockRequestResult)>&& completionHandler)
+{
+    completionHandler(PointerLockRequestResult::Unsupported);
+}
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+void ChromeClient::requestTextRecognition(Element&, TextRecognitionOptions&&, CompletionHandler<void(RefPtr<Element>&&)>&& completion)
+{
+    if (completion)
+        completion({ });
+}
+#endif
+
+#if ENABLE(VIDEO)
+void ChromeClient::showCaptionDisplaySettings(HTMLMediaElement&, const ResolvedCaptionDisplaySettingsOptions&, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+{
+    completionHandler(Exception { ExceptionCode::NotSupportedError, "Caption Display Settings are not supported."_s });
+}
+#endif
 
 } // namespace WebCore

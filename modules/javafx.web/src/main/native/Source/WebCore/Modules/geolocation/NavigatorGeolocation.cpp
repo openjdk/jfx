@@ -2,7 +2,7 @@
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (c) 2000 Daniel Molkentin (molkentin@kde.org)
  *  Copyright (c) 2000 Stefan Schimanski (schimmi@kde.org)
- *  Copyright (C) 2003, 2004, 2005, 2006 Apple Inc.
+ *  Copyright (C) 2003, 2004, 2005, 2006 Apple Inc. All rights reserved.
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  *  This library is free software; you can redistribute it and/or
@@ -44,18 +44,13 @@ NavigatorGeolocation::NavigatorGeolocation(Navigator& navigator)
 
 NavigatorGeolocation::~NavigatorGeolocation() = default;
 
-ASCIILiteral NavigatorGeolocation::supplementName()
-{
-    return "NavigatorGeolocation"_s;
-}
-
 NavigatorGeolocation* NavigatorGeolocation::from(Navigator& navigator)
 {
-    NavigatorGeolocation* supplement = static_cast<NavigatorGeolocation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorGeolocation>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorGeolocation>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -68,16 +63,24 @@ void NavigatorGeolocation::resetAllGeolocationPermission()
 }
 #endif // PLATFORM(IOS_FAMILY)
 
-Geolocation* NavigatorGeolocation::geolocation(Navigator& navigator)
+Geolocation& NavigatorGeolocation::geolocation(Navigator& navigator)
 {
     return NavigatorGeolocation::from(navigator)->geolocation();
 }
 
-Geolocation* NavigatorGeolocation::geolocation() const
+Geolocation* NavigatorGeolocation::optionalGeolocation(Navigator& navigator)
+{
+    auto* supplement = downcast<NavigatorGeolocation>(Supplement<Navigator>::from(&navigator, supplementName()));
+    if (!supplement)
+        return nullptr;
+    return supplement->m_geolocation.get();
+}
+
+Geolocation& NavigatorGeolocation::geolocation() const
 {
     if (!m_geolocation)
-        m_geolocation = Geolocation::create(Ref { m_navigator.get() });
-    return m_geolocation.get();
+        lazyInitialize(m_geolocation, Geolocation::create(m_navigator.get()));
+    return *m_geolocation;
 }
 
 } // namespace WebCore

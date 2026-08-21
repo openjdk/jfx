@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2011, 2012 Apple Inc.
+ * Copyright (C) 2006, 2011, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLOptionsCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLOptionsCollection);
 
 HTMLOptionsCollection::HTMLOptionsCollection(HTMLSelectElement& select)
     : CachedHTMLCollection(select, CollectionType::SelectOptions)

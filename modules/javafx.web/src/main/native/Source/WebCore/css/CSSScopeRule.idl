@@ -23,12 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://drafts.csswg.org/css-cascade-6/#the-cssscoperule-interface
+// https://drafts.csswg.org/css-cascade-6/#cssscoperule
 
 typedef USVString CSSOMString;
 
 [
-    EnabledBySetting=CSSScopeAtRuleEnabled,
     Exposed=Window
 ] interface CSSScopeRule : CSSGroupingRule {
     readonly attribute CSSOMString? start;

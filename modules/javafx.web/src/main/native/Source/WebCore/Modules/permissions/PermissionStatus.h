@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "ClientOrigin.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MainThreadPermissionObserverIdentifier.h"
 #include "Page.h"
 #include "PermissionDescriptor.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class PermissionStatus final : public ActiveDOMObject, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PermissionStatus>, public EventTarget  {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PermissionStatus);
+    WTF_MAKE_TZONE_ALLOCATED(PermissionStatus);
 public:
     static Ref<PermissionStatus> create(ScriptExecutionContext&, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&);
     ~PermissionStatus();
@@ -61,7 +62,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PermissionStatus; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -74,3 +75,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(PermissionStatus)

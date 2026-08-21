@@ -25,31 +25,32 @@
 
 #pragma once
 
-#include "IDBDatabaseInfo.h"
-#include "IDBKeyData.h"
-#include "IDBTransactionInfo.h"
-#include "IndexValueStore.h"
-#include "ThreadSafeDataBuffer.h"
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBKeyData.h>
+#include <WebCore/IDBTransactionInfo.h>
+#include <WebCore/IndexValueStore.h>
+#include <WebCore/ThreadSafeDataBuffer.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 namespace IDBServer {
 
+class MemoryCursor;
 class MemoryIDBBackingStore;
 class MemoryIndex;
 class MemoryObjectStore;
 
-typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, IDBKeyDataHash, IDBKeyDataHashTraits> KeyValueMap;
+typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, DefaultHash<IDBKeyData>, IDBKeyDataHashTraits> KeyValueMap;
 
-class MemoryBackingStoreTransaction : public RefCountedAndCanMakeWeakPtr<MemoryBackingStoreTransaction> {
+class MemoryBackingStoreTransaction final : public RefCountedAndCanMakeWeakPtr<MemoryBackingStoreTransaction> {
 public:
     static Ref<MemoryBackingStoreTransaction> create(MemoryIDBBackingStore&, const IDBTransactionInfo&);
 
-    MemoryBackingStoreTransaction(MemoryIDBBackingStore&, const IDBTransactionInfo&);
     ~MemoryBackingStoreTransaction();
 
     bool isVersionChange() const { return m_info.mode() == IDBTransactionMode::Versionchange; }
@@ -61,24 +62,29 @@ public:
     void addNewObjectStore(MemoryObjectStore&);
     void addExistingObjectStore(MemoryObjectStore&);
 
-    void recordValueChanged(MemoryObjectStore&, const IDBKeyData&, ThreadSafeDataBuffer*);
     void objectStoreDeleted(Ref<MemoryObjectStore>&&);
-    void objectStoreCleared(MemoryObjectStore&, std::unique_ptr<KeyValueMap>&&, std::unique_ptr<IDBKeyDataSet>&&);
+    void objectStoreCleared(MemoryObjectStore&, KeyValueMap&&, std::unique_ptr<IDBKeyDataSet>&&);
     void objectStoreRenamed(MemoryObjectStore&, const String& oldName);
     void indexRenamed(MemoryIndex&, const String& oldName);
-    void indexCleared(MemoryIndex&, std::unique_ptr<IndexValueStore>&&);
 
     void addNewIndex(MemoryIndex&);
+    void removeNewIndex(MemoryIndex&);
     void addExistingIndex(MemoryIndex&);
     void indexDeleted(Ref<MemoryIndex>&&);
 
     void abort();
     void commit();
 
+    IDBTransactionInfo info() const { return m_info; }
+
+    MemoryCursor* cursor(const IDBResourceIdentifier&) const;
+    void addCursor(MemoryCursor&);
+
 private:
+    MemoryBackingStoreTransaction(MemoryIDBBackingStore&, const IDBTransactionInfo&);
     void finish();
 
-    CheckedRef<MemoryIDBBackingStore> m_backingStore;
+    const CheckedRef<MemoryIDBBackingStore> m_backingStore;
     IDBTransactionInfo m_info;
 
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
@@ -86,20 +92,17 @@ private:
     bool m_inProgress { true };
     bool m_isAborting { false };
 
-    HashSet<RefPtr<MemoryObjectStore>> m_objectStores;
-    HashSet<RefPtr<MemoryObjectStore>> m_versionChangeAddedObjectStores;
-    HashSet<RefPtr<MemoryIndex>> m_indexes;
-    HashSet<RefPtr<MemoryIndex>> m_versionChangeAddedIndexes;
+    HashSet<Ref<MemoryObjectStore>> m_objectStores;
+    HashSet<Ref<MemoryObjectStore>> m_versionChangeAddedObjectStores;
+    HashSet<Ref<MemoryIndex>> m_indexes;
+    HashSet<Ref<MemoryIndex>> m_versionChangeAddedIndexes;
 
-    HashMap<MemoryObjectStore*, uint64_t> m_originalKeyGenerators;
     HashMap<String, RefPtr<MemoryObjectStore>> m_deletedObjectStores;
-    HashSet<RefPtr<MemoryIndex>> m_deletedIndexes;
-    HashMap<MemoryObjectStore*, std::unique_ptr<KeyValueMap>> m_originalValues;
-    HashMap<MemoryObjectStore*, std::unique_ptr<KeyValueMap>> m_clearedKeyValueMaps;
-    HashMap<MemoryObjectStore*, std::unique_ptr<IDBKeyDataSet>> m_clearedOrderedKeys;
+    HashSet<Ref<MemoryIndex>> m_deletedIndexes;
     HashMap<MemoryObjectStore*, String> m_originalObjectStoreNames;
-    HashMap<MemoryIndex*, String> m_originalIndexNames;
-    HashMap<MemoryIndex*, std::unique_ptr<IndexValueStore>> m_clearedIndexValueStores;
+    HashMap<Ref<MemoryIndex>, String> m_originalIndexNames;
+
+    HashMap<IDBResourceIdentifier, WeakPtr<MemoryCursor>> m_cursors;
 };
 
 } // namespace IDBServer

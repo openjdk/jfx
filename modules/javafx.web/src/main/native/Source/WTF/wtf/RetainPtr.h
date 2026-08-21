@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -57,10 +57,6 @@
 #define NS_RETURNS_RETAINED
 #endif
 
-#ifndef __OBJC__
-typedef struct objc_object *id;
-#endif
-
 // Because ARC enablement is a compile-time choice, and we compile this header
 // both ways, we need a separate copy of our code when ARC is enabled.
 #if __has_feature(objc_arc)
@@ -75,18 +71,23 @@ namespace WTF {
 template<typename T> class RetainPtr;
 
 template<typename T> constexpr bool IsNSType = std::is_convertible_v<T, id>;
-template<typename T> using RetainPtrType = std::conditional_t<IsNSType<T>, std::remove_pointer_t<T>, T>;
+template<typename T> using RetainPtrType = std::conditional_t<IsNSType<T> && !std::is_same_v<T, id>, std::remove_pointer_t<T>, T>;
 
-template<typename T> constexpr RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+template<typename T> [[nodiscard]] constexpr RetainPtr<RetainPtrType<T>> adoptCF(T CF_RELEASES_ARGUMENT);
 
-#ifdef __OBJC__
-template<typename T> RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
-#endif
+template<typename T> [[nodiscard]] constexpr RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT);
 
 template<typename T> class RetainPtr {
 public:
     using ValueType = std::remove_pointer_t<T>;
     using PtrType = ValueType*;
+
+#ifdef __OBJC__
+    using StorageType = PtrType;
+#else
+    // Type pun id to CFTypeRef in C++ files. This is valid because they're ABI equivalent.
+    using StorageType = std::conditional_t<IsNSType<PtrType>, CFTypeRef, PtrType>;
+#endif
 
     RetainPtr() = default;
     RetainPtr(PtrType);
@@ -94,38 +95,39 @@ public:
     RetainPtr(const RetainPtr&);
     template<typename U> RetainPtr(const RetainPtr<U>&);
 
-    constexpr RetainPtr(RetainPtr&& o) : m_ptr(toStorageType(o.leakRef())) { }
-    template<typename U> constexpr RetainPtr(RetainPtr<U>&& o) : m_ptr(toStorageType(checkType(o.leakRef()))) { }
+    constexpr RetainPtr(RetainPtr&& o) : m_ptr(o.leakRef()) { }
+    template<typename U, typename = std::enable_if_t<std::is_convertible_v<typename RetainPtr<RetainPtrType<U>>::PtrType, PtrType>>>
+    constexpr RetainPtr(RetainPtr<U>&& o) : m_ptr(o.leakRef()) { }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
-    constexpr RetainPtr(HashTableDeletedValueType) : m_ptr(toStorageType(hashTableDeletedValue())) { }
-    constexpr bool isHashTableDeletedValue() const { return m_ptr == toStorageType(hashTableDeletedValue()); }
+    constexpr RetainPtr(HashTableDeletedValueType) : m_ptr(hashTableDeletedValue()) { }
+    constexpr bool isHashTableDeletedValue() const { return m_ptr == hashTableDeletedValue(); }
 
     ~RetainPtr();
 
     void clear();
 
-    template<typename U = PtrType>
-    std::enable_if_t<IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> leakRef() NS_RETURNS_RETAINED WARN_UNUSED_RETURN {
-        return fromStorageType(std::exchange(m_ptr, nullptr));
+    template<typename U = StorageType>
+    [[nodiscard]] std::enable_if_t<IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() NS_RETURNS_RETAINED {
+        return std::exchange(m_ptr, nullptr);
     }
 
-    template<typename U = PtrType>
-    std::enable_if_t<!IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> leakRef() CF_RETURNS_RETAINED WARN_UNUSED_RETURN {
-        return fromStorageType(std::exchange(m_ptr, nullptr));
+    template<typename U = StorageType>
+    [[nodiscard]] std::enable_if_t<!IsNSType<U> && std::is_same_v<U, StorageType>, StorageType> leakRef() CF_RETURNS_RETAINED {
+        return std::exchange(m_ptr, nullptr);
     }
 
-#if HAVE(CFAUTORELEASE)
     PtrType autorelease();
-#endif
+    PtrType getAutoreleased();
 
 #ifdef __OBJC__
     id bridgingAutorelease();
 #endif
 
-    constexpr PtrType get() const { return fromStorageType(m_ptr); }
-    constexpr PtrType operator->() const { return fromStorageType(m_ptr); }
-    constexpr explicit operator PtrType() const { return fromStorageType(m_ptr); }
+    constexpr PtrType get() const LIFETIME_BOUND { return m_ptr; }
+    constexpr PtrType unsafeGet() const { return m_ptr; } // FIXME: Replace with get() then remove.
+    constexpr PtrType operator->() const LIFETIME_BOUND { return m_ptr; }
+    constexpr explicit operator PtrType() const LIFETIME_BOUND { return m_ptr; }
     constexpr explicit operator bool() const { return m_ptr; }
 
     constexpr bool operator!() const { return !m_ptr; }
@@ -140,67 +142,67 @@ public:
 
     void swap(RetainPtr&);
 
-    template<typename U> friend constexpr RetainPtr<U> adoptCF(U CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
+    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptCF(U CF_RELEASES_ARGUMENT);
 
-#ifdef __OBJC__
-    template<typename U> friend RetainPtr<RetainPtrType<U>> adoptNS(U NS_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
-#endif
+    template<typename U> friend constexpr RetainPtr<RetainPtrType<U>> adoptNS(U NS_RELEASES_ARGUMENT);
 
 private:
     enum AdoptTag { Adopt };
-    constexpr RetainPtr(PtrType ptr, AdoptTag) : m_ptr(toStorageType(ptr)) { }
+    constexpr RetainPtr(PtrType ptr, AdoptTag) : m_ptr(ptr) { }
 
-    static constexpr PtrType checkType(PtrType ptr) { return ptr; }
-
-    // ARC will try to retain/release this value, but it looks like a tagged immediate, so retain/release ends up being a no-op -- see _objc_registerTaggedPointerClass.
-    static constexpr PtrType hashTableDeletedValue() { return fromStorageType(reinterpret_cast<CFTypeRef>(-1)); }
-
-#ifdef __OBJC__
+#if __has_feature(objc_arc)
+    // ARC will try to retain/release this value, but it looks like a tagged immediate, so retain/release ends up being a no-op -- see _objc_isTaggedPointer() in <objc-internal.h>.
     template<typename U = PtrType>
-    static constexpr std::enable_if_t<IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> fromStorageTypeHelper(CFTypeRef ptr)
-    {
-        return (__bridge PtrType)const_cast<CF_BRIDGED_TYPE(id) void*>(ptr);
-    }
+    static constexpr std::enable_if_t<IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> hashTableDeletedValue() { return (__bridge PtrType)(void*)-1; }
+
     template<typename U = PtrType>
-    static constexpr std::enable_if_t<!IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> fromStorageTypeHelper(CFTypeRef ptr)
-    {
-        return (PtrType)const_cast<CF_BRIDGED_TYPE(id) void*>(ptr);
-    }
-    static constexpr PtrType fromStorageType(CFTypeRef ptr) { return fromStorageTypeHelper<PtrType>(ptr); }
-    static constexpr CFTypeRef toStorageType(id ptr) { return (__bridge CFTypeRef)ptr; }
-    static constexpr CFTypeRef toStorageType(CFTypeRef ptr) { return ptr; }
+    static constexpr std::enable_if_t<!IsNSType<U> && std::is_same_v<U, PtrType>, PtrType> hashTableDeletedValue() { return reinterpret_cast<PtrType>(-1); }
 #else
-    static constexpr PtrType fromStorageType(CFTypeRef ptr)
-    {
-        return (PtrType)const_cast<CF_BRIDGED_TYPE(id) void*>(ptr);
-    }
-    static constexpr CFTypeRef toStorageType(PtrType ptr) { return (CFTypeRef)ptr; }
+    static constexpr PtrType hashTableDeletedValue() { return reinterpret_cast<PtrType>(-1); }
 #endif
 
-    CFTypeRef m_ptr { nullptr };
+    static inline void retainFoundationPtr(CFTypeRef ptr) { CFRetain(ptr); }
+    static inline void releaseFoundationPtr(CFTypeRef ptr) { CFRelease(ptr); }
+    static inline void autoreleaseFoundationPtr(CFTypeRef ptr) { CFAutorelease(ptr); }
+
+#ifdef __OBJC__
+#if __has_feature(objc_arc)
+    static inline void retainFoundationPtr(id) { }
+    static inline void releaseFoundationPtr(id) { }
+    static inline void autoreleaseFoundationPtr(id) { }
+#else
+    static inline void retainFoundationPtr(id ptr) { [ptr retain]; }
+    static inline void releaseFoundationPtr(id ptr) { [ptr release]; }
+    static inline void autoreleaseFoundationPtr(id ptr) { [ptr autorelease]; }
+#endif
+#endif
+
+    StorageType m_ptr { nullptr };
 };
 
 template<typename T> RetainPtr(T) -> RetainPtr<RetainPtrType<T>>;
 
 // Helper function for creating a RetainPtr using template argument deduction.
-template<typename T> RetainPtr<RetainPtrType<T>> retainPtr(T) WARN_UNUSED_RETURN;
+template<typename T> [[nodiscard]] RetainPtr<RetainPtrType<T>> retainPtr(T);
 
 template<typename T> inline RetainPtr<T>::~RetainPtr()
 {
     if (auto ptr = std::exchange(m_ptr, nullptr))
-        CFRelease(ptr);
+        releaseFoundationPtr(ptr);
 }
 
 template<typename T> inline RetainPtr<T>::RetainPtr(PtrType ptr)
-    : m_ptr(toStorageType(ptr))
+    : m_ptr(ptr)
 {
     if (m_ptr)
-        CFRetain(m_ptr);
+        SUPPRESS_UNRETAINED_ARG retainFoundationPtr(m_ptr);
 }
 
 template<typename T> inline RetainPtr<T>::RetainPtr(const RetainPtr& o)
-    : RetainPtr(o.get())
+    : m_ptr(o.m_ptr)
 {
+    if (m_ptr)
+        SUPPRESS_UNRETAINED_ARG retainFoundationPtr(m_ptr);
 }
 
 template<typename T> template<typename U> inline RetainPtr<T>::RetainPtr(const RetainPtr<U>& o)
@@ -211,32 +213,31 @@ template<typename T> template<typename U> inline RetainPtr<T>::RetainPtr(const R
 template<typename T> inline void RetainPtr<T>::clear()
 {
     if (auto ptr = std::exchange(m_ptr, nullptr))
-        CFRelease(ptr);
+        releaseFoundationPtr(ptr);
 }
 
-#if HAVE(CFAUTORELEASE)
 template<typename T> inline auto RetainPtr<T>::autorelease() -> PtrType
 {
-#ifdef __OBJC__
-    if constexpr (IsNSType<PtrType>)
-        return CFBridgingRelease(std::exchange(m_ptr, nullptr));
-#endif
-    if (m_ptr)
-        CFAutorelease(m_ptr);
-    return leakRef();
+    auto ptr = std::exchange(m_ptr, nullptr);
+    if (ptr)
+        autoreleaseFoundationPtr(ptr);
+    return ptr;
 }
-#endif // PLATFORM(COCOA)
+
+template<typename T> inline auto RetainPtr<T>::getAutoreleased() -> PtrType
+{
+    RetainPtr copy { *this };
+    return copy.autorelease();
+}
 
 #ifdef __OBJC__
-
 // FIXME: It would be better if we could base the return type on the type that is toll-free bridged with T rather than using id.
 template<typename T> inline id RetainPtr<T>::bridgingAutorelease()
 {
     static_assert(!IsNSType<PtrType>, "Don't use bridgingAutorelease for Objective-C pointer types.");
     return CFBridgingRelease(leakRef());
 }
-
-#endif
+#endif // __OBJC__
 
 template<typename T> inline RetainPtr<T>& RetainPtr<T>::operator=(const RetainPtr& o)
 {
@@ -268,14 +269,14 @@ template<typename T> template<typename U> inline RetainPtr<T>& RetainPtr<T>::ope
 
 template<typename T> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr&& o)
 {
-    RetainPtr ptr = WTFMove(o);
+    RetainPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
 
 template<typename T> template<typename U> inline RetainPtr<T>& RetainPtr<T>::operator=(RetainPtr<U>&& o)
 {
-    RetainPtr ptr = WTFMove(o);
+    RetainPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
@@ -300,32 +301,34 @@ template<typename T, typename U> constexpr bool operator==(const RetainPtr<T>& a
     return a.get() == b;
 }
 
-template<typename T, typename U> constexpr bool operator==(T* a, const RetainPtr<U>& b)
+template<typename T> constexpr RetainPtr<RetainPtrType<T>> adoptCF(T CF_RELEASES_ARGUMENT ptr)
 {
-    return a == b.get();
-}
-
-template<typename T> constexpr RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT ptr)
-{
-#ifdef __OBJC__
     static_assert(!IsNSType<T>, "Don't use adoptCF with Objective-C pointer types, use adoptNS.");
-#endif
-    return RetainPtr<T>(ptr, RetainPtr<T>::Adopt);
+    return { ptr, RetainPtr<RetainPtrType<T>>::Adopt };
 }
 
-#ifdef __OBJC__
-template<typename T> RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT ptr)
+template<typename T> constexpr RetainPtr<RetainPtrType<T>> adoptNS(T NS_RELEASES_ARGUMENT ptr)
 {
     static_assert(IsNSType<T>, "Don't use adoptNS with Core Foundation pointer types, use adoptCF.");
-#if __has_feature(objc_arc)
-    return ptr;
-#else
     return { ptr, RetainPtr<RetainPtrType<T>>::Adopt };
-#endif
+}
+
+template<typename T> inline RetainPtr<RetainPtrType<T>> retainPtr(T ptr)
+{
+    return ptr;
+}
+
+#ifdef __OBJC__
+template<typename T>
+    requires IsNSType<T>
+ALWAYS_INLINE CLANG_POINTER_CONVERSION RetainPtr<RetainPtrType<T>> protect(T ptr)
+{
+    return ptr;
 }
 #endif
 
-template<typename T> inline RetainPtr<RetainPtrType<T>> retainPtr(T ptr)
+template<typename T>
+ALWAYS_INLINE CLANG_POINTER_CONVERSION RetainPtr<T> protect(const RetainPtr<T>& ptr)
 {
     return ptr;
 }
@@ -336,6 +339,12 @@ template<typename T> struct IsSmartPtr<RetainPtr<T>> {
 };
 
 template<typename P> struct HashTraits<RetainPtr<P>> : SimpleClassHashTraits<RetainPtr<P>> {
+    static RetainPtr<P>::PtrType emptyValue() { return nullptr; }
+    static bool isEmptyValue(const RetainPtr<P>& value) { return !value; }
+
+    using PeekType = RetainPtr<P>::PtrType;
+    static PeekType peek(const RetainPtr<P>& value) { return value.get(); }
+    static PeekType peek(P* value) { return value; }
 };
 
 template<typename P> struct DefaultHash<RetainPtr<P>> : PtrHash<RetainPtr<P>> { };
@@ -373,10 +382,19 @@ inline CFHashCode safeCFHash(CFTypeRef a)
     return a ? CFHash(a) : 0;
 }
 
+template<typename T, typename U>
+ALWAYS_INLINE void lazyInitialize(const RetainPtr<T>& ptr, RetainPtr<U>&& obj)
+{
+    RELEASE_ASSERT(!ptr);
+    const_cast<RetainPtr<T>&>(ptr) = std::move(obj);
+}
+
 } // namespace WTF
 
 using WTF::RetainPtr;
 using WTF::adoptCF;
+using WTF::lazyInitialize;
+using WTF::protect;
 using WTF::retainPtr;
 using WTF::safeCFEqual;
 using WTF::safeCFHash;

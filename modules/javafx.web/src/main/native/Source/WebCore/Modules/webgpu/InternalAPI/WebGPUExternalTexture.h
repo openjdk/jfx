@@ -25,12 +25,15 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
-using CVPixelBufferRef = struct __CVBuffer*;
+#if PLATFORM(COCOA)
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
+#endif
 
 namespace WebCore::WebGPU {
 
@@ -42,12 +45,16 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
     virtual void destroy() = 0;
     virtual void undestroy() = 0;
+#if PLATFORM(COCOA)
     virtual void updateExternalTexture(CVPixelBufferRef) = 0;
+#endif
+    virtual bool isRemoteExternalTextureProxy() const { return false; }
+    virtual bool isExternalTextureImpl() const { return false; }
 
 protected:
     ExternalTexture() = default;

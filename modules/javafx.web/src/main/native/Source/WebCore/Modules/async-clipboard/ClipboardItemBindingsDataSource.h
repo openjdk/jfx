@@ -28,7 +28,6 @@
 #include "ClipboardItemDataSource.h"
 #include "ExceptionCode.h"
 #include "FileReaderLoaderClient.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -56,15 +55,19 @@ private:
     void clearItemTypeLoaders();
     void invokeCompletionHandler();
 
-    using BufferOrString = std::variant<String, Ref<SharedBuffer>>;
+    using BufferOrString = Variant<String, Ref<SharedBuffer>>;
     class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader> {
     public:
         static Ref<ClipboardItemTypeLoader> create(Clipboard& writingDestination, const String& type, CompletionHandler<void()>&& completionHandler)
         {
-            return adoptRef(*new ClipboardItemTypeLoader(writingDestination, type, WTFMove(completionHandler)));
+            return adoptRef(*new ClipboardItemTypeLoader(writingDestination, type, WTF::move(completionHandler)));
         }
 
         ~ClipboardItemTypeLoader();
+
+        // FileReaderLoaderClient.
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
 
         void didResolveToString(const String&);
         void didFailToResolve();
@@ -90,7 +93,7 @@ private:
 
         String m_type;
         BufferOrString m_data;
-        std::unique_ptr<FileReaderLoader> m_blobLoader;
+        RefPtr<FileReaderLoader> m_blobLoader;
         CompletionHandler<void()> m_completionHandler;
         WeakPtr<Clipboard, WeakPtrImplWithEventTargetData> m_writingDestination;
     };

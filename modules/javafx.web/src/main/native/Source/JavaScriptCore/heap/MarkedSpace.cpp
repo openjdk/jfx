@@ -41,7 +41,7 @@ static Vector<size_t> sizeClasses()
 {
     Vector<size_t> result;
 
-    if (UNLIKELY(Options::dumpSizeClasses())) {
+    if (Options::dumpSizeClasses()) [[unlikely]] {
         dataLog("Block size: ", MarkedBlock::blockSize, "\n");
         dataLog("Header size: ", sizeof(MarkedBlock::Header), "\n");
     }
@@ -127,7 +127,7 @@ static Vector<size_t> sizeClasses()
 
     {
         // Sort and deduplicate.
-        std::sort(result.begin(), result.end());
+        std::ranges::sort(result);
         auto it = std::unique(result.begin(), result.end());
         result.shrinkCapacity(it - result.begin());
     }
@@ -235,7 +235,7 @@ void MarkedSpace::registerPreciseAllocation(PreciseAllocation* allocation, bool 
     ASSERT(allocation->isNewlyAllocated());
     ASSERT(!allocation->isMarked());
     m_preciseAllocations.append(allocation);
-    if (auto* set = preciseAllocationSet())
+    if (auto& set = preciseAllocationSet())
         set->add(allocation->cell());
     if (isNewAllocation) {
         // Existing code's ordering is calling `didAllocate` and increasing capacity.
@@ -254,7 +254,7 @@ void MarkedSpace::sweepPreciseAllocations()
         PreciseAllocation* allocation = m_preciseAllocations[srcIndex++];
         allocation->sweep();
         if (allocation->isEmpty()) {
-            if (auto* set = preciseAllocationSet())
+            if (auto& set = preciseAllocationSet())
                 set->remove(allocation->cell());
             if (allocation->isLowerTierPrecise())
                 static_cast<IsoSubspace*>(allocation->subspace())->sweepLowerTierPreciseCell(allocation);
@@ -288,7 +288,7 @@ void MarkedSpace::prepareForAllocation()
 
 void MarkedSpace::enablePreciseAllocationTracking()
 {
-    m_preciseAllocationSet = makeUnique<UncheckedKeyHashSet<HeapCell*>>();
+    m_preciseAllocationSet = UncheckedKeyHashSet<HeapCell*> { };
     for (auto* allocation : m_preciseAllocations)
         m_preciseAllocationSet->add(allocation->cell());
 }
@@ -400,16 +400,6 @@ void MarkedSpace::freeBlock(MarkedBlock::Handle* block)
     delete block;
 }
 
-void MarkedSpace::freeOrShrinkBlock(MarkedBlock::Handle* block)
-{
-    if (!block->isEmpty()) {
-        block->shrink();
-        return;
-    }
-
-    freeBlock(block);
-}
-
 void MarkedSpace::shrink()
 {
     forEachDirectory(
@@ -433,7 +423,7 @@ void MarkedSpace::beginMarking()
                 return IterationStatus::Continue;
             });
 
-        if (UNLIKELY(nextVersion(m_markingVersion) == initialVersion)) {
+        if (nextVersion(m_markingVersion) == initialVersion) [[unlikely]] {
             forEachBlock(
                 [&] (MarkedBlock::Handle* handle) {
                     handle->block().resetMarks();
@@ -463,7 +453,7 @@ void MarkedSpace::beginMarking()
 
 void MarkedSpace::endMarking()
 {
-    if (UNLIKELY(nextVersion(m_newlyAllocatedVersion) == initialVersion)) {
+    if (nextVersion(m_newlyAllocatedVersion) == initialVersion) [[unlikely]] {
         forEachBlock(
             [&] (MarkedBlock::Handle* handle) {
                 handle->block().resetAllocated();

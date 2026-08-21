@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,9 @@
 #include "RemoveNodeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include <wtf/Assertions.h>
 
@@ -35,7 +37,7 @@ namespace WebCore {
 
 RemoveNodeCommand::RemoveNodeCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction)
     : SimpleEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_shouldAssumeContentIsAlwaysEditable(shouldAssumeContentIsAlwaysEditable)
 {
     ASSERT(m_node->parentNode());
@@ -43,27 +45,26 @@ RemoveNodeCommand::RemoveNodeCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwa
 
 void RemoveNodeCommand::doApply()
 {
-    auto node = protectedNode();
-    RefPtr parent = node->parentNode();
+    RefPtr parent = m_node->parentNode();
     if (!parent || (m_shouldAssumeContentIsAlwaysEditable == DoNotAssumeContentIsAlwaysEditable
         && !isEditableNode(*parent) && parent->renderer()))
         return;
     ASSERT(isEditableNode(*parent) || !parent->renderer());
 
-    m_parent = WTFMove(parent);
-    m_refChild = node->nextSibling();
+    m_parent = WTF::move(parent);
+    m_refChild = m_node->nextSibling();
 
-    node->remove();
+    m_node->remove();
 }
 
 void RemoveNodeCommand::doUnapply()
 {
-    RefPtr<ContainerNode> parent = WTFMove(m_parent);
-    RefPtr<Node> refChild = WTFMove(m_refChild);
+    RefPtr<ContainerNode> parent = WTF::move(m_parent);
+    RefPtr<Node> refChild = WTF::move(m_refChild);
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    parent->insertBefore(protectedNode(), WTFMove(refChild));
+    parent->insertBefore(m_node, WTF::move(refChild));
 }
 
 #ifndef NDEBUG

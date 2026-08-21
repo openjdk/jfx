@@ -27,9 +27,9 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "CompiledContentExtension.h"
-#include "ContentExtension.h"
-#include "ContentExtensionRule.h"
+#include <WebCore/CompiledContentExtension.h>
+#include <WebCore/ContentExtension.h>
+#include <WebCore/ContentExtensionRule.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -75,31 +75,32 @@ public:
     WEBCORE_EXPORT Vector<ActionsFromContentRuleList> actionsForResourceLoad(const ResourceLoadInfo&, const RuleListFilter& = { [](const String&) { return ShouldSkipRuleList::No; } }) const;
     WEBCORE_EXPORT StyleSheetContents* globalDisplayNoneStyleSheet(const String& identifier) const;
 
-    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter&);
-    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL, const URL& frameURL);
+    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter&) const;
+    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL, const URL& frameURL, const String& httpMethod);
     bool processContentRuleListsForResourceMonitoring(const URL&, const URL& mainDocumentURL, const URL& frameURL, OptionSet<ResourceType>);
 
     static const String& displayNoneCSSRule();
 
-    void forEach(NOESCAPE const Function<void(const String&, ContentExtension&)>&);
+    void forEach(NOESCAPE const Function<void(const String&, ContentExtension&)>&) const;
 
     WEBCORE_EXPORT static bool shouldBeMadeSecure(const URL&);
 
     ContentExtensionsBackend() = default;
-    ContentExtensionsBackend isolatedCopy() && { return ContentExtensionsBackend { crossThreadCopy(WTFMove(m_contentExtensions)) }; }
+    ContentExtensionsBackend isolatedCopy() && { return ContentExtensionsBackend { crossThreadCopy(WTF::move(m_contentExtensions)) }; }
 
 private:
-    explicit ContentExtensionsBackend(UncheckedKeyHashMap<String, Ref<ContentExtension>>&& contentExtensions)
-        : m_contentExtensions(WTFMove(contentExtensions))
+    explicit ContentExtensionsBackend(HashMap<String, Ref<ContentExtension>>&& contentExtensions)
+        : m_contentExtensions(WTF::move(contentExtensions))
     {
     }
 
     ActionsFromContentRuleList actionsFromContentRuleList(const ContentExtension&, const String& urlString, const ResourceLoadInfo&, ResourceFlags) const;
 
-    UncheckedKeyHashMap<String, Ref<ContentExtension>> m_contentExtensions;
+    HashMap<String, Ref<ContentExtension>> m_contentExtensions;
 };
 
-WEBCORE_EXPORT void applyResultsToRequest(ContentRuleListResults&&, Page*, ResourceRequest&);
+WEBCORE_EXPORT void applyResultsToRequest(ContentRuleListResults&&, Page*, ResourceRequest&, const URL& redirectURL = URL { });
+WEBCORE_EXPORT void applyResultsToRequestIfCrossOriginRedirect(ContentRuleListResults&&, Page*, ResourceRequest&);
 std::optional<String> customTrackerBlockingMessageForConsole(const ContentRuleListResults&, const URL& urlString = { }, const URL& mainDocumentURL = { });
 
 } // namespace WebCore::ContentExtensions

@@ -26,13 +26,17 @@
 #include "config.h"
 #include "TextPlaceholderElement.h"
 
+#include "CSSPropertyNames.h"
+#include "CSSUnits.h"
+#include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "HTMLTextFormControlElement.h"
+#include "LayoutSize.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextPlaceholderElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextPlaceholderElement);
 
 Ref<TextPlaceholderElement> TextPlaceholderElement::create(Document& document, const LayoutSize& size)
 {

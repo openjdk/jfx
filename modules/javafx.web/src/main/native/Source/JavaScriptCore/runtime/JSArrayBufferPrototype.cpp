@@ -32,6 +32,11 @@
 #include "JSCInlines.h"
 #include <wtf/text/MakeString.h>
 
+#if ENABLE(WEBASSEMBLY)
+#include "JSWebAssemblyMemory.h"
+#include "WasmMemory.h"
+#endif
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
@@ -57,7 +62,7 @@ std::optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject* globalO
 
     bool isValid = speciesWatchpointIsValid(thisObject, mode);
     scope.assertNoException();
-    if (LIKELY(isValid))
+    if (isValid) [[likely]]
         return std::nullopt;
 
     JSValue constructor = thisObject->get(globalObject, vm.propertyNames->constructor);
@@ -110,7 +115,7 @@ static ALWAYS_INLINE std::pair<SpeciesConstructResult, JSArrayBuffer*> speciesCo
 
     // 17. Perform ? RequireInternalSlot(new, [[ArrayBufferData]]).
     JSArrayBuffer* result = jsDynamicCast<JSArrayBuffer*>(newObject);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwTypeError(globalObject, scope, "Species construction does not create ArrayBuffer"_s);
         return errorResult;
     }
@@ -200,14 +205,14 @@ static EncodedJSValue arrayBufferSlice(JSGlobalObject* globalObject, JSValue arr
     auto speciesResult = speciesConstructArrayBuffer(globalObject, thisObject, newLength, mode);
     // We can only get an exception if we call some user function.
     EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
-    if (UNLIKELY(speciesResult.first == SpeciesConstructResult::Exception))
+    if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
         return { };
 
     // 23. If IsDetachedBuffer(O) is true, throw a TypeError exception.
     if (mode == ArrayBufferSharingMode::Default && thisObject->impl()->isDetached())
         return throwVMTypeError(globalObject, scope, "Receiver is detached"_s);
 
-    if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
+    if (speciesResult.first == SpeciesConstructResult::FastPath) [[likely]] {
         ASSERT(!thisObject->impl()->isDetached());
         RefPtr<ArrayBuffer> newBuffer;
         if (mode == ArrayBufferSharingMode::Default) {
@@ -228,7 +233,7 @@ static EncodedJSValue arrayBufferSlice(JSGlobalObject* globalObject, JSValue arr
         }
 
         Structure* structure = globalObject->arrayBufferStructure(newBuffer->sharingMode());
-        JSArrayBuffer* result = JSArrayBuffer::create(vm, structure, WTFMove(newBuffer));
+        JSArrayBuffer* result = JSArrayBuffer::create(vm, structure, WTF::move(newBuffer));
         return JSValue::encode(result);
     }
 
@@ -280,18 +285,41 @@ JSC_DEFINE_HOST_FUNCTION(arrayBufferProtoFuncResize, (JSGlobalObject* globalObje
     if (!thisObject || (ArrayBufferSharingMode::Shared == thisObject->impl()->sharingMode()))
         return throwVMTypeError(globalObject, scope, "Receiver must be ArrayBuffer"_s);
 
-    if (UNLIKELY(!thisObject->impl()->isResizableOrGrowableShared()))
+    if (!thisObject->impl()->isResizableOrGrowableShared()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "ArrayBuffer is not resizable"_s);
 
     double newLength = callFrame->argument(0).toIntegerOrInfinity(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(thisObject->impl()->isDetached()))
+    if (thisObject->impl()->isDetached()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Receiver is detached"_s);
 
     if (!std::isfinite(newLength) || newLength < 0)
         return throwVMRangeError(globalObject, scope, "new length is out of range"_s);
     size_t newByteLength = static_cast<size_t>(newLength);
+
+#if ENABLE(WEBASSEMBLY)
+    // Wasm JS API redefines the abstract operation HostResizeArrayBuffer as follows:
+    // https://webassembly.github.io/threads/js-api/index.html#abstract-operation-hostresizearraybuffer
+    //
+    // Further, WebAssembly-originated resizable ArrayBuffers must defer resizing to the backing
+    // WebAssembly memory for correct handling of refreshing bounds-checking memories.
+    if (auto* jsMemory = thisObject->associatedWasmMemoryWrapper()) {
+        size_t oldByteLength = thisObject->impl()->byteLength();
+        if (newByteLength < oldByteLength)
+            return throwVMRangeError(globalObject, scope, "Cannot shrink WebAssembly memory"_s);
+        if (newByteLength % PageCount::pageSize)
+            return throwVMRangeError(globalObject, scope, makeString("WebAssembly memory cannot be resized to new byte length "_s, newByteLength, " because it is not a multiple of "_s, PageCount::pageSize));
+        size_t delta = newByteLength - oldByteLength;
+        if (delta) {
+            auto result = jsMemory->memory().grow(vm, PageCount::fromBytes(delta));
+            if (!result)
+                return throwVMRangeError(globalObject, scope, makeString("ArrayBuffer resize failed with new byte length "_s, newByteLength));
+        }
+        return JSValue::encode(jsUndefined());
+    }
+#endif
+
     if (!thisObject->impl()->resize(vm, newByteLength))
         return throwVMRangeError(globalObject, scope, makeString("ArrayBuffer resize failed with new byte length "_s, newByteLength));
 
@@ -311,7 +339,7 @@ static JSArrayBuffer* arrayBufferCopyAndDetach(JSGlobalObject* globalObject, JSA
     ASSERT(arrayBuffer->impl()->sharingMode() == ArrayBufferSharingMode::Default);
     bool isResizable = arrayBuffer->isResizableOrGrowableShared();
 
-    if (UNLIKELY(arrayBuffer->impl()->isDetached())) {
+    if (arrayBuffer->impl()->isDetached()) [[unlikely]] {
         throwVMTypeError(globalObject, scope, "Receiver is detached"_s);
         return nullptr;
     }
@@ -319,36 +347,36 @@ static JSArrayBuffer* arrayBufferCopyAndDetach(JSGlobalObject* globalObject, JSA
     if (!isResizable && newByteLength == arrayBuffer->impl()->byteLength()) {
         // We should just transfer!
         ArrayBufferContents contents;
-        if (UNLIKELY(!arrayBuffer->impl()->transferTo(vm, contents))) {
+        if (!arrayBuffer->impl()->transferTo(vm, contents)) [[unlikely]] {
             throwVMRangeError(globalObject, scope, "ArrayBuffer transfer failed"_s);
             return nullptr;
         }
-        auto newBuffer = ArrayBuffer::create(WTFMove(contents));
-        return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(newBuffer));
+        auto newBuffer = ArrayBuffer::create(WTF::move(contents));
+        return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTF::move(newBuffer));
     }
 
     if (mode == CopyAndDetachMode::PreserveResizability && isResizable) {
-        if (UNLIKELY(newByteLength > arrayBuffer->impl()->maxByteLength())) {
+        if (newByteLength > arrayBuffer->impl()->maxByteLength()) [[unlikely]] {
             throwVMRangeError(globalObject, scope, makeString("ArrayBuffer transfer failed with new byte length "_s, newByteLength));
             return nullptr;
         }
 
         ArrayBufferContents contents;
-        if (UNLIKELY(!arrayBuffer->impl()->transferTo(vm, contents))) {
+        if (!arrayBuffer->impl()->transferTo(vm, contents)) [[unlikely]] {
             throwVMRangeError(globalObject, scope, "ArrayBuffer transfer failed"_s);
             return nullptr;
         }
-        auto newBuffer = ArrayBuffer::create(WTFMove(contents));
+        auto newBuffer = ArrayBuffer::create(WTF::move(contents));
         if (!newBuffer->resize(vm, newByteLength)) {
             throwVMRangeError(globalObject, scope, makeString("ArrayBuffer resize failed with new byte length "_s, newByteLength));
             return nullptr;
         }
-        return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(newBuffer));
+        return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTF::move(newBuffer));
     }
 
     // We should create a new ArrayBuffer and copy them since underlying ArrayBuffer characteristics are different.
     auto newBuffer = ArrayBuffer::tryCreate(newByteLength, 1, std::nullopt);
-    if (UNLIKELY(!newBuffer)) {
+    if (!newBuffer) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -356,12 +384,12 @@ static JSArrayBuffer* arrayBufferCopyAndDetach(JSGlobalObject* globalObject, JSA
     memcpy(newBuffer->data(), arrayBuffer->impl()->data(), copyLength);
 
     ArrayBufferContents dummyContents;
-    if (UNLIKELY(!arrayBuffer->impl()->transferTo(vm, dummyContents))) {
+    if (!arrayBuffer->impl()->transferTo(vm, dummyContents)) [[unlikely]] {
         throwVMRangeError(globalObject, scope, "ArrayBuffer transfer failed"_s);
         return nullptr;
     }
 
-    return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(newBuffer));
+    return JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTF::move(newBuffer));
 }
 
 static JSArrayBuffer* arrayBufferProtoFuncTransferImpl(JSGlobalObject* globalObject, JSValue arrayBufferValue, JSValue newLengthValue, CopyAndDetachMode mode)
@@ -376,7 +404,7 @@ static JSArrayBuffer* arrayBufferProtoFuncTransferImpl(JSGlobalObject* globalObj
     }
 
     // WebAssembly.Memory's buffer cannot be detached.
-    if (UNLIKELY(thisObject->impl()->isWasmMemory())) {
+    if (thisObject->impl()->isWasmMemory()) [[unlikely]] {
         throwVMTypeError(globalObject, scope, "Receiver cannot be detached because it is WebAssembly.Memory"_s);
         return nullptr;
     }
@@ -386,7 +414,7 @@ static JSArrayBuffer* arrayBufferProtoFuncTransferImpl(JSGlobalObject* globalObj
         if (!thisObject->impl()->isDetached())
         newByteLength = thisObject->impl()->byteLength();
     } else {
-        newByteLength = newLengthValue.toTypedArrayIndex(globalObject, "newLength"_s);
+        newByteLength = newLengthValue.toIndex(globalObject, "newLength"_s);
         RETURN_IF_EXCEPTION(scope, { });
     }
 

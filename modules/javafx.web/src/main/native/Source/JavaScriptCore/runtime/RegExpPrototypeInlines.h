@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2022 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,9 +20,53 @@
 
 #pragma once
 
+#include "JSGlobalObject.h"
+#include "RegExpObject.h"
 #include "RegExpPrototype.h"
 
 namespace JSC {
+
+ALWAYS_INLINE bool regExpExecWatchpointIsValid(VM& vm, JSObject* thisObject)
+{
+    JSGlobalObject* globalObject = thisObject->globalObject();
+    RegExpPrototype* regExpPrototype = globalObject->regExpPrototype();
+
+    ASSERT(globalObject->regExpPrimordialPropertiesWatchpointSet().state() != ClearWatchpoint);
+    if (regExpPrototype != thisObject->getPrototypeDirect())
+        return false;
+
+    if (globalObject->regExpPrimordialPropertiesWatchpointSet().state() != IsWatched)
+        return false;
+
+    if (!thisObject->hasCustomProperties())
+        return true;
+
+    return thisObject->getDirectOffset(vm, vm.propertyNames->exec) == invalidOffset;
+}
+
+ALWAYS_INLINE bool regExpMatchAllWathpointIsValid(RegExpObject* regExpObject)
+{
+    JSGlobalObject* globalObject = regExpObject->globalObject();
+    RegExpPrototype* regExpPrototype = globalObject->regExpPrototype();
+
+    if (regExpPrototype != regExpObject->getPrototypeDirect())
+        return false;
+
+    if (globalObject->regExpPrimordialPropertiesWatchpointSet().state() != IsWatched)
+        return false;
+
+    if (regExpObject->hasCustomProperties())
+        return false;
+
+    if (!regExpObject->lastIndexIsWritable())
+        return false;
+
+    JSValue lastIndex = regExpObject->getLastIndex();
+    if (!lastIndex.isNumber())
+        return false;
+
+    return true;
+}
 
 inline Structure* RegExpPrototype::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {

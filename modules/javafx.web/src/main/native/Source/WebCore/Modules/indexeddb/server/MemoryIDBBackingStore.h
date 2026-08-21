@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "IDBBackingStore.h"
-#include "IDBDatabaseIdentifier.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "IndexKey.h"
-#include "MemoryBackingStoreTransaction.h"
+#include <WebCore/IDBBackingStore.h>
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IndexKey.h>
+#include <WebCore/MemoryBackingStoreTransaction.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -66,7 +66,6 @@ private:
     IDBError deleteObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier) final;
     IDBError renameObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, const String& newName) final;
     IDBError clearObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier) final;
-    IDBError createIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&) final;
     IDBError deleteIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier) final;
     IDBError renameIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName) final;
     IDBError keyExistsInObjectStore(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, const IDBKeyData&, bool& keyExists) final;
@@ -91,6 +90,11 @@ private:
 
     bool hasTransaction(const IDBResourceIdentifier& identifier) const final { return m_transactions.contains(identifier); }
 
+    IDBError addIndex(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&) final;
+    void revertAddIndex(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, IDBIndexIdentifier) final;
+    IDBError updateIndexRecordsWithIndexKey(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID) final;
+    void forEachObjectStoreRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier, Function<void(RecordOrError&&)>&&) final;
+
     RefPtr<MemoryObjectStore> takeObjectStoreByIdentifier(IDBObjectStoreIdentifier);
 
     void close() final;
@@ -102,8 +106,8 @@ private:
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
     HashMap<IDBResourceIdentifier, Ref<MemoryBackingStoreTransaction>> m_transactions;
-    HashMap<IDBObjectStoreIdentifier, RefPtr<MemoryObjectStore>> m_objectStoresByIdentifier;
-    HashMap<String, RefPtr<MemoryObjectStore>> m_objectStoresByName;
+    HashMap<IDBObjectStoreIdentifier, Ref<MemoryObjectStore>> m_objectStoresByIdentifier;
+    HashMap<String, Ref<MemoryObjectStore>> m_objectStoresByName;
 };
 
 } // namespace IDBServer

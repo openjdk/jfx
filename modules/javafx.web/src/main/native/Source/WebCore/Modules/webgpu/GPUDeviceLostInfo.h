@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class GPUDeviceLostInfo : public RefCounted<GPUDeviceLostInfo> {
 public:
     static Ref<GPUDeviceLostInfo> create(Ref<WebGPU::DeviceLostInfo>&& backing)
     {
-        return adoptRef(*new GPUDeviceLostInfo(WTFMove(backing)));
+        return adoptRef(*new GPUDeviceLostInfo(WTF::move(backing)));
     }
 
     GPUDeviceLostReason reason() const;
@@ -49,11 +49,11 @@ public:
 
 private:
     GPUDeviceLostInfo(Ref<WebGPU::DeviceLostInfo>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::DeviceLostInfo> m_backing;
+    const Ref<WebGPU::DeviceLostInfo> m_backing;
 };
 
 }

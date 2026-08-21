@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,8 @@ class MultiChannelResampler;
 class WebAudioSourceProvider;
 
 class MediaStreamAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamAudioSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(MediaStreamAudioSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaStreamAudioSourceNode);
 public:
     static ExceptionOr<Ref<MediaStreamAudioSourceNode>> create(BaseAudioContext&, MediaStreamAudioSourceOptions&&);
 
@@ -48,15 +49,18 @@ public:
 
     MediaStream& mediaStream() { return m_mediaStream; }
 
+    void ref() const final { AudioNode::ref(); }
+    void deref() const final { AudioNode::deref(); }
+
 private:
-    MediaStreamAudioSourceNode(BaseAudioContext&, MediaStream&, Ref<WebAudioSourceProvider>&&);
+    MediaStreamAudioSourceNode(BaseAudioContext&, Ref<MediaStream>&&, Ref<WebAudioSourceProvider>&&);
 
     // AudioNode
     void process(size_t framesToProcess) final;
     // AudioSourceProviderClient
     void setFormat(size_t numberOfChannels, float sampleRate) final;
 
-    void provideInput(AudioBus*, size_t framesToProcess);
+    void provideInput(AudioBus&, size_t framesToProcess);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
@@ -65,8 +69,8 @@ private:
     // As an audio source, we will never propagate silence.
     bool propagatesSilence() const override { return false; }
 
-    Ref<MediaStream> m_mediaStream;
-    Ref<WebAudioSourceProvider> m_provider;
+    const Ref<MediaStream> m_mediaStream;
+    const Ref<WebAudioSourceProvider> m_provider;
     std::unique_ptr<MultiChannelResampler> m_multiChannelResampler WTF_GUARDED_BY_LOCK(m_processLock);
 
     Lock m_processLock;
@@ -76,5 +80,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(MediaStreamAudioSourceNode, NodeTypeMediaStreamAudioSource);
 
 #endif // ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM)

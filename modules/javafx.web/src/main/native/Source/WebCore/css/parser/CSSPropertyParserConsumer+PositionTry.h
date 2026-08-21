@@ -30,11 +30,17 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange&, const CSSParserContext&);
+// MARK: <'position-try-fallbacks'>
+// https://drafts.csswg.org/css-anchor-position-1/#propdef-position-try-fallbacks
+RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore
+

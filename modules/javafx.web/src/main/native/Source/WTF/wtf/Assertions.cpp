@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -35,6 +35,7 @@
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 #include <wtf/LoggingAccumulator.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StackTrace.h>
 #include <wtf/StdLibExtras.h>
@@ -57,6 +58,7 @@
 #if OS(DARWIN)
 #include <sys/sysctl.h>
 #include <unistd.h>
+#include <wtf/OSObjectPtr.h>
 #endif
 
 #if !RELEASE_LOG_DISABLED && !USE(OS_LOG)
@@ -71,16 +73,18 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
-WTF_ATTRIBUTE_PRINTF(1, 0)
+WTF_ATTRIBUTE_NSSTRING(1, 0)
 static String createWithFormatAndArguments(const char* format, va_list args)
 {
     va_list argsCopy;
     va_copy(argsCopy, args);
 
+    auto formatSpan = unsafeSpan(format);
+
 ALLOW_NONLITERAL_FORMAT_BEGIN
 
 #if USE(CF)
-    if (contains(unsafeSpan(format), "%@"_span)) {
+    if (contains(formatSpan, "%@"_span)) {
         auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, format, kCFStringEncodingUTF8, kCFAllocatorNull));
         auto result = adoptCF(CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, nullptr, cfFormat.get(), args));
         va_end(argsCopy);
@@ -90,10 +94,10 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
 
     // Do the format once to get the length.
 #if OS(WINDOWS)
-    int result = _vscprintf(format, args);
+    int result = _vscprintf(formatSpan.data(), args);
 #else
     char ch;
-    int result = vsnprintf(&ch, 1, format, args);
+    int result = vsnprintf(&ch, 1, formatSpan.data(), args);
 #endif
 
     if (!result) {
@@ -109,7 +113,7 @@ ALLOW_NONLITERAL_FORMAT_BEGIN
     buffer.grow(result + 1);
 
     // Now do the formatting again, guaranteed to fit.
-    vsnprintf(buffer.data(), buffer.size(), format, argsCopy);
+    vsnprintf(buffer.mutableSpan().data(), buffer.size(), formatSpan.data(), argsCopy);
     va_end(argsCopy);
 
 ALLOW_NONLITERAL_FORMAT_END
@@ -131,12 +135,8 @@ extern "C" {
 #if PLATFORM(COCOA)
 static os_log_t webkitSubsystemForGenericOSLog()
 {
-    static dispatch_once_t once;
-    static os_log_t subsystem;
-    dispatch_once(&once, ^{
-        subsystem = os_log_create(LOG_CHANNEL_WEBKIT_SUBSYSTEM, "Generic");
-    });
-    return subsystem;
+    SUPPRESS_RETAINPTR_CTOR_ADOPT static NeverDestroyed<OSObjectPtr<os_log_t>> subsystem = adoptOSObject(os_log_create(LOG_CHANNEL_WEBKIT_SUBSYSTEM, "Generic"));
+    return subsystem.get().get();
 }
 #endif
 
@@ -150,23 +150,25 @@ static void logToStderr([[maybe_unused]] WTFLogChannel* channel, const char* buf
     fputs(buffer, stderr);
 }
 
-WTF_ATTRIBUTE_PRINTF(2, 0)
+WTF_ATTRIBUTE_NSSTRING(2, 0)
 static void vprintf_stderr_common([[maybe_unused]] WTFLogChannel* channel, const char* format, va_list args)
 {
-#if USE(CF)
-    if (contains(unsafeSpan(format), "%@"_span)) {
-        auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
+    auto formatSpan = unsafeSpan(format);
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
+
+#if USE(CF)
+    if (contains(formatSpan, "%@"_span)) {
+        auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
+
         auto str = adoptCF(CFStringCreateWithFormatAndArguments(nullptr, nullptr, cfFormat.get(), args));
-ALLOW_NONLITERAL_FORMAT_END
         CFIndex length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(str.get()), kCFStringEncodingUTF8);
         constexpr unsigned InitialBufferSize { 256 };
         Vector<char, InitialBufferSize> buffer(length + 1);
 
-        CFStringGetCString(str.get(), buffer.data(), length, kCFStringEncodingUTF8);
+        CFStringGetCString(str.get(), buffer.mutableSpan().data(), length, kCFStringEncodingUTF8);
 
-        logToStderr(channel, buffer.data());
+        logToStderr(channel, buffer.span().data());
         return;
     }
 
@@ -175,7 +177,7 @@ ALLOW_NONLITERAL_FORMAT_END
         os_log_t osLogChannel = channel ? channel->osLogChannel : webkitSubsystemForGenericOSLog();
         va_list copyOfArgs;
         va_copy(copyOfArgs, args);
-        os_log_with_args(osLogChannel, OS_LOG_TYPE_DEFAULT, format, copyOfArgs, __builtin_return_address(0));
+        os_log_with_args(osLogChannel, OS_LOG_TYPE_DEFAULT, formatSpan.data(), copyOfArgs, __builtin_return_address(0));
         va_end(copyOfArgs);
     }
 #endif
@@ -184,7 +186,7 @@ ALLOW_NONLITERAL_FORMAT_END
     if (!g_wtfConfig.disableForwardingVPrintfStdErrToOSLog) {
         va_list copyOfArgs;
         va_copy(copyOfArgs, args);
-        __android_log_vprint(ANDROID_LOG_ERROR, LOG_CHANNEL_WEBKIT_SUBSYSTEM, format, copyOfArgs);
+        __android_log_vprint(ANDROID_LOG_ERROR, LOG_CHANNEL_WEBKIT_SUBSYSTEM, formatSpan.data(), copyOfArgs);
         va_end(copyOfArgs);
     }
 #endif
@@ -197,18 +199,19 @@ ALLOW_NONLITERAL_FORMAT_END
         Vector<char> buffer(size);
         do {
             buffer.grow(size);
-            if (vsnprintf(buffer.data(), size, format, args) != -1) {
-                OutputDebugStringA(buffer.data());
+            if (vsnprintf(buffer.mutableSpan().data(), size, formatSpan.data(), args) != -1) {
+                OutputDebugStringA(buffer.span().data());
                 break;
             }
             size *= 2;
         } while (size > 1024);
     }
 #endif
-    vfprintf(stderr, format, args);
+    vfprintf(stderr, formatSpan.data(), args);
+ALLOW_NONLITERAL_FORMAT_END
 }
 
-WTF_ATTRIBUTE_PRINTF(2, 0)
+WTF_ATTRIBUTE_NSSTRING(2, 0)
 static void vprintf_stderr_with_prefix(const char* rawPrefix, const char* rawFormat, va_list args)
 {
     auto prefix = unsafeSpan(rawPrefix);
@@ -219,11 +222,11 @@ static void vprintf_stderr_with_prefix(const char* rawPrefix, const char* rawFor
     formatWithPrefix[prefix.size() + format.size()] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    vprintf_stderr_common(nullptr, formatWithPrefix.data(), args);
+    vprintf_stderr_common(nullptr, formatWithPrefix.span().data(), args);
 ALLOW_NONLITERAL_FORMAT_END
 }
 
-WTF_ATTRIBUTE_PRINTF(2, 0)
+WTF_ATTRIBUTE_NSSTRING(2, 0)
 static void vprintf_stderr_with_trailing_newline(WTFLogChannel* channel, const char* rawFormat, va_list args)
 {
     auto format = unsafeSpan(rawFormat);
@@ -238,11 +241,11 @@ static void vprintf_stderr_with_trailing_newline(WTFLogChannel* channel, const c
     formatWithNewline[format.size() + 1] = 0;
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    vprintf_stderr_common(channel, formatWithNewline.data(), args);
+    vprintf_stderr_common(channel, formatWithNewline.span().data(), args);
 ALLOW_NONLITERAL_FORMAT_END
 }
 
-WTF_ATTRIBUTE_PRINTF(1, 2)
+WTF_ATTRIBUTE_NSSTRING(1, 2)
 static void printf_stderr_common(const char* format, ...)
 {
     va_list args;
@@ -296,7 +299,7 @@ void WTFReportArgumentAssertionFailure(const char* file, int line, const char* f
 
 class CrashLogPrintStream final : public PrintStream {
 public:
-    WTF_ATTRIBUTE_PRINTF(2, 0)
+    WTF_ATTRIBUTE_NSSTRING(2, 0)
     void vprintf(const char* format, va_list argList) final
     {
         vprintf_stderr_common(nullptr, format, argList);
@@ -320,10 +323,9 @@ void WTFReportBacktraceWithStackDepth(int framesToShow)
 void WTFReportBacktraceWithPrefixAndStackDepth(const char* prefix, int framesToShow)
 {
     int frames = framesToShow + kDefaultFramesToSkip;
-    Vector<void*> samples;
-    samples.resize(frames);
+    Vector<void*> samples(frames);
 
-    WTFGetBacktrace(samples.data(), &frames);
+    WTFGetBacktrace(samples.mutableSpan().data(), &frames);
     CrashLogPrintStream out;
     if (frames > kDefaultFramesToSkip)
         WTFPrintBacktraceWithPrefixAndPrintStream(out, samples.subspan(kDefaultFramesToSkip, framesToShow), prefix);
@@ -442,7 +444,7 @@ void WTFReportError(const char* file, int line, const char* function, const char
 }
 
 class WTFLoggingAccumulator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WTFLoggingAccumulator);
 public:
     void accumulate(const String&);
     void resetAccumulatedLogs();
@@ -475,13 +477,8 @@ String WTFLoggingAccumulator::getAndResetAccumulatedLogs()
 
 static WTFLoggingAccumulator& loggingAccumulator()
 {
-    static WTFLoggingAccumulator* accumulator;
-    static std::once_flag initializeAccumulatorOnce;
-    std::call_once(initializeAccumulatorOnce, [] {
-        accumulator = new WTFLoggingAccumulator;
-    });
-
-    return *accumulator;
+    static NeverDestroyed<UniqueRef<WTFLoggingAccumulator>> accumulator = makeUniqueRef<WTFLoggingAccumulator>();
+    return accumulator.get();
 }
 
 void WTFSetLogChannelLevel(WTFLogChannel* channel, WTFLogLevel level)
@@ -512,7 +509,7 @@ ALLOW_NONLITERAL_FORMAT_END
     va_end(args);
 }
 
-WTF_ATTRIBUTE_PRINTF(2, 0)
+WTF_ATTRIBUTE_NSSTRING(2, 0)
 static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list args)
 {
     if (channel->state == WTFLogChannelState::Off)
@@ -608,7 +605,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 #if USE(OS_LOG) && !RELEASE_LOG_DISABLED
     for (size_t i = 0; i < count; ++i) {
         WTFLogChannel* channel = channels[i];
-        channel->osLogChannel = os_log_create(channel->subsystem, channel->name);
+        channel->osLogChannel = os_log_create(LOG_CHANNEL_WEBKIT_SUBSYSTEM, channel->name);
     }
 #endif
 
@@ -618,7 +615,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
         if (it == componentInfo.end())
             continue;
 
-        auto component = (*it).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+        auto component = (*it).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
 
         WTFLogChannelState logChannelState = WTFLogChannelState::On;
         if (component.startsWith('-')) {
@@ -633,7 +630,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 
         WTFLogLevel logChannelLevel = WTFLogLevel::Error;
         if (++it != componentInfo.end()) {
-            auto level = (*it).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+            auto level = (*it).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
             if (equalLettersIgnoringASCIICase(level, "error"_s))
                 logChannelLevel = WTFLogLevel::Error;
             else if (equalLettersIgnoringASCIICase(level, "warning"_s))
@@ -656,74 +653,74 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 
 } // extern "C"
 
-#if (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
+#if !ASAN_ENABLED && (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5, uint64_t misc6)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
-    register uint64_t misc2GPR asm(CRASH_GPR2) = misc2;
-    register uint64_t misc3GPR asm(CRASH_GPR3) = misc3;
-    register uint64_t misc4GPR asm(CRASH_GPR4) = misc4;
-    register uint64_t misc5GPR asm(CRASH_GPR5) = misc5;
-    register uint64_t misc6GPR asm(CRASH_GPR6) = misc6;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
+    register uint64_t misc2GPR __asm__(CRASH_GPR2) = misc2;
+    register uint64_t misc3GPR __asm__(CRASH_GPR3) = misc3;
+    register uint64_t misc4GPR __asm__(CRASH_GPR4) = misc4;
+    register uint64_t misc5GPR __asm__(CRASH_GPR5) = misc5;
+    register uint64_t misc6GPR __asm__(CRASH_GPR6) = misc6;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR), "r"(misc2GPR), "r"(misc3GPR), "r"(misc4GPR), "r"(misc5GPR), "r"(misc6GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
-    register uint64_t misc2GPR asm(CRASH_GPR2) = misc2;
-    register uint64_t misc3GPR asm(CRASH_GPR3) = misc3;
-    register uint64_t misc4GPR asm(CRASH_GPR4) = misc4;
-    register uint64_t misc5GPR asm(CRASH_GPR5) = misc5;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
+    register uint64_t misc2GPR __asm__(CRASH_GPR2) = misc2;
+    register uint64_t misc3GPR __asm__(CRASH_GPR3) = misc3;
+    register uint64_t misc4GPR __asm__(CRASH_GPR4) = misc4;
+    register uint64_t misc5GPR __asm__(CRASH_GPR5) = misc5;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR), "r"(misc2GPR), "r"(misc3GPR), "r"(misc4GPR), "r"(misc5GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
-    register uint64_t misc2GPR asm(CRASH_GPR2) = misc2;
-    register uint64_t misc3GPR asm(CRASH_GPR3) = misc3;
-    register uint64_t misc4GPR asm(CRASH_GPR4) = misc4;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
+    register uint64_t misc2GPR __asm__(CRASH_GPR2) = misc2;
+    register uint64_t misc3GPR __asm__(CRASH_GPR3) = misc3;
+    register uint64_t misc4GPR __asm__(CRASH_GPR4) = misc4;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR), "r"(misc2GPR), "r"(misc3GPR), "r"(misc4GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
-    register uint64_t misc2GPR asm(CRASH_GPR2) = misc2;
-    register uint64_t misc3GPR asm(CRASH_GPR3) = misc3;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
+    register uint64_t misc2GPR __asm__(CRASH_GPR2) = misc2;
+    register uint64_t misc3GPR __asm__(CRASH_GPR3) = misc3;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR), "r"(misc2GPR), "r"(misc3GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
-    register uint64_t misc2GPR asm(CRASH_GPR2) = misc2;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
+    register uint64_t misc2GPR __asm__(CRASH_GPR2) = misc2;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR), "r"(misc2GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
-    register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
+    register uint64_t misc1GPR __asm__(CRASH_GPR1) = misc1;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR), "r"(misc1GPR));
     __builtin_unreachable();
 }
 
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason)
 {
-    register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
+    register uint64_t reasonGPR __asm__(CRASH_GPR0) = reason;
     __asm__ volatile (WTF_FATAL_CRASH_INST : : "r"(reasonGPR));
     __builtin_unreachable();
 }

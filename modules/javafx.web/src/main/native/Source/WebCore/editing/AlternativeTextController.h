@@ -29,19 +29,10 @@
 #include "DocumentMarker.h"
 #include "EventLoop.h"
 #include "Position.h"
-#include <variant>
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
-
-namespace WebCore {
-class AlternativeTextController;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AlternativeTextController> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -67,9 +58,10 @@ struct TextCheckingResult;
 #define UNLESS_ENABLED(functionBody) functionBody
 #endif
 
-class AlternativeTextController : public CanMakeWeakPtr<AlternativeTextController> {
+class AlternativeTextController final : public CanMakeWeakPtr<AlternativeTextController>, public CanMakeCheckedPtr<AlternativeTextController> {
     WTF_MAKE_TZONE_ALLOCATED(AlternativeTextController);
     WTF_MAKE_NONCOPYABLE(AlternativeTextController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AlternativeTextController);
 public:
     explicit AlternativeTextController(Document& document) UNLESS_ENABLED(: m_document(document) { })
     ~AlternativeTextController() UNLESS_ENABLED({ })
@@ -136,7 +128,7 @@ private:
     bool m_isDismissedByEditing { };
     AlternativeTextType m_type;
     String m_originalText;
-    std::variant<AutocorrectionReplacement, DictationContext> m_details;
+    Variant<AutocorrectionReplacement, DictationContext> m_details;
 
     String m_originalStringForLastDeletedAutocorrection;
     Position m_positionForLastDeletedAutocorrection;

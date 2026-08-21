@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/Assertions.h>
+
 namespace JSC {
 
 enum ResourceExhaustionCode {
@@ -33,7 +36,7 @@ enum ResourceExhaustionCode {
 };
 
 #define RELEASE_ASSERT_RESOURCE_AVAILABLE(assertion, resourceExhaustionCode, failureMessage) do { \
-        if (UNLIKELY(!(assertion))) \
+        if (!(assertion)) [[unlikely]] \
             handleResourceExhaustion(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion, resourceExhaustionCode, #resourceExhaustionCode, failureMessage); \
     } while (false)
 

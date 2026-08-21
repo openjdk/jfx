@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2013 Google Inc. All rights reserved.
- * Copyright (C) 2012-2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,10 +33,11 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLElement.h"
-#include "SpeechSynthesisUtterance.h"
-#include "TextTrackCue.h"
-#include "VTTRegion.h"
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/SpeechSynthesisUtterance.h>
+#include <WebCore/TextTrackCue.h>
+#include <WebCore/VTTRegion.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TypeCasts.h>
 
@@ -90,7 +91,7 @@ enum class VTTAlignSetting : uint8_t {
 // ----------------------------
 
 class VTTCueBox : public TextTrackCueBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VTTCueBox);
+    WTF_MAKE_TZONE_ALLOCATED(VTTCueBox);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VTTCueBox);
 public:
     static Ref<VTTCueBox> create(Document&, VTTCue&);
@@ -115,15 +116,15 @@ class VTTCue
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VTTCue);
+    WTF_MAKE_TZONE_ALLOCATED(VTTCue);
 public:
     static Ref<VTTCue> create(Document&, double start, double end, String&& content);
-    static Ref<VTTCue> create(Document&, const WebVTTCueData&);
+    static Ref<VTTCue> create(Document&, Ref<WebVTTCueData>&&);
 
     virtual ~VTTCue();
 
     enum AutoKeyword { Auto };
-    using LineAndPositionSetting = std::variant<double, AutoKeyword>;
+    using LineAndPositionSetting = Variant<double, AutoKeyword>;
 
     using DirectionSetting = VTTDirectionSetting;
     static constexpr size_t DirectionSettingCount = static_cast<size_t>(DirectionSetting::VerticalGrowingRight) + 1;
@@ -213,7 +214,7 @@ public:
     double calculateMaximumSize() const;
 
 #if ENABLE(SPEECH_SYNTHESIS)
-    RefPtr<SpeechSynthesisUtterance> speechUtterance() const { return m_speechUtterance; }
+    SpeechSynthesisUtterance* speechUtterance() const { return m_speechUtterance.get(); }
 #endif
 
     const LineAndPositionSetting& left() const { return m_left; }
@@ -232,7 +233,7 @@ protected:
     void toJSON(JSON::Object&) const override;
 
 private:
-    VTTCue(Document&, const WebVTTCueData&);
+    VTTCue(Document&, Ref<WebVTTCueData>&&);
 
     void createWebVTTNodeTree();
 
@@ -259,6 +260,8 @@ private:
     void pauseSpeaking() final;
     void cancelSpeaking() final;
 
+    RefPtr<DocumentFragment> protectedWebVTTNodeTree() const { return m_webVTTNodeTree.get(); }
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return *m_logger; }
     uint64_t logIdentifier() const final;
@@ -280,9 +283,9 @@ private:
     String m_parsedRegionId;
 
     RefPtr<DocumentFragment> m_webVTTNodeTree;
-    Ref<HTMLSpanElement> m_cueHighlightBox;
-    Ref<HTMLDivElement> m_cueBackdropBox;
-    RefPtr<VTTCueBox> m_displayTree;
+    const Ref<HTMLSpanElement> m_cueHighlightBox;
+    const Ref<HTMLDivElement> m_cueBackdropBox;
+    const RefPtr<VTTCueBox> m_displayTree;
 #if ENABLE(SPEECH_SYNTHESIS)
     RefPtr<SpeechSynthesis> m_speechSynthesis;
     RefPtr<SpeechSynthesisUtterance> m_speechUtterance;

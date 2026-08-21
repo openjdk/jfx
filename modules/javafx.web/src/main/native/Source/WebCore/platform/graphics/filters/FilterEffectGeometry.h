@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FloatRect.h"
+#include <WebCore/FloatRect.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
@@ -80,11 +80,11 @@ public:
     }
 
 private:
-    friend struct IPC::ArgumentCoder<FilterEffectGeometry, void>;
+    friend struct IPC::ArgumentCoder<FilterEffectGeometry>;
     FloatRect m_boundaries;
     OptionSet<Flags> m_flags;
 };
 
-using FilterEffectGeometryMap = UncheckedKeyHashMap<Ref<FilterEffect>, FilterEffectGeometry>;
+using FilterEffectGeometryMap = HashMap<Ref<FilterEffect>, FilterEffectGeometry>;
 
 } // namespace WebCore

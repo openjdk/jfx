@@ -41,8 +41,10 @@
 #include "InlineRunAndOffset.h"
 #include "LineSelection.h"
 #include "Logging.h"
+#include "PositionInlines.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
+#include "RenderObjectInlines.h"
 #include "SimpleRange.h"
 #include "Text.h"
 #include "TextIterator.h"
@@ -135,7 +137,7 @@ Position VisiblePosition::leftVisuallyDistinctCandidate() const
         CheckedPtr renderer = &box->renderer();
 
         while (true) {
-            if ((renderer->isReplacedOrAtomicInline() || renderer->isBR()) && offset == box->rightmostCaretOffset())
+            if ((renderer->isBlockLevelReplacedOrAtomicInline() || renderer->isBR()) && offset == box->rightmostCaretOffset())
                 return box->isLeftToRightDirection() ? previousVisuallyDistinctCandidate(m_deepPosition) : nextVisuallyDistinctCandidate(m_deepPosition);
 
             if (!renderer->node()) {
@@ -300,7 +302,7 @@ Position VisiblePosition::rightVisuallyDistinctCandidate() const
         CheckedPtr renderer = &box->renderer();
 
         while (true) {
-            if ((renderer->isReplacedOrAtomicInline() || renderer->isBR()) && offset == box->leftmostCaretOffset())
+            if ((renderer->isBlockLevelReplacedOrAtomicInline() || renderer->isBR()) && offset == box->leftmostCaretOffset())
                 return box->isLeftToRightDirection() ? nextVisuallyDistinctCandidate(m_deepPosition) : previousVisuallyDistinctCandidate(m_deepPosition);
 
             if (!renderer->node()) {
@@ -566,8 +568,8 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
     // blocks or enter new ones), we search forward and backward until we find one.
     Position next = canonicalizeCandidate(nextCandidate(position));
     Position prev = canonicalizeCandidate(previousCandidate(position));
-    auto nextNode = next.protectedDeprecatedNode();
-    auto prevNode = prev.protectedDeprecatedNode();
+    RefPtr nextNode = next.deprecatedNode();
+    RefPtr prevNode = prev.deprecatedNode();
 
     // The new position must be in the same editable element. Enforce that first.
     // Unless the descent is from a non-editable html element to an editable body.
@@ -649,11 +651,11 @@ auto VisiblePosition::localCaretRect() const -> LocalCaretRect
         return { };
 
     auto boxAndOffset = inlineBoxAndOffset();
-    CheckedPtr renderer = boxAndOffset.box ? &boxAndOffset.box->renderer() : node->renderer();
+    CheckedPtr renderer = boxAndOffset.box ? const_cast<RenderObject*>(&boxAndOffset.box->renderer()) : node->renderer();
     if (!renderer)
         return { };
 
-    return { computeLocalCaretRect(*renderer, boxAndOffset), const_cast<RenderObject*>(renderer.get()) };
+    return { computeLocalCaretRect(*renderer, boxAndOffset), WTF::move(renderer) };
 }
 
 IntRect VisiblePosition::absoluteCaretBounds(bool* insideFixed) const
@@ -686,7 +688,7 @@ int VisiblePosition::lineDirectionPointForBlockDirectionNavigation() const
     auto caretPoint = renderer->localToAbsolute(localRect.rect.location());
     CheckedPtr<RenderObject> containingBlock = renderer->containingBlock();
     if (!containingBlock)
-        containingBlock = WTFMove(renderer); // Just use ourselves to determine the writing mode if we have no containing block.
+        containingBlock = WTF::move(renderer); // Just use ourselves to determine the writing mode if we have no containing block.
     return containingBlock->isHorizontalWritingMode() ? caretPoint.x() : caretPoint.y();
 }
 
@@ -704,7 +706,8 @@ void VisiblePosition::debugPosition(ASCIILiteral msg) const
 
 String VisiblePosition::debugDescription() const
 {
-    return m_deepPosition.debugDescription();
+    // Only log affinity when it's the non-default value of upstream.
+    return makeString(m_deepPosition.debugDescription(), ", affinity: "_s, m_affinity == Affinity::Upstream ? "upstream"_s : ""_s);
 }
 
 void VisiblePosition::showTreeForThis() const
@@ -784,15 +787,15 @@ TextStream& operator<<(TextStream& stream, Affinity affinity)
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, const VisiblePosition& visiblePosition)
+TextStream& operator<<(TextStream& ts, const VisiblePosition& visiblePosition)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "VisiblePosition " << &visiblePosition;
+    TextStream::GroupScope scope(ts);
+    ts << "VisiblePosition "_s << &visiblePosition;
 
-    stream.dumpProperty("position", visiblePosition.deepEquivalent());
-    stream.dumpProperty("affinity", visiblePosition.affinity());
+    ts.dumpProperty("position"_s, visiblePosition.deepEquivalent());
+    ts.dumpProperty("affinity"_s, visiblePosition.affinity());
 
-    return stream;
+    return ts;
 }
 
 std::optional<SimpleRange> makeSimpleRange(const VisiblePositionRange& range)
@@ -807,7 +810,7 @@ VisiblePositionRange makeVisiblePositionRange(const std::optional<SimpleRange>& 
     return { makeContainerOffsetPosition(range->start), makeContainerOffsetPosition(range->end) };
 }
 
-std::partial_ordering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
+std::partial_ordering operator<=>(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Should two positions with different affinity be considered equivalent or not?
     return treeOrder<ComposedTree>(a.deepEquivalent(), b.deepEquivalent());

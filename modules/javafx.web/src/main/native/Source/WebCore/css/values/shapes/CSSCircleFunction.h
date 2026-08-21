@@ -24,9 +24,8 @@
 
 #pragma once
 
-#include "CSSGradient.h"
-#include "CSSPosition.h"
-#include "CSSPrimitiveNumericTypes.h"
+#include <WebCore/CSSPosition.h>
+#include <WebCore/CSSPrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace CSS {
@@ -34,10 +33,10 @@ namespace CSS {
 // <circle()> = circle( <radial-size>? [ at <position> ]? )
 // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-circle
 struct Circle {
-    using Extent = std::variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
+    using Extent = Variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
     // FIXME: The spec says that this should take Length, not a LengthPercentage, but this does not match the tests.
     using Length = CSS::LengthPercentage<Nonnegative>;
-    using RadialSize = std::variant<Length, Extent>;
+    using RadialSize = Variant<Length, Extent>;
 
     RadialSize radius;
     std::optional<Position> position;

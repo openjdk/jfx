@@ -26,7 +26,9 @@
 #pragma once
 
 #import "ASTInterpolateAttribute.h"
+#import "CallGraph.h"
 #import "WGSL.h"
+#import <variant>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
@@ -53,15 +55,15 @@ class PipelineLayout;
 class ShaderModule : public WGPUShaderModuleImpl, public RefCounted<ShaderModule> {
     WTF_MAKE_TZONE_ALLOCATED(ShaderModule);
 
-    using CheckResult = std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck, std::monostate>;
+    using CheckResult = Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck, std::monostate>;
 public:
-    static Ref<ShaderModule> create(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
+    static Ref<ShaderModule> create(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
     {
-        return adoptRef(*new ShaderModule(WTFMove(checkResult), WTFMove(pipelineLayoutHints), WTFMove(entryPointInformation), library, device));
+        return adoptRef(*new ShaderModule(WTF::move(checkResult), WTF::move(pipelineLayoutHints), WTF::move(entryPointInformation), library, device));
     }
     static Ref<ShaderModule> createInvalid(Device& device, CheckResult&& checkResult = std::monostate { })
     {
-        return adoptRef(*new ShaderModule(device, WTFMove(checkResult)));
+        return adoptRef(*new ShaderModule(device, WTF::move(checkResult)));
     }
 
     ~ShaderModule();
@@ -72,7 +74,7 @@ public:
     bool isValid() const { return std::holds_alternative<WGSL::SuccessfulCheck>(m_checkResult); }
 
     static WGSL::PipelineLayout convertPipelineLayout(const PipelineLayout&);
-    static id<MTLLibrary> createLibrary(id<MTLDevice>, const String& msl, String&& label, NSError **);
+    static id<MTLLibrary> createLibrary(id<MTLDevice>, const String& msl, String&& label, NSError **, WGSL::DeviceState&&);
 
     WGSL::ShaderModule* ast() const;
 
@@ -104,10 +106,10 @@ public:
     bool usesFragDepth(const String&) const;
 
 private:
-    ShaderModule(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&, HashMap<String, Ref<PipelineLayout>>&&, HashMap<String, WGSL::Reflection::EntryPointInformation>&&, id<MTLLibrary>, Device&);
+    ShaderModule(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&, HashMap<String, Ref<PipelineLayout>>&&, HashMap<String, WGSL::Reflection::EntryPointInformation>&&, id<MTLLibrary>, Device&);
     ShaderModule(Device&, CheckResult&&);
 
-    CheckResult convertCheckResult(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&);
+    CheckResult convertCheckResult(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&);
 
     const CheckResult m_checkResult;
     const HashMap<String, Ref<PipelineLayout>> m_pipelineLayoutHints;
@@ -117,7 +119,7 @@ private:
     FragmentInputs parseFragmentInputs(const WGSL::AST::Function&);
     void populateOutputState(const String&, WGSL::Builtin);
 
-    ShaderModule::FragmentOutputs parseFragmentReturnType(const WGSL::Type&, const String&);
+    ShaderModule::FragmentOutputs parseFragmentReturnType(const WGSL::Type&, const WGSL::CallGraph::EntryPoint&);
 
     const Ref<Device> m_device;
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250441 - this needs to be populated from the compiler

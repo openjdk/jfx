@@ -35,19 +35,16 @@ namespace WebCore {
 class CoordinatedPlatformLayer;
 class CoordinatedPlatformLayerBuffer;
 class IntSize;
-#if PLATFORM(JAVA)
-class TextureMapperGL;
-#endif
 class TextureMapperLayer;
 
 class CoordinatedPlatformLayerBufferProxy final : public ThreadSafeRefCounted<CoordinatedPlatformLayerBufferProxy> {
 public:
     static Ref<CoordinatedPlatformLayerBufferProxy> create();
-    virtual ~CoordinatedPlatformLayerBufferProxy();
+    ~CoordinatedPlatformLayerBufferProxy();
 
     void setTargetLayer(CoordinatedPlatformLayer*);
     void consumePendingBufferIfNeeded();
-    bool setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
+    void setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
     enum class ShouldWait : bool { No, Yes };
@@ -58,7 +55,6 @@ private:
     CoordinatedPlatformLayerBufferProxy();
 
     Lock m_lock;
-    bool m_isValid WTF_GUARDED_BY_LOCK(m_lock) { true };
     RefPtr<CoordinatedPlatformLayer> m_layer WTF_GUARDED_BY_LOCK(m_lock);
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_pendingBuffer WTF_GUARDED_BY_LOCK(m_lock);
 #if ENABLE(VIDEO) && USE(GSTREAMER)

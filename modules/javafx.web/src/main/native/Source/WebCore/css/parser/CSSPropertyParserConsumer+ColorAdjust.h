@@ -29,13 +29,14 @@
 
 namespace WebCore {
 
-namespace CSS {
-struct ColorScheme;
-}
-
 class CSSValue;
 class CSSParserTokenRange;
 struct CSSParserContext;
+
+namespace CSS {
+struct ColorScheme;
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -45,13 +46,13 @@ namespace CSSPropertyParserHelpers {
 // https://drafts.csswg.org/css-color-adjust/#propdef-color-scheme
 
 // MARK: <'color-scheme'> consuming (unresolved)
-std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange&, const CSSParserContext&);
+std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <'color-scheme'> parsing (unresolved)
 std::optional<CSS::ColorScheme> parseUnresolvedColorScheme(const String&, const CSSParserContext&);
 
 // MARK: <'color-scheme'> consuming (CSSValue)
-RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 #endif // ENABLE(DARK_MODE_CSS)
 

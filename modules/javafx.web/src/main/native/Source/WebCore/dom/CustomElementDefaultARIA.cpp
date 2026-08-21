@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CustomElementDefaultARIA.h"
 
+#include "ContainerNodeInlines.h"
 #include "Element.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
@@ -35,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomElementDefaultARIA);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CustomElementDefaultARIA);
 
 CustomElementDefaultARIA::CustomElementDefaultARIA() = default;
 CustomElementDefaultARIA::~CustomElementDefaultARIA() = default;
@@ -47,7 +48,7 @@ void CustomElementDefaultARIA::setValueForAttribute(const QualifiedName& name, c
 
 static bool isElementVisible(const Element& element, const Element& thisElement)
 {
-    return !element.isConnected() || element.isInDocumentTree() || thisElement.isDescendantOrShadowDescendantOf(element.protectedRootNode());
+    return !element.isConnected() || element.isInDocumentTree() || thisElement.isShadowIncludingDescendantOf(element.protectedRootNode());
 }
 
 const AtomString& CustomElementDefaultARIA::valueForAttribute(const Element& thisElement, const QualifiedName& name) const
@@ -56,7 +57,7 @@ const AtomString& CustomElementDefaultARIA::valueForAttribute(const Element& thi
     if (it == m_map.end())
         return nullAtom();
 
-    return std::visit(WTF::makeVisitor([&](const AtomString& stringValue) -> const AtomString& {
+    return WTF::visit(WTF::makeVisitor([&](const AtomString& stringValue) -> const AtomString& {
         return stringValue;
     }, [&](const WeakPtr<Element, WeakPtrImplWithEventTargetData>& weakElementValue) -> const AtomString& {
         RefPtr elementValue = weakElementValue.get();
@@ -90,13 +91,13 @@ RefPtr<Element> CustomElementDefaultARIA::elementForAttribute(const Element& thi
         return nullptr;
 
     RefPtr<Element> result;
-    std::visit(WTF::makeVisitor([&](const AtomString& stringValue) {
+    WTF::visit(WTF::makeVisitor([&](const AtomString& stringValue) {
         if (thisElement.isInTreeScope())
             result = thisElement.treeScope().elementByIdResolvingReferenceTarget(stringValue);
     }, [&](const WeakPtr<Element, WeakPtrImplWithEventTargetData>& weakElementValue) {
         RefPtr elementValue = weakElementValue.get();
         if (elementValue && isElementVisible(*elementValue, thisElement))
-            result = WTFMove(elementValue);
+            result = WTF::move(elementValue);
     }, [&](const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>&) {
         RELEASE_ASSERT_NOT_REACHED();
     }), it->value);
@@ -114,7 +115,7 @@ Vector<Ref<Element>> CustomElementDefaultARIA::elementsForAttribute(const Elemen
     auto it = m_map.find(name);
     if (it == m_map.end())
         return result;
-    std::visit(WTF::makeVisitor([&](const AtomString& stringValue) {
+    WTF::visit(WTF::makeVisitor([&](const AtomString& stringValue) {
         if (thisElement.isInTreeScope()) {
             SpaceSplitString idList { stringValue, SpaceSplitString::ShouldFoldCase::No };
             result = WTF::compactMap(idList, [&](auto& id) {
@@ -144,7 +145,7 @@ void CustomElementDefaultARIA::setElementsForAttribute(const QualifiedName& name
             elements.append(WeakPtr<Element, WeakPtrImplWithEventTargetData> { element });
         }
     }
-    m_map.set(name, WTFMove(elements));
+    m_map.set(name, WTF::move(elements));
 }
 
 } // namespace WebCore

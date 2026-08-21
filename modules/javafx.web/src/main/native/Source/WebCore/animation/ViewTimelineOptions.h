@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "CSSKeywordValue.h"
-#include "CSSNumericValue.h"
-#include "Element.h"
-#include "ScrollAxis.h"
+#include <WebCore/CSSKeywordValue.h>
+#include <WebCore/CSSNumericValue.h>
+#include <WebCore/Element.h>
+#include <WebCore/ScrollAxis.h>
 
 namespace WebCore {
 
-using ViewTimelineIndividualInset = std::variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
-using ViewTimelineInsetValue = std::variant<String, Vector<ViewTimelineIndividualInset>>;
+using ViewTimelineIndividualInset = Variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
+using ViewTimelineInsetValue = Variant<String, Vector<ViewTimelineIndividualInset>>;
 
 struct ViewTimelineOptions {
     RefPtr<Element> subject;

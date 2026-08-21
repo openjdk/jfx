@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,11 @@
 #include "config.h"
 #include "SharedWorkerScriptLoader.h"
 
+#include "ContentSecurityPolicy.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
 #include "InspectorInstrumentation.h"
+#include "SecurityOrigin.h"
 #include "SharedWorker.h"
 #include "WorkerFetchResult.h"
 #include "WorkerInitializationData.h"
@@ -39,26 +42,31 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerScriptLoader);
 
+Ref<SharedWorkerScriptLoader> SharedWorkerScriptLoader::create(URL&& url, SharedWorker& worker, WorkerOptions&& options)
+{
+    return adoptRef(*new SharedWorkerScriptLoader(WTF::move(url), worker, WTF::move(options)));
+}
+
 SharedWorkerScriptLoader::SharedWorkerScriptLoader(URL&& url, SharedWorker& worker, WorkerOptions&& options)
-    : m_options(WTFMove(options))
+    : m_options(WTF::move(options))
     , m_worker(worker)
     , m_loader(WorkerScriptLoader::create())
-    , m_url(WTFMove(url))
+    , m_url(WTF::move(url))
 {
 }
 
 void SharedWorkerScriptLoader::load(CompletionHandler<void(WorkerFetchResult&&, WorkerInitializationData&&)>&& completionHandler)
 {
     ASSERT(!m_completionHandler);
-    m_completionHandler = WTFMove(completionHandler);
+    m_completionHandler = WTF::move(completionHandler);
 
     auto source = m_options.type == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
-    m_loader->loadAsynchronously(*m_worker->scriptExecutionContext(), ResourceRequest(m_url), source, m_worker->workerFetchOptions(m_options, FetchOptions::Destination::Sharedworker), ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective, ServiceWorkersMode::All, *this, WorkerRunLoop::defaultMode(), ScriptExecutionContextIdentifier::generate());
+    m_loader->loadAsynchronously(*m_worker->protectedScriptExecutionContext(), ResourceRequest(URL { m_url }), source, m_worker->workerFetchOptions(m_options, FetchOptions::Destination::Sharedworker), ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective, ServiceWorkersMode::All, *this, WorkerRunLoop::defaultMode(), ScriptExecutionContextIdentifier::generate());
 }
 
 void SharedWorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse&)
 {
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
             InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
@@ -67,18 +75,29 @@ void SharedWorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifi
 
 void SharedWorkerScriptLoader::notifyFinished(std::optional<ScriptExecutionContextIdentifier> mainContextIdentifier)
 {
-    auto* scriptExecutionContext = m_worker->scriptExecutionContext();
+    RefPtr scriptExecutionContext = m_worker->scriptExecutionContext();
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends()) && scriptExecutionContext && !m_loader->failed()) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+        if (scriptExecutionContext && !m_loader->failed()) {
         ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_loader->identifier(), script = m_loader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });
+        }
     }
 
     auto fetchResult = m_loader->fetchResult();
+
+    // These URLs carry no HTTP headers; inherit the creating document's
+    // CSP, matching Worker::didReceiveResponse().
+    if (scriptExecutionContext) {
+        const auto& responseURL = fetchResult.responseURL;
+        if (responseURL.protocolIsBlob() || responseURL.protocolIsFile() || SecurityOrigin::create(responseURL)->isOpaque())
+            fetchResult.contentSecurityPolicy = scriptExecutionContext->checkedContentSecurityPolicy()->responseHeaders();
+    }
+
     if (fetchResult.referrerPolicy.isNull() && scriptExecutionContext)
         fetchResult.referrerPolicy = referrerPolicyToString(scriptExecutionContext->referrerPolicy());
-    m_completionHandler(WTFMove(fetchResult), WorkerInitializationData {
+    m_completionHandler(WTF::move(fetchResult), WorkerInitializationData {
         m_loader->takeServiceWorkerData(),
         m_loader->clientIdentifier(),
         m_loader->advancedPrivacyProtections(),

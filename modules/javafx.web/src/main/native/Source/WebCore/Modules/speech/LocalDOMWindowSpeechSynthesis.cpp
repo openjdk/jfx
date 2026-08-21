@@ -33,7 +33,10 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "Document.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -48,22 +51,17 @@ LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(DOMWindow* window)
 
 LocalDOMWindowSpeechSynthesis::~LocalDOMWindowSpeechSynthesis() = default;
 
-ASCIILiteral LocalDOMWindowSpeechSynthesis::supplementName()
-{
-    return "LocalDOMWindowSpeechSynthesis"_s;
-}
-
 // static
 LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(DOMWindow* window)
 {
     RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
     if (!localWindow)
         return nullptr;
-    auto* supplement = static_cast<LocalDOMWindowSpeechSynthesis*>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
+    auto* supplement = downcast<LocalDOMWindowSpeechSynthesis>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<LocalDOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
-        provideTo(localWindow.get(), supplementName(), WTFMove(newSupplement));
+        provideTo(localWindow.get(), supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -76,8 +74,10 @@ SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(DOMWindow& windo
 
 SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis()
 {
-    if (!m_speechSynthesis && frame() && frame()->document())
-        m_speechSynthesis = SpeechSynthesis::create(*frame()->document());
+    if (!m_speechSynthesis && frame()) {
+        if (RefPtr document = frame()->document())
+            m_speechSynthesis = SpeechSynthesis::create(*document);
+    }
     return m_speechSynthesis.get();
 }
 

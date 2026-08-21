@@ -44,16 +44,16 @@
 #include "CSSValueKeywords.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSTransformValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSTransformValue);
 
-static ExceptionOr<Ref<CSSTransformComponent>> createTransformComponent(Ref<const CSSFunctionValue> functionValue)
+static ExceptionOr<Ref<CSSTransformComponent>> createTransformComponent(Ref<const CSSFunctionValue> functionValue, Document& document)
 {
     auto makeTransformComponent = [&](auto exceptionOrTransformComponent) -> ExceptionOr<Ref<CSSTransformComponent>> {
         if (exceptionOrTransformComponent.hasException())
@@ -67,48 +67,48 @@ static ExceptionOr<Ref<CSSTransformComponent>> createTransformComponent(Ref<cons
     case CSSValueTranslateZ:
     case CSSValueTranslate:
     case CSSValueTranslate3d:
-        return makeTransformComponent(CSSTranslate::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSTranslate::create(WTF::move(functionValue), document));
     case CSSValueScaleX:
     case CSSValueScaleY:
     case CSSValueScaleZ:
     case CSSValueScale:
     case CSSValueScale3d:
-        return makeTransformComponent(CSSScale::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSScale::create(WTF::move(functionValue), document));
     case CSSValueRotateX:
     case CSSValueRotateY:
     case CSSValueRotateZ:
     case CSSValueRotate:
     case CSSValueRotate3d:
-        return makeTransformComponent(CSSRotate::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSRotate::create(WTF::move(functionValue), document));
     case CSSValueSkewX:
-        return makeTransformComponent(CSSSkewX::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSSkewX::create(WTF::move(functionValue), document));
     case CSSValueSkewY:
-        return makeTransformComponent(CSSSkewY::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSSkewY::create(WTF::move(functionValue), document));
     case CSSValueSkew:
-        return makeTransformComponent(CSSSkew::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSSkew::create(WTF::move(functionValue), document));
     case CSSValuePerspective:
-        return makeTransformComponent(CSSPerspective::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSPerspective::create(WTF::move(functionValue), document));
     case CSSValueMatrix:
     case CSSValueMatrix3d:
-        return makeTransformComponent(CSSMatrixComponent::create(WTFMove(functionValue)));
+        return makeTransformComponent(CSSMatrixComponent::create(WTF::move(functionValue), document));
     default:
         return Exception { ExceptionCode::TypeError, "Unexpected function value type"_s };
     }
 }
 
-ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(Ref<const CSSTransformListValue> list)
+ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(Ref<const CSSTransformListValue> list, Document& document)
 {
     Vector<Ref<CSSTransformComponent>> components;
-    for (auto& value : list.get()) {
-        RefPtr functionValue = dynamicDowncast<CSSFunctionValue>(value);
+    for (Ref value : list.get()) {
+        RefPtr functionValue = dynamicDowncast<CSSFunctionValue>(value.ptr());
         if (!functionValue)
             return Exception { ExceptionCode::TypeError, "Expected only function values in a transform list."_s };
-        auto component = createTransformComponent(functionValue.releaseNonNull());
+        auto component = createTransformComponent(functionValue.releaseNonNull(), document);
         if (component.hasException())
             return component.releaseException();
         components.append(component.releaseReturnValue());
     }
-    return adoptRef(*new CSSTransformValue(WTFMove(components)));
+    return adoptRef(*new CSSTransformValue(WTF::move(components)));
 }
 
 ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(Vector<Ref<CSSTransformComponent>>&& transforms)
@@ -116,7 +116,7 @@ ExceptionOr<Ref<CSSTransformValue>> CSSTransformValue::create(Vector<Ref<CSSTran
     // https://drafts.css-houdini.org/css-typed-om/#dom-csstransformvalue-csstransformvalue
     if (transforms.isEmpty())
         return Exception { ExceptionCode::TypeError };
-    return adoptRef(*new CSSTransformValue(WTFMove(transforms)));
+    return adoptRef(*new CSSTransformValue(WTF::move(transforms)));
 }
 
 RefPtr<CSSTransformComponent> CSSTransformValue::item(size_t index)
@@ -130,9 +130,9 @@ ExceptionOr<Ref<CSSTransformComponent>> CSSTransformValue::setItem(size_t index,
         return Exception { ExceptionCode::RangeError, makeString("Index "_s, index, " exceeds the range of CSSTransformValue."_s) };
 
     if (index == m_components.size())
-        m_components.append(WTFMove(value));
+        m_components.append(WTF::move(value));
     else
-        m_components[index] = WTFMove(value);
+        m_components[index] = WTF::move(value);
 
     return Ref<CSSTransformComponent> { m_components[index] };
 }
@@ -140,7 +140,7 @@ ExceptionOr<Ref<CSSTransformComponent>> CSSTransformValue::setItem(size_t index,
 bool CSSTransformValue::is2D() const
 {
     // https://drafts.css-houdini.org/css-typed-om/#dom-csstransformvalue-is2d
-    return WTF::allOf(m_components, [] (auto& component) {
+    return std::ranges::all_of(m_components, [](auto& component) {
         return component->is2D();
     });
 }
@@ -160,11 +160,11 @@ ExceptionOr<Ref<DOMMatrix>> CSSTransformValue::toMatrix()
         matrix.multiply(componentMatrix->transformationMatrix());
     }
 
-    return DOMMatrix::create(WTFMove(matrix), is2D);
+    return DOMMatrix::create(WTF::move(matrix), is2D);
 }
 
 CSSTransformValue::CSSTransformValue(Vector<Ref<CSSTransformComponent>>&& transforms)
-    : m_components(WTFMove(transforms))
+    : m_components(WTF::move(transforms))
 {
 }
 
@@ -183,7 +183,7 @@ RefPtr<CSSValue> CSSTransformValue::toCSSValue() const
         if (auto cssComponent = component->toCSSValue())
             builder.append(cssComponent.releaseNonNull());
     }
-    return CSSTransformListValue::create(WTFMove(builder));
+    return CSSTransformListValue::create(WTF::move(builder));
 }
 
 } // namespace WebCore

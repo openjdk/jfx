@@ -36,12 +36,14 @@
 #include "MediaRecorderPrivateOptions.h"
 #include "MediaRecorderPrivateWriter.h"
 #include "MediaSampleAVFObjC.h"
+#include "MediaSamplesBlock.h"
 #include "MediaUtilities.h"
 #include "WebAudioBufferList.h"
 
 #include <CoreAudio/CoreAudioTypes.h>
 #include <CoreMedia/CMTime.h>
 #include <mutex>
+#include <numbers>
 #include <wtf/Locker.h>
 #include <wtf/MediaTime.h>
 
@@ -76,7 +78,7 @@ RefPtr<MediaRecorderPrivateEncoder> MediaRecorderPrivateEncoder::create(bool has
     Ref encoder = adoptRef(*new MediaRecorderPrivateEncoder(hasAudio, hasVideo));
 
     auto writer = MediaRecorderPrivateWriter::create(containerType.isEmpty() ? "video/mp4"_s : containerType, encoder->listener());
-    if (!writer || !encoder->initialize(options, makeUniqueRefFromNonNullUniquePtr(WTFMove(writer))))
+    if (!writer || !encoder->initialize(options, makeUniqueRefFromNonNullUniquePtr(WTF::move(writer))))
         return nullptr;
 
     return encoder;
@@ -144,7 +146,7 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
 {
     assertIsMainThread();
 
-    m_writer = writer.moveToUniquePtr();
+    lazyInitialize(m_writer, writer.moveToUniquePtr());
 
     ContentType mimeType(options.mimeType);
     auto containerType = mimeType.containerType();
@@ -188,6 +190,8 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
         else
             return false; // unsupported codec.
     }
+
+    RELEASE_LOG(WebRTC, "MediaRecorderPrivateEncoder::initialize isWebM=%d, audioCodec=%d, videCodec=%d", isWebM, hasAudio() ? (int)m_audioCodec : -1, hasVideo() ? (int)m_videoCodec : -1);
 
     m_audioBitsPerSecond = options.audioBitsPerSecond.value_or(0);
     m_videoBitsPerSecond = options.videoBitsPerSecond.value_or(0);
@@ -290,7 +294,8 @@ void MediaRecorderPrivateEncoder::appendAudioSampleBuffer(const PlatformAudioDat
         m_currentStreamDescription = toCAAudioStreamDescription(description);
         addRingBuffer(description);
         m_currentAudioSampleCount = 0;
-    }
+    } else
+        clearRingBuffersIfPossible();
 
     auto currentAudioTime = m_currentAudioTime;
     m_lastEnqueuedAudioTimeUs = m_currentAudioTime.toMicroseconds();
@@ -308,10 +313,14 @@ void MediaRecorderPrivateEncoder::appendAudioSampleBuffer(const PlatformAudioDat
     m_currentAudioSampleCount += sampleCount;
 }
 
-void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStreamBasicDescription& description)
+void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStreamBasicDescription& description, InProcessCARingBuffer* newRingBuffer, size_t ringBufferId)
 {
     assertIsCurrent(queueSingleton());
 
+    if (!newRingBuffer) {
+        m_hadError = true;
+        return;
+    }
     if (!m_originalOutputDescription) {
         if (m_audioCodec != kAudioFormatLinearPCM) {
             AudioStreamBasicDescription outputDescription = { };
@@ -349,42 +358,39 @@ void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStre
         return;
     }
 
-    updateCurrentRingBufferIfNeeded();
+    m_currentRingBuffer = newRingBuffer;
+    m_currentRingBufferId = ringBufferId;
 }
 
 void MediaRecorderPrivateEncoder::addRingBuffer(const AudioStreamDescription& description)
 {
     auto asbd = *std::get<const AudioStreamBasicDescription*>(description.platformDescription().description);
-    Locker locker { m_ringBuffersLock };
-    m_ringBuffers.append(InProcessCARingBuffer::allocate(asbd, description.sampleRate() * 2)); // allocate 2s of buffer.
-    queueSingleton().dispatch([weakThis = ThreadSafeWeakPtr { *this }, description = asbd] {
+    m_ringBuffers.append(std::make_pair(InProcessCARingBuffer::allocate(asbd, description.sampleRate() * 2), ++m_lastRingBufferId)); // allocate 2s of buffer.
+    queueSingleton().dispatch([weakThis = ThreadSafeWeakPtr { *this }, description = asbd, newRingBuffer = m_ringBuffers.last().first.get(), lastRingBufferId = m_lastRingBufferId] {
         if (RefPtr protectedThis = weakThis.get())
-            protectedThis->audioSamplesDescriptionChanged(description);
+            protectedThis->audioSamplesDescriptionChanged(description, newRingBuffer, lastRingBufferId);
     });
 }
 
 void MediaRecorderPrivateEncoder::writeDataToRingBuffer(AudioBufferList* list, size_t sampleCount, size_t totalSampleCount)
 {
-    Locker locker { m_ringBuffersLock };
-    if (m_ringBuffers.isEmpty() || !m_ringBuffers.last())
+    ASSERT(!m_ringBuffers.isEmpty());
+    if (!m_ringBuffers.last().first)
         return;
-    m_ringBuffers.last()->store(list, sampleCount, totalSampleCount);
+    m_ringBuffers.last().first->store(list, sampleCount, totalSampleCount);
 }
 
-void MediaRecorderPrivateEncoder::updateCurrentRingBufferIfNeeded()
+void MediaRecorderPrivateEncoder::clearRingBuffersIfPossible()
 {
-    assertIsCurrent(queueSingleton());
-
-    Locker locker { m_ringBuffersLock };
-    if (m_currentRingBuffer) {
-        ASSERT(m_ringBuffers.size() > 1);
+    if (m_ringBuffers.size() == 1)
+        return;
+    size_t currentRingBufferId = m_currentRingBufferId;
+    while (m_ringBuffers.size() > 1) {
+        if (m_ringBuffers.first().second < currentRingBufferId)
         m_ringBuffers.removeFirst();
-    }
-    m_currentRingBuffer = m_ringBuffers.first().get();
-    if (!m_currentRingBuffer) {
-        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged: out of memory error occurred");
-        m_hadError = true;
-    }
+        else
+            break;
+    };
 }
 
 void MediaRecorderPrivateEncoder::audioSamplesAvailable(const MediaTime& time, size_t sampleCount, size_t totalSampleCount)
@@ -410,7 +416,7 @@ void MediaRecorderPrivateEncoder::audioSamplesAvailable(const MediaTime& time, s
         m_hadError = true;
         return;
     }
-    auto [list, block] = WTFMove(*result);
+    auto [list, block] = WTF::move(*result);
 
     ASSERT(m_currentRingBuffer);
     m_currentRingBuffer->fetch(list->list(), sampleCount, totalSampleCount);
@@ -443,7 +449,7 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(VideoFrame& frame)
                 nextVideoFrameTime = MediaTime(m_previousSegmentVideoDurationUs, 1000000);
             }
             m_lastRawVideoFrameReceived = nextVideoFrameTime;
-            appendVideoFrame(nextVideoFrameTime, WTFMove(frame));
+            appendVideoFrame(nextVideoFrameTime, WTF::move(frame));
         }
     });
 }
@@ -456,21 +462,21 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(MediaTime sampleTime, Ref<Vid
         m_firstVideoFrameProcessed = true;
 
         if (frame->rotation() != VideoFrame::Rotation::None || frame->isMirrored()) {
-            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * M_PI / 180);
+            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * std::numbers::pi / 180);
             if (frame->isMirrored())
                 m_videoTransform = CGAffineTransformScale(*m_videoTransform, -1, 1);
         }
         VideoEncoder::Config config { static_cast<uint64_t>(frame->presentationSize().width()), static_cast<uint64_t>(frame->presentationSize().height()), false, videoBitRate() };
 
         Ref promise = VideoEncoder::create(codecStringForMediaVideoCodecId(m_videoCodec), config, [weakThis = ThreadSafeWeakPtr { *this }, config](auto&& configuration) mutable {
-            queueSingleton().dispatch([weakThis, config = WTFMove(config), configuration] {
+            queueSingleton().dispatch([weakThis, config = WTF::move(config), configuration = WTF::move(configuration)]() mutable {
                 if (RefPtr protectedThis = weakThis.get())
-                    protectedThis->processVideoEncoderActiveConfiguration(config, WTFMove(configuration));
+                    protectedThis->processVideoEncoderActiveConfiguration(config, WTF::move(configuration));
             });
         }, [weakThis = ThreadSafeWeakPtr { *this }](auto&& frame) {
-            queueSingleton().dispatch([weakThis, frame = WTFMove(frame)]() mutable {
+            queueSingleton().dispatch([weakThis, frame = WTF::move(frame)]() mutable {
                 if (RefPtr protectedThis = weakThis.get())
-                    protectedThis->enqueueCompressedVideoFrame(WTFMove(frame));
+                    protectedThis->enqueueCompressedVideoFrame(WTF::move(frame));
             });
         });
         GenericNonExclusivePromise::Producer producer;
@@ -478,13 +484,13 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(MediaTime sampleTime, Ref<Vid
         promise->whenSettled(queueSingleton(), [weakThis = ThreadSafeWeakPtr { *this }, this](auto&& result) {
             assertIsCurrent(queueSingleton());
             if (RefPtr protectedThis = weakThis.get(); protectedThis && result) {
-                m_videoEncoder = WTFMove(*result);
+                m_videoEncoder = WTF::move(*result);
                 Ref { *m_videoEncoder }->setRates(videoBitRate(), 0);
                 m_videoEncoderCreationPromise = nullptr;
                 return encodePendingVideoFrames();
             }
             return GenericPromise::createAndResolve();
-        })->chainTo(WTFMove(producer));
+        })->chainTo(WTF::move(producer));
     }
 
     // FIXME: AVAssetWriter errors when we attempt to add a sample with the same time.
@@ -493,7 +499,7 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(MediaTime sampleTime, Ref<Vid
         sampleTime = m_lastEnqueuedRawVideoFrame + MediaTime(1, 1000000);
 
     m_lastEnqueuedRawVideoFrame = sampleTime;
-    m_pendingVideoFrames.append({ WTFMove(frame), sampleTime });
+    m_pendingVideoFrames.append({ WTF::move(frame), sampleTime });
     LOG(MediaStream, "appendVideoFrame:enqueuing raw video frame:%f queue:%zu first:%f last:%f (received audio:%d)", sampleTime.toDouble(), m_pendingVideoFrames.size(), m_pendingVideoFrames.first().second.toDouble(), m_pendingVideoFrames.last().second.toDouble(), !!m_lastEnqueuedAudioTimeUs.load());
 
     encodePendingVideoFrames();
@@ -537,7 +543,7 @@ Ref<FragmentedSharedBuffer> MediaRecorderPrivateEncoder::takeData()
     {
         Locker locker { m_lock };
         flushDataBuffer();
-        return m_data.take();
+        return m_data.takeBuffer();
     }
 }
 
@@ -559,7 +565,7 @@ void MediaRecorderPrivateEncoder::enqueueCompressedAudioSampleBuffers()
             return;
         }
         if (auto result = m_writer->addAudioTrack(Ref { *m_audioCompressedAudioInfo })) {
-            m_audioCompressedAudioInfo->trackID = *result;
+            m_audioCompressedAudioInfo->setTrackID(*result);
             m_audioTrackIndex = result;
         } else {
             RELEASE_LOG_ERROR(MediaStream, "appendAudioFrame: Failed to create audio track");
@@ -626,7 +632,7 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::encodePendingVideoFrames()
     Ref promise = producer.promise();
 
     if (m_videoEncoderCreationPromise) {
-        RefPtr { m_videoEncoderCreationPromise }->chainTo(WTFMove(producer));
+        RefPtr { m_videoEncoderCreationPromise }->chainTo(WTF::move(producer));
         return promise;
     }
 
@@ -641,9 +647,9 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::encodePendingVideoFrames()
             m_needKeyFrame = false;
         }
         LOG(MediaStream, "encodePendingVideoFrames:encoding video frame:%f (us:%lld) kf:%d", frame.second.toDouble(), frame.second.toMicroseconds(), needVideoKeyframe);
-        return Ref { *m_videoEncoder }->encode({ WTFMove(frame.first), frame.second.toMicroseconds(), { } }, needVideoKeyframe);
+        return Ref { *m_videoEncoder }->encode({ WTF::move(frame.first), frame.second.toMicroseconds(), { } }, needVideoKeyframe);
     } };
-    VideoEncoder::EncodePromise::all(WTFMove(promises))->chainTo(WTFMove(producer));
+    VideoEncoder::EncodePromise::all(WTF::move(promises))->chainTo(WTF::move(producer));
 
     return promise;
 }
@@ -652,24 +658,20 @@ void MediaRecorderPrivateEncoder::processVideoEncoderActiveConfiguration(const V
 {
     assertIsCurrent(queueSingleton());
 
-    Ref videoInfo = VideoInfo::create();
-    if (configuration.visibleWidth && configuration.visibleHeight)
-        videoInfo->size = { static_cast<float>(*configuration.visibleWidth), static_cast<float>(*configuration.visibleHeight) };
-    else
-        videoInfo->size = { static_cast<float>(config.width), static_cast<float>(config.height) };
-    if (configuration.displayWidth && configuration.displayHeight)
-        videoInfo->displaySize = { static_cast<float>(*configuration.displayWidth), static_cast<float>(*configuration.displayHeight) };
-    else
-        videoInfo->displaySize = { static_cast<float>(config.width), static_cast<float>(config.height) };
-    if (configuration.description)
-        videoInfo->atomData = SharedBuffer::create(*configuration.description);
-    if (configuration.colorSpace)
-        videoInfo->colorSpace = *configuration.colorSpace;
-    videoInfo->codecName = m_videoCodec;
+    Ref videoInfo = VideoInfo::create({
+        {
+            .codecName = m_videoCodec,
+        }, {
+            .size = configuration.visibleWidth && configuration.visibleHeight ? FloatSize { static_cast<float>(*configuration.visibleWidth), static_cast<float>(*configuration.visibleHeight) } : FloatSize { static_cast<float>(config.width), static_cast<float>(config.height) },
+            .displaySize = configuration.displayWidth && configuration.displayHeight ? FloatSize { static_cast<float>(*configuration.displayWidth), static_cast<float>(*configuration.displayHeight) } : FloatSize { static_cast<float>(config.width), static_cast<float>(config.height) },
+            .colorSpace = configuration.colorSpace.value_or(PlatformVideoColorSpace { }),
+            .extensionAtoms = configuration.description ? Vector<TrackInfo::AtomData> { 1, { computeBoxType(m_videoCodec), SharedBuffer::create(*configuration.description) } } : Vector<TrackInfo::AtomData> { }
+        }
+    });
     m_videoTrackInfo = videoInfo.copyRef();
     if (auto result = m_writer->addVideoTrack(Ref { *m_videoTrackInfo }, m_videoTransform)) {
         m_videoTrackIndex = result;
-        m_videoTrackInfo->trackID = *m_videoTrackIndex;
+        m_videoTrackInfo->setTrackID(*m_videoTrackIndex);
     } else {
         RELEASE_LOG_ERROR(MediaStream, "appendVideoFrame: Failed to create video track");
         return;
@@ -679,7 +681,7 @@ void MediaRecorderPrivateEncoder::processVideoEncoderActiveConfiguration(const V
         callOnMainThread([weakThis = ThreadSafeWeakPtr { *this }, codec = configuration.codec.isolatedCopy()]() mutable {
             if (RefPtr protectedThis = weakThis.get()) {
                 assertIsMainThread();
-                protectedThis->m_videoCodecMimeType = WTFMove(codec);
+                protectedThis->m_videoCodecMimeType = WTF::move(codec);
                 protectedThis->generateMIMEType();
             }
         });
@@ -706,7 +708,7 @@ void MediaRecorderPrivateEncoder::enqueueCompressedVideoFrame(VideoEncoder::Enco
         .data = SharedBuffer::create(frame.data),
         .flags = frame.isKeyFrame ? MediaSample::SampleFlags::IsSync : MediaSample::SampleFlags::None
     });
-    m_encodedVideoFrames.append(makeUniqueRef<MediaSamplesBlock>(m_videoTrackInfo.get(), WTFMove(vector)));
+    m_encodedVideoFrames.append(makeUniqueRef<MediaSamplesBlock>(m_videoTrackInfo.get(), WTF::move(vector)));
     LOG(MediaStream, "appendVideoFrame:Receiving compressed %svideo frame: queue:%zu first:%f last:%f", frame.isKeyFrame ? "keyframe " : "", m_encodedVideoFrames.size(), m_encodedVideoFrames.first()->presentationTime().toDouble(), m_encodedVideoFrames.last()->presentationTime().toDouble());
     partiallyFlushEncodedQueues();
 }
@@ -864,7 +866,7 @@ void MediaRecorderPrivateEncoder::interleaveAndEnqueueNextFrame()
         m_hasMuxedAudioFrameSinceEndSegment = true;
         m_lastMuxedAudioSampleEndTime = frame->presentationEndTime();
     }
-    m_interleavedFrames.append(WTFMove(frame));
+    m_interleavedFrames.append(WTF::move(frame));
 
     return;
 }
@@ -883,11 +885,6 @@ void MediaRecorderPrivateEncoder::stopRecording()
         assertIsCurrent(queueSingleton());
 
         m_isPaused = false;
-
-        {
-            Locker locker { m_ringBuffersLock };
-            m_ringBuffers.clear();
-        }
 
         RefPtr converter = audioConverter();
         if (!converter)
@@ -923,18 +920,18 @@ void MediaRecorderPrivateEncoder::stopRecording()
     });
 }
 
-void MediaRecorderPrivateEncoder::fetchData(CompletionHandler<void(RefPtr<FragmentedSharedBuffer>&&, double)>&& completionHandler)
+void MediaRecorderPrivateEncoder::fetchData(CompletionHandler<void(Ref<FragmentedSharedBuffer>&&, double)>&& completionHandler)
 {
     assertIsMainThread();
 
-    m_currentFlushOperations = Ref { m_currentFlushOperations }->whenSettled(queueSingleton(), [protectedThis = Ref { *this }, this, completionHandler = WTFMove(completionHandler)]() mutable {
+    m_currentFlushOperations = Ref { m_currentFlushOperations }->whenSettled(queueSingleton(), [protectedThis = Ref { *this }, this, completionHandler = WTF::move(completionHandler)]() mutable {
         auto currentTime = this->currentTime();
-        return flushPendingData(currentTime)->whenSettled(queueSingleton(), [protectedThis, this, completionHandler = WTFMove(completionHandler), currentTime]() mutable {
+        return flushPendingData(currentTime)->whenSettled(queueSingleton(), [protectedThis, this, completionHandler = WTF::move(completionHandler), currentTime]() mutable {
             assertIsCurrent(queueSingleton());
             Ref data = takeData();
             LOG(MediaStream, "fetchData::returning data:%zu timeCode:%f time:%f", data->size(), m_timeCode, currentTime.toDouble());
-            callOnMainThread([completionHandler = WTFMove(completionHandler), data, timeCode = m_timeCode]() mutable {
-                completionHandler(WTFMove(data), timeCode);
+            callOnMainThread([completionHandler = WTF::move(completionHandler), data, timeCode = m_timeCode]() mutable {
+                completionHandler(WTF::move(data), timeCode);
             });
             if (data->size())
                 m_timeCode = currentTime.toDouble();
@@ -962,7 +959,7 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::flushPendingData(const MediaTim
     ASSERT(!m_pendingFlush, "flush are serialized");
     m_pendingFlush++;
 
-    return GenericPromise::all(WTFMove(promises))->whenSettled(queueSingleton(), [weakThis = ThreadSafeWeakPtr { *this }, this, currentTime] {
+    return GenericPromise::all(WTF::move(promises))->whenSettled(queueSingleton(), [weakThis = ThreadSafeWeakPtr { *this }, this, currentTime] {
         assertIsCurrent(queueSingleton());
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
@@ -995,7 +992,7 @@ Ref<GenericPromise> MediaRecorderPrivateEncoder::flushPendingData(const MediaTim
             m_hasMuxedVideoFrameSinceEndSegment = false;
             GenericPromise::Producer producer;
             Ref promise = producer.promise();
-            m_writer->writeFrames(std::exchange(m_interleavedFrames, { }), endMuxedTime)->chainTo(WTFMove(producer));
+            m_writer->writeFrames(std::exchange(m_interleavedFrames, { }), endMuxedTime)->chainTo(WTF::move(producer));
             return promise;
         }
         return GenericPromise::createAndResolve();

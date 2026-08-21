@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,10 +51,12 @@ public:
 
     virtual ~WorkerModuleScriptLoader();
 
+    void ref() const final { ModuleScriptLoader::ref(); }
+    void deref() const final { ModuleScriptLoader::deref(); }
+
     void load(ScriptExecutionContext&, URL&& sourceURL);
 
     WorkerScriptLoader& scriptLoader() { return m_scriptLoader.get(); }
-    Ref<WorkerScriptLoader> protectedScriptLoader();
 
     static String taskMode();
     ReferrerPolicy referrerPolicy();
@@ -68,12 +70,14 @@ public:
 private:
     WorkerModuleScriptLoader(ModuleScriptLoaderClient&, DeferredPromise&, WorkerScriptFetcher&, RefPtr<JSC::ScriptFetchParameters>&&);
 
+    bool isWorkerModuleScriptLoader() const final { return true; }
+
     void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) final { }
     void notifyFinished(std::optional<ScriptExecutionContextIdentifier>) final;
 
     void notifyClientFinished();
 
-    Ref<WorkerScriptLoader> m_scriptLoader;
+    const Ref<WorkerScriptLoader> m_scriptLoader;
     URL m_sourceURL;
     ScriptBuffer m_script;
     URL m_responseURL;
@@ -83,3 +87,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerModuleScriptLoader)
+    static bool isType(const WebCore::ModuleScriptLoader& loader) { return loader.isWorkerModuleScriptLoader(); }
+SPECIALIZE_TYPE_TRAITS_END()

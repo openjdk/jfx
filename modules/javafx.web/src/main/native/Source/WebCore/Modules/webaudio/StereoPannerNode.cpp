@@ -33,11 +33,12 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StereoPannerNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StereoPannerNode);
 
 ExceptionOr<Ref<StereoPannerNode>> StereoPannerNode::create(BaseAudioContext& context, const StereoPannerOptions& options)
 {
@@ -68,18 +69,16 @@ StereoPannerNode::~StereoPannerNode()
 
 void StereoPannerNode::process(size_t framesToProcess)
 {
-    AudioBus* destination = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    AudioBus& destination = firstOutput->bus();
 
-    if (!isInitialized() || !input(0)->isConnected()) {
-        destination->zero();
+    CheckedPtr firstInput = input(0);
+    if (!isInitialized() || !firstInput->isConnected()) {
+        destination.zero();
         return;
     }
 
-    AudioBus* source = input(0)->bus();
-    if (!source) {
-        destination->zero();
-        return;
-    }
+    AudioBus& source = firstInput->bus();
 
     if (m_pan->hasSampleAccurateValues() && m_pan->automationRate() == AutomationRate::ARate) {
         auto panValues = m_sampleAccurateValues.span().first(framesToProcess);

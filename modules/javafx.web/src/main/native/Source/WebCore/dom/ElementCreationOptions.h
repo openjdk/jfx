@@ -30,7 +30,7 @@
 namespace WebCore {
 
 struct ElementCreationOptions {
-    RefPtr<CustomElementRegistry> customElements;
+    std::optional<RefPtr<CustomElementRegistry>> customElementRegistry;
 };
 
 } // namespace WebCore

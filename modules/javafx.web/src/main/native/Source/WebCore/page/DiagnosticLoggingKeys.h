@@ -33,7 +33,6 @@ enum class HTMLMediaElementSourceType : uint8_t;
 
 class DiagnosticLoggingKeys {
 public:
-    static String applicationCacheKey();
 #if ENABLE(APPLICATION_MANIFEST)
     static String applicationManifestKey();
 #endif
@@ -183,9 +182,19 @@ public:
     static String textTrackKindKey();
     static String textTrackModeKey();
 
+    static String mediaPresentationTypeWatchTimeKey();
+    static String presentationTypeKey();
+
     WEBCORE_EXPORT static String memoryUsageToDiagnosticLoggingKey(uint64_t memoryUsage);
     WEBCORE_EXPORT static String foregroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);
     WEBCORE_EXPORT static String backgroundCPUUsageToDiagnosticLoggingKey(double cpuUsage);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    static String iframeResourceMonitoringKey();
+    static String unloadCountKey();
+    static String unloadPreventedByThrottlerCountKey();
+    static String unloadPreventedByStickyActivationCountKey();
+#endif
 };
 
 } // namespace WebCore

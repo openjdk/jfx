@@ -27,8 +27,8 @@
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
 
-#include "PixelBuffer.h"
 #include <JavaScriptCore/Float16Array.h>
+#include <WebCore/PixelBuffer.h>
 
 namespace WebCore {
 
@@ -40,9 +40,8 @@ public:
     WEBCORE_EXPORT static RefPtr<Float16ArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&);
     WEBCORE_EXPORT static RefPtr<Float16ArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&, Ref<JSC::ArrayBuffer>&&);
 
-    JSC::Float16Array& data() const { return m_data.get(); }
-    Ref<JSC::Float16Array>&& takeData() { return WTFMove(m_data); }
-    WEBCORE_EXPORT std::span<const uint8_t> span() const;
+    JSC::Float16Array& data() const LIFETIME_BOUND { return m_data.get(); }
+    Ref<JSC::Float16Array>&& takeData() { return WTF::move(m_data); }
 
     Type type() const override { return Type::Float16Array; }
     RefPtr<PixelBuffer> createScratchPixelBuffer(const IntSize&) const override;

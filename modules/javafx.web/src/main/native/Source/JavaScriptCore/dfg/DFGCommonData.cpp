@@ -65,7 +65,7 @@ bool CommonData::invalidateLinkedCode()
     if (!m_isStillValid)
         return false;
 
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)
@@ -84,7 +84,7 @@ CommonData::~CommonData()
 {
     if (m_isUnlinked)
         return;
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)
@@ -152,10 +152,9 @@ void CommonData::validateReferences(const TrackedReferences& trackedReferences)
 
 void CommonData::finalizeCatchEntrypoints(Vector<CatchEntrypointData>&& catchEntrypoints)
 {
-    std::sort(catchEntrypoints.begin(), catchEntrypoints.end(),
-        [] (const CatchEntrypointData& a, const CatchEntrypointData& b) { return a.bytecodeIndex < b.bytecodeIndex; });
+    std::ranges::sort(catchEntrypoints, { }, &CatchEntrypointData::bytecodeIndex);
     ASSERT(m_catchEntrypoints.isEmpty());
-    m_catchEntrypoints = WTFMove(catchEntrypoints);
+    m_catchEntrypoints = WTF::move(catchEntrypoints);
 
 #if ASSERT_ENABLED
     for (unsigned i = 0; i + 1 < m_catchEntrypoints.size(); ++i)

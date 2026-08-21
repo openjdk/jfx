@@ -29,11 +29,13 @@
 #include "DisplayListRecorderImpl.h"
 #include "FloatRect.h"
 #include "FontCache.h"
+#include "FontCascadeInlines.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
 #include "TextRun.h"
 #include "WidthIterator.h"
+#include <ranges>
 #include <wtf/MainThread.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -66,9 +68,9 @@ FontCascade::FontCascade()
 }
 
 FontCascade::FontCascade(FontCascadeDescription&& description)
-    : m_fontDescription(WTFMove(description))
+    : m_fontDescription(WTF::move(description))
     , m_generation(++lastFontCascadeGeneration)
-    , m_useBackslashAsYenSymbol(FontCache::forCurrentThread().useBackslashAsYenSignForFamily(m_fontDescription.firstFamily()))
+    , m_useBackslashAsYenSymbol(computeUseBackslashAsYenSymbol())
     , m_enableKerning(computeEnableKerning())
     , m_requiresShaping(computeRequiresShaping())
 {
@@ -76,10 +78,10 @@ FontCascade::FontCascade(FontCascadeDescription&& description)
 }
 
 FontCascade::FontCascade(FontCascadeDescription&& description, const FontCascade& other)
-    : m_fontDescription(WTFMove(description))
+    : m_fontDescription(WTF::move(description))
     , m_spacing(other.m_spacing)
     , m_generation(++lastFontCascadeGeneration)
-    , m_useBackslashAsYenSymbol(FontCache::forCurrentThread().useBackslashAsYenSignForFamily(m_fontDescription.firstFamily()))
+    , m_useBackslashAsYenSymbol(computeUseBackslashAsYenSymbol())
     , m_enableKerning(computeEnableKerning())
     , m_requiresShaping(computeRequiresShaping())
 {
@@ -87,10 +89,11 @@ FontCascade::FontCascade(FontCascadeDescription&& description, const FontCascade
 
 FontCascade::FontCascade(const FontCascade& other)
     : CanMakeWeakPtr<FontCascade>()
-    , CanMakeCheckedPtr<FontCascade>()
+    , CanMakeCheckedPtr<FontCascade, WTF::DefaultedOperatorEqual::No, WTF::CheckedPtrDeleteCheckException::Yes>()
     , m_fontDescription(other.m_fontDescription)
     , m_spacing(other.m_spacing)
     , m_fonts(other.m_fonts)
+    , m_fontSelector(other.m_fontSelector)
     , m_generation(other.m_generation)
     , m_useBackslashAsYenSymbol(other.m_useBackslashAsYenSymbol)
     , m_enableKerning(computeEnableKerning())
@@ -107,6 +110,7 @@ FontCascade& FontCascade::operator=(const FontCascade& other)
     m_useBackslashAsYenSymbol = other.m_useBackslashAsYenSymbol;
     m_enableKerning = other.m_enableKerning;
     m_requiresShaping = other.m_requiresShaping;
+    m_fontSelector = other.m_fontSelector;
     return *this;
 }
 
@@ -115,17 +119,17 @@ bool FontCascade::operator==(const FontCascade& other) const
     if (m_fontDescription != other.m_fontDescription || m_spacing != other.m_spacing)
         return false;
 
-    if (m_fonts == other.m_fonts)
-        return true;
+    if (m_fonts != other.m_fonts)
+        return false;
 
     if (!m_fonts || !other.m_fonts)
         return false;
 
-    if (m_fonts->fontSelector() != other.m_fonts->fontSelector())
+    if (fontSelector() != other.fontSelector())
         return false;
 
     // Can these cases actually somehow occur? All fonts should get wiped out by full style recalc.
-    if (m_fonts->fontSelectorVersion() != other.m_fonts->fontSelectorVersion())
+    if (fontSelectorVersion() != other.fontSelectorVersion())
         return false;
 
     if (m_fonts->generation() != other.m_fonts->generation())
@@ -138,62 +142,38 @@ bool FontCascade::isCurrent(const FontSelector& fontSelector) const
 {
     if (!m_fonts)
         return false;
-    if (m_fonts->generation() != FontCache::forCurrentThread().generation())
+    if (m_fonts->generation() != FontCache::forCurrentThread()->generation())
         return false;
-    if (m_fonts->fontSelectorVersion() != fontSelector.version())
+    if (fontSelectorVersion() != fontSelector.version())
         return false;
 
     return true;
 }
 
+unsigned FontCascade::fontSelectorVersion() const
+{
+    return m_fontSelector ? Ref { *m_fontSelector }->version() : 0;
+}
+
 void FontCascade::updateFonts(Ref<FontCascadeFonts>&& fonts) const
 {
     // FIXME: Ideally we'd only update m_generation if the fonts changed.
-    m_fonts = WTFMove(fonts);
+    m_fonts = WTF::move(fonts);
     m_generation = ++lastFontCascadeGeneration;
 }
 
 void FontCascade::update(RefPtr<FontSelector>&& fontSelector) const
 {
-    FontCache::forCurrentThread().updateFontCascade(*this, WTFMove(fontSelector));
+    m_fontSelector = WTF::move(fontSelector);
+    FontCache::forCurrentThread()->updateFontCascade(*this);
 }
 
 GlyphBuffer FontCascade::layoutText(CodePath codePathToUse, const TextRun& run, unsigned from, unsigned to, ForTextEmphasisOrNot forTextEmphasis) const
 {
-    if (codePathToUse != CodePath::Complex)
-        return layoutSimpleText(run, from, to, forTextEmphasis);
-
+    if (shouldUseComplexTextController(codePathToUse))
     return layoutComplexText(run, from, to, forTextEmphasis);
-}
 
-float FontCascade::letterSpacing() const
-{
-    switch (m_spacing.letter.type()) {
-    case LengthType::Fixed:
-        return m_spacing.letter.value();
-    case LengthType::Percent:
-        return m_spacing.letter.percent() / 100 * size();
-    case LengthType::Calculated:
-        return m_spacing.letter.nonNanCalculatedValue(size());
-    default:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-}
-
-float FontCascade::wordSpacing() const
-{
-    switch (m_spacing.word.type()) {
-    case LengthType::Fixed:
-        return m_spacing.word.value();
-    case LengthType::Percent:
-        return m_spacing.word.percent() / 100 * size();
-    case LengthType::Calculated:
-        return m_spacing.word.nonNanCalculatedValue(size());
-    default:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
+    return layoutSimpleText(run, from, to, forTextEmphasis);
 }
 
 FloatSize FontCascade::drawText(GraphicsContext& context, const TextRun& run, const FloatPoint& point, unsigned from, std::optional<unsigned> to, CustomFontNotReadyAction customFontNotReadyAction) const
@@ -227,14 +207,14 @@ void FontCascade::drawEmphasisMarks(GraphicsContext& context, const TextRun& run
     drawEmphasisMarks(context, glyphBuffer, mark, startPoint);
 }
 
-std::unique_ptr<DisplayList::DisplayList> FontCascade::displayListForTextRun(GraphicsContext& context, const TextRun& run, unsigned from, std::optional<unsigned> to, CustomFontNotReadyAction customFontNotReadyAction) const
+RefPtr<const DisplayList::DisplayList> FontCascade::displayListForTextRun(GraphicsContext& context, const TextRun& run, unsigned from, std::optional<unsigned> to, CustomFontNotReadyAction customFontNotReadyAction) const
 {
     ASSERT(!context.paintingDisabled());
     unsigned destination = to.value_or(run.length());
 
     // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
     CodePath codePathToUse = codePath(run);
-    if (codePathToUse != CodePath::Complex && (enableKerning() || requiresShaping()) && (from || destination != run.length()))
+    if (codePathToUse != CodePath::Complex && !canHandleRunAsSimpleText(run, from, destination))
         codePathToUse = CodePath::Complex;
 
     auto glyphBuffer = layoutText(codePathToUse, run, from, destination);
@@ -243,20 +223,22 @@ std::unique_ptr<DisplayList::DisplayList> FontCascade::displayListForTextRun(Gra
     if (glyphBuffer.isEmpty())
         return nullptr;
 
-    std::unique_ptr<DisplayList::DisplayList> displayList = makeUnique<DisplayList::DisplayList>();
-    DisplayList::RecorderImpl recordingContext(*displayList, context.state().clone(GraphicsContextState::Purpose::Initial), { },
-        context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale), context.colorSpace(),
-        DisplayList::Recorder::DrawGlyphsMode::DeconstructUsingDrawDecomposedGlyphsCommands);
+#if USE(SKIA)
+    const auto drawGlyphsMode = context.hasPlatformContext() ? DisplayList::Recorder::DrawGlyphsMode::TextBlob : DisplayList::Recorder::DrawGlyphsMode::Normal;
+#else
+    constexpr auto drawGlyphsMode = DisplayList::Recorder::DrawGlyphsMode::Deconstruct;
+#endif
+
+    DisplayList::RecorderImpl recordingContext(context.state().clone(GraphicsContextState::Purpose::Initial), { },
+        context.getCTM(GraphicsContext::DefinitelyIncludeDeviceScale), context.colorSpace(), drawGlyphsMode);
 
     FloatPoint startPoint = toFloatPoint(WebCore::size(glyphBuffer.initialAdvance()));
     drawGlyphBuffer(recordingContext, glyphBuffer, startPoint, customFontNotReadyAction);
 
-    displayList->shrinkToFit();
-
-    return displayList;
+    return recordingContext.takeDisplayList();
 }
 
-float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned to, SingleThreadWeakHashSet<const Font>* fallbackFonts, float* outWidthBeforeRange, float* outWidthAfterRange) const
+float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned to, float& outWidthBeforeRange, float& outWidthAfterRange) const
 {
     ASSERT(from <= to);
     ASSERT(to <= run.length());
@@ -268,17 +250,16 @@ float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned 
     float offsetAfterRange = 0;
     float totalWidth = 0;
 
-    auto codePathToUse = codePath(run);
-    if (codePathToUse == CodePath::Complex) {
-        ComplexTextController complexIterator(*this, run, false, fallbackFonts);
-        complexIterator.advance(from, nullptr, GlyphIterationStyle::IncludePartialGlyphs, fallbackFonts);
+    if (shouldUseComplexTextController(codePath(run))) {
+        ComplexTextController complexIterator(*this, run);
+        complexIterator.advance(from, nullptr, GlyphIterationStyle::IncludePartialGlyphs, nullptr);
         offsetBeforeRange = complexIterator.runWidthSoFar();
-        complexIterator.advance(to, nullptr, GlyphIterationStyle::IncludePartialGlyphs, fallbackFonts);
+        complexIterator.advance(to, nullptr, GlyphIterationStyle::IncludePartialGlyphs, nullptr);
         offsetAfterRange = complexIterator.runWidthSoFar();
-        complexIterator.advance(run.length(), nullptr, GlyphIterationStyle::IncludePartialGlyphs, fallbackFonts);
+        complexIterator.advance(run.length(), nullptr, GlyphIterationStyle::IncludePartialGlyphs, nullptr);
         totalWidth = complexIterator.runWidthSoFar();
     } else {
-        WidthIterator simpleIterator(*this, run, fallbackFonts);
+        WidthIterator simpleIterator(*this, run);
         GlyphBuffer glyphBuffer;
         simpleIterator.advance(from, glyphBuffer);
         offsetBeforeRange = simpleIterator.runWidthSoFar();
@@ -291,13 +272,15 @@ float FontCascade::widthOfTextRange(const TextRun& run, unsigned from, unsigned 
         // We might need to adjust the various widths we've measured to account for that.
     }
 
-    if (outWidthBeforeRange)
-        *outWidthBeforeRange = offsetBeforeRange;
-
-    if (outWidthAfterRange)
-        *outWidthAfterRange = totalWidth - offsetAfterRange;
-
+    outWidthBeforeRange = offsetBeforeRange;
+    outWidthAfterRange = totalWidth - offsetAfterRange;
     return offsetAfterRange - offsetBeforeRange;
+}
+
+float FontCascade::width(StringView text) const
+{
+    TextRun run { text };
+    return width (run);
 }
 
 float FontCascade::width(const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const
@@ -308,7 +291,11 @@ float FontCascade::width(const TextRun& run, SingleThreadWeakHashSet<const Font>
     CodePath codePathToUse = codePath(run);
     if (codePathToUse != CodePath::Complex) {
         // The complex path is more restrictive about returning fallback fonts than the simple path, so we need an explicit test to make their behaviors match.
+        #if !PLATFORM(JAVA)
+        if constexpr (!canReturnFallbackFontsForComplexText())
+        #else
         if (!canReturnFallbackFontsForComplexText())
+        #endif
             fallbackFonts = nullptr;
         // The simple path can optimize the case where glyph overflow is not observable.
         if (codePathToUse != CodePath::SimpleWithGlyphOverflow && (glyphOverflow && !glyphOverflow->computeBounds))
@@ -316,7 +303,7 @@ float FontCascade::width(const TextRun& run, SingleThreadWeakHashSet<const Font>
     }
 
     bool hasWordSpacingOrLetterSpacing = wordSpacing() || letterSpacing();
-    float* cacheEntry = protectedFonts()->widthCache().add(run, std::numeric_limits<float>::quiet_NaN(), enableKerning() || requiresShaping(), hasWordSpacingOrLetterSpacing, !textAutospace().isNoAutospace(), glyphOverflow);
+    float* cacheEntry = fonts()->widthCache().add(run, std::numeric_limits<float>::quiet_NaN(), enableKerning() || requiresShaping(), hasWordSpacingOrLetterSpacing, !textAutospace().isNoAutospace(), glyphOverflow);
     if (cacheEntry && !std::isnan(*cacheEntry))
         return *cacheEntry;
 
@@ -324,18 +311,44 @@ float FontCascade::width(const TextRun& run, SingleThreadWeakHashSet<const Font>
     if (!fallbackFonts)
         fallbackFonts = &localFallbackFonts;
 
-    float result;
-    if (codePathToUse == CodePath::Complex)
-        result = widthForComplexText(run, fallbackFonts, glyphOverflow);
-    else
-        result = widthForSimpleText(run, fallbackFonts, glyphOverflow);
-
+    float result = width(codePathToUse, run, fallbackFonts, glyphOverflow);
     if (cacheEntry && fallbackFonts->isEmptyIgnoringNullReferences())
         *cacheEntry = result;
     return result;
 }
+
+float FontCascade::width(CodePath codePathToUse, const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const
+{
+    if (shouldUseComplexTextController(codePathToUse)) {
+        ComplexTextController controller(*this, run, true, fallbackFonts);
+        if (glyphOverflow) {
+            glyphOverflow->top = std::max<double>(glyphOverflow->top, -controller.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
+            glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, controller.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
+            glyphOverflow->left = std::max<double>(0, -controller.minGlyphBoundingBoxX());
+            glyphOverflow->right = std::max<double>(0, controller.maxGlyphBoundingBoxX() - controller.totalAdvance().width());
+        }
+        return controller.totalAdvance().width();
+    }
+
+    WidthIterator it(*this, run, fallbackFonts, glyphOverflow);
+    GlyphBuffer glyphBuffer;
+    it.advance(run.length(), glyphBuffer);
+    it.finalize(glyphBuffer);
+    if (glyphOverflow) {
+        glyphOverflow->top = std::max<double>(glyphOverflow->top, -it.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
+        glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, it.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
+        glyphOverflow->left = it.firstGlyphOverflow();
+        glyphOverflow->right = it.lastGlyphOverflow();
+    }
+    return it.runWidthSoFar();
+}
+
 NEVER_INLINE float FontCascade::widthForSimpleTextSlow(StringView text, TextDirection textDirection, float* cacheEntry) const
 {
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    TextRun run { text, 0, 0, ExpansionBehavior::defaultBehavior(), textDirection, false, false };
+    float result = width(CodePath::Simple, run);
+#else
     GlyphBuffer glyphBuffer;
     Ref font = primaryFont();
     ASSERT(!font->syntheticBoldOffset()); // This function should only be called when RenderText::computeCanUseSimplifiedTextMeasuring() returns true, and that function requires no synthetic bold.
@@ -353,14 +366,14 @@ NEVER_INLINE float FontCascade::widthForSimpleTextSlow(StringView text, TextDire
         addGlyphsFromText(glyphBuffer, font, text.span16());
 
     auto initialAdvance = font->applyTransforms(glyphBuffer, 0, 0, enableKerning(), requiresShaping(), fontDescription().computedLocale(), text, textDirection);
-    auto width = 0.f;
+    auto result = 0.f;
     for (size_t i = 0; i < glyphBuffer.size(); ++i)
-        width += WebCore::width(glyphBuffer.advanceAt(i));
-    width += WebCore::width(initialAdvance);
-
+        result += WebCore::width(glyphBuffer.advanceAt(i));
+    result += WebCore::width(initialAdvance);
+#endif
     if (cacheEntry)
-        *cacheEntry = width;
-    return width;
+        *cacheEntry = result;
+    return result;
 }
 
 float FontCascade::widthForSimpleTextWithFixedPitch(StringView text, bool whitespaceIsCollapsed) const
@@ -372,7 +385,7 @@ float FontCascade::widthForSimpleTextWithFixedPitch(StringView text, bool whites
     if (whitespaceIsCollapsed)
         return text.length() * monospaceCharacterWidth;
 
-    float* cacheEntry = protectedFonts()->widthCache().add(text, std::numeric_limits<float>::quiet_NaN());
+    float* cacheEntry = fonts()->widthCache().add(text, std::numeric_limits<float>::quiet_NaN());
     if (cacheEntry && !std::isnan(*cacheEntry))
         return *cacheEntry;
 
@@ -408,7 +421,7 @@ float FontCascade::zeroWidth() const
     return glyphData.font->fontMetrics().zeroWidth().value_or(defaultZeroWidthValue);
 }
 
-GlyphData FontCascade::glyphDataForCharacter(char32_t c, bool mirror, FontVariant variant) const
+GlyphData FontCascade::glyphDataForCharacter(char32_t c, bool mirror, FontVariant variant, std::optional<ResolvedEmojiPolicy> resolvedEmojiPolicy) const
 {
     if (variant == AutoVariant) {
         if (m_fontDescription.variantCaps() == FontVariantCaps::Small) {
@@ -425,9 +438,9 @@ GlyphData FontCascade::glyphDataForCharacter(char32_t c, bool mirror, FontVarian
     if (mirror)
         c = u_charMirror(c);
 
-    auto emojiPolicy = resolveEmojiPolicy(m_fontDescription.variantEmoji(), c);
+    auto emojiPolicy = resolvedEmojiPolicy.value_or(resolveEmojiPolicy(m_fontDescription.variantEmoji(), c));
 
-    return protectedFonts()->glyphDataForCharacter(c, m_fontDescription, variant, emojiPolicy);
+    return protectedFonts()->glyphDataForCharacter(c, m_fontDescription, protectedFontSelector().get(), variant, emojiPolicy);
 }
 
 
@@ -480,7 +493,7 @@ bool FontCascade::hasValidAverageCharWidth() const
         return false;
 #endif
 
-    static constexpr ComparableASCIILiteral names[] = {
+    static constexpr SortedArraySet set { std::to_array<ComparableASCIILiteral>({
         "#GungSeo"_s,
         "#HeadLineA"_s,
         "#PCMyungjo"_s,
@@ -515,8 +528,7 @@ bool FontCascade::hasValidAverageCharWidth() const
         "STHeiti"_s,
         "Symbol"_s,
         "Times"_s,
-    };
-    static constexpr SortedArraySet set { names };
+    }) };
     return !set.contains(family);
 }
 
@@ -563,21 +575,22 @@ void FontCascade::adjustSelectionRectForText(bool canUseSimplifiedTextMeasuring,
         if (canUseSimplifiedTextMeasuring && canTakeFixedPitchFastContentMeasuring())
             return adjustSelectionRectForSimpleTextWithFixedPitch(run, selectionRect, from, destination);
 
-        if ((enableKerning() || requiresShaping()) && (from || destination != run.length()))
+        if (!canHandleRunAsSimpleText(run, from, destination))
             codePathToUse = CodePath::Complex;
     }
-    if (codePathToUse != CodePath::Complex)
-        return adjustSelectionRectForSimpleText(run, selectionRect, from, destination);
 
+    if (shouldUseComplexTextController(codePathToUse))
     return adjustSelectionRectForComplexText(run, selectionRect, from, destination);
+
+    return adjustSelectionRectForSimpleText(run, selectionRect, from, destination);
 }
 
 int FontCascade::offsetForPosition(const TextRun& run, float x, bool includePartialGlyphs) const
 {
-    if (codePath(run, x) != CodePath::Complex)
-        return offsetForPositionForSimpleText(run, x, includePartialGlyphs);
-
+    if (shouldUseComplexTextController(codePath(run, x)))
     return offsetForPositionForComplexText(run, x, includePartialGlyphs);
+
+    return offsetForPositionForSimpleText(run, x, includePartialGlyphs);
 }
 
 template <typename CharacterType>
@@ -592,12 +605,12 @@ static inline String normalizeSpacesInternal(std::span<const CharacterType> char
     return normalized.toString();
 }
 
-String FontCascade::normalizeSpaces(std::span<const LChar> characters)
+String FontCascade::normalizeSpaces(std::span<const Latin1Character> characters)
 {
     return normalizeSpacesInternal(characters);
 }
 
-String FontCascade::normalizeSpaces(std::span<const UChar> characters)
+String FontCascade::normalizeSpaces(std::span<const char16_t> characters)
 {
     return normalizeSpacesInternal(characters);
 }
@@ -621,6 +634,31 @@ bool FontCascade::shouldDisableFontSubpixelAntialiasingForTesting()
 {
     return disableFontSubpixelAntialiasingForTesting;
 }
+
+bool FontCascade::canHandleRunAsSimpleText(const TextRun& run, unsigned from, unsigned to) const
+{
+#if !PLATFORM(GTK) && !PLATFORM(WPE) && !USE(FREETYPE)
+    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
+    return !((enableKerning() || requiresShaping()) && (from || to != run.length()));
+#else
+    UNUSED_PARAM(run);
+    UNUSED_PARAM(from);
+    UNUSED_PARAM(to);
+    return true;
+#endif
+}
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+bool FontCascade::shouldUseComplexTextControllerForSimpleText() const
+{
+    // For ports that doesn't implement Font::applyTransforms, we can only use WidthIterator when we know for sure
+    // that Font::applyTransforms is not actually needed.
+    if (fontDescription().variantCaps() != FontVariantCaps::Normal || fontDescription().variantEmoji() == FontVariantEmoji::Emoji)
+        return true;
+
+    return enableKerning() || requiresShaping();
+}
+#endif
 
 void FontCascade::setCodePath(CodePath p)
 {
@@ -663,7 +701,7 @@ FontCascade::CodePath FontCascade::codePath(const TextRun& run, std::optional<un
     return characterRangeCodePath(run.span16());
 }
 
-FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar> span)
+FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const char16_t> span)
 {
     // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we
     // can't simply use UnicodeCharacter Property/class because some characters
@@ -798,7 +836,7 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
             if (i + 1 == size)
                 continue;
 
-            UChar next = span[++i];
+            char16_t next = span[++i];
             if (!U16_IS_TRAIL(next))
                 continue;
 
@@ -855,6 +893,10 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
             if (supplementaryCharacter < 0x11C70) // Bhaiksuki
                 return CodePath::Complex;
             if (supplementaryCharacter < 0x11CC0) // Marchen
+                return CodePath::Complex;
+            if (supplementaryCharacter < 0x16B00)
+                continue;
+            if (supplementaryCharacter < 0x16B90) // Pahawh Hmong
                 return CodePath::Complex;
             if (supplementaryCharacter < 0x1E900)
                 continue;
@@ -1104,7 +1146,7 @@ bool FontCascade::isCJKIdeographOrSymbol(char32_t c)
     return isCJKIdeograph(c);
 }
 
-std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::span<const LChar> characters, TextDirection direction, ExpansionBehavior expansionBehavior)
+std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::span<const Latin1Character> characters, TextDirection direction, ExpansionBehavior expansionBehavior)
 {
     unsigned count = 0;
     bool isAfterExpansion = expansionBehavior.left == ExpansionBehavior::Behavior::Forbid;
@@ -1121,7 +1163,7 @@ std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::sp
                 isAfterExpansion = false;
         }
     } else {
-        for (auto character : makeReversedRange(characters)) {
+        for (auto character : characters | std::views::reverse) {
             if (treatAsSpace(character)) {
                 ++count;
                 isAfterExpansion = true;
@@ -1140,7 +1182,7 @@ std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::sp
     return std::make_pair(count, isAfterExpansion);
 }
 
-std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::span<const UChar> characters, TextDirection direction, ExpansionBehavior expansionBehavior)
+std::pair<unsigned, bool> FontCascade::expansionOpportunityCountInternal(std::span<const char16_t> characters, TextDirection direction, ExpansionBehavior expansionBehavior)
 {
     unsigned count = 0;
     bool isAfterExpansion = expansionBehavior.left == ExpansionBehavior::Behavior::Forbid;
@@ -1294,6 +1336,11 @@ bool FontCascade::isLoadingCustomFonts() const
 {
     RefPtr fonts = m_fonts;
     return fonts && fonts->isLoadingCustomFonts();
+}
+
+bool FontCascade::computeUseBackslashAsYenSymbol() const
+{
+    return FontCache::forCurrentThread()->useBackslashAsYenSignForFamily(m_fontDescription.firstFamily());
 }
 
 enum class GlyphUnderlineType : uint8_t {
@@ -1466,8 +1513,8 @@ GlyphBuffer FontCascade::layoutComplexText(const TextRun& run, unsigned from, un
     GlyphBuffer glyphBuffer;
 
     ComplexTextController controller(*this, run, false, 0, forTextEmphasis == ForTextEmphasisOrNot::ForTextEmphasis);
-    GlyphBuffer dummyGlyphBuffer;
-    controller.advance(from, &dummyGlyphBuffer);
+    GlyphBuffer glyphBufferForStartingIndex;
+    controller.advance(from, &glyphBufferForStartingIndex);
     controller.advance(to, &glyphBuffer);
 
     if (glyphBuffer.isEmpty())
@@ -1477,17 +1524,17 @@ GlyphBuffer FontCascade::layoutComplexText(const TextRun& run, unsigned from, un
         // Exploit the fact that the sum of the paint advances is equal to
         // the sum of the layout advances.
         FloatSize initialAdvance = controller.totalAdvance();
-        for (unsigned i = 0; i < dummyGlyphBuffer.size(); ++i)
-            initialAdvance -= WebCore::size(dummyGlyphBuffer.advanceAt(i));
+        for (unsigned i = 0; i < glyphBufferForStartingIndex.size(); ++i)
+            initialAdvance -= WebCore::size(glyphBufferForStartingIndex.advanceAt(i));
         for (unsigned i = 0; i < glyphBuffer.size(); ++i)
             initialAdvance -= WebCore::size(glyphBuffer.advanceAt(i));
         // FIXME: Shouldn't we subtract the other initial advance?
         glyphBuffer.reverse(0, glyphBuffer.size());
         glyphBuffer.setInitialAdvance(makeGlyphBufferAdvance(initialAdvance));
     } else {
-        FloatSize initialAdvance = WebCore::size(dummyGlyphBuffer.initialAdvance());
-        for (unsigned i = 0; i < dummyGlyphBuffer.size(); ++i)
-            initialAdvance += WebCore::size(dummyGlyphBuffer.advanceAt(i));
+        FloatSize initialAdvance = WebCore::size(glyphBufferForStartingIndex.initialAdvance());
+        for (unsigned i = 0; i < glyphBufferForStartingIndex.size(); ++i)
+            initialAdvance += WebCore::size(glyphBufferForStartingIndex.advanceAt(i));
         // FIXME: Shouldn't we add the other initial advance?
         glyphBuffer.setInitialAdvance(makeGlyphBufferAdvance(initialAdvance));
     }
@@ -1507,14 +1554,14 @@ inline bool shouldDrawIfLoading(const Font& font, FontCascade::CustomFontNotRead
 void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& glyphBuffer, FloatPoint& point, CustomFontNotReadyAction customFontNotReadyAction) const
 {
     ASSERT(glyphBuffer.isFlattened());
-    RefPtr fontData = &glyphBuffer.fontAt(0);
+    RefPtr fontData = glyphBuffer.fontAt(0);
     FloatPoint startPoint = point;
     float nextX = startPoint.x() + WebCore::width(glyphBuffer.advanceAt(0));
     float nextY = startPoint.y() + height(glyphBuffer.advanceAt(0));
     unsigned lastFrom = 0;
     unsigned nextGlyph = 1;
     while (nextGlyph < glyphBuffer.size()) {
-        RefPtr nextFontData = &glyphBuffer.fontAt(nextGlyph);
+        RefPtr nextFontData = glyphBuffer.fontAt(nextGlyph);
 
         if (nextFontData != fontData) {
             if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {
@@ -1522,7 +1569,7 @@ void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& g
                 context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom, glyphCount), glyphBuffer.advances(lastFrom, glyphCount), startPoint, m_fontDescription.usedFontSmoothing());
             }
             lastFrom = nextGlyph;
-            fontData = WTFMove(nextFontData);
+            fontData = WTF::move(nextFontData);
             startPoint.setX(nextX);
             startPoint.setY(nextY);
         }
@@ -1591,33 +1638,10 @@ void FontCascade::drawEmphasisMarks(GraphicsContext& context, const GlyphBuffer&
     drawGlyphBuffer(context, markBuffer, startPoint, CustomFontNotReadyAction::DoNotPaintIfFontNotReady);
 }
 
-float FontCascade::widthForSimpleText(const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const
+float FontCascade::widthForCharacterInRun(const TextRun& run, unsigned characterPosition) const
 {
-    WidthIterator it(*this, run, fallbackFonts, glyphOverflow);
-    GlyphBuffer glyphBuffer;
-    it.advance(run.length(), glyphBuffer);
-    it.finalize(glyphBuffer);
-
-    if (glyphOverflow) {
-        glyphOverflow->top = std::max<double>(glyphOverflow->top, -it.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
-        glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, it.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
-        glyphOverflow->left = it.firstGlyphOverflow();
-        glyphOverflow->right = it.lastGlyphOverflow();
-    }
-
-    return it.runWidthSoFar();
-}
-
-float FontCascade::widthForComplexText(const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow* glyphOverflow) const
-{
-    ComplexTextController controller(*this, run, true, fallbackFonts);
-    if (glyphOverflow) {
-        glyphOverflow->top = std::max<double>(glyphOverflow->top, -controller.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
-        glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, controller.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
-        glyphOverflow->left = std::max<double>(0, -controller.minGlyphBoundingBoxX());
-        glyphOverflow->right = std::max<double>(0, controller.maxGlyphBoundingBoxX() - controller.totalAdvance().width());
-    }
-    return controller.totalAdvance().width();
+    auto shortenedRun = run.subRun(characterPosition, 1);
+    return width(codePath(run), shortenedRun);
 }
 
 void FontCascade::adjustSelectionRectForSimpleText(const TextRun& run, LayoutRect& selectionRect, unsigned from, unsigned to) const
@@ -1677,7 +1701,7 @@ int FontCascade::offsetForPositionForSimpleText(const TextRun& run, float x, boo
     GlyphBuffer localGlyphBuffer;
     unsigned offset;
     if (run.rtl()) {
-        delta -= widthForSimpleText(run);
+        delta -= width(CodePath::Simple, run);
         while (1) {
             offset = it.currentCharacterIndex();
             float w;
@@ -1856,11 +1880,6 @@ void GlyphToPathTranslator::advance()
         m_fontData = m_glyphBuffer.fontAt(m_index);
 }
 
-RefPtr<FontCascadeFonts> FontCascade::protectedFonts() const
-{
-    return m_fonts;
-}
-
 Vector<FloatSegment> FontCascade::lineSegmentsForIntersectionsWithRect(const TextRun& run, const FloatPoint& textOrigin, const FloatRect& lineExtents) const
 {
     Vector<FloatSegment> result;
@@ -1931,11 +1950,11 @@ TextStream& operator<<(TextStream& ts, const FontCascade& fontCascade)
 {
     ts << fontCascade.fontDescription();
 
-    if (fontCascade.fonts()) {
-        ts << ", font selector " << fontCascade.fonts()->fontSelector();
-        ts << ", font selector version " << fontCascade.fonts()->fontSelectorVersion();
-        ts << ", generation " << fontCascade.fonts()->generation();
-    }
+    if (fontCascade.fontSelector())
+        ts << ", font selector "_s << fontCascade.fontSelector();
+
+    if (fontCascade.fonts())
+        ts << ", generation "_s << fontCascade.fonts()->generation();
 
     return ts;
 }

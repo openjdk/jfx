@@ -38,7 +38,6 @@ class RenderElement;
 class RenderObject;
 class RenderStyle;
 class LegacyRenderSVGRoot;
-class SVGRenderStyle;
 
 // Holds a set of resources associated with a RenderObject
 class SVGResources {
@@ -71,7 +70,7 @@ public:
     void buildSetOfResources(SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer>&);
 
     // Methods operating on all cached resources
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) const;
+    void removeClientFromCacheAndMarkForInvalidation(RenderElement&, bool markForInvalidation = true) const;
     // Returns true if the resource-to-be-destroyed is one of our resources.
     bool resourceDestroyed(LegacyRenderSVGResourceContainer&);
 

@@ -26,6 +26,7 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
+#include "CoordinatedCompositionReason.h"
 #include "Damage.h"
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
@@ -46,7 +47,6 @@ class CoordinatedPlatformLayerBuffer;
 class CoordinatedTileBuffer;
 class GraphicsLayerCoordinated;
 class NativeImage;
-class TextureMapper;
 class TextureMapperLayer;
 
 #if USE(SKIA)
@@ -74,8 +74,11 @@ public:
         virtual Ref<CoordinatedImageBackingStore> imageBackingStore(Ref<NativeImage>&&) = 0;
         virtual void notifyCompositionRequired() = 0;
         virtual bool isCompositionRequiredOrOngoing() const = 0;
-        virtual void requestComposition() = 0;
+        virtual void requestComposition(CompositionReason) = 0;
         virtual RunLoop* compositingRunLoop() const = 0;
+        virtual int maxTextureSize() const = 0;
+        virtual void willPaintTile() = 0;
+        virtual void didPaintTile() = 0;
     };
 
     static Ref<CoordinatedPlatformLayer> create();
@@ -97,8 +100,8 @@ public:
     void invalidateTarget();
 
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
-    bool damagePropagation() const { return m_damagePropagation; }
+    void setDamagePropagationEnabled(bool enabled) { m_damagePropagationEnabled = enabled; }
+    void setDamageInGlobalCoordinateSpace(std::shared_ptr<Damage> damage) { m_damageInGlobalCoordinateSpace = WTF::move(damage); }
 #endif
 
     void setPosition(FloatPoint&&);
@@ -123,6 +126,7 @@ public:
     void didUpdateLayerTransform();
 
     void setVisibleRect(const FloatRect&);
+    const FloatRect& visibleRect() const;
     void setTransformedVisibleRect(IntRect&& visibleRect, IntRect&& visibleRectIncludingFuture);
 
 #if ENABLE(SCROLLING_THREAD)
@@ -144,7 +148,7 @@ public:
     void setContentsClippingRect(const FloatRoundedRect&);
     void setContentsScale(float);
     enum class RequireComposition : bool { No, Yes };
-    void setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&, RequireComposition = RequireComposition::Yes);
+    void setContentsBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&, std::optional<Damage>&& = std::nullopt, RequireComposition = RequireComposition::Yes);
 #if ENABLE(VIDEO) && USE(GSTREAMER)
     void replaceCurrentContentsBufferWithCopy();
 #endif
@@ -153,10 +157,7 @@ public:
     void setContentsColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
-    void setDirtyRegion(Vector<IntRect, 1>&&);
-#if ENABLE(DAMAGE_TRACKING)
-    void setDamage(Damage&&);
-#endif
+    void setDirtyRegion(Damage&&);
 
     void setFilters(const FilterOperations&);
     void setMask(CoordinatedPlatformLayer*);
@@ -178,18 +179,21 @@ public:
     void updateContents(bool affectedByTransformAnimation);
     void updateBackingStore();
 
-    void flushCompositingState(TextureMapper&);
+    void flushCompositingState(const OptionSet<CompositionReason>&);
 
     bool hasPendingTilesCreation() const { return m_pendingTilesCreation; }
     bool isCompositionRequiredOrOngoing() const;
-    void requestComposition();
+    void requestComposition(CompositionReason);
     RunLoop* compositingRunLoop() const;
+    int maxTextureSize() const;
 
     Ref<CoordinatedTileBuffer> paint(const IntRect&);
 #if USE(SKIA)
     Ref<SkiaRecordingResult> record(const IntRect&);
     Ref<CoordinatedTileBuffer> replay(const RefPtr<SkiaRecordingResult>&, const IntRect&);
 #endif
+    void willPaintTile();
+    void didPaintTile();
     void waitUntilPaintingComplete();
 
 private:
@@ -199,6 +203,10 @@ private:
 
     bool needsBackingStore() const;
     void purgeBackingStores();
+
+#if ENABLE(DAMAGE_TRACKING)
+    void addDamage(Damage&&);
+#endif
 
     enum class Change : uint32_t {
         Position                     = 1 << 0,
@@ -249,7 +257,8 @@ private:
     bool m_needsTilesUpdate { false };
 
 #if ENABLE(DAMAGE_TRACKING)
-    bool m_damagePropagation { false };
+    bool m_damagePropagationEnabled { false };
+    std::shared_ptr<Damage> m_damageInGlobalCoordinateSpace;
 #endif
 
     Lock m_lock;
@@ -301,7 +310,7 @@ private:
     float m_debugBorderWidth WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     int m_repaintCount WTF_GUARDED_BY_LOCK(m_lock) { -1 };
 #if ENABLE(DAMAGE_TRACKING)
-    Damage m_damage WTF_GUARDED_BY_LOCK(m_lock);
+    std::optional<Damage> m_damage WTF_GUARDED_BY_LOCK(m_lock);
 #endif
 #if ENABLE(SCROLLING_THREAD)
     Markable<ScrollingNodeID> m_scrollingNodeID WTF_GUARDED_BY_LOCK(m_lock);

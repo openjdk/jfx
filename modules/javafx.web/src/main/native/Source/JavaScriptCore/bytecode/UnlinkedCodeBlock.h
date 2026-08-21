@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,24 +25,24 @@
 
 #pragma once
 
-#include "ArithProfile.h"
-#include "ArrayProfile.h"
-#include "BytecodeConventions.h"
-#include "CodeType.h"
-#include "DFGExitProfile.h"
-#include "ExecutionCounter.h"
-#include "ExpressionInfo.h"
-#include "HandlerInfo.h"
-#include "Identifier.h"
-#include "InstructionStream.h"
-#include "JSCast.h"
-#include "Opcode.h"
-#include "ParserModes.h"
-#include "RegExp.h"
-#include "UnlinkedFunctionExecutable.h"
-#include "UnlinkedMetadataTable.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ArithProfile.h>
+#include <JavaScriptCore/ArrayProfile.h>
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/CodeType.h>
+#include <JavaScriptCore/DFGExitProfile.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/ExpressionInfo.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/RegExp.h>
+#include <JavaScriptCore/UnlinkedFunctionExecutable.h>
+#include <JavaScriptCore/UnlinkedMetadataTable.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <algorithm>
 #include <wtf/BitVector.h>
 #include <wtf/FixedVector.h>
@@ -115,6 +115,7 @@ struct UnlinkedSimpleJumpTable {
     FixedVector<int32_t> m_branchOffsets;
     int32_t m_min { 0 };
     int32_t m_defaultOffset { 0 };
+    int32_t m_isList { 0 };
 
     inline int32_t offsetForValue(int32_t value) const
     {
@@ -133,6 +134,9 @@ struct UnlinkedSimpleJumpTable {
     }
 
     int32_t defaultOffset() const { return m_defaultOffset; }
+
+    // Returns true if this is a list-style jump table (key-offset pairs), used for sparse switches.
+    bool isList() const { return !!m_isList; }
 };
 
 class UnlinkedCodeBlock : public JSCell {
@@ -245,8 +249,10 @@ public:
 
     UnlinkedFunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     size_t numberOfFunctionDecls() { return m_functionDecls.size(); }
+    std::span<const WriteBarrier<UnlinkedFunctionExecutable>> functionDecls() const { return m_functionDecls.span(); }
     UnlinkedFunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
     size_t numberOfFunctionExprs() { return m_functionExprs.size(); }
+    std::span<const WriteBarrier<UnlinkedFunctionExecutable>> functionExprs() const { return m_functionExprs.span(); }
 
     // Exception handling support
     size_t numberOfExceptionHandlers() const { return m_rareData ? m_rareData->m_exceptionHandlers.size() : 0; }
@@ -440,7 +446,7 @@ private:
     PackedRefPtr<StringImpl> m_sourceMappingURLDirective;
 
     FixedVector<JSInstructionStream::Offset> m_jumpTargets;
-    Ref<UnlinkedMetadataTable> m_metadata;
+    const Ref<UnlinkedMetadataTable> m_metadata;
     std::unique_ptr<JSInstructionStream> m_instructions;
     std::unique_ptr<BytecodeLivenessAnalysis> m_liveness;
 
@@ -458,7 +464,7 @@ private:
 
 public:
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UnlinkedCodeBlock_RareData);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RareData, UnlinkedCodeBlock_RareData);
 
         size_t sizeInBytes(const AbstractLocker&) const;
 
@@ -502,7 +508,7 @@ private:
 
     OutOfLineJumpTargets m_outOfLineJumpTargets;
     std::unique_ptr<RareData> m_rareData;
-    MallocPtr<ExpressionInfo> m_expressionInfo;
+    std::unique_ptr<ExpressionInfo> m_expressionInfo;
     BaselineExecutionCounter m_llintExecuteCounter;
     FixedVector<UnlinkedValueProfile> m_valueProfiles;
     FixedVector<UnlinkedArrayProfile> m_arrayProfiles;
@@ -515,11 +521,12 @@ private:
 #endif
 
 protected:
-    DECLARE_VISIT_CHILDREN;
     static size_t estimatedSize(JSCell*, VM&);
 
 public:
     DECLARE_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 };
 
 }

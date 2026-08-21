@@ -29,21 +29,23 @@
 #include "config.h"
 #include "AccessibilityTableHeaderContainer.h"
 
+#include "AXLoggerBase.h"
 #include "AXObjectCache.h"
-#include "AccessibilityTable.h"
+#include "AccessibilityObjectInlines.h"
+#include "AccessibilityNodeObject.h"
 
 namespace WebCore {
 
-AccessibilityTableHeaderContainer::AccessibilityTableHeaderContainer(AXID axID)
-    : AccessibilityMockObject(axID)
+AccessibilityTableHeaderContainer::AccessibilityTableHeaderContainer(AXID axID, AXObjectCache& cache)
+    : AccessibilityMockObject(axID, cache)
 {
 }
 
 AccessibilityTableHeaderContainer::~AccessibilityTableHeaderContainer() = default;
 
-Ref<AccessibilityTableHeaderContainer> AccessibilityTableHeaderContainer::create(AXID axID)
+Ref<AccessibilityTableHeaderContainer> AccessibilityTableHeaderContainer::create(AXID axID, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityTableHeaderContainer(axID));
+    return adoptRef(*new AccessibilityTableHeaderContainer(axID, cache));
 }
 
 LayoutRect AccessibilityTableHeaderContainer::elementRect() const
@@ -62,11 +64,11 @@ bool AccessibilityTableHeaderContainer::computeIsIgnored() const
 
 void AccessibilityTableHeaderContainer::addChildren()
 {
-    ASSERT(!m_childrenInitialized);
+    AX_ASSERT(!m_childrenInitialized);
 
     m_childrenInitialized = true;
-    RefPtr parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
-    if (!parentTable || !parentTable->isExposable())
+    RefPtr parentTable = dynamicDowncast<AccessibilityNodeObject>(m_parent.get());
+    if (!parentTable || !parentTable->isExposableTable())
         return;
 
     for (auto& columnHeader : parentTable->columnHeaders())
@@ -74,6 +76,10 @@ void AccessibilityTableHeaderContainer::addChildren()
 
     for (const auto& child : m_children)
         m_headerRect.unite(child->elementRect());
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 } // namespace WebCore

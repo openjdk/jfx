@@ -26,8 +26,7 @@
 #include "ContainerQueryParser.h"
 
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParser.h"
-#include "CSSPropertyParserConsumer+Conditional.h"
+#include "CSSPropertyParsing.h"
 #include "ContainerQueryFeatures.h"
 #include "MediaQueryParserContext.h"
 
@@ -44,17 +43,22 @@ std::optional<ContainerQuery> ContainerQueryParser::consumeContainerQuery(CSSPar
     auto consumeName = [&] {
         if (range.peek().type() == LeftParenthesisToken || range.peek().type() == FunctionToken)
             return nullAtom();
-        auto nameValue = CSSPropertyParserHelpers::consumeSingleContainerName(range, context.context);
-        if (!nameValue)
+        RefPtr nameValue = CSSPropertyParsing::consumeSingleContainerName(range);
+        if (RefPtr namePrimitive = dynamicDowncast<CSSPrimitiveValue>(nameValue))
+            return AtomString { namePrimitive->stringValue() };
             return nullAtom();
-        return AtomString { nameValue->stringValue() };
     };
 
     auto name = consumeName();
 
     auto condition = consumeCondition(range, context);
-    if (!condition)
+
+    if (!condition) {
+        if (name.isEmpty())
         return { };
+        // it's valid to have a named container query without a condition, like "@container --name {}"
+        condition = MQ::Condition { };
+    }
 
     OptionSet<Axis> requiredAxes;
     auto containsUnknownFeature = ContainsUnknownFeature::No;
@@ -75,24 +79,10 @@ bool ContainerQueryParser::isValidFunctionId(CSSValueID functionId)
 
 const MQ::FeatureSchema* ContainerQueryParser::schemaForFeatureName(const AtomString& name, const MediaQueryParserContext& context, State& state)
 {
-    if (state.inFunctionId == CSSValueStyle && context.context.cssStyleQueriesEnabled)
+    if (state.inFunctionId == CSSValueStyle)
         return &Features::style();
 
     return GenericMediaQueryParser<ContainerQueryParser>::schemaForFeatureName(name, context, state);
-}
-
-const ContainerProgressProviding* ContainerQueryParser::containerProgressProvidingSchemaForFeatureName(const AtomString& name, const MediaQueryParserContext&)
-{
-    using Map = MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, const ContainerProgressProviding*>;
-
-    static NeverDestroyed<Map> schemas = [&] {
-        Map map;
-        for (auto& entry : Features::allContainerProgressProvidingSchemas())
-            map.add(entry->name(), entry);
-        return map;
-    }();
-
-    return schemas->get(name);
 }
 
 }

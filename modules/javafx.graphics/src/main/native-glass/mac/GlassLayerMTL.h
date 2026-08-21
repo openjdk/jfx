@@ -38,6 +38,7 @@
 }
 
 - (id) init:(long)mtlCommandQueuePtr
+     isVsyncEnabled:(BOOL)isVsyncEnabled
        withIsSwPipe:(BOOL)isSwPipe;
 
 - (void) blitToScreen;

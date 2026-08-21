@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {
@@ -42,7 +43,7 @@ static std::optional<Vector<uint8_t>> cryptWrapKey(const Vector<uint8_t>& key, c
         return std::nullopt;
 
     Vector<uint8_t> cipherText(data.size() + 8);
-    if (AES_wrap_key(aesKey.key(), nullptr, cipherText.data(), data.data(), data.size()) < 0)
+    if (AES_wrap_key(aesKey.key(), nullptr, cipherText.mutableSpan().data(), data.span().data(), data.size()) < 0)
         return std::nullopt;
 
     return cipherText;
@@ -58,7 +59,7 @@ static std::optional<Vector<uint8_t>> cryptUnwrapKey(const Vector<uint8_t>& key,
         return std::nullopt;
 
     Vector<uint8_t> plainText(data.size() - 8);
-    if (AES_unwrap_key(aesKey.key(), nullptr, plainText.data(), data.data(), data.size()) < 0)
+    if (AES_unwrap_key(aesKey.key(), nullptr, plainText.mutableSpan().data(), data.span().data(), data.size()) < 0)
         return std::nullopt;
 
     return plainText;
@@ -69,7 +70,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformWrapKey(const CryptoK
     auto output = cryptWrapKey(key.key(), data);
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformUnwrapKey(const CryptoKeyAES& key, const Vector<uint8_t>& data)
@@ -77,7 +78,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESKW::platformUnwrapKey(const Crypt
     auto output = cryptUnwrapKey(key.key(), data);
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 } // namespace WebCore

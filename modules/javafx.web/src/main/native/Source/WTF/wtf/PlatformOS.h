@@ -137,6 +137,7 @@
     || OS(DARWIN)           \
     || OS(FREEBSD)          \
     || OS(FUCHSIA)          \
+    || OS(HAIKU)            \
     || OS(HURD)             \
     || OS(LINUX)            \
     || OS(NETBSD)           \

@@ -20,20 +20,19 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include <initializer_list>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashTable.h>
+#include <wtf/HashTraits.h>
+#include <wtf/RobinHoodHashTable.h>
 
 namespace WTF {
 
 template<typename ValueArg, typename HashArg, typename TraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
 class HashSet final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(HashSet);
 private:
     using HashFunctions = HashArg;
     using ValueTraits = TraitsArg;
@@ -43,7 +42,7 @@ public:
     using ValueType = typename ValueTraits::TraitType;
 
 private:
-    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, shouldValidateKey>;
+    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, FastMalloc>;
 
 public:
     // HashSet iterators have the following structure:
@@ -59,10 +58,26 @@ public:
     using AddResult = typename HashTableType::AddResult;
 
     HashSet() = default;
+
     HashSet(std::initializer_list<ValueArg> initializerList)
     {
-        for (const auto& value : initializerList)
-            add(value);
+        if (!initializerList.size())
+            return;
+
+        reserveInitialCapacity(initializerList.size());
+        for (auto&& value : initializerList)
+            add(std::forward<decltype(value)>(value));
+    }
+
+    template<typename ContainerType>
+    explicit HashSet(ContainerType&& container)
+    {
+        if (!container.size())
+            return;
+
+        reserveInitialCapacity(container.size());
+        for (auto&& value : std::forward<ContainerType>(container))
+            add(std::forward<decltype(value)>(value));
     }
 
     void swap(HashSet&);
@@ -72,14 +87,19 @@ public:
     unsigned memoryUse() const;
     bool isEmpty() const;
 
+    // Useful when the key type is WeakPtr
+    size_t computeSize() const requires (ValueTraits::hasIsWeakNullValueFunction);
+    bool isEmptyIgnoringNullReferences() const requires (ValueTraits::hasIsWeakNullValueFunction);
+    void removeWeakNullEntries() requires (ValueTraits::hasIsWeakNullValueFunction);
+
     void reserveInitialCapacity(unsigned keyCount) { m_impl.reserveInitialCapacity(keyCount); }
 
-    iterator begin() const;
-    iterator end() const;
+    iterator begin() const LIFETIME_BOUND;
+    iterator end() const LIFETIME_BOUND;
 
-    iterator random() const { return m_impl.random(); }
+    iterator random() const LIFETIME_BOUND { return m_impl.random(); }
 
-    iterator find(const ValueType&) const;
+    iterator find(const ValueType&) const LIFETIME_BOUND;
     bool contains(const ValueType&) const;
 
     // An alternate version of find() that finds the object by hashing and comparing
@@ -87,15 +107,15 @@ public:
     // must have the following function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
-    template<typename HashTranslator, typename T> iterator find(const T&) const;
+    template<typename HashTranslator, typename T> iterator find(const T&) const LIFETIME_BOUND;
     template<typename HashTranslator, typename T> bool contains(const T&) const;
 
     ALWAYS_INLINE bool isNullStorage() const { return m_impl.isNullStorage(); }
 
     // The return value includes both an iterator to the added value's location,
     // and an isNewEntry bool that indicates if it is a new or existing entry in the set.
-    AddResult add(const ValueType&);
-    AddResult add(ValueType&&);
+    AddResult add(const ValueType&) LIFETIME_BOUND;
+    AddResult add(ValueType&&) LIFETIME_BOUND;
     void add(std::initializer_list<std::reference_wrapper<const ValueType>>);
 
     void addVoid(const ValueType&);
@@ -107,7 +127,7 @@ public:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
     //   static translate(ValueType&, const T&, unsigned hashCode);
-    template<typename HashTranslator, typename T> AddResult add(const T&);
+    template<typename HashTranslator, typename T> AddResult add(const T&) LIFETIME_BOUND;
 
     // An alternate version of translated add(), ensure() will still do translation
     // by hashing and comparing with some other type, to avoid the cost of type
@@ -117,14 +137,14 @@ public:
     // function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
-    template<typename HashTranslator> AddResult ensure(auto&&, NOESCAPE const Invocable<ValueType()> auto&);
+    template<typename HashTranslator> AddResult ensure(auto&&, NOESCAPE const Invocable<ValueType()> auto&) LIFETIME_BOUND;
 
     // Attempts to add a list of things to the set. Returns true if any of
     // them are new to the set. Returns false if the set is unchanged.
-    template<typename IteratorType>
-    bool add(IteratorType begin, IteratorType end);
-    template<typename IteratorType>
-    bool remove(IteratorType begin, IteratorType end);
+    template<typename ContainerType>
+    bool addAll(ContainerType&&);
+    template<typename ContainerType>
+    bool removeAll(const ContainerType&);
 
     bool remove(const ValueType&);
     bool remove(iterator);
@@ -162,10 +182,6 @@ public:
     template<typename OtherCollection>
     HashSet symmetricDifferenceWith(const OtherCollection&) const;
 
-    // Adds the elements of the given collection to the set (a.k.a. OR).
-    template<typename OtherCollection>
-    void formUnion(const OtherCollection&);
-
     // Removes the elements of this set that are in the given collection (a.k.a. A - B).
     //
     // NOTE: OtherCollection is required to implement `bool contains(Value)`.
@@ -190,16 +206,16 @@ public:
     bool isSubset(const OtherCollection&);
 
     // Overloads for smart pointer values that take the raw pointer type as the parameter.
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, bool>::type contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, bool>::type remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, TakeType>::type take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
+    template<SmartPtr V = ValueType> iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const LIFETIME_BOUND;
+    template<SmartPtr V = ValueType> bool contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
+    template<SmartPtr V = ValueType> bool remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
+    template<SmartPtr V = ValueType> TakeType take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
 
-    // Overloads for non-nullable smart pointer values that take the raw reference type as the parameter.
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, TakeType>::type take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
+    // Overloads for smart pointer values that take the raw reference type as the parameter.
+    template<SmartPtr V = ValueType> iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& ref) const LIFETIME_BOUND { return find(&ref); }
+    template<SmartPtr V = ValueType> bool contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& ref) const { return contains(&ref); }
+    template<SmartPtr V = ValueType> bool remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& ref) { return remove(&ref); }
+    template<SmartPtr V = ValueType> TakeType take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& ref) { return take(&ref); }
 
     static bool isValidValue(const ValueType&);
 
@@ -277,98 +293,116 @@ inline bool HashSet<T, U, V, W, shouldValidateKey>::isEmpty() const
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-inline auto HashSet<T, U, V, W, shouldValidateKey>::begin() const -> iterator
+inline size_t HashSet<T, U, V, W, shouldValidateKey>::computeSize() const requires (ValueTraits::hasIsWeakNullValueFunction)
+{
+    return m_impl.computeSize();
+}
+
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::isEmptyIgnoringNullReferences() const requires (ValueTraits::hasIsWeakNullValueFunction)
+{
+    return m_impl.isEmptyIgnoringNullReferences();
+}
+
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::removeWeakNullEntries() requires (ValueTraits::hasIsWeakNullValueFunction)
+{
+    m_impl.removeWeakNullEntries();
+}
+
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::begin() const LIFETIME_BOUND -> iterator
 {
     return m_impl.begin();
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-inline auto HashSet<T, U, V, W, shouldValidateKey>::end() const -> iterator
+inline auto HashSet<T, U, V, W, shouldValidateKey>::end() const LIFETIME_BOUND -> iterator
 {
     return m_impl.end();
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-inline auto HashSet<T, U, V, W, shouldValidateKey>::find(const ValueType& value) const -> iterator
+inline auto HashSet<T, U, V, W, shouldValidateKey>::find(const ValueType& value) const LIFETIME_BOUND -> iterator
 {
-    return m_impl.find(value);
+    return m_impl.template find<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline bool HashSet<T, U, V, W, shouldValidateKey>::contains(const ValueType& value) const
 {
-    return m_impl.contains(value);
+    return m_impl.template contains<shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(const T& value) const -> iterator
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(const T& value) const LIFETIME_BOUND -> iterator
 {
-    return m_impl.template find<HashSetTranslatorAdapter<HashTranslator>>(value);
+    return m_impl.template find<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
 inline bool HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(const T& value) const
 {
-    return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator>>(value);
+    return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::ensure(T&& key, NOESCAPE const Invocable<ValueType()> auto& functor) -> AddResult
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::ensure(T&& key, NOESCAPE const Invocable<ValueType()> auto& functor) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.template add<HashSetEnsureTranslatorAdaptor<Traits, HashTranslator>>(std::forward<T>(key), functor);
+    return m_impl.template add<HashSetEnsureTranslatorAdaptor<Traits, HashTranslator>, shouldValidateKey>(std::forward<T>(key), functor);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-inline auto HashSet<T, U, V, W, shouldValidateKey>::add(const ValueType& value) -> AddResult
+inline auto HashSet<T, U, V, W, shouldValidateKey>::add(const ValueType& value) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.add(value);
+    return m_impl.template add<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-inline auto HashSet<T, U, V, W, shouldValidateKey>::add(ValueType&& value) -> AddResult
+inline auto HashSet<T, U, V, W, shouldValidateKey>::add(ValueType&& value) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.add(WTFMove(value));
+    return m_impl.template add<shouldValidateKey>(WTF::move(value));
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(const ValueType& value)
 {
-    m_impl.add(value);
+    m_impl.template add<shouldValidateKey>(value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(ValueType&& value)
 {
-    m_impl.add(WTFMove(value));
+    m_impl.template add<shouldValidateKey>(WTF::move(value));
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::add(const auto& value) -> AddResult
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::add(const auto& value) LIFETIME_BOUND -> AddResult
 {
-    return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator>>(value, [&]() ALWAYS_INLINE_LAMBDA { return value; });
+    return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator>, shouldValidateKey>(value, [&]() ALWAYS_INLINE_LAMBDA { return value; });
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-template<typename IteratorType>
-inline bool HashSet<T, U, V, W, shouldValidateKey>::add(IteratorType begin, IteratorType end)
+template<typename ContainerType>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::addAll(ContainerType&& container)
 {
     bool changed = false;
-    for (IteratorType iter = begin; iter != end; ++iter)
-        changed |= add(*iter).isNewEntry;
+    for (auto&& item : std::forward<ContainerType>(container))
+        changed |= add(std::forward<decltype(item)>(item)).isNewEntry;
     return changed;
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-template<typename IteratorType>
-inline bool HashSet<T, U, V, W, shouldValidateKey>::remove(IteratorType begin, IteratorType end)
+template<typename ContainerType>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::removeAll(const ContainerType& container)
 {
     bool changed = false;
-    for (IteratorType iter = begin; iter != end; ++iter)
-        changed |= remove(*iter);
+    for (auto& item : container)
+        changed |= remove(item);
     return changed;
 }
 
@@ -406,7 +440,7 @@ inline auto HashSet<T, U, V, W, shouldValidateKey>::take(iterator it) -> TakeTyp
     if (it == end())
         return ValueTraits::take(ValueTraits::emptyValue());
 
-    auto result = ValueTraits::take(WTFMove(const_cast<ValueType&>(*it)));
+    auto result = ValueTraits::take(WTF::move(const_cast<ValueType&>(*it)));
     remove(it);
     return result;
 }
@@ -428,7 +462,7 @@ template<typename OtherCollection>
 inline auto HashSet<T, U, V, W, shouldValidateKey>::unionWith(const OtherCollection& other) const -> HashSet<T, U, V, W, shouldValidateKey>
 {
     auto copy = *this;
-    copy.add(other.begin(), other.end());
+    copy.addAll(other);
     return copy;
 }
 
@@ -467,13 +501,6 @@ inline auto HashSet<T, U, V, W, shouldValidateKey>::symmetricDifferenceWith(cons
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline void HashSet<T, U, V, W, shouldValidateKey>::formUnion(const OtherCollection& other)
-{
-    add(other.begin(), other.end());
-}
-
-template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
-template<typename OtherCollection>
 inline void HashSet<T, U, V, W, shouldValidateKey>::formIntersection(const OtherCollection& other)
 {
     *this = intersectionWith(other);
@@ -504,59 +531,31 @@ inline bool HashSet<T, U, V, W, shouldValidateKey>::isSubset(const OtherCollecti
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
+template<SmartPtr V>
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const LIFETIME_BOUND -> iterator
 {
-    return m_impl.template find<HashSetTranslator<Traits, HashFunctions>>(value);
+    return m_impl.template find<HashSetTranslator<Traits, HashFunctions>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+template<SmartPtr V>
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> bool
 {
-    return m_impl.template contains<HashSetTranslator<Traits, HashFunctions>>(value);
+    return m_impl.template contains<HashSetTranslator<Traits, HashFunctions>, shouldValidateKey>(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+template<SmartPtr V>
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> bool
 {
     return remove(find(value));
 }
 
 template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, TakeType>::type
+template<SmartPtr V>
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> TakeType
 {
     return take(find(value));
-}
-
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type
-{
-    return find(&value);
-}
-
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
-{
-    return contains(&value);
-}
-
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
-{
-    return remove(&value);
-}
-
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
-template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, TakeType>::type
-{
-    return take(&value);
 }
 
 template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
@@ -605,5 +604,3 @@ inline void HashSet<T, U, V, W, shouldValidateKey>::checkConsistency() const
 } // namespace WTF
 
 using WTF::HashSet;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

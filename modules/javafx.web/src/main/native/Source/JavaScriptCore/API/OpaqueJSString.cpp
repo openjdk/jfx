@@ -38,7 +38,7 @@ RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(const String& string)
     if (string.isNull())
         return nullptr;
 
-    return adoptRef(new OpaqueJSString(string));
+    return adoptRef(new OpaqueJSString(String { string }));
 }
 
 RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(String&& string)
@@ -46,13 +46,13 @@ RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(String&& string)
     if (string.isNull())
         return nullptr;
 
-    return adoptRef(new OpaqueJSString(WTFMove(string)));
+    return adoptRef(new OpaqueJSString(WTF::move(string)));
 }
 
 OpaqueJSString::~OpaqueJSString()
 {
     // m_characters is put in a local here to avoid an extra atomic load.
-    UChar* characters = m_characters;
+    char16_t* characters = m_characters;
     if (!characters)
         return;
 
@@ -73,23 +73,23 @@ Identifier OpaqueJSString::identifier(VM* vm) const
     if (m_string.isNull())
         return Identifier();
     if (m_string.isEmpty())
-        return Identifier(Identifier::EmptyIdentifier);
+        return Identifier(Identifier::EmptyIdentifierFlag::EmptyIdentifier);
     if (m_string.is8Bit())
         return Identifier::fromString(*vm, m_string.span8());
     return Identifier::fromString(*vm, m_string.span16());
 }
 
-const UChar* OpaqueJSString::characters()
+const char16_t* OpaqueJSString::characters() LIFETIME_BOUND
 {
     // m_characters is put in a local here to avoid an extra atomic load.
-    UChar* characters = m_characters;
+    char16_t* characters = m_characters;
     if (characters)
         return characters;
 
     if (m_string.isNull())
         return nullptr;
 
-    auto newCharacters = MallocSpan<UChar>::malloc(m_string.length() * sizeof(UChar));
+    auto newCharacters = MallocSpan<char16_t>::malloc(m_string.length() * sizeof(char16_t));
     StringView { m_string }.getCharacters(newCharacters.mutableSpan());
 
     if (!m_characters.compare_exchange_strong(characters, newCharacters.mutableSpan().data()))

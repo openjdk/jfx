@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "HTTPHeaderNames.h"
+#include <WebCore/HTTPHeaderNames.h>
 #include <utility>
+#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -41,7 +42,7 @@ public:
         String value;
 
         CommonHeader isolatedCopy() const & { return { key , value.isolatedCopy() }; }
-        CommonHeader isolatedCopy() && { return { key , WTFMove(value).isolatedCopy() }; }
+        CommonHeader isolatedCopy() && { return { key , WTF::move(value).isolatedCopy() }; }
 
         friend bool operator==(const CommonHeader&, const CommonHeader&) = default;
     };
@@ -51,7 +52,7 @@ public:
         String value;
 
         UncommonHeader isolatedCopy() const & { return { key.isolatedCopy() , value.isolatedCopy() }; }
-        UncommonHeader isolatedCopy() && { return { WTFMove(key).isolatedCopy() , WTFMove(value).isolatedCopy() }; }
+        UncommonHeader isolatedCopy() && { return { WTF::move(key).isolatedCopy() , WTF::move(value).isolatedCopy() }; }
 
         friend bool operator==(const UncommonHeader&, const UncommonHeader&) = default;
     };
@@ -180,19 +181,31 @@ public:
     WEBCORE_EXPORT bool contains(HTTPHeaderName) const;
     WEBCORE_EXPORT bool remove(HTTPHeaderName);
 
+    // https://fetch.spec.whatwg.org/#request-body-header-name
+    // Content-Length is not a request-body-header name per spec, but is included
+    // here since in practice the body is always nulled alongside this call.
+    void removeRequestBodyHeaders()
+    {
+        remove(HTTPHeaderName::ContentEncoding);
+        remove(HTTPHeaderName::ContentLanguage);
+        remove(HTTPHeaderName::ContentLength);
+        remove(HTTPHeaderName::ContentLocation);
+        remove(HTTPHeaderName::ContentType);
+    }
+
     // Instead of passing a string literal to any of these functions, just use a HTTPHeaderName instead.
     template<size_t length> String get(ASCIILiteral) const = delete;
     template<size_t length> void set(ASCIILiteral, const String&) = delete;
     template<size_t length> bool contains(ASCIILiteral) = delete;
     template<size_t length> bool remove(ASCIILiteral) = delete;
 
-    const CommonHeadersVector& commonHeaders() const { return m_commonHeaders; }
-    const UncommonHeadersVector& uncommonHeaders() const { return m_uncommonHeaders; }
-    CommonHeadersVector& commonHeaders() { return m_commonHeaders; }
-    UncommonHeadersVector& uncommonHeaders() { return m_uncommonHeaders; }
+    const CommonHeadersVector& commonHeaders() const LIFETIME_BOUND { return m_commonHeaders; }
+    const UncommonHeadersVector& uncommonHeaders() const LIFETIME_BOUND { return m_uncommonHeaders; }
+    CommonHeadersVector& commonHeaders() LIFETIME_BOUND { return m_commonHeaders; }
+    UncommonHeadersVector& uncommonHeaders() LIFETIME_BOUND { return m_uncommonHeaders; }
 
-    const_iterator begin() const { return const_iterator(*this, 0, 0); }
-    const_iterator end() const { return const_iterator(*this, m_commonHeaders.size(), m_uncommonHeaders.size()); }
+    const_iterator begin() const LIFETIME_BOUND { return const_iterator(*this, 0, 0); }
+    const_iterator end() const LIFETIME_BOUND { return const_iterator(*this, m_commonHeaders.size(), m_uncommonHeaders.size()); }
 
     friend bool operator==(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
     {

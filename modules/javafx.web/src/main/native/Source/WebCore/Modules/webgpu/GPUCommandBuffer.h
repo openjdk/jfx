@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,11 +41,12 @@ class GPUCommandBuffer : public RefCounted<GPUCommandBuffer> {
 public:
     static Ref<GPUCommandBuffer> create(Ref<WebGPU::CommandBuffer>&& backing, GPUCommandEncoder& encoder)
     {
-        return adoptRef(*new GPUCommandBuffer(WTFMove(backing), encoder));
+        return adoptRef(*new GPUCommandBuffer(WTF::move(backing), encoder));
     }
 
     String label() const;
     void setLabel(String&&);
+    void setOverrideLabel(String&&);
 
     WebGPU::CommandBuffer& backing() { return m_backing; }
     const WebGPU::CommandBuffer& backing() const { return m_backing; }
@@ -53,13 +54,14 @@ public:
 
 private:
     GPUCommandBuffer(Ref<WebGPU::CommandBuffer>&& backing, GPUCommandEncoder& encoder)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
         , m_encoder(encoder)
     {
     }
 
     Ref<WebGPU::CommandBuffer> m_backing;
-    Ref<GPUCommandEncoder> m_encoder;
+    const Ref<GPUCommandEncoder> m_encoder;
+    std::optional<String> m_overrideLabel;
 };
 
 }

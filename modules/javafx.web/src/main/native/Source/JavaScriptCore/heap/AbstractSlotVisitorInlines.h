@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "AbstractSlotVisitor.h"
-#include "Heap.h"
-#include "WeakInlines.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/AbstractSlotVisitor.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/WeakInlines.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -130,7 +130,7 @@ inline bool AbstractSlotVisitor::addOpaqueRoot(void* ptr)
         return false;
     if (!m_opaqueRoots.add(ptr))
         return false;
-    if (UNLIKELY(m_needsExtraOpaqueRootHandling))
+    if (m_needsExtraOpaqueRootHandling) [[unlikely]]
         didAddOpaqueRoot(ptr);
     m_visitCount++;
     return true;
@@ -139,7 +139,7 @@ inline bool AbstractSlotVisitor::addOpaqueRoot(void* ptr)
 inline bool AbstractSlotVisitor::containsOpaqueRoot(void* ptr) const
 {
     bool found = m_opaqueRoots.contains(ptr);
-    if (UNLIKELY(found && m_needsExtraOpaqueRootHandling)) {
+    if (found && m_needsExtraOpaqueRootHandling) [[unlikely]] {
         auto* nonConstThis = const_cast<AbstractSlotVisitor*>(this);
         nonConstThis->didFindOpaqueRoot(ptr);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +30,12 @@
 #include "CachedResourceRequest.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginPreflightResultCache.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "HTTPStatusCodes.h"
 #include "LegacySchemeRegistry.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
@@ -41,6 +43,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <mutex>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/AtomString.h>
@@ -86,7 +89,7 @@ void updateRequestForAccessControl(ResourceRequest& request, SecurityOrigin& sec
 
 ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& request, SecurityOrigin& securityOrigin, const String& referrer, bool includeFetchMetadata)
 {
-    ResourceRequest preflightRequest(request.url());
+    ResourceRequest preflightRequest { URL { request.url() } };
     static const double platformDefaultTimeout = 0;
     preflightRequest.setTimeoutInterval(platformDefaultTimeout);
     updateRequestForAccessControl(preflightRequest, securityOrigin, StoredCredentialsPolicy::DoNotUse);
@@ -107,7 +110,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
                 unsafeHeaders.append(headerField.key.convertToASCIILowercase());
         }
 
-        std::sort(unsafeHeaders.begin(), unsafeHeaders.end(), WTF::codePointCompareLessThan);
+        std::ranges::sort(unsafeHeaders, WTF::codePointCompareLessThan);
 
         StringBuilder headerBuffer;
 
@@ -162,7 +165,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
 
     if (crossOriginAttribute.isNull()) {
-        CachedResourceRequest cachedRequest { WTFMove(request), WTFMove(options) };
+        CachedResourceRequest cachedRequest { WTF::move(request), WTF::move(options) };
         cachedRequest.setOrigin(document.securityOrigin());
         return cachedRequest;
     }
@@ -182,8 +185,8 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         options.storedCredentialsPolicy = StoredCredentialsPolicy::DoNotUse;
     }
 
-    CachedResourceRequest cachedRequest { WTFMove(request), WTFMove(options) };
-    updateRequestForAccessControl(cachedRequest.resourceRequest(), document.securityOrigin(), options.storedCredentialsPolicy);
+    CachedResourceRequest cachedRequest { WTF::move(request), WTF::move(options) };
+    updateRequestForAccessControl(cachedRequest.resourceRequest(), document.protectedSecurityOrigin().get(), options.storedCredentialsPolicy);
     return cachedRequest;
 }
 
@@ -304,14 +307,14 @@ Expected<void, String> validatePreflightResponse(PAL::SessionID sessionID, const
 
     auto result = CrossOriginPreflightResultCacheItem::create(storedCredentialsPolicy, response);
     if (!result.has_value())
-        return makeUnexpected(WTFMove(result.error()));
+        return makeUnexpected(WTF::move(result.error()));
 
-    auto entry = WTFMove(result.value());
+    auto entry = WTF::move(result.value());
     auto errorDescription = entry->validateMethodAndHeaders(request.httpMethod(), request.httpHeaderFields());
     CrossOriginPreflightResultCache::singleton().appendEntry(sessionID, { topOrigin.data(), securityOrigin.data(), }, request.url(), entry.moveToUniquePtr());
 
     if (errorDescription)
-        return makeUnexpected(WTFMove(*errorDescription));
+        return makeUnexpected(WTF::move(*errorDescription));
 
     return { };
 }
@@ -363,7 +366,7 @@ std::optional<ResourceError> validateCrossOriginResourcePolicy(CrossOriginEmbedd
 
 std::optional<ResourceError> validateRangeRequestedFlag(const ResourceRequest& request, const ResourceResponse& response)
 {
-    if (response.isRangeRequested() && response.httpStatusCode() == 206 && response.type() == ResourceResponse::Type::Opaque && !request.hasHTTPHeaderField(HTTPHeaderName::Range))
+    if (response.isRangeRequested() && (response.httpStatusCode() == httpStatus206PartialContent || response.httpStatusCode() == httpStatus416RangeNotSatisfiable) && response.type() == ResourceResponse::Type::Opaque && !request.hasHTTPHeaderField(HTTPHeaderName::Range))
         return ResourceError({ }, 0, response.url(), { }, ResourceError::Type::General);
     return std::nullopt;
 }

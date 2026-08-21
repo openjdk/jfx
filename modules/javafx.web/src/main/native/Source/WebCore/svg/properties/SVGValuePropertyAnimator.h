@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ public:
     template<typename... Arguments>
     SVGValuePropertyAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, Arguments&&... arguments)
         : Base(attributeName, std::forward<Arguments>(arguments)...)
-        , m_property(static_reference_cast<PropertyType>(WTFMove(property)))
+        , m_property(unsafeRefDowncast<PropertyType>(WTF::move(property)))
     {
     }
 
@@ -59,7 +59,7 @@ protected:
     using Base::computeCSSPropertyValue;
     using Base::m_attributeName;
 
-    Ref<PropertyType> m_property;
+    const Ref<PropertyType> m_property;
 };
 
 #define TZONE_TEMPLATE_PARAMS template<typename PropertyType, typename AnimationFunction>

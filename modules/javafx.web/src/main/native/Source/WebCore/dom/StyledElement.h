@@ -24,24 +24,26 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
-#include "CSSProperty.h"
-#include "CSSPropertyNames.h"
-#include "CSSValueKeywords.h"
-#include "Element.h"
-#include "ElementData.h"
+#include <WebCore/Element.h>
+#include <WebCore/ElementData.h>
+#include <WebCore/IsImportant.h>
 
 namespace WebCore {
 
 class Attribute;
+class CSSStyleProperties;
+class CSSValue;
 class ImmutableStyleProperties;
 class MutableStyleProperties;
-class PropertySetCSSStyleDeclaration;
 class StyleProperties;
 class StylePropertyMap;
 
+enum CSSPropertyID : uint16_t;
+enum CSSValueID : uint16_t;
+enum class CSSUnitType : uint8_t;
+
 class StyledElement : public Element {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyledElement);
+    WTF_MAKE_TZONE_ALLOCATED(StyledElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyledElement);
 public:
     virtual ~StyledElement();
@@ -65,7 +67,7 @@ public:
 
     void synchronizeStyleAttributeInternal() const { const_cast<StyledElement*>(this)->synchronizeStyleAttributeInternalImpl(); }
 
-    WEBCORE_EXPORT CSSStyleDeclaration& cssomStyle();
+    WEBCORE_EXPORT CSSStyleProperties& cssomStyle();
     StylePropertyMap& ensureAttributeStyleMap();
 
     // https://html.spec.whatwg.org/#presentational-hints
@@ -97,9 +99,9 @@ private:
     void synchronizeStyleAttributeInternalImpl();
 
     void inlineStyleChanged();
-    PropertySetCSSStyleDeclaration* inlineStyleCSSOMWrapper();
+    CSSStyleProperties* inlineStyleCSSOMWrapper();
     void setInlineStyleFromString(const AtomString&);
-    MutableStyleProperties& ensureMutableInlineStyle();
+    Ref<MutableStyleProperties> ensureMutableInlineStyle();
 
     void rebuildPresentationalHintStyle();
 };

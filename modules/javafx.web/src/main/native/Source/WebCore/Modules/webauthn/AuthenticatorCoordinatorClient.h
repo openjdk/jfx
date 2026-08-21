@@ -27,18 +27,14 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticatorCoordinator.h"
-#include "ExceptionData.h"
+#include <WebCore/AuthenticatorCoordinator.h>
+#include <WebCore/ExceptionData.h>
+#include <WebCore/PublicKeyCredential.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 class AuthenticatorCoordinatorClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AuthenticatorCoordinatorClient> : std::true_type { };
 }
 
 namespace WebAuthn {
@@ -63,7 +59,7 @@ using CapabilitiesCompletionHandler = CompletionHandler<void(Vector<KeyValuePair
 using RequestCompletionHandler = CompletionHandler<void(WebCore::AuthenticatorResponseData&&, WebCore::AuthenticatorAttachment, WebCore::ExceptionData&&)>;
 using QueryCompletionHandler = CompletionHandler<void(bool)>;
 
-class AuthenticatorCoordinatorClient : public CanMakeWeakPtr<AuthenticatorCoordinatorClient> {
+class AuthenticatorCoordinatorClient {
     WTF_MAKE_TZONE_ALLOCATED(AuthenticatorCoordinatorClient);
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinatorClient);
 public:
@@ -75,6 +71,9 @@ public:
     virtual void isConditionalMediationAvailable(const SecurityOrigin&, QueryCompletionHandler&&) = 0;
     virtual void isUserVerifyingPlatformAuthenticatorAvailable(const SecurityOrigin&, QueryCompletionHandler&&) = 0;
     virtual void getClientCapabilities(const SecurityOrigin&, CapabilitiesCompletionHandler&&) = 0;
+    virtual void signalUnknownCredential(const SecurityOrigin&, UnknownCredentialOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
+    virtual void signalAllAcceptedCredentials(const SecurityOrigin&, AllAcceptedCredentialsOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
+    virtual void signalCurrentUserDetails(const SecurityOrigin&, CurrentUserDetailsOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
     virtual void cancel(CompletionHandler<void()>&&) = 0;
 };
 

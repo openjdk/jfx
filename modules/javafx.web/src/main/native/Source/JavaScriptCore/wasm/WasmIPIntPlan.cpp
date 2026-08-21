@@ -48,14 +48,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC { namespace Wasm {
 
 IPIntPlan::IPIntPlan(VM& vm, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(vm, WTFMove(source), compilerMode, WTFMove(task))
+    : Base(vm, WTF::move(source), compilerMode, WTF::move(task))
 {
     if (parseAndValidateModule(m_source.span()))
         prepare();
 }
 
 IPIntPlan::IPIntPlan(VM& vm, Ref<ModuleInformation> info, const Ref<IPIntCallee>* callees, CompletionTask&& task)
-    : Base(vm, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
+    : Base(vm, WTF::move(info), CompilerMode::FullCompile, WTF::move(task))
     , m_callees(callees)
 {
     ASSERT(m_callees || !m_moduleInformation->functions.size());
@@ -65,7 +65,7 @@ IPIntPlan::IPIntPlan(VM& vm, Ref<ModuleInformation> info, const Ref<IPIntCallee>
 }
 
 IPIntPlan::IPIntPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(vm, WTFMove(info), compilerMode, WTFMove(task))
+    : Base(vm, WTF::move(info), compilerMode, WTF::move(task))
 {
     prepare();
     m_currentIndex = m_moduleInformation->functions.size();
@@ -103,7 +103,7 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileMetadata(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::IPIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
@@ -124,33 +124,34 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
             m_moduleInformation->addClobberingTailCall(m_moduleInformation->toSpaceIndex(parseAndCompileResult->get()->functionIndex()));
     }
 
-    m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
+    m_wasmInternalFunctions[functionIndex] = WTF::move(*parseAndCompileResult);
 
     IPIntCallee* ipintCallee = nullptr;
     if (!m_callees) {
-        auto callee = IPIntCallee::create(*m_wasmInternalFunctions[functionIndex], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
+        auto callee = IPIntCallee::create(*m_wasmInternalFunctions[functionIndex], functionIndexSpace, m_moduleInformation->nameSection().get(functionIndexSpace));
         ASSERT(!callee->entrypoint());
+        bool usesSIMD = m_moduleInformation->usesSIMD(functionIndex);
+        // Immediately tier up to BBQ for SIMD, if necesary.
+        if (usesSIMD && !Options::useWasmIPIntSIMD())
+            callee->tierUpCounter().setNewThreshold(0);
 
-#if ENABLE(JIT)
-        if (Options::useWasmJIT() && Options::useBBQJIT()) {
-            if (m_moduleInformation->usesSIMD(functionIndex))
-                callee->setEntrypoint(LLInt::inPlaceInterpreterSIMDEntryThunk().retaggedCode<WasmEntryPtrTag>());
-            else
-                callee->setEntrypoint(LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>());
-        }
-#else
-        if (false);
-#endif
-        else {
-            if (m_moduleInformation->usesSIMD(functionIndex)) {
+        if (usesSIMD && !Options::useBBQJIT() && !Options::useWasmIPIntSIMD()) {
                 Locker locker { m_lock };
                 Base::fail(makeString("JIT is disabled, but the entrypoint for "_s, functionIndex.rawIndex(), " requires JIT"_s));
                 return;
             }
-            callee->setEntrypoint(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline));
-        }
+
+        CodePtr<WasmEntryPtrTag> entrypoint { };
+#if ENABLE(JIT)
+        if (Options::useJIT())
+                entrypoint = LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>();
+#endif
+        if (!entrypoint)
+            entrypoint = LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline);
+
+        callee->setEntrypoint(entrypoint);
         ipintCallee = callee.ptr();
-        m_calleesVector[functionIndex] = WTFMove(callee);
+        m_calleesVector[functionIndex] = WTF::move(callee);
     } else
         ipintCallee = m_callees[functionIndex].ptr();
 
@@ -172,7 +173,7 @@ bool IPIntPlan::ensureEntrypoint(IPIntCallee&, FunctionCodeIndex functionIndex)
     if (m_entrypoints[functionIndex])
         return true;
 
-    m_entrypoints[functionIndex] = JSEntrypointCallee::create(m_moduleInformation->internalFunctionTypeIndices[functionIndex], m_moduleInformation->usesSIMD(functionIndex));
+    m_entrypoints[functionIndex] = JSToWasmCallee::create(m_moduleInformation->internalFunctionTypeIndices[functionIndex], m_moduleInformation->usesSIMD(functionIndex));
     return true;
 }
 
@@ -182,7 +183,7 @@ void IPIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }
@@ -201,9 +202,8 @@ void IPIntPlan::didCompleteCompilation()
             }
         }
         if (auto& callee = m_entrypoints[functionIndex]) {
-            if (callee->compilationMode() == CompilationMode::JSToWasmEntrypointMode)
-                static_cast<JSEntrypointCallee*>(callee.get())->setWasmCallee(CalleeBits::encodeNativeCallee(&m_callees[functionIndex].get()));
-            m_jsEntrypointCallees.add(functionIndex, callee);
+            callee->setWasmCallee(CalleeBits::encodeNativeCallee(&m_callees[functionIndex].get()));
+            m_jsToWasmCallees.add(functionIndex, callee);
     }
     }
 
@@ -224,6 +224,8 @@ void IPIntPlan::didCompleteCompilation()
 void IPIntPlan::completeInStreaming()
 {
     Locker locker { m_lock };
+    if (failIfMixedExceptionHandlingProposals())
+        return;
     complete();
 }
 
@@ -237,7 +239,7 @@ void IPIntPlan::didFailInStreaming(String&& message)
 {
     Locker locker { m_lock };
     if (!m_errorMessage)
-        fail(WTFMove(message));
+        fail(WTF::move(message));
 }
 
 void IPIntPlan::work()

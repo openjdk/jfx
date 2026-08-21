@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +99,7 @@ Ref<StorageNamespace> StorageNamespaceImpl::copy(Page&)
     for (auto& iter : m_storageAreaMap)
         newNamespace->m_storageAreaMap.set(iter.key, iter.value->copy());
 
-    return WTFMove(newNamespace);
+    return WTF::move(newNamespace);
 }
 
 Ref<StorageArea> StorageNamespaceImpl::storageArea(const SecurityOrigin& origin)

@@ -40,9 +40,9 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionClient);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionController);
 
 DeviceMotionController::DeviceMotionController(DeviceMotionClient& client)
-    : DeviceController(client)
+    : m_client(client)
 {
-    deviceMotionClient().setController(this);
+    client.setController(this);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -57,7 +57,7 @@ void DeviceMotionController::suspendUpdates()
 
 void DeviceMotionController::resumeUpdates()
 {
-    if (!m_listeners.isEmpty())
+    if (hasListeners())
         m_client->startUpdating();
 }
 
@@ -68,37 +68,37 @@ void DeviceMotionController::didChangeDeviceMotion(DeviceMotionData* deviceMotio
     dispatchDeviceEvent(DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionData));
 }
 
-DeviceMotionClient& DeviceMotionController::deviceMotionClient()
-{
-    return downcast<DeviceMotionClient>(m_client.get());
-}
-
 bool DeviceMotionController::hasLastData()
 {
-    return deviceMotionClient().lastMotion();
+    return checkedClient()->lastMotion();
 }
 
 RefPtr<Event> DeviceMotionController::getLastEvent()
 {
-    RefPtr lastMotion = deviceMotionClient().lastMotion();
+    RefPtr lastMotion = checkedClient()->lastMotion();
     return DeviceMotionEvent::create(eventNames().devicemotionEvent, lastMotion.get());
-}
-
-ASCIILiteral DeviceMotionController::supplementName()
-{
-    return "DeviceMotionController"_s;
 }
 
 DeviceMotionController* DeviceMotionController::from(Page* page)
 {
-    return static_cast<DeviceMotionController*>(Supplement<Page>::from(page, supplementName()));
+    return downcast<DeviceMotionController>(Supplement<Page>::from(page, supplementName()));
 }
 
 bool DeviceMotionController::isActiveAt(Page* page)
 {
-    if (DeviceMotionController* self = DeviceMotionController::from(page))
+    if (CheckedPtr self = DeviceMotionController::from(page))
         return self->isActive();
     return false;
+}
+
+DeviceClient& DeviceMotionController::client()
+{
+    return m_client.get();
+}
+
+CheckedRef<DeviceMotionClient> DeviceMotionController::checkedClient()
+{
+    return m_client.get();
 }
 
 } // namespace WebCore

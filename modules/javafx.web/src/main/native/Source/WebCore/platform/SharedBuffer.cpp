@@ -61,39 +61,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedBufferBuilder);
 
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create()
-{
-    return adoptRef(*new FragmentedSharedBuffer);
-}
-
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(std::span<const uint8_t> data)
-{
-    return adoptRef(*new FragmentedSharedBuffer(data));
-}
-
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(FileSystem::MappedFileData&& mappedFileData)
-{
-    return adoptRef(*new FragmentedSharedBuffer(WTFMove(mappedFileData)));
-}
-
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(Ref<SharedBuffer>&& buffer)
-{
-    return adoptRef(*new FragmentedSharedBuffer(WTFMove(buffer)));
-}
-
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(Vector<uint8_t>&& vector)
-{
-    return adoptRef(*new FragmentedSharedBuffer(WTFMove(vector)));
-}
-
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(DataSegment::Provider&& provider)
-{
-    return adoptRef(*new FragmentedSharedBuffer(WTFMove(provider)));
-}
-
 std::optional<Ref<FragmentedSharedBuffer>> FragmentedSharedBuffer::fromIPCData(IPCData&& ipcData)
 {
-    return WTF::switchOn(WTFMove(ipcData), [](Vector<std::span<const uint8_t>>&& data) -> std::optional<Ref<FragmentedSharedBuffer>> {
+    return WTF::switchOn(WTF::move(ipcData), [](Vector<std::span<const uint8_t>>&& data) -> std::optional<Ref<FragmentedSharedBuffer>> {
         if (!data.size())
             return SharedBuffer::create();
 
@@ -104,56 +74,37 @@ std::optional<Ref<FragmentedSharedBuffer>> FragmentedSharedBuffer::fromIPCData(I
             return std::nullopt;
 
         if (useUnixDomainSockets || size < minimumPageSize) {
-            if (data.size() == 1)
-                return SharedBuffer::create(data[0]);
-            Ref sharedMemoryBuffer = FragmentedSharedBuffer::create();
-            for (auto span : data)
-                sharedMemoryBuffer->append(span);
-            return sharedMemoryBuffer;
+            SharedBufferBuilder builder;
+            builder.appendSpans(data);
+            return builder.takeBuffer();
         }
         return std::nullopt;
     }, [](std::optional<WebCore::SharedMemoryHandle>&& handle) -> std::optional<Ref<FragmentedSharedBuffer>> {
         if (useUnixDomainSockets || !handle.has_value() || handle->size() < minimumPageSize)
             return std::nullopt;
 
-        RefPtr sharedMemoryBuffer = SharedMemory::map(WTFMove(handle.value()), SharedMemory::Protection::ReadOnly);
+        RefPtr sharedMemoryBuffer = SharedMemory::map(WTF::move(handle.value()), SharedMemory::Protection::ReadOnly);
         if (!sharedMemoryBuffer)
             return std::nullopt;
         return SharedBuffer::create(sharedMemoryBuffer->span());
     });
 }
 
-FragmentedSharedBuffer::FragmentedSharedBuffer() = default;
-
-FragmentedSharedBuffer::FragmentedSharedBuffer(FileSystem::MappedFileData&& fileData)
-    : m_size(fileData.size())
+FragmentedSharedBuffer::FragmentedSharedBuffer(Ref<const DataSegment>&& segment)
+    : m_size(segment->size())
+    , m_segments(DataSegmentVector::from(DataSegmentVectorEntry { 0, WTF::move(segment) }))
+    , m_contiguous(true)
 {
-    m_segments.append({ 0, DataSegment::create(WTFMove(fileData)) });
 }
 
-FragmentedSharedBuffer::FragmentedSharedBuffer(DataSegment::Provider&& provider)
-    : m_size(provider.span().size())
+FragmentedSharedBuffer::FragmentedSharedBuffer(size_t size, const DataSegmentVector& segments)
+    : m_size(size)
+    , m_segments(WTF::map<1>(segments, [](auto& element) {
+        return DataSegmentVectorEntry { element.beginPosition, element.segment.copyRef() };
+    }))
 {
-    m_segments.append({ 0, DataSegment::create(WTFMove(provider)) });
+    ASSERT(internallyConsistent());
 }
-
-FragmentedSharedBuffer::FragmentedSharedBuffer(Ref<SharedBuffer>&& buffer)
-{
-    append(WTFMove(buffer));
-}
-
-#if USE(GSTREAMER)
-Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::create(GstMappedOwnedBuffer& mappedBuffer)
-{
-    return adoptRef(*new FragmentedSharedBuffer(mappedBuffer));
-}
-
-FragmentedSharedBuffer::FragmentedSharedBuffer(GstMappedOwnedBuffer& mappedBuffer)
-    : m_size(mappedBuffer.size())
-{
-    m_segments.append({ 0, DataSegment::create(&mappedBuffer) });
-}
-#endif
 
 static Vector<uint8_t> combineSegmentsData(const FragmentedSharedBuffer::DataSegmentVector& segments, size_t size)
 {
@@ -174,19 +125,30 @@ Ref<SharedBuffer> FragmentedSharedBuffer::makeContiguous() const
     if (m_segments.size() == 1)
         return SharedBuffer::create(m_segments[0].segment.copyRef());
     auto combinedData = combineSegmentsData(m_segments, m_size);
-    return SharedBuffer::create(WTFMove(combinedData));
+    return SharedBuffer::create(WTF::move(combinedData));
 }
 #if ENABLE(GPU_PROCESS)  && PLATFORM(JAVA)
 auto FragmentedSharedBuffer::toIPCData() const -> IPCData
 {
-    if (useUnixDomainSockets || size() < minimumPageSize) {
+    auto segmentSpans = [&] {
         return WTF::map(m_segments, [](auto& segment) {
             return segment.segment->span();
         });
-    }
+    };
 
-    RefPtr sharedMemoryBuffer = SharedMemory::copyBuffer(*this);
+    if (useUnixDomainSockets || size() < minimumPageSize)
+        return segmentSpans();
+
+#if PLATFORM(COCOA)
+    if (m_segments.size() == 1) {
+        Ref segment = m_segments[0].segment;
+        if (segment->containsMappedFileData())
+            return SharedMemoryHandle::createVMShare(segment->span(), SharedMemory::Protection::ReadOnly);
+    }
+#endif
+    if (RefPtr<SharedMemory> sharedMemoryBuffer = SharedMemory::copyBuffer(*this))
     return sharedMemoryBuffer->createHandle(SharedMemory::Protection::ReadOnly);
+    return segmentSpans();
 }
 #endif
 
@@ -206,7 +168,7 @@ Vector<uint8_t> FragmentedSharedBuffer::takeData()
         return { };
 
     Vector<uint8_t> combinedData;
-    if (hasOneSegment() && std::holds_alternative<Vector<uint8_t>>(m_segments[0].segment->m_immutableData) && m_segments[0].segment->hasOneRef())
+    if (segmentsCount() == 1 && std::holds_alternative<Vector<uint8_t>>(m_segments[0].segment->m_immutableData) && m_segments[0].segment->hasOneRef())
         combinedData = std::exchange(std::get<Vector<uint8_t>>(const_cast<DataSegment&>(m_segments[0].segment.get()).m_immutableData), Vector<uint8_t>());
     else
         combinedData = combineSegmentsData(m_segments, m_size);
@@ -241,7 +203,7 @@ Ref<SharedBuffer> FragmentedSharedBuffer::getContiguousData(size_t position, siz
         auto canCopy = std::min(length - combinedData.size(), element.segment->size());
         combinedData.append(element.segment->span().first(canCopy));
     }
-    return SharedBuffer::create(WTFMove(combinedData));
+    return SharedBuffer::create(WTF::move(combinedData));
 }
 
 std::span<const FragmentedSharedBuffer::DataSegmentVectorEntry> FragmentedSharedBuffer::segmentForPosition(size_t position) const
@@ -282,34 +244,6 @@ RefPtr<ArrayBuffer> FragmentedSharedBuffer::tryCreateArrayBuffer() const
     return arrayBuffer;
 }
 
-void FragmentedSharedBuffer::append(const FragmentedSharedBuffer& data)
-{
-    ASSERT(!m_contiguous);
-    m_segments.appendContainerWithMapping(data.m_segments, [&](auto& element) {
-        DataSegmentVectorEntry entry { m_size, element.segment.copyRef() };
-        m_size += element.segment->size();
-        return entry;
-    });
-    ASSERT(internallyConsistent());
-}
-
-void FragmentedSharedBuffer::append(std::span<const uint8_t> data)
-{
-    ASSERT(!m_contiguous);
-    m_segments.append({ m_size, DataSegment::create(data) });
-    m_size += data.size();
-    ASSERT(internallyConsistent());
-}
-
-void FragmentedSharedBuffer::append(Vector<uint8_t>&& data)
-{
-    ASSERT(!m_contiguous);
-    auto dataSize = data.size();
-    m_segments.append({ m_size, DataSegment::create(WTFMove(data)) });
-    m_size += dataSize;
-    ASSERT(internallyConsistent());
-}
-
 void FragmentedSharedBuffer::clear()
 {
     m_size = 0;
@@ -321,14 +255,7 @@ Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::copy() const
 {
     if (m_contiguous)
         return m_segments.size() ? SharedBuffer::create(m_segments[0].segment.copyRef()) : SharedBuffer::create();
-    Ref<FragmentedSharedBuffer> clone = adoptRef(*new FragmentedSharedBuffer);
-    clone->m_size = m_size;
-    clone->m_segments = WTF::map<1>(m_segments, [](auto& element) {
-        return DataSegmentVectorEntry { element.beginPosition, element.segment.copyRef() };
-    });
-    ASSERT(clone->internallyConsistent());
-    ASSERT(internallyConsistent());
-    return clone;
+    return adoptRef(*new FragmentedSharedBuffer(m_size, m_segments));
 }
 
 void FragmentedSharedBuffer::forEachSegment(NOESCAPE const Function<void(std::span<const uint8_t>)>& apply) const
@@ -452,13 +379,20 @@ void FragmentedSharedBuffer::copyTo(std::span<uint8_t> destination, size_t offse
 #if ASSERT_ENABLED
 bool FragmentedSharedBuffer::internallyConsistent() const
 {
+    if (isContiguous() && segmentsCount() > 1)
+        return false;
+    return internallyConsistent(m_size, m_segments);
+}
+
+bool FragmentedSharedBuffer::internallyConsistent(size_t size, const DataSegmentVector& segments)
+{
     size_t position = 0;
-    for (const auto& element : m_segments) {
+    for (const auto& element : segments) {
         if (element.beginPosition != position)
             return false;
         position += element.segment->size();
     }
-    return position == m_size;
+    return position == size;
 }
 #endif // ASSERT_ENABLED
 
@@ -476,9 +410,18 @@ bool FragmentedSharedBuffer::operator==(const FragmentedSharedBuffer& other) con
     if (m_size != other.m_size)
         return false;
 
-    auto thisSpan = m_segments.span();
+    return haveIdenticalContent(m_segments, other.m_segments);
+}
+
+bool FragmentedSharedBuffer::haveIdenticalContent(const DataSegmentVector& a, const DataSegmentVector& b)
+{
+    // Fast comparison.
+    if (a == b)
+        return true;
+
+    auto thisSpan = a.span();
     size_t thisOffset = 0;
-    auto otherSpan = other.m_segments.span();
+    auto otherSpan = b.span();
     size_t otherOffset = 0;
 
     while (!thisSpan.empty() && !otherSpan.empty()) {
@@ -517,60 +460,67 @@ bool FragmentedSharedBuffer::operator==(const FragmentedSharedBuffer& other) con
     return true;
 }
 
-SharedBuffer::SharedBuffer()
-{
-    m_contiguous = true;
-}
-
 SharedBuffer::SharedBuffer(Ref<const DataSegment>&& segment)
+    : FragmentedSharedBuffer(WTF::move(segment))
 {
-    m_size = segment->size();
-    m_segments.append({ 0, WTFMove(segment) });
-    m_contiguous = true;
 }
 
-SharedBuffer::SharedBuffer(Ref<FragmentedSharedBuffer>&& contiguousBuffer)
+SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& fileData)
+    : FragmentedSharedBuffer(DataSegment::create(WTF::move(fileData)))
 {
-    ASSERT(contiguousBuffer->hasOneSegment() || contiguousBuffer->isEmpty());
-    m_size = contiguousBuffer->size();
-    if (contiguousBuffer->hasOneSegment())
-        m_segments.append({ 0, contiguousBuffer->m_segments[0].segment.copyRef() });
-    m_contiguous = true;
 }
 
-SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& data)
-    : FragmentedSharedBuffer(WTFMove(data))
+SharedBuffer::SharedBuffer(DataSegment::Provider&& provider)
+    : FragmentedSharedBuffer(DataSegment::create(WTF::move(provider)))
 {
-    m_contiguous = true;
 }
+
+SharedBuffer::SharedBuffer(std::span<const uint8_t> data)
+    : FragmentedSharedBuffer(DataSegment::create(data))
+{
+}
+
+SharedBuffer::SharedBuffer(Vector<uint8_t>&& data)
+    : FragmentedSharedBuffer(DataSegment::create(WTF::move(data)))
+{
+}
+
+#if USE(GSTREAMER)
+Ref<SharedBuffer> SharedBuffer::create(GstMappedOwnedBuffer& mappedBuffer)
+{
+    return adoptRef(*new SharedBuffer(mappedBuffer));
+}
+
+SharedBuffer::SharedBuffer(GstMappedOwnedBuffer& mappedBuffer)
+    : FragmentedSharedBuffer(DataSegment::create(&mappedBuffer))
+{
+}
+#endif
 
 RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath, FileSystem::MappedFileMode mappedFileMode, MayUseFileMapping mayUseFileMapping)
 {
     if (mayUseFileMapping == MayUseFileMapping::Yes) {
-        bool mappingSuccess;
-        FileSystem::MappedFileData mappedFileData(filePath, mappedFileMode, mappingSuccess);
-        if (mappingSuccess)
-            return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
+        if (auto mappedFileData = FileSystem::mapFile(filePath, mappedFileMode))
+            return adoptRef(new SharedBuffer(WTF::move(*mappedFileData)));
     }
 
     auto buffer = FileSystem::readEntireFile(filePath);
     if (!buffer)
         return nullptr;
 
-    return SharedBuffer::create(WTFMove(*buffer));
+    return SharedBuffer::create(WTF::move(*buffer));
 }
 
 std::span<const uint8_t> SharedBuffer::span() const
 {
-    if (m_segments.isEmpty())
+    if (!segmentsCount())
         return { };
-    return m_segments[0].segment->span();
+    return segments()[0].segment->span();
 }
 
-const uint8_t& SharedBuffer::operator[](size_t i) const
+uint8_t SharedBuffer::operator[](size_t i) const
 {
-    RELEASE_ASSERT(i < size() && !m_segments.isEmpty());
-    return m_segments[0].segment->span()[i];
+    return segments()[0].segment->span()[i];
 }
 
 WTF::Persistence::Decoder SharedBuffer::decoder() const
@@ -581,48 +531,48 @@ WTF::Persistence::Decoder SharedBuffer::decoder() const
 Ref<DataSegment> DataSegment::create(Vector<uint8_t>&& data)
 {
     data.shrinkToFit();
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 
 #if USE(CF)
 Ref<DataSegment> DataSegment::create(RetainPtr<CFDataRef>&& data)
 {
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 #endif
 
 #if USE(GLIB)
 Ref<DataSegment> DataSegment::create(GRefPtr<GBytes>&& data)
 {
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 #endif
 
 #if USE(GSTREAMER)
 Ref<DataSegment> DataSegment::create(RefPtr<GstMappedOwnedBuffer>&& data)
 {
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 #endif
 
 #if USE(SKIA)
 Ref<DataSegment> DataSegment::create(sk_sp<SkData>&& data)
 {
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 #endif
 
 Ref<DataSegment> DataSegment::create(FileSystem::MappedFileData&& data)
 {
-    return adoptRef(*new DataSegment(WTFMove(data)));
+    return adoptRef(*new DataSegment(WTF::move(data)));
 }
 
 Ref<DataSegment> DataSegment::create(Provider&& provider)
 {
-    return adoptRef(*new DataSegment(WTFMove(provider)));
+    return adoptRef(*new DataSegment(WTF::move(provider)));
 }
 
-std::span<const uint8_t> DataSegment::span() const
+std::span<const uint8_t> DataSegment::span() const LIFETIME_BOUND
 {
     auto visitor = WTF::makeVisitor(
         [](const Vector<uint8_t>& data) { return data.span(); },
@@ -651,7 +601,7 @@ std::span<const uint8_t> DataSegment::span() const
         [](const FileSystem::MappedFileData& data) { return data.span(); },
         [](const Provider& provider) { return provider.span(); }
     );
-    return std::visit(visitor, m_immutableData);
+    return WTF::visit(visitor, m_immutableData);
 }
 
 bool DataSegment::containsMappedFileData() const
@@ -659,67 +609,134 @@ bool DataSegment::containsMappedFileData() const
     return std::holds_alternative<FileSystem::MappedFileData>(m_immutableData);
 }
 
-SharedBufferBuilder::SharedBufferBuilder(RefPtr<FragmentedSharedBuffer>&& buffer)
+RefPtr<ArrayBuffer> SharedBufferBuilder::tryCreateArrayBuffer() const
 {
-    if (!buffer)
-        return;
-    initialize(buffer.releaseNonNull());
+    if (isEmpty())
+        return ArrayBuffer::tryCreate();
+    updateBufferIfNeeded();
+    return RefPtr { m_buffer }->tryCreateArrayBuffer();
 }
 
-SharedBufferBuilder& SharedBufferBuilder::operator=(RefPtr<FragmentedSharedBuffer>&& buffer)
+Ref<FragmentedSharedBuffer> SharedBufferBuilder::takeBuffer()
 {
-    if (!buffer) {
-        m_buffer = nullptr;
-        return *this;
+    if (isEmpty())
+        return SharedBuffer::create();
+    updateBufferIfNeeded();
+    Ref buffer = m_buffer.releaseNonNull();
+    reset();
+    return buffer;
+}
+
+Ref<SharedBuffer> SharedBufferBuilder::takeBufferAsContiguous()
+{
+    return takeBuffer()->makeContiguous();
+}
+
+RefPtr<ArrayBuffer> SharedBufferBuilder::takeBufferAsArrayBuffer()
+{
+    if (isEmpty())
+        return ArrayBuffer::tryCreate();
+    return takeBuffer()->tryCreateArrayBuffer();
+}
+
+void SharedBufferBuilder::updateBufferIfNeeded() const
+{
+    if (m_state == State::Null) {
+    ASSERT(!m_buffer);
+        return;
     }
-    m_buffer = nullptr;
-    initialize(buffer.releaseNonNull());
+    if (m_state == State::Fresh)
+        return;
+    m_buffer = createBuffer();
+    m_state = State::Fresh;
+}
+
+Ref<FragmentedSharedBuffer> SharedBufferBuilder::createBuffer() const
+{
+    if (isEmpty())
+        return SharedBuffer::create();
+    if (m_segments.size() == 1)
+        return SharedBuffer::create(m_segments[0].segment.copyRef());
+    return adoptRef(*new FragmentedSharedBuffer(m_size, m_segments));
+}
+
+void SharedBufferBuilder::appendDataSegment(Ref<DataSegment>&& segment)
+{
+    m_state = State::Stale;
+    size_t size = segment->size();
+    m_segments.append(SharedBuffer::DataSegmentVectorEntry { m_size, WTF::move(segment) });
+    m_size += size;
+}
+
+void SharedBufferBuilder::append(const FragmentedSharedBuffer& data)
+{
+    m_state = State::Stale;
+    m_segments.appendContainerWithMapping(data.m_segments, [&](auto& element) {
+        SharedBuffer::DataSegmentVectorEntry entry { m_size, element.segment.copyRef() };
+        m_size += element.segment->size();
+        return entry;
+    });
+    ASSERT(FragmentedSharedBuffer::internallyConsistent(m_size, m_segments));
+}
+
+void SharedBufferBuilder::append(std::span<const uint8_t> data)
+{
+    if (data.size())
+        appendDataSegment(DataSegment::create(data));
+}
+
+void SharedBufferBuilder::append(Vector<uint8_t>&& data)
+{
+    if (data.size())
+        appendDataSegment(DataSegment::create(WTF::move(data)));
+}
+
+void SharedBufferBuilder::appendSpans(const Vector<std::span<const uint8_t>>& spans)
+{
+    m_state = State::Stale;
+    m_segments.appendContainerWithMapping(spans, [&](auto& span) {
+        SharedBuffer::DataSegmentVectorEntry entry { m_size, DataSegment::create(span) };
+        m_size += span.size();
+        return entry;
+    });
+    ASSERT(FragmentedSharedBuffer::internallyConsistent(m_size, m_segments));
+}
+
+SharedBufferBuilder::SharedBufferBuilder(const SharedBufferBuilder& other)
+    : m_state(other.m_state)
+    , m_buffer(other.m_buffer)
+    , m_size(other.m_size)
+    , m_segments(WTF::map<1>(other.m_segments, [](auto& element) {
+        return SharedBuffer::DataSegmentVectorEntry { element.beginPosition, element.segment.copyRef() };
+    }))
+{
+}
+
+SharedBufferBuilder& SharedBufferBuilder::operator=(const SharedBufferBuilder& other)
+{
+    reset();
+    m_state = other.m_state;
+    m_buffer = other.m_buffer;
+    m_size = other.m_size;
+    m_segments.appendContainerWithMapping(other.m_segments, [&](auto& element) {
+        return SharedBuffer::DataSegmentVectorEntry { element.beginPosition, element.segment.copyRef() };
+    });
     return *this;
 }
 
-void SharedBufferBuilder::initialize(Ref<FragmentedSharedBuffer>&& buffer)
+bool SharedBufferBuilder::operator==(const SharedBufferBuilder& other) const
 {
-    ASSERT(!m_buffer);
-    // We do not want to take a reference to the SharedBuffer as all SharedBuffer should be immutable
-    // once created.
-    if (buffer->hasOneRef() && !buffer->isContiguous()) {
-        m_buffer = WTFMove(buffer);
-        return;
-    }
-    append(buffer);
-}
+    if (this == &other)
+        return true;
 
-RefPtr<ArrayBuffer> SharedBufferBuilder::tryCreateArrayBuffer() const
-{
-    RefPtr buffer = m_buffer;
-    return buffer ? buffer->tryCreateArrayBuffer() : ArrayBuffer::tryCreate();
-}
+    if (m_size != other.m_size)
+        return false;
 
-Ref<FragmentedSharedBuffer> SharedBufferBuilder::take()
-{
-    return m_buffer ? m_buffer.releaseNonNull() : FragmentedSharedBuffer::create();
-}
-
-Ref<SharedBuffer> SharedBufferBuilder::takeAsContiguous()
-{
-    return take()->makeContiguous();
-}
-
-RefPtr<ArrayBuffer> SharedBufferBuilder::takeAsArrayBuffer()
-{
-    if (!m_buffer)
-        return ArrayBuffer::tryCreate();
-    return take()->tryCreateArrayBuffer();
-}
-
-void SharedBufferBuilder::ensureBuffer()
-{
-    if (!m_buffer)
-        m_buffer = FragmentedSharedBuffer::create();
+    return FragmentedSharedBuffer::haveIdenticalContent(m_segments, other.m_segments);
 }
 
 SharedBufferDataView::SharedBufferDataView(Ref<const DataSegment>&& segment, size_t positionWithinSegment, std::optional<size_t> size)
-    : m_segment(WTFMove(segment))
+    : m_segment(WTF::move(segment))
     , m_positionWithinSegment(positionWithinSegment)
     , m_size(size ? *size : m_segment->size() - positionWithinSegment)
 {
@@ -760,12 +777,7 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
         }
 
     buffer.shrink(result.buffer.size());
-    return SharedBuffer::create(WTFMove(buffer));
-}
-
-Ref<SharedBuffer> SharedBuffer::create(Ref<FragmentedSharedBuffer>&& fragmentedBuffer)
-{
-    return fragmentedBuffer->makeContiguous();
+    return SharedBuffer::create(WTF::move(buffer));
 }
 
 } // namespace WebCore

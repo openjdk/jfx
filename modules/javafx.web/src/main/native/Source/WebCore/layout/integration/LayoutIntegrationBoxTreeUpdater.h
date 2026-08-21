@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
+class Document;
 class RenderBlock;
 class RenderBoxModelObject;
 class RenderElement;
@@ -53,6 +55,7 @@ class InlineContent;
 class BoxTreeUpdater {
 public:
     BoxTreeUpdater(RenderBlock&);
+    BoxTreeUpdater(RenderBlock&, const Document&);
     ~BoxTreeUpdater();
 
     CheckedRef<Layout::ElementBox> build();
@@ -78,9 +81,12 @@ private:
 
     void buildTreeForInlineContent();
     void buildTreeForFlexContent();
+    void buildTreeForGridContent();
+
     void insertChild(UniqueRef<Layout::Box>, RenderObject&, const RenderObject* beforeChild = nullptr);
 
     RenderBlock& m_rootRenderer;
+    CheckedPtr<const Document> m_document;
 };
 
 #if ENABLE(TREE_DEBUGGING)
@@ -88,3 +94,4 @@ void showInlineContent(TextStream&, const InlineContent&, size_t depth, bool isD
 #endif
 }
 }
+

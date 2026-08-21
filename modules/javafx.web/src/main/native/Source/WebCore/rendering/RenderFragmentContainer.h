@@ -34,6 +34,7 @@
 #include "RenderFragmentedFlow.h"
 #include "VisiblePosition.h"
 #include <memory>
+#include <wtf/WeakHashMap.h>
 
 namespace WebCore {
 
@@ -43,10 +44,10 @@ class RenderBoxFragmentInfo;
 class RenderFragmentedFlow;
 
 class RenderFragmentContainer : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFragmentContainer);
+    WTF_MAKE_TZONE_ALLOCATED(RenderFragmentContainer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFragmentContainer);
 public:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void setFragmentedFlowPortionRect(const LayoutRect& rect) { m_fragmentedFlowPortionRect = rect; }
     LayoutRect fragmentedFlowPortionRect() const { return m_fragmentedFlowPortionRect; }
@@ -66,7 +67,7 @@ public:
     RenderBoxFragmentInfo* renderBoxFragmentInfo(const RenderBox&) const;
     RenderBoxFragmentInfo* setRenderBoxFragmentInfo(const RenderBox&, LayoutUnit logicalLeftInset, LayoutUnit logicalRightInset,
         bool containingBlockChainIsInset);
-    std::unique_ptr<RenderBoxFragmentInfo> takeRenderBoxFragmentInfo(const RenderBox*);
+    std::unique_ptr<RenderBoxFragmentInfo> takeRenderBoxFragmentInfo(const RenderBox&);
     void removeRenderBoxFragmentInfo(const RenderBox&);
 
     void deleteAllRenderBoxFragmentInfo();
@@ -101,7 +102,7 @@ public:
 
     virtual void repaintFragmentedFlowContent(const LayoutRect& repaintRect) const;
 
-    virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
+    virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) const { }
 
     void addLayoutOverflowForBox(const RenderBox&, const LayoutRect&);
     void addVisualOverflowForBox(const RenderBox&, const LayoutRect&);
@@ -116,9 +117,10 @@ public:
 
     bool canHaveChildren() const override { return false; }
     bool canHaveGeneratedChildren() const override { return true; }
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
+    virtual bool contentRectSpansFragments(const LayoutRect&) const { return false; }
 
 protected:
     RenderFragmentContainer(Type, Element&, RenderStyle&&, RenderFragmentedFlow*);
@@ -157,7 +159,7 @@ private:
     // A RenderBoxFragmentInfo* tells us about any layout information for a RenderBox that
     // is unique to the fragment. For now it just holds logical width information for RenderBlocks, but eventually
     // it will also hold a custom style for any box (for fragment styling).
-    using RenderBoxFragmentInfoMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, std::unique_ptr<RenderBoxFragmentInfo>>;
+    using RenderBoxFragmentInfoMap = SingleThreadWeakHashMap<const RenderBox, std::unique_ptr<RenderBoxFragmentInfo>>;
     RenderBoxFragmentInfoMap m_renderBoxFragmentInfo;
 
     bool m_isValid { false };

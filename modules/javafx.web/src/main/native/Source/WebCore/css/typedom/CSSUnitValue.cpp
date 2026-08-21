@@ -34,15 +34,16 @@
 #include "CSSCalcValue.h"
 #include "CSSParserFastPaths.h"
 #include "CSSParserToken.h"
+#include "CSSPrimitiveNumericCategory.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSUnits.h"
-#include "CalculationCategory.h"
+#include "ExceptionOr.h"
 #include <cmath>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSUnitValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSUnitValue);
 
 CSSUnitType CSSUnitValue::parseUnit(const String& unit)
 {
@@ -86,7 +87,7 @@ ExceptionOr<Ref<CSSUnitValue>> CSSUnitValue::create(double value, const String& 
     if (!type)
         return Exception { ExceptionCode::TypeError };
     auto unitValue = adoptRef(*new CSSUnitValue(value, parsedUnit));
-    unitValue->m_type = WTFMove(*type);
+    unitValue->m_type = WTF::move(*type);
     return unitValue;
 }
 
@@ -137,8 +138,8 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
 // FIXME: This function could be mostly generated from CSSProperties.json.
 static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
-    CSS::Range valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange) && (value < valueRange.min || value > valueRange.max))
+    auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID);
+    if (valueRange && (value < valueRange->min || value > valueRange->max))
         return true;
 
     switch (propertyID) {
@@ -220,9 +221,9 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
 static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
 {
     // FIXME: Merge with isValueOutOfRangeForProperty.
-    auto valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange))
-        return valueRange;
+
+    if (auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID))
+        return *valueRange;
 
     switch (propertyID) {
     case CSSPropertyAnimationDuration:
@@ -297,14 +298,14 @@ static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
     }
 }
 
-static Calculation::Category calculationCategoryForProperty(CSSPropertyID, CSSUnitType unit)
+static CSS::Category calculationCategoryForProperty(CSSPropertyID, CSSUnitType unit)
 {
     // FIXME: This should be looking up the supported calculation categories for the CSSPropertyID and picking the one that best matches the unit.
 
     switch (unit) {
     case CSSUnitType::CSS_NUMBER:
     case CSSUnitType::CSS_INTEGER:
-        return Calculation::Category::Number;
+        return CSS::Category::Number;
     case CSSUnitType::CSS_EM:
     case CSSUnitType::CSS_EX:
     case CSSUnitType::CSS_PX:
@@ -354,33 +355,33 @@ static Calculation::Category calculationCategoryForProperty(CSSPropertyID, CSSUn
     case CSSUnitType::CSS_CQB:
     case CSSUnitType::CSS_CQMIN:
     case CSSUnitType::CSS_CQMAX:
-        return Calculation::Category::Length;
+        return CSS::Category::Length;
     case CSSUnitType::CSS_PERCENTAGE:
-        return Calculation::Category::Percentage;
+        return CSS::Category::Percentage;
     case CSSUnitType::CSS_DEG:
     case CSSUnitType::CSS_RAD:
     case CSSUnitType::CSS_GRAD:
     case CSSUnitType::CSS_TURN:
-        return Calculation::Category::Angle;
+        return CSS::Category::Angle;
     case CSSUnitType::CSS_MS:
     case CSSUnitType::CSS_S:
-        return Calculation::Category::Time;
+        return CSS::Category::Time;
     case CSSUnitType::CSS_HZ:
     case CSSUnitType::CSS_KHZ:
-        return Calculation::Category::Frequency;
+        return CSS::Category::Frequency;
     case CSSUnitType::CSS_DPPX:
     case CSSUnitType::CSS_X:
     case CSSUnitType::CSS_DPI:
     case CSSUnitType::CSS_DPCM:
-        return Calculation::Category::Resolution;
+        return CSS::Category::Resolution;
     case CSSUnitType::CSS_FR:
-        return Calculation::Category::Flex;
+        return CSS::Category::Flex;
     default:
         break;
     }
 
     ASSERT_NOT_REACHED();
-    return Calculation::Category::Number;
+    return CSS::Category::Number;
 }
 
 RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) const
@@ -401,11 +402,11 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
         }
 
         Vector<CSSCalc::Child> sumChildren;
-        sumChildren.append(WTFMove(*node));
-        auto sum = CSSCalc::makeChild(CSSCalc::Sum { .children = WTFMove(sumChildren) }, type);
+        sumChildren.append(WTF::move(*node));
+        auto sum = CSSCalc::makeChild(CSSCalc::Sum { .children = WTF::move(sumChildren) }, type);
 
-        return CSSPrimitiveValue::create(CSSCalcValue::create(category, range, CSSCalc::Tree {
-            .root = WTFMove(sum),
+        return CSSPrimitiveValue::create(CSSCalc::Value::create(category, range, CSSCalc::Tree {
+            .root = WTF::move(sum),
             .type = type,
             .stage = CSSCalc::Stage::Specified,
         }));

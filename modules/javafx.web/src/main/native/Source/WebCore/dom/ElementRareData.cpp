@@ -42,12 +42,14 @@ struct SameSizeAsElementRareData : NodeRareData {
     HashMap<std::optional<Style::PseudoElementIdentifier>, AtomString> viewTransitionCapture;
     void* pointers[18];
     void* intersectionObserverData;
-    void* typedOMData[2];
     void* resizeObserverData;
-    Markable<LayoutUnit, LayoutUnitMarkableTraits> lastRemembedSize[2];
+    void* largestContentfulPaintData;
+    void* typedOMData[2];
+    Markable<LayoutUnit> lastRemembedSize[2];
     ExplicitlySetAttrElementsMap explicitlySetAttrElementsMap;
     uint8_t visibilityAdjustment;
-    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<Calculation::RandomKeyMap>> randomKeyMap;
+    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<CSSCalc::RandomCachingKeyMap>> randomCachingKeyMaps;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> invokedPopoverWeakPtr;
 };
 
 static_assert(sizeof(ElementRareData) == sizeof(SameSizeAsElementRareData), "ElementRareData should stay small");

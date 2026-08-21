@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,14 +41,14 @@ private:
     void invalidateStyleWithRuleSets();
 
     const bool m_isEnabled;
-    Ref<Element> m_element;
+    const Ref<Element> m_element;
 
     Invalidator::MatchElementRuleSets m_matchElementRuleSets;
 };
 
 inline AttributeChangeInvalidation::AttributeChangeInvalidation(Ref<Element>&& element, const QualifiedName& attributeName, const AtomString& oldValue, const AtomString& newValue)
     : m_isEnabled(element->needsStyleInvalidation())
-    , m_element(WTFMove(element))
+    , m_element(WTF::move(element))
 {
     if (!m_isEnabled)
         return;

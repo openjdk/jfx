@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ReportingObserver.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "InspectorInstrumentation.h"
@@ -41,7 +42,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ReportingObserverCallback);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ReportingObserver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ReportingObserver);
 
 static bool isVisibleToReportingObservers(const String& type)
 {
@@ -50,13 +51,14 @@ static bool isVisibleToReportingObservers(const String& type)
         String { "coep"_s },
         String { "deprecation"_s },
         String { "test"_s },
+        String { "integrity-violation"_s },
     });
     return visibleTypes->contains(type);
 }
 
 Ref<ReportingObserver> ReportingObserver::create(ScriptExecutionContext& scriptExecutionContext, Ref<ReportingObserverCallback>&& callback, Options&& options)
 {
-    auto reportingObserver = adoptRef(*new ReportingObserver(scriptExecutionContext, WTFMove(callback), WTFMove(options)));
+    auto reportingObserver = adoptRef(*new ReportingObserver(scriptExecutionContext, WTF::move(callback), WTF::move(options)));
     reportingObserver->suspendIfNeeded();
     return reportingObserver;
 }
@@ -75,7 +77,7 @@ static WeakPtr<ReportingScope> reportingScopeForContext(ScriptExecutionContext& 
 ReportingObserver::ReportingObserver(ScriptExecutionContext& scriptExecutionContext, Ref<ReportingObserverCallback>&& callback, Options&& options)
     : ActiveDOMObject(&scriptExecutionContext)
     , m_reportingScope(reportingScopeForContext(scriptExecutionContext))
-    , m_callback(WTFMove(callback))
+    , m_callback(WTF::move(callback))
     , m_types(options.types.value_or(Vector<AtomString>()))
     , m_buffered(options.buffered)
 {
@@ -86,18 +88,19 @@ ReportingObserver::~ReportingObserver() = default;
 void ReportingObserver::disconnect()
 {
     // https://www.w3.org/TR/reporting-1/#dom-reportingobserver-disconnect
-    if (m_reportingScope)
-        m_reportingScope->unregisterReportingObserver(*this);
+    if (RefPtr reportingScope = m_reportingScope.get())
+        reportingScope->unregisterReportingObserver(*this);
 }
 
 void ReportingObserver::observe()
 {
-    ASSERT(m_reportingScope);
-    if (!m_reportingScope)
+    RefPtr reportingScope = m_reportingScope.get();
+    ASSERT(reportingScope);
+    if (!reportingScope)
         return;
 
     // https://www.w3.org/TR/reporting-1/#dom-reportingobserver-observe
-    m_reportingScope->registerReportingObserver(*this);
+    reportingScope->registerReportingObserver(*this);
 
     if (!m_buffered)
         return;
@@ -105,13 +108,13 @@ void ReportingObserver::observe()
     m_buffered = false;
 
     // For each report in global’s report buffer, queue a task to execute § 4.3 Add report to observer with report and the context object.
-    m_reportingScope->appendQueuedReportsForRelevantType(*this);
+    reportingScope->appendQueuedReportsForRelevantType(*this);
 }
 
 auto ReportingObserver::takeRecords() -> Vector<Ref<Report>>
 {
     // https://www.w3.org/TR/reporting-1/#dom-reportingobserver-takerecords
-    return WTFMove(m_queuedReports);
+    return WTF::move(m_queuedReports);
 }
 
 void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& report)
@@ -135,24 +138,27 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
     ASSERT(m_reportingScope && scriptExecutionContext() == m_reportingScope->scriptExecutionContext());
 
     // Step 4.3.4: Queue a task to § 4.4
-    queueTaskKeepingObjectAlive(*this, TaskSource::Reporting, [protectedThis = Ref { *this }, protectedCallback = Ref { m_callback }] {
-        RefPtr context = protectedThis->scriptExecutionContext();
+    queueTaskKeepingObjectAlive(*this, TaskSource::Reporting, [protectedCallback = Ref { m_callback }](ReportingObserver& observer) {
+        RefPtr context = observer.scriptExecutionContext();
         ASSERT(context);
     if (!context)
         return;
 
         // Step 4.4: Invoke reporting observers with notify list with a copy of global’s registered reporting observer list.
-        auto reports = protectedThis->takeRecords();
+        auto reports = observer.takeRecords();
 
         InspectorInstrumentation::willFireObserverCallback(*context, "ReportingObserver"_s);
-        protectedCallback->handleEvent(reports, protectedThis);
+
+        protectedCallback->invoke(reports, observer);
+
         InspectorInstrumentation::didFireObserverCallback(*context);
     });
 }
 
 bool ReportingObserver::virtualHasPendingActivity() const
 {
-    return m_reportingScope && m_reportingScope->containsObserver(*this);
+    // We cannot ref `m_reportingScope` here since this function may get called on the GC thread.
+    SUPPRESS_UNCOUNTED_ARG return m_reportingScope && m_reportingScope->containsObserver(*this);
 }
 
 ReportingObserverCallback& ReportingObserver::callbackConcurrently()

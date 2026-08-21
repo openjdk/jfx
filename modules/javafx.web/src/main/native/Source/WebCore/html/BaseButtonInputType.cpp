@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,8 +32,10 @@
 #include "config.h"
 #include "BaseButtonInputType.h"
 
+#include "AXObjectCache.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "NodeDocument.h"
 #include "RenderButton.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -57,7 +59,8 @@ bool BaseButtonInputType::appendFormData(DOMFormData&) const
 RenderPtr<RenderElement> BaseButtonInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderButton>(*element(), WTFMove(style));
+    // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderButton>(*protectedElement(), WTF::move(style));
 }
 
 bool BaseButtonInputType::storesValueSeparateFromAttribute()
@@ -67,8 +70,12 @@ bool BaseButtonInputType::storesValueSeparateFromAttribute()
 
 void BaseButtonInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
-    ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+    RefPtr element = this->element();
+    ASSERT(element);
+    element->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+
+    if (CheckedPtr cache = element->protectedDocument()->existingAXObjectCache())
+        cache->valueChanged(*element);
 }
 
 bool BaseButtonInputType::dirAutoUsesValue() const

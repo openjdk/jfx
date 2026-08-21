@@ -36,10 +36,12 @@
 #include "pas_heap_table.h"
 #include "pas_immortal_heap.h"
 #include "pas_log.h"
+#include "pas_mar_registry.h"
 #include "pas_monotonic_time.h"
 #include "pas_primitive_heap_ref.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_segregated_size_directory.h"
+#include "pas_zero_memory.h"
 
 pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
                           pas_heap_ref_kind heap_ref_kind,
@@ -52,7 +54,7 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
     uintptr_t begin;
 
     if (verbose) {
-        pas_log("Creating heap for size = %lu, alignment = %lu.\n",
+        pas_log("Creating heap for size = %zu, alignment = %zu.\n",
                 config->get_type_size(heap_ref->type),
                 config->get_type_alignment(heap_ref->type));
     }
@@ -77,10 +79,16 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
     heap->heap_ref = heap_ref;
     heap->heap_ref_kind = heap_ref_kind;
     heap->config_kind = config->kind;
+    heap->is_non_compact_heap = heap_ref->is_non_compact_heap;
 
     // PGM being enabled in the config does not guarantee it will be called during runtime.
     if (config->pgm_enabled)
         pas_probabilistic_guard_malloc_initialize_pgm();
+
+#if PAS_OS(DARWIN)
+    static pthread_once_t mar_control = PTHREAD_ONCE_INIT;
+    pthread_once(&mar_control, pas_mar_initialize);
+#endif /* PAS_OS(DARWIN) */
 
     pas_all_heaps_add_heap(heap);
 
@@ -201,11 +209,11 @@ void pas_heap_reset_heap_ref(pas_heap* heap)
         ((pas_primitive_heap_ref*)heap->heap_ref)->cached_index = UINT_MAX;
         return;
     case pas_fake_heap_ref_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 pas_segregated_size_directory*

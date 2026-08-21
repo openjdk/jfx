@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ASTForward.h"
+#include "CompilationMessage.h"
 #include "WGSLEnums.h"
 #include <array>
 #include <functional>
@@ -140,7 +141,7 @@ struct Array {
     // std::monostate represents a runtime-sized array
     // unsigned represents a creation fixed array (constant size)
     // AST::Expression* represents a fixed array (override size)
-    using Size = std::variant<std::monostate, unsigned, AST::Expression*>;
+    using Size = Variant<std::monostate, unsigned, AST::Expression*>;
 
     const Type* element;
     Size size;
@@ -171,12 +172,10 @@ public:
         static constexpr unsigned fract = 0;
         static constexpr unsigned exp = 1;
 
-        static constexpr std::pair<ComparableASCIILiteral, unsigned> mapEntries[] {
+        static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, unsigned>>({
             { "exp"_s, exp },
             { "fract"_s, fract },
-        };
-
-        static constexpr SortedArrayMap map { mapEntries };
+        }) };
     };
 
     struct ModfResult {
@@ -184,12 +183,10 @@ public:
         static constexpr unsigned fract = 0;
         static constexpr unsigned whole = 1;
 
-        static constexpr std::pair<ComparableASCIILiteral, unsigned> mapEntries[] {
+        static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, unsigned>>({
             { "fract"_s, fract },
             { "whole"_s, whole },
-        };
-
-        static constexpr SortedArrayMap map { mapEntries };
+        }) };
     };
 
     struct AtomicCompareExchangeResult {
@@ -197,15 +194,13 @@ public:
         static constexpr unsigned oldValue = 0;
         static constexpr unsigned exchanged = 1;
 
-        static constexpr std::pair<ComparableASCIILiteral, unsigned> mapEntries[] {
+        static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, unsigned>>({
             { "exchanged"_s, exchanged },
             { "old_value"_s, oldValue },
+        }) };
         };
 
-        static constexpr SortedArrayMap map { mapEntries };
-    };
-
-    static constexpr auto keys = std::to_array<SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>[2]>>({
+    static constexpr auto keys = std::to_array<SortedArrayMap<std::pair<ComparableASCIILiteral, unsigned>, 2>>({
         FrexpResult::map,
         ModfResult::map,
         AtomicCompareExchangeResult::map,
@@ -241,15 +236,12 @@ struct Atomic {
 
 struct TypeConstructor {
     ASCIILiteral name;
-    std::function<const Type*(AST::ElaboratedTypeExpression&)> construct;
-};
-
-struct Bottom {
+    std::function<Result<const Type*>(AST::ElaboratedTypeExpression&)> construct;
 };
 
 } // namespace Types
 
-struct Type : public std::variant<
+struct Type : public Variant<
     Types::Primitive,
     Types::Vector,
     Types::Matrix,
@@ -263,10 +255,9 @@ struct Type : public std::variant<
     Types::Reference,
     Types::Pointer,
     Types::Atomic,
-    Types::TypeConstructor,
-    Types::Bottom
+    Types::TypeConstructor
 > {
-    using std::variant<
+    using Variant<
         Types::Primitive,
         Types::Vector,
         Types::Matrix,
@@ -280,12 +271,12 @@ struct Type : public std::variant<
         Types::Reference,
         Types::Pointer,
         Types::Atomic,
-        Types::TypeConstructor,
-        Types::Bottom
+        Types::TypeConstructor
         >::variant;
     void dump(PrintStream&) const;
     String toString() const;
     unsigned size() const;
+    std::optional<unsigned> maybeSize() const;
     unsigned alignment() const;
     Packing packing() const;
     bool isConstructible() const;
@@ -299,7 +290,7 @@ struct Type : public std::variant<
     bool isTexture() const;
 };
 
-using ConversionRank = Markable<unsigned, IntegralMarkableTraits<unsigned, std::numeric_limits<unsigned>::max()>>;
+using ConversionRank = Markable<unsigned>;
 ConversionRank conversionRank(const Type* from, const Type* to);
 
 bool isPrimitive(const Type*, Types::Primitive::Kind);
@@ -310,7 +301,7 @@ const Type* shaderTypeForTexelFormat(TexelFormat, const TypeStore&);
 
 namespace WTF {
 
-template<> class StringTypeAdapter<WGSL::Type, void> {
+template<> class StringTypeAdapter<WGSL::Type> {
 public:
     StringTypeAdapter(const WGSL::Type& type)
         : m_string { type.toString() }

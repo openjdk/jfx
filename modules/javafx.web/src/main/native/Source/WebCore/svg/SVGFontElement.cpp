@@ -30,13 +30,14 @@
 #include "SVGHKernElement.h"
 #include "SVGMissingGlyphElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGVKernElement.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFontElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFontElement);
 
 inline SVGFontElement::SVGFontElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))

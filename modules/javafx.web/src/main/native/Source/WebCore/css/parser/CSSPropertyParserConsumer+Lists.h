@@ -31,14 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterSet(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeListStyleType(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeCounterSet(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

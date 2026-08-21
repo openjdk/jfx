@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterResults);
 
 FilterResults::FilterResults(std::unique_ptr<ImageBufferAllocator>&& allocator)
-    : m_allocator(allocator ? WTFMove(allocator) : makeUnique<ImageBufferAllocator>())
+    : m_allocator(allocator ? WTF::move(allocator) : makeUnique<ImageBufferAllocator>())
 {
 }
 
@@ -65,12 +65,12 @@ bool FilterResults::canCacheResult(const FilterImage& result) const
     return totalMemoryCost <= maxAllowedMemoryCost;
 }
 
-void FilterResults::setEffectResult(FilterEffect& effect, const FilterImageVector& inputs, Ref<FilterImage>&& result)
+void FilterResults::setEffectResult(FilterEffect& effect, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result)
 {
     if (!canCacheResult(result))
         return;
 
-    m_results.set({ effect }, WTFMove(result));
+    m_results.set({ effect }, WTF::move(result));
 
     for (auto& input : inputs)
         m_resultReferences.add(input, FilterEffectSet()).iterator->value.add(effect);

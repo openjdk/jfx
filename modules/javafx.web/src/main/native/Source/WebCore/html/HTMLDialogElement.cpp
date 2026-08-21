@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,9 @@
 #include "config.h"
 #include "HTMLDialogElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSSelector.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
@@ -35,11 +36,13 @@
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderBlock.h"
 #include "RenderElement.h"
 #include "ScopedEventQueue.h"
+#include "Settings.h"
 #include "ToggleEvent.h"
 #include "ToggleEventTask.h"
 #include "TypedElementDescendantIteratorInlines.h"
@@ -47,7 +50,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDialogElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDialogElement);
 
 using namespace HTMLNames;
 
@@ -75,13 +78,14 @@ ExceptionOr<void> HTMLDialogElement::show()
 
     queueDialogToggleEventTask(ToggleState::Closed, ToggleState::Open);
 
-    setBooleanAttribute(openAttr, true);
+    setAttributeWithoutSynchronization(openAttr, emptyAtom());
 
-    m_previouslyFocusedElement = document().focusedElement();
+    Ref document = this->document();
+    m_previouslyFocusedElement = document->focusedElement();
 
-    auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
+    RefPtr hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
 
-    document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    document->hideAllPopoversUntil(hideUntil.get(), FocusPreviousElement::No, FireEvents::No);
 
     runFocusingSteps();
 
@@ -104,7 +108,8 @@ ExceptionOr<void> HTMLDialogElement::showModal()
     if (isPopoverShowing())
         return Exception { ExceptionCode::InvalidStateError, "Element is already an open popover."_s };
 
-    if (!protectedDocument()->isFullyActive())
+    Ref document = this->document();
+    if (!document->isFullyActive())
         return Exception { ExceptionCode::InvalidStateError, "Invalid for dialogs within documents that are not fully active."_s };
 
     Ref event = ToggleEvent::create(eventNames().beforetoggleEvent, { EventInit { }, "closed"_s, "open"_s }, Event::IsCancelable::Yes);
@@ -123,27 +128,30 @@ ExceptionOr<void> HTMLDialogElement::showModal()
 
     queueDialogToggleEventTask(ToggleState::Closed, ToggleState::Open);
 
-    // setBooleanAttribute will dispatch a DOMSubtreeModified event.
+    // setAttributeWihoutSynchronization will dispatch a DOMSubtreeModified event.
     // Postpone callback execution that can potentially make the dialog disconnected.
     EventQueueScope scope;
-    setBooleanAttribute(openAttr, true);
+    setAttributeWithoutSynchronization(openAttr, emptyAtom());
 
     setIsModal(true);
 
-    auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
-    if (auto* renderer = this->renderer())
+    {
+        CheckedPtr<RenderBlock> containingBlockBeforeStyleResolution;
+        CheckedPtr renderer = this->renderer();
+        if (renderer)
         containingBlockBeforeStyleResolution = renderer->containingBlock();
 
     if (!isInTopLayer())
         addToTopLayer();
 
-    RenderElement::markRendererDirtyAfterTopLayerChange(this->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
+        RenderElement::markRendererDirtyAfterTopLayerChange(renderer.get(), containingBlockBeforeStyleResolution.get());
+    }
 
-    m_previouslyFocusedElement = document().focusedElement();
+    m_previouslyFocusedElement = document->focusedElement();
 
-    auto hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
+    RefPtr hideUntil = topmostPopoverAncestor(TopLayerElementType::Other);
 
-    document().hideAllPopoversUntil(hideUntil, FocusPreviousElement::No, FireEvents::No);
+    document->hideAllPopoversUntil(hideUntil.get(), FocusPreviousElement::No, FireEvents::No);
 
     runFocusingSteps();
 
@@ -163,7 +171,7 @@ void HTMLDialogElement::close(const String& result)
 
     queueDialogToggleEventTask(ToggleState::Open, ToggleState::Closed);
 
-    setBooleanAttribute(openAttr, false);
+    removeAttribute(openAttr);
 
     if (isModal())
         removeFromTopLayer();
@@ -195,10 +203,11 @@ void HTMLDialogElement::requestClose(const String& returnValue)
 
 bool HTMLDialogElement::isValidCommandType(const CommandType command)
 {
-    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close;
+    return HTMLElement::isValidCommandType(command) || command == CommandType::ShowModal || command == CommandType::Close
+        || command == CommandType::RequestClose;
 }
 
-bool HTMLDialogElement::handleCommandInternal(const HTMLButtonElement& invoker, const CommandType& command)
+bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const CommandType& command)
 {
     if (HTMLElement::handleCommandInternal(invoker, command))
         return true;
@@ -208,7 +217,13 @@ bool HTMLDialogElement::handleCommandInternal(const HTMLButtonElement& invoker, 
 
     if (isOpen()) {
         if (command == CommandType::Close) {
-            close(invoker.value().string());
+            String value = invoker.value().string();
+            close(value);
+            return true;
+        }
+        if (command == CommandType::RequestClose) {
+            String value = invoker.value().string();
+            requestClose(value);
             return true;
         }
     } else {
@@ -223,11 +238,14 @@ bool HTMLDialogElement::handleCommandInternal(const HTMLButtonElement& invoker, 
 
 void HTMLDialogElement::queueCancelTask()
 {
-    queueTaskKeepingThisNodeAlive(TaskSource::UserInteraction, [this] {
+    queueTaskKeepingThisNodeAlive(TaskSource::UserInteraction, [weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
         auto cancelEvent = Event::create(eventNames().cancelEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
-        dispatchEvent(cancelEvent);
+        protectedThis->dispatchEvent(cancelEvent);
         if (!cancelEvent->defaultPrevented())
-            close(nullString());
+            protectedThis->close(nullString());
     });
 }
 
@@ -243,22 +261,21 @@ void HTMLDialogElement::runFocusingSteps()
     if (!control)
         control = this;
 
-    RefPtr page = control->document().protectedPage();
+    Ref controlDocument = control->document();
+    RefPtr page = controlDocument->page();
     if (!page)
         return;
 
     if (control->isFocusable())
         control->runFocusingStepsForAutofocus();
     else if (m_isModal)
-        document().setFocusedElement(nullptr); // Focus fixup rule
+        protectedDocument()->setFocusedElement(nullptr); // Focus fixup rule
 
-    if (!control->document().isSameOriginAsTopDocument())
+    RefPtr topDocument = controlDocument->sameOriginTopLevelTraversable();
+    if (!topDocument)
         return;
 
-    if (RefPtr mainFrameDocument = control->document().mainFrameDocument())
-        mainFrameDocument->clearAutofocusCandidates();
-    else
-        LOG_ONCE(SiteIsolation, "Unable to fully perform HTMLDialogElement::runFocusingSteps() without access to the main frame document ");
+    topDocument->clearAutofocusCandidates();
     page->setAutofocusProcessed();
 }
 
@@ -271,6 +288,16 @@ void HTMLDialogElement::removedFromAncestor(RemovalType removalType, ContainerNo
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     setIsModal(false);
+}
+
+void HTMLDialogElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
+{
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+    if (name == openAttr) {
+        auto isOpen = !newValue.isNull();
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::Open, isOpen);
+        m_isOpen = isOpen;
+    }
 }
 
 void HTMLDialogElement::setIsModal(bool newValue)
@@ -286,7 +313,12 @@ void HTMLDialogElement::queueDialogToggleEventTask(ToggleState oldState, ToggleS
     if (!m_toggleEventTask)
         m_toggleEventTask = ToggleEventTask::create(*this);
 
-    m_toggleEventTask->queue(oldState, newState);
+    RefPtr { m_toggleEventTask }->queue(oldState, newState);
 }
 
-};
+bool HTMLDialogElement::isOpen() const
+{
+    return m_isOpen;
+}
+
+}

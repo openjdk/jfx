@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2013 Apple, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
+ * Copyright (C) 2013 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +27,16 @@
 #include "config.h"
 #include "HTMLParserScheduler.h"
 
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "ElementInlines.h"
 #include "HTMLDocumentParser.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "Page.h"
 #include "ScriptController.h"
 #include "ScriptElement.h"
 #include <wtf/TZoneMallocInlines.h>
+#include "FrameDestructionObserverInlines.h"
 
 namespace WebCore {
 
@@ -140,7 +141,7 @@ bool HTMLParserScheduler::shouldYieldBeforeExecutingScript(const ScriptElement* 
     if (!document->haveStylesheetsLoaded())
         return false;
 
-    if (UNLIKELY(m_documentHasActiveParserYieldTokens))
+    if (m_documentHasActiveParserYieldTokens) [[unlikely]]
         return true;
 
     // Yield if we have never painted and there is meaningful content

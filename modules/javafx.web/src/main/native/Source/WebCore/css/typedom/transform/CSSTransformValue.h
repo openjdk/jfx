@@ -34,12 +34,13 @@ namespace WebCore {
 class CSSTransformComponent;
 class CSSTransformListValue;
 class DOMMatrix;
+class Document;
 template<typename> class ExceptionOr;
 
 class CSSTransformValue final : public CSSStyleValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSTransformValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSTransformValue);
 public:
-    static ExceptionOr<Ref<CSSTransformValue>> create(Ref<const CSSTransformListValue>);
+    static ExceptionOr<Ref<CSSTransformValue>> create(Ref<const CSSTransformListValue>, Document&);
     static ExceptionOr<Ref<CSSTransformValue>> create(Vector<Ref<CSSTransformComponent>>&&);
 
     virtual ~CSSTransformValue();
@@ -53,7 +54,7 @@ public:
 
     ExceptionOr<Ref<DOMMatrix>> toMatrix();
 
-    CSSStyleValueType getType() const override { return CSSStyleValueType::CSSTransformValue; }
+    CSSStyleValueType styleValueType() const override { return CSSStyleValueType::CSSTransformValue; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -67,5 +68,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSTransformValue)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSTransformValue; }
+    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.styleValueType() == WebCore::CSSStyleValueType::CSSTransformValue; }
 SPECIALIZE_TYPE_TRAITS_END()

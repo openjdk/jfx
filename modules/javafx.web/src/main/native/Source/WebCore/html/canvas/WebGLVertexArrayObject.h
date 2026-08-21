@@ -39,13 +39,20 @@ class WebGL2RenderingContext;
 
 class WebGLVertexArrayObject final : public WebGLVertexArrayObjectBase {
 public:
-    static RefPtr<WebGLVertexArrayObject> create(WebGLRenderingContextBase&, Type);
+    static Ref<WebGLVertexArrayObject> createLost();
+    static Ref<WebGLVertexArrayObject> create(WebGLRenderingContextBase&, Type);
     virtual ~WebGLVertexArrayObject();
 private:
     WebGLVertexArrayObject(WebGLRenderingContextBase&, PlatformGLObject, Type);
+    WebGLVertexArrayObject();
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) final;
+    ArrayObjectType arrayObjectType() const final { return ArrayObjectType::Object; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGLVertexArrayObject)
+    static bool isType(const WebCore::WebGLVertexArrayObjectBase& objectBase) { return objectBase.arrayObjectType() == WebCore::WebGLVertexArrayObjectBase::ArrayObjectType::Object; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBGL)

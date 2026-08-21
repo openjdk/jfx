@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -22,17 +22,8 @@
 
 #pragma once
 
-#include "CachedResourceClient.h"
+#include <WebCore/CachedResourceClient.h>
 #include <wtf/CompletionHandler.h>
-
-namespace WebCore {
-class CachedRawResourceClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CachedRawResourceClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -48,7 +39,7 @@ public:
     CachedResourceClientType resourceClientType() const override { return expectedType(); }
 
     virtual void dataSent(CachedResource&, unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
-    virtual void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&& completionHandler)
+    virtual void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&& completionHandler)
     {
         if (completionHandler)
             completionHandler();
@@ -56,11 +47,11 @@ public:
 
     virtual bool shouldCacheResponse(CachedResource&, const ResourceResponse&) { return true; }
     virtual void dataReceived(CachedResource&, const SharedBuffer&) { }
-    virtual void redirectReceived(CachedResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
+    virtual void redirectReceived(CachedResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTF::move(request)); }
     virtual void finishedTimingForWorkerLoad(CachedResource&, const ResourceTiming&) { }
 
 #if USE(QUICK_LOOK)
-    virtual void previewResponseReceived(CachedResource&, const ResourceResponse&) { };
+    virtual void previewResponseReceived(const CachedResource&, const ResourceResponse&) { };
 #endif
 };
 

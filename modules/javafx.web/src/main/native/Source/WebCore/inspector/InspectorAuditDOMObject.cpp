@@ -28,6 +28,8 @@
 #include "InspectorAuditDOMObject.h"
 
 #include "Document.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Node.h"
 #include "UserGestureEmulationScope.h"
 #include "VoidCallback.h"
@@ -59,7 +61,7 @@ ExceptionOr<bool> InspectorAuditDOMObject::hasEventListeners(Node& node, const S
             eventTypes.append(type);
 
         for (AtomString& type : eventTypes) {
-            for (const RefPtr<RegisteredEventListener>& listener : node.eventListeners(type)) {
+            for (auto& listener : node.eventListeners(type)) {
                 if (listener->callback().type() == EventListener::JSEventListenerType)
                     return true;
             }
@@ -74,7 +76,7 @@ ExceptionOr<void> InspectorAuditDOMObject::simulateUserInteraction(Document& doc
     ERROR_IF_NO_ACTIVE_AUDIT();
 
     UserGestureEmulationScope userGestureScope(m_auditAgent.inspectedPage(), true, &document);
-    callback->handleEvent();
+    callback->invoke();
 
     return { };
 }

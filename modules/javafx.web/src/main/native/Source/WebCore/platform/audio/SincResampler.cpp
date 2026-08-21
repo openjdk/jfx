@@ -35,7 +35,7 @@
 #include "AudioBus.h"
 #include "AudioUtilities.h"
 #include "VectorMath.h"
-#include <wtf/Algorithms.h>
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -135,7 +135,7 @@ SincResampler::SincResampler(double scaleFactor, unsigned requestFrames, Functio
     : m_scaleFactor(scaleFactor)
     , m_kernelStorage(kernelStorageSize)
     , m_requestFrames(requestFrames)
-    , m_provideInput(WTFMove(provideInput))
+    , m_provideInput(WTF::move(provideInput))
     , m_inputBuffer(m_requestFrames + kernelSize) // See input buffer layout above.
     , m_r1(m_inputBuffer.span())
     , m_r2(m_inputBuffer.span().subspan(kernelSize / 2))
@@ -192,13 +192,13 @@ void SincResampler::initializeKernel()
 
         for (int i = 0; i < n; ++i) {
             // Compute the sinc() with offset.
-            double s = sincScaleFactor * piDouble * (i - halfSize - subsampleOffset);
+            double s = sincScaleFactor * std::numbers::pi * (i - halfSize - subsampleOffset);
             double sinc = !s ? 1.0 : sin(s) / s;
             sinc *= sincScaleFactor;
 
             // Compute Blackman window, matching the offset of the sinc().
             double x = (i - subsampleOffset) / n;
-            double window = a0 - a1 * cos(2.0 * piDouble * x) + a2 * cos(4.0 * piDouble * x);
+            double window = a0 - a1 * cos(2.0 * std::numbers::pi * x) + a2 * cos(4.0 * std::numbers::pi * x);
 
             // Window the sinc() function and store at the correct offset.
             m_kernelStorage[i + offsetIndex * kernelSize] = sinc * window;

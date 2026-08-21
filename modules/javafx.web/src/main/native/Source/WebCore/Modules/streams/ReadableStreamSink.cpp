@@ -28,6 +28,7 @@
 #include "ReadableStreamSink.h"
 
 #include "DOMException.h"
+#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "ReadableStream.h"
 #include "SharedBuffer.h"
@@ -36,7 +37,7 @@
 namespace WebCore {
 
 ReadableStreamToSharedBufferSink::ReadableStreamToSharedBufferSink(Callback&& callback)
-    : m_callback { WTFMove(callback) }
+    : m_callback { WTF::move(callback) }
 {
 }
 
@@ -71,7 +72,7 @@ void ReadableStreamToSharedBufferSink::error(String&& message)
         return;
 
     auto callback = std::exchange(m_callback, { });
-    callback(Exception { ExceptionCode::TypeError, WTFMove(message) });
+    callback(Exception { ExceptionCode::TypeError, WTF::move(message) });
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,15 @@
 #include "config.h"
 #include "ScriptedAnimationController.h"
 
+#include "DocumentPage.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
+#include "RenderObjectStyle.h"
 #include "RequestAnimationFrameCallback.h"
+#include "ScriptController.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include <wtf/SystemTracing.h>
@@ -111,7 +115,7 @@ ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCal
     RefPtr<ImminentlyScheduledWorkScope> workScope;
     if (RefPtr page = this->page())
         workScope = page->opportunisticTaskScheduler().makeScheduledWorkScope();
-    m_callbackDataList.append({ WTFMove(callback), UserGestureIndicator::currentUserGesture(), WTFMove(workScope) });
+    m_callbackDataList.append({ WTF::move(callback), UserGestureIndicator::currentUserGesture(), WTF::move(workScope) });
 
     if (RefPtr document = m_document.get())
         InspectorInstrumentation::didRequestAnimationFrame(*document, callbackId);
@@ -171,7 +175,7 @@ void ScriptedAnimationController::serviceRequestAnimationFrameCallbacks(ReducedR
 
         auto identifier = callback->m_id;
         InspectorInstrumentation::willFireAnimationFrame(document, identifier);
-        Ref { callback }->handleEvent(highResNowMs);
+        Ref { callback }->invoke(highResNowMs);
         InspectorInstrumentation::didFireAnimationFrame(document, identifier);
     }
 

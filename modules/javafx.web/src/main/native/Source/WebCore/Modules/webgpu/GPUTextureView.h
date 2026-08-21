@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ class GPUTextureView : public RefCountedAndCanMakeWeakPtr<GPUTextureView> {
 public:
     static Ref<GPUTextureView> create(Ref<WebGPU::TextureView>&& backing)
     {
-        return adoptRef(*new GPUTextureView(WTFMove(backing)));
+        return adoptRef(*new GPUTextureView(WTF::move(backing)));
     }
 
     String label() const;
@@ -48,11 +48,11 @@ public:
 
 private:
     GPUTextureView(Ref<WebGPU::TextureView>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::TextureView> m_backing;
+    const Ref<WebGPU::TextureView> m_backing;
 };
 
 }

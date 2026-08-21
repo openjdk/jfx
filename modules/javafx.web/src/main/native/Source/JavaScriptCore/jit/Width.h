@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CPU.h"
+#include <JavaScriptCore/CPU.h>
 
 #include <wtf/PrintStream.h>
 
@@ -43,6 +43,12 @@ static constexpr Width Width16 = Width::Width16;
 static constexpr Width Width32 = Width::Width32;
 static constexpr Width Width64 = Width::Width64;
 static constexpr Width Width128 = Width::Width128;
+
+#if USE(JSVALUE64)
+static constexpr Width WidthPtr = Width::Width64;
+#else
+static constexpr Width WidthPtr = Width::Width32;
+#endif
 
 enum class PreservedWidth : uint8_t {
     PreservesNothing = 0,

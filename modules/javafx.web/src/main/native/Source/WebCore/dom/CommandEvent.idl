@@ -24,7 +24,7 @@
  */
 
 [
-    EnabledBySetting=InvokerAttributesEnabled,
+    EnabledBySetting=CommandAttributesEnabled,
     Exposed=Window
 ] interface CommandEvent : Event {
     constructor([AtomString] DOMString type, optional CommandEventInit eventInitDict);
@@ -33,7 +33,9 @@
     readonly attribute DOMString command;
 };
 
-dictionary CommandEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CommandEventInit : EventInit {
     Element? source = null;
     DOMString command = "";
 };

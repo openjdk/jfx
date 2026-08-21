@@ -26,14 +26,19 @@
 #include "config.h"
 #include "Permissions.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DedicatedWorkerGlobalScope.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
 #include "Exception.h"
+#include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"
 #include "JSPermissionStatus.h"
 #include "LocalFrame.h"
+#include "Navigator.h"
 #include "NavigatorBase.h"
+#include "NavigatorGeolocation.h"
 #include "Page.h"
 #include "PermissionController.h"
 #include "PermissionDescriptor.h"
@@ -48,13 +53,42 @@
 #include "WorkerLoaderProxy.h"
 #include "WorkerThread.h"
 #include <optional>
+#include <wtf/Expected.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Permissions);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Permissions);
+
+#if ENABLE(GEOLOCATION)
+
+static std::optional<PermissionState> determineGeolocationPermissionState(PermissionState permissionState, const Document& document)
+{
+    RefPtr window = document.window();
+    if (!window)
+        return std::nullopt;
+
+    RefPtr geolocation = NavigatorGeolocation::optionalGeolocation(window->protectedNavigator());
+
+    switch (permissionState) {
+    case PermissionState::Granted:
+        return PermissionState::Granted;
+    case PermissionState::Denied:
+        if (!geolocation || !geolocation->hasBeenRequested())
+            return PermissionState::Prompt;
+        return PermissionState::Denied;
+    case PermissionState::Prompt:
+        if (!geolocation || !geolocation->hasBeenRequested())
+            return PermissionState::Prompt;
+        return geolocation->isAllowed() ? PermissionState::Granted : PermissionState::Denied;
+    };
+
+    return std::nullopt;
+}
+
+#endif // ENABLE(GEOLOCATION)
 
 Ref<Permissions> Permissions::create(NavigatorBase& navigator)
 {
@@ -71,7 +105,12 @@ NavigatorBase* Permissions::navigator()
     return m_navigator.get();
 }
 
-Permissions::~Permissions() = default;
+Permissions::~Permissions()
+{
+    auto queryPromises = std::exchange(m_queryPromises, { });
+    for (auto& promise : queryPromises.values())
+        promise->reject(ExceptionCode::AbortError, "Promise was rejected because the browsing context is going away"_s);
+}
 
 static bool isAllowedByPermissionsPolicy(const Document& document, PermissionName name)
 {
@@ -82,6 +121,8 @@ static bool isAllowedByPermissionsPolicy(const Document& document, PermissionNam
         return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Geolocation, document, PermissionsPolicy::ShouldReportViolation::No);
     case PermissionName::Microphone:
         return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No);
+    case PermissionName::StorageAccess:
+        return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::StorageAccess, document, PermissionsPolicy::ShouldReportViolation::No);
     default:
         return true;
     }
@@ -113,26 +154,50 @@ std::optional<PermissionName> Permissions::toPermissionName(const String& name)
         return PermissionName::Notifications;
     if (name == "push"_s)
         return PermissionName::Push;
+    if (name == "storage-access"_s)
+        return PermissionName::StorageAccess;
     return std::nullopt;
 }
 
-void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DOMPromiseDeferred<IDLInterface<PermissionStatus>>&& promise)
+static Expected<PermissionState, Exception> processPermissionQueryResult(std::optional<PermissionState> permissionState, const PermissionDescriptor& permissionDescriptor, const Document& document)
+{
+    if (!permissionState)
+        return makeUnexpected(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
+
+#if ENABLE(GEOLOCATION)
+    if (permissionDescriptor.name == PermissionName::Geolocation) {
+        if (auto geolocationPermissionState = determineGeolocationPermissionState(*permissionState, document))
+            permissionState = geolocationPermissionState;
+        else
+            return makeUnexpected(Exception { ExceptionCode::InvalidStateError, "The Document does not have a Geolocation object"_s });
+    }
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+    if (document.quirks().shouldEnableCameraAndMicrophonePermissionStateQuirk() && (permissionDescriptor.name == PermissionName::Camera || permissionDescriptor.name == PermissionName::Microphone) && *permissionState == PermissionState::Prompt)
+        permissionState = PermissionState::Granted;
+#endif
+
+    return *permissionState;
+}
+
+void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, Ref<DeferredPromise>&& promise)
 {
     RefPtr context = m_navigator ? m_navigator->scriptExecutionContext() : nullptr;
     if (!context || !context->globalObject()) {
-        promise.reject(Exception { ExceptionCode::InvalidStateError, "The context is invalid"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "The context is invalid"_s });
         return;
     }
 
     auto source = sourceFromContext(*context);
     if (!source) {
-        promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query is not supported in this context"_s  });
+        promise->reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query is not supported in this context"_s  });
         return;
     }
 
     RefPtr document = dynamicDowncast<Document>(*context);
     if (document && !document->isFullyActive()) {
-        promise.reject(Exception { ExceptionCode::InvalidStateError, "The document is not fully active"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "The document is not fully active"_s });
         return;
     }
 
@@ -140,8 +205,8 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto permissionDescriptorConversionResult = convert<IDLDictionary<PermissionDescriptor>>(*context->globalObject(), permissionDescriptorValue.get());
-    if (UNLIKELY(permissionDescriptorConversionResult.hasException(scope))) {
-        promise.reject(Exception { ExceptionCode::ExistingExceptionError });
+    if (permissionDescriptorConversionResult.hasException(scope)) [[unlikely]] {
+        promise->reject(Exception { ExceptionCode::ExistingExceptionError });
         return;
     }
 
@@ -150,57 +215,71 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     RefPtr origin = context->securityOrigin();
     auto originData = origin ? origin->data() : SecurityOriginData { };
 
-    if (document) {
-        WeakPtr page = document->page();
-        if (!page) {
-            promise.reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
-            return;
-        }
+    auto contextIdentifier = context->identifier();
 
-        if (!isAllowedByPermissionsPolicy(*document, permissionDescriptor.name)) {
-            promise.resolve(PermissionStatus::create(*context, PermissionState::Denied, permissionDescriptor, PermissionQuerySource::Window, *page));
-            return;
-        }
+    auto promiseIdentifier = PromiseIdentifier::generate();
+    m_queryPromises.add(promiseIdentifier, WTF::move(promise));
 
-        PermissionController::shared().query(ClientOrigin { document->topOrigin().data(), WTFMove(originData) }, permissionDescriptor, *page, *source, [document = Ref { *document }, page, permissionDescriptor, promise = WTFMove(promise)](auto permissionState) mutable {
-            if (!permissionState) {
-                promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
-                return;
-            }
+    auto queryPermissionOnMainThread = [originData = WTF::move(originData).isolatedCopy(), permissionDescriptor, contextIdentifier, source = *source, promiseIdentifier, weakThis = WeakPtr { *this }] (ScriptExecutionContext& mainThreadContext) mutable {
+        ASSERT(isMainThread());
 
-            promise.resolve(PermissionStatus::create(document, *permissionState, permissionDescriptor, PermissionQuerySource::Window, WTFMove(page)));
+        auto& document = downcast<Document>(mainThreadContext);
+        if (!document.page()) {
+            ScriptExecutionContext::ensureOnContextThread(contextIdentifier, [weakThis = WTF::move(weakThis), promiseIdentifier](auto&) mutable {
+                RefPtr protectedThis = weakThis;
+                if (!protectedThis)
+                    return;
+                if (RefPtr promise = protectedThis->m_queryPromises.take(promiseIdentifier))
+                    promise->reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
         });
         return;
     }
 
-    auto& workerGlobalScope = downcast<WorkerGlobalScope>(*context);
-    auto completionHandler = [originData = WTFMove(originData).isolatedCopy(), permissionDescriptor, contextIdentifier = workerGlobalScope.identifier(), source = *source, promise = WTFMove(promise)] (auto& context) mutable {
-        ASSERT(isMainThread());
-
-        auto& document = downcast<Document>(context);
-        if (!document.page()) {
-            ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise)](auto&) mutable {
-                promise.reject(Exception { ExceptionCode::InvalidStateError, "The page does not exist"_s });
+        if (source == PermissionQuerySource::Window && !isAllowedByPermissionsPolicy(document, permissionDescriptor.name)) {
+            ScriptExecutionContext::ensureOnContextThread(contextIdentifier, [weakThis = WTF::move(weakThis), promiseIdentifier, permissionDescriptor, page = WeakPtr { *document.page() }](auto& context) mutable {
+                RefPtr protectedThis = weakThis;
+                if (!protectedThis)
+                    return;
+                if (RefPtr promise = protectedThis->m_queryPromises.take(promiseIdentifier))
+                    promise->resolve<IDLInterface<PermissionStatus>>(PermissionStatus::create(context, PermissionState::Denied, permissionDescriptor, PermissionQuerySource::Window, WTF::move(page)));
             });
             return;
         }
 
-        auto page = source == PermissionQuerySource::DedicatedWorker ? WeakPtr { *document.page() } : nullptr;
+        auto page = source == PermissionQuerySource::DedicatedWorker || source == PermissionQuerySource::Window ? WeakPtr { *document.page() } : nullptr;
 
-        PermissionController::shared().query(ClientOrigin { document.topOrigin().data(), WTFMove(originData) }, permissionDescriptor, page, source, [contextIdentifier, permissionDescriptor, promise = WTFMove(promise), source, page](auto permissionState) mutable {
-            ScriptExecutionContext::postTaskTo(contextIdentifier, [promise = WTFMove(promise), permissionState, permissionDescriptor, source, page = WTFMove(page)](auto& context) mutable {
-            if (!permissionState) {
-                    promise.reject(Exception { ExceptionCode::NotSupportedError, "Permissions::query does not support this API"_s });
+        PermissionController::singleton().query(ClientOrigin { document.topOrigin().data(), WTF::move(originData) }, permissionDescriptor, page, source, [contextIdentifier, permissionDescriptor, weakThis = WTF::move(weakThis), promiseIdentifier, source, page, document = Ref { document }](auto permissionState) mutable {
+            ASSERT(isMainThread());
+
+            auto result = processPermissionQueryResult(permissionState, permissionDescriptor, document);
+            if (!result) {
+                ScriptExecutionContext::ensureOnContextThread(contextIdentifier, [weakThis = WTF::move(weakThis), promiseIdentifier, exception = result.error()](auto&) mutable {
+                    RefPtr protectedThis = weakThis;
+                    if (!protectedThis)
                 return;
-            }
+                    if (RefPtr promise = protectedThis->m_queryPromises.take(promiseIdentifier))
+                        promise->reject(WTF::move(exception));
+                    });
+                    return;
+                }
 
-                promise.resolve(PermissionStatus::create(context, *permissionState, permissionDescriptor, source, WTFMove(page)));
+            ScriptExecutionContext::ensureOnContextThread(contextIdentifier, [weakThis = WTF::move(weakThis), promiseIdentifier, permissionState = *result, permissionDescriptor, source, page = WTF::move(page)](auto& context) mutable {
+                RefPtr protectedThis = weakThis;
+                if (!protectedThis)
+                    return;
+                if (RefPtr promise = protectedThis->m_queryPromises.take(promiseIdentifier))
+                    promise->resolve<IDLInterface<PermissionStatus>>(PermissionStatus::create(context, permissionState, permissionDescriptor, source, WTF::move(page)));
         });
     });
     };
 
-    if (auto* workerLoaderProxy = workerGlobalScope.thread().workerLoaderProxy())
-        workerLoaderProxy->postTaskToLoader(WTFMove(completionHandler));
+    if (document)
+        queryPermissionOnMainThread(*document);
+    else {
+        Ref workerGlobalScope = downcast<WorkerGlobalScope>(*context);
+    if (CheckedPtr workerLoaderProxy = workerGlobalScope->thread()->workerLoaderProxy())
+            workerLoaderProxy->postTaskToLoader(WTF::move(queryPermissionOnMainThread));
+    }
 }
 
 } // namespace WebCore

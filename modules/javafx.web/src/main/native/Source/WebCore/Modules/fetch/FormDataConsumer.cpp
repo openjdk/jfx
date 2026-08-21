@@ -27,6 +27,7 @@
 #include "FormDataConsumer.h"
 
 #include "BlobLoader.h"
+#include "ExceptionOr.h"
 #include "FormData.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
@@ -38,7 +39,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FormDataConsumer);
 FormDataConsumer::FormDataConsumer(const FormData& formData, ScriptExecutionContext& context, Callback&& callback)
     : m_formData(formData.copy())
     , m_context(&context)
-    , m_callback(WTFMove(callback))
+    , m_callback(WTF::move(callback))
     , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"_s))
 {
 }
@@ -77,7 +78,7 @@ void FormDataConsumer::consumeFile(const String& filename)
 {
     m_isReadingFile = true;
     m_fileQueue->dispatch([weakThis = WeakPtr { *this }, identifier = m_context->identifier(), path = filename.isolatedCopy()]() mutable {
-        ScriptExecutionContext::postTaskTo(identifier, [weakThis = WTFMove(weakThis), content = FileSystem::readEntireFile(path)](auto&) {
+        ScriptExecutionContext::postTaskTo(identifier, [weakThis = WTF::move(weakThis), content = FileSystem::readEntireFile(path)](auto&) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis || !protectedThis->m_isReadingFile)
                 return;
@@ -95,7 +96,7 @@ void FormDataConsumer::consumeFile(const String& filename)
 
 void FormDataConsumer::consumeBlob(const URL& blobURL)
 {
-    m_blobLoader = makeUnique<BlobLoader>([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
+    m_blobLoader = BlobLoader::create([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -112,10 +113,11 @@ void FormDataConsumer::consumeBlob(const URL& blobURL)
         if (auto data = loader->arrayBufferResult())
             protectedThis->consume(data->span());
     });
-
-    m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
-
-    if (!m_blobLoader || !m_blobLoader->isLoading())
+    if (RefPtr blobLoader = m_blobLoader.get()) {
+        blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
+        if (blobLoader->isLoading())
+            return;
+    }
         didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data blob"_s });
 }
 
@@ -125,7 +127,7 @@ void FormDataConsumer::consume(std::span<const uint8_t> content)
         return;
 
     if (!content.empty()) {
-        bool result = m_callback(WTFMove(content));
+        bool result = m_callback(WTF::move(content));
         if (!result) {
             cancel();
             return;
@@ -143,7 +145,7 @@ void FormDataConsumer::didFail(Exception&& exception)
     auto callback = std::exchange(m_callback, nullptr);
     cancel();
     if (callback)
-        callback(WTFMove(exception));
+        callback(WTF::move(exception));
 }
 
 void FormDataConsumer::cancel()

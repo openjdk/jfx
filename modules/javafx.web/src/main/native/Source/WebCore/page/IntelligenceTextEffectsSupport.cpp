@@ -27,8 +27,9 @@
 #include "IntelligenceTextEffectsSupport.h"
 
 #include "CharacterRange.h"
-#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
+#include "DocumentMarkers.h"
+#include "DocumentView.h"
 #include "FloatRect.h"
 #include "RenderedDocumentMarker.h"
 #include "SimpleRange.h"
@@ -53,7 +54,7 @@ Vector<FloatRect> writingToolsTextSuggestionRectsInRootViewCoordinates(Document&
         auto markerRange = makeSimpleRange(node, marker);
 
         auto rect = document.view()->contentsToRootView(unionRect(RenderObject::absoluteTextRects(markerRange, { })));
-        textRectsInRootViewCoordinates.append(WTFMove(rect));
+        textRectsInRootViewCoordinates.append(WTF::move(rect));
 
         return false;
     });
@@ -75,7 +76,7 @@ void updateTextVisibility(Document& document, const SimpleRange& scope, const Ch
     }
 }
 
-std::optional<TextIndicatorData> textPreviewDataForRange(Document&, const SimpleRange& scope, const CharacterRange& range)
+RefPtr<TextIndicator> textPreviewDataForRange(Document&, const SimpleRange& scope, const CharacterRange& range)
 {
     auto resolvedRange = resolveCharacterRange(scope, range);
 
@@ -90,11 +91,7 @@ std::optional<TextIndicatorData> textPreviewDataForRange(Document&, const Simple
 #endif
     };
 
-    RefPtr textIndicator = WebCore::TextIndicator::createWithRange(resolvedRange, textIndicatorOptions, WebCore::TextIndicatorPresentationTransition::None, { });
-    if (!textIndicator)
-        return std::nullopt;
-
-    return textIndicator->data();
+    return WebCore::TextIndicator::createWithRange(resolvedRange, textIndicatorOptions, WebCore::TextIndicatorPresentationTransition::None, { });
 }
 
 #if ENABLE(WRITING_TOOLS)

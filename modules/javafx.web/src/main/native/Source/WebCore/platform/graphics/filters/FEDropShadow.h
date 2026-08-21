@@ -20,13 +20,13 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FilterEffect.h"
+#include <WebCore/Color.h>
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
 class FEDropShadow final : public FilterEffect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEDropShadow);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEDropShadow);
 public:
     WEBCORE_EXPORT static Ref<FEDropShadow> create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace = DestinationColorSpace::SRGB());
@@ -64,7 +64,7 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
 
     std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;

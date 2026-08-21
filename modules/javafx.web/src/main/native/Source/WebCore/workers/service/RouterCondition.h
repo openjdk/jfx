@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FetchRequestDestination.h"
-#include "FetchRequestMode.h"
-#include "RunningStatus.h"
-#include "URLPattern.h"
+#include <WebCore/FetchRequestDestination.h>
+#include <WebCore/FetchRequestMode.h>
+#include <WebCore/RunningStatus.h>
+#include <WebCore/URLPattern.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
@@ -36,19 +36,19 @@ namespace WebCore {
 
 struct RouterCondition;
 class RouterNotCondition {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RouterNotCondition);
 public:
     RouterNotCondition(RouterCondition&&);
 
     RouterCondition& value() & { return m_value.get(); }
-    RouterCondition&& value() && { return WTFMove(m_value.get()); }
+    RouterCondition&& value() && { return WTF::move(m_value.get()); }
 
 private:
     UniqueRef<RouterCondition> m_value;
 };
 
 struct RouterCondition {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(RouterCondition);
 
     std::optional<URLPattern::Compatible> urlPattern;
     String requestMethod;
@@ -62,7 +62,7 @@ struct RouterCondition {
 };
 
 inline RouterNotCondition::RouterNotCondition(RouterCondition&& value)
-    : m_value(makeUniqueRef<RouterCondition>(WTFMove(value)))
+    : m_value(makeUniqueRef<RouterCondition>(WTF::move(value)))
 {
 }
 

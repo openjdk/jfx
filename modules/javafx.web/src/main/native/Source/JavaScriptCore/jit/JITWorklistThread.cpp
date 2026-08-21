@@ -31,8 +31,11 @@
 #include "HeapInlines.h"
 #include "JITWorklist.h"
 #include "VM.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITWorklistThread);
 
 class JITWorklistThread::WorkScope final {
 public:
@@ -40,20 +43,30 @@ public:
         : m_thread(thread)
         , m_tier(thread.m_plan->tier())
     {
-        RELEASE_ASSERT(m_thread.m_plan);
-        RELEASE_ASSERT(m_thread.m_worklist.m_numberOfActiveThreads);
+        RELEASE_ASSERT(m_thread->m_plan);
     }
 
     ~WorkScope()
     {
-        Locker locker { *m_thread.m_worklist.m_lock };
-        m_thread.m_plan = nullptr;
-        m_thread.m_worklist.m_numberOfActiveThreads--;
-        m_thread.m_worklist.m_ongoingCompilationsPerTier[static_cast<unsigned>(m_tier)]--;
+        Locker locker { *m_thread->m_worklist.m_lock };
+        m_thread->m_plan = nullptr;
+        m_thread->m_worklist.m_ongoingCompilationsPerTier[static_cast<unsigned>(m_tier)]--;
+
+        ASSERT(m_thread->m_planLoad);
+        ASSERT(m_thread->m_worklist.m_totalLoad >= m_thread->m_planLoad);
+        m_thread->m_worklist.m_totalLoad -= m_thread->m_planLoad;
+        m_thread->m_planLoad = 0;
+
+        ASSERT(!m_thread->m_worklist.m_totalLoad ==
+            (!m_thread->m_worklist.queueLength(locker) && !m_thread->m_worklist.totalOngoingCompilations(locker)));
     }
 
 private:
-    JITWorklistThread& m_thread;
+#if USE(PROTECTED_JIT)
+    // Must be constructed before we allocate anything using SequesteredArenaMalloc
+    ArenaLifetime m_saLifetime { };
+#endif
+    CheckedRef<JITWorklistThread> m_thread;
     JITPlan::Tier m_tier;
 };
 
@@ -79,12 +92,11 @@ auto JITWorklistThread::poll(const AbstractLocker& locker) -> PollResult
         if (queue.isEmpty())
             continue;
 
-
         if (m_worklist.m_ongoingCompilationsPerTier[i] >= m_worklist.m_maximumNumberOfConcurrentCompilationsPerTier[i])
             continue;
 
         m_plan = queue.takeFirst();
-        if (UNLIKELY(!m_plan)) {
+        if (!m_plan) [[unlikely]] {
             if (Options::verboseCompilationQueue()) {
                 m_worklist.dump(locker, WTF::dataFile());
                 dataLog(": Thread shutting down\n");
@@ -93,11 +105,14 @@ auto JITWorklistThread::poll(const AbstractLocker& locker) -> PollResult
         }
 
         RELEASE_ASSERT(m_plan->stage() == JITPlanStage::Preparing);
-        m_worklist.m_numberOfActiveThreads++;
+        // Dequeuing this plan doesn't change the total load yet, but it will once the compilation finishes.
+        // If the plan is canceled during compilation, the codeBlock may no longer be alive, so remember the plan's load now.
+        m_planLoad = m_worklist.planLoad(*m_plan);
         m_worklist.m_ongoingCompilationsPerTier[i]++;
         return PollResult::Work;
     }
-
+    RELEASE_ASSERT(m_worklist.m_numberOfActiveThreads);
+    m_worklist.m_numberOfActiveThreads--;
     return PollResult::Wait;
 }
 
@@ -110,11 +125,8 @@ auto JITWorklistThread::work() -> WorkResult
         Locker locker { *m_worklist.m_lock };
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
-        m_state = State::Compiling;
         m_plan->notifyCompiling();
     }
-
-
     dataLogLnIf(Options::verboseCompilationQueue(), m_worklist, ": Compiling ", m_plan->key(), " asynchronously");
 
     // There's no way for the GC to be safepointing since we own rightToRun.
@@ -132,7 +144,6 @@ auto JITWorklistThread::work() -> WorkResult
 
     {
         Locker locker { *m_worklist.m_lock };
-        m_state = State::NotCompiling;
         if (m_plan->stage() == JITPlanStage::Canceled)
             return WorkResult::Continue;
 
@@ -144,7 +155,7 @@ auto JITWorklistThread::work() -> WorkResult
         }
 
         RELEASE_ASSERT(!m_plan->vm()->heap.worldIsStopped());
-        m_worklist.m_readyPlans.append(WTFMove(m_plan));
+        m_worklist.m_readyPlans.append(m_plan.releaseNonNull());
         m_worklist.m_planCompiledOrCancelled.notifyAll();
     }
 

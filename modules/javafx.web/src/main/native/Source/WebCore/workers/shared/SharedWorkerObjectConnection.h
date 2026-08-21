@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SharedWorkerObjectIdentifier.h"
-#include "TransferredMessagePort.h"
+#include <WebCore/SharedWorkerObjectIdentifier.h>
+#include <WebCore/TransferredMessagePort.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
@@ -56,12 +56,15 @@ protected:
     WEBCORE_EXPORT void fetchScriptInClient(URL&&, WebCore::SharedWorkerObjectIdentifier, WorkerOptions&&, CompletionHandler<void(WorkerFetchResult&&, WorkerInitializationData&&)>&&);
     WEBCORE_EXPORT void notifyWorkerObjectOfLoadCompletion(WebCore::SharedWorkerObjectIdentifier, const ResourceError&);
     WEBCORE_EXPORT void postErrorToWorkerObject(SharedWorkerObjectIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrorEvent);
-    WEBCORE_EXPORT void reportNetworkUsageToWorkerObject(SharedWorkerObjectIdentifier, size_t bytesTransferredOverNetworkDelta);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void reportNetworkUsageToWorkerObject(SharedWorkerObjectIdentifier, uint64_t bytesTransferredOverNetworkDelta);
+#endif
 
     WEBCORE_EXPORT SharedWorkerObjectConnection();
 
 private:
-    HashMap<uint64_t, UniqueRef<SharedWorkerScriptLoader>> m_loaders;
+    HashMap<uint64_t, Ref<SharedWorkerScriptLoader>> m_loaders;
 };
 
 } // namespace WebCore

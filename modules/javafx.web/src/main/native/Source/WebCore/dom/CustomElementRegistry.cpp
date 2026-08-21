@@ -28,7 +28,7 @@
 
 #include "CustomElementReactionQueue.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
 #include "ElementRareData.h"
 #include "ElementTraversal.h"
 #include "HTMLElementFactory.h"
@@ -37,7 +37,6 @@
 #include "LocalDOMWindow.h"
 #include "MathMLNames.h"
 #include "QualifiedName.h"
-#include "Quirks.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -82,7 +81,7 @@ void CustomElementRegistry::didAssociateWithDocument(Document& document)
 static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCustomElementInterface& elementInterface, CustomElementRegistry& registry)
 {
     for (RefPtr element = ElementTraversal::firstWithin(node); element; element = ElementTraversal::next(*element)) {
-        if (element->isCustomElementUpgradeCandidate() && element->treeScope().customElementRegistry() == &registry && element->tagQName().matches(elementInterface.name()))
+        if (element->isCustomElementUpgradeCandidate() && CustomElementRegistry::registryForElement(*element) == &registry && element->tagQName().matches(elementInterface.name()))
             element->enqueueToUpgrade(elementInterface);
         if (RefPtr shadowRoot = element->shadowRoot()) {
             if (shadowRoot->mode() != ShadowRootMode::UserAgent)
@@ -191,28 +190,49 @@ void CustomElementRegistry::upgrade(Node& root)
     upgradeElementsInShadowIncludingDescendants(*this, *containerNode);
 }
 
-void CustomElementRegistry::initialize(Node& root)
+ExceptionOr<void> CustomElementRegistry::initialize(Node& root)
 {
+    if (!isScoped() && (is<Document>(root) || this != root.document().customElementRegistry()))
+        return Exception { ExceptionCode::NotSupportedError };
+
     auto* containerRoot = dynamicDowncast<ContainerNode>(root);
     if (!containerRoot) {
         ASSERT(!root.usesNullCustomElementRegistry()); // Flag is only set on ShadowRoot and Element.
-        return;
+        return { };
     }
 
-    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(root); shadowRoot && shadowRoot->usesNullCustomElementRegistry()) {
+    if (RefPtr document = dynamicDowncast<Document>(*containerRoot); document && document->usesNullCustomElementRegistry()) {
+        document->clearUsesNullCustomElementRegistry();
+        document->setCustomElementRegistry(*this);
+    } else if (RefPtr shadowRoot = dynamicDowncast<ShadowRoot>(*containerRoot); shadowRoot && shadowRoot->usesNullCustomElementRegistry()) {
         ASSERT(shadowRoot->hasScopedCustomElementRegistry());
         shadowRoot->clearUsesNullCustomElementRegistry();
         shadowRoot->setCustomElementRegistry(*this);
-    }
+    } else if (auto* documentFragment = dynamicDowncast<DocumentFragment>(*containerRoot); documentFragment && documentFragment->usesNullCustomElementRegistry())
+        documentFragment->clearUsesNullCustomElementRegistry();
 
     RefPtr registryOfTreeScope = root.isInTreeScope() ? root.treeScope().customElementRegistry() : nullptr;
-    for (Ref element : descendantsOfType<Element>(*containerRoot)) {
-        if (element->usesNullCustomElementRegistry()) {
-            element->clearUsesNullCustomElementRegistry();
+    auto updateRegistryIfNeeded = [&](Element& element) {
+        if (!element.usesNullCustomElementRegistry())
+            return;
+        element.clearUsesNullCustomElementRegistry();
             if (this != registryOfTreeScope)
                 addToScopedCustomElementRegistryMap(element, *this);
-        }
+    };
+    auto upgradeElementIfPossible = [&](Element& element) {
+        if (element.isCustomElementUpgradeCandidate() && CustomElementRegistry::registryForElement(element) == this)
+            CustomElementReactionQueue::tryToUpgradeElement(element);
+    };
+
+    if (RefPtr element = dynamicDowncast<Element>(*containerRoot)) {
+        updateRegistryIfNeeded(*element);
+        upgradeElementIfPossible(*element);
     }
+    for (Ref element : descendantsOfType<Element>(*containerRoot)) {
+        updateRegistryIfNeeded(element);
+        upgradeElementIfPossible(element);
+    }
+    return { };
 }
 
 void CustomElementRegistry::addToScopedCustomElementRegistryMap(Element& element, CustomElementRegistry& registry)
@@ -221,7 +241,7 @@ void CustomElementRegistry::addToScopedCustomElementRegistryMap(Element& element
     if (element.usesScopedCustomElementRegistryMap())
         return;
     element.setUsesScopedCustomElementRegistryMap();
-    registry.didAssociateWithDocument(element.document());
+    registry.didAssociateWithDocument(element.protectedDocument().get());
     auto result = scopedCustomElementRegistryMap().add(element, registry);
     ASSERT_UNUSED(result, result.isNewEntry);
 }

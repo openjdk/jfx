@@ -87,7 +87,7 @@ public:
     bool isSpaceAll() const { return m_trim == TrimType::SpaceAll; }
     bool shouldTrimSpacing(const TextSpacing::CharactersData&) const;
     friend bool operator==(const TextSpacingTrim&, const TextSpacingTrim&) = default;
-    TrimType type() const { return m_trim; }
+    constexpr TrimType type() const { return m_trim; }
 private:
     TrimType m_trim { TrimType::SpaceAll };
 };
@@ -97,40 +97,41 @@ inline WTF::TextStream& operator<<(WTF::TextStream& ts, const TextSpacingTrim& v
     // FIXME: add remaining values;
     switch (value.type()) {
     case TextSpacingTrim::TrimType::Auto:
-        return ts << "auto";
+        return ts << "auto"_s;
     case TextSpacingTrim::TrimType::SpaceAll:
-        return ts << "space-all";
+        return ts << "space-all"_s;
     case TextSpacingTrim::TrimType::TrimAll:
-        return ts << "trim-all";
+        return ts << "trim-all"_s;
         }
     return ts;
-    }
+}
 
 class TextAutospace {
 public:
-        // The width cache is not really profitable unless we're doing expensive glyph transformations.
     enum class Type: uint8_t {
         Auto = 1 << 0,
         IdeographAlpha = 1 << 1,
         IdeographNumeric = 1 << 2,
         Normal = 1 << 3
-        // If we allow tabs and a tab occurs inside a word, the width of the word varies based on its position on the line.
     };
 
     using Options = OptionSet<Type>;
 
-    TextAutospace() = default;
-    TextAutospace(Options options)
+    constexpr TextAutospace() = default;
+    constexpr TextAutospace(Options options)
         : m_options(options)
-        { }
+    {
+    }
 
-    bool isAuto() const { return m_options.contains(Type::Auto); }
-    bool isNoAutospace() const { return m_options.isEmpty(); }
-    bool isNormal() const { return m_options.contains(Type::Normal); }
-    bool hasIdeographAlpha() const { return m_options.containsAny({ Type::IdeographAlpha, Type::Normal }); }
-    bool hasIdeographNumeric() const { return m_options.containsAny({ Type::IdeographNumeric, Type::Normal }); }
-    Options options() { return m_options; }
-    friend bool operator==(const TextAutospace&, const TextAutospace&) = default;
+    constexpr bool isAuto() const { return m_options.contains(Type::Auto); }
+    constexpr bool isNoAutospace() const { return m_options.isEmpty(); }
+    constexpr bool isNormal() const { return m_options.contains(Type::Normal); }
+    constexpr bool hasIdeographAlpha() const { return m_options.containsAny({ Type::IdeographAlpha, Type::Normal }); }
+    constexpr bool hasIdeographNumeric() const { return m_options.containsAny({ Type::IdeographNumeric, Type::Normal }); }
+    constexpr Options options() { return m_options; }
+
+    bool operator==(const TextAutospace&) const = default;
+
     bool shouldApplySpacing(TextSpacing::CharacterClass firstCharacterClass, TextSpacing::CharacterClass secondCharacterClass) const;
     bool shouldApplySpacing(char32_t firstCharacter, char32_t secondCharacter) const;
     static float textAutospaceSize(const Font&);
@@ -140,29 +141,20 @@ private:
 };
 
 inline WTF::TextStream& operator<<(WTF::TextStream& ts, const TextAutospace& value)
-    {
+{
     // FIXME: add remaining values;
-
     if (value.isAuto())
-            // The map use 0 for empty key, thus we do +1 here to avoid conflicting against empty key.
-            // This is fine since the key is uint32_t while character is UChar. So +1 never causes overflow.
-
-        // Cache hit: ramp up by sampling the next few words.
-        return ts << "auto";
+        return ts << "auto"_s;
     if (value.isNoAutospace())
-        return ts << "no-autospace";
-        // Cache miss: ramp down by increasing our sampling interval.
+        return ts << "no-autospace"_s;
     if (value.isNormal())
-
-        return ts << "normal";
+        return ts << "normal"_s;
     if (value.hasIdeographAlpha())
-        ts << "ideograph-alpha";
+        ts << "ideograph-alpha"_s;
     if (value.hasIdeographNumeric())
-        ts << "ideograph-numeric";
+        ts << "ideograph-numeric"_s;
     return ts;
-    }
-
-
+}
 
 
 } // namespace WebCore

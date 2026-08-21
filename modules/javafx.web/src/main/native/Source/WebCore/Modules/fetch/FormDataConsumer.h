@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <span>
 #include <wtf/Function.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -37,14 +36,16 @@
 namespace WebCore {
 
 class BlobLoader;
+class Exception;
 class FormData;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FormDataConsumer : public RefCountedAndCanMakeWeakPtr<FormDataConsumer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(FormDataConsumer, WEBCORE_EXPORT);
 public:
     using Callback = Function<bool(ExceptionOr<std::span<const uint8_t>>)>;
-    static Ref<FormDataConsumer> create(const FormData& formData, ScriptExecutionContext& context, Callback&& callback) { return adoptRef(*new FormDataConsumer(formData, context, WTFMove(callback))); }
+    static Ref<FormDataConsumer> create(const FormData& formData, ScriptExecutionContext& context, Callback&& callback) { return adoptRef(*new FormDataConsumer(formData, context, WTF::move(callback))); }
     WEBCORE_EXPORT ~FormDataConsumer();
 
     void start() { read(); }
@@ -64,13 +65,13 @@ private:
     void didFail(Exception&&);
     bool isCancelled() { return !m_context; }
 
-    Ref<FormData> m_formData;
+    const Ref<FormData> m_formData;
     RefPtr<ScriptExecutionContext> m_context;
     Callback m_callback;
 
     size_t m_currentElementIndex { 0 };
-    Ref<WorkQueue> m_fileQueue;
-    std::unique_ptr<BlobLoader> m_blobLoader;
+    const Ref<WorkQueue> m_fileQueue;
+    RefPtr<BlobLoader> m_blobLoader;
     bool m_isReadingFile { false };
 };
 

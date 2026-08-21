@@ -26,16 +26,20 @@
 
 #pragma once
 
+#include "DocumentPage.h"
 #include "FocusController.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
+#include "HTMLDetailsElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLOptionElement.h"
+#include "HTMLSelectElement.h"
 #include "InspectorInstrumentation.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "SelectorChecker.h"
 #include "Settings.h"
@@ -48,8 +52,12 @@
 #endif
 
 #if ENABLE(FULLSCREEN_API)
+#include "DocumentFullscreen.h"
 #include "DocumentOrShadowRootFullscreen.h"
-#include "FullscreenManager.h"
+#endif
+
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+#include "DocumentImmersive.h"
 #endif
 
 #if ENABLE(VIDEO)
@@ -411,24 +419,24 @@ ALWAYS_INLINE bool matchesFullscreenPseudoClass(const Element& element)
 
 ALWAYS_INLINE bool matchesAnimatingFullscreenTransitionPseudoClass(const Element& element)
 {
-    CheckedPtr fullscreenManager = element.document().fullscreenManagerIfExists();
-    if (!fullscreenManager || &element != fullscreenManager->fullscreenElement())
+    RefPtr documentFullscreen = element.document().fullscreenIfExists();
+    if (!documentFullscreen || &element != documentFullscreen->fullscreenElement())
         return false;
-    return fullscreenManager->isAnimatingFullscreen();
+    return documentFullscreen->isAnimatingFullscreen();
 }
 
 ALWAYS_INLINE bool matchesFullscreenDocumentPseudoClass(const Element& element)
 {
     // While a Document is in the fullscreen state, the 'full-screen-document' pseudoclass applies
     // to all elements of that Document.
-    CheckedPtr fullscreenManager = element.document().fullscreenManagerIfExists();
-    return fullscreenManager && fullscreenManager->fullscreenElement();
+    RefPtr documentFullscreen = element.document().fullscreenIfExists();
+    return documentFullscreen && documentFullscreen->fullscreenElement();
 }
 
 ALWAYS_INLINE bool matchesInWindowFullscreenPseudoClass(const Element& element)
 {
 #if ENABLE(VIDEO)
-    if (&element != element.document().fullscreenManager().fullscreenElement())
+    if (&element != element.document().fullscreen().fullscreenElement())
         return false;
 
     auto* mediaElement = dynamicDowncast<HTMLMediaElement>(element);
@@ -446,6 +454,16 @@ ALWAYS_INLINE bool matchesInWindowFullscreenPseudoClass(const Element& element)
 ALWAYS_INLINE bool matchesPictureInPicturePseudoClass(const Element& element)
 {
     return is<HTMLVideoElement>(element) && element.document().pictureInPictureElement() == &element;
+}
+
+#endif
+
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+
+ALWAYS_INLINE bool matchesImmersivePseudoClass(const Element& element)
+{
+    auto* modelElement = dynamicDowncast<HTMLModelElement>(element);
+    return modelElement && modelElement->immersive();
 }
 
 #endif
@@ -571,6 +589,20 @@ ALWAYS_INLINE bool matchesModalPseudoClass(const Element& element)
 ALWAYS_INLINE bool matchesPopoverOpenPseudoClass(const Element& element)
 {
     return element.isPopoverShowing();
+}
+
+ALWAYS_INLINE bool matchesOpenPseudoClass(const Element& element)
+{
+    if (auto* dialog = dynamicDowncast<HTMLDialogElement>(element))
+        return dialog->isOpen();
+    if (auto* details = dynamicDowncast<HTMLDetailsElement>(element))
+        return details->isOpen();
+    if (auto* select = dynamicDowncast<HTMLSelectElement>(element))
+        return select->isOpen();
+    if (auto* input = dynamicDowncast<HTMLInputElement>(element))
+        return input->isPresentingAttachedView();
+
+    return false;
 }
 
 ALWAYS_INLINE bool matchesUserInvalidPseudoClass(const Element& element)

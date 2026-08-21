@@ -37,7 +37,7 @@ namespace WTF::Persistence {
 template<typename> struct Coder;
 
 class Encoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Encoder);
 public:
     WTF_EXPORT_PRIVATE Encoder();
     WTF_EXPORT_PRIVATE ~Encoder();
@@ -45,14 +45,16 @@ public:
     WTF_EXPORT_PRIVATE void encodeChecksum();
     WTF_EXPORT_PRIVATE void encodeFixedLengthData(std::span<const uint8_t>);
 
-    template<typename T, std::enable_if_t<std::is_enum<T>::value>* = nullptr>
+    template<typename T>
+        requires (std::is_enum_v<T>)
     Encoder& operator<<(const T& t)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Enum type must not be larger than 64 bits.");
         return *this << static_cast<uint64_t>(t);
     }
 
-    template<typename T, std::enable_if_t<!std::is_enum<T>::value && !std::is_arithmetic<typename std::remove_const<T>>::value>* = nullptr>
+    template<typename T>
+        requires (!std::is_arithmetic_v<typename std::remove_const<T>> && !std::is_enum_v<T>)
     Encoder& operator<<(const T& t)
     {
         Coder<T>::encodeForPersistence(*this, t);
@@ -70,7 +72,9 @@ public:
     WTF_EXPORT_PRIVATE Encoder& operator<<(float);
     WTF_EXPORT_PRIVATE Encoder& operator<<(double);
 
-    const uint8_t* buffer() const LIFETIME_BOUND { return m_buffer.data(); }
+    // FIXME: Port call sites to span() and remove.
+    const uint8_t* buffer() const LIFETIME_BOUND { return m_buffer.span().data(); }
+
     size_t bufferSize() const { return m_buffer.size(); }
     std::span<const uint8_t> span() const LIFETIME_BOUND { return m_buffer.span(); }
 

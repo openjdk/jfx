@@ -34,9 +34,10 @@ namespace WebCore {
 
 class DOMPromise;
 struct PaymentRequestUpdateEventInit;
+template<typename> class ExceptionOr;
 
 class PaymentRequestUpdateEvent : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PaymentRequestUpdateEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PaymentRequestUpdateEvent);
 public:
     template <typename... Args> static Ref<PaymentRequestUpdateEvent> create(Args&&... args)
     {

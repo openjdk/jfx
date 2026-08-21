@@ -20,6 +20,7 @@
 #pragma once
 
 #include "SVGTextMetricsBuilder.h"
+#include "SVGTextPositioningElement.h"
 
 namespace WebCore {
 
@@ -27,7 +28,6 @@ class RenderBoxModelObject;
 class RenderObject;
 class RenderSVGInlineText;
 class RenderSVGText;
-class SVGTextPositioningElement;
 
 // SVGTextLayoutAttributesBuilder performs the first layout phase for SVG text.
 //
@@ -52,14 +52,14 @@ public:
 
 private:
     struct TextPosition {
-        TextPosition(SVGTextPositioningElement* newElement = 0, unsigned newStart = 0, unsigned newLength = 0)
+        TextPosition(SVGTextPositioningElement* newElement, unsigned newStart = 0, unsigned newLength = 0)
             : element(newElement)
             , start(newStart)
             , length(newLength)
         {
         }
 
-        SVGTextPositioningElement* element;
+        CheckedPtr<SVGTextPositioningElement> element;
         unsigned start;
         unsigned length;
     };

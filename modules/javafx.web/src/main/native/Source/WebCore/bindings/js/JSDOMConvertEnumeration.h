@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
-#include "JSDOMGlobalObject.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
+#include <WebCore/JSDOMGlobalObject.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -52,11 +52,11 @@ template<typename T> struct Converter<IDLEnumeration<T>> : DefaultConverter<IDLE
         auto result = parseEnumeration<T>(lexicalGlobalObject, value);
         RETURN_IF_EXCEPTION(throwScope, Result::exception());
 
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             exceptionThrower(lexicalGlobalObject, throwScope);
             return Result::exception();
         }
-        return Result { WTFMove(result.value()) };
+        return Result { WTF::move(result.value()) };
     }
 };
 

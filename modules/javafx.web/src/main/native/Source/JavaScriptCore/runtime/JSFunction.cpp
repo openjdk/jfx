@@ -70,11 +70,17 @@ Structure* JSFunction::selectStructureForNewFuncExp(JSGlobalObject* globalObject
 {
     ASSERT(!executable->isHostFunction());
     bool isBuiltin = executable->isBuiltinFunction();
+    // Arrow functions will never have a prototype, so no need to check
     if (executable->isArrowFunction())
         return globalObject->arrowFunctionStructure(isBuiltin);
-    if (executable->isInStrictContext())
+    if (executable->isInStrictContext()) {
+        if (executable->hasPrototypeProperty())
         return globalObject->strictFunctionStructure(isBuiltin);
+        return globalObject->strictMethodStructure(isBuiltin);
+    }
+    if (executable->hasPrototypeProperty())
     return globalObject->sloppyFunctionStructure(isBuiltin);
+    return globalObject->sloppyMethodStructure(isBuiltin);
 }
 
 JSFunction* JSFunction::create(VM& vm, JSGlobalObject* globalObject, FunctionExecutable* executable, JSScope* scope)
@@ -162,7 +168,7 @@ JSObject* JSFunction::prototypeForConstruction(VM& vm, JSGlobalObject* globalObj
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSValue prototype = get(globalObject, vm.propertyNames->prototype);
     scope.releaseAssertNoException();
-    if (LIKELY(prototype.isObject()))
+    if (prototype.isObject()) [[likely]]
         return asObject(prototype);
     if (isHostOrBuiltinFunction())
         return this->globalObject()->objectPrototype();
@@ -306,25 +312,7 @@ DEFINE_VISIT_CHILDREN(JSFunction);
 
 CallData JSFunction::getCallData(JSCell* cell)
 {
-    // Keep this function OK for invocation from concurrent compilers.
-    CallData callData;
-
-    JSFunction* thisObject = jsCast<JSFunction*>(cell);
-    if (thisObject->isHostFunction()) {
-        callData.type = CallData::Type::Native;
-        callData.native.function = thisObject->nativeFunction();
-        callData.native.isBoundFunction = thisObject->inherits<JSBoundFunction>();
-        callData.native.isWasm = false;
-#if ENABLE(WEBASSEMBLY)
-        callData.native.isWasm = thisObject->inherits<WebAssemblyFunction>();
-#endif
-    } else {
-        callData.type = CallData::Type::JS;
-        callData.js.functionExecutable = thisObject->jsExecutable();
-        callData.js.scope = thisObject->scope();
-    }
-
-    return callData;
+    return getCallDataInline(cell);
 }
 
 static constexpr unsigned prototypeAttributesForNonClass = PropertyAttribute::DontEnum | PropertyAttribute::DontDelete;
@@ -354,7 +342,8 @@ bool JSFunction::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObje
 
     JSFunction* thisObject = jsCast<JSFunction*>(object);
 
-    if (propertyName == vm.propertyNames->prototype && thisObject->mayHaveNonReifiedPrototype()) {
+    if (propertyName == vm.propertyNames->prototype) {
+        if (thisObject->mayHaveNonReifiedPrototype()) {
         unsigned attributes;
         PropertyOffset offset = thisObject->getDirectOffset(vm, propertyName, attributes);
         if (!isValidOffset(offset)) {
@@ -367,6 +356,7 @@ bool JSFunction::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObje
         slot.setValue(thisObject, attributes, thisObject->getDirect(offset), offset);
         return true;
     }
+    }
 
     thisObject->reifyLazyPropertyIfNeeded<JSFunction::SetHasModifiedLengthOrName::No>(vm, globalObject, propertyName);
     RETURN_IF_EXCEPTION(scope, false);
@@ -374,18 +364,43 @@ bool JSFunction::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObje
     RELEASE_AND_RETURN(scope, Base::getOwnPropertySlot(thisObject, globalObject, propertyName, slot));
 }
 
-void JSFunction::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSFunction::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     JSFunction* thisObject = jsCast<JSFunction*>(object);
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     if (mode == DontEnumPropertiesMode::Include) {
-        if (!thisObject->hasReifiedLength())
+        bool hasLength = thisObject->hasOwnProperty(globalObject, vm.propertyNames->length);
+        if (scope.exception()) [[unlikely]] {
+            hasLength = false;
+            scope.clearException();
+        }
+        if (!thisObject->hasReifiedLength() || hasLength)
             propertyNames.add(vm.propertyNames->length);
-        if (!thisObject->hasReifiedName())
+        bool hasName = thisObject->hasOwnProperty(globalObject, vm.propertyNames->name);
+        if (scope.exception()) [[unlikely]] {
+            hasName = false;
+            scope.clearException();
+        }
+        if (!thisObject->hasReifiedName() || hasName)
             propertyNames.add(vm.propertyNames->name);
         if (!thisObject->isHostOrBuiltinFunction() && thisObject->jsExecutable()->hasPrototypeProperty())
             propertyNames.add(vm.propertyNames->prototype);
+    } else if (mode == DontEnumPropertiesMode::Exclude) {
+        PropertyDescriptor descriptor;
+
+        thisObject->getOwnPropertyDescriptor(globalObject, vm.propertyNames->length, descriptor);
+        if (scope.exception()) [[unlikely]]
+            scope.clearException();
+        else if (descriptor.enumerable())
+            propertyNames.add(vm.propertyNames->length);
+
+        thisObject->getOwnPropertyDescriptor(globalObject, vm.propertyNames->name, descriptor);
+        if (scope.exception()) [[unlikely]]
+            scope.clearException();
+        else if (descriptor.enumerable())
+            propertyNames.add(vm.propertyNames->name);
     }
 }
 
@@ -404,7 +419,7 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
         if (!isValidOffset(thisObject->getDirectOffset(vm, propertyName))) {
             // For class constructors, prototype object is initialized from bytecode via defineOwnProperty().
             ASSERT(!thisObject->jsExecutable()->isClassConstructorFunction());
-            if (UNLIKELY(slot.thisValue() != thisObject))
+                if (slot.thisValue() != thisObject) [[unlikely]]
                 RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
             thisObject->putDirect(vm, propertyName, value, prototypeAttributesForNonClass);
             return true;
@@ -426,9 +441,10 @@ bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Prop
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFunction* thisObject = jsCast<JSFunction*>(cell);
 
-    thisObject->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
+    PropertyStatus propertyType = thisObject->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
     RETURN_IF_EXCEPTION(scope, false);
-
+    if (isLazy(propertyType))
+        slot.disableCaching();
     RELEASE_AND_RETURN(scope, Base::deleteProperty(thisObject, globalObject, propertyName, slot));
 }
 
@@ -466,32 +482,7 @@ bool JSFunction::defineOwnProperty(JSObject* object, JSGlobalObject* globalObjec
 // ECMA 13.2.2 [[Construct]]
 CallData JSFunction::getConstructData(JSCell* cell)
 {
-    // Keep this function OK for invocation from concurrent compilers.
-    CallData constructData;
-
-    JSFunction* thisObject = jsCast<JSFunction*>(cell);
-    if (thisObject->isHostFunction()) {
-        if (thisObject->inherits<JSBoundFunction>()) {
-            if (jsCast<JSBoundFunction*>(thisObject)->canConstruct()) {
-                constructData.type = CallData::Type::Native;
-                constructData.native.function = thisObject->nativeConstructor();
-                constructData.native.isBoundFunction = true;
-                constructData.native.isWasm = false;
-            }
-        } else if (thisObject->nativeConstructor() != callHostFunctionAsConstructor) {
-            constructData.type = CallData::Type::Native;
-            constructData.native.function = thisObject->nativeConstructor();
-        }
-    } else {
-        FunctionExecutable* functionExecutable = thisObject->jsExecutable();
-        if (functionExecutable->constructAbility() != ConstructAbility::CannotConstruct) {
-            constructData.type = CallData::Type::JS;
-            constructData.js.functionExecutable = functionExecutable;
-            constructData.js.scope = thisObject->scope();
-        }
-    }
-
-    return constructData;
+    return getConstructDataInline(cell);
 }
 
 String getCalculatedDisplayName(VM& vm, JSObject* object)
@@ -596,7 +587,7 @@ JSFunction::PropertyStatus JSFunction::reifyName(VM& vm, JSGlobalObject* globalO
     RETURN_IF_EXCEPTION(throwScope, PropertyStatus::Lazy);
 
     rareData->setHasReifiedName();
-    putDirect(vm, propID, jsString(vm, WTFMove(name)), initialAttributes);
+    putDirect(vm, propID, jsString(vm, WTF::move(name)), initialAttributes);
     return PropertyStatus::Reified;
 }
 

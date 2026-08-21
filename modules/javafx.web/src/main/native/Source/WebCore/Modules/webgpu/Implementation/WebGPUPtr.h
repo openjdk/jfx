@@ -51,14 +51,14 @@ struct WebGPUPtrTraits {
 template <typename T, void (*reference)(T), void(*release)(T)> struct BaseWebGPURefDerefTraits {
     static ALWAYS_INLINE T refIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             reference(t);
         return t;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             release(t);
     }
 };
@@ -75,6 +75,7 @@ template <> struct WebGPURefDerefTraits<WGPUComputePassEncoder> : public BaseWeb
 template <> struct WebGPURefDerefTraits<WGPUComputePipeline> : public BaseWebGPURefDerefTraits<WGPUComputePipeline, wgpuComputePipelineReference, wgpuComputePipelineRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUDevice> : public BaseWebGPURefDerefTraits<WGPUDevice, wgpuDeviceReference, wgpuDeviceRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUInstance> : public BaseWebGPURefDerefTraits<WGPUInstance, wgpuInstanceReference, wgpuInstanceRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUDDMesh> : public BaseWebGPURefDerefTraits<WGPUDDMesh, wgpuDDMeshReference, wgpuDDMeshRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUPipelineLayout> : public BaseWebGPURefDerefTraits<WGPUPipelineLayout, wgpuPipelineLayoutReference, wgpuPipelineLayoutRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUQuerySet> : public BaseWebGPURefDerefTraits<WGPUQuerySet, wgpuQuerySetReference, wgpuQuerySetRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUQueue> : public BaseWebGPURefDerefTraits<WGPUQueue, wgpuQueueReference, wgpuQueueRelease> { };

@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "Event.h"
-#include "ExtendableEventInit.h"
+#include <WebCore/Event.h>
+#include <WebCore/ExtendableEventInit.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DOMPromise;
+template<typename> class ExceptionOr;
 
 class ExtendableEvent : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ExtendableEvent);
+    WTF_MAKE_TZONE_ALLOCATED(ExtendableEvent);
 public:
     static Ref<ExtendableEvent> create(const AtomString& type, const ExtendableEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
@@ -48,16 +49,30 @@ public:
 
     WEBCORE_EXPORT void whenAllExtendLifetimePromisesAreSettled(Function<void(HashSet<Ref<DOMPromise>>&&)>&&);
 
+    virtual bool isBackgroundFetchEvent() const { return false; }
+
 protected:
     WEBCORE_EXPORT ExtendableEvent(enum EventInterfaceType, const AtomString&, const ExtendableEventInit&, IsTrusted);
     ExtendableEvent(enum EventInterfaceType, const AtomString&, CanBubble, IsCancelable);
 
     void addExtendLifetimePromise(Ref<DOMPromise>&&);
+    bool isWaiting() const { return m_isWaiting; }
 
 private:
     unsigned m_pendingPromiseCount { 0 };
     HashSet<Ref<DOMPromise>> m_extendLifetimePromises;
+    bool m_isWaiting { true };
     Function<void(HashSet<Ref<DOMPromise>>&&)> m_whenAllExtendLifetimePromisesAreSettledHandler;
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(ToValueTypeName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::ExtendableEvent& event) { return event.interfaceType() == WebCore::EventInterfaceType::ToValueTypeName; } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+#define SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT_POLYMORPHIC(ToValueTypeName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::ExtendableEvent& event) { return event.is##ToValueTypeName(); } \
+SPECIALIZE_TYPE_TRAITS_END()

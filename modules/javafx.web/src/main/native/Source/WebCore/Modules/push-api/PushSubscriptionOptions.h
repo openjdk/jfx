@@ -26,7 +26,6 @@
 #pragma once
 
 #include "EpochTimeStamp.h"
-#include "ExceptionOr.h"
 
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <optional>
@@ -35,8 +34,10 @@
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class PushSubscriptionOptions : public RefCounted<PushSubscriptionOptions> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushSubscriptionOptions);
+    WTF_MAKE_TZONE_ALLOCATED(PushSubscriptionOptions);
 public:
     template<typename... Args> static Ref<PushSubscriptionOptions> create(Args&&... args) { return adoptRef(*new PushSubscriptionOptions(std::forward<Args>(args)...)); }
     ~PushSubscriptionOptions();

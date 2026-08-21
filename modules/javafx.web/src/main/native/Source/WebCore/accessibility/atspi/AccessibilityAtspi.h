@@ -20,6 +20,7 @@
 #pragma once
 
 #if USE(ATSPI)
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
@@ -41,8 +42,8 @@ class AccessibilityRootAtspi;
 enum class AccessibilityRole : uint8_t;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
-class AccessibilityAtspi {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
+class AccessibilityAtspi : public CanMakeWeakPtr<AccessibilityAtspi> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityAtspi, AccessibilityAtspi);
     WTF_MAKE_NONCOPYABLE(AccessibilityAtspi);
     friend NeverDestroyed<AccessibilityAtspi>;
 public:
@@ -53,6 +54,7 @@ public:
     void deref() const { }
 
     void connect(const String&, const String&);
+    WEBCORE_EXPORT void disconnect();
 
     const char* uniqueName() const;
     GVariant* nullReference() const;
@@ -89,7 +91,7 @@ public:
     static const char* localizedRoleName(AccessibilityRole);
 
 #if ENABLE(DEVELOPER_MODE)
-    using NotificationObserverParameter = std::variant<std::nullptr_t, String, bool, unsigned, Ref<AccessibilityObjectAtspi>>;
+    using NotificationObserverParameter = Variant<std::nullptr_t, String, bool, unsigned, Ref<AccessibilityObjectAtspi>>;
     using NotificationObserver = Function<void(AccessibilityObjectAtspi&, const char*, NotificationObserverParameter)>;
     WEBCORE_EXPORT void addNotificationObserver(void*, NotificationObserver&&);
     WEBCORE_EXPORT void removeNotificationObserver(void*);
@@ -135,21 +137,22 @@ private:
 
     String m_busName;
     bool m_isConnecting { false };
+    unsigned m_nameOwnerId { 0 };
     GRefPtr<GDBusConnection> m_connection;
     GRefPtr<GDBusProxy> m_registry;
     Vector<PendingRootRegistration> m_pendingRootRegistrations;
-    UncheckedKeyHashMap<CString, Vector<GUniquePtr<char*>>> m_eventListeners;
-    UncheckedKeyHashMap<AccessibilityRootAtspi*, Vector<unsigned, 3>> m_rootObjects;
-    UncheckedKeyHashMap<AccessibilityObjectAtspi*, Vector<unsigned, 7>> m_atspiObjects;
-    UncheckedKeyHashMap<AccessibilityObjectAtspi*, Vector<unsigned, 1>> m_atspiHyperlinks;
-    UncheckedKeyHashMap<CString, unsigned> m_clients;
+    HashMap<CString, Vector<GUniquePtr<char*>>> m_eventListeners;
+    HashMap<AccessibilityRootAtspi*, Vector<unsigned, 3>> m_rootObjects;
+    HashMap<AccessibilityObjectAtspi*, Vector<unsigned, 7>> m_atspiObjects;
+    HashMap<AccessibilityObjectAtspi*, Vector<unsigned, 1>> m_atspiHyperlinks;
+    HashMap<CString, unsigned> m_clients;
     unsigned m_cacheID { 0 };
-    UncheckedKeyHashMap<String, AccessibilityObjectAtspi*> m_cache;
+    HashMap<String, AccessibilityObjectAtspi*> m_cache;
     ListHashSet<RefPtr<AccessibilityObjectAtspi>> m_cacheUpdateList;
     RunLoop::Timer m_cacheUpdateTimer;
     RunLoop::Timer m_cacheClearTimer;
 #if ENABLE(DEVELOPER_MODE)
-    UncheckedKeyHashMap<void*, NotificationObserver> m_notificationObservers;
+    HashMap<void*, NotificationObserver> m_notificationObservers;
 #endif
 };
 

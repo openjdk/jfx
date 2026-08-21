@@ -47,12 +47,10 @@ static RealtimeMediaSourceSupportedConstraints supportedRealtimeIncomingVideoSou
     return constraints;
 }
 
-RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
-    : RealtimeMediaSource(CaptureDevice { WTFMove(videoTrackId), CaptureDevice::DeviceType::Camera, "remote video"_s })
-    , m_videoTrack(WTFMove(videoTrack))
+RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(Ref<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
+    : RealtimeMediaSource(CaptureDevice { WTF::move(videoTrackId), CaptureDevice::DeviceType::Camera, "remote video"_s })
+    , m_videoTrack(WTF::move(videoTrack))
 {
-    ASSERT(m_videoTrack);
-
     m_currentSettings = RealtimeMediaSourceSettings { };
     m_currentSettings->setSupportedConstraints(supportedRealtimeIncomingVideoSourceSettingConstraints());
 
@@ -75,7 +73,10 @@ RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webr
 
 RealtimeIncomingVideoSource::~RealtimeIncomingVideoSource()
 {
-    stop();
+    // Subclasses must call stop() in their destructors to ensure the video
+    // track sink is removed BEFORE derived members are destroyed. Otherwise,
+    // the OnFrame callback may access destroyed members on the video thread.
+    ASSERT(!isProducingData());
     m_videoTrack->UnregisterObserver(this);
 }
 
@@ -88,7 +89,7 @@ void RealtimeIncomingVideoSource::enableFrameRatedMonitoring()
 
 void RealtimeIncomingVideoSource::startProducingData()
 {
-    m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
+    m_videoTrack->AddOrUpdateSink(this, webrtc::VideoSinkWants());
 }
 
 void RealtimeIncomingVideoSource::stopProducingData()
@@ -122,7 +123,7 @@ const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings()
     settings.setHeight(size.height());
     settings.setFrameRate(frameRate());
 
-    m_currentSettings = WTFMove(settings);
+    m_currentSettings = WTF::move(settings);
     return m_currentSettings.value();
 }
 

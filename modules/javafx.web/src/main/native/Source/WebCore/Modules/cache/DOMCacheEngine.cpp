@@ -32,6 +32,7 @@
 #include "Exception.h"
 #include "HTTPParsers.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -98,7 +99,7 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
     varyValue.split(',', [&](StringView view) {
         if (isVarying)
             return;
-        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<char16_t>);
         if (nameView == "*"_s) {
             isVarying = true;
             return;
@@ -160,9 +161,9 @@ CrossThreadRecord toCrossThreadRecord(Record&& record)
         record.identifier,
         record.updateResponseCounter,
         record.requestHeadersGuard,
-        WTFMove(record.request).isolatedCopy(),
-        WTFMove(record.options).isolatedCopy(),
-        WTFMove(record.referrer).isolatedCopy(),
+        WTF::move(record.request).isolatedCopy(),
+        WTF::move(record.options).isolatedCopy(),
+        WTF::move(record.referrer).isolatedCopy(),
         record.responseHeadersGuard,
         record.response.crossThreadData(),
         isolatedResponseBody(record.responseBody),
@@ -176,12 +177,12 @@ Record fromCrossThreadRecord(CrossThreadRecord&& record)
         record.identifier,
         record.updateResponseCounter,
         record.requestHeadersGuard,
-        WTFMove(record.request),
-        WTFMove(record.options),
-        WTFMove(record.referrer),
+        WTF::move(record.request),
+        WTF::move(record.options),
+        WTF::move(record.referrer),
         record.responseHeadersGuard,
-        ResourceResponse::fromCrossThreadData(WTFMove(record.response)),
-        WTFMove(record.responseBody),
+        ResourceResponse::fromCrossThreadData(WTF::move(record.response)),
+        WTF::move(record.responseBody),
         record.responseBodySize
     };
 }
@@ -192,11 +193,11 @@ CrossThreadRecord CrossThreadRecord::isolatedCopy() &&
         identifier,
         updateResponseCounter,
         requestHeadersGuard,
-        WTFMove(request).isolatedCopy(),
-        WTFMove(options).isolatedCopy(),
-        WTFMove(referrer).isolatedCopy(),
+        WTF::move(request).isolatedCopy(),
+        WTF::move(options).isolatedCopy(),
+        WTF::move(referrer).isolatedCopy(),
         responseHeadersGuard,
-        WTFMove(response).isolatedCopy(),
+        WTF::move(response).isolatedCopy(),
         isolatedResponseBody(responseBody),
         responseBodySize
     };

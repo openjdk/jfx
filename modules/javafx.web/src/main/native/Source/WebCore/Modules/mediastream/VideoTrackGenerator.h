@@ -26,7 +26,6 @@
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
-#include "ExceptionOr.h"
 #include "RealtimeMediaSource.h"
 #include "WritableStreamSink.h"
 #include <wtf/RefCounted.h>
@@ -36,9 +35,10 @@ namespace WebCore {
 class MediaStreamTrack;
 class ScriptExecutionContext;
 class WritableStream;
+template<typename> class ExceptionOr;
 
 class VideoTrackGenerator : public RefCounted<VideoTrackGenerator> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VideoTrackGenerator);
+    WTF_MAKE_TZONE_ALLOCATED(VideoTrackGenerator);
 public:
     static ExceptionOr<Ref<VideoTrackGenerator>> create(ScriptExecutionContext&);
     ~VideoTrackGenerator();
@@ -81,7 +81,7 @@ private:
 
     class Sink final : public WritableStreamSink {
     public:
-        static Ref<Sink> create(Ref<Source>&& source) { return adoptRef(*new Sink(WTFMove(source))); }
+        static Ref<Sink> create(Ref<Source>&& source) { return adoptRef(*new Sink(WTF::move(source))); }
 
         void setMuted(bool muted) { m_muted = muted; }
 
@@ -90,17 +90,17 @@ private:
 
         void write(ScriptExecutionContext&, JSC::JSValue, DOMPromiseDeferred<void>&&) final;
         void close() final;
-        void error(String&&) final;
+        void abort(JSC::JSValue) final;
 
         bool m_muted { false };
-        Ref<Source> m_source;
+        const Ref<Source> m_source;
     };
 
     bool m_muted { false };
     bool m_hasMutedChanged { false };
-    Ref<Sink> m_sink;
-    Ref<WritableStream> m_writable;
-    Ref<MediaStreamTrack> m_track;
+    const Ref<Sink> m_sink;
+    const Ref<WritableStream> m_writable;
+    const Ref<MediaStreamTrack> m_track;
 };
 
 } // namespace WebCore

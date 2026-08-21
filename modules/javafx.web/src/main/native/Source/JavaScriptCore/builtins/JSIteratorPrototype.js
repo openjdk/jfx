@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.map
+// https://tc39.es/ecma262/#sec-iterator.prototype.map
 function map(mapper)
 {
     "use strict";
@@ -33,8 +33,11 @@ function map(mapper)
         @throwTypeError("Iterator.prototype.map requires that |this| be an Object.");
 
     if (!@isCallable(mapper)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.map callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -57,7 +60,7 @@ function map(mapper)
     return @iteratorHelperCreate(generator, iterated);
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.filter
+// https://tc39.es/ecma262/#sec-iterator.prototype.filter
 function filter(predicate)
 {
     "use strict";
@@ -66,8 +69,11 @@ function filter(predicate)
         @throwTypeError("Iterator.prototype.filter requires that |this| be an Object.");
 
     if (!@isCallable(predicate)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.filter callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -90,7 +96,7 @@ function filter(predicate)
     return @iteratorHelperCreate(generator, iterated);
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.take
+// https://tc39.es/ecma262/#sec-iterator.prototype.take
 function take(limit)
 {
     "use strict";
@@ -101,14 +107,20 @@ function take(limit)
     var numLimit;
     @ifAbruptCloseIterator(this, numLimit = @toNumber(limit));
     if (numLimit !== numLimit) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwRangeError("Iterator.prototype.take argument must not be NaN.");
+    }
     }
 
     var intLimit = @toIntegerOrInfinity(numLimit);
     if (intLimit < 0) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwRangeError("Iterator.prototype.take argument must be non-negative.");
+    }
     }
 
     var iterated = this;
@@ -139,7 +151,7 @@ function take(limit)
     return @iteratorHelperCreate(generator, iterated);
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.drop
+// https://tc39.es/ecma262/#sec-iterator.prototype.drop
 function drop(limit)
 {
     "use strict";
@@ -150,14 +162,20 @@ function drop(limit)
     var numLimit;
     @ifAbruptCloseIterator(this, (numLimit = @toNumber(limit)));
     if (numLimit !== numLimit) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwRangeError("Iterator.prototype.drop argument must not be NaN.");
+    }
     }
 
     var intLimit = @toIntegerOrInfinity(numLimit);
     if (intLimit < 0) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwRangeError("Iterator.prototype.drop argument must be non-negative.");
+    }
     }
 
     var iterated = this;
@@ -185,7 +203,7 @@ function drop(limit)
     return @iteratorHelperCreate(generator, iterated);
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.flatmap
+// https://tc39.es/ecma262/#sec-iterator.prototype.flatmap
 function flatMap(mapper)
 {
     "use strict";
@@ -194,8 +212,11 @@ function flatMap(mapper)
         @throwTypeError("Iterator.prototype.flatMap requires that |this| be an Object.");
 
     if (!@isCallable(mapper)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.flatMap callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -203,7 +224,12 @@ function flatMap(mapper)
     var iteratedWrapper = {
         @@iterator: function() { return this; },
         next: function() { return iteratedNextMethod.@call(iterated); },
-        return: function() { return iterated.return(@undefined); },
+        return: function() {
+            var iteratedReturnMethod = iterated.return;
+            if (iteratedReturnMethod !== @undefined)
+                return iteratedReturnMethod.@call(iterated, @undefined);
+            return { done: true };
+        },
     };
 
     var generator = (function*() {
@@ -220,7 +246,7 @@ function flatMap(mapper)
     return @iteratorHelperCreate(generator, iterated);
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.some
+// https://tc39.es/ecma262/#sec-iterator.prototype.some
 function some(predicate)
 {
     "use strict";
@@ -229,8 +255,11 @@ function some(predicate)
         @throwTypeError("Iterator.prototype.some requires that |this| be an Object.");
 
     if (!@isCallable(predicate)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.some callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -244,7 +273,7 @@ function some(predicate)
     return false;
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.every
+// https://tc39.es/ecma262/#sec-iterator.prototype.every
 function every(predicate)
 {
     "use strict";
@@ -253,8 +282,11 @@ function every(predicate)
         @throwTypeError("Iterator.prototype.every requires that |this| be an Object.");
 
     if (!@isCallable(predicate)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.every callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -268,7 +300,7 @@ function every(predicate)
     return true;
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.find
+// https://tc39.es/ecma262/#sec-iterator.prototype.find
 function find(predicate)
 {
     "use strict";
@@ -277,8 +309,11 @@ function find(predicate)
         @throwTypeError("Iterator.prototype.find requires that |this| be an Object.");
 
     if (!@isCallable(predicate)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.find callback must be a function.");
+    }
     }
 
     var iterated = this;
@@ -292,7 +327,7 @@ function find(predicate)
     return @undefined;
 }
 
-// https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.reduce
+// https://tc39.es/ecma262/#sec-iterator.prototype.reduce
 function reduce(reducer /*, initialValue */)
 {
     "use strict";
@@ -301,25 +336,26 @@ function reduce(reducer /*, initialValue */)
         @throwTypeError("Iterator.prototype.reduce requires that |this| be an Object.");
 
     if (!@isCallable(reducer)) {
+        try {
         @iteratorGenericClose(this);
+        } finally {
         @throwTypeError("Iterator.prototype.reduce reducer argument must be a function.");
+    }
     }
 
     var iterated = this;
-    var initialValue = @argument(1);
-
     var iteratedNextMethod = this.next;
 
     var accumulator;
     var counter = 0;
-    if (initialValue === @undefined) {
+    if (@argumentCount() <= 1) {
         var result = @iteratorGenericNext(iteratedNextMethod, iterated);
         if (result.done)
             @throwTypeError("Iterator.prototype.reduce requires an initial value or an iterator that is not done.");
         accumulator = result.value;
         counter = 1;
     } else
-        accumulator = initialValue;
+        accumulator = @argument(1);
 
     for (;;) {
         var result = @iteratorGenericNext(iteratedNextMethod, iterated);
@@ -345,11 +381,11 @@ function chunks(chunkSize)
 
     var numChunkSize = @toNumber(chunkSize);
     if (numChunkSize !== numChunkSize)
-        @throwRangeError("Iterator.prototype.chunks requires that argument not be NaN.");
+        @throwRangeError("Iterator.prototype.chunks requires that first argument not be NaN.");
 
     var intChunkSize = @toIntegerOrInfinity(numChunkSize);
     if (intChunkSize < 1 || intChunkSize > @MAX_ARRAY_INDEX)
-        @throwRangeError("Iterator.prototype.chunks requires that argument be between 1 and 2**32 - 1.");
+        @throwRangeError("Iterator.prototype.chunks requires that first argument be between 1 and 2**32 - 1.");
 
     var iterated = this;
     var iteratedNextMethod = this.next;
@@ -381,7 +417,7 @@ function chunks(chunkSize)
 }
 
 // https://tc39.es/proposal-iterator-chunking/#sec-iterator.prototype.windows
-function windows(windowSize)
+function windows(windowSize /*, undersized */)
 {
     "use strict";
 
@@ -390,11 +426,15 @@ function windows(windowSize)
 
     var numWindowSize = @toNumber(windowSize);
     if (numWindowSize !== numWindowSize)
-        @throwRangeError("Iterator.prototype.windows requires that argument not be NaN.");
+        @throwRangeError("Iterator.prototype.windows requires that first argument not be NaN.");
 
     var intWindowSize = @toIntegerOrInfinity(numWindowSize);
     if (intWindowSize < 1 || intWindowSize > @MAX_ARRAY_INDEX)
-        @throwRangeError("Iterator.prototype.windows requires that argument be between 1 and 2**32 - 1.");
+        @throwRangeError("Iterator.prototype.windows requires that first argument be between 1 and 2**32 - 1.");
+
+    var undersized = @argument(1) ?? "only-full";
+    if (undersized !== "only-full" && undersized !== "allow-partial")
+        @throwTypeError("Iterator.prototype.windows requires that second argument be \"only-full\" or \"allow-partial\".");
 
     var iterated = this;
     var iteratedNextMethod = this.next;
@@ -404,8 +444,11 @@ function windows(windowSize)
 
         for (;;) {
             var result = @iteratorGenericNext(iteratedNextMethod, iterated);
-            if (result.done)
+            if (result.done) {
+                if (undersized === "allow-partial" && buffer.length && buffer.length < intWindowSize)
+                    yield buffer;
                 return;
+            }
 
             if (buffer.length === intWindowSize) {
                 for (var i = 0; i < buffer.length - 1; ++i)
@@ -427,4 +470,15 @@ function windows(windowSize)
     })();
 
     return @iteratorHelperCreate(generator, iterated);
+}
+
+// https://tc39.es/proposal-explicit-resource-management/#sec-%iteratorprototype%-object
+@overriddenName="[Symbol.dispose]"
+function dispose()
+{
+    "use strict";
+
+    var returnMethod = this.return;
+    if (returnMethod !== @undefined)
+        returnMethod.@call(this);
 }

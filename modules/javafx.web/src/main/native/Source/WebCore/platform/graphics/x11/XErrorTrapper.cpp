@@ -34,16 +34,16 @@
 
 namespace WebCore {
 
-static UncheckedKeyHashMap<Display*, Vector<XErrorTrapper*>>& xErrorTrappersMap()
+static HashMap<Display*, Vector<XErrorTrapper*>>& xErrorTrappersMap()
 {
-    static NeverDestroyed<UncheckedKeyHashMap<Display*, Vector<XErrorTrapper*>>> trappersMap;
+    static NeverDestroyed<HashMap<Display*, Vector<XErrorTrapper*>>> trappersMap;
     return trappersMap;
 }
 
 XErrorTrapper::XErrorTrapper(Display* display, Policy policy, Vector<unsigned char>&& expectedErrors)
     : m_display(display)
     , m_policy(policy)
-    , m_expectedErrors(WTFMove(expectedErrors))
+    , m_expectedErrors(WTF::move(expectedErrors))
 {
     xErrorTrappersMap().add(m_display, Vector<XErrorTrapper*>()).iterator->value.append(this);
     m_previousErrorHandler = XSetErrorHandler([](Display* display, XErrorEvent* event) -> int {

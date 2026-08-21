@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CallFrame.h"
 
 #include "CodeBlock.h"
+#include "DebuggerCallFrame.h"
 #include "ExecutableAllocator.h"
 #include "InlineCallFrame.h"
 #include "JSCInlines.h"
@@ -38,6 +39,7 @@
 #include "VMEntryScopeInlines.h"
 #include "WasmContext.h"
 #include <wtf/StringPrintStream.h>
+#include <wtf/URL.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -204,7 +206,7 @@ SourceOrigin CallFrame::callerSourceOrigin(VM& vm)
             // instead of the source origin of the forEach function.
             if (static_cast<FunctionExecutable*>(visitor->codeBlock()->ownerExecutable())->isBuiltinFunction())
                 return IterationStatus::Continue;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case StackVisitor::Frame::CodeType::Eval:
         case StackVisitor::Frame::CodeType::Module:
@@ -286,7 +288,7 @@ void CallFrame::dump(PrintStream& out) const
         switch (nativeCallee->category()) {
         case NativeCallee::Category::Wasm: {
 #if ENABLE(WEBASSEMBLY)
-            auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
+            auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(nativeCallee);
             out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", wasmCallee->compilationMode(), " ", RawPointer(callee().rawPtr()), "]");
             out.print("(JSWebAssemblyInstance: ", RawPointer(wasmInstance()), ")");
 #else
@@ -302,7 +304,7 @@ void CallFrame::dump(PrintStream& out) const
     }
 
     if (CodeBlock* codeBlock = this->codeBlock()) {
-        out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
+        out.print(codeBlock->inferredNameWithHash(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
 
         out.print("(");
         thisValue().dumpForBacktrace(out);
@@ -314,6 +316,25 @@ void CallFrame::dump(PrintStream& out) const
         }
 
         out.print(")");
+
+        String source = codeBlock->ownerExecutable()->sourceURL();
+        if (!source.isEmpty()) {
+            out.print(" at ");
+
+            URL url = URL(source);
+            if (url.hasPath())
+                out.print(url.lastPathComponent());
+            else
+                out.print(source);
+
+            VM& vm = deprecatedVM();
+
+            if (RefPtr<DebuggerCallFrame> currentDebuggerCallFrame = DebuggerCallFrame::create(vm, const_cast<CallFrame*>(this))) {
+                int lineNumber = currentDebuggerCallFrame->line() + 1;
+                int columnNumber = currentDebuggerCallFrame->column() + 1;
+                out.print(":", lineNumber, ":", columnNumber);
+            }
+        }
 
         return;
     }
@@ -340,7 +361,7 @@ const char* CallFrame::describeFrame()
     return buffer;
 }
 
-void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound)
+void CallFrame::convertToZombieFrame(VM& vm, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound)
 {
     ASSERT(!isEmptyTopLevelCallFrameForDebugger());
     ASSERT(codeBlockToKeepAliveUntilFrameIsUnwound->inherits<CodeBlock>());
@@ -356,10 +377,10 @@ void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAl
         globalObject = throwOriginFrame->jsCallee()->globalObject();
     else
         globalObject = vm.entryScope->globalObject();
-    JSObject* partiallyInitializedFrameCallee = globalObject->partiallyInitializedFrameCallee();
+    JSObject* zombieFrameCallee = globalObject->zombieFrameCallee();
 
     setCodeBlock(codeBlockToKeepAliveUntilFrameIsUnwound);
-    setCallee(partiallyInitializedFrameCallee);
+    setCallee(zombieFrameCallee);
     setArgumentCountIncludingThis(0);
 }
 

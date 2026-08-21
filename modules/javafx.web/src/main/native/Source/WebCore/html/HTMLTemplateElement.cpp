@@ -36,8 +36,11 @@
 #include "DocumentFragment.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
+#include "EventTargetInlines.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
+#include "SerializedNode.h"
 #include "ShadowRoot.h"
 #include "ShadowRootInit.h"
 #include "SlotAssignmentMode.h"
@@ -47,7 +50,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTemplateElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTemplateElement);
 
 using namespace HTMLNames;
 
@@ -83,8 +86,13 @@ DocumentFragment& HTMLTemplateElement::content() const
 {
     ASSERT(!m_declarativeShadowRoot);
     if (!m_content)
-        m_content = TemplateContentDocumentFragment::create(document().ensureTemplateDocument(), *this);
+        lazyInitialize(m_content, TemplateContentDocumentFragment::create(protectedDocument()->ensureProtectedTemplateDocument(), *this));
     return *m_content;
+}
+
+void HTMLTemplateElement::adoptDeserializedContent(Ref<TemplateContentDocumentFragment>&& content)
+{
+    lazyInitialize(m_content, WTF::move(content));
 }
 
 const AtomString& HTMLTemplateElement::shadowRootMode() const
@@ -100,21 +108,16 @@ const AtomString& HTMLTemplateElement::shadowRootMode() const
     return emptyAtom();
 }
 
-void HTMLTemplateElement::setShadowRootMode(const AtomString& value)
-{
-        setAttribute(HTMLNames::shadowrootmodeAttr, value);
-}
-
 void HTMLTemplateElement::setDeclarativeShadowRoot(ShadowRoot& shadowRoot)
 {
     m_declarativeShadowRoot = shadowRoot;
 }
 
-Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry)
+Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry) const
 {
     RefPtr<Node> clone;
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
         return cloneElementWithoutChildren(document, registry);
     case CloningOperation::SelfWithTemplateContent:
         clone = cloneElementWithoutChildren(document, registry);
@@ -126,9 +129,35 @@ Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOper
     if (m_content) {
         auto& templateElement = downcast<HTMLTemplateElement>(*clone);
         Ref fragment = templateElement.content();
-        content().cloneChildNodes(fragment->document(), nullptr, fragment);
+        m_content->cloneChildNodes(fragment->protectedDocument(), nullptr, fragment);
     }
     return clone.releaseNonNull();
+}
+
+SerializedNode HTMLTemplateElement::serializeNode(CloningOperation type) const
+{
+    Vector<SerializedNode> children;
+    switch (type) {
+    case CloningOperation::SelfOnly:
+    case CloningOperation::SelfWithTemplateContent:
+        break;
+    case CloningOperation::Everything:
+        children = serializeChildNodes();
+        break;
+    }
+
+    auto contentChildren = m_content && type != CloningOperation::SelfOnly
+        ? std::optional(SerializedNode::DocumentFragment { m_content->serializeChildNodes() })
+        : std::nullopt;
+
+    return { SerializedNode::HTMLTemplateElement {
+        SerializedNode::Element {
+            { WTF::move(children) },
+            { tagQName() },
+            serializeAttributes<SerializedNode::Element::Attribute>(),
+            serializeShadowRoot<SerializedNode::ShadowRoot>()
+        }, WTF::move(contentChildren)
+    } };
 }
 
 void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
@@ -137,7 +166,7 @@ void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& 
     if (!m_content)
         return;
     ASSERT_WITH_SECURITY_IMPLICATION(&document() == &newDocument);
-    m_content->setTreeScopeRecursively(newDocument.ensureTemplateDocument());
+    m_content->setTreeScopeRecursively(newDocument.ensureProtectedTemplateDocument());
 }
 
 } // namespace WebCore

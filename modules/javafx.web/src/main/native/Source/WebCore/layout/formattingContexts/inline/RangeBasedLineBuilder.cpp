@@ -27,26 +27,61 @@
 #include "RangeBasedLineBuilder.h"
 
 #include "InlineFormattingContext.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StyleComputedStyle+InitialInlines.h"
 
 namespace WebCore {
 namespace Layout {
 
-RangeBasedLineBuilder::RangeBasedLineBuilder(InlineFormattingContext& inlineFormattingContext, HorizontalConstraints rootHorizontalConstraints, const InlineItemList& inlineItemList)
-    : AbstractLineBuilder(inlineFormattingContext, inlineFormattingContext.root(), rootHorizontalConstraints, inlineItemList)
-    , m_textOnlySimpleLineBuilder(inlineFormattingContext, downcast<ElementBox>(inlineItemList[0].layoutBox()), rootHorizontalConstraints, inlineItemList)
+static inline bool hasInlineBoxesOnly(size_t inlineBoxCount, size_t numberOfInlineItems)
 {
+    return !(numberOfInlineItems % 2) && inlineBoxCount == numberOfInlineItems / 2;
 }
 
-LineLayoutResult RangeBasedLineBuilder::layoutInlineContent(const LineInput& lineInput, const std::optional<PreviousLine>& previousLine)
+RangeBasedLineBuilder::RangeBasedLineBuilder(InlineFormattingContext& inlineFormattingContext, HorizontalConstraints rootHorizontalConstraints, const InlineContentCache::InlineItems& inlineItems)
+    : AbstractLineBuilder(inlineFormattingContext, inlineFormattingContext.root(), rootHorizontalConstraints, inlineItems.content())
+    , m_textOnlySimpleLineBuilder(inlineFormattingContext, downcast<ElementBox>(inlineItems.content()[0].layoutBox()), rootHorizontalConstraints, inlineItems.content())
+    , m_inlineBoxCount(inlineItems.inlineBoxCount())
 {
+    ASSERT(m_inlineBoxCount);
+}
+
+LineLayoutResult RangeBasedLineBuilder::layoutInlineContent(const LineInput& lineInput, const std::optional<PreviousLine>& previousLine, bool isFirstFormattedLineCandidate)
+{
+    auto numberOfInlineItems = m_inlineItemList.size();
+    if (hasInlineBoxesOnly(m_inlineBoxCount, numberOfInlineItems)) {
+        Line::RunList inlineBoxRuns;
+        inlineBoxRuns.reserveCapacity(numberOfInlineItems);
+        for (auto& inlineItem : m_inlineItemList) {
+            ASSERT(inlineItem.isInlineBoxStartOrEnd());
+            inlineBoxRuns.append({ Line::Run(inlineItem, inlineItem.firstLineStyle(), { }) });
+        }
+
+        auto lineRect = lineInput.initialLogicalRect;
+        auto contentLeft = InlineFormattingUtils::horizontalAlignmentOffset(rootStyle(), { }, lineRect.width(), { }, true);
+        return LineLayoutResult { lineInput.needsLayoutRange
+            , WTF::move(inlineBoxRuns)
+            , { }
+            , { contentLeft, { }, contentLeft, std::max(0.f, contentLeft - lineRect.right()) }
+            , { lineRect.topLeft(), lineRect.width(), lineRect.left() }
+            , { }
+            , { }
+            , { isFirstFormattedLineCandidate ? IsFirstFormattedLine::Yes : IsFirstFormattedLine::No, { } }
+            , { }
+            , { LineLayoutResult::InlineContentEnding::Generic }
+            , m_inlineBoxCount
+            , { }
+            , { }
+            , { }
+        };
+    }
+
     // 1. Shrink the layout range that we can run text-only builder on (currently it's just the opening/closing inline box)
     // 2. Run text-only line builder
     // 3. Insert/append the missing inline box run
-    auto isFirstLine = !lineInput.needsLayoutRange.startIndex();
-
     auto adjustedNeedsLayoutRange = [&] {
         auto needsLayoutRange = lineInput.needsLayoutRange;
-        if (isFirstLine) {
+        if (isFirstFormattedLineCandidate) {
             ASSERT(m_inlineItemList.front().isInlineBoxStart());
             ASSERT(!needsLayoutRange.start.offset);
             // Skip leading InlineItemStart (e.g. <span>)
@@ -61,20 +96,20 @@ LineLayoutResult RangeBasedLineBuilder::layoutInlineContent(const LineInput& lin
     auto needsLayoutRange = adjustedNeedsLayoutRange();
     ASSERT(!needsLayoutRange.isEmpty());
 
-    auto lineLayoutResult = m_textOnlySimpleLineBuilder.layoutInlineContent({ needsLayoutRange, lineInput.initialLogicalRect }, previousLine);
+    auto lineLayoutResult = m_textOnlySimpleLineBuilder.layoutInlineContent({ needsLayoutRange, lineInput.initialLogicalRect }, previousLine, isFirstFormattedLineCandidate);
 
     auto insertLeadingInlineBoxRun = [&] {
         auto& leadingInlineItem = m_inlineItemList.front();
         ASSERT(leadingInlineItem.isInlineBoxStart());
 
-        if (isFirstLine) {
+        if (isFirstFormattedLineCandidate) {
             ASSERT(!previousLine);
-            lineLayoutResult.inlineContent.insert(0, { leadingInlineItem, leadingInlineItem.firstLineStyle(), { } });
+            lineLayoutResult.runs.insert(0, { leadingInlineItem, leadingInlineItem.firstLineStyle(), { } });
             lineLayoutResult.inlineItemRange.start = lineInput.needsLayoutRange.start;
             return;
         }
         // Subsequent lines need leading spanning inline box run.
-        lineLayoutResult.inlineContent.insert(0, { leadingInlineItem, { }, { } });
+        lineLayoutResult.runs.insert(0, { leadingInlineItem, { }, { } });
     };
     insertLeadingInlineBoxRun();
 
@@ -82,7 +117,7 @@ LineLayoutResult RangeBasedLineBuilder::layoutInlineContent(const LineInput& lin
         if (lineLayoutResult.inlineItemRange.end != needsLayoutRange.end)
             return;
         auto& trailingInlineItem = m_inlineItemList.back();
-        lineLayoutResult.inlineContent.append({ trailingInlineItem, isFirstLine ? trailingInlineItem.firstLineStyle() : trailingInlineItem.style(), lineLayoutResult.contentGeometry.logicalWidth });
+        lineLayoutResult.runs.append({ trailingInlineItem, isFirstFormattedLineCandidate ? trailingInlineItem.firstLineStyle() : trailingInlineItem.style(), lineLayoutResult.contentGeometry.logicalWidth });
         lineLayoutResult.inlineItemRange.end = lineInput.needsLayoutRange.end;
     };
     appendTrailingInlineBoxRunIfNeeded();
@@ -90,37 +125,60 @@ LineLayoutResult RangeBasedLineBuilder::layoutInlineContent(const LineInput& lin
     return lineLayoutResult;
 }
 
-bool RangeBasedLineBuilder::isEligibleForRangeInlineLayout(const InlineFormattingContext& inlineFormattingContext, const InlineContentCache::InlineItems& inlineItems, const PlacedFloats& placedFloats)
+bool RangeBasedLineBuilder::isEligibleForRangeInlineLayout(const InlineFormattingContext& inlineFormattingContext, InlineItemRange needsLayoutRange, const InlineContentCache::InlineItems& inlineItems, const PlacedFloats& placedFloats)
 {
     if (inlineItems.isEmpty())
         return false;
-    // Range based line builder only supports the following content <inline box>eligible for text only layout</inline box>
-    auto& inlineItemList = inlineItems.content();
-    auto isFullyNestedContent = inlineItems.inlineBoxCount() == 1 && inlineItemList.first().isInlineBoxStart() && inlineItemList.last().isInlineBoxEnd() && inlineItemList.size() > 2;
-    if (!isFullyNestedContent)
+
+    if (needsLayoutRange.start || needsLayoutRange.end.index != inlineItems.size())
         return false;
 
-    auto& inlineBox = inlineItemList.first().layoutBox();
-    auto& inlineBoxGeometry = inlineFormattingContext.geometryForBox(inlineBox);
-    if (inlineBoxGeometry.horizontalMarginBorderAndPadding()) {
+    // Range based line builder only supports the following content <inline box>eligible for text only layout</inline box>
+    auto& inlineItemList = inlineItems.content();
+    auto numberOfInlineItems = inlineItemList.size();
+    auto isEmptyContent = hasInlineBoxesOnly(inlineItems.inlineBoxCount(), numberOfInlineItems);
+    auto isFullyNestedContent = inlineItems.inlineBoxCount() == 1 && inlineItemList.first().isInlineBoxStart() && inlineItemList.last().isInlineBoxEnd() && numberOfInlineItems > 2;
+    if (!isEmptyContent && !isFullyNestedContent)
+        return false;
+
+    auto hasDecorationOrBreak = [&] {
+        for (auto& inlineItem : inlineItemList) {
+            if (!inlineItem.isInlineBoxStart())
+        return false;
+            auto& inlineBox = inlineItem.layoutBox();
+            if (inlineFormattingContext.geometryForBox(inlineBox).horizontalMarginBorderAndPadding())
+                return true;
+            if (inlineBox.style().boxDecorationBreak() != Style::ComputedStyle::initialBoxDecorationBreak())
+                return true;
+        }
+        ASSERT_NOT_REACHED();
+        return true;
+    };
+
+    if (hasDecorationOrBreak()) {
         // FIXME: Add start decoration support is just a matter of shrinking the available space for the first line (or on subsequent lines when decoration break is present)
         return false;
     }
-    if (inlineBox.style().boxDecorationBreak() != RenderStyle::initialBoxDecorationBreak())
-        return false;
 
     if (inlineFormattingContext.layoutState().parentBlockLayoutState().lineClamp())
         return false;
 
+    if (!isEmptyContent) {
     // Check the nested text content.
     if (!inlineItems.hasTextAndLineBreakOnlyContent() || inlineItems.requiresVisualReordering() || !placedFloats.isEmpty() || inlineItems.hasTextAutospace())
         return false;
 
-    if (!TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineFormattingContext.root().style()) || !TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineBox.style()))
+        auto& rootStyle = inlineFormattingContext.root().style();
+        auto& inlineBoxStyle = inlineItemList.first().layoutBox().style();
+        if (inlineBoxStyle.textAlign() != rootStyle.textAlign())
         return false;
+        if (!TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineFormattingContext.root()) || !TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(inlineItemList.first().layoutBox()))
+            return false;
+    }
 
     return true;
 }
 
 }
 }
+

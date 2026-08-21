@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2021-2025, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "InspectorStyleSheet.h"
 
 #include "CSSContainerRule.h"
+#include "CSSGroupingRule.h"
 #include "CSSImportRule.h"
 #include "CSSKeyframesRule.h"
 #include "CSSLayerBlockRule.h"
@@ -34,7 +35,6 @@
 #include "CSSMediaRule.h"
 #include "CSSParser.h"
 #include "CSSParserEnum.h"
-#include "CSSParserImpl.h"
 #include "CSSParserObserver.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
@@ -42,14 +42,17 @@
 #include "CSSRule.h"
 #include "CSSRuleList.h"
 #include "CSSSelectorParser.h"
+#include "CSSStyleProperties.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CSSSupportsRule.h"
 #include "CSSTokenizer.h"
 #include "ContentSecurityPolicy.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "Element.h"
 #include "ExtensionStyleSheets.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
@@ -57,6 +60,7 @@
 #include "InspectorCSSAgent.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorPageAgent.h"
+#include "InspectorResourceUtilities.h"
 #include "MediaList.h"
 #include "Node.h"
 #include "SVGElementTypeHelpers.h"
@@ -95,16 +99,15 @@ static RuleFlatteningStrategy flatteningStrategyForStyleRuleType(StyleRuleType s
     case StyleRuleType::Supports:
     case StyleRuleType::LayerBlock:
     case StyleRuleType::Container:
-    case StyleRuleType::StartingStyle:
-        // These rules MUST be handled by the static `isValidRuleHeaderText`, `protocolGroupingTypeForStyleRuleType`,
-        // and `asCSSRuleList` in order to provide functionality in Web Inspector. Additionally, they MUST have a CSSOM
-        // representation created in `StyleRuleBase::createCSSOMWrapper`, otherwise we will end up with a mismatched
-        // lists of source data and CSSOM wrappers.
-        return RuleFlatteningStrategy::CommitSelfThenChildren;
-
-    // FIXME: implement support for this and move this case up.
-    // https://bugs.webkit.org/show_bug.cgi?id=264496
     case StyleRuleType::Scope:
+    case StyleRuleType::StartingStyle:
+        // These rules MUST be handled by the following methods in order to provide functionality in
+        // and avoid mismatched lists of source data and CSSOM wrappers:
+        // - `isValidRuleHeaderText`
+        // - `protocolGroupingTypeForStyleRuleType`
+        // - `asCSSRuleList`
+        // - `InspectorCSSOMWrappers::collect` .
+        return RuleFlatteningStrategy::CommitSelfThenChildren;
 
     // FIXME (webkit.org/b/284176): support @position-try in Web Inspector.
     case StyleRuleType::PositionTry:
@@ -125,6 +128,8 @@ static RuleFlatteningStrategy flatteningStrategyForStyleRuleType(StyleRuleType s
     case StyleRuleType::Property:
     case StyleRuleType::ViewTransition:
     case StyleRuleType::NestedDeclarations:
+    case StyleRuleType::Function:
+    case StyleRuleType::FunctionDeclarations:
         // These rule types do not contain rules that apply directly to an element (i.e. these rules should not appear
         // in the Styles details sidebar of the Elements tab in Web Inspector).
         return RuleFlatteningStrategy::Ignore;
@@ -149,6 +154,10 @@ static ASCIILiteral atRuleIdentifierForType(StyleRuleType styleRuleType)
         return "@layer"_s;
     case StyleRuleType::Container:
         return "@container"_s;
+    case StyleRuleType::Scope:
+        return "@scope"_s;
+    case StyleRuleType::StartingStyle:
+        return "@starting-style"_s;
     default:
         ASSERT_NOT_REACHED();
         return ""_s;
@@ -164,13 +173,13 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
         // Make sure the engine can parse the provided `@` rule, even if it only uses unsupported features. As long as
         // the rule text is entirely consumed and it creates a rule of the expected type, we consider it valid because
         // we will be able to continue to edit the rule in the future.
-        CSSParserContext context(parserContextForDocument(document)); // CSSParserImpl holds a reference to this.
-        CSSParserImpl parser(context, makeString(atRuleIdentifier, ' ', headerText, " {}"_s));
+        CSSParserContext context(parserContextForDocument(document)); // CSSParser holds a reference to this.
+        CSSParser parser(context, makeString(atRuleIdentifier, ' ', headerText, " {}"_s));
         if (!parser.tokenizer())
             return false;
 
         auto tokenRange = parser.tokenizer()->tokenRange();
-        auto rule = parser.consumeAtRule(tokenRange, CSSParserImpl::AllowedRules::RegularRules);
+        auto rule = parser.consumeAtRule(tokenRange, CSSParser::AllowedRules::RegularRules);
 
         if (!rule)
             return false;
@@ -188,14 +197,14 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
     };
 
     switch (styleRuleType) {
-    case StyleRuleType::Style: {
-        CSSParser parser(parserContextForDocument(document));
-        return !!parser.parseSelectorList(headerText, nullptr, nestedContext);
-    }
+    case StyleRuleType::Style:
+        return !!CSSSelectorParser::parseSelectorList(headerText, parserContextForDocument(document), nullptr, nestedContext);
     case StyleRuleType::Media:
     case StyleRuleType::Supports:
     case StyleRuleType::LayerBlock:
     case StyleRuleType::Container:
+    case StyleRuleType::Scope:
+    case StyleRuleType::StartingStyle:
         return isValidAtRuleHeaderText(atRuleIdentifierForType(styleRuleType));
     default:
         return false;
@@ -215,6 +224,10 @@ static std::optional<Inspector::Protocol::CSS::Grouping::Type> protocolGroupingT
         return Inspector::Protocol::CSS::Grouping::Type::LayerRule;
     case StyleRuleType::Container:
         return Inspector::Protocol::CSS::Grouping::Type::ContainerRule;
+    case StyleRuleType::Scope:
+        return Inspector::Protocol::CSS::Grouping::Type::ScopeRule;
+    case StyleRuleType::StartingStyle:
+        return Inspector::Protocol::CSS::Grouping::Type::StartingStyleRule;
     default:
         return std::nullopt;
     }
@@ -313,7 +326,7 @@ private:
     void fixUnparsedPropertyRanges(CSSRuleSourceData*);
 
     const String& m_parsedText;
-    Document* m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
     RuleSourceDataList m_currentRuleDataStack;
     RefPtr<CSSRuleSourceData> m_currentRuleData;
@@ -329,7 +342,7 @@ void StyleSheetHandler::startRuleHeader(StyleRuleType type, unsigned offset)
     auto data = CSSRuleSourceData::create(type);
     data->ruleHeaderRange.start = offset;
     m_currentRuleData = data.copyRef();
-    m_currentRuleDataStack.append(WTFMove(data));
+    m_currentRuleDataStack.append(WTF::move(data));
 }
 
 template <typename CharacterType> inline void StyleSheetHandler::setRuleHeaderEnd(std::span<const CharacterType> data)
@@ -351,9 +364,9 @@ void StyleSheetHandler::endRuleHeader(unsigned offset)
     ASSERT(!m_currentRuleDataStack.isEmpty());
 
     if (m_parsedText.is8Bit())
-        setRuleHeaderEnd<LChar>(m_parsedText.span8().first(offset));
+        setRuleHeaderEnd<Latin1Character>(m_parsedText.span8().first(offset));
     else
-        setRuleHeaderEnd<UChar>(m_parsedText.span16().first(offset));
+        setRuleHeaderEnd<char16_t>(m_parsedText.span16().first(offset));
 }
 
 void StyleSheetHandler::observeSelector(unsigned startOffset, unsigned endOffset)
@@ -393,13 +406,13 @@ void StyleSheetHandler::endRuleBody(unsigned offset)
         std::swap(rule->styleSourceData, inferredStyleRule->styleSourceData);
 
         // Inferred style rules are always logically placed at the start of their parent rule.
-        rule->childRules.insert(0, WTFMove(inferredStyleRule));
+        rule->childRules.insert(0, WTF::move(inferredStyleRule));
     }
 
     if (m_currentRuleDataStack.isEmpty())
-        m_ruleSourceDataResult->append(WTFMove(rule));
+        m_ruleSourceDataResult->append(WTF::move(rule));
     else
-        m_currentRuleDataStack.last()->childRules.append(WTFMove(rule));
+        m_currentRuleDataStack.last()->childRules.append(WTF::move(rule));
 }
 
 void StyleSheetHandler::markRuleBodyContainsImplicitlyNestedProperties()
@@ -412,7 +425,7 @@ Ref<CSSRuleSourceData> StyleSheetHandler::popRuleData()
 {
     ASSERT(!m_currentRuleDataStack.isEmpty());
     m_currentRuleData = nullptr;
-    auto data = WTFMove(m_currentRuleDataStack.last());
+    auto data = WTF::move(m_currentRuleDataStack.last());
     m_currentRuleDataStack.removeLast();
     return data;
 }
@@ -473,11 +486,11 @@ void StyleSheetHandler::fixUnparsedPropertyRanges(CSSRuleSourceData* ruleData)
         return;
 
     if (m_parsedText.is8Bit()) {
-        fixUnparsedProperties<LChar>(m_parsedText.span8(), ruleData);
+        fixUnparsedProperties<Latin1Character>(m_parsedText.span8(), ruleData);
         return;
     }
 
-    fixUnparsedProperties<UChar>(m_parsedText.span16(), ruleData);
+    fixUnparsedProperties<char16_t>(m_parsedText.span16(), ruleData);
 }
 
 void StyleSheetHandler::observeProperty(unsigned startOffset, unsigned endOffset, bool isImportant, bool isParsed)
@@ -533,8 +546,8 @@ void StyleSheetHandler::observeComment(unsigned startOffset, unsigned endOffset)
     // FIXME: Use the actual rule type rather than STYLE_RULE?
     RuleSourceDataList sourceData;
 
-    StyleSheetHandler handler(commentText, m_document, &sourceData);
-    CSSParser::parseDeclarationForInspector(parserContextForDocument(m_document), commentText, handler);
+    StyleSheetHandler handler(commentText, m_document.get(), &sourceData);
+    CSSParser::parseDeclarationListForInspector(commentText, parserContextForDocument(m_document.get()), handler);
     Vector<CSSPropertySourceData>& commentPropertyData = sourceData.first()->styleSourceData->propertyData;
     if (commentPropertyData.size() != 1)
         return;
@@ -662,7 +675,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>> InspectorStyleSheet::buil
                 layerRulePayload->setText(layerName);
                     if (!sourceURL.isEmpty())
                         layerRulePayload->setSourceURL(sourceURL);
-                    groupingsPayload->addItem(WTFMove(layerRulePayload));
+                    groupingsPayload->addItem(WTF::move(layerRulePayload));
             }
 
                 if (auto& media = importRule->media(); media.length() && media.mediaText() != "all"_s) {
@@ -672,7 +685,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>> InspectorStyleSheet::buil
                 mediaRulePayload->setText(media.mediaText());
                 if (!sourceURL.isEmpty())
                         mediaRulePayload->setSourceURL(sourceURL);
-                    groupingsPayload->addItem(WTFMove(mediaRulePayload));
+                    groupingsPayload->addItem(WTF::move(mediaRulePayload));
                 }
             }
         }
@@ -700,7 +713,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>> InspectorStyleSheet::buil
                 if (!sourceURL.isEmpty())
                     sheetGroupingPayload->setSourceURL(sourceURL);
 
-                groupingsPayload->addItem(WTFMove(sheetGroupingPayload));
+                groupingsPayload->addItem(WTF::move(sheetGroupingPayload));
             }
 
             parentRule = styleSheet->ownerRule();
@@ -716,12 +729,12 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>> InspectorStyleSheet::buil
 
 Ref<InspectorStyle> InspectorStyle::create(const InspectorCSSId& styleId, Ref<CSSStyleDeclaration>&& style, InspectorStyleSheet* parentStyleSheet)
 {
-    return adoptRef(*new InspectorStyle(styleId, WTFMove(style), parentStyleSheet));
+    return adoptRef(*new InspectorStyle(styleId, WTF::move(style), parentStyleSheet));
 }
 
 InspectorStyle::InspectorStyle(const InspectorCSSId& styleId, Ref<CSSStyleDeclaration>&& style, InspectorStyleSheet* parentStyleSheet)
     : m_styleId(styleId)
-    , m_style(WTFMove(style))
+    , m_style(WTF::move(style))
     , m_parentStyleSheet(parentStyleSheet)
 {
 }
@@ -754,7 +767,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> Inspector
             .setName(propertyEntry.name)
             .setValue(propertyEntry.value)
             .release();
-        result->addItem(WTFMove(entry));
+        result->addItem(WTF::move(entry));
     }
     return result;
 }
@@ -833,7 +846,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
 
     auto propertiesObject = JSON::ArrayOf<Inspector::Protocol::CSS::CSSProperty>::create();
     auto shorthandEntries = ArrayOf<Inspector::Protocol::CSS::ShorthandEntry>::create();
-    HashMap<String, RefPtr<Inspector::Protocol::CSS::CSSProperty>> propertyNameToPreviousActiveProperty;
+    HashMap<String, Ref<Inspector::Protocol::CSS::CSSProperty>> propertyNameToPreviousActiveProperty;
     HashSet<String> foundShorthands;
     String previousPriority;
     String previousStatus;
@@ -891,7 +904,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
 
                 // Canonicalize property names to treat non-prefixed and vendor-prefixed property names the same (opacity vs. -webkit-opacity).
                 String canonicalPropertyName = propertyId != CSSPropertyID::CSSPropertyInvalid && propertyId != CSSPropertyID::CSSPropertyCustom ? nameString(propertyId) : name;
-                HashMap<String, RefPtr<Inspector::Protocol::CSS::CSSProperty>>::iterator activeIt = propertyNameToPreviousActiveProperty.find(canonicalPropertyName);
+                auto activeIt = propertyNameToPreviousActiveProperty.find(canonicalPropertyName);
                 if (activeIt != propertyNameToPreviousActiveProperty.end()) {
                     if (propertyEntry.parsedOk) {
                         auto newPriority = activeIt->value->getString("priority"_s);
@@ -937,7 +950,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
                             .setName(shorthand)
                             .setValue(shorthandValue(shorthand))
                             .release();
-                        shorthandEntries->addItem(WTFMove(entry));
+                        shorthandEntries->addItem(WTF::move(entry));
                     }
                 }
             }
@@ -949,8 +962,8 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties()
     }
 
     return Inspector::Protocol::CSS::CSSStyle::create()
-        .setCssProperties(WTFMove(propertiesObject))
-        .setShorthandEntries(WTFMove(shorthandEntries))
+        .setCssProperties(WTF::move(propertiesObject))
+        .setShorthandEntries(WTF::move(shorthandEntries))
         .release();
 }
 
@@ -1015,7 +1028,7 @@ Vector<String> InspectorStyle::longhandProperties(const String& shorthandPropert
 
 Ref<InspectorStyleSheet> InspectorStyleSheet::create(InspectorPageAgent* pageAgent, const String& id, RefPtr<CSSStyleSheet>&& pageStyleSheet, Inspector::Protocol::CSS::StyleSheetOrigin origin, const String& documentURL, Listener* listener)
 {
-    return adoptRef(*new InspectorStyleSheet(pageAgent, id, WTFMove(pageStyleSheet), origin, documentURL, listener));
+    return adoptRef(*new InspectorStyleSheet(pageAgent, id, WTF::move(pageStyleSheet), origin, documentURL, listener));
 }
 
 String InspectorStyleSheet::styleSheetURL(CSSStyleSheet* pageStyleSheet)
@@ -1028,7 +1041,7 @@ String InspectorStyleSheet::styleSheetURL(CSSStyleSheet* pageStyleSheet)
 InspectorStyleSheet::InspectorStyleSheet(InspectorPageAgent* pageAgent, const String& id, RefPtr<CSSStyleSheet>&& pageStyleSheet, Inspector::Protocol::CSS::StyleSheetOrigin origin, const String& documentURL, Listener* listener)
     : m_pageAgent(pageAgent)
     , m_id(id)
-    , m_pageStyleSheet(WTFMove(pageStyleSheet))
+    , m_pageStyleSheet(WTF::move(pageStyleSheet))
     , m_origin(origin)
     , m_documentURL(documentURL)
     , m_listener(listener)
@@ -1289,7 +1302,7 @@ static Ref<Inspector::Protocol::CSS::CSSSelector> buildObjectForSelectorHelper(c
     tuple->addItem(specificity[0]);
     tuple->addItem(specificity[1]);
     tuple->addItem(specificity[2]);
-    inspectorSelector->setSpecificity(WTFMove(tuple));
+    inspectorSelector->setSpecificity(WTF::move(tuple));
 
     return inspectorSelector;
 }
@@ -1362,8 +1375,8 @@ Vector<const CSSSelector*> InspectorStyleSheet::selectorsForCSSStyleRule(CSSStyl
 
     Vector<const CSSSelector*> selectors;
     for (auto& rule : cssStyleRulesSplitFromSameRule(rule)) {
-        for (const CSSSelector* selector = rule->styleRule().selectorList().first(); selector; selector = CSSSelectorList::next(selector))
-            selectors.append(selector);
+        for (auto& selector : rule->styleRule().selectorList())
+            selectors.append(&selector);
     }
     return selectors;
 }
@@ -1425,7 +1438,7 @@ RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorStyleSheet::buildObjectForRul
 
     auto groupingsPayload = buildArrayForGroupings(*rule);
     if (groupingsPayload->length())
-        result->setGroupings(WTFMove(groupingsPayload));
+        result->setGroupings(WTF::move(groupingsPayload));
 
     if (auto sourceData = ruleSourceDataFor(rule))
         result->setIsImplicitlyNested(sourceData->isImplicitlyNested);
@@ -1463,7 +1476,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyleSheet::buildObjectForStyle
     return result;
 }
 
-static inline bool isNotSpaceOrTab(UChar character)
+static inline bool isNotSpaceOrTab(char16_t character)
 {
     return character != ' ' && character != '\t';
 }
@@ -1527,6 +1540,9 @@ ExceptionOr<void> InspectorStyleSheet::setRuleStyleText(const InspectorCSSId& id
 
     auto* cssRule = ruleForId(id);
     if (!cssRule)
+        return Exception { ExceptionCode::NotFoundError };
+
+    if (!ensureParsedDataReady())
         return Exception { ExceptionCode::NotFoundError };
 
     RefPtr<CSSRuleSourceData> sourceData = ruleSourceDataFor(cssRule);
@@ -1699,11 +1715,11 @@ bool InspectorStyleSheet::ensureSourceData()
     // FIXME: <webkit.org/b/161747> Media control CSS uses out-of-spec selectors in inline user agent shadow root style
     // element. See corresponding workaround in `CSSSelectorParser::extractCompoundFlags`.
     if (auto* ownerNode = m_pageStyleSheet->ownerNode(); ownerNode && ownerNode->isInUserAgentShadowTree())
-        context.mode = UASheetMode;
+        context.setUASheetMode();
 
     StyleSheetHandler handler(m_parsedStyleSheet->text(), m_pageStyleSheet->ownerDocument(), ruleSourceDataResult.get());
-    CSSParser::parseSheetForInspector(context, newStyleSheet, m_parsedStyleSheet->text(), handler);
-    m_parsedStyleSheet->setSourceData(WTFMove(ruleSourceDataResult));
+    CSSParser::parseStyleSheetForInspector(m_parsedStyleSheet->text(), context, newStyleSheet, handler);
+    m_parsedStyleSheet->setSourceData(WTF::move(ruleSourceDataResult));
     return m_parsedStyleSheet->hasSourceData();
 }
 
@@ -1728,7 +1744,7 @@ bool InspectorStyleSheet::resourceStyleSheetText(String* result) const
 
     String error;
     bool base64Encoded;
-    InspectorPageAgent::resourceContent(error, ownerDocument()->frame(), URL({ }, m_pageStyleSheet->href()), result, &base64Encoded);
+    ResourceUtilities::resourceContent(error, ownerDocument()->frame(), URL({ }, m_pageStyleSheet->href()), result, &base64Encoded);
     return error.isEmpty() && !base64Encoded;
 }
 
@@ -1751,7 +1767,7 @@ bool InspectorStyleSheet::extensionStyleSheetText(String* result) const
     if (!ownerDocument())
         return false;
 
-    auto content = ownerDocument()->extensionStyleSheets().contentForInjectedStyleSheet(m_pageStyleSheet);
+    auto content = ownerDocument()->extensionStyleSheets().contentForInjectedStyleSheet(*m_pageStyleSheet);
     if (content.isEmpty())
         return false;
 
@@ -1781,7 +1797,7 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSRule>> InspectorStyleSheet::build
 
     RefPtr<CSSRuleList> refRuleList = ruleList;
     Vector<RefPtr<CSSRule>> rules;
-    collectFlatRules(WTFMove(refRuleList), &rules);
+    collectFlatRules(WTF::move(refRuleList), &rules);
 
     for (auto& rule : rules) {
         if (auto* styleRule = dynamicDowncast<CSSStyleRule>(rule.get())) {
@@ -1809,7 +1825,7 @@ void InspectorStyleSheet::collectFlatRules(RefPtr<CSSRuleList>&& ruleList, Vecto
 
             auto childRuleList = asCSSRuleList(rule);
             ASSERT(childRuleList);
-                collectFlatRules(WTFMove(childRuleList), result);
+            collectFlatRules(WTF::move(childRuleList), result);
             break;
         }
 
@@ -1821,12 +1837,12 @@ void InspectorStyleSheet::collectFlatRules(RefPtr<CSSRuleList>&& ruleList, Vecto
 
 Ref<InspectorStyleSheetForInlineStyle> InspectorStyleSheetForInlineStyle::create(InspectorPageAgent* pageAgent, const String& id, Ref<StyledElement>&& element, Inspector::Protocol::CSS::StyleSheetOrigin origin, Listener* listener)
 {
-    return adoptRef(*new InspectorStyleSheetForInlineStyle(pageAgent, id, WTFMove(element), origin, listener));
+    return adoptRef(*new InspectorStyleSheetForInlineStyle(pageAgent, id, WTF::move(element), origin, listener));
 }
 
 InspectorStyleSheetForInlineStyle::InspectorStyleSheetForInlineStyle(InspectorPageAgent* pageAgent, const String& id, Ref<StyledElement>&& element, Inspector::Protocol::CSS::StyleSheetOrigin origin, Listener* listener)
     : InspectorStyleSheet(pageAgent, id, nullptr, origin, String(), listener)
-    , m_element(WTFMove(element))
+    , m_element(WTF::move(element))
     , m_ruleSourceData(nullptr)
     , m_isStyleTextValid(false)
 {
@@ -1927,8 +1943,8 @@ Ref<CSSRuleSourceData> InspectorStyleSheetForInlineStyle::ruleSourceData() const
     CSSParserContext context(parserContextForDocument(&m_element->document()));
     RuleSourceDataList ruleSourceDataResult;
     StyleSheetHandler handler(m_styleText, &m_element->document(), &ruleSourceDataResult);
-    CSSParser::parseDeclarationForInspector(context, m_styleText, handler);
-    return WTFMove(ruleSourceDataResult.first());
+    CSSParser::parseDeclarationListForInspector(m_styleText, context, handler);
+    return WTF::move(ruleSourceDataResult.first());
 }
 
 } // namespace WebCore

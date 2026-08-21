@@ -28,12 +28,16 @@ package test.jfx.incubator.scene.control.richtext.support;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.tk.Toolkit;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * Utilities for RichTextArea-based tests.
@@ -51,7 +55,7 @@ public class RTUtil {
      */
     public static void setText(RichTextArea control, String text) {
         TextPos end = control.getDocumentEnd();
-        control.replaceText(TextPos.ZERO, end, text, false);
+        control.replaceText(TextPos.ZERO, end, text);
     }
 
     /**
@@ -61,10 +65,26 @@ public class RTUtil {
      * @return the plain text
      */
     public static String getText(RichTextArea control) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            control.write(DataFormat.PLAIN_TEXT, out);
+            byte[] b = out.toByteArray();
+            return new String(b, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * Extracts plain text from the supplied StyledTextModel, using {@code write(DataFormat.PLAIN_TEXT)} method.
+     *
+     * @param model the model
+     * @return the plain text
+     */
+    public static String getText(StyledTextModel model) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             try {
-                control.write(DataFormat.PLAIN_TEXT, out);
+                model.write(null, DataFormat.PLAIN_TEXT, out);
                 byte[] b = out.toByteArray();
                 return new String(b, StandardCharsets.UTF_8);
             } finally {
@@ -90,5 +110,20 @@ public class RTUtil {
      */
     public static void firePulse() {
         Toolkit.getToolkit().firePulse();
+    }
+
+    /// Returns a 32x32 PNG image filled with red as byte array.
+    public static byte[] redPng32x32() {
+        String RED_PNG_32x32 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAALUlEQVR4Xu3OoQEAAAjDsP3/NPgdACaVVck8lx7XAQAAAAAAAAAAAAAAAAAALJf68OJSymrlAAAAAElFTkSuQmCC";
+        return Base64.getDecoder().decode(RED_PNG_32x32);
+    }
+
+    /// Returns an EmbeddedImage at the specified text position, or null.
+    public static EmbeddedImage embeddedImageAt(RichTextArea t, TextPos p) {
+        if (p != null) {
+            StyleAttributeMap a = t.getStyleAttributeMap(p, false);
+            return a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+        }
+        return null;
     }
 }

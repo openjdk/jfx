@@ -67,7 +67,7 @@ static AtomString extractLocaleFromDictionaryFileName(const String& fileName)
     return StringView(fileName).substring(prefixLength, fileName.length() - prefixLength - suffixLength).convertToASCIILowercaseAtom();
 }
 
-static void scanDirectoryForDictionaries(const char* directoryPath, UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales)
+static void scanDirectoryForDictionaries(const char* directoryPath, HashMap<AtomString, Vector<String>>& availableLocales)
 {
     auto directoryPathString = String::fromUTF8(directoryPath);
     for (auto& fileName : FileSystem::listDirectory(directoryPathString)) {
@@ -90,65 +90,15 @@ static void scanDirectoryForDictionaries(const char* directoryPath, UncheckedKey
     }
 }
 
-#if ENABLE(DEVELOPER_MODE)
 
-#if PLATFORM(GTK)
-static CString webkitBuildDirectory()
-{
-    const char* webkitOutputDir = g_getenv("WEBKIT_OUTPUTDIR");
-    if (webkitOutputDir)
-        return webkitOutputDir;
-
-    GUniquePtr<char> outputDir(g_build_filename(FileSystem::webkitTopLevelDirectory().data(), "WebKitBuild", nullptr));
-    return outputDir.get();
-}
-#endif // PLATFORM(GTK)
-
-static void scanTestDictionariesDirectoryIfNecessary(UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales)
-{
-    // It's unfortunate that we need to look for the dictionaries this way, but
-    // libhyphen doesn't have the concept of installed dictionaries. Instead,
-    // we have this special case for WebKit tests.
-#if PLATFORM(GTK)
-    // Try alternative dictionaries path for people using Flatpak.
-    GUniquePtr<char> dictionariesPath(g_build_filename("/usr", "share", "webkitgtk-test-dicts", nullptr));
-    if (g_getenv("FLATPAK_ID") && g_file_test(dictionariesPath.get(), static_cast<GFileTest>(G_FILE_TEST_IS_DIR))) {
-        scanDirectoryForDictionaries(dictionariesPath.get(), availableLocales);
-        return;
-    }
-
-    CString buildDirectory = webkitBuildDirectory();
-    dictionariesPath.reset(g_build_filename(buildDirectory.data(), "DependenciesGTK", "Root", "webkitgtk-test-dicts", nullptr));
-    if (g_file_test(dictionariesPath.get(), static_cast<GFileTest>(G_FILE_TEST_IS_DIR))) {
-        scanDirectoryForDictionaries(dictionariesPath.get(), availableLocales);
-        return;
-    }
-
-    // Try alternative dictionaries path for people not using JHBuild.
-    dictionariesPath.reset(g_build_filename(buildDirectory.data(), "webkitgtk-test-dicts", nullptr));
-    if (g_file_test(dictionariesPath.get(), static_cast<GFileTest>(G_FILE_TEST_IS_DIR)))
-        scanDirectoryForDictionaries(dictionariesPath.get(), availableLocales);
-
-#elif defined(TEST_HYPHENATAION_PATH)
-    scanDirectoryForDictionaries(TEST_HYPHENATAION_PATH, availableLocales);
-#else
-    UNUSED_PARAM(availableLocales);
-#endif
-}
-#endif
-
-static UncheckedKeyHashMap<AtomString, Vector<String>>& availableLocales()
+static HashMap<AtomString, Vector<String>>& availableLocales()
 {
     static bool scannedLocales = false;
-    static UncheckedKeyHashMap<AtomString, Vector<String>> availableLocales;
+    static HashMap<AtomString, Vector<String>> availableLocales;
 
     if (!scannedLocales) {
         for (size_t i = 0; i < std::size(gDictionaryDirectories); i++)
             scanDirectoryForDictionaries(gDictionaryDirectories[i], availableLocales);
-
-#if ENABLE(DEVELOPER_MODE)
-        scanTestDictionariesDirectoryIfNecessary(availableLocales);
-#endif
 
         scannedLocales = true;
     }
@@ -271,7 +221,7 @@ size_t lastHyphenLocation(StringView string, size_t beforeIndex, const AtomStrin
     // The libhyphen documentation specifies that this array should be 5 bytes longer than
     // the byte length of the input string.
     Vector<char> hyphenArray(utf8StringCopy.length() - leadingSpaceBytes + 5);
-    char* hyphenArrayData = hyphenArray.data();
+    char* hyphenArrayData = hyphenArray.mutableSpan().data();
 
     AtomString lowercaseLocaleIdentifier = localeIdentifier.convertToASCIILowercase();
 
@@ -281,6 +231,9 @@ size_t lastHyphenLocation(StringView string, size_t beforeIndex, const AtomStrin
 
     for (const auto& dictionaryPath : availableLocales().get(lowercaseLocaleIdentifier)) {
         RefPtr<HyphenationDictionary> dictionary = TinyLRUCachePolicy<AtomString, RefPtr<HyphenationDictionary>>::cache().get(AtomString(dictionaryPath));
+
+        if (!dictionary->libhyphenDictionary())
+            continue;
 
         char** replacements = nullptr;
         int* positions = nullptr;

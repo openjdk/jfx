@@ -24,17 +24,18 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "NodeFilter.h"
-#include "ScriptWrappable.h"
-#include "Traversal.h"
+#include <WebCore/NodeFilter.h>
+#include <WebCore/ScriptWrappable.h>
+#include <WebCore/Traversal.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class NodeIterator final : public ScriptWrappable, public RefCountedAndCanMakeWeakPtr<NodeIterator>, public NodeIteratorBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(NodeIterator, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(NodeIterator, WEBCORE_EXPORT);
 public:
     static Ref<NodeIterator> create(Node&, unsigned whatToShow, RefPtr<NodeFilter>&&);
     WEBCORE_EXPORT ~NodeIterator();

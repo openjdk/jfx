@@ -52,7 +52,7 @@ public:
     ExceptionOr<Ref<SVGTransform>> createSVGTransformFromMatrix(DOMMatrix2DInit&& matrixInit)
     {
         Ref svgTransform =  SVGTransform::create();
-        svgTransform->setMatrix(WTFMove(matrixInit));
+        svgTransform->setMatrix(WTF::move(matrixInit));
         return svgTransform;
     }
 
@@ -63,9 +63,14 @@ public:
     String valueAsString() const override;
 
 private:
-    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&);
-    bool parse(StringParsingBuffer<LChar>&);
-    bool parse(StringParsingBuffer<UChar>&);
+
+    enum class ListReplacement : bool {
+        Append,
+        Replace
+    };
+    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&, ListReplacement = ListReplacement::Append);
+    bool parse(StringParsingBuffer<Latin1Character>&);
+    bool parse(StringParsingBuffer<char16_t>&);
 };
 
 } // namespace WebCore

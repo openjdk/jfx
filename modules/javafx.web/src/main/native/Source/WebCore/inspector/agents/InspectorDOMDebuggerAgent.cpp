@@ -70,17 +70,17 @@ InspectorDOMDebuggerAgent::~InspectorDOMDebuggerAgent() = default;
 
 bool InspectorDOMDebuggerAgent::enabled() const
 {
-    return m_instrumentingAgents.enabledDOMDebuggerAgent() == this;
+    return Ref { m_instrumentingAgents.get() }->enabledDOMDebuggerAgent() == this;
 }
 
 void InspectorDOMDebuggerAgent::enable()
 {
-    m_instrumentingAgents.setEnabledDOMDebuggerAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledDOMDebuggerAgent(this);
 }
 
 void InspectorDOMDebuggerAgent::disable()
 {
-    m_instrumentingAgents.setEnabledDOMDebuggerAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledDOMDebuggerAgent(nullptr);
 
     m_listenerBreakpoints.clear();
     m_pauseOnAllIntervalsBreakpoint = nullptr;
@@ -106,7 +106,7 @@ void InspectorDOMDebuggerAgent::debuggerWasDisabled()
     disable();
 }
 
-void InspectorDOMDebuggerAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorDOMDebuggerAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -143,7 +143,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setEventBrea
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTFMove(options));
+    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTF::move(options));
     if (!breakpoint)
         return makeUnexpected(errorString);
 
@@ -155,9 +155,9 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setEventBrea
                 eventBreakpoint.caseSensitive = *caseSensitive;
             if (isRegex)
                 eventBreakpoint.isRegex = *isRegex;
-            eventBreakpoint.specialBreakpoint = WTFMove(breakpoint);
+            eventBreakpoint.specialBreakpoint = WTF::move(breakpoint);
 
-            if (!m_listenerBreakpoints.appendIfNotContains(WTFMove(eventBreakpoint)))
+            if (!m_listenerBreakpoints.appendIfNotContains(WTF::move(eventBreakpoint)))
                 return makeUnexpected("Breakpoint with given eventName, given caseSensitive, and given isRegex already exists"_s);
             return { };
         }
@@ -175,25 +175,25 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setEventBrea
     case Inspector::Protocol::DOMDebugger::EventBreakpointType::AnimationFrame:
         if (m_pauseOnAllAnimationFramesBreakpoint)
             return makeUnexpected("Breakpoint for AnimationFrame already exists"_s);
-        m_pauseOnAllAnimationFramesBreakpoint = WTFMove(breakpoint);
+        m_pauseOnAllAnimationFramesBreakpoint = WTF::move(breakpoint);
         return { };
 
     case Inspector::Protocol::DOMDebugger::EventBreakpointType::Interval:
         if (m_pauseOnAllIntervalsBreakpoint)
             return makeUnexpected("Breakpoint for Interval already exists"_s);
-        m_pauseOnAllIntervalsBreakpoint = WTFMove(breakpoint);
+        m_pauseOnAllIntervalsBreakpoint = WTF::move(breakpoint);
         return { };
 
     case Inspector::Protocol::DOMDebugger::EventBreakpointType::Listener:
         if (m_pauseOnAllListenersBreakpoint)
             return makeUnexpected("Breakpoint for Listener already exists"_s);
-        m_pauseOnAllListenersBreakpoint = WTFMove(breakpoint);
+        m_pauseOnAllListenersBreakpoint = WTF::move(breakpoint);
         return { };
 
     case Inspector::Protocol::DOMDebugger::EventBreakpointType::Timeout:
         if (m_pauseOnAllTimeoutsBreakpoint)
             return makeUnexpected("Breakpoint for Timeout already exists"_s);
-        m_pauseOnAllTimeoutsBreakpoint = WTFMove(breakpoint);
+        m_pauseOnAllTimeoutsBreakpoint = WTF::move(breakpoint);
         return { };
     }
 
@@ -261,7 +261,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::removeEventB
 static JSC::JSGlobalObject* globalObjectFor(ScriptExecutionContext& scriptExecutionContext, EventListener& eventListener)
 {
     if (auto* jsEventListener = dynamicDowncast<JSEventListener>(eventListener)) {
-        if (auto* isolatedWorld = jsEventListener->isolatedWorld())
+        if (RefPtr isolatedWorld = jsEventListener->isolatedWorld())
             return toJSDOMGlobalObject(scriptExecutionContext, *isolatedWorld);
     }
 
@@ -288,7 +288,8 @@ void InspectorDOMDebuggerAgent::willHandleEvent(ScriptExecutionContext& scriptEx
     if (!m_debuggerAgent->breakpointsActive())
         return;
 
-    auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
+    Ref agents = m_instrumentingAgents.get();
+    auto* domAgent = agents->persistentDOMAgent();
 
     auto breakpoint = m_pauseOnAllListenersBreakpoint;
     if (!breakpoint) {
@@ -313,7 +314,7 @@ void InspectorDOMDebuggerAgent::willHandleEvent(ScriptExecutionContext& scriptEx
             eventData->setInteger("eventListenerId"_s, eventListenerId);
     }
 
-    m_debuggerAgent->schedulePauseForSpecialBreakpoint(*breakpoint, Inspector::DebuggerFrontendDispatcher::Reason::Listener, WTFMove(eventData));
+    m_debuggerAgent->schedulePauseForSpecialBreakpoint(*breakpoint, Inspector::DebuggerFrontendDispatcher::Reason::Listener, WTF::move(eventData));
 }
 
 void InspectorDOMDebuggerAgent::didHandleEvent(ScriptExecutionContext& scriptExecutionContext, Event& event, const RegisteredEventListener& registeredEventListener)
@@ -347,7 +348,8 @@ void InspectorDOMDebuggerAgent::didHandleEvent(ScriptExecutionContext& scriptExe
         }
     }
     if (!breakpoint) {
-        if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent())
+        Ref agents = m_instrumentingAgents.get();
+        if (auto* domAgent = agents->persistentDOMAgent())
             breakpoint = domAgent->breakpointForEventListener(*event.currentTarget(), event.type(), registeredEventListener.callback(), registeredEventListener.useCapture());
     }
     if (!breakpoint)
@@ -422,14 +424,14 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setURLBreakp
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTFMove(options));
+    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTF::move(options));
     if (!breakpoint)
         return makeUnexpected(errorString);
 
     if (url.isEmpty()) {
         if (m_pauseOnAllURLsBreakpoint)
             return makeUnexpected("Breakpoint for all URLs already exists"_s);
-        m_pauseOnAllURLsBreakpoint = WTFMove(breakpoint);
+        m_pauseOnAllURLsBreakpoint = WTF::move(breakpoint);
         return { };
     }
 
@@ -473,14 +475,14 @@ void InspectorDOMDebuggerAgent::breakOnURLIfNeeded(const String& url)
     if (!ScriptDisallowedScope::isScriptAllowedInMainThread())
         return;
 
-    constexpr bool caseSensitive = false;
+    constexpr auto searchCaseSensitive = ContentSearchUtilities::SearchCaseSensitive::No;
 
     auto breakpointURL = emptyString();
     auto breakpoint = m_pauseOnAllURLsBreakpoint.copyRef();
     if (!breakpoint) {
         for (auto& [query, textBreakpoint] : m_urlTextBreakpoints) {
-            auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(query, caseSensitive, ContentSearchUtilities::SearchStringType::ContainsString);
-            if (regex.match(url) != -1) {
+            auto searcher = ContentSearchUtilities::createSearcherForString(query, ContentSearchUtilities::SearchType::ContainsString, searchCaseSensitive);
+            if (ContentSearchUtilities::searcherMatchesText(searcher, url)) {
                 breakpoint = textBreakpoint.copyRef();
                 breakpointURL = query;
                 break;
@@ -489,8 +491,8 @@ void InspectorDOMDebuggerAgent::breakOnURLIfNeeded(const String& url)
     }
     if (!breakpoint) {
         for (auto& [query, regexBreakpoint] : m_urlRegexBreakpoints) {
-            auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(query, caseSensitive, ContentSearchUtilities::SearchStringType::Regex);
-            if (regex.match(url) != -1) {
+            auto searcher = ContentSearchUtilities::createSearcherForString(query, ContentSearchUtilities::SearchType::Regex, searchCaseSensitive);
+            if (ContentSearchUtilities::searcherMatchesText(searcher, url)) {
                 breakpoint = regexBreakpoint.copyRef();
                 breakpointURL = query;
                 break;
@@ -503,7 +505,7 @@ void InspectorDOMDebuggerAgent::breakOnURLIfNeeded(const String& url)
     Ref<JSON::Object> eventData = JSON::Object::create();
     eventData->setString("breakpointURL"_s, breakpointURL);
     eventData->setString("url"_s, url);
-    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::URL, WTFMove(eventData), WTFMove(breakpoint));
+    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::URL, WTF::move(eventData), WTF::move(breakpoint));
 }
 
 void InspectorDOMDebuggerAgent::willSendXMLHttpRequest(const String& url)
@@ -524,11 +526,12 @@ bool InspectorDOMDebuggerAgent::EventBreakpoint::matches(const String& eventName
     if (m_knownMatchingEventNames.contains(eventName))
         return true;
 
-    if (!m_eventNameMatchRegex) {
-        auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ExactString;
-        m_eventNameMatchRegex = ContentSearchUtilities::createRegularExpressionForSearchString(this->eventName, caseSensitive, searchStringType);
+    if (!m_eventNameSearcher) {
+        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
+        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+        m_eventNameSearcher = ContentSearchUtilities::createSearcherForString(this->eventName, searchType, searchCaseSensitive);
     }
-    if (m_eventNameMatchRegex->match(eventName) == -1)
+    if (!ContentSearchUtilities::searcherMatchesText(*m_eventNameSearcher, eventName))
         return false;
 
     m_knownMatchingEventNames.add(eventName);

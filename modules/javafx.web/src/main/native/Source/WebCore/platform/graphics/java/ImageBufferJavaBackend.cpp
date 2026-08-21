@@ -85,7 +85,7 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         backendSize.width(), backendSize.height());
 
     return std::unique_ptr<ImageBufferJavaBackend>(new ImageBufferJavaBackend(
-        parameters, WTFMove(platformImage), WTFMove(context), backendSize));
+        parameters, WTF::move(platformImage), WTF::move(context), backendSize));
 }
 
 /*std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
@@ -97,8 +97,8 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
 ImageBufferJavaBackend::ImageBufferJavaBackend(
     const Parameters& parameters, PlatformImagePtr image, std::unique_ptr<GraphicsContext>&& context, IntSize backendSize)
     : ImageBufferBackend(parameters)
-    , m_image(WTFMove(image))
-    , m_context(WTFMove(context))
+    , m_image(WTF::move(image))
+    , m_context(WTF::move(context))
     , m_backendSize(backendSize)
 {
 }
@@ -216,13 +216,13 @@ void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, std::span<co
     return ImageBufferBackend::getPixelBuffer(srcRect, data,destination);
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBufferSourceView& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination)
 {
     ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, destination);
     update();
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) //override
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBufferSourceView& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) //override
 {
     auto [data, size] = getDataAndSize();
     if (!data || size == 0)

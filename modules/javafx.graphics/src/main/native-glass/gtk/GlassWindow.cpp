@@ -293,9 +293,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setTitle
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    const char* ctitle = mainEnv->GetStringUTFChars(title, NULL);
+
+    gchar * ctitle = jstring_to_utf8(env, title);
     ctx->set_title(ctitle);
-    mainEnv->ReleaseStringUTFChars(title, ctitle);
+    g_free(ctitle);
 
     return JNI_TRUE;
 }

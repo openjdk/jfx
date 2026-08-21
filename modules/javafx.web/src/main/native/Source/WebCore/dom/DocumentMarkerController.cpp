@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -27,15 +27,19 @@
 #include "config.h"
 #include "DocumentMarkerController.h"
 
+#include "BoundaryPointInlines.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DocumentInlines.h"
+#include "DocumentMarkers.h"
+#include "DocumentView.h"
+#include "FloatQuad.h"
 #include "FontCascade.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderBlockFlow.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderReplaced.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
@@ -78,20 +82,24 @@ auto DocumentMarkerController::collectTextRanges(const SimpleRange& range) -> Ve
     Vector<TextRange> ranges;
     for (TextIterator iterator(range); !iterator.atEnd(); iterator.advance()) {
         auto currentRange = iterator.range();
-        ranges.append({ WTFMove(currentRange.start.container), { currentRange.start.offset, currentRange.end.offset } });
+        ranges.append({ WTF::move(currentRange.start.container), { currentRange.start.offset, currentRange.end.offset } });
     }
     return ranges;
 }
 
-void DocumentMarkerController::addMarker(const SimpleRange& range, DocumentMarkerType type, const DocumentMarker::Data& data)
+bool DocumentMarkerController::addMarker(const SimpleRange& range, DocumentMarkerType type, const DocumentMarker::Data& data)
 {
-    for (auto& textPiece : collectTextRanges(range))
-        addMarker(textPiece.node, { type, textPiece.range, DocumentMarker::Data { data } });
+    bool added = false;
+    for (auto& textPiece : collectTextRanges(range)) {
+        if (addMarker(textPiece.node, { type, textPiece.range, DocumentMarker::Data { data } }))
+            added = true;
+    }
+    return added;
 }
 
-void DocumentMarkerController::addMarker(Node& node, unsigned startOffset, unsigned length, DocumentMarkerType type, DocumentMarker::Data&& data)
+bool DocumentMarkerController::addMarker(Node& node, unsigned startOffset, unsigned length, DocumentMarkerType type, DocumentMarker::Data&& data)
 {
-    addMarker(node, { type, { startOffset, startOffset + length }, WTFMove(data) });
+    return addMarker(node, { type, { startOffset, startOffset + length }, WTF::move(data) });
 }
 
 void DocumentMarkerController::addDraggedContentMarker(const SimpleRange& range)
@@ -113,9 +121,9 @@ void DocumentMarkerController::addTransparentContentMarker(const SimpleRange& ra
         //
         // Otherwise, this information would be lost if the original range is collapsed, so this prevents that from happening.
 
-        DocumentMarker::TransparentContentData markerData { { range.protectedStartContainer().ptr() }, uuid };
-        Ref node = range.protectedStartContainer();
-        addMarker(node.get(), { DocumentMarkerType::TransparentContent, { range.startOffset(), range.endOffset() }, WTFMove(markerData) });
+        Ref node = range.startContainer();
+        DocumentMarker::TransparentContentData markerData { { node.ptr() }, uuid };
+        addMarker(node.get(), { DocumentMarkerType::TransparentContent, { range.startOffset(), range.endOffset() }, WTF::move(markerData) });
 
         return;
     }
@@ -309,12 +317,12 @@ static bool canMergeMarkers(const DocumentMarker& marker, const DocumentMarker& 
 // Markers are stored in order sorted by their start offset.
 // Markers of the same type do not overlap each other.
 
-void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
+bool DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
 {
     ASSERT(newMarker.endOffset() >= newMarker.startOffset());
     if (newMarker.endOffset() == newMarker.startOffset() && newMarker.type() != DocumentMarkerType::TransparentContent) {
         // In general, markers with collapsed ranges are not allowed, except explicitly for `TransparentContent` markers.
-        return;
+        return false;
     }
 
     m_possiblyExistingMarkerTypes.add(newMarker.type());
@@ -323,7 +331,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
 
     if (!list) {
         list = makeUnique<Vector<RenderedDocumentMarker>>();
-        list->append(RenderedDocumentMarker(WTFMove(newMarker)));
+        list->append(RenderedDocumentMarker(WTF::move(newMarker)));
     } else if (shouldInsertAsSeparateMarker(newMarker)) {
         // We don't merge dictation markers.
         size_t i;
@@ -333,9 +341,9 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
             if (marker.startOffset() > newMarker.startOffset())
                 break;
         }
-        list->insert(i, RenderedDocumentMarker(WTFMove(newMarker)));
+        list->insert(i, RenderedDocumentMarker(WTF::move(newMarker)));
     } else {
-        RenderedDocumentMarker toInsert(WTFMove(newMarker));
+        RenderedDocumentMarker toInsert(WTF::move(newMarker));
         size_t numMarkers = list->size();
         size_t i;
         // Iterate over all markers whose start offset is less than or equal to the new marker's.
@@ -347,8 +355,8 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
                 break;
             if (canMergeMarkers(marker, toInsert) && marker.endOffset() >= toInsert.startOffset()) {
                 toInsert.setStartOffset(marker.startOffset());
-                list->remove(i);
-                numMarkers--;
+                list->removeAt(i);
+                --numMarkers;
                 break;
             }
         }
@@ -361,7 +369,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
             if (marker.startOffset() > toInsert.endOffset())
                 break;
             if (canMergeMarkers(marker, toInsert)) {
-                list->remove(j);
+                list->removeAt(j);
                 if (toInsert.endOffset() <= marker.endOffset()) {
                     toInsert.setEndOffset(marker.endOffset());
                     break;
@@ -385,6 +393,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
 #endif
 
     invalidateRectsForMarkersInNode(node);
+    return true;
 }
 
 // Copies markers from source to destination, applying the specified shift delta to the copies. The shift is
@@ -419,7 +428,7 @@ void DocumentMarkerController::copyMarkers(Node& source, OffsetRange range, Node
         if (copiedMarker.endOffset() >= range.end)
             copiedMarker.setEndOffset(range.end);
 
-        addMarker(destination, WTFMove(copiedMarker));
+        addMarker(destination, WTF::move(copiedMarker));
         needRepaint = true;
     }
 
@@ -465,7 +474,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
         needRepaint = true;
 
         DocumentMarker copiedMarker = marker;
-        list->remove(i);
+        list->removeAt(i);
         if (overlapRule == RemovePartiallyOverlappingMarker::Yes)
             continue;
 
@@ -473,12 +482,12 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
         if (range.start > copiedMarker.startOffset()) {
             auto newLeft = copiedMarker;
             newLeft.setEndOffset(range.start);
-            list->insert(i, RenderedDocumentMarker(WTFMove(newLeft)));
+            list->insert(i, RenderedDocumentMarker(WTF::move(newLeft)));
             i++;
         }
         if (copiedMarker.endOffset() > range.end) {
             copiedMarker.setStartOffset(range.end);
-            list->insert(i, RenderedDocumentMarker(WTFMove(copiedMarker)));
+            list->insert(i, RenderedDocumentMarker(WTF::move(copiedMarker)));
             i++;
         }
     }
@@ -542,7 +551,7 @@ void DocumentMarkerController::applyToCollapsedRangeMarker(const SimpleRange& ra
     if (!range.collapsed())
         return;
 
-    Ref node = range.protectedStartContainer();
+    Ref node = range.startContainer();
     if (auto list = m_markers.get(node.ptr())) {
         auto offsetRange = characterDataOffsetRange(range, node.get());
         for (auto& marker : *list) {
@@ -578,7 +587,7 @@ void DocumentMarkerController::forEach<DocumentMarkerController::IterationDirect
     }
 
     // The above loop does not take into account collapsed ranges.
-    applyToCollapsedRangeMarker(range, types, WTFMove(function));
+    applyToCollapsedRangeMarker(range, types, WTF::move(function));
 }
 
 template<>
@@ -607,7 +616,7 @@ void DocumentMarkerController::forEach<DocumentMarkerController::IterationDirect
     }
 
     // The above loop does not take into account collapsed ranges.
-    applyToCollapsedRangeMarker(range, types, WTFMove(function));
+    applyToCollapsedRangeMarker(range, types, WTF::move(function));
 }
 
 void DocumentMarkerController::forEachOfTypes(OptionSet<DocumentMarkerType> types, Function<bool(Node&, RenderedDocumentMarker&)>&& function)
@@ -711,7 +720,7 @@ OptionSet<DocumentMarkerType> DocumentMarkerController::removeMarkersFromList(Ma
             }
 
             // pitch the old marker
-            list->remove(i);
+            list->removeAt(i);
             needsRepainting = true;
             // i now is the index of the next marker
         }
@@ -776,7 +785,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
 
 #if PLATFORM(IOS_FAMILY)
         if (targetStartOffset >= node.length() || targetEndOffset <= 0) {
-            list->remove(i);
+                list->removeAt(i);
             continue;
         }
 #endif
@@ -789,7 +798,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
         // FIXME: No obvious reason this should be iOS-specific. Remove the #if at some point.
         else if (marker.endOffset() > startOffset) {
             if (targetEndOffset <= marker.startOffset()) {
-                list->remove(i);
+                list->removeAt(i);
                 continue;
             }
             marker.setEndOffset(std::min(targetEndOffset, node.length()));
@@ -914,7 +923,7 @@ void addMarker(const SimpleRange& range, DocumentMarkerType type, const Document
 
 void addMarker(Node& node, unsigned startOffset, unsigned length, DocumentMarkerType type, DocumentMarker::Data&& data)
 {
-    node.protectedDocument()->checkedMarkers()->addMarker(node, startOffset, length, type, WTFMove(data));
+    node.protectedDocument()->checkedMarkers()->addMarker(node, startOffset, length, type, WTF::move(data));
 }
 
 void removeMarkers(const SimpleRange& range, OptionSet<DocumentMarkerType> types, RemovePartiallyOverlappingMarker policy)

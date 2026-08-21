@@ -32,16 +32,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLCompressedTextureASTC);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLCompressedTextureASTC);
 
 WebGLCompressedTextureASTC::WebGLCompressedTextureASTC(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLCompressedTextureASTC)
-    , m_isHDRSupported(context.protectedGraphicsContextGL()->supportsExtension("GL_KHR_texture_compression_astc_hdr"_s))
-    , m_isLDRSupported(context.protectedGraphicsContextGL()->supportsExtension("GL_KHR_texture_compression_astc_ldr"_s))
+    , m_isHDRSupported(context.graphicsContextGL()->supportsExtension(GCGLExtension::KHR_texture_compression_astc_hdr))
+    , m_isLDRSupported(context.graphicsContextGL()->supportsExtension(GCGLExtension::KHR_texture_compression_astc_ldr))
 {
     RefPtr graphicsContextGL = context.graphicsContextGL();
-    graphicsContextGL->ensureExtensionEnabled("GL_KHR_texture_compression_astc_hdr"_s);
-    graphicsContextGL->ensureExtensionEnabled("GL_KHR_texture_compression_astc_ldr"_s);
+    graphicsContextGL->enableExtension(GCGLExtension::KHR_texture_compression_astc_hdr);
+    graphicsContextGL->enableExtension(GCGLExtension::KHR_texture_compression_astc_ldr);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGBA_ASTC_4x4_KHR);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGBA_ASTC_5x4_KHR);
@@ -90,8 +90,8 @@ Vector<String> WebGLCompressedTextureASTC::getSupportedProfiles()
 
 bool WebGLCompressedTextureASTC::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_KHR_texture_compression_astc_hdr"_s)
-        || context.supportsExtension("GL_KHR_texture_compression_astc_ldr"_s);
+    return context.supportsExtension(GCGLExtension::KHR_texture_compression_astc_hdr)
+        || context.supportsExtension(GCGLExtension::KHR_texture_compression_astc_ldr);
 }
 
 } // namespace WebCore

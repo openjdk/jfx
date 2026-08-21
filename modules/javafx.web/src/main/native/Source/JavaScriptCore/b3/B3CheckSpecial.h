@@ -30,6 +30,7 @@
 #include "AirKind.h"
 #include "B3StackmapSpecial.h"
 #include <wtf/HashMap.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 {
@@ -50,7 +51,7 @@ struct Inst;
 // - CheckMul(a, b), which turns into Mul32 b, a but we pass Any for a's ValueRep.
 
 class CheckSpecial final : public StackmapSpecial {
-    WTF_MAKE_TZONE_ALLOCATED(CheckSpecial);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CheckSpecial);
 public:
     // Support for hash consing these things.
     class Key {
@@ -96,6 +97,8 @@ public:
             return *this == Key(WTF::HashTableDeletedValue);
         }
 
+        static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
         unsigned hash() const
         {
             // Seriously, we don't need to be smart here. It just doesn't matter.
@@ -135,18 +138,9 @@ private:
     unsigned m_numCheckArgs;
 };
 
-struct CheckSpecialKeyHash {
-    static unsigned hash(const CheckSpecial::Key& key) { return key.hash(); }
-    static bool equal(const CheckSpecial::Key& a, const CheckSpecial::Key& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::B3
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::CheckSpecial::Key> : JSC::B3::CheckSpecialKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::CheckSpecial::Key> : SimpleClassHashTraits<JSC::B3::CheckSpecial::Key> {

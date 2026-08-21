@@ -28,6 +28,8 @@
 #ifndef ParallelJobsGeneric_h
 #define ParallelJobsGeneric_h
 
+#include <wtf/Platform.h>
+
 #if ENABLE(THREADING_GENERIC)
 
 #include <wtf/Condition.h>
@@ -38,7 +40,7 @@
 namespace WTF {
 
 class ParallelEnvironment {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ParallelEnvironment);
 public:
     typedef void (*ThreadFunction)(void*);
 
@@ -49,7 +51,7 @@ public:
         return m_numberOfJobs;
     }
 
-    WTF_EXPORT_PRIVATE void execute(void* parameters);
+    WTF_EXPORT_PRIVATE void execute(std::span<uint8_t> parameters);
 
     class ThreadPrivate : public RefCounted<ThreadPrivate> {
     public:

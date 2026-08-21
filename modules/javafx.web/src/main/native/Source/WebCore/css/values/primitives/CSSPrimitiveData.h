@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "CSSPrimitiveKeywordList.h"
-#include "CSSPrimitiveNumericConcepts.h"
-#include "CSSPrimitiveNumericRaw.h"
-#include "CSSUnevaluatedCalc.h"
+#include <WebCore/CSSPrimitiveKeywordList.h>
+#include <WebCore/CSSPrimitiveNumericConcepts.h>
+#include <WebCore/CSSPrimitiveNumericRaw.h>
+#include <WebCore/CSSUnevaluatedCalc.h>
 #include <limits>
 #include <type_traits>
 #include <wtf/EnumTraits.h>
@@ -35,7 +35,7 @@
 namespace WebCore {
 namespace CSS {
 
-// `PrimitiveData` is a bespoke implementation of `std::variant<Numeric, Keywords...>`
+// `PrimitiveData` is a bespoke implementation of `Variant<Numeric, Keywords...>`
 // optimized for memory use by allowing numeric types with multiple unit representations
 // (e.g. <length>, <angle>, etc.) to utilize multiple indices for a single smaller payload.
 //
@@ -219,14 +219,14 @@ template<Numeric N, PrimitiveKeyword... Ks> struct PrimitiveDataIndex {
 
 union PrimitiveDataPayload {
     double number;
-    CSSCalcValue* calc;
+    CSSCalc::Value* calc;
 
     PrimitiveDataPayload(double number)
         : number { number }
     {
     }
 
-    PrimitiveDataPayload(CSSCalcValue* calc)
+    PrimitiveDataPayload(CSSCalc::Value* calc)
         : calc { calc }
     {
     }

@@ -26,12 +26,11 @@
 
 #pragma once
 
-#include "CSSColorDescriptors.h"
-#include "CSSHexColor.h"
-#include "CSSKeywordColor.h"
-#include "CSSResolvedColor.h"
-#include "CSSValueTypes.h"
-#include <variant>
+#include <WebCore/CSSColorDescriptors.h>
+#include <WebCore/CSSHexColor.h>
+#include <WebCore/CSSKeywordColor.h>
+#include <WebCore/CSSResolvedColor.h>
+#include <WebCore/CSSValueTypes.h>
 #include <wtf/Markable.h>
 
 namespace WebCore {
@@ -50,8 +49,8 @@ struct Color {
 private:
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
 
-    // FIXME: Replace std::variant with a generic CompactPointerVariant type.
-    using ColorKind = std::variant<
+    // FIXME: Replace Variant with a generic CompactPointerVariant type.
+    using ColorKind = Variant<
         EmptyToken, // Special value used by Markable to represent empty state.
         ResolvedColor,
         KeywordColor,
@@ -72,6 +71,7 @@ private:
         UniqueRef<AbsoluteColor<OKLCHFunction>>,
         UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedA98RGB<float>>>>,
         UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedDisplayP3<float>>>>,
+        UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>>,
         UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>>,
         UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedRec2020<float>>>>,
         UniqueRef<AbsoluteColor<ColorRGBFunction<ExtendedSRGBA<float>>>>,
@@ -87,6 +87,7 @@ private:
         UniqueRef<RelativeColor<OKLCHFunction>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>>,
+        UniqueRef<RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>>,
         UniqueRef<RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>>,
@@ -118,6 +119,7 @@ public:
     explicit Color(AbsoluteColor<OKLCHFunction>&&);
     explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedA98RGB<float>>>&&);
     explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedDisplayP3<float>>>&&);
+    explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>&&);
     explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>&&);
     explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedRec2020<float>>>&&);
     explicit Color(AbsoluteColor<ColorRGBFunction<ExtendedSRGBA<float>>>&&);
@@ -133,6 +135,7 @@ public:
     explicit Color(RelativeColor<OKLCHFunction>&&);
     explicit Color(RelativeColor<ColorRGBFunction<ExtendedA98RGB<float>>>&&);
     explicit Color(RelativeColor<ColorRGBFunction<ExtendedDisplayP3<float>>>&&);
+    explicit Color(RelativeColor<ColorRGBFunction<ExtendedLinearDisplayP3<float>>>&&);
     explicit Color(RelativeColor<ColorRGBFunction<ExtendedProPhotoRGB<float>>>&&);
     explicit Color(RelativeColor<ColorRGBFunction<ExtendedRec2020<float>>>&&);
     explicit Color(RelativeColor<ColorRGBFunction<ExtendedSRGBA<float>>>&&);
@@ -164,12 +167,9 @@ public:
     // as const references, pretending the UniqueRefs don't exist.
     template<typename... F> decltype(auto) switchOn(F&&...) const;
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const Color&);
-        static Color emptyValue();
-    };
-
 private:
+    friend struct MarkableTraits<Color>;
+
     template<typename T>
     static ColorKind makeIndirectColor(T&&);
     static ColorKind copy(const ColorKind&);
@@ -206,4 +206,14 @@ template<typename... F> decltype(auto) Color::switchOn(F&&... f) const
 } // namespace CSS
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Color> = true;
+namespace WTF {
+
+template<>
+struct MarkableTraits<WebCore::CSS::Color> {
+    static bool isEmptyValue(const WebCore::CSS::Color& color) { return std::holds_alternative<WebCore::CSS::Color::EmptyToken>(color.value); }
+    static WebCore::CSS::Color emptyValue() { return WebCore::CSS::Color(WebCore::CSS::Color::EmptyToken()); }
+};
+
+} // namespace WTF
+
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::Color)

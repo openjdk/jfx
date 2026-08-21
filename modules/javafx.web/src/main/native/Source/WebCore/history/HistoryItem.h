@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,17 +26,16 @@
 
 #pragma once
 
-#include "BackForwardFrameItemIdentifier.h"
-#include "BackForwardItemIdentifier.h"
-#include "FloatRect.h"
-#include "FrameIdentifier.h"
-#include "FrameLoaderTypes.h"
-#include "IntPoint.h"
-#include "IntRect.h"
-#include "LengthBox.h"
-#include "PolicyContainer.h"
-#include "SerializedScriptValue.h"
+#include <WebCore/BackForwardFrameItemIdentifier.h>
+#include <WebCore/BackForwardItemIdentifier.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PolicyContainer.h>
 #include <memory>
+#include <wtf/Platform.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UUID.h>
@@ -48,12 +47,11 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "ViewportArguments.h"
+#include <WebCore/ViewportArguments.h>
 #endif
 
 #if PLATFORM(COCOA)
 #import <wtf/RetainPtr.h>
-typedef struct objc_object* id;
 #endif
 
 namespace WebCore {
@@ -64,6 +62,7 @@ class FormData;
 class HistoryItem;
 class Image;
 class ResourceRequest;
+class SerializedScriptValue;
 
 class HistoryItemClient : public RefCounted<HistoryItemClient> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(HistoryItemClient, WEBCORE_EXPORT);
@@ -139,9 +138,10 @@ public:
     void setURL(const URL&);
     WEBCORE_EXPORT void setURLString(const String&);
     WEBCORE_EXPORT void setOriginalURLString(const String&);
-    WEBCORE_EXPORT void setReferrer(const String&);
+    WEBCORE_EXPORT void setReferrer(String&&);
     WEBCORE_EXPORT void setTarget(const AtomString&);
     WEBCORE_EXPORT void setFrameID(std::optional<FrameIdentifier>);
+    WEBCORE_EXPORT void setTitle(String&&);
     WEBCORE_EXPORT void setTitle(const String&);
     void setIsTargetItem(bool isTargetItem) { m_isTargetItem = isTargetItem; }
 
@@ -240,8 +240,6 @@ private:
 
     static int64_t generateSequenceNumber();
 
-    bool hasSameDocumentTree(HistoryItem& otherItem) const;
-
     String m_urlString;
     String m_originalURLString;
     String m_referrer;
@@ -308,7 +306,7 @@ private:
     BackForwardFrameItemIdentifier m_frameItemID;
     WTF::UUID m_uuidIdentifier;
     std::optional<PolicyContainer> m_policyContainer;
-    Ref<Client> m_client;
+    const Ref<Client> m_client;
 };
 
 } // namespace WebCore

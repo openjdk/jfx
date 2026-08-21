@@ -37,7 +37,9 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "AudioSession.h"
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
+#include "ExceptionCode.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
@@ -54,23 +56,25 @@
 #include "Settings.h"
 #include "UserMediaController.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <algorithm>
 #include <wtf/Scope.h>
 
 namespace WebCore {
 
 Ref<UserMediaRequest> UserMediaRequest::create(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
 {
-    auto result = adoptRef(*new UserMediaRequest(document, WTFMove(request), WTFMove(audioConstraints), WTFMove(videoConstraints), WTFMove(promise)));
+    auto result = adoptRef(*new UserMediaRequest(document, WTF::move(request), WTF::move(audioConstraints), WTF::move(videoConstraints), WTF::move(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
 UserMediaRequest::UserMediaRequest(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
     : ActiveDOMObject(document)
-    , m_promise(makeUniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>>(WTFMove(promise)))
-    , m_request(WTFMove(request))
-    , m_audioConstraints(WTFMove(audioConstraints))
-    , m_videoConstraints(WTFMove(videoConstraints))
+    , m_promise(makeUniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>>(WTF::move(promise)))
+    , m_request(WTF::move(request))
+    , m_audioConstraints(WTF::move(audioConstraints))
+    , m_videoConstraints(WTF::move(videoConstraints))
 {
 }
 
@@ -104,8 +108,8 @@ void UserMediaRequest::start()
     // 4. If the current settings object's responsible document is NOT allowed to use the feature indicated by
     //    attribute name allowusermedia, return a promise rejected with a DOMException object whose name
     //    attribute has the value SecurityError.
-    auto& document = downcast<Document>(*context);
-    auto* controller = UserMediaController::from(document.page());
+    Ref document = downcast<Document>(*context);
+    auto* controller = UserMediaController::from(document->protectedPage().get());
     if (!controller) {
         deny(MediaAccessDenialReason::UserMediaDisabled);
         return;
@@ -120,29 +124,26 @@ void UserMediaRequest::start()
     switch (m_request.type) {
     case MediaStreamRequest::Type::DisplayMedia:
     case MediaStreamRequest::Type::DisplayMediaWithAudio:
-        if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::DisplayCapture, document)) {
+        if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::DisplayCapture, document.get())) {
             deny(MediaAccessDenialReason::PermissionDenied);
-            controller->logGetDisplayMediaDenial(document);
+            controller->logGetDisplayMediaDenial(document.get());
             return;
         }
         break;
     case MediaStreamRequest::Type::UserMedia:
-        if (m_request.audioConstraints.isValid && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document)) {
+        if (m_request.audioConstraints.isValid && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document.get())) {
             deny(MediaAccessDenialReason::PermissionDenied);
-            controller->logGetUserMediaDenial(document);
+            controller->logGetUserMediaDenial(document.get());
             return;
         }
-        if (m_request.videoConstraints.isValid && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document)) {
+        if (m_request.videoConstraints.isValid && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document.get())) {
             deny(MediaAccessDenialReason::PermissionDenied);
-            controller->logGetUserMediaDenial(document);
+            controller->logGetUserMediaDenial(document.get());
             return;
         }
         break;
     }
 
-    ASSERT(document.page());
-    if (RefPtr page = document.protectedPage())
-        PlatformMediaSessionManager::singleton().prepareToSendUserMediaPermissionRequestForPage(*page);
     controller->requestUserMediaAccess(*this);
 }
 
@@ -151,7 +152,7 @@ static inline bool isMediaStreamCorrectlyStarted(const MediaStream& stream)
     if (stream.getTracks().isEmpty())
         return false;
 
-    return WTF::allOf(stream.getTracks(), [](auto& track) {
+    return std::ranges::all_of(stream.getTracks(), [](auto& track) {
         return !track->source().captureDidFail();
     });
 }
@@ -161,18 +162,18 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
     RELEASE_LOG(MediaStream, "UserMediaRequest::allow %s %s", audioDevice ? audioDevice.persistentId().utf8().data() : "", videoDevice ? videoDevice.persistentId().utf8().data() : "");
 
     Ref document = downcast<Document>(*scriptExecutionContext());
-    RefPtr localWindow = document->protectedWindow();
+    RefPtr localWindow = document->window();
     RefPtr mediaDevices = localWindow ? NavigatorMediaDevices::mediaDevices(localWindow->protectedNavigator()) : nullptr;
     if (mediaDevices)
         mediaDevices->willStartMediaCapture(!!audioDevice, !!videoDevice);
 
-    m_allowCompletionHandler = WTFMove(completionHandler);
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, audioDevice = WTFMove(audioDevice), videoDevice = WTFMove(videoDevice), deviceIdentifierHashSalt = WTFMove(deviceIdentifierHashSalt)]() mutable {
-        auto callback = [this, protector = makePendingActivity(*this)](auto privateStreamOrError) mutable {
-            auto scopeExit = makeScopeExit([completionHandler = WTFMove(m_allowCompletionHandler)]() mutable {
+    m_allowCompletionHandler = WTF::move(completionHandler);
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [audioDevice = WTF::move(audioDevice), videoDevice = WTF::move(videoDevice), deviceIdentifierHashSalt = WTF::move(deviceIdentifierHashSalt)](auto& request) mutable {
+        auto callback = [protectedThis = Ref { request }, protector = request.makePendingActivity(request)](auto privateStreamOrError) mutable {
+            auto scopeExit = makeScopeExit([completionHandler = WTF::move(protectedThis->m_allowCompletionHandler)]() mutable {
                 completionHandler();
             });
-            if (isContextStopped()) {
+            if (protectedThis->isContextStopped()) {
                 if (!!privateStreamOrError) {
                     RELEASE_LOG(MediaStream, "UserMediaRequest::allow, context is stopped");
                     privateStreamOrError.value()->forEachTrack([](auto& track) {
@@ -185,48 +186,48 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
             if (!privateStreamOrError) {
                 RELEASE_LOG(MediaStream, "UserMediaRequest::allow failed to create media stream!");
                 auto error = privateStreamOrError.error();
-                scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, error.errorMessage);
-                deny(error.denialReason, error.errorMessage, error.invalidConstraint);
+                protectedThis->scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, error.errorMessage);
+                protectedThis->deny(error.denialReason, error.errorMessage, error.invalidConstraint);
                 return;
             }
-            auto privateStream = WTFMove(privateStreamOrError).value();
+            auto privateStream = WTF::move(privateStreamOrError).value();
 
-            auto& document = downcast<Document>(*scriptExecutionContext());
+            auto& document = downcast<Document>(*protectedThis->scriptExecutionContext());
             privateStream->monitorOrientation(document.orientationNotifier());
 
-            auto stream = MediaStream::create(document, WTFMove(privateStream));
+            Ref stream = MediaStream::create(document, WTF::move(privateStream));
             stream->startProducingData();
 
             if (!isMediaStreamCorrectlyStarted(stream)) {
-                deny(MediaAccessDenialReason::HardwareError);
+                protectedThis->deny(MediaAccessDenialReason::HardwareError);
                 return;
             }
 
             if (RefPtr audioTrack = stream->getFirstAudioTrack()) {
 #if USE(AUDIO_SESSION)
-                AudioSession::sharedSession().tryToSetActive(true);
+                AudioSession::singleton().tryToSetActive(true);
 #endif
-                if (std::holds_alternative<MediaTrackConstraints>(m_audioConstraints))
-                    audioTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_audioConstraints)));
+                if (std::holds_alternative<MediaTrackConstraints>(protectedThis->m_audioConstraints))
+                    audioTrack->setConstraints(std::get<MediaTrackConstraints>(WTF::move(protectedThis->m_audioConstraints)));
             }
             if (RefPtr videoTrack = stream->getFirstVideoTrack()) {
-                if (std::holds_alternative<MediaTrackConstraints>(m_videoConstraints))
-                    videoTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_videoConstraints)));
+                if (std::holds_alternative<MediaTrackConstraints>(protectedThis->m_videoConstraints))
+                    videoTrack->setConstraints(std::get<MediaTrackConstraints>(WTF::move(protectedThis->m_videoConstraints)));
             }
 
             ASSERT(document.isCapturing());
             document.setHasCaptureMediaStreamTrack();
-            m_promise->resolve(WTFMove(stream));
+            protectedThis->m_promise->resolve(WTF::move(stream));
         };
 
-        auto& document = downcast<Document>(*scriptExecutionContext());
-        RealtimeMediaSourceCenter::singleton().createMediaStream(document.logger(), WTFMove(callback), WTFMove(deviceIdentifierHashSalt), WTFMove(audioDevice), WTFMove(videoDevice), m_request);
+        auto& document = downcast<Document>(*request.scriptExecutionContext());
+        RealtimeMediaSourceCenter::singleton().createMediaStream(document.logger(), WTF::move(callback), WTF::move(deviceIdentifierHashSalt), WTF::move(audioDevice), WTF::move(videoDevice), request.m_request);
 
-        if (!scriptExecutionContext())
+        if (!request.scriptExecutionContext())
             return;
 
 #if ENABLE(WEB_RTC)
-        if (auto* page = document.page())
+        if (RefPtr page = document.page())
             page->rtcController().disableICECandidateFilteringForDocument(document);
 #endif
     });
@@ -286,7 +287,7 @@ void UserMediaRequest::deny(MediaAccessDenialReason reason, const String& messag
 void UserMediaRequest::stop()
 {
     Ref document = downcast<Document>(*scriptExecutionContext());
-    if (auto* controller = UserMediaController::from(document->page()))
+    if (auto* controller = UserMediaController::from(document->protectedPage().get()))
         controller->cancelUserMediaAccessRequest(*this);
 }
 

@@ -38,6 +38,7 @@ namespace WebCore {
 
 class NumberInputType final : public TextFieldInputType {
     WTF_MAKE_TZONE_ALLOCATED(NumberInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NumberInputType);
 public:
     static Ref<NumberInputType> create(HTMLInputElement& element)
     {
@@ -60,15 +61,18 @@ private:
     ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const final;
-    float decorationWidth() const final;
+    float decorationWidth(float inputWidth) const final;
+    static ValueOrReference<String> stripInvalidNumberCharacters(const String&);
+    ValueOrReference<String> normalizeFullWidthNumberChars(const String&) const;
     StepRange createStepRange(AnyStepHandling) const final;
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) final;
+    void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) final;
     Decimal parseToNumber(const String&, const Decimal&) const final;
     String serialize(const Decimal&) const final;
     String localizeValue(const String&) const final;
     String visibleValue() const final;
     String convertFromVisibleValue(const String&) const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     String badInputText() const final;
     bool supportsPlaceholder() const final;
     void attributeChanged(const QualifiedName&) final;

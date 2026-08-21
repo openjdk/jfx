@@ -30,20 +30,29 @@
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayerAnimationValue.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
+#include "GraphicsLayerFilterAnimationValue.h"
+#include "GraphicsLayerKeyframeValueList.h"
 #include "LayoutRect.h"
 #include "MediaPlayerEnums.h"
 #include "RotateTransformOperation.h"
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/ProcessID.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 #include "AcceleratedEffectStack.h"
+#endif
+
+#if PLATFORM(COCOA)
+#include <QuartzCore/CALayer.h>
 #endif
 
 #ifndef NDEBUG
@@ -52,14 +61,9 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatAnimationValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformAnimationValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterAnimationValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(KeyframeValueList);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsLayer);
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty property)
 {
     switch (property) {
@@ -119,31 +123,11 @@ String animatedPropertyIDAsString(AnimatedProperty property)
     return ""_s;
 }
 
-typedef UncheckedKeyHashMap<const GraphicsLayer*, Vector<FloatRect>> RepaintMap;
+using RepaintMap = HashMap<const GraphicsLayer*, Vector<FloatRect>>;
 static RepaintMap& repaintRectMap()
 {
     static NeverDestroyed<RepaintMap> map;
     return map;
-}
-
-void KeyframeValueList::insert(std::unique_ptr<const AnimationValue> value)
-{
-    for (size_t i = 0; i < m_values.size(); ++i) {
-        const AnimationValue* curValue = m_values[i].get();
-        if (curValue->keyTime() == value->keyTime()) {
-            ASSERT_NOT_REACHED();
-            // insert after
-            m_values.insert(i + 1, WTFMove(value));
-            return;
-        }
-        if (curValue->keyTime() > value->keyTime()) {
-            // insert before
-            m_values.insert(i, WTFMove(value));
-            return;
-        }
-    }
-
-    m_values.append(WTFMove(value));
 }
 
 #if !USE(CA)
@@ -206,6 +190,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
+    , m_showFrameProcessBorders(false)
     , m_isMaskLayer(false)
     , m_isBackdropRoot(false)
     , m_isTrackingDisplayListReplay(false)
@@ -311,7 +296,7 @@ bool GraphicsLayer::setChildren(Vector<Ref<GraphicsLayer>>&& newChildren)
 
     size_t listSize = newChildren.size();
     for (size_t i = 0; i < listSize; ++i)
-        addChild(WTFMove(newChildren[i]));
+        addChild(WTF::move(newChildren[i]));
 
     return true;
 }
@@ -322,7 +307,7 @@ void GraphicsLayer::addChild(Ref<GraphicsLayer>&& childLayer)
 
     childLayer->removeFromParent();
     childLayer->setParent(this);
-    m_children.append(WTFMove(childLayer));
+    m_children.append(WTF::move(childLayer));
 }
 
 void GraphicsLayer::addChildAtIndex(Ref<GraphicsLayer>&& childLayer, int index)
@@ -331,7 +316,7 @@ void GraphicsLayer::addChildAtIndex(Ref<GraphicsLayer>&& childLayer, int index)
 
     childLayer->removeFromParent();
     childLayer->setParent(this);
-    m_children.insert(index, WTFMove(childLayer));
+    m_children.insert(index, WTF::move(childLayer));
 }
 
 void GraphicsLayer::addChildBelow(Ref<GraphicsLayer>&& childLayer, GraphicsLayer* sibling)
@@ -343,12 +328,12 @@ void GraphicsLayer::addChildBelow(Ref<GraphicsLayer>&& childLayer, GraphicsLayer
 
     for (unsigned i = 0; i < m_children.size(); i++) {
         if (sibling == m_children[i].ptr()) {
-            m_children.insert(i, WTFMove(childLayer));
+            m_children.insert(i, WTF::move(childLayer));
             return;
         }
     }
 
-    m_children.append(WTFMove(childLayer));
+    m_children.append(WTF::move(childLayer));
 }
 
 void GraphicsLayer::addChildAbove(Ref<GraphicsLayer>&& childLayer, GraphicsLayer* sibling)
@@ -360,12 +345,12 @@ void GraphicsLayer::addChildAbove(Ref<GraphicsLayer>&& childLayer, GraphicsLayer
 
     for (unsigned i = 0; i < m_children.size(); i++) {
         if (sibling == m_children[i].ptr()) {
-            m_children.insert(i + 1, WTFMove(childLayer));
+            m_children.insert(i + 1, WTF::move(childLayer));
             return;
         }
     }
 
-    m_children.append(WTFMove(childLayer));
+    m_children.append(WTF::move(childLayer));
 }
 
 bool GraphicsLayer::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& newChild)
@@ -377,7 +362,7 @@ bool GraphicsLayer::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& n
     bool found = false;
     for (unsigned i = 0; i < m_children.size(); i++) {
         if (oldChild == m_children[i].ptr()) {
-            m_children[i] = WTFMove(newChild);
+            m_children[i] = WTF::move(newChild);
             found = true;
             break;
         }
@@ -407,8 +392,7 @@ void GraphicsLayer::removeAllChildren()
 
 void GraphicsLayer::removeFromParentInternal()
 {
-    if (m_parent) {
-        GraphicsLayer* parent = m_parent;
+    if (auto* parent = m_parent.get()) {
         setParent(nullptr);
         parent->m_children.removeFirstMatching([this](auto& layer) {
             return layer.ptr() == this;
@@ -449,6 +433,16 @@ void GraphicsLayer::setDrawsHDRContent(bool b)
 {
     ASSERT(m_type != Type::Structural);
     m_drawsHDRContent = b;
+}
+
+void GraphicsLayer::setTonemappingEnabled(bool b)
+{
+    ASSERT(m_type != Type::Structural);
+    m_tonemappingEnabled = b;
+}
+
+void GraphicsLayer::setNeedsDisplayIfEDRHeadroomExceeds(float)
+{
 }
 #endif
 
@@ -515,7 +509,7 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
         m_maskLayer->setIsMaskLayer(false);
     }
 
-    m_maskLayer = WTFMove(layer);
+    m_maskLayer = WTF::move(layer);
 }
 
 MediaPlayerVideoGravity GraphicsLayer::videoGravity() const
@@ -574,7 +568,7 @@ void GraphicsLayer::setShapeLayerWindRule(WindRule windRule)
 
 void GraphicsLayer::setEventRegion(EventRegion&& eventRegion)
 {
-    m_eventRegion = WTFMove(eventRegion);
+    m_eventRegion = WTF::move(eventRegion);
 }
 
 void GraphicsLayer::noteDeviceOrPageScaleFactorChangedIncludingDescendants()
@@ -608,7 +602,7 @@ void GraphicsLayer::setReplicatedByLayer(RefPtr<GraphicsLayer>&& layer)
     if (layer)
         layer->setReplicatedLayer(this);
 
-    m_replicaLayer = WTFMove(layer);
+    m_replicaLayer = WTF::move(layer);
 }
 
 void GraphicsLayer::setOffsetFromRenderer(const FloatSize& offset, ShouldSetNeedsDisplay shouldSetNeedsDisplay)
@@ -619,7 +613,7 @@ void GraphicsLayer::setOffsetFromRenderer(const FloatSize& offset, ShouldSetNeed
     m_offsetFromRenderer = offset;
 
     // If the compositing layer offset changes, we need to repaint.
-    if (shouldSetNeedsDisplay == SetNeedsDisplay)
+    if (shouldSetNeedsDisplay == ShouldSetNeedsDisplay::Set)
         setNeedsDisplay();
 }
 
@@ -631,7 +625,7 @@ void GraphicsLayer::setScrollOffset(const ScrollOffset& offset, ShouldSetNeedsDi
     m_scrollOffset = offset;
 
     // If the compositing layer offset changes, we need to repaint.
-    if (shouldSetNeedsDisplay == SetNeedsDisplay)
+    if (shouldSetNeedsDisplay == ShouldSetNeedsDisplay::Set)
         setNeedsDisplay();
 }
 
@@ -671,7 +665,7 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const F
         clipRect.move(offset);
     }
 
-    client().paintContents(this, context, clipRect, layerPaintBehavior);
+    client().paintContents(*this, context, clipRect, layerPaintBehavior);
 }
 
 FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverageRect, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect)
@@ -787,12 +781,20 @@ void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
         return;
     }
 
+    if (isShowingFrameProcessBorders()) {
+        auto hash = intHash(static_cast<uint32_t>(getCurrentProcessID()));
+        uint8_t r = (hash >>  0) & 0xFF, g = (hash >>  8) & 0xFF, b = (hash >> 16) & 0xFF;
+        color = SRGBA<uint8_t> { r, g, b }.colorWithAlphaByte(192);
+        width = 4;
+        return;
+    }
+
     color = Color::yellow.colorWithAlphaByte(192); // container: yellow
 }
 
 void GraphicsLayer::updateDebugIndicators()
 {
-    if (!isShowingDebugBorder())
+    if (!isShowingDebugBorder() && !isShowingFrameProcessBorders())
         return;
 
     Color borderColor;
@@ -806,12 +808,12 @@ void GraphicsLayer::setZPosition(float position)
     m_zPosition = position;
 }
 
-static inline const FilterOperations& filterOperationsAt(const KeyframeValueList& valueList, size_t index)
+static inline const FilterOperations& filterOperationsAt(const GraphicsLayerKeyframeValueList& valueList, size_t index)
 {
-    return static_cast<const FilterAnimationValue&>(valueList.at(index)).value();
+    return downcast<GraphicsLayerFilterAnimationValue>(valueList.at(index)).value();
 }
 
-int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
+int GraphicsLayer::validateFilterOperations(const GraphicsLayerKeyframeValueList& valueList)
 {
     ASSERT(valueList.property() == AnimatedProperty::Filter || valueList.property() == AnimatedProperty::WebkitBackdropFilter);
 
@@ -844,7 +846,7 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
     return firstIndex;
 }
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 void GraphicsLayer::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effects, AcceleratedEffectValues&& baseValues)
 {
     if (effects.isEmpty()) {
@@ -855,8 +857,8 @@ void GraphicsLayer::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effe
     if (!m_effectStack)
         m_effectStack = AcceleratedEffectStack::create();
 
-    m_effectStack->setEffects(WTFMove(effects));
-    m_effectStack->setBaseValues(WTFMove(baseValues));
+    m_effectStack->setEffects(WTF::move(effects));
+    m_effectStack->setBaseValues(WTF::move(baseValues));
 }
 #endif
 
@@ -882,7 +884,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     FloatRect largestRepaintRect(FloatPoint(), m_size);
     largestRepaintRect.intersect(repaintRect);
 
-    repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTFMove(largestRepaintRect));
+    repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTF::move(largestRepaintRect));
 }
 
 void GraphicsLayer::traverse(GraphicsLayer& layer, NOESCAPE const Function<void(GraphicsLayer&)>& traversalFunc)
@@ -907,16 +909,16 @@ void GraphicsLayer::setTileCoverage(TileCoverage coverage)
 
 void GraphicsLayer::dumpLayer(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
-    ts << indent << "(" << "GraphicsLayer";
+    ts << indent << '(' << "GraphicsLayer"_s;
 
     if (options & LayerTreeAsTextOptions::Debug) {
-        ts << " " << static_cast<void*>(const_cast<GraphicsLayer*>(this));
-        ts << " \"" << m_name << "\"";
+        ts << ' ' << static_cast<void*>(const_cast<GraphicsLayer*>(this));
+        ts << " \"" << m_name << '"';
     }
 
-    ts << "\n";
+    ts << '\n';
     dumpProperties(ts, options);
-    ts << indent << ")\n";
+    ts << indent << ")\n"_s;
 }
 
 static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, OptionSet<LayerTreeAsTextOptions> options)
@@ -955,7 +957,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (client().shouldDumpPropertyForLayer(this, "anchorPoint"_s, options)) {
         ts << indent << "(anchor "_s << m_anchorPoint.x() << ' ' << m_anchorPoint.y();
         if (m_anchorPoint.z())
-            ts << " " << m_anchorPoint.z();
+            ts << ' ' << m_anchorPoint.z();
         ts << ")\n"_s;
     }
 
@@ -1056,7 +1058,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_replicatedLayer) {
         ts << indent << "(replicated layer"_s;
         if (options & LayerTreeAsTextOptions::Debug)
-            ts << ' ' << m_replicatedLayer;
+            ts << ' ' << m_replicatedLayer.get();
         ts << ")\n"_s;
     }
 
@@ -1100,7 +1102,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
         dumpChildren(childrenStream, m_children, totalChildCount, options);
 
         if (totalChildCount) {
-            ts << indent << "(children "_s << totalChildCount << "\n"_s;
+            ts << indent << "(children "_s << totalChildCount << '\n';
             ts << childrenStream.release();
             ts << indent << ")\n"_s;
         }
@@ -1113,7 +1115,7 @@ TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& la
 {
     for (size_t i = 0; i < layers.size(); ++i) {
         if (i)
-            ts << " ";
+            ts << ' ';
         ts << layers[i];
     }
 
@@ -1123,13 +1125,13 @@ TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& la
 TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 {
     switch (phase) {
-    case GraphicsLayerPaintingPhase::Background: ts << "background"; break;
-    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"; break;
-    case GraphicsLayerPaintingPhase::Mask: ts << "mask"; break;
-    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"; break;
-    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"; break;
-    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"; break;
-    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"; break;
+    case GraphicsLayerPaintingPhase::Background: ts << "background"_s; break;
+    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"_s; break;
+    case GraphicsLayerPaintingPhase::Mask: ts << "mask"_s; break;
+    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"_s; break;
+    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"_s; break;
+    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"_s; break;
+    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"_s; break;
     }
 
     return ts;
@@ -1138,10 +1140,19 @@ TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& customAppearance)
 {
     switch (customAppearance) {
-    case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
-    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
+    case GraphicsLayer::CustomAppearance::None: ts << "none"_s; break;
+    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"_s; break;
     }
     return ts;
+}
+
+void GraphicsLayer::setShadowPath(const Path& path)
+{
+#if USE(CA)
+    m_shadowPath = path;
+#else
+    UNUSED_PARAM(path);
+#endif
 }
 
 String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options, uint32_t baseIndent) const
@@ -1152,6 +1163,14 @@ String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options,
     dumpLayer(ts, options);
     return ts.release();
 }
+
+#if PLATFORM(COCOA)
+RetainPtr<CALayer> GraphicsLayer::protectedPlatformLayer() const
+{
+    // FIXME: CALayer.h is included but static analysis is still warning.
+    SUPPRESS_FORWARD_DECL_ARG return platformLayer();
+}
+#endif
 
 } // namespace WebCore
 
@@ -1167,9 +1186,8 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     // The tree is too large to print to the os log so save the tree output
     // to a file in case we don't have easy access to stderr.
     auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GraphicsLayerTree"_s);
-    if (FileSystem::isHandleValid(fileHandle)) {
-        FileSystem::writeToFile(fileHandle, byteCast<uint8_t>(output.utf8().span()));
-        FileSystem::closeFile(fileHandle);
+    if (fileHandle) {
+        fileHandle.write(byteCast<uint8_t>(output.utf8().span()));
         WTFLogAlways("Saved GraphicsLayer Tree to %s", tempFilePath.utf8().data());
     } else
         WTFLogAlways("Failed to open temporary file for saving the GraphicsLayer Tree.");

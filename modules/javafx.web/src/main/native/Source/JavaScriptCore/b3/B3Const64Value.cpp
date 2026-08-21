@@ -66,6 +66,22 @@ Value* Const64Value::mulConstant(Procedure& proc, const Value* other) const
     return proc.add<Const64Value>(origin(), m_value * other->asInt64());
 }
 
+Value* Const64Value::mulHighConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasInt64())
+        return nullptr;
+    int64_t result = static_cast<int64_t>((static_cast<Int128>(static_cast<int64_t>(m_value)) * static_cast<Int128>(static_cast<int64_t>(other->asInt64()))) >> 64);
+    return proc.add<Const64Value>(origin(), result);
+}
+
+Value* Const64Value::uMulHighConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasInt64())
+        return nullptr;
+    uint64_t result = static_cast<uint64_t>((static_cast<UInt128>(static_cast<uint64_t>(m_value)) * static_cast<UInt128>(static_cast<uint64_t>(other->asInt64()))) >> 64);
+    return proc.add<Const64Value>(origin(), static_cast<int64_t>(result));
+}
+
 Value* Const64Value::checkAddConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasInt64())

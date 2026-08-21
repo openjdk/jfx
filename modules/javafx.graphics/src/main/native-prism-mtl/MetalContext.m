@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@
 #import "MetalMeshView.h"
 #import "MetalPhongMaterial.h"
 #import "com_sun_prism_mtl_MTLContext.h"
+#import "com_sun_prism_mtl_MTLPipeline.h"
 
 @implementation MetalContext
 
@@ -67,7 +68,6 @@
         nonLinearSamplerDict = [[NSMutableDictionary alloc] init];
         compositeMode = com_sun_prism_mtl_MTLContext_MTL_COMPMODE_SRCOVER; //default
 
-        currentBufferIndex = 0;
         commandQueue = [device newCommandQueue];
         commandQueue.label = @"The only MTLCommandQueue";
         pipelineManager = [MetalPipelineManager alloc];
@@ -359,11 +359,6 @@
     }
 }
 
-- (NSUInteger) getCurrentBufferIndex
-{
-    return currentBufferIndex;
-}
-
 - (id<MTLRenderPipelineState>) getPhongPipelineStateWithNumLights:(int)numLights
 {
     return [[self getPipelineManager] getPhongPipeStateWithNumLights:numLights
@@ -598,13 +593,13 @@
 - (void) setClipRect:(int)x y:(int)y width:(int)width height:(int)height
 {
     id<MTLTexture> currRtt = [rtt getTexture];
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
     int x1 = x + width;
     int y1 = y + height;
     if (x <= 0 && y <= 0 && x1 >= currRtt.width && y1 >= currRtt.height) {
         [self resetClipRect];
     } else {
-        if (x < 0)                    x = 0;
-        if (y < 0)                    y = 0;
         if (x1 > currRtt.width)  width  = currRtt.width - x;
         if (y1 > currRtt.height) height = currRtt.height - y;
         if (x > x1)              width  = x = 0;
@@ -1552,4 +1547,23 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nReleaseTexture
     MetalTexture* pTex = (MetalTexture*)jlong_to_ptr(pTexture);
     [pTex release];
     pTex = nil;
+}
+
+
+// MTLPipeline methods
+
+/*
+ * Class:     com_sun_prism_mtl_MTLPipeline
+ * Method:    nSupportsMTL
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_mtl_MTLPipeline_nSupportsMTL
+    (JNIEnv *env, jclass jClass)
+{
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    // The Prism MTL pipeline requires MTLGPUFamilyMac2
+    if ([device supportsFamily:MTLGPUFamilyMac2]) {
+        return true;
+    }
+    return false;
 }

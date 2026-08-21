@@ -623,11 +623,11 @@ public class TextFieldTest {
         stage.show();
 
         assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(TextInputSkinShim.getTextTranslateX(txtField), 0, 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -646,7 +646,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -665,7 +665,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test public void stripInvalidCharacters() {

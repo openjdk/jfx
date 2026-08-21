@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,12 @@
 #include "config.h"
 #include "ActiveDOMObject.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
-#include "ScriptExecutionContext.h"
+#include "EventTargetInlines.h"
+#include "ScriptExecutionContextInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -141,10 +143,10 @@ bool ActiveDOMObject::isAllowedToRunScript() const
 
 void ActiveDOMObject::queueTaskInEventLoop(TaskSource source, Function<void ()>&& function)
 {
-    RefPtr<ScriptExecutionContext> context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
-    context->eventLoop().queueTask(source, WTFMove(function));
+    context->checkedEventLoop()->queueTask(source, WTF::move(function));
 }
 
 class ActiveDOMObjectEventDispatchTask : public EventLoopTask {
@@ -153,7 +155,7 @@ public:
     ActiveDOMObjectEventDispatchTask(TaskSource source, EventLoopTaskGroup& group, ActiveDOMObject& object, Function<void()>&& dispatchEvent)
         : EventLoopTask(source, group)
         , m_object(object)
-        , m_dispatchEvent(WTFMove(dispatchEvent))
+        , m_dispatchEvent(WTF::move(dispatchEvent))
     {
         ++m_object->m_pendingActivityInstanceCount;
     }
@@ -173,7 +175,7 @@ public:
     }
 
 private:
-    Ref<ActiveDOMObject> m_object;
+    const Ref<ActiveDOMObject> m_object;
     Function<void()> m_dispatchEvent;
 };
 
@@ -185,11 +187,11 @@ void ActiveDOMObject::queueTaskToDispatchEventInternal(EventTarget& target, Task
     RefPtr context = scriptExecutionContext();
     if (!context)
         return;
-    auto& eventLoopTaskGroup = context->eventLoop();
-    auto task = makeUnique<ActiveDOMObjectEventDispatchTask>(source, eventLoopTaskGroup, *this, [target = Ref { target }, event = WTFMove(event)] {
+    CheckedRef eventLoopTaskGroup = context->eventLoop();
+    auto task = makeUnique<ActiveDOMObjectEventDispatchTask>(source, eventLoopTaskGroup, *this, [target = Ref { target }, event = WTF::move(event)] {
         target->dispatchEvent(event);
     });
-    eventLoopTaskGroup.queueTask(WTFMove(task));
+    eventLoopTaskGroup->queueTask(WTF::move(task));
 }
 
 void ActiveDOMObject::queueCancellableTaskToDispatchEventInternal(EventTarget& target, TaskSource source, TaskCancellationGroup& cancellationGroup, Ref<Event>&& event)
@@ -198,11 +200,11 @@ void ActiveDOMObject::queueCancellableTaskToDispatchEventInternal(EventTarget& t
     RefPtr context = scriptExecutionContext();
     if (!context)
         return;
-    auto& eventLoopTaskGroup = context->eventLoop();
-    auto task = makeUnique<ActiveDOMObjectEventDispatchTask>(source, eventLoopTaskGroup, *this, CancellableTask(cancellationGroup, [target = Ref { target }, event = WTFMove(event)] {
+    CheckedRef eventLoopTaskGroup = context->eventLoop();
+    auto task = makeUnique<ActiveDOMObjectEventDispatchTask>(source, eventLoopTaskGroup, *this, CancellableTask(cancellationGroup, [target = Ref { target }, event = WTF::move(event)] {
         target->dispatchEvent(event);
     }));
-    eventLoopTaskGroup.queueTask(WTFMove(task));
+    eventLoopTaskGroup->queueTask(WTF::move(task));
 }
 
 } // namespace WebCore

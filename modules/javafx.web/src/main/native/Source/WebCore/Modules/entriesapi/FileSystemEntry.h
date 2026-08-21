@@ -37,7 +37,7 @@ class ErrorCallback;
 class FileSystemEntryCallback;
 
 class FileSystemEntry : public ScriptWrappable, public ActiveDOMObject, public RefCounted<FileSystemEntry> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FileSystemEntry);
+    WTF_MAKE_TZONE_ALLOCATED(FileSystemEntry);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -58,7 +58,7 @@ protected:
     Document* document() const;
 
 private:
-    Ref<DOMFileSystem> m_filesystem;
+    const Ref<DOMFileSystem> m_filesystem;
     String m_name;
     String m_virtualPath;
 };

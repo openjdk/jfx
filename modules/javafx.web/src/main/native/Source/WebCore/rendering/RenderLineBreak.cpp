@@ -31,9 +31,10 @@
 #include "InlineIteratorSVGTextBox.h"
 #include "InlineRunAndOffset.h"
 #include "LineSelection.h"
-#include "LogicalSelectionOffsetCaches.h"
+#include "LogicalSelectionOffsetCachesInlines.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBox.h"
@@ -46,36 +47,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderLineBreak);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderLineBreak);
 
 RenderLineBreak::RenderLineBreak(HTMLElement& element, RenderStyle&& style)
-    : RenderBoxModelObject(Type::LineBreak, element, WTFMove(style), { }, is<HTMLWBRElement>(element) ? OptionSet<LineBreakFlag> { LineBreakFlag::IsWBR } : OptionSet<LineBreakFlag> { })
+    : RenderBoxModelObject(Type::LineBreak, element, WTF::move(style), { }, is<HTMLWBRElement>(element) ? OptionSet<LineBreakFlag> { LineBreakFlag::IsWBR } : OptionSet<LineBreakFlag> { })
 {
     ASSERT(isRenderLineBreak());
 }
 
 RenderLineBreak::~RenderLineBreak()
 {
-}
-
-LayoutUnit RenderLineBreak::lineHeight(bool firstLine, LineDirectionMode /*direction*/, LinePositionMode /*linePositionMode*/) const
-{
-    if (firstLine) {
-        auto& firstLineStyle = this->firstLineStyle();
-        if (&firstLineStyle != &style())
-            return LayoutUnit::fromFloatCeil(firstLineStyle.computedLineHeight());
-    }
-
-    if (!m_cachedLineHeight)
-        m_cachedLineHeight = LayoutUnit::fromFloatCeil(style().computedLineHeight());
-    return *m_cachedLineHeight;
-}
-
-LayoutUnit RenderLineBreak::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
-{
-    auto& style = firstLine ? firstLineStyle() : this->style();
-    auto& fontMetrics = style.metricsOfPrimaryFont();
-    return LayoutUnit { (fontMetrics.ascent(baselineType) + (lineHeight(firstLine, direction, linePositionMode) - fontMetrics.height()) / 2) };
 }
 
 int RenderLineBreak::caretMinOffset() const
@@ -93,9 +74,9 @@ bool RenderLineBreak::canBeSelectionLeaf() const
     return true;
 }
 
-VisiblePosition RenderLineBreak::positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*)
+PositionWithAffinity RenderLineBreak::positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*)
 {
-    return createVisiblePosition(0, Affinity::Downstream);
+    return createPositionWithAffinity(0, Affinity::Downstream);
 }
 
 IntRect RenderLineBreak::linesBoundingBox() const
@@ -130,7 +111,6 @@ void RenderLineBreak::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) co
 
 void RenderLineBreak::updateFromStyle()
 {
-    m_cachedLineHeight = { };
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(isInline());
 }
 

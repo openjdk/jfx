@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
 
 #include <optional>
 #include <wtf/HashMap.h>
@@ -49,8 +49,11 @@ public:
 
     void registerCodeRange(void* start, void* end, CommentMap&& map)
     {
-        if (LIKELY(!Options::needDisassemblySupport()) || !map.size())
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
+        if (!map.size())
+            return;
+
         Locker locker { m_lock };
 
         auto newStart = std::bit_cast<uintptr_t>(start);
@@ -69,12 +72,12 @@ public:
         (void) newStart;
 #endif
 
-        m_comments.emplace(orderedKey(start), std::pair { newEnd, WTFMove(map) });
+        m_comments.emplace(orderedKey(start), std::pair { newEnd, WTF::move(map) });
     }
 
     void unregisterCodeRange(void* start, void* end)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
         Locker locker { m_lock };
 
@@ -89,7 +92,7 @@ public:
 
     inline std::optional<String> comment(void* in)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return { };
         Locker locker { m_lock };
         auto it = m_comments.lower_bound(orderedKey(in));

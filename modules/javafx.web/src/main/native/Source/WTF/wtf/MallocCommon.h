@@ -35,7 +35,7 @@ public:
     TryMallocReturnValue(void*);
     TryMallocReturnValue(TryMallocReturnValue&&);
     ~TryMallocReturnValue();
-    template<typename T> bool getValue(T*&) WARN_UNUSED_RETURN;
+    template<typename T> [[nodiscard]] bool getValue(T*&);
 private:
     void operator=(TryMallocReturnValue&&) = delete;
     mutable void* m_data;
@@ -71,7 +71,7 @@ public:
     WTF_EXPORT_PRIVATE ~ForbidMallocUseForCurrentThreadScope();
 #else
     ForbidMallocUseForCurrentThreadScope() = default;
-    ~ForbidMallocUseForCurrentThreadScope() { }
+    ALWAYS_INLINE ~ForbidMallocUseForCurrentThreadScope() { }
 #endif
 
     ForbidMallocUseForCurrentThreadScope(const ForbidMallocUseForCurrentThreadScope&) = delete;
@@ -108,7 +108,7 @@ using WTF::TryMallocReturnValue;
 using WTF::DisableMallocRestrictionsForCurrentThreadScope;
 using WTF::ForbidMallocUseForCurrentThreadScope;
 
-// FIXME: de-duplicate with WTF_MAKE_FAST_ALLOCATED_IMPL
+// FIXME: de-duplicate with WTF_DEPRECATED_MAKE_FAST_ALLOCATED_IMPL
 #define WTF_MAKE_CONFIGURABLE_ALLOCATED_IMPL(alloc, family) \
     void* operator new(size_t, void* p) { return p; } \
     void* operator new[](size_t, void* p) { return p; } \
@@ -144,7 +144,7 @@ using WTF::ForbidMallocUseForCurrentThreadScope;
     using WTFIs ## family ## Allocated  = int; \
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
-// FIXME: de-duplicate with WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL
+// FIXME: de-duplicate with WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL
 #define WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname, alloc, family) \
     void* operator new(size_t, void* p) { return p; } \
     void* operator new[](size_t, void* p) { return p; } \
@@ -181,14 +181,14 @@ using WTF::ForbidMallocUseForCurrentThreadScope;
 
 #define WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER(classname, alloc) \
 public: \
-    WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname, alloc) \
+    WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname, alloc, alloc) \
 private: \
 using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER(classname, alloc) \
 private: \
 public: \
-    WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname, alloc) \
+    WTF_MAKE_CONFIGURABLE_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname, alloc, alloc) \
 using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_CONFIGURABLE_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(classname) \

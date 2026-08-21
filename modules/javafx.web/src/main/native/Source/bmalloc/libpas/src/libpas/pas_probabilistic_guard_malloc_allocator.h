@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,8 +52,10 @@
 #ifndef PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 #define PAS_PROBABILISTIC_GUARD_MALLOC_ALLOCATOR
 
+#include "pas_report_crash_pgm_report.h"
 #include "pas_utils.h"
 #include "pas_large_heap.h"
+#include "pas_large_map_entry.h"
 #include "pas_ptr_hash_map.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -68,6 +70,9 @@ struct pas_pgm_storage {
     uintptr_t start_of_data_pages;
     size_t size_of_allocated_pages;
     uintptr_t start_of_allocated_pages;
+
+    pas_backtrace_metadata* alloc_backtrace;
+    pas_backtrace_metadata* dealloc_backtrace;
 
     /*
      * These parameter below rely on page sizes being less than 65536.
@@ -88,6 +93,12 @@ struct pas_pgm_storage {
 
     pas_large_heap* large_heap;
 };
+
+/*
+ * Flag to indicate if PGM was ever enabled for this process,
+ * even if it been subsequently disabled, or no guarded allocations have been made.
+*/
+extern bool pas_probabilistic_guard_malloc_has_been_used;
 
 /* max amount of free memory that can be wasted (1MB) */
 #define PAS_PGM_MAX_WASTED_MEMORY (1024 * 1024)
@@ -124,6 +135,7 @@ size_t pas_probabilistic_guard_malloc_get_free_wasted_memory(void);
 pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void);
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem);
+bool pas_probabilistic_guard_malloc_enabled_on_process(void);
 
 /*
  * Determine whether PGM can be called at runtime.

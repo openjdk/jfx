@@ -66,7 +66,7 @@ RemoteInspectorSocketEndpoint::RemoteInspectorSocketEndpoint()
 
 RemoteInspectorSocketEndpoint::~RemoteInspectorSocketEndpoint()
 {
-    ASSERT(m_workerThread.get() != &Thread::current());
+    ASSERT(m_workerThread.get() != &Thread::currentSingleton());
 
     m_shouldAbortWorkerThread = true;
     wakeupWorkerThread();
@@ -101,7 +101,7 @@ std::optional<ConnectionID> RemoteInspectorSocketEndpoint::listenInet(const char
     if (!connection->isListening())
         return std::nullopt;
 
-    m_listeners.add(id, WTFMove(connection));
+    m_listeners.add(id, WTF::move(connection));
     wakeupWorkerThread();
     return id;
 }
@@ -213,7 +213,7 @@ std::optional<ConnectionID> RemoteInspectorSocketEndpoint::createClient(Platform
     if (!Socket::isValid(connection->socket))
         return std::nullopt;
 
-    m_clients.add(id, WTFMove(connection));
+    m_clients.add(id, WTF::move(connection));
     wakeupWorkerThread();
 
     return id;
@@ -283,11 +283,11 @@ void RemoteInspectorSocketEndpoint::recvIfEnabled(ConnectionID id)
     Locker locker { m_connectionsLock };
     if (const auto& connection = m_clients.get(id)) {
         Vector<uint8_t> recvBuffer(Socket::BufferSize);
-        if (auto readSize = Socket::read(connection->socket, recvBuffer.data(), recvBuffer.size())) {
+        if (auto readSize = Socket::read(connection->socket, recvBuffer.mutableSpan().data(), recvBuffer.size())) {
             if (*readSize > 0) {
                 recvBuffer.shrink(*readSize);
                 locker.unlockEarly();
-                connection->client.didReceive(*this, id, WTFMove(recvBuffer));
+                connection->client.didReceive(*this, id, WTF::move(recvBuffer));
                 return;
             }
         }
@@ -310,7 +310,7 @@ void RemoteInspectorSocketEndpoint::sendIfEnabled(ConnectionID id)
         if (buffer.isEmpty())
             return;
 
-        if (auto writeSize = Socket::write(connection->socket, buffer.data(), std::min(buffer.size(), Socket::BufferSize))) {
+        if (auto writeSize = Socket::write(connection->socket, buffer.span().data(), std::min(buffer.size(), Socket::BufferSize))) {
             auto size = *writeSize;
             if (size == buffer.size()) {
                 buffer.clear();
@@ -318,7 +318,7 @@ void RemoteInspectorSocketEndpoint::sendIfEnabled(ConnectionID id)
             }
 
             if (size > 0)
-                buffer.remove(0, size);
+                buffer.removeAt(0, size);
         }
 
         Socket::markWaitingWritable(connection->poll);

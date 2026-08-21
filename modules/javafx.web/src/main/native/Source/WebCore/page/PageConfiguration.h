@@ -25,15 +25,17 @@
 
 #pragma once
 
-#include "ContentSecurityPolicy.h"
-#include "FrameIdentifier.h"
-#include "PageIdentifier.h"
-#include "ShouldRelaxThirdPartyCookieBlocking.h"
+#include <WebCore/ContentSecurityPolicy.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
 #include <pal/SessionID.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -41,21 +43,24 @@
 #include <wtf/Vector.h>
 
 #if ENABLE(APPLICATION_MANIFEST)
-#include "ApplicationManifest.h"
+#include <WebCore/ApplicationManifest.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
-#include "DeviceOrientationUpdateProvider.h"
+#include <WebCore/DeviceOrientationUpdateProvider.h>
 #endif
 
 #if PLATFORM(VISION) && ENABLE(GAMEPAD)
-#include "ShouldRequireExplicitConsentForGamepadAccess.h"
+#include <WebCore/ShouldRequireExplicitConsentForGamepadAccess.h>
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+#include <WebCore/ImageAnalysisQueue.h>
 #endif
 
 namespace WebCore {
 
 class AlternativeTextClient;
-class ApplicationCacheStorage;
 class AttachmentElementClient;
 class AuthenticatorCoordinatorClient;
 class BackForwardClient;
@@ -74,13 +79,14 @@ class EditorClient;
 class Frame;
 class FrameLoader;
 class HistoryItemClient;
-class InspectorClient;
+class InspectorBackendClient;
 class LocalFrameLoaderClient;
+class MediaSessionManagerInterface;
 class ModelPlayerProvider;
 class PaymentCoordinatorClient;
 class PerformanceLoggingClient;
 class PluginInfoProvider;
-class ProcessSyncClient;
+class DocumentSyncClient;
 class ProgressTrackerClient;
 class RemoteFrame;
 class RemoteFrameClient;
@@ -98,6 +104,7 @@ class WebRTCProvider;
 
 enum class SandboxFlag : uint16_t;
 using SandboxFlags = OptionSet<SandboxFlag>;
+using MediaSessionManagerFactory = Function<RefPtr<MediaSessionManagerInterface> (PageIdentifier)>;
 
 class PageConfiguration {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(PageConfiguration, WEBCORE_EXPORT);
@@ -107,8 +114,9 @@ public:
     struct LocalMainFrameCreationParameters {
         CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)> clientCreator;
         SandboxFlags effectiveSandboxFlags;
+        ReferrerPolicy effectiveReferrerPolicy { ReferrerPolicy::EmptyString };
     };
-    using MainFrameCreationParameters = std::variant<LocalMainFrameCreationParameters, CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>>;
+    using MainFrameCreationParameters = Variant<LocalMainFrameCreationParameters, CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>>;
 
     WEBCORE_EXPORT PageConfiguration(
         std::optional<PageIdentifier>,
@@ -127,7 +135,7 @@ public:
         UniqueRef<SpeechRecognitionProvider>&&,
         Ref<BroadcastChannelRegistry>&&,
         UniqueRef<StorageProvider>&&,
-        UniqueRef<ModelPlayerProvider>&&,
+        Ref<ModelPlayerProvider>&&,
         Ref<BadgeClient>&&,
         Ref<HistoryItemClient>&&,
 #if ENABLE(CONTEXT_MENUS)
@@ -138,9 +146,9 @@ public:
 #endif
         UniqueRef<ChromeClient>&&,
         UniqueRef<CryptoClient>&&,
-        UniqueRef<ProcessSyncClient>&&
+        UniqueRef<DocumentSyncClient>&&
 #if HAVE(DIGITAL_CREDENTIALS_UI)
-        , UniqueRef<CredentialRequestCoordinatorClient>&&
+        , Ref<CredentialRequestCoordinatorClient>&&
 #endif
     );
     WEBCORE_EXPORT ~PageConfiguration();
@@ -156,7 +164,7 @@ public:
     UniqueRef<EditorClient> editorClient;
     Ref<SocketProvider> socketProvider;
     std::unique_ptr<DragClient> dragClient;
-    std::unique_ptr<InspectorClient> inspectorClient;
+    std::unique_ptr<InspectorBackendClient> inspectorBackendClient;
 #if ENABLE(APPLE_PAY)
     Ref<PaymentCoordinatorClient> paymentCoordinatorClient;
 #endif
@@ -186,7 +194,6 @@ public:
     RefPtr<SpeechSynthesisClient> speechSynthesisClient;
 #endif
 
-    RefPtr<ApplicationCacheStorage> applicationCacheStorage;
     RefPtr<DatabaseProvider> databaseProvider;
     Ref<CacheStorageProvider> cacheStorageProvider;
     RefPtr<PluginInfoProvider> pluginInfoProvider;
@@ -206,7 +213,6 @@ public:
     // FIXME: These should be all be Settings.
     bool loadsSubresources { true };
     std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> allowedNetworkHosts;
-    bool userScriptsShouldWaitUntilNotification { true };
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
     bool httpsUpgradeEnabled { true };
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting;
@@ -217,7 +223,7 @@ public:
 
     UniqueRef<StorageProvider> storageProvider;
 
-    UniqueRef<ModelPlayerProvider> modelPlayerProvider;
+    Ref<ModelPlayerProvider> modelPlayerProvider;
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> attachmentElementClient;
 #endif
@@ -228,7 +234,7 @@ public:
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
     UniqueRef<CryptoClient> cryptoClient;
 
-    UniqueRef<ProcessSyncClient> processSyncClient;
+    UniqueRef<DocumentSyncClient> documentSyncClient;
 
 #if PLATFORM(VISION) && ENABLE(GAMEPAD)
     ShouldRequireExplicitConsentForGamepadAccess gamepadAccessRequiresExplicitConsent { ShouldRequireExplicitConsentForGamepadAccess::No };
@@ -243,7 +249,13 @@ public:
 #endif
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
-    UniqueRef<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
+    Ref<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
+#endif
+
+    std::optional<MediaSessionManagerFactory> mediaSessionManagerFactory;
+
+#if ENABLE(IMAGE_ANALYSIS)
+    std::optional<ImageTranslationLanguageIdentifiers> imageTranslationLanguageIdentifiers;
 #endif
 };
 

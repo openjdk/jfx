@@ -60,7 +60,7 @@ void WorkerEventLoop::scheduleToRun()
 
 bool WorkerEventLoop::isContextThread() const
 {
-    return scriptExecutionContext()->isContextThread();
+    return protectedScriptExecutionContext()->isContextThread();
 }
 
 MicrotaskQueue& WorkerEventLoop::microtaskQueue()
@@ -81,4 +81,5 @@ const String WorkerEventLoop::taskMode()
 {
     return "workerEventLoopTaskMode"_s;
 }
+
 } // namespace WebCore

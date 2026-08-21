@@ -27,10 +27,10 @@
 
 #if ENABLE(PREVIEW_CONVERTER)
 
-#include "ResourceError.h"
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
-#include <wtf/RefCounted.h>
+#include <WebCore/ResourceError.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -40,22 +40,13 @@ OBJC_CLASS QLPreviewConverter;
 OBJC_CLASS WebPreviewConverterDelegate;
 
 namespace WebCore {
-struct PreviewPlatformDelegate;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PreviewPlatformDelegate> : std::true_type { };
-}
-
-namespace WebCore {
 
 class ResourceError;
 class ResourceRequest;
 struct PreviewConverterClient;
 struct PreviewConverterProvider;
 
-struct PreviewPlatformDelegate : CanMakeWeakPtr<PreviewPlatformDelegate> {
+struct PreviewPlatformDelegate : AbstractRefCountedAndCanMakeWeakPtr<PreviewPlatformDelegate> {
     virtual ~PreviewPlatformDelegate() = default;
 
     virtual void delegateDidReceiveData(const FragmentedSharedBuffer&) = 0;
@@ -76,6 +67,10 @@ public:
 
     ~PreviewConverter();
 
+    // PreviewPlatformDelegate.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     ResourceRequest safeRequest(const ResourceRequest&) const;
     ResourceResponse previewResponse() const;
     WEBCORE_EXPORT String previewFileName() const;
@@ -95,7 +90,7 @@ public:
     WEBCORE_EXPORT static void setPasswordForTesting(const String&);
 
 private:
-    static UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> platformSupportedMIMETypes();
+    static HashSet<String, ASCIICaseInsensitiveHash> platformSupportedMIMETypes();
 
     PreviewConverter(const ResourceResponse&, PreviewConverterProvider&);
 

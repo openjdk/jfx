@@ -27,9 +27,9 @@
 
 #include "CSSPropertyParser.h"
 #include "CSSSerializationContext.h"
-#include "ComputedStyleExtractor.h"
 #include "SVGAttributeAnimator.h"
 #include "SVGElement.h"
+#include "StyleExtractor.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -50,9 +50,9 @@ public:
         m_function.setFromAndByValues(targetElement, from, by);
     }
 
-    void setToAtEndOfDurationValue(const String& toAtEndOfDuration) override
+    void setToAtEndOfDurationValue(SVGElement& targetElement, const String& toAtEndOfDuration) override
     {
-        m_function.setToAtEndOfDurationValue(toAtEndOfDuration);
+        m_function.setToAtEndOfDurationValue(targetElement, toAtEndOfDuration);
     }
 
 protected:
@@ -85,12 +85,10 @@ protected:
 
         // Don't include any properties resulting from CSS Transitions/Animations or SMIL animations, as we want to retrieve the "base value".
         targetElement.setUseOverrideComputedStyle(true);
-        RefPtr<CSSValue> value = ComputedStyleExtractor(&targetElement).propertyValue(id);
+        auto serialization = Style::Extractor(&targetElement).propertyValueSerialization(id, CSS::defaultSerializationContext());
         targetElement.setUseOverrideComputedStyle(false);
-        if (!value)
-            return String();
 
-        return value->cssText(CSS::defaultSerializationContext());
+        return serialization;
     }
 
     String computeInheritedCSSPropertyValue(SVGElement& targetElement) const

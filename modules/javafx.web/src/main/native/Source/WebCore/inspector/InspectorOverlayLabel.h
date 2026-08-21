@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatPoint.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatPoint.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -45,7 +45,7 @@ class InspectorOverlayLabel {
     WTF_MAKE_TZONE_ALLOCATED(InspectorOverlayLabel);
 public:
     struct Arrow {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Arrow);
 
         enum class Direction : uint8_t {
             None,
@@ -74,7 +74,7 @@ public:
     };
 
     struct Content {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Content);
 
         struct Decoration {
             enum class Type : uint8_t {
@@ -100,7 +100,7 @@ public:
     static FloatSize expectedSize(const String&, Arrow::Direction);
 
 private:
-    friend struct IPC::ArgumentCoder<InspectorOverlayLabel, void>;
+    friend struct IPC::ArgumentCoder<InspectorOverlayLabel>;
     Vector<Content> m_contents;
     FloatPoint m_location;
     Color m_backgroundColor;

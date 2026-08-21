@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2002, 2005, 2006, 2008, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,21 +22,21 @@
 #include "config.h"
 #include "CSSPageRule.h"
 
-#include "CSSParser.h"
-#include "CSSSelector.h"
+#include "CSSPageDescriptors.h"
+#include "CSSSelectorParser.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
+#include "StyleSheetContents.h"
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 CSSPageRule::CSSPageRule(StyleRulePage& pageRule, CSSStyleSheet* parent)
-    : CSSGroupingRule(pageRule, parent)
+    : CSSRule(parent)
     , m_pageRule(pageRule)
 {
 }
@@ -47,33 +47,31 @@ CSSPageRule::~CSSPageRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSPageRule::style()
+CSSPageDescriptors& CSSPageRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_pageRule->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = CSSPageDescriptors::create(m_pageRule->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 
 String CSSPageRule::selectorText() const
 {
-    if (auto* selector = m_pageRule->selector()) {
-        if (!selector->selectorText().isEmpty())
-            return selector->selectorText();
-    }
-    return ""_s;
+    if (auto& selector = m_pageRule->selector(); !selector.selectorText().isEmpty())
+        return selector.selectorText();
+    return emptyString();
 }
 
 void CSSPageRule::setSelectorText(const String& selectorText)
 {
-    CSSParser parser(parserContext());
-    auto* sheet = parentStyleSheet();
-    auto selectorList = parser.parseSelectorList(selectorText, sheet ? &sheet->contents() : nullptr);
+    RefPtr sheet = parentStyleSheet();
+    RefPtr sheetContents = sheet ? &sheet->contents() : nullptr;
+    auto selectorList = CSSSelectorParser::parseSelectorList(selectorText, parserContext(), sheetContents.get());
     if (!selectorList)
         return;
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
-    m_pageRule->wrapperAdoptSelectorList(WTFMove(*selectorList));
+    m_pageRule->wrapperAdoptSelectorList(WTF::move(*selectorList));
 }
 
 String CSSPageRule::cssText() const

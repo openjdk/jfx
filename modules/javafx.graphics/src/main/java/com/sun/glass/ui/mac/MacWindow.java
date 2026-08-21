@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,8 @@ final class MacWindow extends Window {
         super(owner, screen, styleMask);
 
         if (isExtendedWindow()) {
-            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+            headerButtonHeightProperty().subscribe(this::onHeaderButtonHeightChanged);
+            headerButtonDarkStyleProperty().subscribe(this::onHeaderButtonDarkStyleChanged);
         }
     }
 
@@ -178,19 +179,25 @@ final class MacWindow extends Window {
 
     private native void _setWindowButtonStyle(long ptr, int toolbarStyle, boolean buttonsVisible);
 
-    private void onPrefHeaderButtonHeightChanged(Number height) {
+    private native void _setWindowButtonAppearance(long ptr, boolean darkAppearance);
+
+    private void onHeaderButtonHeightChanged(Number height) {
         double h = height != null ? height.doubleValue() : HeaderBar.USE_DEFAULT_SIZE;
         var toolbarStyle = NSWindowToolbarStyle.ofHeight(h);
         _setWindowButtonStyle(getRawHandle(), toolbarStyle.style, h != 0);
         updateHeaderButtonMetrics(toolbarStyle, h);
     }
 
-    private void updateHeaderButtonMetrics(NSWindowToolbarStyle toolbarStyle, double prefButtonHeight) {
+    private void onHeaderButtonDarkStyleChanged(Boolean dark) {
+        _setWindowButtonAppearance(getRawHandle(), dark == Boolean.TRUE);
+    }
+
+    private void updateHeaderButtonMetrics(NSWindowToolbarStyle toolbarStyle, double buttonHeight) {
         double minHeight = NSWindowToolbarStyle.SMALL.size.getHeight();
         var empty = new Dimension2D(0, 0);
         var size = isUtilityWindow() ? toolbarStyle.utilitySize : toolbarStyle.size;
 
-        HeaderButtonMetrics metrics = prefButtonHeight != 0
+        HeaderButtonMetrics metrics = buttonHeight != 0
             ? _isRightToLeftLayoutDirection()
                 ? new HeaderButtonMetrics(empty, size, minHeight)
                 : new HeaderButtonMetrics(size, empty, minHeight)

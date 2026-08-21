@@ -34,10 +34,11 @@
 #include "Page.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
@@ -54,19 +55,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGRoot);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGRoot);
 
 const int defaultWidth = 300;
 const int defaultHeight = 150;
 
 LegacyRenderSVGRoot::LegacyRenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
-    : RenderReplaced(Type::LegacySVGRoot, element, WTFMove(style), ReplacedFlag::UsesBoundaryCaching)
-    , m_isLayoutSizeChanged(false)
-    , m_needsBoundariesOrTransformUpdate(true)
-    , m_hasBoxDecorations(false)
+    : RenderReplaced(Type::LegacySVGRoot, element, WTF::move(style), ReplacedFlag::UsesBoundaryCaching)
 {
     ASSERT(isLegacyRenderSVGRoot());
-    LayoutSize intrinsicSize(calculateIntrinsicSize());
+    LayoutSize intrinsicSize(computeIntrinsicSize());
     if (!intrinsicSize.width())
         intrinsicSize.setWidth(defaultWidth);
     if (!intrinsicSize.height())
@@ -91,38 +89,45 @@ bool LegacyRenderSVGRoot::hasIntrinsicAspectRatio() const
     return computeIntrinsicAspectRatio();
 }
 
-FloatSize LegacyRenderSVGRoot::calculateIntrinsicSize() const
+FloatSize LegacyRenderSVGRoot::computeIntrinsicSize() const
 {
-    return FloatSize(floatValueForLength(svgSVGElement().intrinsicWidth(), 0), floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
+    ASSERT_IMPLIES(view().frameView().layoutContext().isInRenderTreeLayout(), !shouldApplySizeContainment());
+    FloatSize intrinsicSize = { svgSVGElement().intrinsicWidth(), svgSVGElement().intrinsicHeight() };
+    // Transpose for vertical writing mode
+    if (!isHorizontalWritingMode())
+        return intrinsicSize.transposedSize();
+    return intrinsicSize;
 }
 
-void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
+FloatSize LegacyRenderSVGRoot::preferredAspectRatio() const
 {
     ASSERT(!shouldApplySizeContainment());
 
-    // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
-    intrinsicSize = calculateIntrinsicSize();
+    if (style().aspectRatio().isRatio())
+        return FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value);
 
-    if (style().aspectRatioType() == AspectRatioType::Ratio) {
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
-        return;
-    }
-
+    auto intrinsicSize = computeIntrinsicSize();
     std::optional<FloatSize> intrinsicRatioValue;
+    FloatSize preferredAspectRatio;
     if (!intrinsicSize.isEmpty())
-        intrinsicRatio = { intrinsicSize.width(), intrinsicSize.height() };
+        preferredAspectRatio = { intrinsicSize.width(), intrinsicSize.height() };
     else {
-        FloatSize viewBoxSize = svgSVGElement().viewBox().size();
+        FloatSize viewBoxSize = svgSVGElement().currentViewBoxRect().size();
         if (!viewBoxSize.isEmpty()) {
             // The viewBox can only yield an intrinsic ratio, not an intrinsic size.
+            if (isHorizontalWritingMode())
             intrinsicRatioValue = { viewBoxSize.width(), viewBoxSize.height() };
+            else
+                intrinsicRatioValue = { viewBoxSize.height(), viewBoxSize.width() };
         }
     }
 
     if (intrinsicRatioValue)
-        intrinsicRatio = *intrinsicRatioValue;
-    else if (style().aspectRatioType() == AspectRatioType::AutoAndRatio)
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
+        return *intrinsicRatioValue;
+    if (style().aspectRatio().isAutoAndRatio())
+        return FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value);
+
+    return preferredAspectRatio;
 }
 
 bool LegacyRenderSVGRoot::isEmbeddedThroughSVGImage() const
@@ -191,8 +196,8 @@ void LegacyRenderSVGRoot::layout()
     if (!m_resourcesNeedingToInvalidateClients.isEmptyIgnoringNullReferences()) {
         // Invalidate resource clients, which may mark some nodes for layout.
         for (auto& resource :  m_resourcesNeedingToInvalidateClients) {
-            resource.removeAllClientsFromCache();
-            SVGResourcesCache::clientStyleChanged(resource, StyleDifference::Layout, nullptr, resource.style());
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
+            SVGResourcesCache::clientStyleChanged(resource, Style::DifferenceResult::Layout, nullptr, resource.style());
         }
 
         m_isLayoutSizeChanged = false;
@@ -241,6 +246,8 @@ bool LegacyRenderSVGRoot::shouldApplyViewportClip() const
 
 void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     // An empty viewport disables rendering.
     bool clipViewport = shouldApplyViewportClip();
     if (clipViewport && contentBoxSize().isEmpty())
@@ -348,13 +355,13 @@ void LegacyRenderSVGRoot::willBeRemovedFromTree()
     RenderReplaced::willBeRemovedFromTree();
 }
 
-void LegacyRenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void LegacyRenderSVGRoot::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
-    if (diff == StyleDifference::Layout)
+    if (diff == Style::DifferenceResult::Layout)
         invalidateCachedBoundaries();
 
     // Box decorations may have appeared/disappeared - recompute status.
-    if (diff == StyleDifference::Repaint)
+    if (diff == Style::DifferenceResult::Repaint)
         m_hasBoxDecorations = hasVisibleBoxDecorationStyle();
 
     RenderReplaced::styleDidChange(diff, oldStyle);
@@ -426,7 +433,7 @@ std::optional<FloatRect> LegacyRenderSVGRoot::computeFloatVisibleRectInContainer
 
     // Apply initial viewport clip
     if (shouldApplyViewportClip()) {
-        if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection)) {
+        if (context.options.contains(VisibleRectContext::Option::UseEdgeInclusiveIntersection)) {
             if (!adjustedRect.edgeInclusiveIntersect(snappedIntRect(borderBoxRect())))
                 return std::nullopt;
         } else
@@ -456,7 +463,7 @@ void LegacyRenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* ance
     RenderReplaced::mapLocalToContainer(ancestorContainer, transformState, mode | ApplyContainerFlip, wasFixed);
 }
 
-const RenderObject* LegacyRenderSVGRoot::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* LegacyRenderSVGRoot::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     return RenderReplaced::pushMappingToContainer(ancestorToStopAt, geometryMap);
 }
@@ -466,11 +473,14 @@ void LegacyRenderSVGRoot::updateCachedBoundaries()
     m_strokeBoundingBox = std::nullopt;
     m_repaintBoundingBox = { };
     m_accurateRepaintBoundingBox = std::nullopt;
-    FloatRect repaintBoundingBox;
-    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, repaintBoundingBox);
-    SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox);
-    repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-    m_repaintBoundingBox = repaintBoundingBox;
+
+    auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this);
+    m_objectBoundingBox = boundingBoxes.objectBoundingBox;
+
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox);
+    boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+    m_repaintBoundingBox = boundingBoxes.repaintBoundingBox;
 }
 
 FloatRect LegacyRenderSVGRoot::strokeBoundingBox() const
@@ -493,15 +503,19 @@ FloatRect LegacyRenderSVGRoot::repaintRectInLocalCoordinates(RepaintRectCalculat
     if (!m_accurateRepaintBoundingBox) {
         // Initialize m_accurateRepaintBoundingBox before calling computeContainerBoundingBoxes, since recursively referenced markers can cause us to re-enter here.
         m_accurateRepaintBoundingBox = FloatRect { };
-        FloatRect objectBoundingBox;
-        FloatRect repaintBoundingBox;
-        bool objectBoundingBoxValid = true;
-        SVGRenderSupport::computeContainerBoundingBoxes(*this, objectBoundingBox, objectBoundingBoxValid, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-        m_accurateRepaintBoundingBox = repaintBoundingBox;
+
+        auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this, RepaintRectCalculation::Accurate);
+        SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox, RepaintRectCalculation::Accurate);
+        boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+        m_accurateRepaintBoundingBox = boundingBoxes.repaintBoundingBox;
     }
     return *m_accurateRepaintBoundingBox;
+}
+
+FloatRect LegacyRenderSVGRoot::decoratedBoundingBox() const
+{
+    return SVGRenderSupport::computeContainerDecoratedBoundingBox(*this);
 }
 
 bool LegacyRenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
@@ -543,7 +557,7 @@ bool LegacyRenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResu
 
 bool LegacyRenderSVGRoot::hasRelativeDimensions() const
 {
-    return svgSVGElement().intrinsicHeight().isPercentOrCalculated() || svgSVGElement().intrinsicWidth().isPercentOrCalculated();
+    return false;
 }
 
 void LegacyRenderSVGRoot::addResourceForClientInvalidation(LegacyRenderSVGResourceContainer* resource)

@@ -105,8 +105,6 @@ my (
     $lcmsSupport,
     $mouseCursorScaleSupport,
     $navigatorStandaloneSupport,
-    $networkCacheSpeculativeRevalidationSupport,
-    $networkCacheStaleWhileRevalidateSupport,
     $notificationsSupport,
     $offscreenCanvasSupport,
     $offscreenCanvasInWorkersSupport,
@@ -131,6 +129,7 @@ my (
     $speechSynthesisSupport,
     $spellcheckSupport,
     $svgFontsSupport,
+    $swiftDemoUriScheme,
     $isoMallocSupport,
     $systemMallocSupport,
     $telephoneNumberDetectionSupport,
@@ -157,6 +156,7 @@ my (
     $webdriverTouchInteractionsSupport,
     $webdriverWheelInteractionsSupport,
     $webglSupport,
+    $webGpuSwift,
     $webXRSupport,
     $wirelessPlaybackTargetSupport,
     $woff2Support,
@@ -302,12 +302,6 @@ my @features = (
     { option => "navigator-standalone", desc => "Toogle standalone navigator support",
       define => "ENABLE_NAVIGATOR_STANDALONE", value => \$navigatorStandaloneSupport },
 
-    { option => "network-cache-speculative-revalidation", desc => "Toogle network cache speculative revalidation support",
-      define => "ENABLE_NETWORK_CACHE_SPECULATIVE_REVALIDATION", value => \$networkCacheSpeculativeRevalidationSupport },
-
-    { option => "network-cache-stale-while-revalidate", desc => "Toogle network cache stale-while-revalidate caching strategy",
-      define => "ENABLE_NETWORK_CACHE_STALE_WHILE_REVALIDATE", value => \$networkCacheStaleWhileRevalidateSupport },
-
     { option => "notifications", desc => "Toggle Notifications support",
       define => "ENABLE_NOTIFICATIONS", value => \$notificationsSupport },
 
@@ -324,7 +318,7 @@ my @features = (
       define => "ENABLE_ORIENTATION_EVENTS", value => \$orientationEventsSupport },
 
     { option => "overflow-scrolling-touch", desc => "Toggle accelerated scrolling support",
-      define => "ENABLE_OVERFLOW_SCROLLING_TOUCH", value => \$overflowScrollingTouchSupport },
+      define => "ENABLE_WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY", value => \$overflowScrollingTouchSupport },
 
     { option => "payment-request", desc => "Toggle Payment Request support",
       define => "ENABLE_PAYMENT_REQUEST", value => \$paymentRequestSupport },
@@ -370,6 +364,9 @@ my @features = (
 
     { option => "spellcheck", desc => "Toggle Spellchecking support (requires Enchant)",
       define => "ENABLE_SPELLCHECK", value => \$spellcheckSupport },
+
+    { option => "swift-demo-uri-scheme", desc => "Toggle demo Swift x-swift-demo: URI handler",
+      define => "ENABLE_SWIFT_DEMO_URI_SCHEME", value => \$swiftDemoUriScheme},
 
     { option => "telephone-number-detection", desc => "Toggle telephone number detection support",
       define => "ENABLE_TELEPHONE_NUMBER_DETECTION", value => \$telephoneNumberDetectionSupport },
@@ -419,6 +416,11 @@ my @features = (
     { option => "webgl", desc => "Toggle WebGL support",
       define => "ENABLE_WEBGL", value => \$webglSupport },
 
+    { option => "webgpu-swift", desc => "Toggle WebGPU Swift Implementation",
+      define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
+
+    { option => "webGpuSwift", desc => "Old spelling of \"Toggle WebGPU Swift Implementation\"",
+      hidden => 1, define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
 
     { option => "webxr", desc => "Toggle WebXR support",
       define => "ENABLE_WEBXR", value => \$webXRSupport },
@@ -450,6 +452,9 @@ my @features = (
 
     { option => "avif", desc => "Toggle support for AVIF images",
       define => "USE_AVIF", value => \$avifSupport },
+
+    { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
+      define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },
 
     { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
       define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },

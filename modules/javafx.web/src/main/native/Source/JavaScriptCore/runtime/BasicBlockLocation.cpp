@@ -67,7 +67,7 @@ Vector<std::pair<int, int>> BasicBlockLocation::getExecutedRanges() const
         }
         result.append(Gap(nextRangeStart, minGap.first - 1));
         nextRangeStart = minGap.second + 1;
-        gaps.remove(minIdx);
+        gaps.removeAt(minIdx);
     }
 
     result.append(Gap(nextRangeStart, m_endOffset));

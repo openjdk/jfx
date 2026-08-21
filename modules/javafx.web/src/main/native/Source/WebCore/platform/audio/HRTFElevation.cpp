@@ -60,9 +60,9 @@ constexpr size_t ResponseFrameSize = 256;
 constexpr float ResponseSampleRate = 44100;
 
 static Lock audioBusMapLock;
-static UncheckedKeyHashMap<String, RefPtr<AudioBus>>& concatenatedImpulseResponsesMap() WTF_REQUIRES_LOCK(audioBusMapLock)
+static HashMap<String, Ref<AudioBus>>& concatenatedImpulseResponsesMap() WTF_REQUIRES_LOCK(audioBusMapLock)
 {
-    static NeverDestroyed<UncheckedKeyHashMap<String, RefPtr<AudioBus>>> audioBusMap;
+    static NeverDestroyed<HashMap<String, Ref<AudioBus>>> audioBusMap;
     return audioBusMap;
 }
 
@@ -80,7 +80,7 @@ static RefPtr<AudioBus> getConcatenatedImpulseResponsesForSubject(const String& 
             ASSERT(bus);
             if (!bus)
                 return nullptr;
-            cache.add(subjectName.isolatedCopy(), bus.copyRef());
+            cache.add(subjectName.isolatedCopy(), *bus);
         }
     }
 
@@ -151,8 +151,13 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
     // (hardware) sample-rate.
     unsigned startFrame = index * ResponseFrameSize;
     unsigned stopFrame = startFrame + ResponseFrameSize;
-    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus.get(), startFrame, stopFrame);
-    auto response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
+    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(*bus, startFrame, stopFrame);
+    ASSERT(preSampleRateConvertedResponse);
+    if (!preSampleRateConvertedResponse)
+        return false;
+    auto response = AudioBus::createBySampleRateConverting(*preSampleRateConvertedResponse, false, sampleRate);
+    if (!response)
+        return false;
     AudioChannel* leftEarImpulseResponse = response->channel(AudioBus::ChannelLeft);
     AudioChannel* rightEarImpulseResponse = response->channel(AudioBus::ChannelRight);
 #else
@@ -254,7 +259,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createForSubject(const String& sub
         }
     }
 
-    return makeUnique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), elevation, sampleRate);
+    return makeUnique<HRTFElevation>(WTF::move(kernelListL), WTF::move(kernelListR), elevation, sampleRate);
 }
 
 std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFElevation* hrtfElevation1, HRTFElevation* hrtfElevation2, float x, float sampleRate)
@@ -282,7 +287,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFEl
     // Interpolate elevation angle.
     double angle = (1.0 - x) * hrtfElevation1->elevationAngle() + x * hrtfElevation2->elevationAngle();
 
-    return makeUnique<HRTFElevation>(WTFMove(kernelListL), WTFMove(kernelListR), static_cast<int>(angle), sampleRate);
+    return makeUnique<HRTFElevation>(WTF::move(kernelListL), WTF::move(kernelListR), static_cast<int>(angle), sampleRate);
 }
 
 void HRTFElevation::getKernelsFromAzimuth(double azimuthBlend, unsigned azimuthIndex, HRTFKernel* &kernelL, HRTFKernel* &kernelR, double& frameDelayL, double& frameDelayR)

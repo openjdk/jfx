@@ -27,7 +27,7 @@
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
-#include "LegacyCDMSession.h"
+#include <WebCore/LegacyCDMSession.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
@@ -41,12 +41,12 @@ class LegacyCDM;
 class CDMPrivateInterface;
 class MediaPlayer;
 
-using CreateCDM = Function<std::unique_ptr<CDMPrivateInterface>(LegacyCDM&)>;
+using CreateCDM = Function<const std::unique_ptr<CDMPrivateInterface>(LegacyCDM&)>;
 using CDMSupportsKeySystem = Function<bool(const String&)>;
 using CDMSupportsKeySystemAndMimeType = Function<bool(const String&, const String&)>;
 
 class LegacyCDMClient : public CanMakeCheckedPtr<LegacyCDMClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LegacyCDMClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyCDMClient);
 public:
     virtual ~LegacyCDMClient() = default;
@@ -84,7 +84,7 @@ private:
 
     String m_keySystem;
     CheckedPtr<LegacyCDMClient> m_client;
-    std::unique_ptr<CDMPrivateInterface> m_private;
+    const std::unique_ptr<CDMPrivateInterface> m_private;
 };
 
 }

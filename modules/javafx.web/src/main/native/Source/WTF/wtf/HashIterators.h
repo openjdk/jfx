@@ -26,6 +26,7 @@
 #pragma once
 
 #include <iterator>
+#include <wtf/HashTable.h>
 
 namespace WTF {
 

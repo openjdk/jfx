@@ -26,6 +26,9 @@
 #include "config.h"
 #include "DOMTokenList.h"
 
+#include "ExceptionOr.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
@@ -40,13 +43,13 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMTokenList);
 DOMTokenList::DOMTokenList(Element& element, const QualifiedName& attributeName, IsSupportedTokenFunction&& isSupportedToken)
     : m_element(element)
     , m_attributeName(attributeName)
-    , m_isSupportedToken(WTFMove(isSupportedToken))
+    , m_isSupportedToken(WTF::move(isSupportedToken))
 {
 }
 
 static inline bool tokenContainsHTMLSpace(StringView token)
 {
-    return token.find(isASCIIWhitespace<UChar>) != notFound;
+    return token.find(isASCIIWhitespace<char16_t>) != notFound;
 }
 
 ExceptionOr<void> DOMTokenList::validateToken(StringView token)
@@ -175,9 +178,9 @@ static inline void replaceInOrderedSet(Vector<AtomString, 1>& tokens, size_t tok
 
     if (newTokenIndex > tokenIndex) {
         tokens[tokenIndex] = newToken;
-        tokens.remove(newTokenIndex);
+        tokens.removeAt(newTokenIndex);
     } else
-        tokens.remove(tokenIndex);
+        tokens.removeAt(tokenIndex);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-replace
@@ -208,18 +211,18 @@ ExceptionOr<bool> DOMTokenList::supports(StringView token)
 {
     if (!m_isSupportedToken)
         return Exception { ExceptionCode::TypeError };
-    return m_isSupportedToken(m_element->document(), token);
+    return m_isSupportedToken(m_element->protectedDocument(), token);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-value
 const AtomString& DOMTokenList::value() const
 {
-    return protectedElement()->getAttribute(m_attributeName);
+    return m_element->getAttribute(m_attributeName);
 }
 
 void DOMTokenList::setValue(const AtomString& value)
 {
-    protectedElement()->setAttribute(m_attributeName, value);
+    m_element->setAttribute(m_attributeName, value);
 }
 
 void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
@@ -227,7 +230,7 @@ void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
     // Clear tokens but not capacity.
     m_tokens.shrink(0);
 
-    UncheckedKeyHashSet<AtomString> addedTokens;
+    HashSet<AtomString> addedTokens;
     // https://dom.spec.whatwg.org/#ordered%20sets
     for (unsigned start = 0; ; ) {
         while (start < value.length() && isASCIIWhitespace(value[start]))
@@ -247,7 +250,7 @@ void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
         if (!addedTokens.contains<StringViewHashTranslator>(tokenView)) {
             auto token = tokenView.toAtomString();
             m_tokens.append(token);
-            addedTokens.add(WTFMove(token));
+            addedTokens.add(WTF::move(token));
         }
 
         start = end + 1;
@@ -294,7 +297,7 @@ void DOMTokenList::updateAssociatedAttributeFromTokens()
 Vector<AtomString, 1>& DOMTokenList::tokens()
 {
     if (m_tokensNeedUpdating)
-        updateTokensFromAttributeValue(protectedElement()->getAttribute(m_attributeName));
+        updateTokensFromAttributeValue(m_element->getAttribute(m_attributeName));
     ASSERT(!m_tokensNeedUpdating);
     return m_tokens;
 }

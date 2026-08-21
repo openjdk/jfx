@@ -39,7 +39,7 @@ class GPUQuerySet : public RefCountedAndCanMakeWeakPtr<GPUQuerySet> {
 public:
     static Ref<GPUQuerySet> create(Ref<WebGPU::QuerySet>&& backing, const GPUQuerySetDescriptor& descriptor)
     {
-        return adoptRef(*new GPUQuerySet(WTFMove(backing), descriptor));
+        return adoptRef(*new GPUQuerySet(WTF::move(backing), descriptor));
     }
 
     String label() const;
@@ -56,7 +56,7 @@ public:
 private:
     GPUQuerySet(Ref<WebGPU::QuerySet>&& backing, const GPUQuerySetDescriptor&);
 
-    Ref<WebGPU::QuerySet> m_backing;
+    const Ref<WebGPU::QuerySet> m_backing;
     const GPUQuerySetDescriptor m_descriptor;
 };
 

@@ -26,11 +26,11 @@
 #include "config.h"
 #include "LazyLoadImageObserver.h"
 
-#include "DocumentInlines.h"
 #include "HTMLImageElement.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include <limits>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -53,7 +53,7 @@ private:
 
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
+    CallbackResult<void> invoke(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
 
@@ -68,9 +68,9 @@ private:
         return { };
     }
 
-    CallbackResult<void> handleEventRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
+    CallbackResult<void> invokeRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
     {
-        return handleEvent(thisObserver, entries, observer);
+        return invoke(thisObserver, entries, observer);
     }
 };
 
@@ -93,9 +93,9 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
 {
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
-        static NeverDestroyed<const String> lazyLoadingRootMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
-        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        static NeverDestroyed<const String> lazyLoadingScrollMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
+        IntersectionObserver::Init options { std::nullopt, { }, lazyLoadingScrollMarginFallback, { } };
+        auto observer = IntersectionObserver::create(document, WTF::move(callback), WTF::move(options));
         if (observer.hasException())
             return nullptr;
         m_observer = observer.returnValue().ptr();

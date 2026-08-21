@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "GPRInfo.h"
 #include "LLIntPCRanges.h"
-#include "MacroAssemblerCodeRef.h"
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/PointerPreparations.h>
 #include <wtf/StdLibExtras.h>
@@ -88,7 +88,6 @@ void* llintInstructionPointer(const mcontext_t&);
 static inline void*& stackPointerImpl(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
-#if __DARWIN_UNIX03
 
 #if CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rsp);
@@ -99,16 +98,6 @@ static inline void*& stackPointerImpl(PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-
-#if CPU(X86_64)
-    return reinterpret_cast<void*&>(regs.rsp);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -158,6 +147,12 @@ static inline void*& stackPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return stackPointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>(machineContext.rsp);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -166,6 +161,16 @@ static inline void*& stackPointerImpl(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[_REG_SP]);
 #elif CPU(ARM64)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.mc_gpregs.gp_sp);
+#else
+#error Unknown Architecture
+#endif
+
+#elif OS(QNX)
+
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.cpu.rsp);
+#elif CPU(ARM64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.cpu.gpr[AARCH64_REG_SP]);
 #else
 #error Unknown Architecture
 #endif
@@ -222,8 +227,6 @@ static inline void*& framePointerImpl(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
 
-#if __DARWIN_UNIX03
-
 #if CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rbp);
 #elif CPU(ARM64)
@@ -231,16 +234,6 @@ static inline void*& framePointerImpl(PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-
-#if CPU(X86_64)
-    return reinterpret_cast<void*&>(regs.rsp);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -281,6 +274,12 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return framePointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>(machineContext.rbp);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -355,7 +354,6 @@ inline T framePointer(const mcontext_t& machineContext)
 static inline void*& instructionPointerImpl(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
-#if __DARWIN_UNIX03
 
 #if CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rip);
@@ -364,15 +362,6 @@ static inline void*& instructionPointerImpl(PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-#if CPU(X86_64)
-    return reinterpret_cast<void*&>(regs.rip);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -443,6 +432,12 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return instructionPointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.rip);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -517,7 +512,7 @@ inline CodePtr<PlatformRegistersPCPtrTag> instructionPointer(const mcontext_t& m
 
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
-#if OS(DARWIN) && __DARWIN_UNIX03 && CPU(ARM64)
+#if OS(DARWIN) && CPU(ARM64)
 
 inline CodePtr<PlatformRegistersLRPtrTag> linkRegister(const PlatformRegisters& regs)
 {
@@ -528,7 +523,7 @@ inline CodePtr<PlatformRegistersLRPtrTag> linkRegister(const PlatformRegisters& 
 #endif
     return CodePtr<PlatformRegistersLRPtrTag>(value);
 }
-#endif // OS(DARWIN) && __DARWIN_UNIX03 && CPU(ARM64)
+#endif // OS(DARWIN) && CPU(ARM64)
 
 #if HAVE(MACHINE_CONTEXT)
 template<> void*& argumentPointer<1>(mcontext_t&);
@@ -538,7 +533,6 @@ template<>
 inline void*& argumentPointer<1>(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
-#if __DARWIN_UNIX03
 
 #if CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rsi);
@@ -549,16 +543,6 @@ inline void*& argumentPointer<1>(PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-
-#if CPU(X86_64)
-    return reinterpret_cast<void*&>(regs.rsi);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -580,7 +564,6 @@ inline void*& argumentPointer<1>(PlatformRegisters& regs)
 inline void* wasmInstancePointer(const PlatformRegisters& regs)
 {
 #if OS(DARWIN)
-#if __DARWIN_UNIX03
 
 #if CPU(X86_64)
     return reinterpret_cast<void*>(regs.__rbx);
@@ -589,16 +572,6 @@ inline void* wasmInstancePointer(const PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-
-#if CPU(X86_64)
-    return reinterpret_cast<void*>(regs.rbx);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -631,6 +604,12 @@ inline void*& argumentPointer<1>(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return argumentPointer<1>(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.rsi);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -755,7 +734,6 @@ inline void*& llintInstructionPointer(PlatformRegisters& regs)
 {
     // LLInt uses regT4 as PC.
 #if OS(DARWIN)
-#if __DARWIN_UNIX03
 
 #if CPU(X86_64)
     static_assert(LLInt::LLIntPC == X86Registers::r8, "Wrong LLInt PC.");
@@ -766,16 +744,6 @@ inline void*& llintInstructionPointer(PlatformRegisters& regs)
 #else
 #error Unknown Architecture
 #endif
-
-#else // !__DARWIN_UNIX03
-#if CPU(X86_64)
-    static_assert(LLInt::LLIntPC == X86Registers::r8, "Wrong LLInt PC.");
-    return reinterpret_cast<void*&>(regs.r8);
-#else
-#error Unknown Architecture
-#endif
-
-#endif // __DARWIN_UNIX03
 
 #elif OS(WINDOWS)
 
@@ -810,6 +778,12 @@ inline void*& llintInstructionPointer(mcontext_t& machineContext)
     // LLInt uses regT4 as PC.
 #if OS(DARWIN)
     return llintInstructionPointer(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.r8);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)

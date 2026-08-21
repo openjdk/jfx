@@ -27,9 +27,9 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "ActiveDOMCallback.h"
-#include "CallbackResult.h"
-#include "MediaSessionActionDetails.h"
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/CallbackResult.h>
+#include <WebCore/MediaSessionActionDetails.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -39,8 +39,12 @@ class MediaSessionActionHandler : public RefCounted<MediaSessionActionHandler>, 
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(const MediaSessionActionDetails&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(const MediaSessionActionDetails&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(const MediaSessionActionDetails&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(const MediaSessionActionDetails&) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

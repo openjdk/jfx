@@ -33,7 +33,7 @@ namespace WebCore {
 class GraphicsContext;
 
 struct GradientData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(GradientData);
 
     struct Inputs {
         friend bool operator==(const Inputs&, const Inputs&) = default;
@@ -67,15 +67,16 @@ public:
 };
 
 class LegacyRenderSVGResourceGradient : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceGradient);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGResourceGradient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceGradient);
 public:
     virtual ~LegacyRenderSVGResourceGradient();
 
     SVGGradientElement& gradientElement() const { return static_cast<SVGGradientElement&>(LegacyRenderSVGResourceContainer::element()); }
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) final;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) final;
+    void removeAllClientsFromCache() final;
+    void removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
+    void removeClientFromCache(RenderElement&) final;
 
     OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) final;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) final;
@@ -98,7 +99,7 @@ private:
     virtual bool collectGradientAttributes() = 0;
     virtual Ref<Gradient> buildGradient(const RenderStyle&) const = 0;
 
-    UncheckedKeyHashMap<RenderObject*, std::unique_ptr<GradientData>> m_gradientMap;
+    HashMap<RenderObject*, std::unique_ptr<GradientData>> m_gradientMap;
 
     std::unique_ptr<GradientApplier> m_gradientApplier;
     bool m_shouldCollectGradientAttributes { true };

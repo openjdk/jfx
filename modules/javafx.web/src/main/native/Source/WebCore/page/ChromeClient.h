@@ -21,40 +21,40 @@
 
 #pragma once
 
-#include "AutoplayEvent.h"
-#include "ContactInfo.h"
-#include "DatabaseDetails.h"
-#include "DeviceOrientationOrMotionPermissionState.h"
-#include "DigitalCredentialsRequestData.h"
-#include "DigitalCredentialsResponseData.h"
-#include "DisabledAdaptations.h"
-#include "DocumentStorageAccess.h"
-#include "ExceptionData.h"
-#include "FocusDirection.h"
-#include "HTMLMediaElementEnums.h"
-#include "HighlightVisibility.h"
-#include "ImageBuffer.h"
-#include "ImageBufferResourceLimits.h"
-#include "InputMode.h"
-#include "MediaControlsContextMenuItem.h"
-#include "PointerCharacteristics.h"
-#include "SyntheticClickResult.h"
-#include "WebCoreKeyboardUIMode.h"
+#include <WebCore/AutoplayEvent.h>
+#include <WebCore/ContactInfo.h>
+#include <WebCore/DatabaseDetails.h>
+#include <WebCore/DeviceOrientationOrMotionPermissionState.h>
+#include <WebCore/DisabledAdaptations.h>
+#include <WebCore/DocumentStorageAccess.h>
+#include <WebCore/ExceptionData.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/FocusDirection.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/HTMLMediaElementEnums.h>
+#include <WebCore/HighlightVisibility.h>
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/ImageBufferResourceLimits.h>
+#include <WebCore/InputMode.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/MediaControlsContextMenuItem.h>
+#include <WebCore/PlaybackTargetClientContextIdentifier.h>
+#include <WebCore/PointerCharacteristics.h>
+#include <WebCore/SyntheticClickResult.h>
+#include <WebCore/WebCoreKeyboardUIMode.h>
+#include <WebCore/Widget.h>
 #include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/Platform.h>
 #include <wtf/Seconds.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-#include "MediaPlaybackTargetContext.h"
-#endif
-
 #if PLATFORM(IOS_FAMILY)
-#include "PlatformLayer.h"
-#include "WKContentObservation.h"
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/WKContentObservation.h>
 #define NSResponder WAKResponder
 #ifndef __OBJC__
 class WAKResponder;
@@ -65,19 +65,28 @@ OBJC_CLASS NSData;
 #endif
 
 #if ENABLE(MEDIA_USAGE)
-#include "MediaSessionIdentifier.h"
-#include "MediaUsageInfo.h"
-#endif
-
-#if ENABLE(ARKIT_INLINE_PREVIEW)
-class HTMLModelElement;
+#include <WebCore/MediaSessionIdentifier.h>
+#include <WebCore/MediaUsageInfo.h>
 #endif
 
 #if ENABLE(WEBXR)
-#include "PlatformXR.h"
+#include <WebCore/PlatformXR.h>
+#endif
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#include <WebCore/DigitalCredentialsProtocols.h>
+#include <WebCore/DigitalCredentialsRequestData.h>
+#include <WebCore/DigitalCredentialsResponseData.h>
+#include <WebCore/UnvalidatedDigitalCredentialRequest.h>
+#include <WebCore/ValidatedMobileDocumentRequest.h>
 #endif
 
 OBJC_CLASS NSResponder;
+
+namespace JSC {
+enum class MessageSource : uint8_t;
+enum class MessageLevel : uint8_t;
+}
 
 namespace WebCore {
 
@@ -94,9 +103,13 @@ class Element;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class Frame;
+class FrameDamageHistory;
+class FrameSelection;
 class Geolocation;
 class GraphicsLayer;
 class GraphicsLayerFactory;
+class HTMLAttachmentElement;
 class HTMLImageElement;
 class HTMLInputElement;
 class HTMLMediaElement;
@@ -107,19 +120,29 @@ class HitTestResult;
 class Icon;
 class IntRect;
 class LocalFrame;
+class LocalFrameView;
 class NavigationAction;
 class Node;
 class Page;
 class PopupMenu;
 class PopupMenuClient;
+class Region;
 class RegistrableDomain;
-class SearchPopupMenu;
+class SVGImageElement;
+class ScrollableArea;
 class ScrollingCoordinator;
+class SearchPopupMenu;
 class SecurityOrigin;
 class SecurityOriginData;
+class TextIndicator;
 class ViewportConstraints;
 class Widget;
 class WorkerClient;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+struct DigitalCredentialsRequestData;
+struct MobileDocumentRequest;
+#endif
 
 #if ENABLE(WEBGL)
 class GraphicsContextGL;
@@ -128,23 +151,31 @@ struct GraphicsContextGLAttributes;
 
 struct AppHighlight;
 struct ApplePayAMSUIRequest;
+struct AriaNotifyData;
+struct CharacterRange;
 struct ContactsRequestData;
+struct ContentRuleListMatchedRule;
 struct ContentRuleListResults;
 struct DataDetectorElementInfo;
 struct DateTimeChooserParameters;
 struct FocusOptions;
 struct GraphicsDeviceAdapter;
+struct LiveRegionAnnouncementData;
 struct MockWebAuthenticationConfiguration;
+struct ResolvedCaptionDisplaySettingsOptions;
 struct ShareDataWithParsedURL;
-struct TextIndicatorData;
+struct SimpleRange;
+struct StringWithDirection;
+struct SystemPreviewInfo;
 struct TextRecognitionOptions;
 struct ViewportArguments;
 struct WindowFeatures;
 
 enum class ActivityStateForCPUSampling : uint8_t;
 enum class AXLoadingEvent : uint8_t;
-enum class AXNotification;
+enum class AXNotification : uint8_t;
 enum class AXTextChange : uint8_t;
+enum class BroadcastFocusedElement : bool;
 enum class CookieConsentDecisionResult : uint8_t;
 enum class DidFilterLinkDecoration : bool { No, Yes };
 enum class IsLoggedIn : uint8_t;
@@ -153,13 +184,22 @@ enum class ModalContainerControlType : uint8_t;
 enum class ModalContainerDecision : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 enum class PluginUnavailabilityReason : uint8_t;
+enum class PointerLockRequestResult : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
+enum class ScriptTrackingPrivacyCategory : uint8_t;
+enum class ScrollbarOverlayStyle : uint8_t;
+enum class ScrollbarStyle : uint8_t;
 enum class TextAnimationRunMode : uint8_t;
 
 enum class MediaProducerMediaState : uint32_t;
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 
-template<typename> class ExceptionOr;
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+enum class MediaPlaybackTargetMockState : uint8_t;
+#endif
+
+typedef int32_t IntDegrees;
 
 namespace ShapeDetection {
 class BarcodeDetector;
@@ -171,7 +211,9 @@ class TextDetector;
 }
 
 namespace WritingTools {
+using TextSuggestionID = WTF::UUID;
 using SessionID = WTF::UUID;
+enum class TextSuggestionState : uint8_t;
 }
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
@@ -195,7 +237,7 @@ public:
     virtual bool canTakeFocus(FocusDirection) const = 0;
     virtual void takeFocus(FocusDirection) = 0;
 
-    virtual void focusedElementChanged(Element*) = 0;
+    virtual void focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement) = 0;
     virtual void focusedFrameChanged(Frame*) = 0;
 
     // The Frame pointer provides the ChromeClient with context about which
@@ -226,11 +268,10 @@ public:
 
     virtual void setResizable(bool) = 0;
 
-    virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) = 0;
-    virtual void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String& message, std::span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) { UNUSED_PARAM(message); UNUSED_PARAM(messageArguments); UNUSED_PARAM(lineNumber); UNUSED_PARAM(columnNumber); UNUSED_PARAM(sourceID); }
+    virtual void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) = 0;
 
     virtual bool canRunBeforeUnloadConfirmPanel() = 0;
-    virtual bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&) = 0;
+    virtual bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&) = 0;
 
     virtual void closeWindow() = 0;
 
@@ -245,6 +286,7 @@ public:
 #endif
     virtual KeyboardUIMode keyboardUIMode() = 0;
 
+    virtual bool hasAccessoryMousePointingDevice() const = 0;
     virtual bool hoverSupportedByPrimaryPointingDevice() const = 0;
     virtual bool hoverSupportedByAnyAvailablePointingDevice() const = 0;
     virtual std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const = 0;
@@ -261,10 +303,19 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 #if PLATFORM(IOS_FAMILY)
-    virtual void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const = 0;
+    virtual void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const = 0;
+    virtual void relayAriaNotifyNotification(AriaNotifyData&&) const = 0;
+    virtual void relayLiveRegionNotification(LiveRegionAnnouncementData&&) const = 0;
 #endif
 
+    virtual void mainFrameDidChange() { };
+
     virtual void didFinishLoadingImageForElement(HTMLImageElement&) = 0;
+    virtual void didFinishLoadingImageForSVGImage(SVGImageElement&) { }
+
+#if ENABLE(MODEL_PROCESS)
+    virtual void setHasModelElement(bool) { }
+#endif
 
     virtual PlatformPageClient platformPageClient() const = 0;
 
@@ -303,6 +354,12 @@ public:
     virtual void spatialBackdropSourceChanged() const { }
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    virtual void allowImmersiveElement(const Element&, CompletionHandler<void(bool)>&& completion) const { completion(false); }
+    virtual void presentImmersiveElement(const Element&, const LayerHostingContextIdentifier, CompletionHandler<void(bool)>&& completion) const { completion(false); }
+    virtual void dismissImmersiveElement(const Element&, CompletionHandler<void()>&& completion) const { completion(); }
+#endif
+
 #if ENABLE(APP_HIGHLIGHTS)
     virtual WebCore::HighlightVisibility appHighlightsVisiblility() const { return HighlightVisibility::Hidden; };
 #endif
@@ -316,19 +373,9 @@ public:
     // old caches.
     virtual void reachedMaxAppCacheSize(int64_t) { }
 
-    // Callback invoked when the application cache origin quota is reached. This
-    // means that the resources attempting to be cached via the manifest are
-    // more than allowed on this origin. This callback allows the chrome client
-    // to take action, such as prompting the user to ask to increase the quota
-    // for this origin. The totalSpaceNeeded parameter is the total amount of
-    // storage, in bytes, needed to store the new cache along with all of the
-    // other existing caches for the origin that would not be replaced by
-    // the new cache.
-    virtual void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) { }
-
     WEBCORE_EXPORT virtual std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
-#if ENABLE(IOS_TOUCH_EVENTS)
+#if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(JAVA)
     virtual void didPreventDefaultForEvent() = 0;
 #endif
 
@@ -366,31 +413,37 @@ public:
     virtual bool showDataDetectorsUIForElement(const Element&, const Event&) = 0;
 #endif
 
-#if ENABLE(ORIENTATION_EVENTS)
+#if ENABLE(ORIENTATION_EVENTS) && !PLATFORM(JAVA)
     virtual IntDegrees deviceOrientation() const = 0;
 #endif
-
+#if ENABLE(INPUT_TYPE_COLOR)
     virtual RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) = 0;
-
+#endif
     virtual RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) = 0;
     virtual bool canShowDataListSuggestionLabels() const = 0;
 
     virtual RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) = 0;
 
-    virtual void setTextIndicator(const TextIndicatorData&) const = 0;
+    virtual void setTextIndicator(RefPtr<TextIndicator>&&) const = 0;
+    virtual void updateTextIndicator(RefPtr<TextIndicator>&&) const = 0;
 
     virtual void runOpenPanel(LocalFrame&, FileChooser&) = 0;
-    virtual void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&& callback) { callback(false); }
-    virtual void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback) { callback(std::nullopt); }
+    virtual void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&& callback) { callback(false); }
+    virtual void showContactPicker(ContactsRequestData&&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback) { callback(std::nullopt); }
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
     virtual void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&& completionHandler)
     {
-        completionHandler(makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s }));
+        completionHandler(makeUnexpected(ExceptionData { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s }));
     }
+
     virtual void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler)
     {
         completionHandler(false);
     }
+
+    WEBCORE_EXPORT virtual ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&);
+#endif
 
     // Asynchronous request to load an icon for specified filenames.
     virtual void loadIconForFiles(const Vector<String>&, FileIconLoader&) = 0;
@@ -404,12 +457,14 @@ public:
     virtual bool shouldPaintEntireContents() const { return false; }
     virtual bool hasStablePageScaleFactor() const { return true; }
 
+    virtual void setNeedsFixedContainerEdgesUpdate() { }
+
     // Allows ports to customize the type of graphics layers created by this page.
     virtual GraphicsLayerFactory* graphicsLayerFactory() const { return nullptr; }
 
     virtual DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const { return nullptr; }
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float, const DestinationColorSpace&, ImageBufferPixelFormat) const { return nullptr; }
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float, const DestinationColorSpace&, ImageBufferFormat) const { return nullptr; }
     WEBCORE_EXPORT virtual RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>);
 
 #if ENABLE(WEBGL)
@@ -469,7 +524,7 @@ public:
     WEBCORE_EXPORT virtual RefPtr<ScrollingCoordinator> createScrollingCoordinator(Page&) const;
     WEBCORE_EXPORT virtual void ensureScrollbarsController(Page&, ScrollableArea&, bool update = false) const;
 
-    virtual bool canEnterVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const { return false; }
+    virtual bool canEnterVideoFullscreen(HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode) const { return false; }
     virtual bool supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) { return false; }
     virtual bool supportsVideoFullscreenStandby() { return false; }
 
@@ -497,11 +552,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     virtual bool supportsFullScreenForElement(const Element&, bool) { return false; }
-    virtual void enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
-    {
-        willEnterFullscreen({ });
-        didEnterFullscreen(false);
-    }
+    virtual void enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     virtual void updateImageSource(Element&) { }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
@@ -527,7 +578,7 @@ public:
 
     virtual bool testProcessIncomingSyncMessagesWhenWaitingForSyncReply() { return true; }
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(JAVA)
     // FIXME: Come up with a more descriptive name for this function and make it platform independent (if possible).
     virtual bool isStopping() = 0;
 #endif
@@ -536,13 +587,14 @@ public:
     virtual void disableSuddenTermination() { }
 
     virtual void contentRuleListNotification(const URL&, const ContentRuleListResults&) { };
+    virtual void contentRuleListMatchedRule(const ContentRuleListMatchedRule&) { };
 
 #if PLATFORM(WIN)
     virtual void AXStartFrameLoad() = 0;
     virtual void AXFinishFrameLoad() = 0;
 #endif
 
-#if PLATFORM(PLAYSTATION)
+#if PLATFORM(PLAYSTATION) || PLATFORM(HAIKU)
     virtual void postAccessibilityNotification(AccessibilityObject&, AXNotification) = 0;
     virtual void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) = 0;
     virtual void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXLoadingEvent) = 0;
@@ -564,21 +616,23 @@ public:
     virtual bool isSVGImageChromeClient() const { return false; }
 
 #if ENABLE(POINTER_LOCK)
-    virtual bool requestPointerLock() { return false; }
-    virtual void requestPointerUnlock() { }
+    virtual void requestPointerLock(CompletionHandler<void(PointerLockRequestResult)>&&);
+    virtual void requestPointerUnlock(CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
 #endif
 
     virtual FloatSize minimumWindowSize() const { return FloatSize(100, 100); };
 
     virtual bool isEmptyChromeClient() const { return false; }
 
-    virtual void didAssociateFormControls(const Vector<RefPtr<Element>>&, LocalFrame&) { };
+    virtual void didAssociateFormControls(const Vector<Ref<Element>>&, LocalFrame&) { };
     virtual bool shouldNotifyOnFormChanges() { return false; };
 
     virtual void didAddHeaderLayer(GraphicsLayer&) { }
     virtual void didAddFooterLayer(GraphicsLayer&) { }
 
     virtual bool shouldUseTiledBackingForFrameView(const LocalFrameView&) const { return false; }
+
+    virtual void frameViewLayoutOrVisualViewportChanged(const LocalFrameView&) { }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     virtual void isAnyAnimationAllowedToPlayDidChange(bool /* anyAnimationCanPlay */) { };
@@ -615,13 +669,13 @@ public:
 
     virtual void performSwitchHapticFeedback() { }
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(JAVA)
     virtual void addPlaybackTargetPickerClient(PlaybackTargetClientContextIdentifier) { }
     virtual void removePlaybackTargetPickerClient(PlaybackTargetClientContextIdentifier) { }
     virtual void showPlaybackTargetPicker(PlaybackTargetClientContextIdentifier, const IntPoint&, bool /*isVideo*/) { }
     virtual void playbackTargetPickerClientStateDidChange(PlaybackTargetClientContextIdentifier, MediaProducerMediaStateFlags) { }
     virtual void setMockMediaPlaybackTargetPickerEnabled(bool)  { }
-    virtual void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetContext::MockState) { }
+    virtual void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetMockState) { }
     virtual void mockMediaPlaybackTargetPickerDismissPopup() { }
 #endif
 
@@ -633,7 +687,7 @@ public:
     virtual RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) = 0;
 
     virtual void hasStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, LocalFrame&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
-    virtual void requestStorageAccess(RegistrableDomain&& subFrameDomain, RegistrableDomain&& topFrameDomain, LocalFrame&, StorageAccessScope scope, CompletionHandler<void(RequestStorageAccessResult)>&& completionHandler) { completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::No, scope, WTFMove(topFrameDomain), WTFMove(subFrameDomain) }); }
+    virtual void requestStorageAccess(RegistrableDomain&& subFrameDomain, RegistrableDomain&& topFrameDomain, LocalFrame&, StorageAccessScope scope, HasUserGestureOrNoUserGestureRequired, CompletionHandler<void(RequestStorageAccessResult)>&& completionHandler) { completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::No, scope, WTF::move(topFrameDomain), WTF::move(subFrameDomain) }); }
     virtual bool hasPageLevelStorageAccess(const RegistrableDomain& /*topLevelDomain*/, const RegistrableDomain& /*resourceDomain*/) const { return false; }
 
     virtual void setLoginStatus(RegistrableDomain&&, IsLoggedIn, CompletionHandler<void()>&&) { }
@@ -652,7 +706,8 @@ public:
     virtual void setMockWebAuthenticationConfiguration(const MockWebAuthenticationConfiguration&) { }
 #endif
 
-    virtual bool requiresScriptTelemetryForURL(const URL&, const SecurityOrigin& /* topOrigin */) const { return false; }
+    virtual bool requiresScriptTrackingPrivacyProtections(const URL&, const SecurityOrigin& /* topOrigin */) const { return false; }
+    virtual bool shouldAllowScriptAccess(const URL&, const WebCore::SecurityOrigin&, ScriptTrackingPrivacyCategory) const { return true; }
 
     virtual void animationDidFinishForElement(const Element&) { }
 
@@ -661,20 +716,18 @@ public:
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS)
-    virtual void requestTextRecognition(Element&, TextRecognitionOptions&&, CompletionHandler<void(RefPtr<Element>&&)>&& completion = { })
-    {
-        if (completion)
-            completion({ });
-    }
+    WEBCORE_EXPORT virtual void requestTextRecognition(Element&, TextRecognitionOptions&&, CompletionHandler<void(RefPtr<Element>&&)>&& completion = { });
 #endif
     virtual bool needsImageOverlayControllerForSelectionPainting() const { return false; }
 
+    virtual bool needsScrollGeometryUpdates() const { return false; }
+
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
-    virtual void showMediaControlsContextMenu(FloatRect&&, Vector<MediaControlsContextMenuItem>&&, CompletionHandler<void(MediaControlsContextMenuItem::ID)>&& completionHandler) { completionHandler(MediaControlsContextMenuItem::invalidID); }
+    virtual void showMediaControlsContextMenu(FloatRect&&, Vector<MediaControlsContextMenuItem>&&, HTMLMediaElement&,  CompletionHandler<void(MediaControlsContextMenuItem::ID)>&& completionHandler) { completionHandler(MediaControlsContextMenuItem::invalidID); }
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
 
 #if ENABLE(WEBXR)
-    virtual void enumerateImmersiveXRDevices(CompletionHandler<void(const PlatformXR::Instance::DeviceList&)>&& completionHandler) { PlatformXR::Instance::singleton().enumerateImmersiveXRDevices(WTFMove(completionHandler)); }
+    virtual void enumerateImmersiveXRDevices(CompletionHandler<void(const PlatformXR::DeviceList&)>&& completionHandler) { completionHandler({ }); }
     virtual void requestPermissionOnXRSessionFeatures(const SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList& granted, const PlatformXR::Device::FeatureList& /* consentRequired */, const PlatformXR::Device::FeatureList& /* consentOptional */, const PlatformXR::Device::FeatureList& /* requiredFeaturesRequested */, const PlatformXR::Device::FeatureList& /* optionalFeaturesRequested */, CompletionHandler<void(std::optional<PlatformXR::Device::FeatureList>&&)>&& completionHandler) { completionHandler(granted); }
 #endif
 
@@ -740,6 +793,17 @@ public:
     virtual void didDispatchClickEvent(const PlatformMouseEvent&, Node&) { }
 
     virtual void didProgrammaticallyClearTextFormControl(const HTMLTextFormControlElement&) { }
+
+#if ENABLE(DAMAGE_TRACKING)
+    virtual void resetDamageHistoryForTesting() { }
+    virtual void foreachRegionInDamageHistoryForTesting(Function<void(const Region&)>&&) const { }
+#endif
+
+    virtual bool usePluginRendererScrollableArea(LocalFrame&) const { return true; }
+
+#if ENABLE(VIDEO)
+    WEBCORE_EXPORT virtual void showCaptionDisplaySettings(HTMLMediaElement&, const ResolvedCaptionDisplaySettingsOptions&, CompletionHandler<void(ExceptionOr<void>)>&&);
+#endif
 
     WEBCORE_EXPORT virtual ~ChromeClient();
 

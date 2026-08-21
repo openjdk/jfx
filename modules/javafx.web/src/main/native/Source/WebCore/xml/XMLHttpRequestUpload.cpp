@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "WebCoreOpaqueRoot.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include <wtf/Assertions.h>
@@ -36,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XMLHttpRequestUpload);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XMLHttpRequestUpload);
 
 XMLHttpRequestUpload::XMLHttpRequestUpload(XMLHttpRequest& request)
     : m_request(request)
@@ -45,7 +46,7 @@ XMLHttpRequestUpload::XMLHttpRequestUpload(XMLHttpRequest& request)
 
 void XMLHttpRequestUpload::eventListenersDidChange()
 {
-    m_request.updateHasRelevantEventListener();
+    Ref { m_request.get() }->updateHasRelevantEventListener();
 }
 
 bool XMLHttpRequestUpload::hasRelevantEventListener() const
@@ -65,6 +66,13 @@ void XMLHttpRequestUpload::dispatchProgressEvent(const AtomString& type, unsigne
 
     // https://xhr.spec.whatwg.org/#firing-events-using-the-progressevent-interface
     dispatchEvent(XMLHttpRequestProgressEvent::create(type, !!total, loaded, total));
+}
+
+ScriptExecutionContext* XMLHttpRequestUpload::scriptExecutionContext() const
+{
+    if (RefPtr request = m_request.ptr())
+        return request->scriptExecutionContext();
+    return nullptr;
 }
 
 WebCoreOpaqueRoot root(XMLHttpRequestUpload* upload)

@@ -38,7 +38,7 @@
 namespace JSC { namespace DFG {
 
 class InPlaceAbstractState {
-    WTF_MAKE_TZONE_ALLOCATED(InPlaceAbstractState);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(InPlaceAbstractState);
 public:
     InPlaceAbstractState(Graph&);
 
@@ -59,9 +59,9 @@ public:
         return value;
     }
 
-    ALWAYS_INLINE void fastForwardAndFilterUnproven(AbstractValue& value, SpeculatedType type)
+    ALWAYS_INLINE FiltrationResult fastForwardAndFilterUnproven(AbstractValue& value, SpeculatedType type)
     {
-        value.fastForwardToAndFilterUnproven(m_effectEpoch, type);
+        return value.fastForwardToAndFilterUnproven(m_effectEpoch, type);
     }
 
     ALWAYS_INLINE AbstractValue& forNodeWithoutFastForward(NodeFlowProjection node)
@@ -367,8 +367,6 @@ public:
     void setStructureClobberState(StructureClobberState value) { m_structureClobberState = value; }
     void setIsValid(bool isValid) { m_isValid = isValid; }
     void setBranchDirection(BranchDirection branchDirection) { m_branchDirection = branchDirection; }
-
-    void setShouldTryConstantFolding(bool) { }
 
     void setProofStatus(Edge& edge, ProofStatus status)
     {

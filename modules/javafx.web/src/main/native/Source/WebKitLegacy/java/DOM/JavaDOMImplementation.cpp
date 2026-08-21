@@ -30,6 +30,9 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/DOMImplementation.h>
 #include <WebCore/Document.h>
+#if PLATFORM(JAVA)
+#include "DocumentInlines.h"
+#endif
 #include <WebCore/DocumentType.h>
 #include <WebCore/HTMLDocument.h>
 #include <WebCore/SVGTests.h>

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
 #include <wtf/RetainPtr.h>
@@ -42,7 +43,7 @@ OBJC_CLASS NSString;
 namespace WebCore {
 
 class SerializedPlatformDataCueValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SerializedPlatformDataCueValue);
+    WTF_MAKE_TZONE_ALLOCATED(SerializedPlatformDataCueValue);
 public:
     struct Data {
 #if PLATFORM(COCOA)
@@ -50,14 +51,14 @@ public:
         HashMap<String, String> otherAttributes;
         String key;
         RetainPtr<NSLocale> locale;
-        std::variant<std::nullptr_t, RetainPtr<NSString>, RetainPtr<NSDate>, RetainPtr<NSNumber>, RetainPtr<NSData>> value;
+        Variant<std::nullptr_t, RetainPtr<NSString>, RetainPtr<NSDate>, RetainPtr<NSNumber>, RetainPtr<NSData>> value;
         bool operator==(const Data&) const;
 #endif
     };
 
     SerializedPlatformDataCueValue() = default;
     SerializedPlatformDataCueValue(std::optional<Data>&& data)
-        : m_data(WTFMove(data)) { }
+        : m_data(WTF::move(data)) { }
 #if PLATFORM(COCOA)
     SerializedPlatformDataCueValue(AVMetadataItem *);
     RetainPtr<NSDictionary> toNSDictionary() const;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,15 +41,20 @@ public:
     explicit NavigatorClipboard(Navigator&);
     ~NavigatorClipboard();
 
-    static RefPtr<Clipboard> clipboard(Navigator&);
-    RefPtr<Clipboard> clipboard();
+    static Ref<Clipboard> clipboard(Navigator&);
+    Ref<Clipboard> clipboard();
 
 private:
     static NavigatorClipboard* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorClipboard"_s; }
+    bool isNavigatorClipboard() const final { return true; }
 
-    RefPtr<Clipboard> m_clipboard;
-    CheckedRef<Navigator> m_navigator;
+    const RefPtr<Clipboard> m_clipboard;
+    const CheckedRef<Navigator> m_navigator;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorClipboard)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorClipboard(); }
+SPECIALIZE_TYPE_TRAITS_END()

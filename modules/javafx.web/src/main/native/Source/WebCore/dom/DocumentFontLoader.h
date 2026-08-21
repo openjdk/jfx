@@ -26,9 +26,10 @@
 
 #pragma once
 
-#include "CachedResourceHandle.h"
-#include "Document.h"
-#include "Timer.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/Document.h>
+#include <WebCore/Timer.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRef.h>
@@ -37,7 +38,7 @@ namespace WebCore {
 
 class CachedFont;
 
-class DocumentFontLoader {
+class DocumentFontLoader : public CanMakeWeakPtr<DocumentFontLoader> {
     WTF_MAKE_TZONE_ALLOCATED(DocumentFontLoader);
 public:
     DocumentFontLoader(Document&);
@@ -57,6 +58,7 @@ public:
 
 private:
     void fontLoadingTimerFired();
+    Ref<Document> protectedDocument() const { return m_document.get(); }
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     Timer m_fontLoadingTimer;

@@ -55,7 +55,6 @@ void JITThunks::initialize(VM& vm)
 #define JSC_DEFINE_COMMON_JIT_THUNK(name, func) \
     m_commonThunks[static_cast<unsigned>(CommonJITThunkID::name)] = func(vm);
 JSC_FOR_EACH_COMMON_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
-JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
 #undef JSC_DEFINE_COMMON_JIT_THUNK
 }
 
@@ -272,7 +271,7 @@ NativeExecutable* JITThunks::hostFunctionStub(VM& vm, TaggedNativeFunction funct
 
     Ref<JSC::JITCode> forConstruct = adoptRef(*new NativeJITCode(MacroAssemblerCodeRef<JSEntryPtrTag>::createSelfManagedCodeRef(ctiNativeConstruct(vm).retagged<JSEntryPtrTag>()), JITType::HostCallThunk, NoIntrinsic));
 
-    NativeExecutable* nativeExecutable = NativeExecutable::create(vm, forCall.releaseNonNull(), function, WTFMove(forConstruct), constructor, implementationVisibility, name);
+    NativeExecutable* nativeExecutable = NativeExecutable::create(vm, forCall.releaseNonNull(), function, WTF::move(forConstruct), constructor, implementationVisibility, name);
     {
         AssertNoGC assertNoGC;
         auto addResult = m_nativeExecutableSet.add<NativeExecutableTranslator>(nativeExecutable);

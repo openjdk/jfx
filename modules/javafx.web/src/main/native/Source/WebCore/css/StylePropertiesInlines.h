@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +25,10 @@
 
 #pragma once
 
-#include "CSSPropertyParser.h"
-#include "ImmutableStyleProperties.h"
-#include "MutableStyleProperties.h"
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/CSSPropertyInitialValues.h>
+#include <WebCore/ImmutableStyleProperties.h>
+#include <WebCore/MutableStyleProperties.h>
 
 namespace WebCore {
 
@@ -43,7 +45,7 @@ inline StyleProperties::StyleProperties(CSSParserMode mode, unsigned immutableAr
 {
 }
 
-inline StyleProperties::PropertyReference StyleProperties::propertyAt(unsigned index) const
+inline StyleProperties::PropertyReference StyleProperties::propertyAt(unsigned index) const LIFETIME_BOUND
 {
     if (m_isMutable)
         return uncheckedDowncast<MutableStyleProperties>(*this).propertyAt(index);
@@ -111,4 +113,4 @@ inline std::optional<CSSValueID> longhandValueID(CSSPropertyID property, const C
     return longhandValueID(property, *value);
 }
 
-}
+} // namespace WebCore

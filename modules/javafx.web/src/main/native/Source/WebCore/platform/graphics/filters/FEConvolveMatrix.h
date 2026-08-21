@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "FilterEffect.h"
-#include "FloatPoint.h"
+#include <WebCore/FilterEffect.h>
+#include <WebCore/FloatPoint.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ enum class EdgeModeType : uint8_t {
 };
 
 class FEConvolveMatrix final : public FilterEffect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEConvolveMatrix);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEConvolveMatrix);
 public:
     WEBCORE_EXPORT static Ref<FEConvolveMatrix> create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix, DestinationColorSpace = DestinationColorSpace::SRGB());
@@ -75,6 +75,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

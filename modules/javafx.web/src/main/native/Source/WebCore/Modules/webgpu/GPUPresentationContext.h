@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,10 +46,10 @@ class GPUPresentationContext : public RefCounted<GPUPresentationContext> {
 public:
     static Ref<GPUPresentationContext> create(Ref<WebGPU::PresentationContext>&& backing)
     {
-        return adoptRef(*new GPUPresentationContext(WTFMove(backing)));
+        return adoptRef(*new GPUPresentationContext(WTF::move(backing)));
     }
 
-    WARN_UNUSED_RETURN bool configure(const GPUCanvasConfiguration&, GPUIntegerCoordinate, GPUIntegerCoordinate, bool);
+    [[nodiscard]] bool configure(const GPUCanvasConfiguration&, GPUIntegerCoordinate, GPUIntegerCoordinate, bool);
     void unconfigure();
 
     RefPtr<GPUTexture> getCurrentTexture(uint32_t);
@@ -60,11 +60,11 @@ public:
 
 private:
     GPUPresentationContext(Ref<WebGPU::PresentationContext>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::PresentationContext> m_backing;
+    const Ref<WebGPU::PresentationContext> m_backing;
     RefPtr<GPUTexture> m_currentTexture;
     RefPtr<const GPUDevice> m_device;
     GPUTextureDescriptor m_textureDescriptor;

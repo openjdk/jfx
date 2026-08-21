@@ -21,12 +21,14 @@
 
 #pragma once
 
-#include "Breakpoint.h"
-#include "CallData.h"
-#include "DebuggerCallFrame.h"
-#include "DebuggerParseData.h"
-#include "DebuggerPrimitives.h"
-#include "JSCJSValue.h"
+#include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/CallData.h>
+#include <JavaScriptCore/DebuggerCallFrame.h>
+#include <JavaScriptCore/DebuggerParseData.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSRunLoopTimer.h>
+#include <JavaScriptCore/Weak.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
@@ -37,6 +39,7 @@ namespace JSC {
 class CallFrame;
 class CodeBlock;
 class Exception;
+class JSGenerator;
 class JSGlobalObject;
 class Microtask;
 class SourceProvider;
@@ -76,7 +79,7 @@ public:
     bool evaluateBreakpointCondition(Breakpoint&, JSGlobalObject*);
     void evaluateBreakpointActions(Breakpoint&, JSGlobalObject*);
 
-    void setPauseOnDebuggerStatementsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnDebuggerStatementsBreakpoint = WTFMove(breakpoint); }
+    void setPauseOnDebuggerStatementsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnDebuggerStatementsBreakpoint = WTF::move(breakpoint); }
 
     class TemporarilyDisableExceptionBreakpoints {
     public:
@@ -91,8 +94,8 @@ public:
         RefPtr<Breakpoint> m_pauseOnAllExceptionsBreakpoint;
         RefPtr<Breakpoint> m_pauseOnUncaughtExceptionsBreakpoint;
     };
-    void setPauseOnAllExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnAllExceptionsBreakpoint = WTFMove(breakpoint); }
-    void setPauseOnUncaughtExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnUncaughtExceptionsBreakpoint = WTFMove(breakpoint); }
+    void setPauseOnAllExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnAllExceptionsBreakpoint = WTF::move(breakpoint); }
+    void setPauseOnUncaughtExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnUncaughtExceptionsBreakpoint = WTF::move(breakpoint); }
 
     enum ReasonForPause {
         NotPaused,
@@ -104,6 +107,7 @@ public:
         PausedForBreakpoint,
         PausedForDebuggerStatement,
         PausedAfterBlackboxedScript,
+        PausedAfterAwait,
     };
     ReasonForPause reasonForPause() const { return m_reasonForPause; }
     BreakpointID pausingBreakpointID() const { return m_pausingBreakpointID; }
@@ -141,6 +145,8 @@ public:
     void exception(JSGlobalObject*, CallFrame*, JSValue exceptionValue, bool hasCatchHandler);
     void atStatement(CallFrame*);
     void atExpression(CallFrame*);
+    void willAwait(CallFrame*, JSValue generator);
+    void didAwait(CallFrame*, JSValue generator);
     void callEvent(CallFrame*);
     void returnEvent(CallFrame*);
     void unwindEvent(CallFrame*);
@@ -226,8 +232,8 @@ public:
     void setProfilingClient(ProfilingClient*);
     bool hasProfilingClient() const { return m_profilingClient != nullptr; }
     bool isAlreadyProfiling() const { return m_profilingClient && m_profilingClient->isAlreadyProfiling(); }
-    Seconds willEvaluateScript();
-    void didEvaluateScript(Seconds startTime, ProfilingReason);
+    JS_EXPORT_PRIVATE Seconds willEvaluateScript();
+    JS_EXPORT_PRIVATE void didEvaluateScript(Seconds startTime, ProfilingReason);
 
 protected:
     JS_EXPORT_PRIVATE JSC::DebuggerCallFrame& currentDebuggerCallFrame();
@@ -249,7 +255,7 @@ protected:
     JS_EXPORT_PRIVATE virtual void recompileAllJSFunctions();
 
     virtual void didPause(JSGlobalObject*) { }
-    JS_EXPORT_PRIVATE virtual void handlePause(JSGlobalObject*, ReasonForPause);
+    JS_EXPORT_PRIVATE virtual void handlePause(JSGlobalObject*);
     virtual void didContinue(JSGlobalObject*) { }
     virtual void runEventLoopWhilePaused() { }
 
@@ -270,27 +276,9 @@ private:
     class SetSteppingModeFunctor;
     class ToggleBreakpointFunctor;
 
-    class PauseReasonDeclaration {
-    public:
-        PauseReasonDeclaration(Debugger& debugger, ReasonForPause reason)
-            : m_debugger(debugger)
-        {
-            m_debugger.m_reasonForPause = reason;
-        }
-
-        ~PauseReasonDeclaration()
-        {
-            m_debugger.m_reasonForPause = NotPaused;
-        }
-    private:
-        Debugger& m_debugger;
-    };
-
     RefPtr<Breakpoint> didHitBreakpoint(SourceID, const TextPosition&);
 
     DebuggerParseData& debuggerParseData(SourceID, SourceProvider*);
-
-    void updateNeedForOpDebugCallbacks();
 
     // These update functions are only needed because our current breakpoints are
     // key'ed off the source position instead of the bytecode PC. This ensures
@@ -303,6 +291,7 @@ private:
     void pauseIfNeeded(JSC::JSGlobalObject*);
     void resetImmediatePauseState();
     void resetEventualPauseState();
+    void resetAsyncPauseState();
 
     enum SteppingMode {
         SteppingModeDisabled,
@@ -345,9 +334,20 @@ private:
     JSValue m_currentException;
     CallFrame* m_pauseOnCallFrame { nullptr };
     CallFrame* m_currentCallFrame { nullptr };
+    Weak<JSGenerator> m_pauseForAwaitInGenerator;
+    bool m_didPauseInAwait { false };
     unsigned m_lastExecutedLine;
     SourceID m_lastExecutedSourceID;
     bool m_afterBlackboxedScript { false };
+
+    class AbandonPauseInAwaitTimer final : public JSRunLoopTimer {
+    public:
+        explicit AbandonPauseInAwaitTimer(Debugger&);
+        void doWork(VM&) final;
+    private:
+        Debugger& m_debugger;
+    };
+    RefPtr<AbandonPauseInAwaitTimer> m_abandonPauseInAwaitTimer;
 
     using LineToBreakpointsMap = UncheckedKeyHashMap<unsigned, BreakpointsVector, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>>;
     UncheckedKeyHashMap<SourceID, LineToBreakpointsMap, WTF::IntHash<SourceID>, WTF::UnsignedWithZeroKeyHashTraits<SourceID>> m_breakpointsForSourceID;
@@ -375,6 +375,7 @@ private:
 
     friend class DebuggerPausedScope;
     friend class TemporaryPausedState;
+    friend class PauseReasonDeclaration;
     friend class LLIntOffsetsExtractor;
     friend class WTF::DoublyLinkedListNode<Debugger>;
 };

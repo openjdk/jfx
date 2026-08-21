@@ -25,6 +25,7 @@
 
 [
     Conditional=APPLE_PAY&PAYMENT_REQUEST,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayRequest : ApplePayRequestBase {
     required unsigned long version;
     required DOMString merchantIdentifier;

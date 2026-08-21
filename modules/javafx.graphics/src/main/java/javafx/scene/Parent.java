@@ -83,7 +83,7 @@ public abstract non-sealed class Parent extends Node {
 
     // If set to true, generate a warning message whenever adding a node to a
     // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    private static final boolean warnOnAutoMove = Boolean.getBoolean("javafx.sg.warn");
 
     /**
      * Threshold when it's worth to populate list of removed children.

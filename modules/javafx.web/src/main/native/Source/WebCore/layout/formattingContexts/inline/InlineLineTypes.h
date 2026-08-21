@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LayoutUnits.h"
+#include <WebCore/LayoutUnits.h>
 
 namespace WebCore {
 namespace Layout {
@@ -40,6 +40,11 @@ struct TextSpacingContext {
     InlineBoxBoundaryTextSpacings inlineBoxBoundaryTextSpacings;
     // TrimmableTextSpacings map inline item indexes to spacing. Text content can be split into multiple different inline text items. This structure serves to identify spacing that was added to a text item because of its adjacency to another text item. Ex: if we have 2 text items A and B, and the last character of A and the first character of B require spacing to be added between them. This spacing is always added as a leading spacing to B. However, during line breaking, if B gets placed on a different line as A, they are no longer adjacent and we must trim such spacing. We don't use this map for actually adding the spacing, just for trimming it. Therefore this maps serves only to identify trimmable spacing between text runs. Maybe this can be called TrimmableTextSpacingBetweenTextItems or something.
     TrimmableTextSpacings trimmableTextSpacings;
+};
+
+enum class IsFirstFormattedLine : bool {
+    No,
+    Yes
 };
 
 enum class LineEndingTruncationPolicy : uint8_t {
@@ -80,7 +85,6 @@ struct PreviousLine {
     // Content width measured during line breaking (avoid double-measuring).
     std::optional<InlineLayoutUnit> trailingOverflowingContentWidth { };
     bool endsWithLineBreak { false };
-    bool hasInlineContent { false };
     TextDirection inlineBaseDirection { TextDirection::LTR };
     Vector<const Box*> suspendedFloats;
 };

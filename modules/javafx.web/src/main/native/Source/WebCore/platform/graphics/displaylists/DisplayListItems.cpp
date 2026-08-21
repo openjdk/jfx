@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,18 @@
 #include "config.h"
 #include "DisplayListItems.h"
 
-#include "DecomposedGlyphs.h"
-#include "DisplayListReplayer.h"
+#include "DisplayList.h"
 #include "Filter.h"
+#include "FilterResults.h"
 #include "FontCascade.h"
 #include "ImageBuffer.h"
 #include "MediaPlayer.h"
 #include "SharedBuffer.h"
 #include <wtf/text/TextStream.h>
+
+#if USE(SKIA)
+#include "GraphicsContextSkia.h"
+#endif
 
 namespace WebCore {
 namespace DisplayList {
@@ -55,8 +59,8 @@ void Translate::apply(GraphicsContext& context) const
 
 void Translate::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("x", x());
-    ts.dumpProperty("y", y());
+    ts.dumpProperty("x"_s, x());
+    ts.dumpProperty("y"_s, y());
 }
 
 void Rotate::apply(GraphicsContext& context) const
@@ -66,7 +70,7 @@ void Rotate::apply(GraphicsContext& context) const
 
 void Rotate::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("angle", angle());
+    ts.dumpProperty("angle"_s, angle());
 }
 
 void Scale::apply(GraphicsContext& context) const
@@ -76,7 +80,7 @@ void Scale::apply(GraphicsContext& context) const
 
 void Scale::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("size", amount());
+    ts.dumpProperty("size"_s, amount());
 }
 
 void SetCTM::apply(GraphicsContext& context) const
@@ -86,7 +90,7 @@ void SetCTM::apply(GraphicsContext& context) const
 
 void SetCTM::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("set-ctm", transform());
+    ts.dumpProperty("set-ctm"_s, transform());
 }
 
 void ConcatenateCTM::apply(GraphicsContext& context) const
@@ -96,7 +100,7 @@ void ConcatenateCTM::apply(GraphicsContext& context) const
 
 void ConcatenateCTM::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("ctm", transform());
+    ts.dumpProperty("ctm"_s, transform());
 }
 
 void SetInlineFillColor::apply(GraphicsContext& context) const
@@ -106,7 +110,7 @@ void SetInlineFillColor::apply(GraphicsContext& context) const
 
 void SetInlineFillColor::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("color", color());
+    ts.dumpProperty("color"_s, color());
 }
 
 void SetInlineStroke::apply(GraphicsContext& context) const
@@ -120,9 +124,9 @@ void SetInlineStroke::apply(GraphicsContext& context) const
 void SetInlineStroke::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     if (auto color = this->color())
-        ts.dumpProperty("color", *color);
+        ts.dumpProperty("color"_s, *color);
     if (auto thickness = this->thickness())
-        ts.dumpProperty("thickness", *thickness);
+        ts.dumpProperty("thickness"_s, *thickness);
 }
 
 SetState::SetState(const GraphicsContextState& state)
@@ -147,7 +151,7 @@ void SetLineCap::apply(GraphicsContext& context) const
 
 void SetLineCap::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("line-cap", lineCap());
+    ts.dumpProperty("line-cap"_s, lineCap());
 }
 
 void SetLineDash::apply(GraphicsContext& context) const
@@ -157,8 +161,8 @@ void SetLineDash::apply(GraphicsContext& context) const
 
 void SetLineDash::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("dash-array", dashArray());
-    ts.dumpProperty("dash-offset", dashOffset());
+    ts.dumpProperty("dash-array"_s, dashArray());
+    ts.dumpProperty("dash-offset"_s, dashOffset());
 }
 
 void SetLineJoin::apply(GraphicsContext& context) const
@@ -168,7 +172,7 @@ void SetLineJoin::apply(GraphicsContext& context) const
 
 void SetLineJoin::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("line-join", lineJoin());
+    ts.dumpProperty("line-join"_s, lineJoin());
 }
 
 void SetMiterLimit::apply(GraphicsContext& context) const
@@ -178,12 +182,7 @@ void SetMiterLimit::apply(GraphicsContext& context) const
 
 void SetMiterLimit::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("mitre-limit", miterLimit());
-}
-
-void ClearDropShadow::apply(GraphicsContext& context) const
-{
-    context.clearDropShadow();
+    ts.dumpProperty("mitre-limit"_s, miterLimit());
 }
 
 void Clip::apply(GraphicsContext& context) const
@@ -193,7 +192,7 @@ void Clip::apply(GraphicsContext& context) const
 
 void Clip::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void ClipRoundedRect::apply(GraphicsContext& context) const
@@ -203,7 +202,7 @@ void ClipRoundedRect::apply(GraphicsContext& context) const
 
 void ClipRoundedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void ClipOut::apply(GraphicsContext& context) const
@@ -213,7 +212,7 @@ void ClipOut::apply(GraphicsContext& context) const
 
 void ClipOut::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void ClipOutRoundedRect::apply(GraphicsContext& context) const
@@ -223,19 +222,19 @@ void ClipOutRoundedRect::apply(GraphicsContext& context) const
 
 void ClipOutRoundedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
-void ClipToImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+void ClipToImageBuffer::apply(GraphicsContext& context) const
 {
-    context.clipToImageBuffer(imageBuffer, m_destinationRect);
+    context.clipToImageBuffer(m_imageBuffer, m_destinationRect);
 }
 
 void ClipToImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-buffer-identifier", imageBufferIdentifier());
-    ts.dumpProperty("dest-rect", destinationRect());
+        ts.dumpProperty("image-buffer-identifier"_s, m_imageBuffer->renderingResourceIdentifier());
+    ts.dumpProperty("dest-rect"_s, destinationRect());
 }
 
 void ClipOutToPath::apply(GraphicsContext& context) const
@@ -245,7 +244,7 @@ void ClipOutToPath::apply(GraphicsContext& context) const
 
 void ClipOutToPath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
+    ts.dumpProperty("path"_s, path());
 }
 
 void ClipPath::apply(GraphicsContext& context) const
@@ -255,8 +254,8 @@ void ClipPath::apply(GraphicsContext& context) const
 
 void ClipPath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
-    ts.dumpProperty("wind-rule", windRule());
+    ts.dumpProperty("path"_s, path());
+    ts.dumpProperty("wind-rule"_s, windRule());
 }
 
 void ResetClip::apply(GraphicsContext& context) const
@@ -264,93 +263,112 @@ void ResetClip::apply(GraphicsContext& context) const
     context.resetClip();
 }
 
-DrawFilteredImageBuffer::DrawFilteredImageBuffer(std::optional<RenderingResourceIdentifier> sourceImageIdentifier, const FloatRect& sourceImageRect, Filter& filter)
-    : m_sourceImageIdentifier(sourceImageIdentifier)
-    , m_sourceImageRect(sourceImageRect)
-    , m_filter(filter)
+void DrawFilteredImageBuffer::apply(GraphicsContext& context) const
 {
-}
-
-NO_RETURN_DUE_TO_ASSERT void DrawFilteredImageBuffer::apply(GraphicsContext&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void DrawFilteredImageBuffer::apply(GraphicsContext& context, ImageBuffer* sourceImage, FilterResults& results) const
-{
-    context.drawFilteredImageBuffer(sourceImage, m_sourceImageRect, m_filter, results);
+    FilterResults results;
+    context.drawFilteredImageBuffer(m_sourceImage.get(), m_sourceImageRect, m_filter, results);
 }
 
 void DrawFilteredImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
-    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("source-image-identifier", sourceImageIdentifier());
-    ts.dumpProperty("source-image-rect", sourceImageRect());
+    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers)) {
+        if (m_sourceImage)
+            ts.dumpProperty("source-image-identifier"_s, m_sourceImage->renderingResourceIdentifier());
+    }
+    ts.dumpProperty("source-image-rect"_s, sourceImageRect());
 }
 
-DrawGlyphs::DrawGlyphs(RenderingResourceIdentifier fontIdentifier, PositionedGlyphs&& positionedGlyphs)
-    : m_fontIdentifier(fontIdentifier)
-    , m_positionedGlyphs(WTFMove(positionedGlyphs))
+void DrawGlyphs::apply(GraphicsContext& context) const
 {
-}
-
-DrawGlyphs::DrawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
-    : m_fontIdentifier(font.renderingResourceIdentifier())
-    , m_positionedGlyphs { Vector(glyphs), Vector(advances), localAnchor, smoothingMode }
-{
-}
-
-void DrawGlyphs::apply(GraphicsContext& context, const Font& font) const
-{
-    return context.drawGlyphs(font, m_positionedGlyphs.glyphs.span(), m_positionedGlyphs.advances.span(), anchorPoint(), m_positionedGlyphs.smoothingMode);
+    context.drawGlyphs(m_font, m_glyphs.span(), m_advances.span(), m_localAnchor, m_fontSmoothingMode);
 }
 
 void DrawGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     // FIXME: dump more stuff.
-    ts.dumpProperty("local-anchor", localAnchor());
-    ts.dumpProperty("anchor-point", anchorPoint());
-    ts.dumpProperty("font-smoothing-mode", fontSmoothingMode());
-    ts.dumpProperty("length", glyphs().size());
+    ts.dumpProperty("local-anchor"_s, localAnchor());
+    ts.dumpProperty("font-smoothing-mode"_s, fontSmoothingMode());
+    ts.dumpProperty("length"_s, length());
 }
 
-void DrawDecomposedGlyphs::apply(GraphicsContext& context, const Font& font, const DecomposedGlyphs& decomposedGlyphs) const
+#if USE(SKIA)
+void DrawTextBlob::apply(GraphicsContext& context) const
 {
-    return context.drawDecomposedGlyphs(font, decomposedGlyphs);
+    if (m_textBlob)
+        static_cast<GraphicsContextSkia*>(&context)->drawSkiaText(m_textBlob, SkFloatToScalar(m_localAnchor.x()), SkFloatToScalar(m_localAnchor.y()), m_enableAntialiasing, m_isVertical);
 }
 
-void DrawDecomposedGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
+void DrawTextBlob::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers)) {
-        ts.dumpProperty("font-identifier", fontIdentifier());
-        ts.dumpProperty("draw-glyphs-data-identifier", decomposedGlyphsIdentifier());
-    }
+    ts.dumpProperty("local-anchor"_s, localAnchor());
+    ts.dumpProperty("font-smoothing-mode"_s, fontSmoothingMode());
+    ts.dumpProperty("length"_s, length());
+}
+#endif // USE(SKIA)
+
+DrawDisplayList::DrawDisplayList(Ref<const DisplayList>&& displayList)
+    : m_displayList(WTF::move(displayList))
+{
 }
 
-void DrawImageBuffer::apply(GraphicsContext& context, ImageBuffer& imageBuffer) const
+DrawDisplayList::~DrawDisplayList() = default;
+
+Ref<const DisplayList> DrawDisplayList::displayList() const
 {
-    context.drawImageBuffer(imageBuffer, m_destinationRect, m_srcRect, m_options);
+    return m_displayList;
+}
+
+void DrawDisplayList::apply(GraphicsContext& context, ControlFactory& controlFactory) const
+{
+    return context.drawDisplayList(m_displayList, controlFactory);
+}
+
+void DrawDisplayList::dump(TextStream& ts, OptionSet<AsTextFlag>) const
+{
+    Ref displayList = this->displayList();
+    ts.dumpProperty("display-list"_s, displayList);
+}
+
+DrawPlaceholder::DrawPlaceholder(Function<void(GraphicsContext&)>&& function)
+    : m_function(FunctionHolder::create(WTF::move(function)))
+{
+}
+
+DrawPlaceholder::~DrawPlaceholder() = default;
+
+void DrawPlaceholder::apply(GraphicsContext& context) const
+{
+    return (*m_function)(context);
+}
+
+void DrawPlaceholder::dump(TextStream&, OptionSet<AsTextFlag>) const
+{
+}
+
+void DrawImageBuffer::apply(GraphicsContext& context) const
+{
+    context.drawImageBuffer(m_imageBuffer, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-buffer-identifier", imageBufferIdentifier());
-    ts.dumpProperty("source-rect", source());
-    ts.dumpProperty("dest-rect", destinationRect());
+        ts.dumpProperty("image-buffer-identifier"_s, m_imageBuffer->renderingResourceIdentifier());
+    ts.dumpProperty("source-rect"_s, source());
+    ts.dumpProperty("dest-rect"_s, destinationRect());
 }
 
-void DrawNativeImage::apply(GraphicsContext& context, NativeImage& image) const
+void DrawNativeImage::apply(GraphicsContext& context) const
 {
-    context.drawNativeImageInternal(image, m_destinationRect, m_srcRect, m_options);
+    context.drawNativeImage(m_image, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawNativeImage::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-identifier", imageIdentifier());
-    ts.dumpProperty("source-rect", source());
-    ts.dumpProperty("dest-rect", destinationRect());
+        ts.dumpProperty("image-identifier"_s, m_image->renderingResourceIdentifier());
+    ts.dumpProperty("source-rect"_s, source());
+    ts.dumpProperty("dest-rect"_s, destinationRect());
 }
 
 void DrawSystemImage::apply(GraphicsContext& context) const
@@ -361,44 +379,39 @@ void DrawSystemImage::apply(GraphicsContext& context) const
 void DrawSystemImage::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     // FIXME: dump more stuff.
-    ts.dumpProperty("destination", destinationRect());
+    ts.dumpProperty("destination"_s, destinationRect());
 }
 
-DrawPattern::DrawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
-    : m_imageIdentifier(imageIdentifier)
-    , m_destination(destRect)
-    , m_tileRect(tileRect)
-    , m_patternTransform(patternTransform)
-    , m_phase(phase)
-    , m_spacing(spacing)
-    , m_options(options)
+void DrawPatternNativeImage::apply(GraphicsContext& context) const
 {
+    context.drawPattern(m_image, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
 }
 
-void DrawPattern::apply(GraphicsContext& context, SourceImage& sourceImage) const
-{
-    if (auto image = sourceImage.nativeImageIfExists()) {
-        context.drawPattern(*image, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
-        return;
-    }
-
-    if (auto imageBuffer = sourceImage.imageBufferIfExists()) {
-        context.drawPattern(*imageBuffer, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
-        return;
-    }
-
-    ASSERT_NOT_REACHED();
-}
-
-void DrawPattern::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
+void DrawPatternNativeImage::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
     if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
-        ts.dumpProperty("image-identifier", imageIdentifier());
-    ts.dumpProperty("pattern-transform", patternTransform());
-    ts.dumpProperty("tile-rect", tileRect());
-    ts.dumpProperty("dest-rect", destRect());
-    ts.dumpProperty("phase", phase());
-    ts.dumpProperty("spacing", spacing());
+        ts.dumpProperty("image-identifier"_s, m_image->renderingResourceIdentifier());
+    ts.dumpProperty("pattern-transform"_s, patternTransform());
+    ts.dumpProperty("tile-rect"_s, tileRect());
+    ts.dumpProperty("dest-rect"_s, destRect());
+    ts.dumpProperty("phase"_s, phase());
+    ts.dumpProperty("spacing"_s, spacing());
+}
+
+void DrawPatternImageBuffer::apply(GraphicsContext& context) const
+{
+    context.drawPattern(m_imageBuffer, m_destination, m_tileRect, m_patternTransform, m_phase, m_spacing, m_options);
+}
+
+void DrawPatternImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
+{
+    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
+        ts.dumpProperty("image-identifier"_s, m_imageBuffer->renderingResourceIdentifier());
+    ts.dumpProperty("pattern-transform"_s, patternTransform());
+    ts.dumpProperty("tile-rect"_s, tileRect());
+    ts.dumpProperty("dest-rect"_s, destRect());
+    ts.dumpProperty("phase"_s, phase());
+    ts.dumpProperty("spacing"_s, spacing());
 }
 
 void DrawRect::apply(GraphicsContext& context) const
@@ -408,8 +421,8 @@ void DrawRect::apply(GraphicsContext& context) const
 
 void DrawRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("border-thickness", borderThickness());
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("border-thickness"_s, borderThickness());
 }
 
 void DrawLine::apply(GraphicsContext& context) const
@@ -419,8 +432,8 @@ void DrawLine::apply(GraphicsContext& context) const
 
 void DrawLine::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("point-1", point1());
-    ts.dumpProperty("point-2", point2());
+    ts.dumpProperty("point-1"_s, point1());
+    ts.dumpProperty("point-2"_s, point2());
 }
 
 DrawLinesForText::DrawLinesForText(const FloatPoint& point, std::span<const FloatSegment> lineSegments, float thickness, bool printing, bool doubleLines, StrokeStyle style)
@@ -440,12 +453,12 @@ void DrawLinesForText::apply(GraphicsContext& context) const
 
 void DrawLinesForText::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("point", point());
-    ts.dumpProperty("thickness", thickness());
-    ts.dumpProperty("double", doubleLines());
-    ts.dumpProperty("lineSegments", lineSegments());
-    ts.dumpProperty("is-printing", isPrinting());
-    ts.dumpProperty("double", doubleLines());
+    ts.dumpProperty("point"_s, point());
+    ts.dumpProperty("thickness"_s, thickness());
+    ts.dumpProperty("double"_s, doubleLines());
+    ts.dumpProperty("lineSegments"_s, lineSegments());
+    ts.dumpProperty("is-printing"_s, isPrinting());
+    ts.dumpProperty("double"_s, doubleLines());
 }
 
 void DrawDotsForDocumentMarker::apply(GraphicsContext& context) const
@@ -455,7 +468,7 @@ void DrawDotsForDocumentMarker::apply(GraphicsContext& context) const
 
 void DrawDotsForDocumentMarker::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void DrawEllipse::apply(GraphicsContext& context) const
@@ -465,7 +478,7 @@ void DrawEllipse::apply(GraphicsContext& context) const
 
 void DrawEllipse::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void DrawPath::apply(GraphicsContext& context) const
@@ -475,7 +488,7 @@ void DrawPath::apply(GraphicsContext& context) const
 
 void DrawPath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
+    ts.dumpProperty("path"_s, path());
 }
 
 void DrawFocusRingPath::apply(GraphicsContext& context) const
@@ -485,9 +498,9 @@ void DrawFocusRingPath::apply(GraphicsContext& context) const
 
 void DrawFocusRingPath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
-    ts.dumpProperty("outline-width", outlineWidth());
-    ts.dumpProperty("color", color());
+    ts.dumpProperty("path"_s, path());
+    ts.dumpProperty("outline-width"_s, outlineWidth());
+    ts.dumpProperty("color"_s, color());
 }
 
 void DrawFocusRingRects::apply(GraphicsContext& context) const
@@ -497,10 +510,10 @@ void DrawFocusRingRects::apply(GraphicsContext& context) const
 
 void DrawFocusRingRects::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rects", rects());
-    ts.dumpProperty("outline-offset", outlineOffset());
-    ts.dumpProperty("outline-width", outlineWidth());
-    ts.dumpProperty("color", color());
+    ts.dumpProperty("rects"_s, rects());
+    ts.dumpProperty("outline-offset"_s, outlineOffset());
+    ts.dumpProperty("outline-width"_s, outlineWidth());
+    ts.dumpProperty("color"_s, color());
 }
 
 void FillRect::apply(GraphicsContext& context) const
@@ -510,8 +523,8 @@ void FillRect::apply(GraphicsContext& context) const
 
 void FillRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("requiresClipToRect", m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("requiresClipToRect"_s, m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
 }
 
 void FillRectWithColor::apply(GraphicsContext& context) const
@@ -521,8 +534,8 @@ void FillRectWithColor::apply(GraphicsContext& context) const
 
 void FillRectWithColor::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("color", color());
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("color"_s, color());
 }
 
 FillRectWithGradient::FillRectWithGradient(const FloatRect& rect, Gradient& gradient)
@@ -532,8 +545,8 @@ FillRectWithGradient::FillRectWithGradient(const FloatRect& rect, Gradient& grad
 }
 
 FillRectWithGradient::FillRectWithGradient(FloatRect&& rect, Ref<Gradient>&& gradient)
-    : m_rect(WTFMove(rect))
-    , m_gradient(WTFMove(gradient))
+    : m_rect(WTF::move(rect))
+    , m_gradient(WTF::move(gradient))
 {
 }
 
@@ -544,8 +557,8 @@ void FillRectWithGradient::apply(GraphicsContext& context) const
 
 void FillRectWithGradient::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("gradient", m_gradient);
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("gradient"_s, m_gradient);
 }
 
 FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform, GraphicsContext::RequiresClipToRect requiresClipToRect)
@@ -557,24 +570,24 @@ FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(con
 }
 
 FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(FloatRect&& rect, Ref<Gradient>&& gradient, AffineTransform&& gradientSpaceTransform, GraphicsContext::RequiresClipToRect requiresClipToRect)
-    : m_rect(WTFMove(rect))
-    , m_gradient(WTFMove(gradient))
-    , m_gradientSpaceTransform(WTFMove(gradientSpaceTransform))
+    : m_rect(WTF::move(rect))
+    , m_gradient(WTF::move(gradient))
+    , m_gradientSpaceTransform(WTF::move(gradientSpaceTransform))
     , m_requiresClipToRect(requiresClipToRect)
 {
 }
 
 void FillRectWithGradientAndSpaceTransform::apply(GraphicsContext& context) const
 {
-    context.fillRect(m_rect, m_gradient, m_gradientSpaceTransform);
+    context.fillRect(m_rect, m_gradient, m_gradientSpaceTransform, m_requiresClipToRect);
 }
 
 void FillRectWithGradientAndSpaceTransform::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     // FIXME: log gradient.
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("gradient-space-transform", gradientSpaceTransform());
-    ts.dumpProperty("requiresClipToRect", m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("gradient-space-transform"_s, gradientSpaceTransform());
+    ts.dumpProperty("requiresClipToRect"_s, m_requiresClipToRect == GraphicsContext::RequiresClipToRect::Yes);
 }
 
 void FillCompositedRect::apply(GraphicsContext& context) const
@@ -584,10 +597,10 @@ void FillCompositedRect::apply(GraphicsContext& context) const
 
 void FillCompositedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("color", color());
-    ts.dumpProperty("composite-operation", compositeOperator());
-    ts.dumpProperty("blend-mode", blendMode());
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("color"_s, color());
+    ts.dumpProperty("composite-operation"_s, compositeOperator());
+    ts.dumpProperty("blend-mode"_s, blendMode());
 }
 
 void FillRoundedRect::apply(GraphicsContext& context) const
@@ -597,9 +610,9 @@ void FillRoundedRect::apply(GraphicsContext& context) const
 
 void FillRoundedRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", roundedRect());
-    ts.dumpProperty("color", color());
-    ts.dumpProperty("blend-mode", blendMode());
+    ts.dumpProperty("rect"_s, roundedRect());
+    ts.dumpProperty("color"_s, color());
+    ts.dumpProperty("blend-mode"_s, blendMode());
 }
 
 void FillRectWithRoundedHole::apply(GraphicsContext& context) const
@@ -609,73 +622,9 @@ void FillRectWithRoundedHole::apply(GraphicsContext& context) const
 
 void FillRectWithRoundedHole::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("rounded-hole-rect", roundedHoleRect());
-    ts.dumpProperty("color", color());
-}
-
-#if ENABLE(INLINE_PATH_DATA)
-
-void FillLine::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillLine::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void FillArc::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void FillClosedArc::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillClosedArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void FillQuadCurve::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillQuadCurve::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void FillBezierCurve::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillBezierCurve::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-#endif // ENABLE(INLINE_PATH_DATA)
-
-void FillPathSegment::apply(GraphicsContext& context) const
-{
-    context.fillPath(path());
-}
-
-void FillPathSegment::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("rounded-hole-rect"_s, roundedHoleRect());
+    ts.dumpProperty("color"_s, color());
 }
 
 void FillPath::apply(GraphicsContext& context) const
@@ -685,7 +634,7 @@ void FillPath::apply(GraphicsContext& context) const
 
 void FillPath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
+    ts.dumpProperty("path"_s, path());
 }
 
 void FillEllipse::apply(GraphicsContext& context) const
@@ -695,7 +644,7 @@ void FillEllipse::apply(GraphicsContext& context) const
 
 void FillEllipse::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 void StrokeRect::apply(GraphicsContext& context) const
@@ -705,8 +654,8 @@ void StrokeRect::apply(GraphicsContext& context) const
 
 void StrokeRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
-    ts.dumpProperty("line-width", lineWidth());
+    ts.dumpProperty("rect"_s, rect());
+    ts.dumpProperty("line-width"_s, lineWidth());
 }
 
 void StrokePath::apply(GraphicsContext& context) const
@@ -716,17 +665,7 @@ void StrokePath::apply(GraphicsContext& context) const
 
 void StrokePath::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("path", path());
-}
-
-void StrokePathSegment::apply(GraphicsContext& context) const
-{
-    context.strokePath(path());
-}
-
-void StrokePathSegment::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
+    ts.dumpProperty("path"_s, path());
 }
 
 void StrokeEllipse::apply(GraphicsContext& context) const
@@ -736,70 +675,8 @@ void StrokeEllipse::apply(GraphicsContext& context) const
 
 void StrokeEllipse::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
-
-void StrokeLine::apply(GraphicsContext& context) const
-{
-#if ENABLE(INLINE_PATH_DATA)
-    auto path = Path({ PathSegment { PathDataLine { { start() }, { end() } } } });
-#else
-    Path path;
-    path.moveTo(start());
-    path.addLineTo(end());
-#endif
-    context.strokePath(path);
-}
-
-void StrokeLine::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("start", start());
-    ts.dumpProperty("end", end());
-}
-
-#if ENABLE(INLINE_PATH_DATA)
-
-void StrokeArc::apply(GraphicsContext& context) const
-{
-    context.strokePath(path());
-}
-
-void StrokeArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void StrokeClosedArc::apply(GraphicsContext& context) const
-{
-    context.strokePath(path());
-}
-
-void StrokeClosedArc::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void StrokeQuadCurve::apply(GraphicsContext& context) const
-{
-    context.strokePath(path());
-}
-
-void StrokeQuadCurve::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-void StrokeBezierCurve::apply(GraphicsContext& context) const
-{
-    context.strokePath(path());
-}
-
-void StrokeBezierCurve::dump(TextStream& ts, OptionSet<AsTextFlag>) const
-{
-    ts.dumpProperty("path", path());
-}
-
-#endif // ENABLE(INLINE_PATH_DATA)
 
 void ClearRect::apply(GraphicsContext& context) const
 {
@@ -808,7 +685,7 @@ void ClearRect::apply(GraphicsContext& context) const
 
 void ClearRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("rect", rect());
+    ts.dumpProperty("rect"_s, rect());
 }
 
 DrawControlPart::DrawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
@@ -828,10 +705,10 @@ void DrawControlPart::apply(GraphicsContext& context, ControlFactory& controlFac
 
 void DrawControlPart::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("type", type());
-    ts.dumpProperty("border-rect", borderRect());
-    ts.dumpProperty("device-scale-factor", deviceScaleFactor());
-    ts.dumpProperty("style", style());
+    ts.dumpProperty("type"_s, type());
+    ts.dumpProperty("border-rect"_s, borderRect());
+    ts.dumpProperty("device-scale-factor"_s, deviceScaleFactor());
+    ts.dumpProperty("style"_s, style());
 }
 
 void BeginTransparencyLayer::apply(GraphicsContext& context) const
@@ -846,13 +723,13 @@ void BeginTransparencyLayerWithCompositeMode::apply(GraphicsContext& context) co
 
 void BeginTransparencyLayer::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("opacity", opacity());
+    ts.dumpProperty("opacity"_s, opacity());
 }
 
 void BeginTransparencyLayerWithCompositeMode::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("composite-operator", compositeMode().operation);
-    ts.dumpProperty("blend-mode", compositeMode().blendMode);
+    ts.dumpProperty("composite-operator"_s, compositeMode().operation);
+    ts.dumpProperty("blend-mode"_s, compositeMode().blendMode);
 }
 
 void EndTransparencyLayer::apply(GraphicsContext& context) const
@@ -881,17 +758,17 @@ void ApplyDeviceScaleFactor::apply(GraphicsContext& context) const
 
 void ApplyDeviceScaleFactor::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("scale-factor", scaleFactor());
+    ts.dumpProperty("scale-factor"_s, scaleFactor());
 }
 
 void BeginPage::apply(GraphicsContext& context) const
 {
-    context.beginPage(m_pageSize);
+    context.beginPage(m_pageRect);
 }
 
 void BeginPage::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("page-size", pageSize());
+    ts.dumpProperty("page-rect"_s, pageRect());
 }
 
 void EndPage::apply(GraphicsContext& context) const
@@ -906,8 +783,8 @@ void SetURLForRect::apply(GraphicsContext& context) const
 
 void SetURLForRect::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
-    ts.dumpProperty("link", link());
-    ts.dumpProperty("dest_rect", destRect());
+    ts.dumpProperty("link"_s, link());
+    ts.dumpProperty("dest_rect"_s, destRect());
 }
 
 } // namespace DisplayList

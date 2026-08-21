@@ -30,6 +30,10 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FETurbulenceCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FETurbulence> FETurbulence::create(TurbulenceType type, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles, DestinationColorSpace colorSpace)
@@ -112,6 +116,24 @@ FloatRect FETurbulence::calculateImageRect(const Filter& filter, std::span<const
     return filter.maxEffectRect(primitiveSubregion);
 }
 
+OptionSet<FilterRenderingMode> FETurbulence::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FETurbulence::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FETurbulenceCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FETurbulence::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FETurbulenceSoftwareApplier>(*this);
@@ -121,13 +143,13 @@ static TextStream& operator<<(TextStream& ts, TurbulenceType type)
 {
     switch (type) {
     case TurbulenceType::Unknown:
-        ts << "UNKNOWN";
+        ts << "UNKNOWN"_s;
         break;
     case TurbulenceType::Turbulence:
-        ts << "TURBULENCE";
+        ts << "TURBULENCE"_s;
         break;
     case TurbulenceType::FractalNoise:
-        ts << "NOISE";
+        ts << "NOISE"_s;
         break;
     }
     return ts;
@@ -135,16 +157,16 @@ static TextStream& operator<<(TextStream& ts, TurbulenceType type)
 
 TextStream& FETurbulence::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feTurbulence";
+    ts << indent << "[feTurbulence"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " type=\"" << type() << "\"";
-    ts << " baseFrequency=\"" << baseFrequencyX() << ", " << baseFrequencyY() << "\"";
-    ts << " seed=\"" << seed() << "\"";
-    ts << " numOctaves=\"" << numOctaves() << "\"";
-    ts << " stitchTiles=\"" << stitchTiles() << "\"";
+    ts << " type=\""_s << type() << '"';
+    ts << " baseFrequency=\""_s << baseFrequencyX() << ", "_s << baseFrequencyY() << '"';
+    ts << " seed=\""_s << seed() << '"';
+    ts << " numOctaves=\""_s << numOctaves() << '"';
+    ts << " stitchTiles=\""_s << stitchTiles() << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

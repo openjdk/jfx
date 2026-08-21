@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *  Copyright (c) 2015 Canon Inc. All rights reserved.
  *
@@ -27,31 +27,31 @@
 #include "Chrome.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentSettingsValues.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
 #include "HTMLFrameOwnerElement.h"
-#include "InspectorController.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMWindowCustom.h"
 #include "JSDocument.h"
+#include "JSExecState.h"
 #include "JSFetchResponse.h"
-#include "JSMicrotaskCallback.h"
 #include "JSNode.h"
 #include "JSTrustedScript.h"
 #include "LocalFrame.h"
 #include "Logging.h"
-#include "Page.h"
-#include "Quirks.h"
+#include "Microtasks.h"
+#include "NodeDocument.h"
+#include "PageInspectorController.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptController.h"
 #include "ScriptModuleLoader.h"
 #include "SecurityOrigin.h"
-#include "Settings.h"
 #include "TrustedType.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CodeBlock.h>
@@ -116,7 +116,7 @@ const GlobalObjectMethodTable* JSDOMWindowBase::globalObjectMethodTable()
 
 JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>&& window, JSWindowProxy* proxy)
     : JSDOMGlobalObject(vm, structure, proxy->world(), globalObjectMethodTable())
-    , m_wrapped(WTFMove(window))
+    , m_wrapped(WTF::move(window))
 {
     m_proxy.set(vm, this, proxy);
 }
@@ -156,7 +156,8 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
 
 void JSDOMWindowBase::destroy(JSCell* cell)
 {
-    static_cast<JSDOMWindowBase*>(cell)->JSDOMWindowBase::~JSDOMWindowBase();
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSDOMWindowBase*>(cell)->JSDOMWindowBase::~JSDOMWindowBase();
 }
 
 void JSDOMWindowBase::updateDocument()
@@ -172,7 +173,8 @@ void JSDOMWindowBase::updateDocument()
     bool shouldThrowReadOnlyError = false;
     bool ignoreReadOnlyErrors = true;
     bool putResult = false;
-    symbolTablePutTouchWatchpointSet(this, lexicalGlobalObject, builtinNames(vm).documentPublicName(), toJS(lexicalGlobalObject, this, m_wrapped->documentIfLocal()), shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+    RefPtr document = m_wrapped->documentIfLocal();
+    symbolTablePutTouchWatchpointSet(this, lexicalGlobalObject, builtinNames(vm).documentPublicName(), document ? toJS(lexicalGlobalObject, this, document.releaseNonNull()) : jsNull(), shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 }
 
@@ -248,32 +250,64 @@ RuntimeFlags JSDOMWindowBase::javaScriptRuntimeFlags(const JSGlobalObject* objec
     return frame->settings().javaScriptRuntimeFlags();
 }
 
-void JSDOMWindowBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+class UserGestureInitiatedMicrotaskDispatcher final : public WebCoreMicrotaskDispatcher {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(UserGestureInitiatedMicrotaskDispatcher);
+public:
+
+    UserGestureInitiatedMicrotaskDispatcher(EventLoopTaskGroup& group, Ref<UserGestureToken>&& userGestureToken)
+        : WebCoreMicrotaskDispatcher(Type::WebCoreUserGestureIndicator, group)
+        , m_userGestureToken(WTF::move(userGestureToken))
+    {
+    }
+
+    ~UserGestureInitiatedMicrotaskDispatcher() final = default;
+
+    JSC::QueuedTask::Result run(JSC::QueuedTask& task) final
+    {
+        auto runnability = currentRunnability();
+        if (runnability == JSC::QueuedTask::Result::Executed) {
+            UserGestureIndicator gestureIndicator(m_userGestureToken.ptr(), m_userGestureToken->scope(), UserGestureToken::ShouldPropagateToMicroTask::Yes);
+            JSExecState::runTaskWithDebugger(task.globalObject(), task);
+        }
+        return runnability;
+    }
+
+    static Ref<UserGestureInitiatedMicrotaskDispatcher> create(EventLoopTaskGroup& group, Ref<UserGestureToken>&& userGestureToken)
+    {
+        return adoptRef(*new UserGestureInitiatedMicrotaskDispatcher(group, WTF::move(userGestureToken)));
+    }
+
+private:
+    const Ref<UserGestureToken> m_userGestureToken;
+};
+
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(UserGestureInitiatedMicrotaskDispatcher);
+
+
+void JSDOMWindowBase::queueMicrotaskToEventLoop(JSGlobalObject& object, QueuedTask&& task)
 {
     JSDOMWindowBase& thisObject = static_cast<JSDOMWindowBase&>(object);
 
-    auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
-    auto* objectScriptExecutionContext = thisObject.scriptExecutionContext();
-    auto& eventLoop = objectScriptExecutionContext->eventLoop();
+    CheckedPtr objectScriptExecutionContext = thisObject.scriptExecutionContext();
+    CheckedRef eventLoop = objectScriptExecutionContext->eventLoop();
     // Propagating media only user gesture for Fetch API's promise chain.
-    auto userGestureToken = UserGestureIndicator::currentUserGesture();
-    if (userGestureToken && (!userGestureToken->isPropagatedFromFetch() || !objectScriptExecutionContext->settingsValues().userGesturePromisePropagationEnabled))
+    auto userGestureToken = UserGestureIndicator::currentUserGestureForMainThread();
+    if (userGestureToken && (!userGestureToken->shouldPropagateToMicroTask() || !objectScriptExecutionContext->settingsValues().userGesturePromisePropagationEnabled))
         userGestureToken = nullptr;
-    eventLoop.queueMicrotask([callback = WTFMove(callback), userGestureToken = WTFMove(userGestureToken)]() mutable {
-        if (!userGestureToken) {
-            callback->call();
-            return;
-        }
 
-        UserGestureIndicator gestureIndicator(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
-        callback->call();
-    });
+    if (!userGestureToken)
+        task.setDispatcher(eventLoop->jsMicrotaskDispatcher(task));
+    else
+        task.setDispatcher(UserGestureInitiatedMicrotaskDispatcher::create(eventLoop.get(), Ref { *userGestureToken }));
+
+    eventLoop->queueMicrotask(WTF::move(task));
 }
 
 JSC::JSObject* JSDOMWindowBase::currentScriptExecutionOwner(JSGlobalObject* object)
 {
-    JSDOMWindowBase* thisObject = static_cast<JSDOMWindowBase*>(object);
-    return jsCast<JSObject*>(toJS(thisObject, thisObject, thisObject->wrapped().documentIfLocal()));
+    auto* thisObject = static_cast<JSDOMWindowBase*>(object);
+    RefPtr document = thisObject->wrapped().documentIfLocal();
+    return jsCast<JSObject*>(document ? toJS(thisObject, thisObject, document.releaseNonNull()) : jsNull());
 }
 
 JSC::ScriptExecutionStatus JSDOMWindowBase::scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject* owner)
@@ -286,11 +320,11 @@ void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, const
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
     CheckedPtr<ContentSecurityPolicy> contentSecurityPolicy;
     RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(thisObject->wrapped());
-    if (auto* element = localWindow ? localWindow->frameElement() : nullptr)
+    if (CheckedPtr element = localWindow ? localWindow->frameElement() : nullptr)
         contentSecurityPolicy = element->document().contentSecurityPolicy();
 
     if (!contentSecurityPolicy) {
-        if (auto* document = localWindow ? localWindow->document() : nullptr)
+        if (CheckedPtr document = localWindow ? localWindow->document() : nullptr)
             contentSecurityPolicy = document->contentSecurityPolicy();
     }
 

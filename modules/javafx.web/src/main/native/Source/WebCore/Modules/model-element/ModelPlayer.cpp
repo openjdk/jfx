@@ -27,10 +27,14 @@
 #include "ModelPlayer.h"
 
 #include "Color.h"
+#include "FloatPoint3D.h"
+#include "ModelPlayerAnimationState.h"
+#include "ModelPlayerTransformState.h"
 #include "TransformationMatrix.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
 #include <WebCore/StageModeOperations.h>
 #endif
 
@@ -40,9 +44,60 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
 
+bool ModelPlayer::isPlaceholder() const
+{
+    return false;
+}
+
+std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
+{
+    return std::nullopt;
+}
+
+std::optional<std::unique_ptr<ModelPlayerTransformState>> ModelPlayer::currentTransformState() const
+{
+    return std::nullopt;
+}
+
+void ModelPlayer::reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&)
+{
+}
+
+void ModelPlayer::visibilityStateDidChange()
+{
+}
+
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxCenter() const
+{
+    return std::nullopt;
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxExtents() const
+{
+    return std::nullopt;
+}
+
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
+
+std::optional<TransformationMatrix> ModelPlayer::entityTransform() const
+{
+    return std::nullopt;
+}
+
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {
 }
+
+bool ModelPlayer::supportsTransform(TransformationMatrix)
+{
+    return false;
+}
+
+#endif
 
 bool ModelPlayer::supportsMouseInteraction()
 {
@@ -54,11 +109,6 @@ bool ModelPlayer::supportsDragging()
     return true;
 }
 
-bool ModelPlayer::supportsTransform(TransformationMatrix)
-{
-    return false;
-}
-
 void ModelPlayer::setInteractionEnabled(bool)
 {
 }
@@ -68,7 +118,8 @@ String ModelPlayer::inlinePreviewUUIDForTesting() const
     return emptyString();
 }
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
+
 void ModelPlayer::setAutoplay(bool)
 {
 }
@@ -107,17 +158,33 @@ void ModelPlayer::setCurrentTime(Seconds, CompletionHandler<void()>&& completion
     completionHandler();
 }
 
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENVIRONMENT_MAP)
+
 void ModelPlayer::setEnvironmentMap(Ref<SharedBuffer>&&)
 {
 }
+
+#endif
+
+#if ENABLE(MODEL_ELEMENT_PORTAL)
 
 void ModelPlayer::setHasPortal(bool)
 {
 }
 
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
+
 void ModelPlayer::setStageMode(StageModeOperation)
 {
 }
+
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE_INTERACTION)
 
 void ModelPlayer::beginStageModeTransform(const TransformationMatrix&)
 {
@@ -131,6 +198,31 @@ void ModelPlayer::endStageModeInteraction()
 {
 }
 
-#endif // ENABLE(MODEL_PROCESS)
-
+void ModelPlayer::animateModelToFitPortal(CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(false);
 }
+
+void ModelPlayer::resetModelTransformAfterDrag()
+{
+}
+
+#endif
+
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+
+void ModelPlayer::ensureImmersivePresentation(CompletionHandler<void(std::optional<LayerHostingContextIdentifier>)>&& completion)
+{
+    ASSERT_NOT_REACHED("ModelPlayer cannot provide a layer context identifier");
+    completion(std::nullopt);
+}
+
+void ModelPlayer::exitImmersivePresentation(CompletionHandler<void()>&& completion)
+{
+    ASSERT_NOT_REACHED("ModelPlayer cannot exit an immersive presentation");
+    completion();
+}
+
+#endif
+
+} // namespace WebCore

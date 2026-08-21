@@ -34,14 +34,14 @@ namespace WebCore {
 struct PatternAttributes;
 
 class SVGPatternElement final : public SVGElement, public SVGFitToViewBox, public SVGTests, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGPatternElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGPatternElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGPatternElement);
 public:
     static Ref<SVGPatternElement> create(const QualifiedName&, Document&);
 
     void collectPatternAttributes(PatternAttributes&) const;
 
-    AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const final;
+    AffineTransform localCoordinateSpaceTransform(CTMScope) const final;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
     const SVGLengthValue& y() const { return m_y->currentValue(); }

@@ -266,7 +266,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
         CacheableIdentifier identifier = stubInfo->identifier();
         UniquedStringImpl* uid = identifier.uid();
         RELEASE_ASSERT(uid);
-        GetByVariant variant(WTFMove(identifier));
+        GetByVariant variant(WTF::move(identifier));
         unsigned attributes;
         variant.m_offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(variant.m_offset))
@@ -293,7 +293,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
                 auto callLinkStatus = makeUnique<CallLinkStatus>();
                 if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, 0, access))
                     *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                status.appendVariant(GetByVariant(access.identifier(), { }, /* viaGlobalProxy */ false, invalidOffset, { }, WTFMove(callLinkStatus)));
+                status.appendVariant(GetByVariant(access.identifier(), { }, /* viaGlobalProxy */ false, invalidOffset, { }, WTF::move(callLinkStatus)));
                 return status;
             }
             case AccessCase::LoadMegamorphic:
@@ -352,10 +352,10 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
 
                 ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
                 GetByVariant variant(access.identifier(), StructureSet(structure), viaGlobalProxy, invalidOffset,
-                    WTFMove(conditionSet), nullptr,
+                    WTF::move(conditionSet), nullptr,
                     nullptr,
                     customAccessorGetter,
-                    WTFMove(domAttribute));
+                    WTF::move(domAttribute));
 
                 if (!result.appendVariant(variant))
                     return GetByStatus(JSC::slowVersion(summary), stubInfo);
@@ -409,7 +409,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
 
                 ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
                     GetByVariant variant(access.identifier(), StructureSet(structure), viaGlobalProxy, complexGetStatus.offset(),
-                        complexGetStatus.conditionSet(), WTFMove(callLinkStatus), intrinsicFunction);
+                        complexGetStatus.conditionSet(), WTF::move(callLinkStatus), intrinsicFunction);
 
                 if (!result.appendVariant(variant))
                     return GetByStatus(JSC::slowVersion(summary), stubInfo);
@@ -478,20 +478,110 @@ GetByStatus GetByStatus::computeFor(
     return computeFor(profiledBlock, baselineMap, didExit, callExitSiteData, codeOrigin);
 }
 
-GetByStatus GetByStatus::computeFor(const StructureSet& set, UniquedStringImpl* uid)
+GetByStatus GetByStatus::computeFor(JSGlobalObject* globalObject, const StructureSet& set, CacheableIdentifier identifier, GetByStatus::LookupMode mode)
 {
     // For now we only handle the super simple self access case. We could handle the
     // prototype case in the future.
-    //
-    // Note that this code is also used for GetByIdDirect since this function only looks
-    // into direct properties. When supporting prototype chains, we should split this for
-    // GetById and GetByIdDirect.
 
     if (set.isEmpty())
         return GetByStatus();
 
-    if (parseIndex(*uid))
+    if (parseIndex(*identifier.uid()))
         return GetByStatus(LikelyTakesSlowPath);
+
+    VM& vm = globalObject->vm();
+    auto attempToFold = [&]() -> std::optional<GetByStatus> {
+        Structure* structure = set.onlyStructure();
+        if (!structure)
+            return std::nullopt;
+
+        JSObject* prototype = nullptr;
+        auto* currentStructure = structure;
+        constexpr unsigned maxPrototypeWalkDepth = 8;
+        for (unsigned i = 0; i < maxPrototypeWalkDepth; ++i) {
+            if (currentStructure->typeInfo().overridesGetOwnPropertySlot())
+                return std::nullopt;
+
+            if (!currentStructure->propertyAccessesAreCacheable())
+                return std::nullopt;
+
+            unsigned attributes;
+            PropertyOffset offset = currentStructure->getConcurrently(identifier.uid(), attributes);
+            if (isValidOffset(offset)) {
+                if (!prototype)
+                    return std::nullopt; // We will handle it in the latter code.
+                if (attributes & PropertyAttribute::Accessor)
+                    return std::nullopt;
+                if (attributes & PropertyAttribute::CustomAccessorOrValue)
+                    return std::nullopt;
+
+                if (auto conditionSet = generateConditionsForPrototypePropertyHitConcurrently(vm, globalObject, structure, prototype, identifier.uid()); conditionSet.isValid()) {
+    GetByStatus result;
+    result.m_state = Simple;
+    result.m_wasSeenInJIT = false;
+                    size_t i = 0;
+                    size_t totalSize = conditionSet.size();
+                    for (auto& condition : conditionSet) {
+                        auto* object = condition.object();
+                        if (!object)
+                            return std::nullopt;
+
+                        auto* currentStructure = object->structure();
+                        if (currentStructure->typeInfo().overridesGetOwnPropertySlot())
+                            return std::nullopt;
+
+                        if (!currentStructure->propertyAccessesAreCacheable())
+                            return std::nullopt;
+
+                        if ((i + 1) == totalSize) {
+                            // The last condition
+                            if (condition.kind() != PropertyCondition::Presence)
+                        return std::nullopt;
+                            if (condition.attributes() & PropertyAttribute::Accessor)
+                        return std::nullopt;
+                            if (condition.attributes() & PropertyAttribute::CustomAccessorOrValue)
+                                return std::nullopt;
+
+                            GetByVariant variant(identifier, StructureSet(structure), /* viaGlobalProxy */ false, condition.offset(), conditionSet);
+                    if (!result.appendVariant(variant))
+                        return std::nullopt;
+
+                    return result;
+                        }
+
+                        if (currentStructure->hasPolyProto())
+                            return std::nullopt;
+
+                        if (condition.kind() != PropertyCondition::Absence)
+                            return std::nullopt;
+
+                        ++i;
+                    }
+                    return std::nullopt;
+                }
+                return std::nullopt;
+            }
+
+            if (currentStructure->hasPolyProto())
+                return std::nullopt;
+
+            JSValue value = currentStructure->prototypeForLookup(globalObject);
+            if (!value)
+                return std::nullopt;
+            if (!value.isObject())
+                return std::nullopt;
+            prototype = asObject(value);
+            currentStructure = prototype->structure();
+        }
+        return std::nullopt;
+    };
+
+    // We should do a prototype walk searching for the property only if this
+    // is a normal access. Don't consult proto for for direct accesses.
+    if (mode == GetByStatus::LookupMode::Normal) {
+    if (auto result = attempToFold())
+        return result.value();
+    }
 
     GetByStatus result;
     result.m_state = Simple;
@@ -505,7 +595,7 @@ GetByStatus GetByStatus::computeFor(const StructureSet& set, UniquedStringImpl* 
             return GetByStatus(LikelyTakesSlowPath);
 
         unsigned attributes;
-        PropertyOffset offset = structure->getConcurrently(uid, attributes);
+        PropertyOffset offset = structure->getConcurrently(identifier.uid(), attributes);
         if (!isValidOffset(offset))
             return GetByStatus(LikelyTakesSlowPath); // It's probably a prototype lookup. Give up on life for now, even though we could totally be way smarter about it.
         if (attributes & PropertyAttribute::Accessor)
@@ -671,6 +761,24 @@ CacheableIdentifier GetByStatus::singleIdentifier() const
         return m_moduleNamespaceData->m_identifier;
 
     return singleIdentifierForICStatus(m_variants);
+}
+
+void GetByStatus::filterById(UniquedStringImpl* uid)
+{
+    if (m_state != Simple)
+        return;
+
+    if (m_variants.isEmpty())
+        return;
+
+    auto filtered = m_variants;
+    filtered.removeAllMatching(
+        [&] (auto& variant) -> bool {
+            return variant.identifier() != uid;
+        });
+    if (filtered.isEmpty())
+        return;
+    m_variants = WTF::move(filtered);
 }
 
 #if ENABLE(JIT)

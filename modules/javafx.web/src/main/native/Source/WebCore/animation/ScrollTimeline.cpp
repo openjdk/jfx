@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,29 @@
 #include "ScrollTimeline.h"
 
 #include "AnimationTimelinesController.h"
-#include "DocumentInlines.h"
+#include "ContainerNodeInlines.h"
+#include "Document.h"
 #include "Element.h"
+#include "KeyframeEffect.h"
+#include "RenderElementInlines.h"
+#include "RenderLayer.h"
+#include "RenderLayerBacking.h"
+#include "RenderLayerModelObject.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
+#include "StylableInlines.h"
+#include "StyleComputedStyle+InitialInlines.h"
+#include "StyleSingleAnimationRange.h"
 #include "WebAnimation.h"
+
+#if ENABLE(THREADED_ANIMATIONS)
+#include "AcceleratedEffectStackUpdater.h"
+#endif
+
+#ifndef NDEBUG
+#include "Settings.h"
+#endif
 
 namespace WebCore {
 
@@ -105,7 +123,12 @@ ScrollTimeline::ScrollTimeline(Scroller scroller, ScrollAxis axis)
     m_scroller = scroller;
 }
 
-Element* ScrollTimeline::source() const
+RefPtr<Element> ScrollTimeline::bindingsSource() const
+{
+    return source();
+}
+
+RefPtr<Element> ScrollTimeline::source() const
 {
     auto source = m_source.styleable();
     if (!source)
@@ -116,15 +139,15 @@ Element* ScrollTimeline::source() const
         if (CheckedPtr subjectRenderer = source->renderer()) {
             if (CheckedPtr nearestScrollableContainer = subjectRenderer->enclosingScrollableContainer()) {
                 if (RefPtr nearestSource = nearestScrollableContainer->element()) {
-                    auto document = nearestSource->protectedDocument();
+                    Ref document = nearestSource->document();
                     RefPtr documentElement = document->documentElement();
                     if (nearestSource != documentElement)
-                        return nearestSource.get();
+                        return nearestSource;
                     // RenderObject::enclosingScrollableContainer() will return the document element even in
                     // quirks mode, but the scrolling element in that case is the <body> element, so we must
                     // make sure to return Document::scrollingElement() in case the document element is
                     // returned by enclosingScrollableContainer() but it was not explicitly set as the source.
-                    return &source->element == documentElement ? nearestSource.get() : document->scrollingElement();
+                    return &source->element == documentElement ? nearestSource : document->scrollingElement();
                 }
             }
         }
@@ -181,17 +204,16 @@ AnimationTimelinesController* ScrollTimeline::controller() const
     return nullptr;
 }
 
-std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedScrollDirection() const
+ScrollTimeline::ResolvedScrollDirection ScrollTimeline::resolvedScrollDirection() const
 {
-    RefPtr source = this->source();
-    if (!source)
-        return { };
+    auto writingMode = [&] -> WritingMode {
+        if (RefPtr source = this->source()) {
+            if (CheckedPtr renderer = source->renderer())
+                return renderer->style().writingMode();
+        }
 
-    CheckedPtr renderer = source->renderer();
-    if (!renderer)
-        return { };
-
-    auto writingMode = renderer->style().writingMode();
+        return { Style::ComputedStyle::initialWritingMode(), Style::ComputedStyle::initialDirection(), Style::ComputedStyle::initialTextOrientation() };
+    }();
 
     auto isVertical = [&] {
         switch (m_axis) {
@@ -224,37 +246,43 @@ std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedS
 
     auto isReversed = (isVertical && !writingMode.isAnyTopToBottom()) || (!isVertical && !writingMode.isAnyLeftToRight());
 
-    return { { isVertical, isReversed } };
+    return { isVertical, isReversed };
 }
 
-void ScrollTimeline::cacheCurrentTime()
+auto ScrollTimeline::computeCurrentTimeData() const -> CurrentTimeData
 {
-    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
-
-    m_cachedCurrentTimeData = [&] -> CurrentTimeData {
         RefPtr source = this->source();
         if (!source)
             return { };
-        auto* sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
+        CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
         if (!sourceScrollableArea)
             return { };
         auto scrollDirection = resolvedScrollDirection();
-        if (!scrollDirection)
-            return { };
-
-        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float maxScrollOffset = scrollDirection->isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
+        float scrollOffset = scrollDirection.isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float maxScrollOffset = scrollDirection.isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
         // Chrome appears to clip the current time of a scroll timeline in the [0-100] range.
         // We match this behavior for compatibility reasons, see https://github.com/w3c/csswg-drafts/issues/11033.
         if (maxScrollOffset > 0)
             scrollOffset = std::clamp(scrollOffset, 0.f, maxScrollOffset);
         return { scrollOffset, maxScrollOffset };
-    }();
+}
 
-    if (previousMaxScrollOffset != m_cachedCurrentTimeData.maxScrollOffset) {
+void ScrollTimeline::cacheCurrentTime()
+{
+    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+    m_cachedCurrentTimeData = computeCurrentTimeData();
+    if (previousMaxScrollOffset != m_cachedCurrentTimeData.maxScrollOffset)
+        sourceMetricsDidChange();
+}
+
+void ScrollTimeline::sourceMetricsDidChange()
+{
         for (auto& animation : m_animations)
             animation->progressBasedTimelineSourceDidChangeMetrics();
-    }
+#if ENABLE(THREADED_ANIMATIONS)
+    if (m_acceleratedRepresentation)
+        scheduleAcceleratedRepresentationUpdate();
+#endif
 }
 
 AnimationTimeline::ShouldUpdateAnimationsAndSendEvents ScrollTimeline::documentWillUpdateAnimationsAndSendEvents()
@@ -264,6 +292,35 @@ AnimationTimeline::ShouldUpdateAnimationsAndSendEvents ScrollTimeline::documentW
     if (source && source->element.isConnected())
         return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::Yes;
     return AnimationTimeline::ShouldUpdateAnimationsAndSendEvents::No;
+}
+
+void ScrollTimeline::updateCurrentTimeIfStale()
+{
+    // https://drafts.csswg.org/scroll-animations-1/#event-loop
+    // We must update timelines that became stale in the process of updating the page rendering.
+    // This function will be called during Page::updateRendering() after animations have been
+    // updated, requestAnimationFrame callbacks have been serviced, styles have been updated
+    // and resize observers have been run.
+    // See https://github.com/w3c/csswg-drafts/issues/12120 about clarifying this.
+    auto source = m_source.styleable();
+    if (!source || m_animations.isEmpty())
+        return;
+
+    auto previousMaxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
+    cacheCurrentTime();
+    if (previousMaxScrollOffset == m_cachedCurrentTimeData.maxScrollOffset)
+        return;
+
+    bool needsStyleUpdate = false;
+    for (auto& animation : m_animations) {
+        if (RefPtr effect = animation->keyframeEffect()) {
+            effect->invalidate();
+            needsStyleUpdate = true;
+        }
+    }
+
+    if (needsStyleUpdate)
+        source->element.protectedDocument()->updateStyleIfNeeded();
 }
 
 void ScrollTimeline::setTimelineScopeElement(const Element& element)
@@ -283,30 +340,24 @@ ScrollableArea* ScrollTimeline::scrollableAreaForSourceRenderer(const RenderElem
     return renderBox->hasLayer() ? renderBox->layer()->scrollableArea() : nullptr;
 }
 
-float ScrollTimeline::floatValueForOffset(const Length& offset, float maxValue)
+Style::SingleAnimationRange ScrollTimeline::defaultRange() const
 {
-    if (offset.isNormal() || offset.isAuto())
-        return 0.f;
-    return floatValueForLength(offset, maxValue);
+    return Style::SingleAnimationRange::defaultForScrollTimeline();
 }
 
-TimelineRange ScrollTimeline::defaultRange() const
+ScrollTimeline::Data ScrollTimeline::computeTimelineData(UseCachedCurrentTime useCachedCurrentTime) const
 {
-    return TimelineRange::defaultForScrollTimeline();
-}
-
-ScrollTimeline::Data ScrollTimeline::computeTimelineData() const
-{
-    if (!m_cachedCurrentTimeData.scrollOffset && !m_cachedCurrentTimeData.maxScrollOffset)
+    auto currentTimeData = useCachedCurrentTime == UseCachedCurrentTime::Yes ? m_cachedCurrentTimeData : computeCurrentTimeData();
+    if (!currentTimeData.scrollOffset && !currentTimeData.maxScrollOffset)
         return { };
     return {
-        m_cachedCurrentTimeData.scrollOffset,
+        currentTimeData.scrollOffset,
         0.f,
-        m_cachedCurrentTimeData.maxScrollOffset
+        currentTimeData.maxScrollOffset
     };
 }
 
-std::pair<WebAnimationTime, WebAnimationTime> ScrollTimeline::intervalForAttachmentRange(const TimelineRange& attachmentRange) const
+std::pair<WebAnimationTime, WebAnimationTime> ScrollTimeline::intervalForAttachmentRange(const Style::SingleAnimationRange& attachmentRange) const
 {
     auto maxScrollOffset = m_cachedCurrentTimeData.maxScrollOffset;
     if (!maxScrollOffset)
@@ -314,33 +365,30 @@ std::pair<WebAnimationTime, WebAnimationTime> ScrollTimeline::intervalForAttachm
 
     auto attachmentRangeOrDefault = attachmentRange.isDefault() ? defaultRange() : attachmentRange;
 
-    auto computedPercentageIfNecessary = [&](const Length& length) {
-        if (length.isPercent())
-            return length.value();
-        return floatValueForOffset(length, maxScrollOffset) / maxScrollOffset * 100;
+    auto computedPercentageIfNecessary = [&](const auto& rangeOffset) {
+        if (auto percentage = rangeOffset.tryPercentage())
+            return percentage->value;
+        return Style::evaluate<float>(rangeOffset, maxScrollOffset, Style::ZoomNeeded { }) / maxScrollOffset * 100;
     };
 
     return {
-        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.start.offset)),
-        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.end.offset))
+        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.start.offset())),
+        WebAnimationTime::fromPercentage(computedPercentageIfNecessary(attachmentRangeOrDefault.end.offset()))
     };
 }
 
-std::optional<WebAnimationTime> ScrollTimeline::currentTime()
+std::optional<WebAnimationTime> ScrollTimeline::currentTime(UseCachedCurrentTime useCachedCurrentTime)
 {
     // https://drafts.csswg.org/scroll-animations-1/#scroll-timeline-progress
     // Progress (the current time) for a scroll progress timeline is calculated as:
     // scroll offset ÷ (scrollable overflow size − scroll container size)
-    auto data = computeTimelineData();
+    auto data = computeTimelineData(useCachedCurrentTime);
     auto range = data.rangeEnd - data.rangeStart;
     if (!range)
         return { };
 
     auto scrollDirection = resolvedScrollDirection();
-    if (!scrollDirection)
-        return { };
-
-    auto distance = scrollDirection->isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
+    auto distance = scrollDirection.isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
     auto progress = distance / range;
     return WebAnimationTime::fromPercentage(progress * 100);
 }
@@ -357,14 +405,79 @@ void ScrollTimeline::animationTimingDidChange(WebAnimation& animation)
         page->scheduleRenderingUpdate(RenderingUpdateStep::Animations);
 }
 
-TextStream& operator<<(TextStream& ts, Scroller scroller)
+#if ENABLE(THREADED_ANIMATIONS)
+bool ScrollTimeline::computeCanBeAccelerated() const
 {
-    switch (scroller) {
-    case Scroller::Nearest: ts << "nearest"; break;
-    case Scroller::Root: ts << "root"; break;
-    case Scroller::Self: ts << "self"; break;
+    RefPtr source = this->source();
+    if (!source)
+        return false;
+
+    ASSERT(source->document().settings().threadedScrollDrivenAnimationsEnabled());
+
+    CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
+    return sourceScrollableArea && !!sourceScrollableArea->scrollingNodeID();
+}
+
+void ScrollTimeline::scheduleAcceleratedRepresentationUpdate()
+{
+    if (RefPtr source = this->source()) {
+        if (RefPtr page = source->protectedDocument()->page()) {
+            if (auto* acceleratedTimelinesUpdater = page->acceleratedTimelinesUpdater())
+                acceleratedTimelinesUpdater->scrollTimelineDidChange(*this);
+        }
     }
-    return ts;
+}
+
+ProgressResolutionData ScrollTimeline::computeProgressResolutionData() const
+{
+    ASSERT(this->source());
+    ASSERT(this->source()->document().settings().threadedScrollDrivenAnimationsEnabled());
+    Ref source = *this->source();
+    CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document());
+    ASSERT(sourceScrollableArea);
+    ASSERT(sourceScrollableArea->scrollingNodeID());
+
+    ASSERT(duration());
+    auto direction = resolvedScrollDirection();
+    auto data = computeTimelineData();
+
+    return {
+        .source = *sourceScrollableArea->scrollingNodeID(),
+        .duration = *duration(),
+        .isVertical = direction.isVertical,
+        .isReversed = direction.isReversed,
+        .scrollOffset = data.scrollOffset,
+        .rangeStart = data.rangeStart,
+        .rangeEnd = data.rangeEnd
+    };
+}
+
+void ScrollTimeline::updateAcceleratedRepresentation()
+{
+    if (m_acceleratedRepresentation)
+        m_acceleratedRepresentation->setProgressResolutionData(computeProgressResolutionData());
+}
+
+Ref<AcceleratedTimeline> ScrollTimeline::createAcceleratedRepresentation() const
+{
+    return AcceleratedTimeline::create(m_acceleratedTimelineIdentifier, computeProgressResolutionData());
+}
+
+std::optional<ScrollingNodeID> ScrollTimeline::scrollingNodeIDForTesting() const
+{
+    if (!m_acceleratedRepresentation)
+        return std::nullopt;
+    if (RefPtr source = this->source()) {
+        if (CheckedPtr sourceScrollableArea = scrollableAreaForSourceRenderer(source->renderer(), source->document()))
+            return sourceScrollableArea->scrollingNodeID();
+    }
+    return std::nullopt;
+}
+#endif
+
+TextStream& operator<<(TextStream& ts, const ScrollTimeline& timeline)
+{
+    return ts << timeline.name() << ' ' << timeline.axis();
 }
 
 } // namespace WebCore

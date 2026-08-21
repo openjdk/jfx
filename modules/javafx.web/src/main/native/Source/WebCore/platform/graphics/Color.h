@@ -25,19 +25,26 @@
 
 #pragma once
 
-#include "ColorConversion.h"
-#include "ColorSpace.h"
-#include "ColorUtilities.h"
-#include "DestinationColorSpace.h"
+#include <WebCore/ColorConversion.h>
+#include <WebCore/ColorSpace.h>
+#include <WebCore/ColorUtilities.h>
+#include <WebCore/DestinationColorSpace.h>
+#include <bit>
 #include <functional>
+#include <utility>
+#include <wtf/Assertions.h>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
+#include <wtf/GetPtr.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/Variant.h>
 
 #if USE(SKIA)
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
@@ -47,10 +54,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #if USE(CG)
 typedef struct CGColor* CGColorRef;
-#endif
-
-#if PLATFORM(GTK)
-typedef struct _GdkRGBA GdkRGBA;
 #endif
 
 namespace WebCore {
@@ -66,7 +69,7 @@ struct OutOfLineColorDataForIPC {
 struct ColorDataForIPC {
     bool isSemantic;
     bool usesFunctionSerialization;
-    std::variant<PackedColor::RGBA, OutOfLineColorDataForIPC> data;
+    Variant<PackedColor::RGBA, OutOfLineColorDataForIPC> data;
 };
 
 // Able to represent:
@@ -84,26 +87,27 @@ public:
 
     Color() = default;
 
-    WEBCORE_EXPORT Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
+    Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
     Color(std::optional<SRGBA<uint8_t>>, OptionSet<Flags> = { });
     WEBCORE_EXPORT Color(std::optional<ColorDataForIPC>&&);
 
-    template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>* = nullptr>
+    template<IsColorTypeWithComponentType<float> ColorType>
     Color(const ColorType&, OptionSet<Flags> = { });
 
-    template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>* = nullptr>
+    template<IsColorTypeWithComponentType<float> ColorType>
     Color(const std::optional<ColorType>&, OptionSet<Flags> = { });
 
     explicit Color(WTF::HashTableEmptyValueType);
     explicit Color(WTF::HashTableDeletedValueType);
     bool isHashTableDeletedValue() const;
     bool isHashTableEmptyValue() const;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
-    WEBCORE_EXPORT Color(const Color&);
-    WEBCORE_EXPORT Color(Color&&);
+    Color(const Color&);
+    Color(Color&&);
 
-    WEBCORE_EXPORT Color& operator=(const Color&);
-    WEBCORE_EXPORT Color& operator=(Color&&);
+    Color& operator=(const Color&);
+    Color& operator=(Color&&);
 
     ~Color();
 
@@ -134,7 +138,7 @@ public:
     // from the underlying type into any analogous components in ColorType.
     template<typename ColorType> ColorType toColorTypeLossyCarryingForwardMissing() const;
 
-    ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
+    WEBCORE_EXPORT ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
     ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(const DestinationColorSpace&) const;
 
     WEBCORE_EXPORT std::pair<ColorSpace, ColorComponents<float, 4>> colorSpaceAndResolvedColorComponents() const;
@@ -158,11 +162,6 @@ public:
     // Returns the underlying color if its type is inline.
     std::optional<PackedColor::RGBA> tryGetAsPackedInline() const;
     std::optional<SRGBA<uint8_t>> tryGetAsSRGBABytes() const;
-
-#if PLATFORM(GTK)
-    Color(const GdkRGBA&);
-    operator GdkRGBA() const;
-#endif
 
 #if USE(SKIA)
     Color(const SkColor&);
@@ -209,19 +208,19 @@ public:
         unsigned blue;
         unsigned alpha;
     };
-    DebugRGBA debugRGBA() const;
+    WEBCORE_EXPORT DebugRGBA debugRGBA() const;
 
-    String debugDescription() const;
+    WEBCORE_EXPORT String debugDescription() const;
 
 private:
     friend void add(Hasher&, const Color&);
 
     class OutOfLineComponents : public ThreadSafeRefCounted<OutOfLineComponents> {
-        WTF_MAKE_FAST_COMPACT_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_COMPACT_ALLOCATED(OutOfLineComponents);
     public:
         static Ref<OutOfLineComponents> create(ColorComponents<float, 4>&& components)
         {
-            return adoptRef(*new OutOfLineComponents(WTFMove(components)));
+            return adoptRef(*new OutOfLineComponents(WTF::move(components)));
         }
 
         float unresolvedAlpha() const { return m_components[3]; }
@@ -231,7 +230,7 @@ private:
 
     private:
         OutOfLineComponents(ColorComponents<float, 4>&& components)
-            : m_components(WTFMove(components))
+            : m_components(WTF::move(components))
         {
         }
 
@@ -310,6 +309,7 @@ bool outOfLineComponentsEqualIgnoringSemanticColor(const Color&, const Color&);
 
 #if USE(CG)
 WEBCORE_EXPORT RetainPtr<CGColorRef> cachedCGColor(const Color&);
+WEBCORE_EXPORT RetainPtr<CGColorRef> cachedSDRCGColorForColorspace(const Color&, const DestinationColorSpace&);
 WEBCORE_EXPORT ColorComponents<float, 4> platformConvertColorComponents(ColorSpace, ColorComponents<float, 4>, const DestinationColorSpace&);
 WEBCORE_EXPORT std::optional<SRGBA<uint8_t>> roundAndClampToSRGBALossy(CGColorRef);
 #endif
@@ -365,13 +365,13 @@ inline Color::Color(std::optional<SRGBA<uint8_t>> color, OptionSet<Flags> flags)
         setColor(*color, toFlagsIncludingPrivate(flags));
 }
 
-template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>*>
+template<IsColorTypeWithComponentType<float> ColorType>
 inline Color::Color(const ColorType& color, OptionSet<Flags> flags)
 {
     setOutOfLineComponents(OutOfLineComponents::create(asColorComponents(color.unresolved())), ColorSpaceFor<ColorType>, toFlagsIncludingPrivate(flags));
 }
 
-template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>*>
+template<IsColorTypeWithComponentType<float> ColorType>
 inline Color::Color(const std::optional<ColorType>& color, OptionSet<Flags> flags)
 {
     if (color)
@@ -380,7 +380,7 @@ inline Color::Color(const std::optional<ColorType>& color, OptionSet<Flags> flag
 
 inline Color::Color(Ref<OutOfLineComponents>&& outOfLineComponents, ColorSpace colorSpace, OptionSet<Flags> flags)
 {
-    setOutOfLineComponents(WTFMove(outOfLineComponents), colorSpace, toFlagsIncludingPrivate(flags));
+    setOutOfLineComponents(WTF::move(outOfLineComponents), colorSpace, toFlagsIncludingPrivate(flags));
 }
 
 inline Color::Color(WTF::HashTableEmptyValueType)
@@ -391,6 +391,46 @@ inline Color::Color(WTF::HashTableEmptyValueType)
 inline Color::Color(WTF::HashTableDeletedValueType)
 {
     m_colorAndFlags = encodedFlags({ FlagsIncludingPrivate::HashTableDeletedValue });
+}
+
+inline Color::Color(const Color& other)
+    : m_colorAndFlags(other.m_colorAndFlags)
+{
+    if (isOutOfLine())
+        asOutOfLine().ref();
+}
+
+inline Color::Color(Color&& other)
+{
+    *this = WTF::move(other);
+}
+
+inline Color& Color::operator=(const Color& other)
+{
+    if (m_colorAndFlags == other.m_colorAndFlags)
+        return *this;
+
+    if (isOutOfLine())
+        asOutOfLine().deref();
+
+    m_colorAndFlags = other.m_colorAndFlags;
+
+    if (isOutOfLine())
+        asOutOfLine().ref();
+
+    return *this;
+}
+
+inline Color& Color::operator=(Color&& other)
+{
+    if (this == &other)
+        return *this;
+
+    if (isOutOfLine())
+        asOutOfLine().deref();
+
+    m_colorAndFlags = std::exchange(other.m_colorAndFlags, invalidColorAndFlags);
+    return *this;
 }
 
 inline bool Color::isHashTableDeletedValue() const
@@ -407,6 +447,7 @@ inline Color::~Color()
 {
     if (isOutOfLine())
         asOutOfLine().deref();
+    secureZeroSpan(singleElementSpan(m_colorAndFlags));
 }
 
 inline bool Color::isValid() const
@@ -591,13 +632,12 @@ inline void Color::setColor(SRGBA<uint8_t> color, OptionSet<FlagsIncludingPrivat
 inline void Color::setOutOfLineComponents(Ref<OutOfLineComponents>&& color, ColorSpace colorSpace, OptionSet<FlagsIncludingPrivate> flags)
 {
     flags.add({ FlagsIncludingPrivate::Valid, FlagsIncludingPrivate::OutOfLine });
-    m_colorAndFlags = encodedOutOfLineComponents(WTFMove(color)) | encodedColorSpace(colorSpace) | encodedFlags(flags);
+    m_colorAndFlags = encodedOutOfLineComponents(WTF::move(color)) | encodedColorSpace(colorSpace) | encodedFlags(flags);
     ASSERT(isOutOfLine());
 }
 
 } // namespace WebCore
 
 namespace WTF {
-template<> struct DefaultHash<WebCore::Color>;
 template<> struct HashTraits<WebCore::Color>;
 }

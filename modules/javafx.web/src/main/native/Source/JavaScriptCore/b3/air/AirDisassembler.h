@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT)
 
-#include "MacroAssembler.h"
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -42,7 +45,7 @@ class Code;
 struct Inst;
 
 class Disassembler {
-    WTF_MAKE_TZONE_ALLOCATED(Disassembler);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Disassembler);
 public:
     Disassembler() = default;
 

@@ -27,7 +27,8 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "IDLTypes.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/PublicKeyCredential.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -40,11 +41,7 @@ enum class Scope;
 
 namespace WebCore {
 class AuthenticatorCoordinator;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AuthenticatorCoordinator> : std::true_type { };
+class Page;
 }
 
 namespace WebCore {
@@ -70,8 +67,12 @@ class AuthenticatorCoordinator final : public CanMakeWeakPtr<AuthenticatorCoordi
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(AuthenticatorCoordinator, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinator);
 public:
-    WEBCORE_EXPORT explicit AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
+    WEBCORE_EXPORT AuthenticatorCoordinator(Page&, std::unique_ptr<AuthenticatorCoordinatorClient>&&);
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
+    ~AuthenticatorCoordinator();
+
+    void ref() const;
+    void deref() const;
 
     // The following methods implement static methods of PublicKeyCredential.
     void create(const Document&, CredentialCreationOptions&&, RefPtr<AbortSignal>&&, CredentialPromise&&);
@@ -81,9 +82,12 @@ public:
 
     void getClientCapabilities(const Document&, DOMPromiseDeferred<PublicKeyCredentialClientCapabilities>&&) const;
 
-private:
-    AuthenticatorCoordinator() = default;
+    void signalUnknownCredential(const Document&, UnknownCredentialOptions&&, DOMPromiseDeferred<void>&&);
+    void signalAllAcceptedCredentials(const Document&, AllAcceptedCredentialsOptions&&, DOMPromiseDeferred<void>&&);
+    void signalCurrentUserDetails(const Document&, CurrentUserDetailsOptions&&, DOMPromiseDeferred<void>&&);
 
+private:
+    WeakRef<Page> m_page;
     std::unique_ptr<AuthenticatorCoordinatorClient> m_client;
     bool m_isCancelling = false;
     CompletionHandler<void()> m_queuedRequest;

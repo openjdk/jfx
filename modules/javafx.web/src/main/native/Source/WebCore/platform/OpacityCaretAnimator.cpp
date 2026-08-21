@@ -29,6 +29,7 @@
 #if HAVE(REDESIGNED_TEXT_CURSOR)
 
 #include "FloatRoundedRect.h"
+#include "GraphicsContext.h"
 #include "VisibleSelection.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -120,7 +121,7 @@ void OpacityCaretAnimator::paint(GraphicsContext& context, const FloatRect& rect
     if (caretColor != Color::transparentBlack)
         caretColorWithOpacity = caretColor.colorWithAlpha(caretPresentationProperties.opacity);
 
-    context.fillRoundedRect(FloatRoundedRect { rect, FloatRoundedRect::Radii { 1.0 } }, caretColorWithOpacity);
+    context.fillRoundedRect(FloatRoundedRect { rect, CornerRadii { 1.0 } }, caretColorWithOpacity);
 }
 
 LayoutRect OpacityCaretAnimator::caretRepaintRectForLocalRect(LayoutRect repaintRect) const

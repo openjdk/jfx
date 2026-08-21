@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTablePartElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTablePartElement);
 
 using namespace HTMLNames;
 
@@ -64,8 +64,8 @@ void HTMLTablePartElement::collectPresentationalHintsForAttribute(const Qualifie
         addHTMLColorToStyle(style, CSSPropertyBackgroundColor, value);
         break;
     case AttributeNames::backgroundAttr:
-        if (!StringView(value).containsOnly<isASCIIWhitespace<UChar>>())
-            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(document().completeURL(value), LoadedFromOpaqueSource::No)));
+        if (!StringView(value).containsOnly<isASCIIWhitespace<char16_t>>())
+            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(protectedDocument()->completeURL(value))));
         break;
     case AttributeNames::valignAttr:
         if (equalLettersIgnoringASCIICase(value, "top"_s))

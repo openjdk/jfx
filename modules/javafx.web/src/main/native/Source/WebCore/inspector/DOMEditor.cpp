@@ -36,7 +36,8 @@
 #include "Document.h"
 #include "Element.h"
 #include "InspectorHistory.h"
-#include "Node.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "Text.h"
 #include "markup.h"
 #include <wtf/RefPtr.h>
@@ -73,8 +74,8 @@ public:
     }
 
 private:
-    Ref<ContainerNode> m_parentNode;
-    Ref<Node> m_node;
+    const Ref<ContainerNode> m_parentNode;
+    const Ref<Node> m_node;
     RefPtr<Node> m_anchorNode;
 };
 
@@ -83,7 +84,7 @@ public:
     InsertBeforeAction(ContainerNode& parentNode, Ref<Node>&& node, Node* anchorNode)
         : InspectorHistory::Action()
         , m_parentNode(parentNode)
-        , m_node(WTFMove(node))
+        , m_node(WTF::move(node))
         , m_anchorNode(anchorNode)
     {
     }
@@ -120,9 +121,9 @@ private:
         return m_parentNode->insertBefore(m_node, m_anchorNode.copyRef());
     }
 
-    Ref<ContainerNode> m_parentNode;
-    Ref<Node> m_node;
-    RefPtr<Node> m_anchorNode;
+    const Ref<ContainerNode> m_parentNode;
+    const Ref<Node> m_node;
+    const RefPtr<Node> m_anchorNode;
     std::unique_ptr<RemoveChildAction> m_removeChildAction;
 };
 
@@ -154,7 +155,7 @@ private:
         return { };
     }
 
-    Ref<Element> m_element;
+    const Ref<Element> m_element;
     AtomString m_name;
     AtomString m_value;
 };
@@ -191,7 +192,7 @@ private:
         return m_element->setAttribute(m_name, m_value);
     }
 
-    Ref<Element> m_element;
+    const Ref<Element> m_element;
     AtomString m_name;
     AtomString m_value;
     AtomString m_oldValue;
@@ -233,8 +234,8 @@ private:
         return m_history.redo();
     }
 
-    Ref<Node> m_node;
-    RefPtr<Node> m_nextSibling;
+    const Ref<Node> m_node;
+    const RefPtr<Node> m_nextSibling;
     String m_html;
     String m_oldHTML;
     RefPtr<Node> m_newNode { nullptr };
@@ -275,7 +276,7 @@ private:
         return { };
     }
 
-    Ref<Element> m_element;
+    const Ref<Element> m_element;
     NodeVector m_addedNodes;
     String m_position;
     String m_html;
@@ -310,7 +311,7 @@ private:
         return { };
     }
 
-    Ref<Text> m_textNode;
+    const Ref<Text> m_textNode;
     String m_text;
     String m_oldText;
 };
@@ -321,7 +322,7 @@ public:
     ReplaceChildNodeAction(ContainerNode& parentNode, Ref<Node>&& newNode, Node& oldNode)
         : InspectorHistory::Action()
         , m_parentNode(parentNode)
-        , m_newNode(WTFMove(newNode))
+        , m_newNode(WTF::move(newNode))
         , m_oldNode(oldNode)
     {
     }
@@ -342,9 +343,9 @@ private:
         return m_parentNode->replaceChild(m_newNode, m_oldNode);
     }
 
-    Ref<ContainerNode> m_parentNode;
-    Ref<Node> m_newNode;
-    Ref<Node> m_oldNode;
+    const Ref<ContainerNode> m_parentNode;
+    const Ref<Node> m_newNode;
+    const Ref<Node> m_oldNode;
 };
 
 class DOMEditor::SetNodeValueAction final : public InspectorHistory::Action {
@@ -376,7 +377,7 @@ private:
         return { };
     }
 
-    Ref<Node> m_node;
+    const Ref<Node> m_node;
     String m_value;
     String m_oldValue;
 };
@@ -390,7 +391,7 @@ DOMEditor::~DOMEditor() = default;
 
 ExceptionOr<void> DOMEditor::insertBefore(ContainerNode& parentNode, Ref<Node>&& node, Node* anchorNode)
 {
-    return m_history.perform(makeUnique<InsertBeforeAction>(parentNode, WTFMove(node), anchorNode));
+    return m_history.perform(makeUnique<InsertBeforeAction>(parentNode, WTF::move(node), anchorNode));
 }
 
 ExceptionOr<void> DOMEditor::removeChild(ContainerNode& parentNode, Node& node)
@@ -412,7 +413,7 @@ ExceptionOr<void> DOMEditor::setOuterHTML(Node& node, const String& html, Node*&
 {
     auto action = makeUnique<SetOuterHTMLAction>(node, html);
     auto& rawAction = *action;
-    auto result = m_history.perform(WTFMove(action));
+    auto result = m_history.perform(WTF::move(action));
     if (!result.hasException())
         newNode = rawAction.newNode();
     return result;
@@ -430,7 +431,7 @@ ExceptionOr<void> DOMEditor::replaceWholeText(Text& textNode, const String& text
 
 ExceptionOr<void> DOMEditor::replaceChild(ContainerNode& parentNode, Ref<Node>&& newNode, Node& oldNode)
 {
-    return m_history.perform(makeUnique<ReplaceChildNodeAction>(parentNode, WTFMove(newNode), oldNode));
+    return m_history.perform(makeUnique<ReplaceChildNodeAction>(parentNode, WTF::move(newNode), oldNode));
 }
 
 ExceptionOr<void> DOMEditor::setNodeValue(Node& node, const String& value)
@@ -448,7 +449,7 @@ static bool populateErrorString(ExceptionOr<void>&& result, ErrorString& errorSt
 
 bool DOMEditor::insertBefore(ContainerNode& parentNode, Ref<Node>&& node, Node* anchorNode, ErrorString& errorString)
 {
-    return populateErrorString(insertBefore(parentNode, WTFMove(node), anchorNode), errorString);
+    return populateErrorString(insertBefore(parentNode, WTF::move(node), anchorNode), errorString);
 }
 
 bool DOMEditor::removeChild(ContainerNode& parentNode, Node& node, ErrorString& errorString)

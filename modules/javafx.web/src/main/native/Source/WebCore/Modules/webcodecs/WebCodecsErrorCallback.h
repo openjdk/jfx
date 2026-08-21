@@ -40,8 +40,12 @@ class WebCodecsErrorCallback : public RefCounted<WebCodecsErrorCallback>, public
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(DOMException&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(DOMException&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(DOMException&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(DOMException&) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

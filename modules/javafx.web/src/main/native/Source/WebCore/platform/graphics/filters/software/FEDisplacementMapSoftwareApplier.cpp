@@ -53,10 +53,10 @@ int FEDisplacementMapSoftwareApplier::yChannelIndex() const
     return static_cast<int>(m_effect->yChannelSelector()) - 1;
 }
 
-bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
-    Ref input2 = inputs[1];
+    Ref input = inputs[0].get();
+    Ref input2 = inputs[1].get();
 
     RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 #include "RTCRtpSender.h"
 #include "RTCRtpTransceiverBackend.h"
 #include "RTCRtpTransceiverDirection.h"
-#include "ScriptWrappable.h"
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -48,10 +48,10 @@ class RTCPeerConnection;
 struct RTCRtpCodecCapability;
 
 class RTCRtpTransceiver final : public RefCounted<RTCRtpTransceiver>, public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCRtpTransceiver);
+    WTF_MAKE_TZONE_ALLOCATED(RTCRtpTransceiver);
 public:
-    static Ref<RTCRtpTransceiver> create(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend) { return adoptRef(*new RTCRtpTransceiver(WTFMove(sender), WTFMove(receiver), WTFMove(backend))); }
-    virtual ~RTCRtpTransceiver();
+    static Ref<RTCRtpTransceiver> create(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend) { return adoptRef(*new RTCRtpTransceiver(WTF::move(sender), WTF::move(receiver), WTF::move(backend))); }
+    ~RTCRtpTransceiver();
 
     bool hasSendingDirection() const;
     void enableSendingDirection();
@@ -81,8 +81,8 @@ private:
     RTCRtpTransceiverDirection m_direction;
     std::optional<RTCRtpTransceiverDirection> m_firedDirection;
 
-    Ref<RTCRtpSender> m_sender;
-    Ref<RTCRtpReceiver> m_receiver;
+    const Ref<RTCRtpSender> m_sender;
+    const Ref<RTCRtpReceiver> m_receiver;
 
     bool m_stopped { false };
 
@@ -92,14 +92,14 @@ private:
 
 class RtpTransceiverSet {
 public:
-    const Vector<RefPtr<RTCRtpTransceiver>>& list() const { return m_transceivers; }
+    const Vector<Ref<RTCRtpTransceiver>>& list() const { return m_transceivers; }
     void append(Ref<RTCRtpTransceiver>&&);
 
     Vector<std::reference_wrapper<RTCRtpSender>> senders() const;
     Vector<std::reference_wrapper<RTCRtpReceiver>> receivers() const;
 
 private:
-    Vector<RefPtr<RTCRtpTransceiver>> m_transceivers;
+    Vector<Ref<RTCRtpTransceiver>> m_transceivers;
 };
 
 } // namespace WebCore

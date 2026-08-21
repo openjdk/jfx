@@ -32,3 +32,20 @@
 .media-controls.adwaita.inline .volume-slider-container > .slider {
     margin-left: 6px;
 }
+
+/* Scrubber */
+
+.media-controls.adwaita.inline .time-control .scrubber {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+/* Time labels */
+
+.media-controls.adwaita.inline .time-control.duration #time-label-remaining {
+    display: none !important;
+}
+
+.media-controls.adwaita.inline .time-control.remaining #time-label-duration {
+    display: none !important;
+}

@@ -30,7 +30,6 @@ typedef (
 typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
 
 [
-    CustomToJSObject,
     CustomHeapSnapshot,
     DOMJIT,
     ExportMacro=WEBCORE_EXPORT,
@@ -56,11 +55,13 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     readonly attribute DocumentType? doctype;
     [DOMJIT=Getter] readonly attribute Element? documentElement;
 
-    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName, optional ElementCreationOptions options = { });
-    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName);
+    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName, optional (DOMString or ElementCreationOptions) options = {});
+    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName, optional (DOMString or ElementCreationOptions) options = {});
     HTMLCollection getElementsByTagName([AtomString] DOMString qualifiedName);
     HTMLCollection getElementsByTagNameNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
     HTMLCollection getElementsByClassName([AtomString] DOMString classNames);
+
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=customElementRegistryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
 
     [NewObject] DocumentFragment createDocumentFragment();
     [NewObject] Text createTextNode(DOMString data);
@@ -88,10 +89,13 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     attribute boolean xmlStandalone;
 
     // Non standard: It has been superseeded by caretPositionFromPoint which we do not implement yet.
-    Range caretRangeFromPoint(optional long x = 0, optional long y = 0);
+    Range? caretRangeFromPoint(optional long x = 0, optional long y = 0);
 
     // Non standard: It has been dropped from Blink already.
     RenderingContext? getCSSCanvasContext(DOMString contextId, DOMString name, long width, long height);
+
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement);
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement, AriaNotifyOptions options);
 };
 
 enum DocumentReadyState { "loading", "interactive", "complete" };

@@ -32,14 +32,18 @@
 #include "AudioNode.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "FloatConversion.h"
 #include "Logging.h"
 #include "VectorMath.h"
 #include <algorithm>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioParam);
 
 static void replaceNaNValues(std::span<float> values, float defaultValue)
 {
@@ -59,7 +63,7 @@ AudioParam::AudioParam(BaseAudioContext& context, const String& name, float defa
     , m_automationRate(automationRate)
     , m_automationRateMode(automationRateMode)
     , m_smoothedValue(defaultValue)
-    , m_summingBus(AudioBus::create(1, AudioUtilities::renderQuantumSize, false).releaseNonNull())
+    , m_summingBus(AudioBus::create(1, AudioUtilities::renderQuantumSize, false))
 #if !RELEASE_LOG_DISABLED
     , m_logger(context.logger())
     , m_logIdentifier(context.nextAudioParameterLogIdentifier())
@@ -229,7 +233,7 @@ ExceptionOr<AudioParam&> AudioParam::setValueCurveAtTime(Vector<float>&& curve, 
         return Exception { ExceptionCode::RangeError, "duration must be a strictly positive value"_s };
 
     startTime = std::max(startTime, context()->currentTime());
-    auto result = m_timeline.setValueCurveAtTime(WTFMove(curve), Seconds { startTime }, Seconds { duration });
+    auto result = m_timeline.setValueCurveAtTime(WTF::move(curve), Seconds { startTime }, Seconds { duration });
     if (result.hasException())
         return result.releaseException();
     return *this;
@@ -320,10 +324,10 @@ void AudioParam::calculateFinalValues(std::span<float> values, bool sampleAccura
         ASSERT(output);
 
         // Render audio from this output.
-        AudioBus* connectionBus = output->pull(0, AudioUtilities::renderQuantumSize);
+        AudioBus& connectionBus = output->pull(0, AudioUtilities::renderQuantumSize);
 
         // Sum, with unity-gain.
-        m_summingBus->sumFrom(*connectionBus);
+        m_summingBus->sumFrom(connectionBus);
     }
 
     // If we're not sample accurate, duplicate the first element of |values| to all of the elements.

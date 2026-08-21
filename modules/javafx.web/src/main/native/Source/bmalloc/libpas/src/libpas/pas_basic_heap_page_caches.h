@@ -48,19 +48,25 @@ struct pas_basic_heap_page_caches {
                                                  would create unnecessary fragmentation in the large
                                                  heap. */
     pas_shared_page_directory_by_size medium_shared_page_directories;
+    pas_megapage_cache small_compact_exclusive_segregated_megapage_cache;
+    pas_megapage_cache small_compact_other_megapage_cache;
+    pas_megapage_cache medium_compact_megapage_cache;
 };
 
 #define PAS_BASIC_HEAP_PAGE_CACHES_INITIALIZER(small_log_shift, medium_log_shift) \
     ((pas_basic_heap_page_caches){ \
         .megapage_large_heap_cache = PAS_MEGAPAGE_LARGE_FREE_HEAP_PHYSICAL_PAGE_SHARING_CACHE_INITIALIZER, \
         .large_heap_cache = PAS_LARGE_FREE_HEAP_PHYSICAL_PAGE_SHARING_CACHE_INITIALIZER, \
-        .small_exclusive_segregated_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER, \
+        .small_exclusive_segregated_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_small), \
         .small_shared_page_directories = PAS_SHARED_PAGE_DIRECTORY_BY_SIZE_INITIALIZER( \
             (small_log_shift), pas_share_pages), \
-        .small_other_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER, \
-        .medium_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER, \
+        .small_other_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_small), \
+        .medium_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_medium), \
         .medium_shared_page_directories = PAS_SHARED_PAGE_DIRECTORY_BY_SIZE_INITIALIZER( \
-            (medium_log_shift), pas_share_pages) \
+            (medium_log_shift), pas_share_pages), \
+        .small_compact_exclusive_segregated_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_small_compact), \
+        .small_compact_other_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_small_compact), \
+        .medium_compact_megapage_cache = PAS_MEGAPAGE_CACHE_INITIALIZER(pas_megapage_cache_size_medium_compact) \
     })
 
 static inline pas_shared_page_directory_by_size*
@@ -74,7 +80,7 @@ pas_basic_heap_page_caches_get_shared_page_directories(
     case pas_small_segregated_page_config_variant:
         return &caches->small_shared_page_directories;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

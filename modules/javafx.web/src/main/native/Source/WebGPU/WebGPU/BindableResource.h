@@ -26,8 +26,16 @@
 #pragma once
 
 #import <Metal/Metal.h>
+#import <limits>
+#import <type_traits>
+#import <utility>
+#import <wtf/GenericHashKey.h>
+#import <wtf/HashFunctions.h>
+#import <wtf/HashMap.h>
+#import <wtf/Hasher.h>
 #import <wtf/OptionSet.h>
 #import <wtf/RefPtr.h>
+#import <wtf/Variant.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
 
@@ -35,6 +43,7 @@ namespace WebGPU {
 
 class Buffer;
 class ExternalTexture;
+class Texture;
 class TextureView;
 
 enum class BindGroupEntryUsage {
@@ -59,7 +68,7 @@ static constexpr auto isTextureBindGroupEntryUsage(OptionSet<BindGroupEntryUsage
 struct BindGroupEntryUsageData {
     OptionSet<BindGroupEntryUsage> usage { BindGroupEntryUsage::Undefined };
     uint32_t binding { 0 };
-    using Resource = std::variant<RefPtr<Buffer>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
+    using Resource = Variant<RefPtr<Buffer>, RefPtr<const Texture>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
     Resource resource;
     uint64_t entryOffset { 0 };
     uint64_t entrySize { 0 };
@@ -79,12 +88,13 @@ struct IndexData {
     uint32_t minVertexCount { UINT32_MAX };
     uint32_t minInstanceCount { UINT32_MAX };
     uint64_t bufferGpuAddress { 0 };
+    uint32_t indexBufferElementCountMinusOne { 0 };
     uint32_t indexCount { 0 };
     uint32_t instanceCount { 0 };
     uint32_t firstIndex { 0 };
     int32_t baseVertex { 0 };
     uint32_t firstInstance { 0 };
-    MTLPrimitiveType primitiveType { MTLPrimitiveTypeTriangle };
+    uint32_t primitiveType { MTLPrimitiveTypeTriangle };
 };
 
 struct IndexBufferAndIndexData {
@@ -92,6 +102,49 @@ struct IndexBufferAndIndexData {
     MTLIndexType indexType { MTLIndexTypeUInt16 };
     NSUInteger indexBufferOffsetInBytes { 0 };
     IndexData indexData;
+};
+
+using DrawIndexCacheContainerKey = std::array<uint32_t, 5>;
+inline void add(Hasher& hasher, const DrawIndexCacheContainerKey& input)
+{
+    for (auto value : input)
+        WTF::add(hasher, value);
+}
+
+struct DrawIndexCacheContainerValue {
+    uint32_t firstIndex { 0 };
+    uint32_t indexCount { 0 };
+    uint32_t primitiveOffsetWithIndexType { 0 };
+    union {
+    uint64_t icb { 0 };
+        struct {
+            uint32_t icb1;
+            uint32_t icb2;
+        };
+    };
+    DrawIndexCacheContainerValue() { }
+    DrawIndexCacheContainerValue(const DrawIndexCacheContainerKey& key)
+        : firstIndex(key[0])
+        , indexCount(key[1])
+        , primitiveOffsetWithIndexType(key[2])
+        , icb1(key[3])
+        , icb2(key[4])
+    {
+    }
+    uint32_t primitiveOffset() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x1); }
+    MTLIndexType indexType() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x2); }
+};
+
+using DrawIndexCacheContainer = HashMap<GenericHashKey<DrawIndexCacheContainerKey>, uint32_t>;
+using DrawIndexCacheContainerIterator = DrawIndexCacheContainer::const_iterator;
+
+using TrackedResourceContainer = HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+struct TrackedResource {
+    mutable TrackedResourceContainer m_commandEncoders;
+    void removeEncoder(uint64_t identifier) const
+    {
+        m_commandEncoders.remove(identifier);
+    }
 };
 
 } // namespace WebGPU

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ class GPUExternalTexture : public RefCountedAndCanMakeWeakPtr<GPUExternalTexture
 public:
     static Ref<GPUExternalTexture> create(Ref<WebGPU::ExternalTexture>&& backing)
     {
-        return adoptRef(*new GPUExternalTexture(WTFMove(backing)));
+        return adoptRef(*new GPUExternalTexture(WTF::move(backing)));
     }
 
     String label() const;
@@ -50,11 +50,11 @@ public:
 
 private:
     GPUExternalTexture(Ref<WebGPU::ExternalTexture>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::ExternalTexture> m_backing;
+    const Ref<WebGPU::ExternalTexture> m_backing;
 };
 
 }

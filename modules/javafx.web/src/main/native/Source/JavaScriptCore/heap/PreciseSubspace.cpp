@@ -27,7 +27,6 @@
 #include "PreciseSubspace.h"
 
 #include "AllocatingScope.h"
-#include "IsoAlignedMemoryAllocator.h"
 #include "IsoCellSetInlines.h"
 #include "JSCellInlines.h"
 #include "MarkedSpaceInlines.h"
@@ -86,3 +85,4 @@ void* PreciseSubspace::allocate(VM& vm, size_t cellSize, GCDeferralContext* defe
 }
 
 } // namespace JSC
+

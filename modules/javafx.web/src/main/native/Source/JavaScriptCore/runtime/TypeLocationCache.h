@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SourceID.h"
-#include "TypeLocation.h"
+#include <JavaScriptCore/SourceID.h>
+#include <JavaScriptCore/TypeLocation.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/GenericHashKey.h>
 
@@ -37,12 +37,6 @@ class VM;
 class TypeLocationCache {
 public:
     struct LocationKey {
-        struct Hash {
-            static unsigned hash(const LocationKey& key) { return key.hash(); }
-            static bool equal(const LocationKey& a, const LocationKey& b) { return a == b; }
-            static constexpr bool safeToCompareToEmptyOrDeleted = false;
-        };
-
         LocationKey() {}
         friend bool operator==(const LocationKey&, const LocationKey&) = default;
 
@@ -59,7 +53,7 @@ public:
 
     std::pair<TypeLocation*, bool> getTypeLocation(GlobalVariableID, SourceID, unsigned start, unsigned end, RefPtr<TypeSet>&&, VM*);
 private:
-    using LocationMap = UncheckedKeyHashMap<GenericHashKey<LocationKey, LocationKey::Hash>, TypeLocation*>;
+    using LocationMap = UncheckedKeyHashMap<GenericHashKey<LocationKey>, TypeLocation*>;
     LocationMap m_locationMap;
 };
 

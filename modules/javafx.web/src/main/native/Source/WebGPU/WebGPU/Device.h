@@ -25,20 +25,24 @@
 
 #pragma once
 
-#import "API.h"
-#import "Adapter.h"
+#import "BindableResource.h"
 #import "HardwareCapabilities.h"
 #import "Queue.h"
-#import "WebGPU.h"
-#import "WebGPUExt.h"
+#import "WGSL.h"
 #import <CoreVideo/CVMetalTextureCache.h>
 #import <CoreVideo/CoreVideo.h>
 #import <IOSurface/IOSurfaceRef.h>
 #import <Metal/Metal.h>
+#import <WebGPU/WebGPU.h>
+#import <WebGPU/WebGPUExt.h>
 #import <simd/matrix_types.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Function.h>
+#import <wtf/HashIterators.h>
+#import <wtf/HashMap.h>
+#import <wtf/HashTable.h>
+#import <wtf/KeyValuePair.h>
 #import <wtf/Ref.h>
 #import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
@@ -46,12 +50,10 @@
 #import <wtf/Vector.h>
 #import <wtf/text/WTFString.h>
 
+IGNORE_CLANG_WARNINGS_BEGIN("nullability-completeness")
+
 struct WGPUDeviceImpl {
 };
-
-namespace WGSL {
-struct PipelineLayout;
-}
 
 namespace WebGPU {
 
@@ -80,6 +82,20 @@ using GPUShaderValidation = MTLShaderValidation;
 #else
 using GPUShaderValidation = uint32_t;
 #endif
+
+#define WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawIndexedPrimitivesIndirectArguments { \
+    MTLDrawIndexedPrimitivesIndirectArguments args;         \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE
+
+#define WEBKIT_DRAW_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawPrimitivesIndirectArguments { \
+    MTLDrawPrimitivesIndirectArguments args;                \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDIRECT_STRUCT_TYPE
 
 // https://gpuweb.github.io/gpuweb/#gpudevice
 class Device : public WGPUDeviceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
@@ -134,7 +150,7 @@ public:
     const Vector<WGPUFeatureName>& features() const { return m_capabilities.features; }
     const HardwareCapabilities::BaseCapabilities& baseCapabilities() const { return m_capabilities.baseCapabilities; }
 
-    id<MTLDevice> device() const { return m_device; }
+    id<MTLDevice> _Nullable device() const { return m_device; }
     void generateAValidationError(NSString * message);
     void generateAValidationError(String&& message);
     void generateAnOutOfMemoryError(String&& message);
@@ -146,6 +162,7 @@ public:
 #else
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
 #endif
+    bool isShaderValidationEnabled() const { return m_shaderValidationEnabled; }
 
     uint32_t maxBuffersPlusVertexBuffersForVertexStage() const
     {
@@ -156,44 +173,49 @@ public:
     uint32_t maxBuffersForFragmentStage() const { return m_capabilities.limits.maxBindGroups; }
 
     uint32_t maxBuffersForComputeStage() const { return m_capabilities.limits.maxBindGroups; }
-    uint32_t vertexBufferIndexForBindGroup(uint32_t groupIndex) const
-    {
-        ASSERT(maxBuffersPlusVertexBuffersForVertexStage() > 0);
-        return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxBuffersPlusVertexBuffersForVertexStage() - 1);
-    }
+    uint32_t vertexBufferIndexForBindGroup(uint32_t groupIndex) const;
 
-    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions) const;
-    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions) const;
+    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
+    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
     id<MTLTexture> newTextureWithDescriptor(MTLTextureDescriptor *, IOSurfaceRef = nullptr, NSUInteger plane = 0) const;
 
     static bool isStencilOnlyFormat(MTLPixelFormat);
     bool shouldStopCaptureAfterSubmit();
     id<MTLBuffer> placeholderBuffer() const { return m_placeholderBuffer; }
+    uint64_t placeholderBufferUniqueId() const { return m_placeholderBuffer.gpuAddress; }
 
     id<MTLTexture> placeholderTexture(WGPUTextureFormat) const;
     bool isDestroyed() const;
     NSString *errorValidatingTextureCreation(const WGPUTextureDescriptor&, const Vector<WGPUTextureFormat>& viewFormats);
-    id<MTLBuffer> dispatchCallBuffer();
-    id<MTLComputePipelineState> dispatchCallPipelineState(id<MTLFunction>);
-    id<MTLRenderPipelineState> indexBufferClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
-    id<MTLRenderPipelineState> indexedIndirectBufferClampPipeline(NSUInteger rasterSampleCount);
-    id<MTLRenderPipelineState> indirectBufferClampPipeline(NSUInteger rasterSampleCount);
-    id<MTLRenderPipelineState> icbCommandClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
+    id<MTLBuffer> _Nullable dispatchCallBuffer();
+    id<MTLComputePipelineState> _Nullable dispatchCallPipelineState(id<MTLFunction>);
+    id<MTLRenderPipelineState> _Nullable indexBufferClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
+    id<MTLRenderPipelineState> _Nullable indexedIndirectBufferClampPipeline(NSUInteger rasterSampleCount);
+    id<MTLRenderPipelineState> _Nullable indirectBufferClampPipeline(NSUInteger rasterSampleCount);
+    id<MTLRenderPipelineState> _Nullable icbCommandClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
     id<MTLFunction> icbCommandClampFunction(MTLIndexType);
-    id<MTLRenderPipelineState> copyIndexIndirectArgsPipeline(NSUInteger rasterSampleCount);
-    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
-    id<MTLBuffer> safeCreateBuffer(NSUInteger) const;
+    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, bool skipMemoryAttribution = false, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
+    id<MTLBuffer> safeCreateBuffer(NSUInteger, bool skipMemoryAttribution = false) const;
+    template<typename T>
+    id<MTLBuffer> safeCreateBufferWithData(const T& data) const
+    {
+        id<MTLBuffer> buffer = [m_device newBufferWithBytes:static_cast<const void*>(&data) length:sizeof(data) options:MTLResourceStorageModeShared];
+        setOwnerWithIdentity(buffer);
+        return buffer;
+    }
     void loseTheDevice(WGPUDeviceLostReason);
     int bufferIndexForICBContainer() const;
     void setOwnerWithIdentity(id<MTLResource>) const;
     struct ExternalTextureData {
-        id<MTLTexture> texture0 { nil };
-        id<MTLTexture> texture1 { nil };
+        id<MTLTexture> _Nullable texture0 { nil };
+        id<MTLTexture> _Nullable texture1 { nil };
         simd::float3x2 uvRemappingMatrix;
         simd::float4x3 colorSpaceConversionMatrix;
     };
     ExternalTextureData createExternalTextureFromPixelBuffer(CVPixelBufferRef, WGPUColorSpace) const;
     RefPtr<XRSubImage> getXRViewSubImage(XRProjectionLayer&);
+    RefPtr<XRSubImage> getXRViewSubImage() const;
+    id<MTLTexture> _Nullable getXRViewSubImageDepthTexture() const;
     const std::optional<const MachSendRight> webProcessID() const;
 #if CPU(X86_64)
     bool isIntel() const { return [m_device.name localizedCaseInsensitiveContainsString:@"intel"]; }
@@ -208,6 +230,36 @@ public:
     uint32_t maxVerticesPerDrawCall() const { return m_maxVerticesPerDrawCall; }
     void trackTimestampsBuffer(id<MTLCommandBuffer>, id<MTLCounterSampleBuffer>);
 
+    const CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier) const
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier)
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    void removeCommandEncoder(uint64_t identifier)
+    {
+        m_commandEncoderMap.remove(identifier);
+    }
+    bool supportsResidencySets() { return m_capabilities.baseCapabilities.supportsResidencySets; }
+    bool isCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void setCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void removeCachedBindGroupLayout(const BindGroupLayout&) const;
+    static constexpr uint64_t maxPipelines = (1ull << (64 - 5));
+    static constexpr uint64_t maxBindGroups = (1ull << 5);
+    Buffer* lookupBuffer(uint64_t address)
+    {
+        if (auto it = m_bufferMap.find(address); it != m_bufferMap.end())
+            return it->value;
+        return nullptr;
+    }
+    void removeBufferFromCache(uint64_t address) { m_bufferMap.remove(address); }
+    uint32_t appleGPUFamily() const { return m_appleGPUFamily; }
+    void setRasterizationMapsForTexture(MTLResourceID, id<MTLRasterizationRateMap> left, id<MTLRasterizationRateMap> right);
+    static id<MTLFunction> nopVertexFunction(id<MTLDevice>);
+    void makeSubmitInvalidClearingEncoders(TrackedResourceContainer&);
+
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
     Device(Adapter&);
@@ -220,7 +272,7 @@ private:
     bool validateRenderPipeline(const WGPURenderPipelineDescriptor&);
 
     void makeInvalid();
-    NSString* addPipelineLayouts(Vector<Vector<WGPUBindGroupLayoutEntry>>&, const std::optional<WGSL::PipelineLayout>&);
+    NSString * _Nullable addPipelineLayouts(Vector<Vector<WGPUBindGroupLayoutEntry>>&, const std::optional<WGSL::PipelineLayout>&);
     Ref<PipelineLayout> generatePipelineLayout(const Vector<Vector<WGPUBindGroupLayoutEntry>> &bindGroupEntries);
 
     void captureFrameIfNeeded() const;
@@ -234,12 +286,7 @@ private:
         std::optional<Error> error;
         const WGPUErrorFilter filter;
     };
-#if ENABLE(WEBGPU_SWIFT)
-private PUBLIC_IN_WEBGPU_SWIFT:
-    id<MTLFunction> m_nopVertexFunction;
-#endif
-private:
-    id<MTLDevice> m_device { nil };
+    id<MTLDevice> _Nullable m_device { nil };
     const Ref<Queue> m_defaultQueue;
 
     Function<void(WGPUErrorType, String&&)> m_uncapturedErrorCallback;
@@ -253,30 +300,27 @@ private:
 
     HardwareCapabilities m_capabilities { };
 
-    id<MTLBuffer> m_placeholderBuffer { nil };
+    id<MTLBuffer> m_placeholderBuffer { };
     id<MTLTexture> m_placeholderTexture { nil };
     id<MTLTexture> m_placeholderDepthStencilTexture { nil };
-    id<MTLBuffer> m_dispatchCallBuffer { nil };
-    id<MTLComputePipelineState> m_dispatchCallPipelineState { nil };
+    id<MTLBuffer> _Nullable m_dispatchCallBuffer { nil };
+    id<MTLComputePipelineState> _Nullable m_dispatchCallPipelineState { nil };
 
-    id<MTLRenderPipelineState> m_indexBufferClampUintPSO { nil };
-    id<MTLRenderPipelineState> m_indexBufferClampUshortPSO { nil };
-    id<MTLRenderPipelineState> m_indexBufferClampUintPSOMS { nil };
-    id<MTLRenderPipelineState> m_indexBufferClampUshortPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexBufferClampUintPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexBufferClampUshortPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexBufferClampUintPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexBufferClampUshortPSOMS { nil };
 
-    id<MTLRenderPipelineState> m_indexedIndirectBufferClampPSO { nil };
-    id<MTLRenderPipelineState> m_indexedIndirectBufferClampPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexedIndirectBufferClampPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_indexedIndirectBufferClampPSOMS { nil };
 
-    id<MTLRenderPipelineState> m_indirectBufferClampPSO { nil };
-    id<MTLRenderPipelineState> m_indirectBufferClampPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_indirectBufferClampPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_indirectBufferClampPSOMS { nil };
 
-    id<MTLRenderPipelineState> m_icbCommandClampUintPSO { nil };
-    id<MTLRenderPipelineState> m_icbCommandClampUshortPSO { nil };
-    id<MTLRenderPipelineState> m_icbCommandClampUintPSOMS { nil };
-    id<MTLRenderPipelineState> m_icbCommandClampUshortPSOMS { nil };
-
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSO { nil };
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_icbCommandClampUintPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_icbCommandClampUshortPSO { nil };
+    id<MTLRenderPipelineState> _Nullable m_icbCommandClampUintPSOMS { nil };
+    id<MTLRenderPipelineState> _Nullable m_icbCommandClampUshortPSOMS { nil };
 
     const Ref<Adapter> m_adapter;
     const ThreadSafeWeakPtr<Instance> m_instance;
@@ -285,10 +329,20 @@ private:
 #endif
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLCounterSampleBuffer>>*>* m_sampleCounterBuffers;
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
-    id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
+    id<MTLSharedEvent> _Nullable m_resolveTimestampsSharedEvent { nil };
+    HashMap<uint64_t, CommandEncoder*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_commandEncoderMap;
+    HashMap<uint64_t, Buffer*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bufferMap;
+    mutable HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bindGroupCompatibilityCache;
     uint64_t m_commandEncoderId { 0 };
+    uint64_t m_pipelineLayoutId { 0 };
+    uint64_t m_renderPipelineId { 0 };
+    uint64_t m_computePipelineId { 0 };
+    uint32_t m_bindGroupLayoutId { 0 };
+    uint32_t m_bindGroupId { 0 };
+    uint32_t m_appleGPUFamily { 0 };
     bool m_supressAllErrors { false };
     const uint32_t m_maxVerticesPerDrawCall { 0 };
+    bool m_shaderValidationEnabled { true };
 } SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU
@@ -302,3 +356,5 @@ inline void derefDevice(WebGPU::Device* obj)
 {
     WTF::deref(obj);
 }
+
+IGNORE_CLANG_WARNINGS_END

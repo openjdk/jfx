@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,7 @@
 
 #if ENABLE(MATHML)
 
-#include "RenderStyleInlines.h"
-#include "StyleInheritedData.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
@@ -63,10 +62,10 @@ static inline float advanceWidthForGlyph(const GlyphData& data)
 // FIXME: This hardcoded data can be removed when OpenType MATH font are widely available (http://wkbug/156837).
 struct StretchyCharacter {
     char32_t character;
-    UChar topChar;
-    UChar extensionChar;
-    UChar bottomChar;
-    UChar middleChar;
+    char16_t topChar;
+    char16_t extensionChar;
+    char16_t bottomChar;
+    char16_t middleChar;
 };
 
 static constexpr std::array stretchyCharacters {
@@ -241,8 +240,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
     if (!getBaseGlyph(style, baseGlyph) || !baseGlyph.font->mathData())
         return;
 
-    // The value of displayOperatorMinHeight is sometimes too small, so we ensure that it is at least \sqrt{2} times the size of the base glyph.
-    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * sqrtOfTwoFloat, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
+    float displayOperatorMinHeight = baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight);
 
     Vector<Glyph> sizeVariants;
     Vector<OpenTypeMathData::AssemblyPart> assemblyParts;
@@ -686,7 +684,7 @@ void MathOperator::paintHorizontalGlyphAssembly(const RenderStyle& style, PaintI
         fillWithHorizontalExtensionGlyph(style, info, LayoutPoint(leftGlyphPaintRect.maxX(), baselineY), LayoutPoint(rightGlyphPaintRect.x(), baselineY));
 }
 
-void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const LayoutPoint& paintOffset)
+void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const LayoutPoint& paintOffset, float deviceScaleFactor)
 {
     if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style.usedVisibility() != Visibility::Visible)
         return;
@@ -694,7 +692,7 @@ void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const Layout
     // Make a copy of the PaintInfo because applyTransform will modify its rect.
     PaintInfo paintInfo(info);
     GraphicsContextStateSaver stateSaver(paintInfo.context());
-    paintInfo.context().setFillColor(style.visitedDependentColorWithColorFilter(CSSPropertyColor));
+    paintInfo.context().setFillColor(style.visitedDependentColorApplyingColorFilter());
 
     // For a radical character, we may need some scale transform to stretch it vertically or mirror it.
     if (m_baseCharacter == kRadicalOperator) {
@@ -721,9 +719,15 @@ void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const Layout
     if (m_stretchType == StretchType::SizeVariant)
         glyphData.glyph = m_variantGlyph;
 
-    LayoutPoint operatorTopLeft = paintOffset;
-    FloatRect glyphBounds = boundsForGlyph(glyphData);
-    LayoutPoint operatorOrigin { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
+    auto operatorTopLeft = paintOffset;
+    auto glyphBounds = boundsForGlyph(glyphData);
+    auto operatorOrigin = LayoutPoint { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
+
+    if (style.writingMode().isHorizontal())
+        operatorOrigin.setY(roundToDevicePixel(LayoutUnit { operatorOrigin.y() }, deviceScaleFactor));
+    else
+        operatorOrigin.setX(roundToDevicePixel(LayoutUnit { operatorOrigin.x() }, deviceScaleFactor));
+
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(glyphData));
     paintInfo.context().drawGlyphs(*glyphData.font, singleElementSpan(glyphData.glyph), singleElementSpan(advance), operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());

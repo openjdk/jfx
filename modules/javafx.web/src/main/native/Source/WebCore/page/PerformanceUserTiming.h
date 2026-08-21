@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PerformanceMark.h"
 #include "PerformanceMeasure.h"
+#include "PerformanceMeasureOptions.h"
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/StringHash.h>
 
 namespace JSC {
@@ -39,8 +40,10 @@ class JSGlobalObject;
 namespace WebCore {
 
 class Performance;
+class WeakPtrImplWithEventTargetData;
+template<typename> class ExceptionOr;
 
-using PerformanceEntryMap = UncheckedKeyHashMap<String, Vector<Ref<PerformanceEntry>>>;
+using PerformanceEntryMap = HashMap<String, Vector<Ref<PerformanceEntry>>>;
 
 class PerformanceUserTiming {
     WTF_MAKE_TZONE_ALLOCATED(PerformanceUserTiming);
@@ -50,7 +53,7 @@ public:
     ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, std::optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    using StartOrMeasureOptions = std::variant<String, PerformanceMeasureOptions>;
+    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
     ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, std::optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
@@ -63,7 +66,7 @@ public:
     static bool isRestrictedMarkName(const String& markName);
 
 private:
-    ExceptionOr<double> convertMarkToTimestamp(const std::variant<String, double>&) const;
+    ExceptionOr<double> convertMarkToTimestamp(const Variant<String, double>&) const;
     ExceptionOr<double> convertMarkToTimestamp(const String& markName) const;
     ExceptionOr<double> convertMarkToTimestamp(double) const;
 

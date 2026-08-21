@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "FilterOperation.h"
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/FilterOperation.h>
 #include <algorithm>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Ref.h>
@@ -54,18 +54,18 @@ public:
         return FilterOperations { m_operations.map([](const auto& op) { return op->clone(); }) };
     }
 
-    const_iterator begin() const { return m_operations.begin(); }
-    const_iterator end() const { return m_operations.end(); }
-    const_reverse_iterator rbegin() const { return m_operations.rbegin(); }
-    const_reverse_iterator rend() const { return m_operations.rend(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_operations.begin(); }
+    const_iterator end() const LIFETIME_BOUND { return m_operations.end(); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_operations.rbegin(); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_operations.rend(); }
 
     bool isEmpty() const { return m_operations.isEmpty(); }
     size_t size() const { return m_operations.size(); }
-    const FilterOperation* at(size_t index) const { return index < m_operations.size() ? m_operations[index].ptr() : nullptr; }
+    const FilterOperation* at(size_t index) const LIFETIME_BOUND { return index < m_operations.size() ? m_operations[index].ptr() : nullptr; }
 
-    const Ref<FilterOperation>& operator[](size_t i) const { return m_operations[i]; }
-    const Ref<FilterOperation>& first() const { return m_operations.first(); }
-    const Ref<FilterOperation>& last() const { return m_operations.last(); }
+    const Ref<FilterOperation>& operator[](size_t i) const LIFETIME_BOUND { return m_operations[i]; }
+    const Ref<FilterOperation>& first() const LIFETIME_BOUND { return m_operations.first(); }
+    const Ref<FilterOperation>& last() const LIFETIME_BOUND { return m_operations.last(); }
 
     bool operationsMatch(const FilterOperations&) const;
 
@@ -80,16 +80,12 @@ public:
     bool hasFilterOfType() const;
 
     bool hasReferenceFilter() const;
-    bool isReferenceFilter() const;
-
-    bool transformColor(Color&) const;
-    bool inverseTransformColor(Color&) const;
 
     WEBCORE_EXPORT bool canInterpolate(const FilterOperations&, CompositeOperation) const;
     WEBCORE_EXPORT FilterOperations blend(const FilterOperations&, const BlendingContext&) const;
 
 private:
-    friend struct IPC::ArgumentCoder<FilterOperations, void>;
+    friend struct IPC::ArgumentCoder<FilterOperations>;
     WEBCORE_EXPORT friend WTF::TextStream& operator<<(WTF::TextStream&, const FilterOperations&);
 
     Vector<Ref<FilterOperation>> m_operations;

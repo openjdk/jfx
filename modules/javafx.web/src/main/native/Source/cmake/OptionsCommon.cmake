@@ -1,4 +1,4 @@
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP OFF)
@@ -11,33 +11,23 @@ add_definitions(-DPAS_BMALLOC=1)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 define_property(TARGET PROPERTY FOLDER INHERITED BRIEF_DOCS "folder" FULL_DOCS "IDE folder name")
 
-if (WTF_CPU_ARM)
-    set(ARM_THUMB2_TEST_SOURCE
-    "
-    #if !defined(thumb2) && !defined(__thumb2__)
-    #error \"Thumb2 instruction set isn't available\"
-    #endif
-    int main() {}
-   ")
+# NB: We can't use CMAKE_HOST_SYSTEM_PROCESSOR as its value is on armv8l is
+# "aarch64". Also, `uname` is not available on Windows, but Windows doesn't
+# currently use this variable.
+execute_process(COMMAND uname -m OUTPUT_VARIABLE WTF_HOST_SYSTEM_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    if (COMPILER_IS_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
-        set(CLANG_EXTRA_ARM_ARGS " -mthumb")
-    endif ()
-
-    set(CMAKE_REQUIRED_FLAGS "${CLANG_EXTRA_ARM_ARGS}")
-    CHECK_CXX_SOURCE_COMPILES("${ARM_THUMB2_TEST_SOURCE}" ARM_THUMB2_DETECTED)
-    unset(CMAKE_REQUIRED_FLAGS)
-
-    if (ARM_THUMB2_DETECTED AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
-        string(APPEND CMAKE_C_FLAGS " ${CLANG_EXTRA_ARM_ARGS}")
-        string(APPEND CMAKE_CXX_FLAGS " ${CLANG_EXTRA_ARM_ARGS}")
-    endif ()
+if ("${WTF_HOST_SYSTEM_MACHINE}" MATCHES "^armv[78]")
+    set(BUILDING_ON_32_BITS TRUE)
+else ()
+    set(BUILDING_ON_32_BITS FALSE)
 endif ()
+
+set(LLD_UNUSABLE_BECAUSE_OF_ADDRESS_SPACE_EXHAUSTION ${BUILDING_ON_32_BITS})
 
 # Use ld.lld when building with LTO, or for debug builds, if available.
 # FIXME: With CMake 3.22+ full conditional syntax can be used in
 #        cmake_dependent_option()
-if (LTO_MODE OR DEVELOPER_MODE)
+if (LTO_MODE OR DEVELOPER_MODE AND (NOT LLD_UNUSABLE_BECAUSE_OF_ADDRESS_SPACE_EXHAUSTION))
     set(TRY_USE_LD_LLD ON)
 endif ()
 CMAKE_DEPENDENT_OPTION(USE_LD_LLD "Use LLD linker" ON
@@ -76,7 +66,7 @@ unset(LD_USAGE_COMMAND)
 
 set(LD_SUPPORTS_SPLIT_DEBUG TRUE)
 set(LD_SUPPORTS_THIN_ARCHIVES TRUE)
-if (LD_VERSION MATCHES "^LLD ")
+if (LD_VERSION MATCHES "(^|[ \t])LLD ")
     set(LD_VARIANT LLD)
 elseif (LD_VERSION MATCHES "^mold ")
     set(LD_VARIANT MOLD)
@@ -104,6 +94,10 @@ endif ()
 if (LD_USAGE MATCHES "--gc-sections")
     set(LD_SUPPORTS_GC_SECTIONS TRUE)
 endif ()
+set(LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION FALSE)
+if (LD_USAGE MATCHES "allow-multiple-definition")
+    set(LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION TRUE)
+endif ()
 unset(LD_USAGE)
 
 message(STATUS "Linker variant in use: ${LD_VARIANT} ")
@@ -128,7 +122,7 @@ if (AR_STATUS EQUAL 0)
     if (AR_VERSION MATCHES "^GNU ar ")
         set(AR_VARIANT BFD)
         set(AR_SUPPORTS_THIN_ARCHIVES TRUE)
-    elseif (AR_VERSION MATCHES "^LLVM ")
+    elseif (AR_VERSION MATCHES "(^|[ \t])LLVM ")
         set(AR_VARIANT LLVM)
         set(AR_SUPPORTS_THIN_ARCHIVES TRUE)
     else ()
@@ -159,9 +153,6 @@ if (LD_SUPPORTS_DISABLE_NEW_DTAGS)
     string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,--disable-new-dtags")
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--disable-new-dtags")
     string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,--disable-new-dtags")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS " -Wl,--no-gc-sections")
-    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--no-gc-sections")
-    string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,--no-gc-sections")
 endif ()
 
 # Prefer thin archives by default if they can be both created by the
@@ -213,6 +204,8 @@ option(USE_APPLE_ICU "Use Apple's internal ICU" ${APPLE})
 # Enable the usage of OpenMP.
 #  - At this moment, OpenMP is only used as an alternative implementation
 #    to native threads for the parallelization of the SVG filters.
+#
+# FIXME: there is no option() for this, so how can it ever be enabled...?
 if (USE_OPENMP)
     find_package(OpenMP REQUIRED)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -321,6 +314,7 @@ WEBKIT_CHECK_HAVE_FUNCTION(HAVE_LOCALTIME_R localtime_r time.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_MALLOC_TRIM malloc_trim malloc.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_STATX statx sys/stat.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_TIMEGM timegm time.h)
+WEBKIT_CHECK_HAVE_FUNCTION(HAVE_TIMERFD timerfd_create sys/timerfd.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_VASPRINTF vasprintf stdio.h)
 
 # Check for symbols

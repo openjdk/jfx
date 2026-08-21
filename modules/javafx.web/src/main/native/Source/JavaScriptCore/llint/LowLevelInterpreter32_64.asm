@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -38,32 +38,16 @@ macro getuOperandWide16JS(opcodeStruct, fieldName, dst)
     loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
 end
 
-macro getuOperandWide16Wasm(opcodeStruct, fieldName, dst)
-    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
-end
-
 macro getOperandWide16JS(opcodeStruct, fieldName, dst)
     loadhsi constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
-end
-
-macro getOperandWide16Wasm(opcodeStruct, fieldName, dst)
-    loadhsi constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
 end
 
 macro getuOperandWide32JS(opcodeStruct, fieldName, dst)
     loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
 end
 
-macro getuOperandWide32Wasm(opcodeStruct, fieldName, dst)
-    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
-end
-
 macro getOperandWide32JS(opcodeStruct, fieldName, dst)
     loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
-end
-
-macro getOperandWide32Wasm(opcodeStruct, fieldName, dst)
-    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
 end
 
 macro storeJSValueConcurrent(store, tag, payload)
@@ -221,6 +205,8 @@ macro doVMEntry(makeCall)
     end
 
     storep vm, VMEntryRecord::m_vm[sp]
+    loadp ProtoCallFrame::context[protoCallFrame], t4
+    storep t4, VMEntryRecord::m_context[sp]
     loadp VM::topCallFrame[vm], t4
     storep t4, VMEntryRecord::m_prevTopCallFrame[sp]
     loadp VM::topEntryFrame[vm], t4
@@ -244,7 +230,7 @@ macro doVMEntry(makeCall)
     # and the frame for the JS code we're executing. We need to do this check
     # before we start copying the args from the protoCallFrame below.
     if C_LOOP
-        bpaeq t3, VM::m_cloopStackLimit[vm], .stackHeightOK
+        bpaeq t3, VMCLoopStackLimitOffset[vm], .stackHeightOK
         move entry, t4
         move vm, t5
         cloopCallSlowPath _llint_stack_check_at_vm_entry, vm, t3
@@ -258,7 +244,7 @@ macro doVMEntry(makeCall)
         move t5, vm
         jmp .llint_throw_stack_overflow_error_from_vm_entry
     else
-        bpb t3, VM::m_softStackLimit[vm], .llint_throw_stack_overflow_error_from_vm_entry
+        bpbeq t3, VMSoftStackLimitOffset[vm], .llint_throw_stack_overflow_error_from_vm_entry
     end
 
 .stackHeightOK:
@@ -725,12 +711,12 @@ macro functionArityCheck(opcodeName, doneLabel)
     addi 1, t2, t3
     andi ~1, t3
     lshiftp 3, t3
-    subp cfr, t3, t5
+    subp sp, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
-        bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+        bpbeq VMCLoopStackLimitOffset[t0], t5, .stackHeightOK
     else
-        bplteq VM::m_softStackLimit[t0], t5, .stackHeightOK
+        bpbeq VMSoftStackLimitOffset[t0], t5, .stackHeightOK
     end
 
     prepareStateForCCall()
@@ -2252,7 +2238,11 @@ llintOpWithJump(op_switch_imm, OpSwitchImm, macro (size, get, jump, dispatch)
     addp t3, t2
 
     bineq t1, Int32Tag, .opSwitchImmNotInt
-    subi UnlinkedSimpleJumpTable::m_min[t2], t0
+
+    btinz UnlinkedSimpleJumpTable::m_isList[t2], .opSwitchImmSlow
+    loadi UnlinkedSimpleJumpTable::m_min[t2], t3
+
+    subi t3, t0
     loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
     btpz t3, .opSwitchImmFallThrough
     biaeq t0, Int32FixedVector::Storage::m_size[t3], .opSwitchImmFallThrough
@@ -2289,6 +2279,10 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
     loadp JSString::m_fiber[t0], t1
     btpnz t1, isRopeInPointer, .opSwitchOnRope
     bineq StringImpl::m_length[t1], 1, .opSwitchCharFallThrough
+
+    loadi UnlinkedSimpleJumpTable::m_min[t2], t3
+    bieq t3, (constexpr INT32_MAX), .opSwitchSlow
+
     loadp StringImpl::m_data8[t1], t0
     btinz StringImpl::m_hashAndFlags[t1], HashFlags8BitBuffer, .opSwitchChar8Bit
     loadh [t0], t0
@@ -2296,7 +2290,7 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
 .opSwitchChar8Bit:
     loadb [t0], t0
 .opSwitchCharReady:
-    subi UnlinkedSimpleJumpTable::m_min[t2], t0
+    subi t3, t0
     loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
     btpz t3, .opSwitchCharFallThrough
     biaeq t0, Int32FixedVector::Storage::m_size[t3], .opSwitchCharFallThrough
@@ -2311,7 +2305,7 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
 .opSwitchOnRope:
     bineq JSRopeString::m_compactFibers + JSRopeString::CompactFibers::m_length[t0], 1, .opSwitchCharFallThrough
 
-.opSwitchOnRopeChar:
+.opSwitchSlow:
     callSlowPath(_llint_slow_path_switch_char)
     nextInstruction()
 end)
@@ -2609,7 +2603,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     btpz a2, (constexpr JSFunction::rareDataTag), .isExecutable
     loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[a2], a2
 .isExecutable:
-    loadp JSFunction::m_scope[a0], a0
+    loadp JSCallee::m_scope[a0], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
     move cfr, a1
@@ -2622,7 +2616,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     end
 
     loadp Callee + PayloadOffset[cfr], t3
-    loadp JSFunction::m_scope[t3], t3
+    loadp JSCallee::m_scope[t3], t3
     loadp JSGlobalObject::m_vm[t3], t3
 
     addp 8, sp
@@ -2770,7 +2764,7 @@ end)
 macro loadWithStructureCheck(opcodeStruct, get, operand, slowPath)
     get(m_scope, t0)
     loadp PayloadOffset[cfr, t0, 8], t0
-    loadp %opcodeStruct%::Metadata::m_structure[t5], t1
+    loadp %opcodeStruct%::Metadata::m_structureID[t5], t1
     bineq JSCell::m_structureID[t0], t1, slowPath
 end
 
@@ -3126,11 +3120,11 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
     end
     size(fastNarrow, fastWide16, fastWide32, macro (callOp) callOp() end)
 
-    # FIXME: We should do this with inline assembly since it's the "fast" case.
     bbeq r1, constexpr IterationMode::Generic, .iteratorOpenGeneric
     dispatch()
 
 .iteratorOpenGeneric:
+    btpz r0, .iteratorOpenException
     macro gotoGetByIdCheckpoint()
         jmp .getByIdStart
     end
@@ -3170,6 +3164,10 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
 .iteratorOpenGenericGetNextSlow:
     callSlowPath(_llint_slow_path_iterator_open_get_next)
     dispatch()
+
+.iteratorOpenException:
+    jmp _llint_throw_from_slow_path_trampoline
+
 end)
 
 llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch, metadata, return)
@@ -3346,6 +3344,9 @@ op(loop_osr_entry_gate, macro ()
     crash() # Should never reach here.
 end)
 
+op(op_instanceof_return_location, macro ()
+    crash() # Should never reach here.
+end)
 
 llintOpWithMetadata(op_check_private_brand, OpCheckPrivateBrand, macro (size, get, dispatch, metadata, return)
     metadata(t5, t2)

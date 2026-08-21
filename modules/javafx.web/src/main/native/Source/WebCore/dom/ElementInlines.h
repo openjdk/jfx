@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "CustomElementDefaultARIA.h"
-#include "DocumentInlines.h"
-#include "Element.h"
-#include "ElementData.h"
-#include "HTMLNames.h"
-#include "RenderStyleInlines.h"
-#include "StyleChange.h"
+#include <WebCore/CustomElementDefaultARIA.h>
+#include <WebCore/Element.h>
+#include <WebCore/ElementData.h>
+#include <WebCore/HTMLNames.h>
+#include <WebCore/NodeDocument.h>
+#include <WebCore/NodeInlines.h>
+#include <WebCore/RenderStyle.h>
+#include <WebCore/StyleChange.h>
 
 namespace WebCore {
 
@@ -48,29 +49,6 @@ inline unsigned Element::findAttributeIndexByName(const QualifiedName& name) con
 inline unsigned Element::findAttributeIndexByName(const AtomString& name, bool shouldIgnoreAttributeCase) const
 {
     return elementData()->findAttributeIndexByName(name, shouldIgnoreAttributeCase);
-}
-
-inline bool Node::hasAttributes() const
-{
-    auto* element = dynamicDowncast<Element>(*this);
-    return element && element->hasAttributes();
-}
-
-inline NamedNodeMap* Node::attributesMap() const
-{
-    if (auto* element = dynamicDowncast<Element>(*this))
-        return &element->attributesMap();
-    return nullptr;
-}
-
-inline Element* Node::parentElement() const
-{
-    return dynamicDowncast<Element>(parentNode());
-}
-
-inline RefPtr<Element> Node::protectedParentElement() const
-{
-    return parentElement();
 }
 
 inline const Element* Element::rootElement() const
@@ -117,6 +95,20 @@ inline String Element::attributeTrimmedWithDefaultARIA(const QualifiedName& name
 
     auto value = originalValue.string();
     return value.trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
+}
+
+inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
+{
+    if (urlToMask.protocolIsInHTTPFamily()) [[likely]]
+        return false;
+    return shouldMaskURLForBindingsInternal(urlToMask);
+}
+
+inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
+{
+    if (shouldMaskURLForBindings(url)) [[unlikely]]
+        return maskedURLForBindings();
+    return url;
 }
 
 inline URL Element::getURLAttributeForBindings(const QualifiedName& name) const
@@ -244,13 +236,13 @@ inline const AtomString& Element::getAttribute(const QualifiedName& name, const 
 
 inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* element)
 {
-    return (element && element->isInTopLayer()) || style.pseudoElementType() == PseudoId::Backdrop;
+    return (element && element->isInTopLayer()) || style.pseudoElementType() == PseudoElementType::Backdrop;
 }
 
 inline void Element::hideNonce()
 {
     // In the common case, Elements don't have a nonce parameter to hide.
-    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+    if (!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)) [[likely]]
         return;
     hideNonceSlow();
 }

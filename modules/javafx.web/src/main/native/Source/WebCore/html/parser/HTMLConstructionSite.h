@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
@@ -162,6 +163,8 @@ public:
 
     bool inQuirksMode() { return m_inQuirksMode; }
 
+    bool hasReachedMaxDOMTreeDepth() const { return m_hasReachedMaxDOMTreeDepth; }
+
     bool isEmpty() const { return !m_openElements.stackDepth(); }
     Element& currentElement() const { return m_openElements.top(); }
     ContainerNode& currentNode() const { return m_openElements.topNode(); }
@@ -255,6 +258,11 @@ private:
     unsigned m_maximumDOMTreeDepth;
 
     bool m_inQuirksMode;
+
+    bool m_hasReachedMaxDOMTreeDepth { false };
+
+    std::unique_ptr<StringBuilder> m_textNodeBuffer;
+    RefPtr<Text> m_currentTextNode;
 };
 
 } // namespace WebCore

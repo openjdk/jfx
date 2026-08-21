@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CookieStore.h"
+#include "EventTargetInterfaces.h"
 #include "FetchIdentifier.h"
 #include "NotificationClient.h"
 #include "ScriptExecutionContextIdentifier.h"
@@ -57,7 +58,8 @@ enum class NotificationEventType : bool;
 struct ServiceWorkerClientData;
 
 class ServiceWorkerGlobalScope final : public WorkerGlobalScope {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ServiceWorkerGlobalScope);
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerGlobalScope);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ServiceWorkerGlobalScope);
 public:
     static Ref<ServiceWorkerGlobalScope> create(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, std::unique_ptr<WorkerClient>&&);
 
@@ -73,7 +75,7 @@ public:
 
     enum EventTargetInterfaceType eventTargetInterface() const final;
 
-    ServiceWorkerThread& thread();
+    Ref<ServiceWorkerThread> thread();
 
     void updateExtendedEventsSet(ExtendableEvent* newEvent = nullptr);
 
@@ -123,6 +125,9 @@ public:
     void navigationPreloadFailed(FetchKey, ResourceError&&);
     void navigationPreloadIsReady(FetchKey, ResourceResponse&&);
 
+    bool hasFetchEventHandler() const { return m_hasFetchEventHandler; }
+    void storeEventTypesToHandle();
+
 private:
     ServiceWorkerGlobalScope(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, std::unique_ptr<WorkerClient>&&);
     void notifyServiceWorkerPageOfCreationIfNecessary();
@@ -137,13 +142,13 @@ private:
     void resetUserGesture() { m_isProcessingUserGesture = false; }
 
     ServiceWorkerContextData m_contextData;
-    Ref<ServiceWorkerRegistration> m_registration;
-    Ref<ServiceWorker> m_serviceWorker;
-    Ref<ServiceWorkerClients> m_clients;
+    const Ref<ServiceWorkerRegistration> m_registration;
+    const Ref<ServiceWorker> m_serviceWorker;
+    const Ref<ServiceWorkerClients> m_clients;
     Vector<Ref<ExtendableEvent>> m_extendedEvents;
 
     uint64_t m_lastRequestIdentifier { 0 };
-    HashMap<uint64_t, RefPtr<DeferredPromise>> m_pendingSkipWaitingPromises;
+    HashMap<uint64_t, Ref<DeferredPromise>> m_pendingSkipWaitingPromises;
     std::unique_ptr<NotificationClient> m_notificationClient;
     bool m_hasPendingSilentPushEvent { false };
     bool m_isProcessingUserGesture { false };
@@ -155,10 +160,11 @@ private:
     MonotonicTime m_lastPushEventTime;
     bool m_consoleMessageReportingEnabled { false };
     RefPtr<CookieStore> m_cookieStore;
+    bool m_hasFetchEventHandler { false };
 
     struct FetchTask {
         RefPtr<ServiceWorkerFetch::Client> client;
-        std::variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
+        Variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
     };
     HashMap<FetchKey, FetchTask> m_ongoingFetchTasks;
 };
@@ -166,7 +172,13 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerGlobalScope)
+    static bool isType(const WebCore::EventTarget& context) { return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::ServiceWorkerGlobalScope; }
     static bool isType(const WebCore::ScriptExecutionContext& context)
+    {
+        auto* global = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
+        return global && global->type() == WebCore::WorkerGlobalScope::Type::ServiceWorker;
+    }
+    static bool isType(const WebCore::WorkerOrWorkletGlobalScope& context)
     {
         auto* global = dynamicDowncast<WebCore::WorkerGlobalScope>(context);
         return global && global->type() == WebCore::WorkerGlobalScope::Type::ServiceWorker;

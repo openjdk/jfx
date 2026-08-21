@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,42 +22,60 @@
 
 #pragma once
 
-#include "SVGAnimatedPropertyImpl.h"
-#include "SVGLocatable.h"
 #include "SVGNames.h"
-#include "SVGParsingError.h"
-#include "SVGPropertyOwnerRegistry.h"
-#include "SVGRenderStyleDefs.h"
+#include "SVGPropertyOwner.h"
 #include "StyledElement.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class AffineTransform;
-class CSSStyleDeclaration;
-class DeprecatedCSSOMValue;
 class Document;
+class SVGAnimatedProperty;
+class SVGAnimatedString;
+class SVGAttributeAnimator;
+class SVGConditionalProcessingAttributes;
 class SVGDocumentExtensions;
 class SVGElementRareData;
 class SVGPropertyAnimatorFactory;
+class SVGPropertyRegistry;
 class SVGResourceElementClient;
 class SVGSVGElement;
+class SVGTransformList;
 class SVGUseElement;
 class Settings;
 class Timer;
 
+enum class AnimationMode : uint8_t;
+enum class CTMScope : bool;
+enum class CalcMode : uint8_t;
+enum class SVGParsingError : uint8_t;
+
+template<typename PropertyType>
+class SVGAnimatedPrimitiveProperty;
+
+template<typename OwnerType, typename... BaseTypes>
+class SVGPropertyOwnerRegistry;
+
 class SVGElement : public StyledElement, public SVGPropertyOwner {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGElement);
 public:
     bool isInnerSVGSVGElement() const;
     bool isOutermostSVGSVGElement() const;
 
     SVGSVGElement* ownerSVGElement() const;
-    SVGElement* viewportElement() const;
+
+    enum class ViewportElementType : uint8_t {
+        Any, // Returns first SVGSVGElement, SVGImageElement, or symbol
+        SVGSVGOnly // Returns only SVGSVGElement
+    };
+
+    SVGElement* viewportElement(ViewportElementType = ViewportElementType::Any) const;
 
     String title() const override;
     virtual bool supportsMarkers() const { return false; }
@@ -65,13 +83,15 @@ public:
     virtual bool needsPendingResourceHandling() const { return true; }
     bool instanceUpdatesBlocked() const;
     void setInstanceUpdatesBlocked(bool);
-    virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const;
+    virtual AffineTransform localCoordinateSpaceTransform(CTMScope) const;
 
     bool hasPendingResources() const { return hasEventTargetFlag(EventTargetFlag::HasPendingResources); }
     void setHasPendingResources() { setEventTargetFlag(EventTargetFlag::HasPendingResources, true); }
     void clearHasPendingResources() { setEventTargetFlag(EventTargetFlag::HasPendingResources, false); }
     virtual void buildPendingResource() { }
 
+    virtual bool isSVGAnimationElement() const { return false; }
+    virtual bool isSVGTextPositioningElement() const { return false; }
     virtual bool isSVGGraphicsElement() const { return false; }
     virtual bool isSVGGeometryElement() const { return false; }
     virtual bool isFilterEffect() const { return false; }
@@ -111,11 +131,11 @@ public:
 
 
     SVGElement* correspondingElement() const;
-    RefPtr<SVGUseElement> correspondingUseElement() const;
+    SVGUseElement* correspondingUseElement() const;
 
     void setCorrespondingElement(SVGElement*);
 
-    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) override;
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) override;
 
     static QualifiedName animatableAttributeForName(const AtomString&);
 #ifndef NDEBUG
@@ -140,7 +160,7 @@ public:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGElement>;
     const SVGPropertyRegistry& propertyRegistry() const { return m_propertyRegistry.get(); }
-    void detachAllProperties() { propertyRegistry().detachAllProperties(); }
+    inline void detachAllProperties(); // Defined in SVGElementInlines.h
 
     bool isAnimatedPropertyAttribute(const QualifiedName&) const;
     bool isAnimatedAttribute(const QualifiedName&) const;
@@ -153,7 +173,7 @@ public:
     void commitPropertyChange(SVGAnimatedProperty&);
 
     const SVGElement* attributeContextElement() const override { return this; }
-    SVGPropertyAnimatorFactory& propertyAnimatorFactory() { return *m_propertyAnimatorFactory; }
+    SVGPropertyAnimatorFactory& propertyAnimatorFactory() { return m_propertyAnimatorFactory; }
     RefPtr<SVGAttributeAnimator> createAnimator(const QualifiedName&, AnimationMode, CalcMode, bool isAccumulated, bool isAdditive);
     void animatorWillBeDeleted(const QualifiedName&);
 
@@ -163,13 +183,14 @@ public:
     ColorInterpolation colorInterpolation() const;
 
     // These are needed for the RenderTree, animation and DOM.
-    AtomString className() const { return AtomString { m_className->currentValue() }; }
+    inline AtomString className() const; // Defined in SVGElementInlines.h
     SVGAnimatedString& classNameAnimated() { return m_className; }
 
     SVGConditionalProcessingAttributes& conditionalProcessingAttributes();
     SVGConditionalProcessingAttributes* conditionalProcessingAttributesIfExists() const;
 
     bool hasAssociatedSVGLayoutBox() const;
+    void invalidateInstances();
 
 protected:
     SVGElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&, OptionSet<TypeFlag> = { });
@@ -196,7 +217,7 @@ protected:
     void updateRelativeLengthsInformation();
     void updateRelativeLengthsInformationForChild(bool hasRelativeLengths, SVGElement&);
 
-    void willRecalcStyle(Style::Change) override;
+    void willRecalcStyle(OptionSet<Style::Change>) override;
 
 private:
     virtual void clearTarget() { }
@@ -208,8 +229,6 @@ private:
     virtual bool filterOutAnimatableAttribute(const QualifiedName&) const;
 #endif
 
-    void invalidateInstances();
-
     std::unique_ptr<SVGElementRareData> m_svgRareData;
 
     WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData> m_childElementsWithRelativeLengths;
@@ -217,10 +236,10 @@ private:
     bool m_selfHasRelativeLengths { false };
     bool m_hasInitializedRelativeLengthsState { false };
 
-    std::unique_ptr<SVGPropertyAnimatorFactory> m_propertyAnimatorFactory;
+    const UniqueRef<SVGPropertyAnimatorFactory> m_propertyAnimatorFactory;
 
-    UniqueRef<SVGPropertyRegistry> m_propertyRegistry;
-    Ref<SVGAnimatedString> m_className { SVGAnimatedString::create(this) };
+    const UniqueRef<SVGPropertyRegistry> m_propertyRegistry;
+    Ref<SVGAnimatedString> m_className;
 };
 
 class SVGElement::InstanceInvalidationGuard {
@@ -260,11 +279,13 @@ inline SVGElement::InstanceUpdateBlocker::~InstanceUpdateBlocker()
     m_element->setInstanceUpdatesBlocked(false);
 }
 
-
-
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGElement)
-    static bool isType(const WebCore::EventTarget& eventTarget) { return eventTarget.isNode() && static_cast<const WebCore::Node&>(eventTarget).isSVGElement(); }
+    static bool isType(const WebCore::EventTarget& eventTarget)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(eventTarget);
+        return node && node->isSVGElement();
+    }
     static bool isType(const WebCore::Node& node) { return node.isSVGElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

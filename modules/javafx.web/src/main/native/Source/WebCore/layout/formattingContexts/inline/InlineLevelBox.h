@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +26,18 @@
 
 #pragma once
 
-#include "FontCascade.h"
-#include "InlineRect.h"
-#include "LayoutBox.h"
-#include "LayoutUnits.h"
-#include "LengthFunctions.h"
-#include "StyleTextEdge.h"
-#include <wtf/OptionSet.h>
+#include <WebCore/FontBaseline.h>
+#include <WebCore/FontCascade.h>
+#include <WebCore/FontMetrics.h>
+#include <WebCore/InlineRect.h>
+#include <WebCore/LayoutBox.h>
+#include <WebCore/LayoutUnits.h>
+#include <WebCore/StyleLineFitEdge.h>
+#include <WebCore/StyleLineHeight.h>
+#include <WebCore/StylePrimitiveNumericTypes+Evaluation.h>
+#include <WebCore/StyleTextBoxEdge.h>
+#include <WebCore/StyleWebKitLineBoxContain.h>
+#include <wtf/EnumSet.h>
 
 namespace WebCore {
 namespace Layout {
@@ -55,9 +61,6 @@ public:
 
         InlineLayoutUnit height() const { return ascent + descent; }
         friend bool operator==(const AscentAndDescent&, const AscentAndDescent&) = default;
-        // FIXME: Remove this.
-        // We need floor/ceil to match legacy layout integral positioning.
-        void round();
     };
     InlineLayoutUnit ascent() const { return m_ascentAndDescent.ascent; }
     InlineLayoutUnit descent() const { return m_ascentAndDescent.descent; }
@@ -67,11 +70,8 @@ public:
     bool hasContent() const { return m_hasContent; }
     void setHasContent();
 
-    struct VerticalAlignment {
-        VerticalAlign type { VerticalAlign::Baseline };
-        std::optional<InlineLayoutUnit> baselineOffset;
-    };
-    VerticalAlignment verticalAlign() const { return m_style.verticalAlignment; }
+    using VerticalAlignment = Variant<CSS::Keyword::Baseline, CSS::Keyword::Sub, CSS::Keyword::Super, CSS::Keyword::Top, CSS::Keyword::TextTop, CSS::Keyword::Middle, CSS::Keyword::Bottom, CSS::Keyword::TextBottom, CSS::Keyword::WebkitBaselineMiddle, InlineLayoutUnit>;
+    const VerticalAlignment& verticalAlign() const { return m_style.verticalAlignment; }
     bool hasLineBoxRelativeAlignment() const;
 
     InlineLayoutUnit preferredLineHeight() const;
@@ -83,8 +83,8 @@ public:
     InlineLayoutUnit fontSize() const { return m_style.primaryFontSize; }
 
     TextBoxTrim textBoxTrim() const { return m_style.textBoxTrim; }
-    TextEdge textBoxEdge() const { return m_style.textBoxEdge; }
-    TextEdge lineFitEdge() const { return m_style.lineFitEdge; }
+    Style::TextBoxEdge textBoxEdge() const { return m_style.textBoxEdge; }
+    Style::LineFitEdge lineFitEdge() const { return m_style.lineFitEdge; }
     InlineLayoutUnit inlineBoxContentOffsetForTextBoxTrim() const { return m_inlineBoxContentOffsetForTextBoxTrim; }
 
     bool hasTextEmphasis() const { return (hasContent() || isAtomicInlineBox()) && m_textEmphasis.has_value(); };
@@ -99,12 +99,12 @@ public:
     bool isLineBreakBox() const { return m_type == Type::LineBreakBox; }
 
     enum class Type : uint8_t {
-        InlineBox             = 1 << 0,
-        LineSpanningInlineBox = 1 << 1,
-        RootInlineBox         = 1 << 2,
-        AtomicInlineBox       = 1 << 3,
-        LineBreakBox          = 1 << 4,
-        GenericInlineLevelBox = 1 << 5
+        InlineBox,
+        LineSpanningInlineBox,
+        RootInlineBox,
+        AtomicInlineBox,
+        LineBreakBox,
+        GenericInlineLevelBox
     };
     Type type() const { return m_type; }
 
@@ -114,11 +114,11 @@ public:
     bool isLastBox() const { return m_isLastWithinLayoutBox; }
 
 private:
-    enum class PositionWithinLayoutBox {
-        First = 1 << 0,
-        Last  = 1 << 1
+    enum class PositionWithinLayoutBox : bool {
+        First,
+        Last
     };
-    InlineLevelBox(const Box&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutSize, Type, OptionSet<PositionWithinLayoutBox> = { PositionWithinLayoutBox::First, PositionWithinLayoutBox::Last });
+    InlineLevelBox(const Box&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutSize, Type, EnumSet<PositionWithinLayoutBox> = { PositionWithinLayoutBox::First, PositionWithinLayoutBox::Last });
 
     friend class InlineDisplayLineBuilder;
     friend class LineBox;
@@ -165,11 +165,12 @@ private:
 
     struct Style {
         const FontMetrics& primaryFontMetrics;
-        const Length& lineHeight;
+        const WebCore::Style::LineHeight& lineHeight;
         TextBoxTrim textBoxTrim;
-        TextEdge textBoxEdge;
-        TextEdge lineFitEdge;
-        OptionSet<LineBoxContain> lineBoxContain;
+        WebCore::Style::TextBoxEdge textBoxEdge;
+        WebCore::Style::LineFitEdge lineFitEdge;
+        WebCore::Style::ZoomFactor zoomFactor { 1.0f };
+        WebCore::Style::WebkitLineBoxContain lineBoxContain;
         InlineLayoutUnit primaryFontSize { 0 };
         VerticalAlignment verticalAlignment { };
     };
@@ -191,30 +192,29 @@ inline void InlineLevelBox::setHasContent()
 inline InlineLayoutUnit InlineLevelBox::preferredLineHeight() const
 {
     if (isPreferredLineHeightFontMetricsBased())
-        return primarymetricsOfPrimaryFont().intLineSpacing();
-#if !PLATFORM(JAVA)
-    if (m_style.lineHeight.isPercentOrCalculated())
-        return minimumValueForLength(m_style.lineHeight, fontSize());
-    return m_style.lineHeight.value();
-#else // required to round a floating-point number down to the nearest integer value otherwise it will introduce 1px extra height
-    if (m_style.lineHeight.isPercentOrCalculated())
-        return floorf(minimumValueForLength(m_style.lineHeight, fontSize()));
-    return floorf(m_style.lineHeight.value());
-#endif
+        return primarymetricsOfPrimaryFont().lineSpacing();
+
+    return WTF::switchOn(m_style.lineHeight,
+        [&](const CSS::Keyword::Normal&) -> InlineLayoutUnit {
+            return 0;
+        },
+        [&](const WebCore::Style::LineHeight::Fixed& fixed) -> InlineLayoutUnit {
+            return WebCore::Style::evaluate<InlineLayoutUnit>(fixed, m_style.zoomFactor);
+        },
+        [&](const WebCore::Style::LineHeight::Percentage& percentage) -> InlineLayoutUnit {
+            return WebCore::Style::evaluate<LayoutUnit>(percentage, LayoutUnit { fontSize() });
+        },
+        [&](const WebCore::Style::LineHeight::Calc& calc) -> InlineLayoutUnit {
+            return WebCore::Style::evaluate<LayoutUnit>(calc, LayoutUnit { fontSize() }, m_style.zoomFactor);
+        }
+    );
 }
 
 inline bool InlineLevelBox::hasLineBoxRelativeAlignment() const
 {
-    auto verticalAlignment = verticalAlign().type;
-    return verticalAlignment == VerticalAlign::Top || verticalAlignment == VerticalAlign::Bottom;
-}
-
-inline void InlineLevelBox::AscentAndDescent::round()
-{
-    ascent = floorf(ascent);
-    descent = ceilf(descent);
+    return WTF::holdsAlternative<CSS::Keyword::Top>(m_style.verticalAlignment)
+        || WTF::holdsAlternative<CSS::Keyword::Bottom>(m_style.verticalAlignment);
 }
 
 }
 }
-

@@ -19,10 +19,14 @@ WEBKIT_OPTION_BEGIN()
 WEBKIT_OPTION_DEFINE(ENABLE_STATIC_JSC "Whether to build JavaScriptCore as a static library." PUBLIC OFF)
 WEBKIT_OPTION_DEFINE(USE_LIBBACKTRACE "Whether to enable usage of libbacktrace." PUBLIC OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_REMOTE_INSPECTOR PRIVATE OFF)
-if (WIN32)
-    # FIXME: Port bmalloc to Windows. https://bugs.webkit.org/show_bug.cgi?id=143310
-    WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE ON)
+if (NOT WIN32)
+    WEBKIT_OPTION_DEFINE(ENABLE_FUZZILLI "Whether to build JavaScriptCore with support for Fuzzilli." PUBLIC OFF)
 endif ()
+if (WIN32)
+    WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE OFF)
+endif ()
+WEBKIT_OPTION_DEFINE(ENABLE_JSC_GLIB_API "Whether to enable the JavaScriptCore GLib API." PUBLIC OFF)
+WEBKIT_OPTION_DEFINE(USE_SYSTEM_UNIFDEF "Whether to use a system-provided unifdef" PRIVATE OFF)
 
 WEBKIT_OPTION_END()
 
@@ -72,19 +76,9 @@ if (WIN32)
     # FIXME: warning STL4042: std::float_denorm_style, std::numeric_limits::has_denorm, and std::numeric_limits::has_denorm_loss are deprecated in C++23.
     add_definitions(-D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
 
-    if (NOT WEBKIT_LIBRARIES_DIR)
-        if (DEFINED ENV{WEBKIT_LIBRARIES})
-            file(TO_CMAKE_PATH "$ENV{WEBKIT_LIBRARIES}" WEBKIT_LIBRARIES_DIR)
-        else ()
-            file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}/WebKitLibraries/win" WEBKIT_LIBRARIES_DIR)
-        endif ()
-    endif ()
-
     if (DEFINED ENV{WEBKIT_IGNORE_PATH})
         set(CMAKE_IGNORE_PATH $ENV{WEBKIT_IGNORE_PATH})
     endif ()
-
-    set(CMAKE_PREFIX_PATH ${WEBKIT_LIBRARIES_DIR})
 
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
@@ -96,9 +90,22 @@ if (WIN32)
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS OFF)
 endif ()
 
+if (ENABLE_JSC_GLIB_API)
+    include(GNUInstallDirs)
+
+    SET_AND_EXPOSE_TO_BUILD(ENABLE_2022_GLIB_API TRUE)
+
+    set(EVENT_LOOP_TYPE "GLib")
+    set(JavaScriptCore_PKGCONFIG_FILE ${CMAKE_BINARY_DIR}/Source/JavaScriptCore/javascriptcoreglib-${PROJECT_VERSION}.pc)
+    set(JavaScriptCore_HEADER_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/javascriptcoreglib-${PROJECT_VERSION}")
+
+    add_definitions(-DJSC_GLIB_API_ENABLED)
+    add_definitions(-DGETTEXT_PACKAGE="JSCGlib")
+endif ()
+
 string(TOLOWER ${EVENT_LOOP_TYPE} LOWERCASE_EVENT_LOOP_TYPE)
 if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
-    find_package(GLIB 2.36 REQUIRED COMPONENTS gio gio-unix gobject)
+    find_package(GLib 2.70.0 REQUIRED COMPONENTS GioUnix Object)
     SET_AND_EXPOSE_TO_BUILD(USE_GLIB 1)
     SET_AND_EXPOSE_TO_BUILD(USE_GLIB_EVENT_LOOP 1)
     SET_AND_EXPOSE_TO_BUILD(WTF_DEFAULT_EVENT_LOOP 0)

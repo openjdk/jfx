@@ -32,17 +32,17 @@
 #include "MathMLRowElement.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLMath);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLMath);
 
 RenderMathMLMath::RenderMathMLMath(MathMLRowElement& element, RenderStyle&& style)
-    : RenderMathMLRow(Type::MathMLMath, element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMath, element, WTF::move(style))
 {
     ASSERT(isRenderMathMLMath());
 }
@@ -104,11 +104,7 @@ void RenderMathMLMath::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit
     setLogicalHeight(ascent + descent + borderAndPaddingLogicalHeight() + horizontalScrollbarHeight());
     updateLogicalHeight();
 
-    layoutPositionedObjects(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
+    layoutOutOfFlowBoxes(relayoutChildren);
 }
 
 }

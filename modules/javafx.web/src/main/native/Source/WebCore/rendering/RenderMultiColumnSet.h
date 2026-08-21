@@ -43,14 +43,14 @@ namespace WebCore {
 // Column spans result in the creation of new column sets as well, since a spanning fragment has to be placed in between the column sets that
 // come before and after the span.
 class RenderMultiColumnSet final : public RenderFragmentContainerSet {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMultiColumnSet);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMultiColumnSet);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMultiColumnSet);
 public:
     RenderMultiColumnSet(RenderFragmentedFlow&, RenderStyle&&);
     virtual ~RenderMultiColumnSet();
 
     RenderBlockFlow* multiColumnBlockFlow() const { return downcast<RenderBlockFlow>(parent()); }
-    RenderMultiColumnFlow* multiColumnFlow() const { return static_cast<RenderMultiColumnFlow*>(fragmentedFlow()); }
+    RenderMultiColumnFlow* multiColumnFlow() const { return downcast<RenderMultiColumnFlow>(fragmentedFlow()); }
 
     RenderMultiColumnSet* nextSiblingMultiColumnSet() const;
     RenderMultiColumnSet* previousSiblingMultiColumnSet() const;
@@ -143,7 +143,7 @@ public:
     LayoutUnit columnGap() const;
 
 private:
-    void addOverflowFromChildren() override;
+    void addOverflowFromInFlowChildren(OptionSet<ComputeOverflowOptions> = { }) override;
 
     void layout() override;
 
@@ -162,11 +162,12 @@ private:
 
     void repaintFragmentedFlowContent(const LayoutRect& repaintRect) const override;
 
-    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) override;
+    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) const override;
 
     Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const final;
+    bool contentRectSpansFragments(const LayoutRect&) const final;
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     ASCIILiteral renderName() const override;
 

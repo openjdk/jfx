@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ArrayStorageInlines.h"
-#include "Butterfly.h"
-#include "JSObject.h"
-#include "Structure.h"
-#include "VM.h"
+#include <JavaScriptCore/ArrayStorageInlines.h>
+#include <JavaScriptCore/Butterfly.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/VM.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -80,7 +80,7 @@ inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t pr
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
     void* base = vm.auxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!base))
+    if (!base) [[unlikely]]
         return nullptr;
 
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
@@ -285,6 +285,32 @@ inline Butterfly* Butterfly::shift(Structure* structure, size_t numberOfSlots)
         propertyStorage() - propertyCapacity,
         sizeof(EncodedJSValue) * propertyCapacity + sizeof(IndexingHeader) + ArrayStorage::sizeFor(0));
     return IndexingHeader::fromEndOf(propertyStorage() + numberOfSlots)->butterfly();
+}
+
+ALWAYS_INLINE void Butterfly::clearRange(IndexingType indexingType, Butterfly* butterfly, unsigned start, unsigned end)
+{
+    ASSERT(end >= start);
+
+    if (size_t remaining = end - start) {
+        // 32-bit, non-Darwin builds don't use `remaining`.
+        UNUSED_VARIABLE(remaining);
+        if (hasDouble(indexingType)) {
+#if OS(DARWIN)
+            constexpr double pattern = PNaN;
+            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + start), &pattern, sizeof(double) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+        } else {
+#if USE(JSVALUE64)
+            memset(static_cast<void*>(butterfly->contiguous().data() + start), 0, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguous().atUnsafe(i).clear();
+#endif
+        }
+    }
 }
 
 } // namespace JSC

@@ -103,12 +103,12 @@ int RegularExpression::match(StringView str, unsigned startFrom, int* matchLengt
     if (str.isNull())
         return -1;
 
-    int offsetVectorSize = (d->m_numSubpatterns + 1) * 2;
+    int offsetVectorSize = d->m_regExpByteCode->m_offsetsSize;
     unsigned* offsetVector;
     Vector<unsigned, 32> nonReturnedOvector;
 
     nonReturnedOvector.grow(offsetVectorSize);
-    offsetVector = nonReturnedOvector.data();
+    offsetVector = nonReturnedOvector.mutableSpan().data();
 
     ASSERT(offsetVector);
     for (unsigned j = 0, i = 0; i < d->m_numSubpatterns + 1; j += 2, i++)

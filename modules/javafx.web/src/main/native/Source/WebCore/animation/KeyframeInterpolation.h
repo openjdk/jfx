@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "IterationCompositeOperation.h"
-#include "TimingFunction.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/IterationCompositeOperation.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <optional>
 #include <wtf/Seconds.h>
 
@@ -36,7 +36,7 @@ namespace WebCore {
 
 class KeyframeInterpolation {
 public:
-    using Property = std::variant<AnimatableCSSProperty, AcceleratedEffectProperty>;
+    using Property = Variant<AnimatableCSSProperty, AcceleratedEffectProperty>;
 
     class Keyframe {
     public:
@@ -69,8 +69,8 @@ public:
     using CompositionCallback = Function<void(const Keyframe&, CompositeOperation)>;
     using AccumulationCallback = Function<void(const Keyframe&)>;
     using InterpolationCallback = Function<void(double intervalProgress, double currentIteration, IterationCompositeOperation)>;
-    using RequiresBlendingForAccumulativeIterationCallback = Function<bool()>;
-    void interpolateKeyframes(Property, const KeyframeInterval&, double iterationProgress, double currentIteration, const WebAnimationTime& iterationDuration, TimingFunction::Before, const CompositionCallback&, const AccumulationCallback&, const InterpolationCallback&, const RequiresBlendingForAccumulativeIterationCallback&) const;
+    using RequiresInterpolationForAccumulativeIterationCallback = Function<bool()>;
+    void interpolateKeyframes(Property, const KeyframeInterval&, double iterationProgress, double currentIteration, const WebAnimationTime& iterationDuration, TimingFunction::Before, const CompositionCallback&, const AccumulationCallback&, const InterpolationCallback&, const RequiresInterpolationForAccumulativeIterationCallback&) const;
 
     virtual ~KeyframeInterpolation() = default;
 };

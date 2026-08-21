@@ -31,7 +31,7 @@
 #include "LegacyInlineTextBox.h"
 #include "PaintInfo.h"
 #include "RenderLayer.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -65,9 +65,11 @@ struct GlyphDisplayListCacheKeyTranslator {
         return computeHash(key);
     }
 
-    static bool equal(const SingleThreadWeakRef<GlyphDisplayListCacheEntry>& entryRef, const GlyphDisplayListCacheKey& key)
+    static bool equal(const WeakPtr<GlyphDisplayListCacheEntry, SingleThreadWeakPtrImpl>& entryRef, const GlyphDisplayListCacheKey& key)
     {
-        auto& entry = entryRef.get();
+        if (!entryRef)
+            return false;
+        auto& entry = *entryRef;
         return entry.m_textRun == key.textRun
             && entry.m_scaleFactor == key.scaleFactor
             && entry.m_fontCascadeGeneration == key.fontCascadeGeneration
@@ -93,7 +95,7 @@ unsigned GlyphDisplayListCache::size() const
 }
 
 template<typename LayoutRun>
-DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getDisplayList(const LayoutRun& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
         if (!m_entries.isEmpty()) {
@@ -106,7 +108,7 @@ DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun&
     if (font.isLoadingCustomFonts() || !font.fonts())
         return nullptr;
 
-    if (auto* result = getIfExists(run))
+    if (RefPtr result = getIfExists(run))
         return result;
 
     bool isFrequentlyPainted = paintInfo.enclosingSelfPaintingLayer()->paintingFrequently();
@@ -117,39 +119,48 @@ DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun&
             return nullptr;
     }
 
-    if (auto iterator = m_entries.find<GlyphDisplayListCacheKeyTranslator>(GlyphDisplayListCacheKey { textRun, font, context }); iterator != m_entries.end()) {
-        Ref entry { iterator->get() };
-        auto* result = &entry->displayList();
+    if (auto iterator = m_entries.findIf([&](auto& weakEntry) {
+        return GlyphDisplayListCacheKeyTranslator::equal(weakEntry, GlyphDisplayListCacheKey { textRun, font, context });
+    }); iterator != m_entries.end()) {
+        RefPtr<GlyphDisplayListCacheEntry> entry = iterator->get();
+        if (!entry)
+            m_entries.remove(iterator);
+        else {
         const_cast<LayoutRun&>(run).setIsInGlyphDisplayListCache();
-        m_entriesForLayoutRun.add(&run, WTFMove(entry));
+            RefPtr result = &entry->displayList();
+            m_entriesForLayoutRun.add(&run, entry.releaseNonNull());
         return result;
     }
+    }
 
-    if (auto displayList = font.displayListForTextRun(context, textRun)) {
-        Ref entry = GlyphDisplayListCacheEntry::create(WTFMove(displayList), textRun, font, context);
-        auto* result = &entry->displayList();
-        if (canShareDisplayList(*result))
-            m_entries.add(entry.get());
+    if (RefPtr displayList = font.displayListForTextRun(context, textRun)) {
+        Ref entry = GlyphDisplayListCacheEntry::create(displayList.releaseNonNull(), textRun, font, context);
+        Ref result = entry->displayList();
+        if (canShareDisplayList(result)) {
+            m_entries.append(entry.get());
+            if (m_entries.size() > s_maxDeduplicationCacheSize)
+                m_entries.removeFirst();
+        }
         const_cast<LayoutRun&>(run).setIsInGlyphDisplayListCache();
-        m_entriesForLayoutRun.add(&run, WTFMove(entry));
+        m_entriesForLayoutRun.add(&run, WTF::move(entry));
         return result;
     }
 
     return nullptr;
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::get(const LegacyInlineTextBox& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const LegacyInlineTextBox& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     return getDisplayList(run, font, context, textRun, paintInfo);
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::get(const InlineDisplay::Box& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const InlineDisplay::Box& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     return getDisplayList(run, font, context, textRun, paintInfo);
 }
 
 template<typename LayoutRun>
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExistsImpl(const LayoutRun& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExistsImpl(const LayoutRun& run)
 {
     if (!run.isInGlyphDisplayListCache())
         return nullptr;
@@ -158,12 +169,12 @@ DisplayList::DisplayList* GlyphDisplayListCache::getIfExistsImpl(const LayoutRun
     return nullptr;
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExists(const LegacyInlineTextBox& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const LegacyInlineTextBox& run)
 {
     return getIfExistsImpl(run);
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExists(const InlineDisplay::Box& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const InlineDisplay::Box& run)
 {
     return getIfExistsImpl(run);
 }
@@ -179,9 +190,12 @@ bool GlyphDisplayListCache::canShareDisplayList(const DisplayList::DisplayList& 
         if (!(std::holds_alternative<DisplayList::Translate>(item)
             || std::holds_alternative<DisplayList::Scale>(item)
             || std::holds_alternative<DisplayList::ConcatenateCTM>(item)
-            || std::holds_alternative<DisplayList::DrawDecomposedGlyphs>(item)
+            || std::holds_alternative<DisplayList::DrawGlyphs>(item)
             || std::holds_alternative<DisplayList::DrawImageBuffer>(item)
             || std::holds_alternative<DisplayList::DrawNativeImage>(item)
+#if USE(SKIA)
+            || std::holds_alternative<DisplayList::DrawTextBlob>(item)
+#endif
             || std::holds_alternative<DisplayList::BeginTransparencyLayer>(item)
             || std::holds_alternative<DisplayList::BeginTransparencyLayerWithCompositeMode>(item)
             || std::holds_alternative<DisplayList::EndTransparencyLayer>(item)))
@@ -190,9 +204,5 @@ bool GlyphDisplayListCache::canShareDisplayList(const DisplayList::DisplayList& 
     return true;
 }
 
-GlyphDisplayListCacheEntry::~GlyphDisplayListCacheEntry()
-{
-    GlyphDisplayListCache::singleton().m_entries.remove(this);
-}
 
 } // namespace WebCore

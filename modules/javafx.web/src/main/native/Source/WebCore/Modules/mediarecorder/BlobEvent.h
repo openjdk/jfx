@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,11 @@ namespace WebCore {
 class Blob;
 
 class BlobEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BlobEvent);
+    WTF_MAKE_TZONE_ALLOCATED(BlobEvent);
 public:
     struct Init : EventInit {
         RefPtr<Blob> data;
-        double timecode;
+        std::optional<double> timecode;
     };
 
     static Ref<BlobEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
@@ -49,7 +49,7 @@ private:
     BlobEvent(const AtomString&, Init&&, IsTrusted);
     BlobEvent(const AtomString&, CanBubble, IsCancelable, Ref<Blob>&&);
 
-    Ref<Blob> m_blob;
+    const Ref<Blob> m_blob;
     double m_timecode { 0 };
 };
 

@@ -34,21 +34,36 @@ namespace WebCore {
 
 class GraphicsContext;
 
-class BitmapTextureJava : public BitmapTexture {
+class BitmapTextureJava : public ThreadSafeRefCounted<BitmapTextureJava> {
 public:
-    static Ref<BitmapTexture> create() { return adoptRef(*new BitmapTextureJava); }
-    IntSize size() const override { return m_image->backendSize(); }
-    void didReset() override;
-    bool isValid() const override { return m_image.get(); }
+    enum Flag {
+            NoFlag = 0,
+            SupportsAlpha = 1 << 0,
+            DepthBuffer = 1 << 1,
+        };
+
+    typedef unsigned Flags;
+    static Ref<BitmapTextureJava> create() { return adoptRef(*new BitmapTextureJava); }
+    IntSize size() const { return m_image->backendSize(); }
+    void didReset();
+    bool isValid() const { return m_image.get(); }
     inline GraphicsContext* graphicsContext() { return m_image ? &(m_image->context()) : nullptr; }
-    void updateContents(NativeImage*, const IntRect&, const IntPoint&) override;
-    void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine) override;
-    RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool) override;
+    void updateContents(NativeImage*, const IntRect&, const IntPoint&);
+    void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine);
     ImageBuffer* image() const { return m_image.get(); }
+    void reset(const IntSize& size, Flags flags = 0)
+    {
+            m_flags = flags;
+            m_contentSize = size;
+            didReset();
+    }
+    inline IntSize contentSize() const { return m_contentSize; }
 
 private:
-    BitmapTextureJava() { }
+    BitmapTextureJava(): m_flags(0) { }
     RefPtr<ImageBuffer> m_image;
+    IntSize m_contentSize;
+    Flags m_flags;
 };
 
 }

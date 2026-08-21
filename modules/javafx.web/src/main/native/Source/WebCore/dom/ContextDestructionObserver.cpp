@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,27 +43,22 @@ ContextDestructionObserver::~ContextDestructionObserver()
 
 void ContextDestructionObserver::observeContext(ScriptExecutionContext* scriptExecutionContext)
 {
-    if (m_scriptExecutionContext) {
-        ASSERT(m_scriptExecutionContext->isContextThread());
-        m_scriptExecutionContext->willDestroyDestructionObserver(*this);
+    if (RefPtr context = m_scriptExecutionContext.get()) {
+        ASSERT(context->isContextThread());
+        context->willDestroyDestructionObserver(*this);
     }
 
     m_scriptExecutionContext = WeakPtr { scriptExecutionContext, EnableWeakPtrThreadingAssertions::No };
 
-    if (m_scriptExecutionContext) {
-        ASSERT(m_scriptExecutionContext->isContextThread());
-        m_scriptExecutionContext->didCreateDestructionObserver(*this);
+    if (RefPtr context = m_scriptExecutionContext.get()) {
+        ASSERT(context->isContextThread());
+        context->didCreateDestructionObserver(*this);
     }
 }
 
 void ContextDestructionObserver::contextDestroyed()
 {
     m_scriptExecutionContext = nullptr;
-}
-
-RefPtr<ScriptExecutionContext> ContextDestructionObserver::protectedScriptExecutionContext() const
-{
-    return m_scriptExecutionContext.get();
 }
 
 } // namespace WebCore

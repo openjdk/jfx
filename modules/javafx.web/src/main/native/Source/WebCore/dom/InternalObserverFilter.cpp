@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverFilter.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "Observable.h"
 #include "PredicateCallback.h"
@@ -53,7 +54,7 @@ public:
             return adoptRef(*new InternalObserverFilter::SubscriberCallbackFilter(context, source, predicate));
         }
 
-        CallbackResult<void> handleEvent(Subscriber& subscriber) final
+        CallbackResult<void> invoke(Subscriber& subscriber) final
         {
             RefPtr context = scriptExecutionContext();
 
@@ -63,15 +64,15 @@ public:
             }
 
             SubscribeOptions options;
-            options.signal = &subscriber.signal();
+            options.signal = subscriber.signal();
             m_sourceObservable->subscribeInternal(*context, InternalObserverFilter::create(*context, subscriber, m_predicate), options);
 
             return { };
         }
 
-        CallbackResult<void> handleEventRethrowingException(Subscriber& subscriber) final
+        CallbackResult<void> invokeRethrowingException(Subscriber& subscriber) final
         {
-            return handleEvent(subscriber);
+            return invoke(subscriber);
         }
 
     private:
@@ -104,7 +105,7 @@ private:
         JSC::Exception* previousException = nullptr;
         {
             auto catchScope = DECLARE_CATCH_SCOPE(vm);
-            auto result = protectedPredicate()->handleEventRethrowingException(value, m_idx);
+            auto result = protectedPredicate()->invokeRethrowingException(value, m_idx);
             previousException = catchScope.exception();
             if (previousException) {
                 catchScope.clearException();

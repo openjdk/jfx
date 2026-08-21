@@ -26,13 +26,15 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
 namespace Cpp {
 
 using VectorUInt8 = WTF::Vector<uint8_t>;
 using SpanConstUInt8 = std::span<const uint8_t>;
-using OptionalVectorUInt8 = std::optional<WTF::Vector<uint8_t>>;
 
 enum class ErrorCodes: int {
     Success = 0,
@@ -59,9 +61,3 @@ struct CryptoOperationReturnValue {
 };
 
 } // Cpp
-
-#ifndef __swift__
-WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
-#include "PALSwift-Generated.h"
-WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
-#endif

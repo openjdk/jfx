@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import com.sun.jfx.incubator.scene.control.richtext.RichParagraphHelper;
 import com.sun.jfx.incubator.scene.control.richtext.TextCell;
-import jfx.incubator.scene.control.richtext.StyleResolver;
 
 /**
  * Represents a single immutable paragraph within the {@code StyledModel}.
@@ -90,8 +89,13 @@ public abstract class RichParagraph {
             }
 
             @Override
-            List<StyledSegment> getSegments() {
-                return null;
+            public int getSegmentCount() {
+                return 0;
+            }
+
+            @Override
+            public StyledSegment getSegment(int index) {
+                throw new IndexOutOfBoundsException();
             }
         };
     }
@@ -112,8 +116,21 @@ public abstract class RichParagraph {
      */
     public abstract String getPlainText();
 
-    // this method could be made public, as long as the returned list is made immutable
-    abstract List<StyledSegment> getSegments();
+    /**
+     * Returns the number of segments in the paragraph.
+     * @return the number of segments
+     * @since 26
+     */
+    public abstract int getSegmentCount();
+
+    /**
+     * Returns the segment at the specified index.
+     * @param index the segment index
+     * @return the segment
+     * @throws IndexOutOfBoundsException if the index is outside of the range {@code 0 ... getSegmentCount()-1} (inclusive)
+     * @since 26
+     */
+    public abstract StyledSegment getSegment(int index);
 
     /**
      * Returns the paragraph attributes.
@@ -123,20 +140,20 @@ public abstract class RichParagraph {
         return null;
     }
 
+    // see VFlow.createTextCell()
     List<Consumer<TextCell>> getHighlights() {
         return null;
     }
 
     // for use by StyledTextModel
     void export(int start, int end, StyledOutput out) throws IOException {
-        List<StyledSegment> segments = getSegments();
-        if (segments == null) {
+        int sz = getSegmentCount();
+        if (sz == 0) {
             out.consume(StyledSegment.of(""));
         } else {
             int off = 0;
-            int sz = segments.size();
             for (int i = 0; i < sz; i++) {
-                StyledSegment seg = segments.get(i);
+                StyledSegment seg = getSegment(i);
                 String text = seg.getText();
                 int len = (text == null ? 0 : text.length());
                 if (start <= (off + len)) {
@@ -157,11 +174,6 @@ public abstract class RichParagraph {
 
     private static void initAccessor() {
         RichParagraphHelper.setAccessor(new RichParagraphHelper.Accessor() {
-            @Override
-            public List<StyledSegment> getSegments(RichParagraph p) {
-                return p.getSegments();
-            }
-
             @Override
             public List<Consumer<TextCell>> getHighlights(RichParagraph p) {
                 return p.getHighlights();
@@ -198,7 +210,7 @@ public abstract class RichParagraph {
         public Builder addWavyUnderline(int start, int length, Color color) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, color);
+                cell.addWavyUnderline(start, end, color);
             });
             return this;
         }
@@ -217,7 +229,7 @@ public abstract class RichParagraph {
         public Builder addWavyUnderline(int start, int length, String ... css) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, css);
+                cell.addWavyUnderline(start, end, css);
             });
             return this;
         }
@@ -367,7 +379,24 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addInlineNode(Supplier<Node> generator) {
-            StyledSegment seg = StyledSegment.ofInlineNode(generator);
+            return addInlineNode(generator, null);
+        }
+
+        /**
+         * Adds an inline node.
+         * <p>
+         * The supplied generator must not cache or keep a reference to the created Node,
+         * but the created Node can keep a reference to the model or some property therein.
+         * <p>
+         * For example, a bidirectional binding between an inline control and some property in the model
+         * would synchronize the model with all the views that use it.
+         * @param generator the generator that provides the actual {@code Node}
+         * @param a the segment styles
+         * @return this {@code Builder} instance
+         * @since 27
+         */
+        public Builder addInlineNode(Supplier<Node> generator, StyleAttributeMap a) {
+            StyledSegment seg = StyledSegment.ofInlineNode(generator, a);
             segments().add(seg);
             return this;
         }
@@ -390,14 +419,37 @@ public abstract class RichParagraph {
         }
 
         /**
+         * Returns the number of segments currently added to the builder.
+         * @return the number of segments
+         * @since 26
+         */
+        public int getSegmentCount() {
+            return (segments == null ?  0 : segments.size());
+        }
+
+        /**
+         * Returns the segment at the specified index.
+         * @param index the segment index
+         * @return the segment
+         * @throws IndexOutOfBoundsException if the index is outside of the range {@code 0 ... getSegmentCount()-1} (inclusive)
+         * @since 26
+         */
+        public StyledSegment getSegment(int index) {
+            if (segments == null) {
+                throw new IndexOutOfBoundsException(index);
+            }
+            return segments.get(index);
+        }
+
+        /**
          * Creates an instance of immutable {@code RichParagraph} from information
          * in this {@code Builder}.
          * @return the new paragraph instance
          */
         public RichParagraph build() {
             List<Consumer<TextCell>> _highlights = highlights;
-            StyleAttributeMap _paragraphAttributes = paragraphAttributes;
-            List<StyledSegment> _segments = (segments == null ? null : List.copyOf(segments));
+            StyleAttributeMap _paragraphAttributes = (paragraphAttributes == null ? StyleAttributeMap.EMPTY : paragraphAttributes);
+            List<StyledSegment> _segments = (segments == null ? List.of() : List.copyOf(segments));
 
             return new RichParagraph() {
                 @Override
@@ -406,13 +458,18 @@ public abstract class RichParagraph {
                 }
 
                 @Override
-                List<StyledSegment> getSegments() {
-                    return _segments;
+                public int getSegmentCount() {
+                    return _segments.size();
+                }
+
+                @Override
+                public StyledSegment getSegment(int index) {
+                    return _segments.get(index);
                 }
 
                 @Override
                 public String getPlainText() {
-                    if (_segments == null) {
+                    if (getSegmentCount() == 0) {
                         return "";
                     }
 

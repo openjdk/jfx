@@ -32,20 +32,21 @@
 #include "LocalFrameView.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderIFrame);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderIFrame);
 
 using namespace HTMLNames;
 
 RenderIFrame::RenderIFrame(HTMLIFrameElement& element, RenderStyle&& style)
-    : RenderFrameBase(Type::IFrame, element, WTFMove(style))
+    : RenderFrameBase(Type::IFrame, element, WTF::move(style))
 {
     ASSERT(isRenderIFrame());
 }
@@ -57,15 +58,14 @@ HTMLIFrameElement& RenderIFrame::iframeElement() const
     return downcast<HTMLIFrameElement>(RenderFrameBase::frameOwnerElement());
 }
 
-bool RenderIFrame::isNonReplacedAtomicInline() const
+Ref<HTMLIFrameElement> RenderIFrame::protectedIframeElement() const
 {
-    // FIXME: iFrames should not override this function.
-    return isInline();
+    return iframeElement();
 }
 
 bool RenderIFrame::requiresLayer() const
 {
-    return RenderFrameBase::requiresLayer() || style().resize() != Resize::None;
+    return RenderFrameBase::requiresLayer() || style().resize() != Style::Resize::None;
 }
 
 bool RenderIFrame::isFullScreenIFrame() const

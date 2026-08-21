@@ -25,12 +25,12 @@
  */
 
 #include "config.h"
+#include "AudioParamTimeline.h"
 
 #if ENABLE(WEB_AUDIO)
 
-#include "AudioParamTimeline.h"
-
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "FloatConversion.h"
 #include "VectorMath.h"
 #include <algorithm>
@@ -117,7 +117,7 @@ ExceptionOr<void> AudioParamTimeline::setValueCurveAtTime(Vector<float>&& curve,
     Locker locker { m_eventsLock };
 
     float curveEndValue = curve.last();
-    auto result = insertEvent(ParamEvent::createSetValueCurveEvent(WTFMove(curve), time, duration));
+    auto result = insertEvent(ParamEvent::createSetValueCurveEvent(WTF::move(curve), time, duration));
     if (result.hasException())
         return result.releaseException();
 
@@ -184,7 +184,7 @@ ExceptionOr<void> AudioParamTimeline::insertEvent(ParamEvent&& event)
         ++i;
     }
 
-    m_events.insert(i, WTFMove(event));
+    m_events.insert(i, WTF::move(event));
     return { };
 }
 
@@ -211,7 +211,7 @@ void AudioParamTimeline::cancelScheduledValues(Seconds cancelTime)
     // Remove all events starting at cancelTime.
     for (unsigned i = 0; i < m_events.size(); ++i) {
         if (isAfter(m_events[i], cancelTime)) {
-            m_events.remove(i, m_events.size() - i);
+            m_events.removeAt(i, m_events.size() - i);
             break;
         }
     }
@@ -255,7 +255,7 @@ ExceptionOr<void> AudioParamTimeline::cancelAndHoldAtTime(Seconds cancelTime)
         // for a CancelValues event so that we can properly cancel the event
         // and hold the value.
         auto savedEvent = ParamEvent::SavedEvent { eventType, cancelledEvent.value(), cancelledEvent.time() };
-        newEvent = ParamEvent::createCancelValuesEvent(cancelTime, WTFMove(savedEvent));
+        newEvent = ParamEvent::createCancelValuesEvent(cancelTime, WTF::move(savedEvent));
         break;
     }
     case ParamEvent::SetTarget: {
@@ -310,11 +310,11 @@ ExceptionOr<void> AudioParamTimeline::cancelAndHoldAtTime(Seconds cancelTime)
 
     // Insert the new event, if any.
     if (newEvent) {
-        auto result = insertEvent(WTFMove(*newEvent));
+        auto result = insertEvent(WTF::move(*newEvent));
         if (result.hasException())
             return result.releaseException();
         if (newSetValueEvent) {
-            insertEvent(WTFMove(*newSetValueEvent));
+            insertEvent(WTF::move(*newSetValueEvent));
             if (result.hasException())
                 return result.releaseException();
         }
@@ -325,7 +325,7 @@ ExceptionOr<void> AudioParamTimeline::cancelAndHoldAtTime(Seconds cancelTime)
 
 void AudioParamTimeline::removeCancelledEvents(size_t firstEventToRemove)
 {
-    m_events.remove(firstEventToRemove, m_events.size() - firstEventToRemove);
+    m_events.removeAt(firstEventToRemove, m_events.size() - firstEventToRemove);
 }
 
 void AudioParamTimeline::removeOldEvents(size_t eventCount)
@@ -335,7 +335,7 @@ void AudioParamTimeline::removeOldEvents(size_t eventCount)
         return;
 
     // Always leave at least one event in the list.
-    m_events.remove(0, std::min(eventCount, m_events.size() - 1));
+    m_events.removeAt(0, std::min(eventCount, m_events.size() - 1));
 }
 
 std::optional<float> AudioParamTimeline::valueForContextTime(BaseAudioContext& context, float defaultValue, float minValue, float maxValue)
@@ -836,9 +836,16 @@ float AudioParamTimeline::linearRampAtTime(Seconds t, float value1, Seconds time
     return value1 + (value2 - value1) * (t - time1).value() / (time2 - time1).value();
 }
 
+// See : https://webaudio.github.io/web-audio-api/#dom-audioparam-exponentialramptovalueattime
 float AudioParamTimeline::exponentialRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2)
 {
-    return value1 * pow(value2 / value1, (t - time1).value() / (time2 - time1).value());
+    ASSERT(std::isfinite(value1));
+    ASSERT(std::isfinite(value2));
+    ASSERT(time2 > time1);
+
+    return (!value1 || (value2 && std::signbit(value1) != std::signbit(value2)))
+        ? value1
+        : value1 * std::pow(value2 / value1, (t - time1).value() / (time2 - time1).value());
 }
 
 float AudioParamTimeline::valueCurveAtTime(Seconds t, Seconds time1, Seconds duration, std::span<const float> curveData, size_t curveLength)
@@ -953,7 +960,7 @@ auto AudioParamTimeline::ParamEvent::createSetValueCurveEvent(Vector<float>&& cu
 {
     double curvePointsPerSecond = (curve.size() - 1) / duration.value();
     float curveEndValue = curve.last();
-    return { ParamEvent::SetValueCurve, 0, time, 0, duration, WTFMove(curve), curvePointsPerSecond, curveEndValue, std::nullopt };
+    return { ParamEvent::SetValueCurve, 0, time, 0, duration, WTF::move(curve), curvePointsPerSecond, curveEndValue, std::nullopt };
 }
 
 auto AudioParamTimeline::ParamEvent::createCancelValuesEvent(Seconds cancelTime, std::optional<SavedEvent>&& savedEvent) -> ParamEvent
@@ -969,7 +976,7 @@ auto AudioParamTimeline::ParamEvent::createCancelValuesEvent(Seconds cancelTime,
             || savedEventType == ParamEvent::SetValueCurve);
     }
 #endif
-    return { ParamEvent::CancelValues, 0, cancelTime, 0, Seconds { }, Vector<float> { }, 0, 0, WTFMove(savedEvent) };
+    return { ParamEvent::CancelValues, 0, cancelTime, 0, Seconds { }, Vector<float> { }, 0, 0, WTF::move(savedEvent) };
 }
 
 bool AudioParamTimeline::isEventCurrent(const ParamEvent& event, const ParamEvent* nextEvent, size_t currentFrame, double sampleRate) const

@@ -36,7 +36,7 @@ enum class RefCounterEvent { Decrement, Increment };
 
 template<typename T>
 class RefCounter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RefCounter);
     WTF_MAKE_NONCOPYABLE(RefCounter);
 
     class Count {
@@ -132,7 +132,7 @@ inline void RefCounter<T>::Count::refCounterWasDeleted()
 
 template<typename T>
 inline RefCounter<T>::RefCounter(ValueChangeFunction&& valueDidChange)
-    : m_valueDidChange(WTFMove(valueDidChange))
+    : m_valueDidChange(WTF::move(valueDidChange))
     , m_count(new Count(*this))
 {
 }

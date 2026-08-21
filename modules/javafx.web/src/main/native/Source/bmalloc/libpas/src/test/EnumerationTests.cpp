@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Apple Inc. All rights reserved.
+ * Copyright (c) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "TestHarness.h"
 #include "pas_root.h"
 #include "bmalloc_heap.h"
+#include "pas_compact_heap_reservation.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_heap.h"
 #include "iso_heap.h"
@@ -106,30 +107,28 @@ struct ReaderRange {
         PAS_ASSERT(size);
     }
 
-    bool operator<(ReaderRange other) const
-    {
-        if (base != other.base)
-            return base < other.base;
-        return size < other.size;
-    }
-
     void* base { nullptr };
     size_t size { 0 };
 };
 
 map<pas_enumerator_record_kind, set<RecordedRange>> recordedRanges;
-map<ReaderRange, void*> readerCache;
+ReaderRange readerPreviousBuffer;
 
 void* enumeratorReader(pas_enumerator* enumerator, void* address, size_t size, void* arg)
 {
     CHECK(!arg);
     CHECK(size);
 
-    ReaderRange range = ReaderRange(address, size);
-
-    auto readerCacheIter = readerCache.find(range);
-    if (readerCacheIter != readerCache.end())
-        return readerCacheIter->second;
+    // Scribble the previously returned buffer to simulate the previously mapped region
+    // being invalidated as per the specification of memory_reader_t in malloc.h:
+    //
+    // typedef kern_return_t memory_reader_t(task_t remote_task, vm_address_t remote_address, vm_size_t size, void * __sized_by(size) *local_memory);
+    //
+    // given a task, "reads" the memory at the given address and size
+    // local_memory: set to a contiguous chunk of memory; validity of local_memory is assumed to be limited (until next call)
+    //
+    if (readerPreviousBuffer.base && readerPreviousBuffer.size)
+        memset(readerPreviousBuffer.base, 0xda, readerPreviousBuffer.size);
 
     void* result = pas_enumerator_allocate(enumerator, size);
 
@@ -175,7 +174,7 @@ void* enumeratorReader(pas_enumerator* enumerator, void* address, size_t size, v
         PAS_ASSERT(!systemResult);
     }
 
-    readerCache[range] = result;
+    readerPreviousBuffer = ReaderRange(result, size);
     return result;
 }
 
@@ -243,7 +242,7 @@ void testPGMEnumerationBasic() {
 
     pas_enumerator* enumerator = pas_enumerator_create(root, enumeratorReader, nullptr, enumeratorRecorder, nullptr, pas_enumerator_record_meta_records, pas_enumerator_record_payload_records, pas_enumerator_record_object_records);
     pas_enumerator_enumerate_all(enumerator);
-
+    CHECK(enumerator);
     pas_enumerator_destroy(enumerator);
 }
 
@@ -277,10 +276,43 @@ void testPGMEnumerationAddAndFree() {
     pas_enumerator* enumerator = pas_enumerator_create(root, enumeratorReader, nullptr, enumeratorRecorder, nullptr, pas_enumerator_record_meta_records, pas_enumerator_record_payload_records, pas_enumerator_record_object_records);
     pas_enumerator_enumerate_all(enumerator);
 
+    CHECK(enumerator);
     pas_enumerator_destroy(enumerator);
 
 }
 
+void testEnumerationInvalidCompactHeapBump()
+{
+    pas_heap_lock_lock();
+    pas_root* root = pas_root_create();
+    pas_heap_lock_unlock();
+
+    // Do an allocation to ensure the compact heap is initialized.
+    void* p = bmalloc_try_allocate(16, pas_non_compact_allocation_mode);
+    PAS_ASSERT(p);
+
+    size_t saved_bump = pas_compact_heap_reservation_bump;
+    // Set invalid bump size
+    pas_compact_heap_reservation_bump = pas_compact_heap_reservation_size + 1;
+
+    pas_enumerator* enumerator = pas_enumerator_create(
+        root, enumeratorReader, nullptr, enumeratorRecorder, nullptr,
+        pas_enumerator_do_not_record_meta_records,
+        pas_enumerator_do_not_record_payload_records,
+        pas_enumerator_do_not_record_object_records);
+    CHECK(!enumerator);
+
+    // Restore and verify normal creation still works.
+    pas_compact_heap_reservation_bump = saved_bump;
+
+    enumerator = pas_enumerator_create(
+        root, enumeratorReader, nullptr, enumeratorRecorder, nullptr,
+        pas_enumerator_do_not_record_meta_records,
+        pas_enumerator_do_not_record_payload_records,
+        pas_enumerator_do_not_record_object_records);
+    CHECK(enumerator);
+    pas_enumerator_destroy(enumerator);
+}
 
 } // end namespace
 
@@ -288,4 +320,5 @@ void addEnumerationTests() {
     ADD_TEST(testBasicEnumeration());
     ADD_TEST(testPGMEnumerationBasic());
     ADD_TEST(testPGMEnumerationAddAndFree());
+    ADD_TEST(testEnumerationInvalidCompactHeapBump());
 }

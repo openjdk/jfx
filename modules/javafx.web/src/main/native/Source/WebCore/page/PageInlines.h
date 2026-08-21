@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "MediaProducer.h"
-#include "Page.h"
+#include <WebCore/KeyboardScrollingAnimator.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/Page.h>
 
 namespace WebCore {
 
@@ -38,6 +39,11 @@ inline bool Page::isAudioMuted() const
 inline bool Page::isMediaCaptureMuted() const
 {
     return m_mutedState.containsAny(MediaProducer::MediaStreamCaptureIsMuted);
+}
+
+inline KeyboardScrollingAnimator* Page::currentKeyboardScrollingAnimator() const
+{
+    return m_currentKeyboardScrollingAnimator.get();
 }
 
 }

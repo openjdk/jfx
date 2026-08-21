@@ -132,7 +132,8 @@ ALWAYS_INLINE void JIT::appendCallWithExceptionCheck(Address function)
 template<typename OperationType>
 ALWAYS_INLINE MacroAssembler::Call JIT::appendCallSetJSValueResult(const CodePtr<CFunctionPtrTag> function, VirtualRegister dst)
 {
-    MacroAssembler::Call call = appendCallWithExceptionCheck<OperationType>(function);
+    updateTopCallFrame();
+    MacroAssembler::Call call = appendCall(function);
     emitPutVirtualRegister(dst, returnValueJSR);
     return call;
 }
@@ -140,7 +141,8 @@ ALWAYS_INLINE MacroAssembler::Call JIT::appendCallSetJSValueResult(const CodePtr
 template<typename OperationType>
 ALWAYS_INLINE void JIT::appendCallSetJSValueResult(Address function, VirtualRegister dst)
 {
-    appendCallWithExceptionCheck<OperationType>(function);
+    updateTopCallFrame();
+    appendCall(function);
     emitPutVirtualRegister(dst, returnValueJSR);
 }
 
@@ -176,9 +178,9 @@ ALWAYS_INLINE void JIT::appendCallWithExceptionCheckSetJSValueResultWithProfile(
     emitPutVirtualRegister(dst, returnValueJSR);
 }
 
-ALWAYS_INLINE void JIT::linkAllSlowCasesForBytecodeIndex(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, BytecodeIndex bytecodeIndex)
+ALWAYS_INLINE void JIT::linkAllSlowCasesUpToBytecodeIndex(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, BytecodeIndex bytecodeIndex)
 {
-    while (iter != slowCases.end() && iter->to == bytecodeIndex)
+    while (iter != slowCases.end() && iter->to <= bytecodeIndex)
         linkSlowCase(iter);
 }
 
@@ -407,6 +409,7 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegisterTag(VirtualRegister src, RegisterI
     }
     load32(tagFor(src), dst);
 }
+
 #elif USE(JSVALUE64)
 ALWAYS_INLINE void JIT::emitGetVirtualRegister(VirtualRegister src, RegisterID dst)
 {
@@ -420,8 +423,7 @@ ALWAYS_INLINE void JIT::emitPutVirtualRegister(VirtualRegister dst, RegisterID f
 
 ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotInt(RegisterID reg1, RegisterID reg2, RegisterID scratch)
 {
-    move(reg1, scratch);
-    and64(reg2, scratch);
+    and64(reg1, reg2, scratch);
     return branchIfNotInt32(scratch);
 }
 
@@ -475,6 +477,53 @@ template<>
 ALWAYS_INLINE ECMAMode JIT::ecmaMode<OpPutPrivateName>(OpPutPrivateName)
 {
     return ECMAMode::strict();
+}
+
+template<size_t minAlign, typename Bytecode>
+ALWAYS_INLINE MacroAssembler::Address JIT::computeBaseAddressForMetadata(const Bytecode& bytecode, GPRReg metadataGPR)
+{
+    // This function attempts to decide what the best base address is when
+    // loading fields from a bytecode instruction's metadata. If offsets are
+    // small enough, we want to emit a single load directly offset from the
+    // metadata table register. But if they're too big, we want to materialize
+    // the metadata offset of the current instruction into a register only
+    // once, so repeated loads don't need to redo that arithmetic.
+
+    // Note: minAlign is very important to get right, but hard to check for
+    // automatically. It should be the minimum alignment or access size across
+    // all the operations we use this address for. This is critical on ARM64
+    // (where this function is most useful) because we have a substantially
+    // larger addressible range when we can assume the access is aligned to
+    // the access size. One important note is that we assume that any accesses
+    // larger than the specified minAlign are also aligned - only then is it
+    // the case that an offset being encodable at a smaller access size also
+    // implies that it is encodable at a larger access size.
+
+    using Metadata = typename Bytecode::Metadata;
+    static_assert(WTF::roundUpToMultipleOf<minAlign>(alignof(Metadata)) == alignof(Metadata));
+    uint32_t metadataOffset = m_profiledCodeBlock->metadataTable()->offsetInMetadataTable(bytecode);
+
+#if CPU(X86) || CPU(X86_64)
+    // On x86 and x86_64, we can directly encode up to a 32-bit displacement.
+    // We use 1 << 30 to be extra conservative that adding a further offset
+    // won't cause a signed overflow.
+    bool shouldEncodeMetadataOffsetInline = metadataOffset < (1u << 30);
+#elif CPU(ARM64)
+    // On arm64, we can only encode a 9-bit signed unaligned offset, or a
+    // 12-bit unsigned aligned offset. We use the same checks used elsewhere
+    // in the macro assembler to see if our offset fits one of those.
+    auto canEncodeOffset = [](int32_t offset) -> bool {
+        return ARM64Assembler::canEncodePImmOffset<minAlign * 8>(offset) || ARM64Assembler::canEncodeSImmOffset(offset);
+    };
+    bool shouldEncodeMetadataOffsetInline = canEncodeOffset(metadataOffset + sizeof(Metadata));
+#else
+    bool shouldEncodeMetadataOffsetInline = false;
+#endif
+
+    if (shouldEncodeMetadataOffsetInline)
+        return Address(GPRInfo::metadataTableRegister, metadataOffset);
+    addPtr(TrustedImm32(metadataOffset), GPRInfo::metadataTableRegister, metadataGPR);
+    return Address(metadataGPR);
 }
 
 template <typename Bytecode>

@@ -32,11 +32,12 @@
 #include "config.h"
 #include "EventTarget.h"
 
-#include "AddEventListenerOptions.h"
+#include "AddEventListenerOptionsInlines.h"
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
 #include "EventPath.h"
 #include "EventTargetConcrete.h"
+#include "EventTargetInlines.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
@@ -62,7 +63,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EventTargetData);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EventTarget);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EventTarget);
 
 struct SameSizeAsEventTarget : ScriptWrappable, CanMakeWeakPtrWithBitField<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
     virtual ~SameSizeAsEventTarget() = default; // Allocate vtable pointer.
@@ -80,6 +81,11 @@ EventTarget::~EventTarget()
     // Explicitly tearing down since WeakPtrImpl can be alive longer than EventTarget.
     if (auto* eventTargetData = this->eventTargetData())
         eventTargetData->clear();
+}
+
+RefPtr<ScriptExecutionContext> EventTarget::protectedScriptExecutionContext() const
+{
+    return scriptExecutionContext();
 }
 
 bool EventTarget::isPaymentRequest() const
@@ -107,7 +113,14 @@ bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListene
         return jsEventListener && !jsEventListener->wasCreatedFromMarkup();
     }();
 
-    if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.value_or(false), options.once }))
+    bool trustedOnly = false;
+    if (options.webkitTrustedOnly) {
+        auto* function = listener->jsFunction();
+        if (function && worldForDOMObject(*function).allowAutofill())
+            trustedOnly = true;
+    }
+
+    if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.value_or(false), options.once, trustedOnly }))
         return false;
 
     if (RefPtr signal = options.signal) {
@@ -137,7 +150,7 @@ void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPt
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE addEventListener(eventType, listener.releaseNonNull(), capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, EventListenerOptionsOrBoolean&& variant)
@@ -153,7 +166,7 @@ void EventTarget::removeEventListenerForBindings(const AtomString& eventType, Re
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE removeEventListener(eventType, *listener, capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
@@ -225,7 +238,7 @@ bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<
 
 RefPtr<EventListener> EventTarget::attributeEventListener(const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
-    for (RefPtr eventListener : eventListeners(eventType)) {
+    for (Ref eventListener : eventListeners(eventType)) {
         RefPtr jsListener = dynamicDowncast<JSEventListener>(eventListener->callback());
         if (jsListener && jsListener->isAttribute() && jsListener->isolatedWorld() == &isolatedWorld)
             return jsListener;
@@ -345,12 +358,15 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
     InspectorInstrumentation::willDispatchEvent(context, event);
 
     for (auto& registeredListener : listeners) {
-        if (UNLIKELY(registeredListener->wasRemoved()))
+        if (registeredListener->wasRemoved()) [[unlikely]]
             continue;
 
         if (phase == EventInvokePhase::Capturing && !registeredListener->useCapture())
             continue;
         if (phase == EventInvokePhase::Bubbling && registeredListener->useCapture())
+            continue;
+
+        if (!event.isTrusted() && registeredListener->trustedOnly()) [[unlikely]]
             continue;
 
         Ref callback = registeredListener->callback();
@@ -368,9 +384,14 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         JSC::EnsureStillAliveScope wrapperProtector(callback->wrapper());
         JSC::EnsureStillAliveScope jsFunctionProtector(callback->jsFunction());
 
-        if (UNLIKELY(event.isAutofillEvent())) {
+        if (event.isAutofillEvent()) [[unlikely]] {
             if (!worldForDOMObject(*callback->jsFunction()).allowAutofill())
                 continue; // webkitrequestautofill only fires in a world with autofill capability.
+        }
+
+        if (event.isShadowRootAttachedEvent()) [[unlikely]] {
+            if (!worldForDOMObject(*callback->jsFunction()).canAccessAnyShadowRoot())
+                continue; // webkitshadowrootattached only fires in a world with access to all shadow roots.
         }
 
         // Do this before invocation to avoid reentrancy issues.
@@ -384,9 +405,9 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         callback->checkValidityForEventTarget(*this);
 #endif
 
-        InspectorInstrumentation::willHandleEvent(context, event, *registeredListener);
+        InspectorInstrumentation::willHandleEvent(context, event, registeredListener);
         callback->handleEvent(context, event);
-        InspectorInstrumentation::didHandleEvent(context, event, *registeredListener);
+        InspectorInstrumentation::didHandleEvent(context, event, registeredListener);
 
         if (registeredListener->isPassive())
             event.setInPassiveListener(false);
@@ -412,7 +433,7 @@ const EventListenerVector& EventTarget::eventListeners(const AtomString& eventTy
 
 void EventTarget::removeAllEventListeners()
 {
-    Ref threadData = threadGlobalData();
+    Ref threadData = threadGlobalDataSingleton();
     RELEASE_ASSERT(!threadData->isInRemoveAllEventListeners());
 
     threadData->setIsInRemoveAllEventListeners(true);
@@ -424,6 +445,17 @@ void EventTarget::removeAllEventListeners()
     }
 
     threadData->setIsInRemoveAllEventListeners(false);
+}
+
+bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
+{
+    if (auto* data = eventTargetData()) {
+        for (const auto& eventType : eventTypes) {
+            if (data->eventListenerMap.contains(eventType))
+                return true;
+        }
+    }
+    return false;
 }
 
 } // namespace WebCore

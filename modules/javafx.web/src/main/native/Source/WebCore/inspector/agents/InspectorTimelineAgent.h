@@ -45,6 +45,7 @@
 
 namespace WebCore {
 
+class Element;
 class Event;
 class FloatQuad;
 class RenderObject;
@@ -79,6 +80,9 @@ enum class TimelineRecordType {
 
     ObserverCallback,
 
+    FirstContentfulPaint,
+    LargestContentfulPaint,
+
     Screenshot,
 };
 
@@ -90,7 +94,7 @@ public:
     ~InspectorTimelineAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // TimelineBackendDispatcherHandler
@@ -116,6 +120,8 @@ public:
     void didEvaluateScript();
     void didTimeStamp(const String& message);
     void didPerformanceMark(const String& label, std::optional<MonotonicTime>);
+    void didEnqueueFirstContentfulPaint();
+    void didEnqueueLargestContentfulPaint(Element*, unsigned area);
     void didRequestAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
     void willFireAnimationFrame(int callbackId);
@@ -150,9 +156,9 @@ protected:
 
     struct TimelineRecordEntry {
         TimelineRecordEntry(Ref<JSON::Object>&& record, Ref<JSON::Object>&& data, RefPtr<JSON::Array>&& children, TimelineRecordType type)
-            : record(WTFMove(record))
-            , data(WTFMove(data))
-            , children(WTFMove(children))
+            : record(WTF::move(record))
+            , data(WTF::move(data))
+            , children(WTF::move(children))
             , type(type)
         {
         }
@@ -192,8 +198,8 @@ private:
 
     void addRecordToTimeline(Ref<JSON::Object>&&, TimelineRecordType);
 
-    std::unique_ptr<Inspector::TimelineFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::TimelineBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::TimelineFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::TimelineBackendDispatcher> m_backendDispatcher;
 
     Vector<TimelineRecordEntry> m_recordStack;
     Vector<TimelineRecordEntry> m_pendingConsoleProfileRecords;

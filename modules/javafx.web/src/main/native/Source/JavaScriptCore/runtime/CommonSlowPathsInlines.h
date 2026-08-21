@@ -29,6 +29,7 @@
 #include "ClonedArguments.h"
 #include "CommonSlowPaths.h"
 #include "DirectArguments.h"
+#include "JSSetInlines.h"
 #include "ScopedArguments.h"
 
 namespace JSC {
@@ -53,7 +54,7 @@ inline void tryCachePutToScopeGlobal(
             metadata.m_getPutInfo = GetPutInfo(metadata.m_getPutInfo.resolveMode(), newResolveType, metadata.m_getPutInfo.initializationMode(), metadata.m_getPutInfo.ecmaMode());
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case GlobalProperty:
     case GlobalPropertyWithVarInjectionChecks: {
@@ -91,11 +92,15 @@ inline void tryCachePutToScopeGlobal(
             return;
         }
 
-        scope->structure()->didCachePropertyReplacement(vm, slot.cachedOffset());
+        Structure* structure = scope->structure();
+        structure->didCachePropertyReplacement(vm, slot.cachedOffset());
 
+        {
         ConcurrentJSLocker locker(codeBlock->m_lock);
-        metadata.m_structure.set(vm, codeBlock, scope->structure());
+            metadata.m_structureID.setWithoutWriteBarrier(structure);
         metadata.m_operand = slot.cachedOffset();
+    }
+        vm.writeBarrier(codeBlock);
     }
 }
 
@@ -115,7 +120,7 @@ inline void tryCacheGetFromScopeGlobal(
             metadata.m_getPutInfo = GetPutInfo(metadata.m_getPutInfo.resolveMode(), newResolveType, metadata.m_getPutInfo.initializationMode(), metadata.m_getPutInfo.ecmaMode());
             break;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case GlobalProperty:
     case GlobalPropertyWithVarInjectionChecks: {
@@ -144,49 +149,56 @@ inline void tryCacheGetFromScopeGlobal(
             Structure* structure = scope->structure();
             {
                 ConcurrentJSLocker locker(codeBlock->m_lock);
-                metadata.m_structure.set(vm, codeBlock, structure);
+                metadata.m_structureID.setWithoutWriteBarrier(structure);
                 metadata.m_operand = slot.cachedOffset();
             }
+            vm.writeBarrier(codeBlock);
             structure->startWatchingPropertyForReplacements(vm, slot.cachedOffset());
         }
     }
 }
 
-ALWAYS_INLINE JSImmutableButterfly* trySpreadFast(JSGlobalObject* globalObject, JSCell* iterable)
+ALWAYS_INLINE JSCellButterfly* trySpreadFast(JSGlobalObject* globalObject, JSCell* iterable)
 {
     if (isJSArray(iterable)) {
         JSArray* array = jsCast<JSArray*>(iterable);
         if (array->isIteratorProtocolFastAndNonObservable()) {
-            // JSImmutableButterfly::createFromArray does not consult the prototype chain,
+            // JSCellButterfly::createFromArray does not consult the prototype chain,
             // so we must be sure that not consulting the prototype chain would
             // produce the same value during iteration.
-            return JSImmutableButterfly::createFromArray(globalObject, globalObject->vm(), array);
+            return JSCellButterfly::createFromArray(globalObject, globalObject->vm(), array);
         }
         return nullptr;
     }
 
     switch (iterable->type()) {
     case StringType: {
-        if (LIKELY(globalObject->isStringPrototypeIteratorProtocolFastAndNonObservable()))
-            return JSImmutableButterfly::createFromString(globalObject, jsCast<JSString*>(iterable));
+        if (globalObject->isStringPrototypeIteratorProtocolFastAndNonObservable()) [[likely]]
+            return JSCellButterfly::createFromString(globalObject, jsCast<JSString*>(iterable));
         return nullptr;
     }
     case ClonedArgumentsType: {
         auto* arguments = jsCast<ClonedArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
-            return JSImmutableButterfly::createFromClonedArguments(globalObject, arguments);
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
+            return JSCellButterfly::createFromClonedArguments(globalObject, arguments);
         return nullptr;
     }
     case DirectArgumentsType: {
         auto* arguments = jsCast<DirectArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
-            return JSImmutableButterfly::createFromDirectArguments(globalObject, arguments);
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
+            return JSCellButterfly::createFromDirectArguments(globalObject, arguments);
         return nullptr;
     }
     case ScopedArgumentsType: {
         auto* arguments = jsCast<ScopedArguments*>(iterable);
-        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
-            return JSImmutableButterfly::createFromScopedArguments(globalObject, arguments);
+        if (arguments->isIteratorProtocolFastAndNonObservable()) [[likely]]
+            return JSCellButterfly::createFromScopedArguments(globalObject, arguments);
+        return nullptr;
+    }
+    case JSSetType: {
+        auto* set = jsCast<JSSet*>(iterable);
+        if (set->isIteratorProtocolFastAndNonObservable()) [[likely]]
+            return JSCellButterfly::createFromSet(globalObject, set);
         return nullptr;
     }
     default:
@@ -201,14 +213,16 @@ inline void opEnumeratorPutByVal(JSGlobalObject* globalObject, JSValue baseValue
 
     switch (mode) {
     case JSPropertyNameEnumerator::IndexedMode: {
-        if (arrayProfile && LIKELY(baseValue.isCell()))
+        if (arrayProfile) {
+            if (baseValue.isCell()) [[likely]]
             arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        }
         scope.release();
         baseValue.putByIndex(globalObject, static_cast<unsigned>(index), value, ecmaMode.isStrict());
         return;
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell())) {
+        if (baseValue.isCell()) [[likely]] {
             auto* baseCell = baseValue.asCell();
             auto* structure = baseCell->structure();
             if (structure->id() == enumerator->cachedStructureID() && !structure->isWatchingReplacement() && !structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto()) {
@@ -221,7 +235,7 @@ inline void opEnumeratorPutByVal(JSGlobalObject* globalObject, JSValue baseValue
         }
         if (enumeratorMetadata)
             *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
 
     case JSPropertyNameEnumerator::GenericMode: {

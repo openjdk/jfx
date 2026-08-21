@@ -65,8 +65,7 @@ ImportMap::ImportMap(SpecifierMap&& imports, ScopesMap&& scopesMap, IntegrityMap
     // is code unit less than a’s key.</spec>
     ASSERT(m_scopesVector.isEmpty());
     m_scopesVector = copyToVector(m_scopesMap.keys());
-    std::sort(m_scopesVector.begin(), m_scopesVector.end(),
-        [](const URL& a, const URL& b) {
+    std::ranges::sort(m_scopesVector, [](const auto& a, const auto& b) {
             return codePointCompareLessThan(b.string(), a.string());
         });
 }
@@ -143,7 +142,7 @@ URL ImportMap::resolve(const String& specifier, const URL& baseURL)
             if (!result)
                 return { };
             if (!result.value().isNull())
-                resolvedURL = WTFMove(result.value());
+                resolvedURL = WTF::move(result.value());
         }
     }
 
@@ -152,9 +151,9 @@ URL ImportMap::resolve(const String& specifier, const URL& baseURL)
     auto result = resolveImportMatch(normalizedSpecifier, asURL, m_imports);
     if (!result)
         return { };
-        resolvedURL = WTFMove(result.value());
+        resolvedURL = WTF::move(result.value());
         if (resolvedURL.isNull() && asURL.isValid())
-            resolvedURL = WTFMove(asURL);
+            resolvedURL = WTF::move(asURL);
     }
     if (!resolvedURL.isNull())
         addModuleToResolvedModuleSet(baseURL.string(), normalizedSpecifier);
@@ -166,7 +165,7 @@ static String normalizeSpecifierKey(const String& specifierKey, const URL& baseU
 {
     // https://html.spec.whatwg.org/C#normalizing-a-specifier-key
 
-    if (UNLIKELY(specifierKey.isEmpty())) {
+    if (specifierKey.isEmpty()) [[unlikely]] {
         reporter.reportWarning("specifier key is empty"_s);
         return nullString();
     }
@@ -185,19 +184,19 @@ static ImportMap::SpecifierMap sortAndNormalizeSpecifierMap(Ref<JSON::Object> im
         AtomString normalizedSpecifierKey = AtomString(normalizeSpecifierKey(key, baseURL, reporter));
         if (normalizedSpecifierKey.isNull())
             continue;
-        if (auto valueAsString = value->asString(); LIKELY(!valueAsString.isNull())) {
+        if (auto valueAsString = value->asString(); !valueAsString.isNull()) [[likely]] {
             URL addressURL = parseURLLikeModuleSpecifier(valueAsString, baseURL);
-            if (UNLIKELY(!addressURL.isValid())) {
+            if (!addressURL.isValid()) [[unlikely]] {
                 reporter.reportWarning(makeString("value in specifier map cannot be parsed as URL "_s, valueAsString));
                 normalized.add(normalizedSpecifierKey, URL { });
                 continue;
             }
-            if (UNLIKELY(key.endsWith('/') && !addressURL.string().endsWith('/'))) {
+            if (key.endsWith('/') && !addressURL.string().endsWith('/')) [[unlikely]] {
                 reporter.reportWarning(makeString("address "_s, addressURL.string(), " does not end with '/' while key "_s, key, " ends with '/'"_s));
                 normalized.add(normalizedSpecifierKey, URL { });
                 continue;
             }
-            normalized.add(normalizedSpecifierKey, WTFMove(addressURL));
+            normalized.add(normalizedSpecifierKey, WTF::move(addressURL));
         } else {
             reporter.reportWarning("value in specifier map needs to be a string"_s);
             normalized.add(normalizedSpecifierKey, URL { });
@@ -251,12 +250,12 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
             }
             URL scopePrefixURL { baseURL, key }; // Do not use parseURLLikeModuleSpecifier since we should accept non relative path.
             dataLogLnIf(ImportMapInternal::verbose, "scope key ", key, " and URL ", scopePrefixURL);
-            if (UNLIKELY(!scopePrefixURL.isValid())) {
+            if (!scopePrefixURL.isValid()) [[unlikely]] {
                 reporter.reportWarning(makeString("scope key"_s, key, " was not parsable"_s));
                 continue;
             }
 
-            scopesMap.set(WTFMove(scopePrefixURL), sortAndNormalizeSpecifierMap(potentialSpecifierMap.releaseNonNull(), baseURL, reporter));
+            scopesMap.set(WTF::move(scopePrefixURL), sortAndNormalizeSpecifierMap(potentialSpecifierMap.releaseNonNull(), baseURL, reporter));
         }
     }
 
@@ -272,7 +271,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
         // https://html.spec.whatwg.org/C#normalizing-a-module-integrity-map
         for (auto& [key, value] : *integrityMap) {
             URL integrityURL = parseURLLikeModuleSpecifier(key, baseURL);
-            if (UNLIKELY(integrityURL.isNull())) {
+            if (integrityURL.isNull()) [[unlikely]] {
                 errorMessage.append("Integrity URL "_s);
                 errorMessage.append(key);
                 errorMessage.append(" is not a valid absolute URL nor a relative URL starting with '/', './' or '../'\n"_s);
@@ -280,7 +279,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
             }
 
             auto valueAsString = value->asString();
-            if (UNLIKELY(valueAsString.isNull())) {
+            if (valueAsString.isNull()) [[unlikely]] {
                 errorMessage.append("Integrity value of "_s);
                 errorMessage.append(key);
                 errorMessage.append(" is not a string\n"_s);
@@ -294,7 +293,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
     if (!errorMessage.isEmpty())
         reporter.reportError(errorMessage.toString());
 
-    return adoptRef(*new ImportMap(WTFMove(normalizedImports), WTFMove(scopesMap), WTFMove(integrity)));
+    return adoptRef(*new ImportMap(WTF::move(normalizedImports), WTF::move(scopesMap), WTF::move(integrity)));
 }
 
 String ImportMap::integrityForURL(const URL& url) const
@@ -317,7 +316,7 @@ void ImportMap::mergeExistingAndNewImportMaps(Ref<ImportMap>&& newImportMap, con
 
     // 3. For each scopePrefix → scopeImports of newImportMapScopes:
     for (auto& scope : newImportMapScopes) {
-        auto scopeImports = WTFMove(scope.value);
+        auto scopeImports = WTF::move(scope.value);
         // 3.1. For each pair of global's resolved module set:
         //
         // 3.1.1. If pair's referring script does not start with scopePrefix,
@@ -361,7 +360,7 @@ void ImportMap::mergeExistingAndNewImportMaps(Ref<ImportMap>&& newImportMap, con
         } else {
             // 3.3 Otherwise, set oldImportMap's scopes[scopePrefix] to
             // scopeImports.
-            m_scopesMap.set(scope.key, WTFMove(scopeImports));
+            m_scopesMap.set(scope.key, WTF::move(scopeImports));
             m_scopesVector.append(scope.key);
         }
     }

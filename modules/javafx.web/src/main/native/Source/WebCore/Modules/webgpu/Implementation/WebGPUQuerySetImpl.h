@@ -41,7 +41,7 @@ class QuerySetImpl final : public QuerySet {
 public:
     static Ref<QuerySetImpl> create(WebGPUPtr<WGPUQuerySet>&& querySet, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new QuerySetImpl(WTFMove(querySet), convertToBackingContext));
+        return adoptRef(*new QuerySetImpl(WTF::move(querySet), convertToBackingContext));
     }
 
     virtual ~QuerySetImpl();
@@ -57,15 +57,20 @@ private:
     QuerySetImpl& operator=(QuerySetImpl&&) = delete;
 
     WGPUQuerySet backing() const { return m_backing.get(); }
+    bool isQuerySetImpl() const final { return true; }
 
     void destroy() final;
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUQuerySet> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::QuerySetImpl)
+    static bool isType(const WebCore::WebGPU::QuerySet& querySet) { return querySet.isQuerySetImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

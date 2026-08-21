@@ -31,8 +31,12 @@
 
 namespace WebCore {
 
-namespace Calculation {
+namespace CSS {
 enum class Category : uint8_t;
+}
+
+namespace CSS {
+struct PropertyParserState;
 }
 
 class CSSParserTokenRange;
@@ -47,7 +51,7 @@ struct Tree;
 
 struct ParserOptions {
     // `category` represents the context in which the parse is taking place.
-    Calculation::Category category;
+    CSS::Category category;
 
     // `range` represents the allowed numeric range for the calculated result.
     CSS::Range range;
@@ -60,10 +64,10 @@ struct ParserOptions {
 };
 
 // Parses and simplifies the provided `CSSParserTokenRange` into a CSSCalc::Tree. Returns `std::nullopt` on failure.
-std::optional<Tree> parseAndSimplify(CSSParserTokenRange&, const CSSParserContext&, const ParserOptions&, const SimplificationOptions&);
+std::optional<Tree> parseAndSimplify(CSSParserTokenRange&, CSS::PropertyParserState&, const ParserOptions&, const SimplificationOptions&);
 
 // Returns whether the provided `CSSValueID` is one of the functions that should be parsed as a `calc()`.
-bool isCalcFunction(CSSValueID function, const CSSParserContext&);
+bool isCalcFunction(CSSValueID function);
 
 } // namespace CSSCalc
 } // namespace WebCore

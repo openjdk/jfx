@@ -60,7 +60,7 @@ static inline char pas_segregated_view_kind_get_character_code(pas_segregated_vi
     case pas_segregated_size_directory_view_kind:
         return 'S';
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -80,7 +80,7 @@ static inline const char* pas_segregated_view_kind_get_string(pas_segregated_vie
     case pas_segregated_size_directory_view_kind:
         return "size_directory";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -99,7 +99,7 @@ pas_segregated_view_kind_get_role_for_owner(pas_segregated_view_kind kind)
     case pas_segregated_shared_handle_kind:
         return pas_segregated_page_shared_role;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_segregated_page_exclusive_role;
     }
 }
@@ -114,7 +114,7 @@ pas_segregated_view_kind_get_role_for_allocator(pas_segregated_view_kind kind)
     case pas_segregated_partial_view_kind:
         return pas_segregated_page_shared_role;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_segregated_page_exclusive_role;
     }
 }
@@ -130,10 +130,10 @@ static inline bool pas_segregated_view_kind_can_become_empty(pas_segregated_view
         return false;
     case pas_segregated_shared_handle_kind:
     case pas_segregated_size_directory_view_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

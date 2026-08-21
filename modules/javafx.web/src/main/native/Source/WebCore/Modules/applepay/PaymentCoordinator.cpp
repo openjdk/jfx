@@ -35,6 +35,7 @@
 #include "ApplePayShippingMethod.h"
 #include "ApplePayShippingMethodUpdate.h"
 #include "Document.h"
+#include "DocumentPage.h"
 #include "ExceptionDetails.h"
 #include "LinkIconCollector.h"
 #include "Logging.h"
@@ -42,12 +43,14 @@
 #include "PaymentCoordinatorClient.h"
 #include "PaymentSession.h"
 #include "UserContentProvider.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 #define PAYMENT_COORDINATOR_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ApplePay, "%p - PaymentCoordinator::" fmt, this, ##__VA_ARGS__)
 #define PAYMENT_COORDINATOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ApplePay, "%p - PaymentCoordinator::" fmt, this, ##__VA_ARGS__)
+#define PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(thisPointer, fmt, ...) RELEASE_LOG(ApplePay, "%p - PaymentCoordinator::" fmt, thisPointer, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -55,11 +58,11 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PaymentCoordinator);
 
 Ref<PaymentCoordinator> PaymentCoordinator::create(Ref<PaymentCoordinatorClient>&& client)
 {
-    return adoptRef(*new PaymentCoordinator(WTFMove(client)));
+    return adoptRef(*new PaymentCoordinator(WTF::move(client)));
 }
 
 PaymentCoordinator::PaymentCoordinator(Ref<PaymentCoordinatorClient>&& client)
-    : m_client(WTFMove(client))
+    : m_client(WTF::move(client))
 {
 }
 
@@ -81,11 +84,11 @@ bool PaymentCoordinator::canMakePayments()
 
 void PaymentCoordinator::canMakePaymentsWithActiveCard(Document& document, const String& merchantIdentifier, Function<void(bool)>&& completionHandler)
 {
-    m_client->canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [this, weakThis = WeakPtr { *this }, document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }, completionHandler = WTFMove(completionHandler)](bool canMakePayments) {
+    m_client->canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [weakThis = WeakPtr { *this }, document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }, completionHandler = WTF::move(completionHandler)](bool canMakePayments) {
         if (!weakThis)
             return completionHandler(false);
 
-        PAYMENT_COORDINATOR_RELEASE_LOG("canMakePaymentsWithActiveCard() -> %d", canMakePayments);
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "canMakePaymentsWithActiveCard() -> %d", canMakePayments);
 
         if (!canMakePayments)
             return completionHandler(false);
@@ -100,7 +103,7 @@ void PaymentCoordinator::canMakePaymentsWithActiveCard(Document& document, const
 void PaymentCoordinator::openPaymentSetup(Document& document, const String& merchantIdentifier, Function<void(bool)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("openPaymentSetup()");
-    m_client->openPaymentSetup(merchantIdentifier, document.domain(), WTFMove(completionHandler));
+    m_client->openPaymentSetup(merchantIdentifier, document.domain(), WTF::move(completionHandler));
 }
 
 bool PaymentCoordinator::beginPaymentSession(Document& document, PaymentSession& paymentSession, const ApplePaySessionPaymentRequest& paymentRequest)
@@ -114,7 +117,7 @@ bool PaymentCoordinator::beginPaymentSession(Document& document, PaymentSession&
     auto linkIconURLs = LinkIconCollector { document }.iconsOfTypes({ LinkIconType::TouchIcon, LinkIconType::TouchPrecomposedIcon }).map([](auto& icon) {
         return icon.url;
     });
-    auto showPaymentUI = m_client->showPaymentUI(page->mainFrameURL(), WTFMove(linkIconURLs), paymentRequest);
+    auto showPaymentUI = m_client->showPaymentUI(page->mainFrameURL(), WTF::move(linkIconURLs), paymentRequest);
     PAYMENT_COORDINATOR_RELEASE_LOG("beginPaymentSession() -> %d", showPaymentUI);
     if (!showPaymentUI)
         return false;
@@ -124,7 +127,7 @@ bool PaymentCoordinator::beginPaymentSession(Document& document, PaymentSession&
         document.addConsoleMessage(MessageSource::PaymentRequest, MessageLevel::Warning, "`enabled` is a deprecated value for `shippingContactEditingMode`. Please use `available` instead."_s);
 #endif
 
-    m_activeSession = &paymentSession;
+    m_activeSession = paymentSession;
     return true;
 }
 
@@ -139,21 +142,21 @@ void PaymentCoordinator::completeShippingMethodSelection(std::optional<ApplePayS
 {
     ASSERT(m_activeSession);
     PAYMENT_COORDINATOR_RELEASE_LOG("completeShippingMethodSelection()");
-    m_client->completeShippingMethodSelection(WTFMove(update));
+    m_client->completeShippingMethodSelection(WTF::move(update));
 }
 
 void PaymentCoordinator::completeShippingContactSelection(std::optional<ApplePayShippingContactUpdate>&& update)
 {
     ASSERT(m_activeSession);
     PAYMENT_COORDINATOR_RELEASE_LOG("completeShippingContactSelection()");
-    m_client->completeShippingContactSelection(WTFMove(update));
+    m_client->completeShippingContactSelection(WTF::move(update));
 }
 
 void PaymentCoordinator::completePaymentMethodSelection(std::optional<ApplePayPaymentMethodUpdate>&& update)
 {
     ASSERT(m_activeSession);
     PAYMENT_COORDINATOR_RELEASE_LOG("completePaymentMethodSelection()");
-    m_client->completePaymentMethodSelection(WTFMove(update));
+    m_client->completePaymentMethodSelection(WTF::move(update));
 }
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
@@ -162,7 +165,7 @@ void PaymentCoordinator::completeCouponCodeChange(std::optional<ApplePayCouponCo
 {
     ASSERT(m_activeSession);
     PAYMENT_COORDINATOR_RELEASE_LOG("completeCouponCodeChange()");
-    m_client->completeCouponCodeChange(WTFMove(update));
+    m_client->completeCouponCodeChange(WTF::move(update));
 }
 
 #endif // ENABLE(APPLE_PAY_COUPON_CODE)
@@ -173,7 +176,7 @@ void PaymentCoordinator::completePaymentSession(ApplePayPaymentAuthorizationResu
 
     bool isFinalState = result.isFinalState();
     PAYMENT_COORDINATOR_RELEASE_LOG("completePaymentSession() (isFinalState: %d)", isFinalState);
-    m_client->completePaymentSession(WTFMove(result));
+    m_client->completePaymentSession(WTF::move(result));
 
     if (!isFinalState)
         return;
@@ -198,83 +201,90 @@ void PaymentCoordinator::cancelPaymentSession()
 
 void PaymentCoordinator::validateMerchant(URL&& validationURL)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("validateMerchant()");
-    m_activeSession->validateMerchant(WTFMove(validationURL));
+    activeSession->validateMerchant(WTF::move(validationURL));
 }
 
 void PaymentCoordinator::didAuthorizePayment(const Payment& payment)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didAuthorizePayment()");
-    m_activeSession->didAuthorizePayment(payment);
+    activeSession->didAuthorizePayment(payment);
 }
 
 void PaymentCoordinator::didSelectPaymentMethod(const PaymentMethod& paymentMethod)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didSelectPaymentMethod()");
-    m_activeSession->didSelectPaymentMethod(paymentMethod);
+    activeSession->didSelectPaymentMethod(paymentMethod);
 }
 
 void PaymentCoordinator::didSelectShippingMethod(const ApplePayShippingMethod& shippingMethod)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didSelectShippingMethod()");
-    m_activeSession->didSelectShippingMethod(shippingMethod);
+    activeSession->didSelectShippingMethod(shippingMethod);
 }
 
 void PaymentCoordinator::didSelectShippingContact(const PaymentContact& shippingContact)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didSelectShippingContact()");
-    m_activeSession->didSelectShippingContact(shippingContact);
+    activeSession->didSelectShippingContact(shippingContact);
 }
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
 
 void PaymentCoordinator::didChangeCouponCode(String&& couponCode)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didChangeCouponCode()");
-    m_activeSession->didChangeCouponCode(WTFMove(couponCode));
+    activeSession->didChangeCouponCode(WTF::move(couponCode));
 }
 
 #endif // ENABLE(APPLE_PAY_COUPON_CODE)
 
 void PaymentCoordinator::didCancelPaymentSession(PaymentSessionError&& error)
 {
-    if (!m_activeSession) {
+    RefPtr activeSession = m_activeSession;
+    if (!activeSession) {
         // It's possible that the payment has been aborted already.
         return;
     }
 
     PAYMENT_COORDINATOR_RELEASE_LOG("didCancelPaymentSession()");
-    m_activeSession->didCancelPaymentSession(WTFMove(error));
+    activeSession->didCancelPaymentSession(WTF::move(error));
     m_activeSession = nullptr;
 }
 
@@ -292,21 +302,21 @@ std::optional<String> PaymentCoordinator::validatedPaymentNetwork(Document&, uns
 void PaymentCoordinator::getSetupFeatures(const ApplePaySetupConfiguration& configuration, const URL& url, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("getSetupFeatures()");
-    m_client->getSetupFeatures(configuration, url, [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](Vector<Ref<ApplePaySetupFeature>>&& features) mutable {
+    m_client->getSetupFeatures(configuration, url, [weakThis = WeakPtr { *this }, completionHandler = WTF::move(completionHandler)](Vector<Ref<ApplePaySetupFeature>>&& features) mutable {
         if (!weakThis)
             return;
-        PAYMENT_COORDINATOR_RELEASE_LOG("getSetupFeatures() completed (features: %zu)", features.size());
-        completionHandler(WTFMove(features));
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "getSetupFeatures() completed (features: %zu)", features.size());
+        completionHandler(WTF::move(features));
     });
 }
 
 void PaymentCoordinator::beginApplePaySetup(const ApplePaySetupConfiguration& configuration, const URL& url, Vector<Ref<ApplePaySetupFeature>>&& features, CompletionHandler<void(bool)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("beginApplePaySetup()");
-    m_client->beginApplePaySetup(configuration, url, WTFMove(features), [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](bool success) mutable {
+    m_client->beginApplePaySetup(configuration, url, WTF::move(features), [weakThis = WeakPtr { *this }, completionHandler = WTF::move(completionHandler)](bool success) mutable {
         if (!weakThis)
             return;
-        PAYMENT_COORDINATOR_RELEASE_LOG("beginApplePaySetup() completed (success: %d)", success);
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "beginApplePaySetup() completed (success: %d)", success);
         completionHandler(success);
     });
 }
@@ -321,5 +331,6 @@ void PaymentCoordinator::endApplePaySetup()
 
 #undef PAYMENT_COORDINATOR_RELEASE_LOG_ERROR
 #undef PAYMENT_COORDINATOR_RELEASE_LOG
+#undef PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS
 
 #endif // ENABLE(APPLE_PAY)

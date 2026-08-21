@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +26,10 @@
 
 #pragma once
 
-#include "BoxSides.h"
-#include "WritingMode.h"
+#include <WebCore/BoxSides.h>
+#include <WebCore/WritingMode.h>
 #include <array>
+#include <concepts>
 #include <wtf/OptionSet.h>
 #include <wtf/text/TextStream.h>
 
@@ -40,15 +42,29 @@ public:
     {
     }
 
+    RectEdges(const RectEdges&) = default;
+    RectEdges& operator=(const RectEdges&) = default;
+    RectEdges(RectEdges&&) = default;
+    RectEdges& operator=(RectEdges&&) = default;
+
     RectEdges(const T& value)
         : m_sides { value, value, value, value }
     {
     }
 
-    RectEdges(const RectEdges&) = default;
-    RectEdges& operator=(const RectEdges&) = default;
+    RectEdges(T&& top, T&& right, T&& bottom, T&& left)
+        : m_sides({ { WTF::move(top), WTF::move(right), WTF::move(bottom), WTF::move(left) } })
+    {
+    }
+
+    RectEdges(const T& top, const T& right, const T& bottom, const T& left)
+        : m_sides({ { top, right, bottom, left } })
+    {
+    }
+
 
     template<typename U>
+        requires (!std::same_as<T, U>)
     RectEdges(U&& top, U&& right, U&& bottom, U&& left)
         : m_sides({ { std::forward<U>(top), std::forward<U>(right), std::forward<U>(bottom), std::forward<U>(left) } })
     {
@@ -58,6 +74,17 @@ public:
     RectEdges(const RectEdges<U>& other)
         : RectEdges(other.top(), other.right(), other.bottom(), other.left())
     {
+    }
+
+    template<typename U, typename Mapper>
+    static RectEdges<T> map(U&& other, NOESCAPE Mapper&& mapper)
+    {
+        return RectEdges<T> {
+            mapper(other.top()),
+            mapper(other.right()),
+            mapper(other.bottom()),
+            mapper(other.left()),
+        };
     }
 
     T& at(BoxSide side) { return m_sides[static_cast<size_t>(side)]; }
@@ -129,9 +156,25 @@ public:
         return yFlippedCopy();
     }
 
-    bool isZero() const
+    template<typename F> bool anyOf(F&& functor) const
     {
-        return !top() && !right() && !bottom() && !left();
+        return std::ranges::any_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool allOf(F&& functor) const
+    {
+        return std::ranges::all_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool noneOf(F&& functor) const
+    {
+        return std::ranges::none_of(m_sides, std::forward<F>(functor));
+    }
+
+    bool isZero() const
+        requires (requires { { !std::declval<T>() } -> std::same_as<bool>; })
+    {
+        return allOf([](auto& edge) { return !edge; });
     }
 
     bool operator==(const RectEdges<T>&) const = default;
@@ -159,9 +202,45 @@ inline RectEdges<T>& operator+=(RectEdges<T>& a, const RectEdges<T>& b)
 }
 
 template<typename T>
+constexpr RectEdges<T> operator-(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return {
+        a.top() - b.top(),
+        a.right() - b.right(),
+        a.bottom() - b.bottom(),
+        a.left() - b.left()
+    };
+}
+
+template<typename T>
+inline RectEdges<T>& operator-=(RectEdges<T>& a, const RectEdges<T>& b)
+{
+    a = a - b;
+    return a;
+}
+
+
+template<typename T, typename F>
+inline RectEdges<T> blend(const RectEdges<T>& a, const RectEdges<T>& b, F&& functor)
+{
+    return {
+        functor(a.top(), b.top(), BoxSide::Top),
+        functor(a.right(), b.right(), BoxSide::Right),
+        functor(a.bottom(), b.bottom(), BoxSide::Bottom),
+        functor(a.left(), b.left(), BoxSide::Left)
+    };
+}
+
+template<typename T>
+inline RectEdges<T> max(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return blend(a, b, [](const T& a, const T& b, BoxSide) { return std::max(a, b); });
+}
+
+template<typename T>
 TextStream& operator<<(TextStream& ts, const RectEdges<T>& edges)
 {
-    ts << "[top " << edges.top() << " right " << edges.right() << " bottom " << edges.bottom() << " left " << edges.left() << "]";
+    ts << "[top "_s << edges.top() << " right "_s << edges.right() << " bottom "_s << edges.bottom() << " left "_s << edges.left() << ']';
     return ts;
 }
 

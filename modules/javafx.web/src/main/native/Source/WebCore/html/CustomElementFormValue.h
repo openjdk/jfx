@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "DOMFormData.h"
-#include "File.h"
+#include <WebCore/DOMFormData.h>
+#include <WebCore/File.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-using CustomElementFormValue = std::variant<std::nullptr_t, RefPtr<File>, String, RefPtr<DOMFormData>>;
+using CustomElementFormValue = Variant<std::nullptr_t, RefPtr<File>, String, RefPtr<DOMFormData>>;
 
 } // namespace WebCore

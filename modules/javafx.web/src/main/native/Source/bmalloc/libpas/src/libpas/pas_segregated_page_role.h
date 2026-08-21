@@ -45,7 +45,7 @@ static inline const char* pas_segregated_page_role_get_string(pas_segregated_pag
     case pas_segregated_page_exclusive_role:
         return "exclusive";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

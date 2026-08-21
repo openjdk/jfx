@@ -59,9 +59,13 @@ static const gchar *_quark_strings[] = {
   "pad-chain-pre", "pad-chain-post", "pad-chain-list-pre",
   "pad-chain-list-post", "pad-send-event-pre", "pad-send-event-post",
   "memory-init", "memory-free-pre", "memory-free-post",
+  "pool-buffer-queued", "pool-buffer-dequeued",
+
+
+  "none",                       /* This is a special quark for no hook - should always be LAST */
 };
 
-GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX];
+GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX + 1];
 
 /* tracing helpers */
 
@@ -234,7 +238,33 @@ done:
     /* Clear floating flag */
     gst_object_ref_sink (tracer);
 
-    /* tracers register them self to the hooks */
+
+    /* Check if the tracer has registered to any hook by looking through all hooks */
+    gboolean tracer_registered = FALSE;
+    if (_priv_tracers) {
+      GList *h_list = g_hash_table_get_values (_priv_tracers);
+      for (GList * h_node = h_list; h_node && !tracer_registered;
+          h_node = g_list_next (h_node)) {
+        for (GList * t_node = h_node->data; t_node;
+            t_node = g_list_next (t_node)) {
+          GstTracerHook *hook = (GstTracerHook *) t_node->data;
+          if (G_OBJECT (hook->tracer) == G_OBJECT (tracer)) {
+            tracer_registered = TRUE;
+            break;
+          }
+        }
+      }
+      g_list_free (h_list);
+    }
+
+    /* If the tracer has not registered to any hook, register it to the "none" hook
+     * to keep it alive until the end of the program */
+    if (!tracer_registered) {
+      GST_DEBUG_OBJECT (tracer,
+          "Tracer has not registered to any hook, registering to 'none' hook");
+      gst_tracing_register_hook (tracer, "none", NULL);
+    }
+
     gst_object_unref (tracer);
 
   }
@@ -255,11 +285,12 @@ _priv_gst_tracing_init (void)
   GST_DEBUG ("Initializing GstTracer");
   _priv_tracers = g_hash_table_new (NULL, NULL);
 
-  if (G_N_ELEMENTS (_quark_strings) != GST_TRACER_QUARK_MAX)
-    g_warning ("the quark table is not consistent! %d != %d",
-        (gint) G_N_ELEMENTS (_quark_strings), GST_TRACER_QUARK_MAX);
 
-  for (i = 0; i < GST_TRACER_QUARK_MAX; i++) {
+  if (G_N_ELEMENTS (_quark_strings) != GST_TRACER_QUARK_MAX + 1)
+    g_warning ("the quark table is not consistent! %d != %d",
+        (gint) G_N_ELEMENTS (_quark_strings), GST_TRACER_QUARK_MAX + 1);
+
+  for (i = 0; i <= GST_TRACER_QUARK_MAX; i++) {
     _priv_gst_tracer_quark_table[i] =
         g_quark_from_static_string (_quark_strings[i]);
   }

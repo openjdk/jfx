@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "RenderBlockFlow.h"
+#include <WebCore/RenderBlockFlow.h>
 #include "RenderListMarker.h"
 
 namespace WebCore {
@@ -30,13 +30,11 @@ namespace WebCore {
 class HTMLOListElement;
 
 class RenderListItem final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderListItem);
+    WTF_MAKE_TZONE_ALLOCATED(RenderListItem);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderListItem);
 public:
     RenderListItem(Element&, RenderStyle&&);
     virtual ~RenderListItem();
-
-    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     int value() const;
     void updateValue();
@@ -61,12 +59,12 @@ private:
 
     void paint(PaintInfo&, const LayoutPoint&) final;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
 
     void computePreferredLogicalWidths() final;
 
     void updateValueNow() const;
-    void counterDirectivesChanged();
+    void usedCounterDirectivesChanged();
 
     SingleThreadWeakPtr<RenderListMarker> m_marker;
     mutable std::optional<int> m_value;

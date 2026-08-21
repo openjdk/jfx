@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ElementAncestorIterator.h"
-#include "ElementIteratorInlines.h"
+#include <WebCore/ElementAncestorIterator.h>
+#include <WebCore/ElementIteratorInlines.h>
 
 namespace WebCore {
 
@@ -44,7 +44,7 @@ inline ElementAncestorIterator<ElementType>& ElementAncestorIterator<ElementType
 template <typename ElementType>
 inline ElementAncestorIterator<ElementType> ElementAncestorRange<ElementType>::begin() const
 {
-    return ElementAncestorIterator<ElementType>(m_first);
+    return ElementAncestorIterator<ElementType>(m_first.get());
 }
 
 // Standalone functions

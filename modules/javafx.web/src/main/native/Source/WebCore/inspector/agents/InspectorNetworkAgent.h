@@ -34,7 +34,9 @@
 #include "InspectorInstrumentation.h"
 #include "InspectorPageAgent.h"
 #include "InspectorWebAgentBase.h"
+#include "NetworkResourcesData.h"
 #include "WebSocket.h"
+#include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/RegularExpression.h>
@@ -46,6 +48,10 @@
 namespace Inspector {
 class ConsoleMessage;
 class InjectedScriptManager;
+class PendingInterceptRequest;
+class PendingInterceptResponse;
+enum class ResourceType;
+struct Intercept;
 }
 
 namespace WebCore {
@@ -73,13 +79,8 @@ public:
 
     static constexpr ASCIILiteral errorDomain() { return "InspectorNetworkAgent"_s; }
 
-    static bool shouldTreatAsText(const String& mimeType);
-    static Ref<TextResourceDecoder> createTextDecoder(const String& mimeType, const String& textEncodingName);
-    static std::optional<String> textContentForCachedResource(CachedResource&);
-    static bool cachedResourceContent(CachedResource&, String* result, bool* base64Encoded);
-
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) final;
 
     // NetworkBackendDispatcherHandler
@@ -138,11 +139,11 @@ public:
     void searchInRequest(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::RequestId&, const String& query, bool caseSensitive, bool isRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>&);
 
 protected:
-    InspectorNetworkAgent(WebAgentContext&, uint32_t);
+    InspectorNetworkAgent(WebAgentContext&, const NetworkResourcesData::Settings&);
 
     virtual Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*) = 0;
     virtual Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*) = 0;
-    virtual Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock()) = 0;
+    virtual Vector<Ref<WebSocket>> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock()) = 0;
     virtual void setResourceCachingDisabledInternal(bool) = 0;
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     virtual bool setEmulatedConditionsInternal(std::optional<int>&& bytesPerSecondLimit) = 0;
@@ -152,13 +153,13 @@ protected:
     virtual bool shouldForceBufferingNetworkResourceData() const = 0;
 
 private:
-    void willSendRequest(ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, InspectorPageAgent::ResourceType, ResourceLoader*);
+    void willSendRequest(ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, Inspector::ResourceType, ResourceLoader*);
 
     bool shouldIntercept(URL, Inspector::Protocol::Network::NetworkStage);
     void continuePendingRequests();
     void continuePendingResponses();
 
-    WebSocket* webSocketForRequestId(const Inspector::Protocol::Network::RequestId&);
+    RefPtr<WebSocket> webSocketForRequestId(const Inspector::Protocol::Network::RequestId&);
 
     Ref<Inspector::Protocol::Network::Initiator> buildInitiatorObject(Document*, const ResourceRequest* = nullptr);
     Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const NetworkLoadMetrics&, ResourceLoader&);
@@ -168,89 +169,18 @@ private:
 
     double timestamp();
 
-    class PendingInterceptRequest {
-        WTF_MAKE_TZONE_ALLOCATED(PendingInterceptRequest);
-        WTF_MAKE_NONCOPYABLE(PendingInterceptRequest);
-    public:
-        PendingInterceptRequest(RefPtr<ResourceLoader> loader, Function<void(const ResourceRequest&)>&& callback)
-            : m_loader(loader)
-            , m_completionCallback(WTFMove(callback))
-        { }
-
-        void continueWithOriginalRequest()
-        {
-            if (!m_loader->reachedTerminalState())
-                m_completionCallback(m_loader->request());
-        }
-
-        void continueWithRequest(const ResourceRequest& request)
-        {
-            m_completionCallback(request);
-        }
-
-        PendingInterceptRequest() = default;
-        RefPtr<ResourceLoader> m_loader;
-        Function<void(const ResourceRequest&)> m_completionCallback;
-    };
-
-    class PendingInterceptResponse {
-        WTF_MAKE_TZONE_ALLOCATED(PendingInterceptResponse);
-        WTF_MAKE_NONCOPYABLE(PendingInterceptResponse);
-    public:
-        PendingInterceptResponse(const ResourceResponse& originalResponse, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&& completionHandler)
-            : m_originalResponse(originalResponse)
-            , m_completionHandler(WTFMove(completionHandler))
-        { }
-
-        ~PendingInterceptResponse()
-        {
-            ASSERT(m_responded);
-        }
-
-        ResourceResponse originalResponse() { return m_originalResponse; }
-
-        void respondWithOriginalResponse()
-        {
-            respond(m_originalResponse, nullptr);
-        }
-
-        void respond(const ResourceResponse& response, RefPtr<FragmentedSharedBuffer> data)
-        {
-            ASSERT(!m_responded);
-            if (m_responded)
-                return;
-
-            m_responded = true;
-
-            m_completionHandler(response, data);
-        }
-
-    private:
-        ResourceResponse m_originalResponse;
-        CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)> m_completionHandler;
-        bool m_responded { false };
-    };
-
-    std::unique_ptr<Inspector::NetworkFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::NetworkBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::NetworkFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::NetworkBackendDispatcher> m_backendDispatcher;
     Inspector::InjectedScriptManager& m_injectedScriptManager;
 
-    std::unique_ptr<NetworkResourcesData> m_resourcesData;
+    const UniqueRef<NetworkResourcesData> m_resourcesData;
 
     MemoryCompactRobinHoodHashMap<String, String> m_extraRequestHeaders;
     HashSet<ResourceLoaderIdentifier> m_hiddenRequestIdentifiers;
 
-    struct Intercept {
-        String url;
-        bool caseSensitive { true };
-        bool isRegex { false };
-        Inspector::Protocol::Network::NetworkStage networkStage { Inspector::Protocol::Network::NetworkStage::Response };
-
-        friend bool operator==(const Intercept&, const Intercept&) = default;
-    };
-    Vector<Intercept> m_intercepts;
-    MemoryCompactRobinHoodHashMap<String, std::unique_ptr<PendingInterceptRequest>> m_pendingInterceptRequests;
-    MemoryCompactRobinHoodHashMap<String, std::unique_ptr<PendingInterceptResponse>> m_pendingInterceptResponses;
+    Vector<Inspector::Intercept> m_intercepts;
+    MemoryCompactRobinHoodHashMap<String, std::unique_ptr<Inspector::PendingInterceptRequest>> m_pendingInterceptRequests;
+    MemoryCompactRobinHoodHashMap<String, std::unique_ptr<Inspector::PendingInterceptResponse>> m_pendingInterceptResponses;
 
     // FIXME: InspectorNetworkAgent should not be aware of style recalculation.
     RefPtr<Inspector::Protocol::Network::Initiator> m_styleRecalculationInitiator;

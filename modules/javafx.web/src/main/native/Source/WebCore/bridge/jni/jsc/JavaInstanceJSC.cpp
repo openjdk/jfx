@@ -53,7 +53,7 @@ using namespace JSC;
 using namespace WebCore;
 
 JavaInstance::JavaInstance(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
-    : Instance(WTFMove(rootObject))
+    : Instance(WTF::move(rootObject))
 {
     m_instance = JobjectWrapper::create(instance);
     m_class = 0;
@@ -348,7 +348,7 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
         jthrowable ex = dispatchJNICall(callFrame->argumentCount(), rootObject,
                                         obj, jMethod->isStatic(),
                                         jMethod->returnType(), methodId,
-                                        jArgs.data(), result,
+                                        jArgs.mutableSpan().data(), result,
                                         accessControlContext());
         if (ex != NULL) {
             JSValue exceptionDescription

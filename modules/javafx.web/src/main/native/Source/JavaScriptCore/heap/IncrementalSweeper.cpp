@@ -70,8 +70,10 @@ void IncrementalSweeper::doWork(VM& vm)
 void IncrementalSweeper::doSweep(VM& vm, MonotonicTime deadline, SweepTrigger trigger)
 {
     std::optional<TraceScope> traceScope;
-    if (UNLIKELY(Options::useTracePoints()))
+    if (Options::useTracePoints()) [[unlikely]]
         traceScope.emplace(IncrementalSweepStart, IncrementalSweepEnd, vm.heap.size(), vm.heap.capacity());
+
+    vm.heap.clearConcurrentRetainedDataIfPossible();
 
     while (sweepNextBlock(vm, trigger)) {
         if (MonotonicTime::now() < deadline)

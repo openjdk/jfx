@@ -29,6 +29,7 @@
 #include "config.h"
 #include "VisitedLinkState.h"
 
+#include "DocumentPage.h"
 #include "ElementIterator.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLAnchorElementInlines.h"
@@ -125,7 +126,7 @@ InsideLink VisitedLinkState::determineLinkStateSlowCase(const Element& element)
 
     m_linksCheckedForVisitedState.add(hash);
 
-    if (!page->visitedLinkStore().isLinkVisited(*page, hash, element.document().baseURL(), attribute))
+    if (!page->protectedVisitedLinkStore()->isLinkVisited(*page, hash, element.document().baseURL(), attribute))
         return InsideLink::InsideUnvisited;
 
     return InsideLink::InsideVisited;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,15 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "SpeechSynthesisErrorEvent.h"
 #include "SpeechSynthesisEvent.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechSynthesisUtterance);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechSynthesisUtterance);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechSynthesisUtteranceActivity);
 
 void SpeechSynthesisUtterance::ref() const
@@ -58,23 +60,20 @@ Ref<SpeechSynthesisUtterance> SpeechSynthesisUtterance::create(ScriptExecutionCo
 
 Ref<SpeechSynthesisUtterance> SpeechSynthesisUtterance::create(ScriptExecutionContext& context, const String& text, SpeechSynthesisUtterance::UtteranceCompletionHandler&& completion)
 {
-    auto utterance = adoptRef(*new SpeechSynthesisUtterance(context, text, WTFMove(completion)));
+    auto utterance = adoptRef(*new SpeechSynthesisUtterance(context, text, WTF::move(completion)));
     utterance->suspendIfNeeded();
     return utterance;
 }
 
 SpeechSynthesisUtterance::SpeechSynthesisUtterance(ScriptExecutionContext& context, const String& text, UtteranceCompletionHandler&& completion)
     : ActiveDOMObject(&context)
-    , m_platformUtterance(PlatformSpeechSynthesisUtterance::create(*this))
-    , m_completionHandler(WTFMove(completion))
+    , m_platformUtterance(PlatformSpeechSynthesisUtterance::create(this))
+    , m_completionHandler(WTF::move(completion))
 {
     m_platformUtterance->setText(text);
 }
 
-SpeechSynthesisUtterance::~SpeechSynthesisUtterance()
-{
-    m_platformUtterance->setClient(nullptr);
-}
+SpeechSynthesisUtterance::~SpeechSynthesisUtterance() = default;
 
 SpeechSynthesisVoice* SpeechSynthesisUtterance::voice() const
 {
@@ -91,7 +90,7 @@ void SpeechSynthesisUtterance::setVoice(SpeechSynthesisVoice* voice)
     m_voice = voice;
 
     if (voice)
-        m_platformUtterance->setVoice(voice->platformVoice());
+        m_platformUtterance->setVoice(&voice->platformVoice());
 }
 
 void SpeechSynthesisUtterance::eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name)
@@ -103,6 +102,7 @@ void SpeechSynthesisUtterance::eventOccurred(const AtomString& type, unsigned lo
         return;
     }
 
+    if (isAllowedToRunScript())
     dispatchEvent(SpeechSynthesisEvent::create(type, { this, charIndex, charLength, static_cast<float>((MonotonicTime::now() - startTime()).seconds()), name }));
 }
 
@@ -113,6 +113,7 @@ void SpeechSynthesisUtterance::errorEventOccurred(const AtomString& type, Speech
         return;
     }
 
+    if (isAllowedToRunScript())
     dispatchEvent(SpeechSynthesisErrorEvent::create(type, { { this, 0, 0, static_cast<float>((MonotonicTime::now() - startTime()).seconds()), { } }, errorCode }));
 }
 
@@ -131,6 +132,15 @@ bool SpeechSynthesisUtterance::virtualHasPendingActivity() const
     return m_activityCountForEventDispatch && hasEventListeners();
 }
 
+ScriptExecutionContext* SpeechSynthesisUtterance::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+EventTargetInterfaceType SpeechSynthesisUtterance::eventTargetInterface() const
+{
+    return EventTargetInterfaceType::SpeechSynthesisUtterance;
+}
 
 } // namespace WebCore
 

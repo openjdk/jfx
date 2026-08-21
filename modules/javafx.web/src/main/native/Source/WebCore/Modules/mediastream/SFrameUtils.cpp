@@ -110,7 +110,7 @@ Vector<uint8_t> fromRbsp(std::span<const uint8_t> frameData)
 SFrameCompatibilityPrefixBuffer computeH264PrefixBuffer(std::span<const uint8_t> frameData)
 {
     // Delta and key prefixes assume SPS/PPS with IDs equal to 0 have been transmitted.
-    static const uint8_t prefixDeltaFrame[6] = { 0x00, 0x00, 0x00, 0x01, 0x21, 0xe0 };
+    static constexpr std::array<uint8_t, 6> prefixDeltaFrame { 0x00, 0x00, 0x00, 0x01, 0x21, 0xe0 };
 
     if (frameData.size() < 5)
         return std::span<const uint8_t> { };
@@ -183,7 +183,7 @@ void toRbsp(Vector<uint8_t>& frame, size_t offset)
         newFrame.append(data[position]);
     });
 
-    frame = WTFMove(newFrame);
+    frame = WTF::move(newFrame);
 }
 
 static inline bool isVP8KeyFrame(std::span<const uint8_t> frame)

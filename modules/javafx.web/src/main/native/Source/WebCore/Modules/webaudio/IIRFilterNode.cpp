@@ -29,14 +29,17 @@
 #include "IIRFilterNode.h"
 
 #include "BaseAudioContext.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "IIRFilter.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IIRFilterNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IIRFilterNode);
 
 // Determine if filter is stable based on the feedback coefficients.
 // We compute the reflection coefficients for the filter. If, at any

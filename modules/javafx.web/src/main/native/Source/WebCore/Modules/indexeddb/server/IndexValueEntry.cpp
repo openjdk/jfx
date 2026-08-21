@@ -77,7 +77,15 @@ bool IndexValueEntry::removeKey(const IDBKeyData& key)
     return m_orderedKeys->erase(key);
 }
 
-const IDBKeyData* IndexValueEntry::getLowest() const
+bool IndexValueEntry::contains(const IDBKeyData& key)
+{
+    if (m_unique)
+        return m_key && *m_key == key;
+
+    return m_orderedKeys && m_orderedKeys->count(key);
+}
+
+const IDBKeyData* IndexValueEntry::getLowest() const LIFETIME_BOUND
 {
     if (m_unique)
         return m_key;
@@ -168,7 +176,7 @@ IndexValueEntry::Iterator& IndexValueEntry::Iterator::operator++()
     return *this;
 }
 
-IndexValueEntry::Iterator IndexValueEntry::begin()
+IndexValueEntry::Iterator IndexValueEntry::begin() LIFETIME_BOUND
 {
     if (m_unique) {
         ASSERT(m_key);
@@ -179,7 +187,7 @@ IndexValueEntry::Iterator IndexValueEntry::begin()
     return { *this, m_orderedKeys->begin() };
 }
 
-IndexValueEntry::Iterator IndexValueEntry::reverseBegin(CursorDuplicity duplicity)
+IndexValueEntry::Iterator IndexValueEntry::reverseBegin(CursorDuplicity duplicity) LIFETIME_BOUND
 {
     if (m_unique) {
         ASSERT(m_key);
@@ -196,7 +204,7 @@ IndexValueEntry::Iterator IndexValueEntry::reverseBegin(CursorDuplicity duplicit
     return { *this, iterator };
 }
 
-IndexValueEntry::Iterator IndexValueEntry::find(const IDBKeyData& key)
+IndexValueEntry::Iterator IndexValueEntry::find(const IDBKeyData& key) LIFETIME_BOUND
 {
     if (m_unique) {
         ASSERT(m_key);
@@ -211,7 +219,7 @@ IndexValueEntry::Iterator IndexValueEntry::find(const IDBKeyData& key)
     return { *this, iterator };
 }
 
-IndexValueEntry::Iterator IndexValueEntry::reverseFind(const IDBKeyData& key, CursorDuplicity)
+IndexValueEntry::Iterator IndexValueEntry::reverseFind(const IDBKeyData& key, CursorDuplicity) LIFETIME_BOUND
 {
     if (m_unique) {
         ASSERT(m_key);
@@ -226,6 +234,19 @@ IndexValueEntry::Iterator IndexValueEntry::reverseFind(const IDBKeyData& key, Cu
     return { *this, iterator };
 }
 
+Vector<IDBKeyData> IndexValueEntry::keys() const
+{
+    Vector<IDBKeyData> result;
+    if (m_unique) {
+        if (m_key)
+            result.append(*m_key);
+    } else if (m_orderedKeys) {
+        for (auto& key : *m_orderedKeys)
+            result.append(key);
+    }
+
+    return result;
+}
 
 } // namespace IDBServer
 } // namespace WebCore

@@ -25,11 +25,10 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/CommaPrinter.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StringPrintStream.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -44,8 +43,8 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
-            out.print(m_comma, *iter);
+        for (auto& item : m_list)
+            out.print(m_comma, item);
     }
 
 private:
@@ -64,8 +63,8 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
-            out.print(m_comma, pointerDump(*iter));
+        for (auto* item : m_list)
+            out.print(m_comma, pointerDump(item));
     }
 
 private:
@@ -112,7 +111,7 @@ CString sortedListDump(const T& list, const Comparator& comparator, ASCIILiteral
 {
     Vector<typename T::ValueType> myList;
     myList.appendRange(list.begin(), list.end());
-    std::sort(myList.begin(), myList.end(), comparator);
+    std::ranges::sort(myList, comparator);
     StringPrintStream out;
     CommaPrinter commaPrinter(comma);
     for (unsigned i = 0; i < myList.size(); ++i)
@@ -138,7 +137,7 @@ CString sortedMapDump(const T& map, const Comparator& comparator, ASCIILiteral a
     Vector<typename T::KeyType> keys;
     for (auto iter = map.begin(); iter != map.end(); ++iter)
         keys.append(iter->key);
-    std::sort(keys.begin(), keys.end(), comparator);
+    std::ranges::sort(keys, comparator);
     StringPrintStream out;
     CommaPrinter commaPrinter(comma);
     for (unsigned i = 0; i < keys.size(); ++i)
@@ -158,8 +157,8 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
-            out.print(m_comma, inContext(*iter, m_context));
+        for (auto& item : m_list)
+            out.print(m_comma, inContext(item, m_context));
     }
 
 private:
@@ -183,5 +182,3 @@ using WTF::mapDump;
 using WTF::pointerListDump;
 using WTF::sortedListDump;
 using WTF::sortedMapDump;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -43,7 +43,7 @@ class RenderPipelineImpl final : public RenderPipeline {
 public:
     static Ref<RenderPipelineImpl> create(WebGPUPtr<WGPURenderPipeline>&& renderPipeline, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new RenderPipelineImpl(WTFMove(renderPipeline), convertToBackingContext));
+        return adoptRef(*new RenderPipelineImpl(WTF::move(renderPipeline), convertToBackingContext));
     }
 
     virtual ~RenderPipelineImpl();
@@ -59,15 +59,20 @@ private:
     RenderPipelineImpl& operator=(RenderPipelineImpl&&) = delete;
 
     WGPURenderPipeline backing() const { return m_backing.get(); }
+    bool isRenderPipelineImpl() const final { return true; }
 
     Ref<BindGroupLayout> getBindGroupLayout(uint32_t index) final;
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPURenderPipeline> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::RenderPipelineImpl)
+    static bool isType(const WebCore::WebGPU::RenderPipeline& pipeline) { return pipeline.isRenderPipelineImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2006, 2015-2016 Apple Inc.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include "LocalFrameView.h"
-#include "Region.h"
-#include "RenderBlockFlow.h"
-#include "RenderSelection.h"
-#include "RenderWidget.h"
+#include <WebCore/LocalFrameView.h>
+#include <WebCore/Region.h>
+#include <WebCore/RenderBlockFlow.h>
+#include <WebCore/RenderSelection.h>
+#include <WebCore/RenderWidget.h>
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -45,7 +45,7 @@ class LayoutState;
 }
 
 class RenderView final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderView);
+    WTF_MAKE_TZONE_ALLOCATED(RenderView);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderView);
 public:
     RenderView(Document&, RenderStyle&&);
@@ -75,11 +75,10 @@ public:
     float zoomFactor() const;
 
     LocalFrameView& frameView() const { return m_frameView.get(); }
-    Ref<LocalFrameView> protectedFrameView() const { return m_frameView.get(); }
 
     Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
     const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
-    Layout::LayoutState& layoutState() { return *m_layoutState; }
+    Layout::LayoutState& layoutState() { return m_layoutState; }
     void updateQuirksMode();
 
     bool needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly() const { return m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly; };
@@ -90,7 +89,7 @@ public:
 
     std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintRootContents();
-    void repaintViewRectangle(const LayoutRect&) const;
+    void repaintViewRectangle(const LayoutRect&);
     void repaintViewAndCompositedLayers();
 
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -139,6 +138,7 @@ public:
     void setIsInWindow(bool);
 
     WEBCORE_EXPORT RenderLayerCompositor& compositor();
+    WEBCORE_EXPORT CheckedRef<RenderLayerCompositor> checkedCompositor();
     WEBCORE_EXPORT bool usesCompositing() const;
 
     WEBCORE_EXPORT IntRect unscaledDocumentRect() const;
@@ -175,7 +175,7 @@ public:
 
     uint64_t rendererCount() const { return m_rendererCount; }
     void didCreateRenderer() { ++m_rendererCount; }
-    void didDestroyRenderer() { --m_rendererCount; }
+    void willDestroyRenderer() { --m_rendererCount; }
 
     void updateVisibleViewportRect(const IntRect&);
     void registerForVisibleInViewportCallback(RenderElement&);
@@ -196,7 +196,7 @@ public:
         ~RepaintRegionAccumulator();
 
     private:
-        SingleThreadWeakPtr<RenderView> m_rootView;
+        SingleThreadWeakPtr<RenderView> m_view;
         bool m_wasAccumulatingRepaintRegion { false };
     };
 
@@ -216,24 +216,30 @@ public:
     void unregisterPositionTryBox(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& positionTryBoxes() const { return m_positionTryBoxes; }
 
-    SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
-    void setViewTransitionRoot(RenderElement& renderer);
+    SingleThreadWeakPtr<RenderBlockFlow> viewTransitionContainingBlock() const;
+    void setViewTransitionContainingBlock(RenderBlockFlow& renderer);
 
-    void addViewTransitionGroup(const AtomString&, RenderElement&);
+    void addViewTransitionGroup(const AtomString&, RenderBox&);
     void removeViewTransitionGroup(const AtomString&);
-    RenderElement* viewTransitionGroupForName(const AtomString&);
+    RenderBox* viewTransitionGroupForName(const AtomString&);
+
+protected:
+    void willBeDestroyed() override;
 
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     bool requiresColumns(int desiredColumnCount) const override;
 
     void computeColumnCountAndWidth() override;
 
     bool shouldRepaint(const LayoutRect&) const;
+
+    // Returns true if we determine that the accumulated dirty rect makes up a significant fraction of viewRect.
+    bool accumulateRepaintRect(IntRect dirtyRect, IntRect viewRect);
     void flushAccumulatedRepaintRegion() const;
 
     void layoutContent(const RenderLayoutState&);
@@ -244,14 +250,14 @@ private:
 
     void updateInitialContainingBlockSize();
 
-    CheckedRef<LocalFrameView> m_frameView;
+    const CheckedRef<LocalFrameView> m_frameView;
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };
 
     // Note that currently RenderView::layoutBox(), if it exists, is a child of m_initialContainingBlock.
-    UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
-    UniqueRef<Layout::LayoutState> m_layoutState;
+    const UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
+    const UniqueRef<Layout::LayoutState> m_layoutState;
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     RenderSelection m_selection;
@@ -293,8 +299,8 @@ private:
     SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
     SingleThreadWeakHashSet<const RenderBox> m_positionTryBoxes;
 
-    SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
-    HashMap<AtomString, SingleThreadWeakPtr<RenderElement>> m_viewTransitionGroups;
+    SingleThreadWeakPtr<RenderBlockFlow> m_viewTransitionContainingBlock;
+    HashMap<AtomString, SingleThreadWeakPtr<RenderBox>> m_viewTransitionGroups;
 };
 
 } // namespace WebCore

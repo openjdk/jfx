@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,9 @@
 #pragma once
 
 #include "PendingScriptClient.h"
-#include "Timer.h"
+#include <WebCore/Timer.h>
 #include <wtf/CheckedRef.h>
+#include <wtf/Deque.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -57,6 +58,7 @@ public:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     enum ExecutionType { ASYNC_EXECUTION, IN_ORDER_EXECUTION };
     void queueScriptForExecution(ScriptElement&, LoadableScript&, ExecutionType);
@@ -78,9 +80,9 @@ private:
     void notifyFinished(PendingScript&) override;
 
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
-    Vector<Ref<PendingScript>> m_scriptsToExecuteInOrder;
-    Vector<RefPtr<PendingScript>> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
-    UncheckedKeyHashSet<Ref<PendingScript>> m_pendingAsyncScripts;
+    Deque<Ref<PendingScript>> m_scriptsToExecuteInOrder;
+    Vector<Ref<PendingScript>> m_scriptsToExecuteSoon; // https://html.spec.whatwg.org/#set-of-scripts-that-will-execute-as-soon-as-possible
+    HashSet<Ref<PendingScript>> m_pendingAsyncScripts;
     Timer m_timer;
 };
 

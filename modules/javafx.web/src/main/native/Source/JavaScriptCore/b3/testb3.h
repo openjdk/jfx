@@ -72,6 +72,7 @@
 #include "OperationResult.h"
 #include "PureNaN.h"
 #include <cmath>
+#include <numbers>
 #include <regex>
 #include <string>
 #include <wtf/FastTLS.h>
@@ -341,10 +342,6 @@ typedef B3Operand<int8_t> Int8Operand;
 
 #define MAKE_OPERAND(value) B3Operand<decltype(value)> { #value, value }
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
-
 template<typename FloatType>
 void populateWithInterestingValues(Vector<B3Operand<FloatType>>& operands)
 {
@@ -362,8 +359,8 @@ void populateWithInterestingValues(Vector<B3Operand<FloatType>>& operands)
     operands.append({ "-1.1", static_cast<FloatType>(-1.1) });
     operands.append({ "2.", static_cast<FloatType>(2.) });
     operands.append({ "-2.", static_cast<FloatType>(-2.) });
-    operands.append({ "M_PI", static_cast<FloatType>(M_PI) });
-    operands.append({ "-M_PI", static_cast<FloatType>(-M_PI) });
+    operands.append({ "M_PI", static_cast<FloatType>(std::numbers::pi) });
+    operands.append({ "-M_PI", static_cast<FloatType>(-std::numbers::pi) });
     operands.append({ "min", std::numeric_limits<FloatType>::min() });
     operands.append({ "max", std::numeric_limits<FloatType>::max() });
     operands.append({ "lowest", std::numeric_limits<FloatType>::lowest() });
@@ -556,9 +553,7 @@ EffectiveType modelLoad(EffectiveType value)
     } u;
 
     u.original = value;
-    if (std::is_signed<LoadedType>::value)
-        return static_cast<EffectiveType>(u.loaded);
-    return static_cast<EffectiveType>(static_cast<typename std::make_unsigned<EffectiveType>::type>(u.loaded));
+    return static_cast<EffectiveType>(static_cast<std::make_unsigned_t<EffectiveType>>(u.loaded));
 }
 
 template<>
@@ -872,6 +867,8 @@ void testIToD64Arg();
 void testIToF64Arg();
 void testIToD32Arg();
 void testIToF32Arg();
+void testIToDU32Arg();
+void testIToFU32Arg();
 void testIToD64Mem();
 void testIToF64Mem();
 void testIToD32Mem();
@@ -1281,6 +1278,11 @@ void testUDivArgsInt32(uint32_t, uint32_t);
 void testUDivArgsInt64(uint64_t, uint64_t);
 void testUModArgsInt32(uint32_t, uint32_t);
 void testUModArgsInt64(uint64_t, uint64_t);
+void testUDivByConstantInt32(uint32_t, uint32_t);
+void testUDivByConstantInt32PowerOf2(uint32_t);
+void testUDivByConstantInt32NonPowerOf2(uint32_t);
+void testUDivByConstantInt32EvenDivisors(uint32_t);
+void testUDivByConstantInt32EdgeCases(uint32_t);
 void testSubArg(int64_t);
 void testSubArgs(int64_t, int64_t);
 void testSubArgImm(int64_t, int64_t);
@@ -1381,6 +1383,8 @@ void testVectorFmulByElementFloat();
 void testVectorFmulByElementDouble();
 void testVectorExtractLane0Float();
 void testVectorExtractLane0Double();
+void testVectorMulHigh();
+void testVectorMulLow();
 
 void testConstDoubleMove();
 void testConstFloatMove();
@@ -1390,5 +1394,47 @@ void testSShrCompare64(int64_t);
 
 void testInt52RoundTripUnary(int32_t);
 void testInt52RoundTripBinary();
+void testTruncSShrAddUnalignedConstant();
+
+void testMulHigh32();
+void testMulHigh64();
+void testUMulHigh32();
+void testUMulHigh64();
+
+void testMemoryCopy();
+void testMemoryCopyConstant();
+void testMemoryFill();
+void testMemoryFillConstant();
+
+void testLoadImmutable();
+
+// ARM64 conditional compare (ccmp) tests
+void testCCmpAnd32(int32_t, int32_t, int32_t, int32_t);
+void testCCmpAnd64(int64_t, int64_t, int64_t, int64_t);
+void testCCmpOr32(int32_t, int32_t, int32_t, int32_t);
+void testCCmpOr64(int64_t, int64_t, int64_t, int64_t);
+// 3-comparison chain tests
+void testCCmpAndAnd32(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);
+void testCCmpOrOr32(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);
+void testCCmpAndOr32(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);
+// Tests for ccmn (negative immediates) and large immediates
+void testCCmnAnd32WithNegativeImm(int32_t, int32_t);
+void testCCmnAnd64WithNegativeImm(int64_t, int64_t);
+void testCCmpWithLargePositiveImm(int32_t, int32_t);
+void testCCmpWithLargeNegativeImm(int32_t, int32_t);
+// Tests for ccmp optimizations
+void testCCmpSmartOperandOrdering32(int32_t, int32_t);
+void testCCmpSmartOperandOrdering64(int64_t, int64_t);
+void testCCmpOperandCommutation32(int32_t, int32_t);
+void testCCmpOperandCommutation64(int64_t, int64_t);
+void testCCmpCombinedOptimizations(int32_t, int32_t);
+void testCCmpZeroRegisterOptimization32(int32_t, int32_t);
+void testCCmpZeroRegisterOptimization64(int64_t, int64_t);
+void testCCmpMixedAndOr32(int32_t, int32_t, int32_t);
+void testCCmpMixedOrAnd32(int32_t, int32_t, int32_t);
+void testCCmpNegatedAnd32(int32_t, int32_t);
+void testCCmpNegatedOr32(int32_t, int32_t);
+void testCCmpMixedWidth32And64(int32_t, int64_t, int32_t);
+void testCCmpMixedWidth64And32(int64_t, int32_t);
 
 #endif // ENABLE(B3_JIT)

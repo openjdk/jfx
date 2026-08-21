@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,14 +40,19 @@ public:
     explicit NavigatorUserActivation(Navigator&);
     ~NavigatorUserActivation();
 
-    static Ref<UserActivation> userActivation(Navigator&);
-    Ref<UserActivation> userActivation();
+    static UserActivation& userActivation(Navigator&);
+    UserActivation& userActivation() const { return m_userActivation; }
 
 private:
     static NavigatorUserActivation* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorUserActivation"_s; }
+    bool isNavigatorUserActivation() const final { return true; }
 
-    Ref<UserActivation> m_userActivation;
+    const Ref<UserActivation> m_userActivation;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorUserActivation)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorUserActivation(); }
+SPECIALIZE_TYPE_TRAITS_END()

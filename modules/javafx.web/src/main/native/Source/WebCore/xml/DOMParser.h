@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/WeakPtr.h>
+#include <wtf/text/AtomString.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -27,16 +28,19 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class Settings;
 class TrustedHTML;
+template<typename> class ExceptionOr;
 
 class DOMParser : public RefCounted<DOMParser> {
 public:
     static Ref<DOMParser> create(Document& contextDocument);
     ~DOMParser();
 
-    ExceptionOr<Ref<Document>> parseFromString(std::variant<RefPtr<TrustedHTML>, String>&&, const AtomString& contentType);
+    ExceptionOr<Ref<Document>> parseFromString(Variant<RefPtr<TrustedHTML>, String>&&, const AtomString& contentType);
 
 private:
     explicit DOMParser(Document& contextDocument);
+
+    RefPtr<Document> protectedContextDocument() const { return m_contextDocument.get(); }
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_contextDocument;
     const Ref<const Settings> m_settings;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "EventTargetInterfaces.h"
 #include "XMLHttpRequest.h"
 #include <wtf/Forward.h>
 
@@ -33,12 +34,12 @@ namespace WebCore {
 class WebCoreOpaqueRoot;
 
 class XMLHttpRequestUpload final : public XMLHttpRequestEventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLHttpRequestUpload);
+    WTF_MAKE_TZONE_ALLOCATED(XMLHttpRequestUpload);
 public:
     explicit XMLHttpRequestUpload(XMLHttpRequest&);
 
-    void ref() { m_request.ref(); }
-    void deref() { m_request.deref(); }
+    void ref() { m_request->ref(); }
+    void deref() { m_request->deref(); }
 
     void dispatchProgressEvent(const AtomString& type, unsigned long long loaded, unsigned long long total);
 
@@ -51,11 +52,13 @@ private:
     void derefEventTarget() final { deref(); }
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::XMLHttpRequestUpload; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return m_request.scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
-    XMLHttpRequest& m_request;
+    WeakRef<XMLHttpRequest, WeakPtrImplWithEventTargetData> m_request;
 };
 
 WebCoreOpaqueRoot root(XMLHttpRequestUpload*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(XMLHttpRequestUpload)

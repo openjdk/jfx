@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "DebugOverlayRegions.h"
-#include "LocalFrame.h"
+#include <WebCore/DebugOverlayRegions.h>
+#include <WebCore/DocumentPage.h>
+#include <WebCore/LocalFrame.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
@@ -45,9 +46,10 @@ public:
         WheelEventHandlers,
         NonFastScrollableRegion,
         InteractionRegion,
-        SiteIsolationRegion
+        EnhancedSecurity,
     };
-    static constexpr unsigned NumberOfRegionTypes = static_cast<unsigned>(RegionType::SiteIsolationRegion) + 1;
+
+    static constexpr unsigned NumberOfRegionTypes = static_cast<unsigned>(RegionType::EnhancedSecurity) + 1;
 
     static void didLayout(LocalFrame&);
     static void didChangeEventHandlers(LocalFrame&);
@@ -74,14 +76,14 @@ private:
     bool shouldPaintOverlayIntoLayer(Page&, RegionType) const;
 
     RegionOverlay* regionOverlayForPage(Page&, RegionType) const;
-    RegionOverlay& ensureRegionOverlayForPage(Page&, RegionType);
+    Ref<RegionOverlay> ensureRegionOverlayForPage(Page&, RegionType);
 
     WeakHashMap<Page, Vector<RefPtr<RegionOverlay>>> m_pageRegionOverlays;
 
     static DebugPageOverlays* sharedDebugOverlays;
 };
 
-#define FAST_RETURN_IF_NO_OVERLAYS(page) if (LIKELY(!page || !hasOverlays(*page))) return;
+#define FAST_RETURN_IF_NO_OVERLAYS(page) if (!page || !hasOverlays(*page)) [[likely]] return;
 
 inline bool DebugPageOverlays::hasOverlays(Page& page)
 {
@@ -98,7 +100,6 @@ inline void DebugPageOverlays::didLayout(LocalFrame& frame)
     sharedDebugOverlays->regionChanged(frame, RegionType::WheelEventHandlers);
     sharedDebugOverlays->regionChanged(frame, RegionType::NonFastScrollableRegion);
     sharedDebugOverlays->regionChanged(frame, RegionType::InteractionRegion);
-    sharedDebugOverlays->regionChanged(frame, RegionType::SiteIsolationRegion);
 }
 
 inline void DebugPageOverlays::didChangeEventHandlers(LocalFrame& frame)
@@ -108,23 +109,22 @@ inline void DebugPageOverlays::didChangeEventHandlers(LocalFrame& frame)
     sharedDebugOverlays->regionChanged(frame, RegionType::WheelEventHandlers);
     sharedDebugOverlays->regionChanged(frame, RegionType::NonFastScrollableRegion);
     sharedDebugOverlays->regionChanged(frame, RegionType::InteractionRegion);
-    sharedDebugOverlays->regionChanged(frame, RegionType::SiteIsolationRegion);
 }
 
 inline void DebugPageOverlays::doAfterUpdateRendering(Page& page)
 {
-    if (LIKELY(!hasOverlays(page)))
+    if (!hasOverlays(page)) [[likely]]
         return;
 
     sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::WheelEventHandlers);
     sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::NonFastScrollableRegion);
     sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::InteractionRegion);
-    sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::SiteIsolationRegion);
+    sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::EnhancedSecurity);
 }
 
 inline bool DebugPageOverlays::shouldPaintOverlayIntoLayerForRegionType(Page& page, RegionType regionType)
 {
-    if (LIKELY(!hasOverlays(page)))
+    if (!hasOverlays(page)) [[likely]]
         return false;
     return sharedDebugOverlays->shouldPaintOverlayIntoLayer(page, regionType);
 }

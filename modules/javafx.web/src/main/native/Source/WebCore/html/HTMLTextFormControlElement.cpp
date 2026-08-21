@@ -31,8 +31,8 @@
 #include "CaretRectComputation.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
-#include "DocumentInlines.h"
-#include "Editing.h"
+#include "ContainerNodeInlines.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -40,6 +40,7 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameSelection.h"
 #include "GCReachableRef.h"
 #include "HTMLBRElement.h"
@@ -53,11 +54,13 @@
 #include "LayoutDisallowedScope.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleSetters.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
@@ -70,7 +73,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTextFormControlElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTextFormControlElement);
 
 using namespace HTMLNames;
 
@@ -98,7 +101,7 @@ Node::InsertedIntoAncestorResult HTMLTextFormControlElement::insertedIntoAncesto
     InsertedIntoAncestorResult InsertedIntoAncestorResult = HTMLFormControlElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         String initialValue = value();
-        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
+        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? String(emptyString()) : WTF::move(initialValue));
     }
     return InsertedIntoAncestorResult;
 }
@@ -133,7 +136,7 @@ void HTMLTextFormControlElement::dispatchFocusEvent(RefPtr<Element>&& oldFocused
     if (supportsPlaceholder())
         updatePlaceholderVisibility();
     handleFocusEvent(oldFocusedElement.get(), options.direction);
-    HTMLFormControlElement::dispatchFocusEvent(WTFMove(oldFocusedElement), options);
+    HTMLFormControlElement::dispatchFocusEvent(WTF::move(oldFocusedElement), options);
 }
 
 void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -142,7 +145,15 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
         updatePlaceholderVisibility();
     // Match the order in Document::setFocusedElement.
     handleBlurEvent();
-    HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
+    HTMLFormControlElement::dispatchBlurEvent(WTF::move(newFocusedElement));
+}
+
+void HTMLTextFormControlElement::dispatchUserTextInputEvent()
+{
+    Ref event = Event::create(eventNames().webkitusertextinputEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes);
+    event->setIsAutofillEvent();
+    event->setTarget(this);
+    dispatchEvent(event);
 }
 
 void HTMLTextFormControlElement::didEditInnerTextValue(bool wasUserEdit)
@@ -153,6 +164,7 @@ void HTMLTextFormControlElement::didEditInnerTextValue(bool wasUserEdit)
     LOG(Editing, "HTMLTextFormControlElement %p didEditInnerTextValue", this);
 
     m_lastChangeWasUserEdit = wasUserEdit;
+    m_wasEverChangedByUserEdit |= wasUserEdit;
     subtreeHasChanged();
 }
 
@@ -166,7 +178,7 @@ void HTMLTextFormControlElement::forwardEvent(Event& event)
         innerText->defaultEventHandler(event);
 }
 
-static bool isNotLineBreak(UChar ch) { return ch != newlineCharacter && ch != carriageReturn; }
+static bool isNotLineBreak(char16_t ch) { return ch != newlineCharacter && ch != carriageReturn; }
 
 bool HTMLTextFormControlElement::isPlaceholderEmpty() const
 {
@@ -227,13 +239,14 @@ String HTMLTextFormControlElement::selectedText() const
 {
     if (!isTextField())
         return String();
-    return value().substring(selectionStart(), selectionEnd() - selectionStart());
+    return value()->substring(selectionStart(), selectionEnd() - selectionStart());
 }
 
 void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
 {
-    if (m_textAsOfLastFormControlChangeEvent != value()) {
-        setTextAsOfLastFormControlChangeEvent(value());
+    auto value = this->value();
+    if (m_textAsOfLastFormControlChangeEvent != value.get()) {
+        setTextAsOfLastFormControlChangeEvent(String { value });
         dispatchChangeEvent();
     }
     setChangedSinceLastFormControlChangeEvent(false);
@@ -498,7 +511,7 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
 static void setContainerAndOffsetForRange(Node& node, unsigned offset, RefPtr<Node>& containerNode, unsigned& offsetInContainer)
 {
     if (node.isTextNode()) {
-        containerNode = &node;
+        containerNode = node;
         offsetInContainer = offset;
     } else {
         containerNode = node.parentNode();
@@ -649,6 +662,13 @@ bool HTMLTextFormControlElement::lastChangeWasUserEdit() const
     return m_lastChangeWasUserEdit;
 }
 
+bool HTMLTextFormControlElement::wasEverChangedByUserEdit() const
+{
+    if (!isTextField())
+        return false;
+    return m_wasEverChangedByUserEdit;
+}
+
 static void stripTrailingNewline(StringBuilder& result)
 {
     // Remove one trailing newline; there's always one that's collapsed out by rendering.
@@ -693,8 +713,8 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
                     previousValue = renderText->textWithoutConvertingBackslashToYenSymbol();
             }
 #endif
-            if (AXObjectCache* cache = document().existingAXObjectCache())
-                cache->postNotification(this, AXNotification::ValueChanged, PostTarget::ObservableParent);
+            if (CheckedPtr cache = document().existingAXObjectCache())
+                cache->onEditableTextValueChanged(*this);
         }
 #endif
 
@@ -703,7 +723,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
             ScriptDisallowedScope::EventAllowedScope allowedScope(*protectedUserAgentShadowRoot());
 
             bool endsWithNewLine = value.endsWith('\n') || value.endsWith('\r');
-            innerText->setInnerText(WTFMove(value));
+            innerText->setInnerText(WTF::move(value));
 
             if (endsWithNewLine)
                 innerText->appendChild(HTMLBRElement::create(document()));
@@ -804,7 +824,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* breakNode = nullptr;
+    RefPtr<Node> breakNode;
     unsigned breakOffset = 0;
     auto currentLineBox = InlineIterator::firstLineBoxFor(*renderer);
     if (!currentLineBox)
@@ -869,8 +889,8 @@ HTMLTextFormControlElement* enclosingTextFormControl(const Position& position)
 String HTMLTextFormControlElement::directionForFormData() const
 {
     auto direction = [this] {
-        for (auto& element : lineageOfType<HTMLElement>(*this)) {
-            auto& value = element.attributeWithoutSynchronization(dirAttr);
+        for (Ref element : lineageOfType<HTMLElement>(*this)) {
+            auto& value = element->attributeWithoutSynchronization(dirAttr);
             if (equalLettersIgnoringASCIICase(value, "rtl"_s))
                 return TextDirection::RTL;
             if (equalLettersIgnoringASCIICase(value, "ltr"_s))
@@ -908,14 +928,14 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
     textBlockStyle.setUnicodeBidi(parentStyle.unicodeBidi());
 
     if (auto innerText = innerTextElement()) {
-        if (auto* properties = innerText->presentationalHintStyle()) {
+        if (RefPtr properties = innerText->presentationalHintStyle()) {
             if (auto value = properties->propertyAsValueID(CSSPropertyWebkitUserModify))
                 textBlockStyle.setUserModify(fromCSSValueID<UserModify>(*value));
         }
     }
 
     if (parentStyle.fieldSizing() == FieldSizing::Content)
-        textBlockStyle.setLogicalMinWidth(Length { caretWidth(), LengthType::Fixed });
+        textBlockStyle.setLogicalMinWidth(Style::MinimumSize::Fixed { static_cast<float>(caretWidth()) });
 
 #if PLATFORM(IOS_FAMILY)
     if (textBlockStyle.textSecurity() != TextSecurity::None && textBlockStyle.writingMode().isBidiRTL()) {
@@ -923,25 +943,31 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
         // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
 
         switch (textBlockStyle.textAlign()) {
-        case TextAlignMode::Start:
-        case TextAlignMode::Justify:
-            textBlockStyle.setTextAlign(TextAlignMode::Right);
+        case Style::TextAlign::Start:
+        case Style::TextAlign::Justify:
+            textBlockStyle.setTextAlign(Style::TextAlign::Right);
             break;
-        case TextAlignMode::End:
-            textBlockStyle.setTextAlign(TextAlignMode::Left);
+        case Style::TextAlign::End:
+            textBlockStyle.setTextAlign(Style::TextAlign::Left);
             break;
-        case TextAlignMode::Left:
-        case TextAlignMode::Right:
-        case TextAlignMode::Center:
-        case TextAlignMode::WebKitLeft:
-        case TextAlignMode::WebKitRight:
-        case TextAlignMode::WebKitCenter:
+        case Style::TextAlign::Left:
+        case Style::TextAlign::Right:
+        case Style::TextAlign::Center:
+        case Style::TextAlign::WebKitLeft:
+        case Style::TextAlign::WebKitRight:
+        case Style::TextAlign::WebKitCenter:
             break;
         }
 
         textBlockStyle.setDirection(TextDirection::LTR);
     }
 #endif
+}
+
+bool HTMLTextFormControlElement::shouldApplyScriptTrackingPrivacyProtection() const
+{
+    return (wasEverChangedByUserEdit() || !wasCreatedByTaintedScript())
+        && protectedDocument()->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::FormControls);
 }
 
 } // namespace WebCore

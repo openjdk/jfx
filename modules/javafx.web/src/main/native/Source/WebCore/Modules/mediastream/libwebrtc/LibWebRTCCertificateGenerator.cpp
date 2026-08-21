@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,8 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCProvider.h"
 #include "LibWebRTCUtils.h"
@@ -48,12 +50,12 @@ class RTCCertificateGeneratorCallbackWrapper : public ThreadSafeRefCounted<RTCCe
 public:
     static Ref<RTCCertificateGeneratorCallbackWrapper> create(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
     {
-        return adoptRef(*new RTCCertificateGeneratorCallbackWrapper(WTFMove(origin), WTFMove(resultCallback)));
+        return adoptRef(*new RTCCertificateGeneratorCallbackWrapper(WTF::move(origin), WTF::move(resultCallback)));
     }
 
-    void process(rtc::scoped_refptr<rtc::RTCCertificate> certificate)
+    void process(webrtc::scoped_refptr<webrtc::RTCCertificate> certificate)
     {
-        callOnMainThread([origin = m_origin.releaseNonNull(), callback = WTFMove(m_resultCallback), certificate = WTFMove(certificate)]() mutable {
+        callOnMainThread([origin = m_origin.releaseNonNull(), callback = WTF::move(m_resultCallback), certificate = WTF::move(certificate)]() mutable {
             if (!certificate) {
                 callback(Exception { ExceptionCode::TypeError, "Unable to create a certificate"_s });
                 return;
@@ -69,14 +71,14 @@ public:
             };
 
             auto pem = certificate->ToPEM();
-            callback(RTCCertificate::create(WTFMove(origin), certificate->Expires(), WTFMove(fingerprints), fromStdString(pem.certificate()), fromStdString(pem.private_key())));
+            callback(RTCCertificate::create(WTF::move(origin), certificate->Expires(), WTF::move(fingerprints), fromStdString(pem.certificate()), fromStdString(pem.private_key())));
         });
     }
 
 private:
     RTCCertificateGeneratorCallbackWrapper(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
-        : m_origin(WTFMove(origin))
-        , m_resultCallback(WTFMove(resultCallback))
+        : m_origin(WTF::move(origin))
+        , m_resultCallback(WTF::move(resultCallback))
     {
     }
 
@@ -84,15 +86,15 @@ private:
     Function<void(ExceptionOr<Ref<RTCCertificate>>&&)> m_resultCallback;
 };
 
-static inline rtc::KeyParams keyParamsFromCertificateType(const PeerConnectionBackend::CertificateInformation& info)
+static inline webrtc::KeyParams keyParamsFromCertificateType(const PeerConnectionBackend::CertificateInformation& info)
 {
     switch (info.type) {
     case PeerConnectionBackend::CertificateInformation::Type::ECDSAP256:
-        return rtc::KeyParams::ECDSA();
+        return webrtc::KeyParams::ECDSA();
     case PeerConnectionBackend::CertificateInformation::Type::RSASSAPKCS1v15:
         if (info.rsaParameters)
-            return rtc::KeyParams::RSA(info.rsaParameters->modulusLength, info.rsaParameters->publicExponent);
-        return rtc::KeyParams::RSA(2048, 65537);
+            return webrtc::KeyParams::RSA(info.rsaParameters->modulusLength, info.rsaParameters->publicExponent);
+        return webrtc::KeyParams::RSA(2048, 65537);
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -100,15 +102,15 @@ static inline rtc::KeyParams keyParamsFromCertificateType(const PeerConnectionBa
 
 void generateCertificate(Ref<SecurityOrigin>&& origin, LibWebRTCProvider& provider, const PeerConnectionBackend::CertificateInformation& info, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
 {
-    auto callbackWrapper = RTCCertificateGeneratorCallbackWrapper::create(WTFMove(origin), WTFMove(resultCallback));
+    auto callbackWrapper = RTCCertificateGeneratorCallbackWrapper::create(WTF::move(origin), WTF::move(resultCallback));
 
     std::optional<uint64_t> expiresMs;
     if (info.expires)
         expiresMs = static_cast<uint64_t>(*info.expires);
 
-    provider.prepareCertificateGenerator([info, expiresMs, callbackWrapper = WTFMove(callbackWrapper)](auto& generator) mutable {
-        generator.GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, [callbackWrapper = WTFMove(callbackWrapper)](rtc::scoped_refptr<rtc::RTCCertificate> certificate) mutable {
-            callbackWrapper->process(WTFMove(certificate));
+    provider.prepareCertificateGenerator([info, expiresMs, callbackWrapper = WTF::move(callbackWrapper)](auto& generator) mutable {
+        generator.GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, [callbackWrapper = WTF::move(callbackWrapper)](webrtc::scoped_refptr<webrtc::RTCCertificate> certificate) mutable {
+            callbackWrapper->process(WTF::move(certificate));
         });
     });
 }

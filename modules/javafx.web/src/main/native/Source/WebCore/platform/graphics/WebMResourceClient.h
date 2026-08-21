@@ -25,16 +25,16 @@
 
 #pragma once
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #include "PlatformMediaResourceLoader.h"
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class WebMResourceClientParent : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebMResourceClientParent, WTF::DestructionThread::Main> {
+class WebMResourceClientParent : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
 public:
     virtual ~WebMResourceClientParent() = default;
 
@@ -67,4 +67,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

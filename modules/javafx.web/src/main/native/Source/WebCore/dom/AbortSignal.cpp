@@ -27,10 +27,12 @@
 #include "AbortSignal.h"
 
 #include "AbortAlgorithm.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "DOMTimer.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMException.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreOpaqueRoot.h"
@@ -40,7 +42,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AbortSignal);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AbortSignal);
 
 Ref<AbortSignal> AbortSignal::create(ScriptExecutionContext* context)
 {
@@ -71,7 +73,7 @@ Ref<AbortSignal> AbortSignal::timeout(ScriptExecutionContext& context, uint64_t 
         Locker locker { globalObject->vm().apiLock() };
         signal->signalAbort(toJS(globalObject, globalObject, DOMException::create(ExceptionCode::TimeoutError)));
     };
-    DOMTimer::install(context, WTFMove(action), Seconds::fromMilliseconds(milliseconds), DOMTimer::Type::SingleShot);
+    DOMTimer::install(context, WTF::move(action), Seconds::fromMilliseconds(milliseconds), DOMTimer::Type::SingleShot);
     return signal;
 }
 
@@ -146,7 +148,7 @@ void AbortSignal::signalAbort(JSC::JSValue reason)
     for (Ref dependentSignal : std::exchange(m_dependentSignals, { })) {
         if (!dependentSignal->aborted()) {
             dependentSignal->markAborted(reason);
-            dependentSignalsToAbort.append(WTFMove(dependentSignal));
+            dependentSignalsToAbort.append(WTF::move(dependentSignal));
         }
     }
 
@@ -210,11 +212,11 @@ void AbortSignal::eventListenersDidChange()
 uint32_t AbortSignal::addAbortAlgorithmToSignal(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
 {
     if (signal.aborted()) {
-        algorithm->handleEvent(signal.m_reason.getValue());
+        algorithm->invoke(signal.m_reason.getValue());
         return 0;
     }
-    return signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue value) mutable {
-        algorithm->handleEvent(value);
+    return signal.addAlgorithm([algorithm = WTF::move(algorithm)](JSC::JSValue value) mutable {
+        algorithm->invoke(value);
     });
 }
 
@@ -225,7 +227,7 @@ void AbortSignal::removeAbortAlgorithmFromSignal(AbortSignal& signal, uint32_t a
 
 uint32_t AbortSignal::addAlgorithm(Algorithm&& algorithm)
 {
-    m_algorithms.append(std::make_pair(++m_algorithmIdentifier, WTFMove(algorithm)));
+    m_algorithms.append(std::make_pair(++m_algorithmIdentifier, WTF::move(algorithm)));
     return m_algorithmIdentifier;
 }
 
@@ -244,6 +246,11 @@ void AbortSignal::throwIfAborted(JSC::JSGlobalObject& lexicalGlobalObject)
     Ref vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     throwException(&lexicalGlobalObject, scope, m_reason.getValue());
+}
+
+ScriptExecutionContext* AbortSignal::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 WebCoreOpaqueRoot root(AbortSignal* signal)

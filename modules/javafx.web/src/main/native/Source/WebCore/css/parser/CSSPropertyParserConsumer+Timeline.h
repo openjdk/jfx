@@ -25,15 +25,22 @@
 
 #pragma once
 
-#include "TimelineRange.h"
-
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
+enum CSSValueID : uint16_t;
 struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
+
+namespace Style {
+enum class SingleAnimationRangeType : bool;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -41,12 +48,25 @@ bool isAnimationRangeKeyword(CSSValueID);
 
 // MARK: - Consumer functions
 
-RefPtr<CSSValue> consumeAnimationRange(CSSParserTokenRange&, const CSSParserContext&, SingleTimelineRange::Type);
-RefPtr<CSSValue> consumeAnimationRangeStart(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeAnimationRangeEnd(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeAnimationTimeline(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeViewTimelineInsetListItem(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeViewTimelineInset(CSSParserTokenRange&, const CSSParserContext&);
+// <scroll()> = scroll( [ <scroller> || <axis> ]? )
+// https://drafts.csswg.org/scroll-animations-1/#scroll-notation
+RefPtr<CSSValue> consumeAnimationTimelineScroll(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// <view()> = view( [ <axis> || <'view-timeline-inset'> ]? )
+// https://drafts.csswg.org/scroll-animations-1/#view-notation
+RefPtr<CSSValue> consumeAnimationTimelineView(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// <single-view-timeline-inset-item> = <single-view-timeline-inset>{1,2}
+// https://drafts.csswg.org/scroll-animations-1/#propdef-view-timeline-inset
+RefPtr<CSSValue> consumeSingleViewTimelineInsetItem(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> parseSingleViewTimelineInsetItem(const String&, const CSSParserContext&);
+
+// <single-animation-range> = normal | <length-percentage> | <timeline-range-name> <length-percentage>?
+// https://drafts.csswg.org/scroll-animations-1/#propdef-animation-range-start
+RefPtr<CSSValue> consumeSingleAnimationRange(CSSParserTokenRange&, CSS::PropertyParserState&, Style::SingleAnimationRangeType);
+RefPtr<CSSValue> consumeSingleAnimationRangeStart(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeSingleAnimationRangeEnd(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> parseSingleAnimationRange(const String&, const CSSParserContext&, Style::SingleAnimationRangeType);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

@@ -25,26 +25,23 @@
 
 #pragma once
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || OS(ANDROID)
 
 #include "PlatformDisplay.h"
 
 namespace WebCore {
 
 class PlatformDisplayDefault final : public PlatformDisplay {
-
-
-
 public:
     static std::unique_ptr<PlatformDisplayDefault> create();
 
     virtual ~PlatformDisplayDefault();
 private:
-    explicit PlatformDisplayDefault(std::unique_ptr<GLDisplay>&&);
+    explicit PlatformDisplayDefault(Ref<GLDisplay>&&);
 
     Type type() const override { return PlatformDisplay::Type::Default; }
 };
 
 } // namespace WebCore
 
-#endif // PLATFORM(GTK)
+#endif // PLATFORM(GTK) || OS(ANDROID)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ class GPURenderBundle : public RefCounted<GPURenderBundle> {
 public:
     static Ref<GPURenderBundle> create(Ref<WebGPU::RenderBundle>&& backing)
     {
-        return adoptRef(*new GPURenderBundle(WTFMove(backing)));
+        return adoptRef(*new GPURenderBundle(WTF::move(backing)));
     }
 
     String label() const;
@@ -47,11 +47,11 @@ public:
 
 private:
     GPURenderBundle(Ref<WebGPU::RenderBundle>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::RenderBundle> m_backing;
+    const Ref<WebGPU::RenderBundle> m_backing;
 };
 
 }

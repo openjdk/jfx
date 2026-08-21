@@ -32,13 +32,13 @@ namespace WebCore {
 
 Ref<Model> Model::create(Ref<SharedBuffer>&& data, String mimeType, URL url)
 {
-    return adoptRef(*new Model(WTFMove(data), WTFMove(mimeType), WTFMove(url)));
+    return adoptRef(*new Model(WTF::move(data), WTF::move(mimeType), WTF::move(url)));
 }
 
 Model::Model(Ref<SharedBuffer>&& data, String mimeType, URL url)
-    : m_data(WTFMove(data))
-    , m_mimeType(WTFMove(mimeType))
-    , m_url(WTFMove(url))
+    : m_data(WTF::move(data))
+    , m_mimeType(WTF::move(mimeType))
+    , m_url(WTF::move(url))
 {
 }
 
@@ -48,9 +48,9 @@ TextStream& operator<<(TextStream& ts, const Model& model)
 {
     TextStream::GroupScope groupScope(ts);
 
-    ts.dumpProperty("data-size", model.data()->size());
-    ts.dumpProperty("mime-type", model.mimeType());
-    ts.dumpProperty("url", model.url());
+    ts.dumpProperty("data-size"_s, model.data()->size());
+    ts.dumpProperty("mime-type"_s, model.mimeType());
+    ts.dumpProperty("url"_s, model.url());
 
     return ts;
 }

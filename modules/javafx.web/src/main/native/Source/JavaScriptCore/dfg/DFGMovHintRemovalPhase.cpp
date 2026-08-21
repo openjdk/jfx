@@ -81,16 +81,59 @@ private:
         Epoch currentEpoch = Epoch::first();
 
         m_state.fill(Epoch());
+
+        // This is a heuristic. We found cases that BB ends with Jump, and successor no longer have liveness for locals.
+        // However, at the end of the current BB, it is alive and we failed to kill that MovHint while we do not have exits.
+        // This is a work-around for that case, we chase only one successor and collect a bit more precise liveness information.
+        if (block->terminal()->isJump()) {
+            auto* successor = block->successor(0);
+
         m_graph.forAllLiveInBytecode(
-            block->terminal()->origin.forExit,
+                successor->terminal()->origin.forExit,
             [&] (Operand reg) {
                 m_state.operand(reg) = currentEpoch;
             });
 
-        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Locals at ", block->terminal()->origin.forExit, ": ", m_state);
+            // Assume that blocks after we exit.
+            currentEpoch.bump();
+
+            for (unsigned nodeIndex = successor->size(); nodeIndex--;) {
+                Node* node = successor->at(nodeIndex);
+
+                if (node->op() == MovHint)
+                    m_state.operand(node->unlinkedOperand()) = Epoch();
+
+                if (mayExit(m_graph, node) != DoesNotExit)
+                    currentEpoch.bump();
+
+                Node* before = block->terminal();
+                if (nodeIndex)
+                    before = successor->at(nodeIndex - 1);
+
+                forAllKilledOperands(
+                    m_graph, before, node,
+                    [&] (Operand operand) {
+                        // This function is a bit sloppy - it might claim to kill a local even if
+                        // it's still live after. We need to protect against that.
+                        if (!!m_state.operand(operand))
+                            return;
+
+                        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Killed operand at ", node, ": ", operand);
+                        m_state.operand(operand) = currentEpoch;
+                    });
+            }
+        } else {
+            m_graph.forAllLiveInBytecode(
+                block->terminal()->origin.forExit,
+                [&] (Operand reg) {
+                    m_state.operand(reg) = currentEpoch;
+                });
 
         // Assume that blocks after we exit.
         currentEpoch.bump();
+        }
+
+        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Locals at ", block->terminal()->origin.forExit, ": ", m_state);
 
         for (unsigned nodeIndex = block->size(); nodeIndex--;) {
             Node* node = block->at(nodeIndex);

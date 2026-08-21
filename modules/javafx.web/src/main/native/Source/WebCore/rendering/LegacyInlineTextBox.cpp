@@ -23,7 +23,7 @@
 #include "config.h"
 #include "LegacyInlineTextBox.h"
 
-#include "BreakLines.h"
+#include "BreakablePositions.h"
 #include "CompositionHighlight.h"
 #include "DashArray.h"
 #include "Document.h"
@@ -47,8 +47,9 @@
 #include "RenderElementInlines.h"
 #include "RenderHighlight.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
 #include "RenderSVGInlineText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
@@ -65,7 +66,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyInlineTextBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyInlineTextBox);
 
 struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
     void* pointers[2];
@@ -74,7 +75,7 @@ struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
 
 static_assert(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBox), "LegacyInlineTextBox should stay small");
 
-typedef UncheckedKeyHashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
+typedef HashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
 static LegacyInlineTextBoxOverflowMap* gTextBoxesWithOverflow;
 
 LegacyInlineTextBox::LegacyInlineTextBox(RenderSVGInlineText& renderer)
@@ -120,24 +121,6 @@ void LegacyInlineTextBox::setLogicalOverflowRect(const LayoutRect& rect)
     if (!gTextBoxesWithOverflow)
         gTextBoxesWithOverflow = new LegacyInlineTextBoxOverflowMap;
     gTextBoxesWithOverflow->add(this, rect);
-}
-
-LayoutUnit LegacyInlineTextBox::baselinePosition(FontBaseline baselineType) const
-{
-    if (!parent())
-        return 0;
-    if (&parent()->renderer() == renderer().parent())
-        return parent()->baselinePosition(baselineType);
-    return downcast<RenderBoxModelObject>(*renderer().parent()).baselinePosition(baselineType, isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
-}
-
-LayoutUnit LegacyInlineTextBox::lineHeight() const
-{
-    if (!renderer().parent())
-        return 0;
-    if (&parent()->renderer() == renderer().parent())
-        return parent()->lineHeight();
-    return downcast<RenderBoxModelObject>(*renderer().parent()).lineHeight(isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
 
 LayoutUnit LegacyInlineTextBox::selectionTop() const
@@ -207,7 +190,7 @@ LayoutRect LegacyInlineTextBox::localSelectionRect(unsigned startPos, unsigned e
     selectionRect.move(logicalLeft(), 0);
     // FIXME: The computation of the snapped selection rect differs from the computation of this rect
     // in paintMarkedTextBackground(). See <https://bugs.webkit.org/show_bug.cgi?id=138913>.
-    return snappedSelectionRect(selectionRect, logicalRight(), renderer().writingMode());
+    return snappedSelectionRect(selectionRect, logicalRight(), writingMode);
 }
 
 void LegacyInlineTextBox::deleteLine()
@@ -266,7 +249,7 @@ TextRun LegacyInlineTextBox::createTextRun() const
 {
     const auto& style = lineStyle();
     TextRun textRun { text(), textPos(), 0, ExpansionBehavior::forbidAll(), direction(), style.rtlOrdering() == Order::Visual, !renderer().canUseSimpleFontCodePath() };
-    textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
+    textRun.setTabSize(!style.collapseWhiteSpace(), Style::toPlatform(style.tabSize()));
     return textRun;
 }
 
@@ -276,7 +259,7 @@ String LegacyInlineTextBox::text() const
 
     // This works because this replacement doesn't affect string indices. We're replacing a single Unicode code unit with another Unicode code unit.
     // How convenient.
-    return RenderBlock::updateSecurityDiscCharacters(lineStyle(), WTFMove(result));
+    return RenderBlock::updateSecurityDiscCharacters(lineStyle(), WTF::move(result));
 }
 
 #if ENABLE(TREE_DEBUGGING)
@@ -302,7 +285,7 @@ void LegacyInlineTextBox::outputLineBox(TextStream& stream, bool mark, int depth
     value = value.substring(start(), len());
     value = makeStringByReplacingAll(value, '\\', "\\\\"_s);
     value = makeStringByReplacingAll(value, '\n', "\\n"_s);
-    stream << boxName() << " "_s << FloatRect(x(), y(), width(), height()) << " ("_s << this << ") renderer->("_s << &renderer() << ") run("_s << start() << ", "_s << start() + len() << ") \""_s << value.utf8().data() << "\""_s;
+    stream << boxName() << " "_s << FloatRect(x(), y(), width(), height()) << " ("_s << this << ") renderer->("_s << &renderer() << ") run("_s << start() << ", "_s << start() + len() << ") \""_s << value.utf8().data() << '"';
     stream.nextLine();
 }
 

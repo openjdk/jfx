@@ -51,7 +51,7 @@ constexpr int maxMarkingStackFramesToCapture = 100;
 
 MarkerData::MarkerData(ReferrerToken referrer, std::unique_ptr<StackTrace>&& stack)
     : m_referrer(referrer)
-    , m_stack(WTFMove(stack))
+    , m_stack(WTF::move(stack))
 {
 }
 
@@ -64,7 +64,7 @@ void VerifierSlotVisitor::MarkedBlockData::addMarkerData(unsigned atomNumber, Ma
 {
     if (m_markers.isEmpty())
         m_markers.grow(MarkedBlock::atomsPerBlock);
-    m_markers[atomNumber] = WTFMove(marker);
+    m_markers[atomNumber] = WTF::move(marker);
 }
 
 const MarkerData* VerifierSlotVisitor::MarkedBlockData::markerData(unsigned atomNumber) const
@@ -89,7 +89,7 @@ const MarkerData* VerifierSlotVisitor::PreciseAllocationData::markerData() const
 
 void VerifierSlotVisitor::PreciseAllocationData::addMarkerData(MarkerData&& marker)
 {
-    m_marker = WTFMove(marker);
+    m_marker = WTF::move(marker);
 }
 
 const MarkerData* VerifierSlotVisitor::OpaqueRootData::markerData() const
@@ -101,7 +101,7 @@ const MarkerData* VerifierSlotVisitor::OpaqueRootData::markerData() const
 
 void VerifierSlotVisitor::OpaqueRootData::addMarkerData(MarkerData&& marker)
 {
-    m_marker = WTFMove(marker);
+    m_marker = WTF::move(marker);
 }
 
 VerifierSlotVisitor::VerifierSlotVisitor(JSC::Heap& heap)
@@ -120,7 +120,7 @@ VerifierSlotVisitor::~VerifierSlotVisitor()
 
 void VerifierSlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(AbstractSlotVisitor&)>> task)
 {
-    m_constraintTasks.append(WTFMove(task));
+    m_constraintTasks.append(WTF::move(task));
 }
 
 NO_RETURN_DUE_TO_CRASH void VerifierSlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)>>)
@@ -173,12 +173,12 @@ void VerifierSlotVisitor::appendUnbarriered(JSCell* cell)
     if (!cell)
         return;
 
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(isMarked(cell->preciseAllocation(), cell)))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (isMarked(cell->preciseAllocation(), cell)) [[likely]]
             return;
     } else {
         MarkedBlock& block = cell->markedBlock();
-        if (LIKELY(isMarked(block, cell)))
+        if (isMarked(block, cell)) [[likely]]
             return;
     }
 
@@ -372,7 +372,7 @@ bool VerifierSlotVisitor::testAndSetMarked(PreciseAllocation& allocation)
     std::unique_ptr<PreciseAllocationData>& data = m_preciseAllocationMap.add(&allocation, nullptr).iterator->value;
     if (!data) {
         data = makeUnique<PreciseAllocationData>(&allocation);
-        if (UNLIKELY(Options::verboseVerifyGC()))
+        if (Options::verboseVerifyGC()) [[unlikely]]
             data->addMarkerData({ referrer(), StackTrace::captureStackTrace(maxMarkingStackFramesToCapture, 2) });
         return false;
     }
@@ -382,7 +382,7 @@ bool VerifierSlotVisitor::testAndSetMarked(PreciseAllocation& allocation)
 bool VerifierSlotVisitor::testAndSetMarked(MarkedBlock& block, HeapCell* cell)
 {
     MarkedBlockData* data = block.verifierMemo<MarkedBlockData*>();
-    if (UNLIKELY(!data)) {
+    if (!data) [[unlikely]] {
         std::unique_ptr<MarkedBlockData>& entryData = m_markedBlockMap.add(&block, nullptr).iterator->value;
         RELEASE_ASSERT(!entryData);
         entryData = makeUnique<MarkedBlockData>(&block);
@@ -392,8 +392,10 @@ bool VerifierSlotVisitor::testAndSetMarked(MarkedBlock& block, HeapCell* cell)
 
     unsigned atomNumber = block.atomNumber(cell);
     bool alreadySet = data->testAndSetMarked(atomNumber);
-    if (!alreadySet && UNLIKELY(Options::verboseVerifyGC()))
+    if (!alreadySet) {
+        if (Options::verboseVerifyGC()) [[unlikely]]
         data->addMarkerData(atomNumber, { referrer(), StackTrace::captureStackTrace(maxMarkingStackFramesToCapture, 2) });
+    }
     return alreadySet;
 }
 

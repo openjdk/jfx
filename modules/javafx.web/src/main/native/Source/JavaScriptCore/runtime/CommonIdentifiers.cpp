@@ -37,16 +37,16 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(CommonIdentifiers);
 
 CommonIdentifiers::CommonIdentifiers(VM& vm)
     : nullIdentifier()
-    , emptyIdentifier(Identifier::EmptyIdentifier)
+    , emptyIdentifier(Identifier::EmptyIdentifierFlag::EmptyIdentifier)
     , underscoreProto(Identifier::fromString(vm, "__proto__"_s))
     , useStrictIdentifier(Identifier::fromString(vm, "use strict"_s))
-    , timesIdentifier(Identifier::fromString(vm, "*"_s))
     , negativeOneIdentifier(Identifier::fromString(vm, "-1"_s))
     , m_builtinNames(makeUnique<BuiltinNames>(vm, this))
     JSC_PARSER_PRIVATE_NAMES(INITIALIZE_PRIVATE_NAME)
     JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(INITIALIZE_KEYWORD)
     JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_PROPERTY_NAME)
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_SYMBOL)
+    JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(INITIALIZE_SYMBOL)
     JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(INITIALIZE_PRIVATE_FIELD_NAME)
 {
 }

@@ -38,30 +38,21 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 JSStringRef JSStringCreateWithCharacters(const JSChar* chars, size_t numChars)
 {
     JSC::initialize();
-    return &OpaqueJSString::create({ reinterpret_cast<const UChar*>(chars), numChars }).leakRef();
+    return &OpaqueJSString::create({ reinterpret_cast<const char16_t*>(chars), numChars }).leakRef();
 }
 
 JSStringRef JSStringCreateWithUTF8CString(const char* string)
 {
     JSC::initialize();
-    if (string) {
-        auto stringSpan = unsafeSpan8(string);
-        Vector<UChar, 1024> buffer(stringSpan.size());
-        auto result = WTF::Unicode::convert(spanReinterpretCast<const char8_t>(stringSpan), buffer.mutableSpan());
-        if (result.code == WTF::Unicode::ConversionResultCode::Success) {
-            if (result.isAllASCII)
-                return &OpaqueJSString::create(stringSpan).leakRef();
-            return &OpaqueJSString::create(result.buffer).leakRef();
-        }
-    }
-
+    if (auto result = OpaqueJSString::tryCreate(byteCast<char8_t>(unsafeSpan(string))))
+        return result.leakRef();
     return &OpaqueJSString::create().leakRef();
 }
 
 JSStringRef JSStringCreateWithCharactersNoCopy(const JSChar* chars, size_t numChars)
 {
     JSC::initialize();
-    return OpaqueJSString::tryCreate(StringImpl::createWithoutCopying({ reinterpret_cast<const UChar*>(chars), numChars })).leakRef();
+    return OpaqueJSString::tryCreate(StringImpl::createWithoutCopying({ reinterpret_cast<const char16_t*>(chars), numChars })).leakRef();
 }
 
 JSStringRef JSStringRetain(JSStringRef string)

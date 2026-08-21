@@ -25,19 +25,12 @@
 
 #pragma once
 
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
-
-namespace WebCore {
-class PageGroup;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PageGroup> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -46,13 +39,14 @@ class Page;
 class CaptionUserPreferences;
 #endif
 
-class PageGroup : public CanMakeWeakPtr<PageGroup> {
+class PageGroup final : public CanMakeWeakPtr<PageGroup>, public CanMakeCheckedPtr<PageGroup> {
     WTF_MAKE_TZONE_ALLOCATED(PageGroup);
     WTF_MAKE_NONCOPYABLE(PageGroup);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageGroup);
 public:
-    WEBCORE_EXPORT explicit PageGroup(const String& name);
-    explicit PageGroup(Page&);
-    ~PageGroup();
+    WEBCORE_EXPORT static UniqueRef<PageGroup> create(const String&);
+    WEBCORE_EXPORT static UniqueRef<PageGroup> create(Page&);
+    WEBCORE_EXPORT ~PageGroup();
 
     WEBCORE_EXPORT static PageGroup* pageGroup(const String& groupName);
 
@@ -67,17 +61,21 @@ public:
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT void captionPreferencesChanged();
     WEBCORE_EXPORT CaptionUserPreferences& ensureCaptionPreferences();
+    Ref<CaptionUserPreferences> ensureProtectedCaptionPreferences();
     CaptionUserPreferences* captionPreferences() const { return m_captionPreferences.get(); }
 #endif
 
 private:
+    WEBCORE_EXPORT explicit PageGroup(const String&);
+    WEBCORE_EXPORT explicit PageGroup(Page&);
+
     String m_name;
     WeakHashSet<Page> m_pages;
 
     unsigned m_identifier;
 
 #if ENABLE(VIDEO)
-    RefPtr<CaptionUserPreferences> m_captionPreferences;
+    const RefPtr<CaptionUserPreferences> m_captionPreferences;
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "AudioUtilities.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include <algorithm>
@@ -46,7 +47,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioScheduledSourceNode);
 
 AudioScheduledSourceNode::AudioScheduledSourceNode(BaseAudioContext& context, NodeType type)
     : AudioNode(context, type)

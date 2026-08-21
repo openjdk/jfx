@@ -32,7 +32,7 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 
-using CVPixelBufferRef = struct __CVBuffer*;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef const struct opaqueCMFormatDescription* CMFormatDescriptionRef;
 
 namespace WebCore {
@@ -65,6 +65,8 @@ private:
     void stopRecording(CompletionHandler<void()>&&) final;
     void pauseRecording(CompletionHandler<void()>&&) final;
     void resumeRecording(CompletionHandler<void()>&&) final;
+
+    bool shouldApplyVideoRotation() const { return m_encoder->shouldApplyVideoRotation(); }
 
     const Ref<MediaRecorderPrivateEncoder> m_encoder;
     RefPtr<VideoFrame> m_blackFrame;

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2016-2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "Reverb.h"
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -47,7 +49,7 @@ constexpr size_t MaxFFTSize = 32768;
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ConvolverNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConvolverNode);
 
 static unsigned computeNumberOfOutputChannels(unsigned inputChannels, unsigned responseChannels)
 {
@@ -66,7 +68,7 @@ ExceptionOr<Ref<ConvolverNode>> ConvolverNode::create(BaseAudioContext& context,
 
     node->setNormalizeForBindings(!options.disableNormalization);
 
-    result = node->setBufferForBindings(WTFMove(options.buffer));
+    result = node->setBufferForBindings(WTF::move(options.buffer));
     if (result.hasException())
         return result.releaseException();
 
@@ -89,25 +91,25 @@ ConvolverNode::~ConvolverNode()
 
 void ConvolverNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    CheckedPtr firstOutput = output(0);
+    AudioBus& outputBus = firstOutput->bus();
 
     // Synchronize with possible dynamic changes to the impulse response.
     if (!m_processLock.tryLock()) {
         // Too bad - tryLock() failed. We must be in the middle of setting a new impulse response.
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
     Locker locker { AdoptLock, m_processLock };
 
     if (!isInitialized() || !m_reverb.get())
-        outputBus->zero();
+        outputBus.zero();
     else {
         // Process using the convolution engine.
         // Note that we can handle the case where nothing is connected to the input, in which case we'll just feed silence into the convolver.
         // FIXME: If we wanted to get fancy we could try to factor in the 'tail time' and stop processing once the tail dies down if
         // we keep getting fed silence.
-        m_reverb->process(input(0)->bus(), outputBus, framesToProcess);
+        m_reverb->process(checkedInput(0)->bus(), outputBus, framesToProcess);
     }
 }
 
@@ -141,7 +143,7 @@ ExceptionOr<void> ConvolverNode::setBufferForBindings(RefPtr<AudioBuffer>&& buff
 
     // Create the reverb with the given impulse response.
     bool useBackgroundThreads = !context().isOfflineContext();
-    auto reverb = makeUnique<Reverb>(bufferBus.get(), AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
+    auto reverb = makeUnique<Reverb>(bufferBus, AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
 
     {
         // The context must be locked since changing the buffer can re-configure the number of channels that are output.
@@ -150,11 +152,11 @@ ExceptionOr<void> ConvolverNode::setBufferForBindings(RefPtr<AudioBuffer>&& buff
         // Synchronize with process().
         Locker locker { m_processLock };
 
-        m_reverb = WTFMove(reverb);
-        m_buffer = WTFMove(buffer);
+        m_reverb = WTF::move(reverb);
+        m_buffer = WTF::move(buffer);
         if (m_buffer) {
             // This will propagate the channel count to any nodes connected further downstream in the graph.
-            output(0)->setNumberOfChannels(computeNumberOfOutputChannels(input(0)->numberOfChannels(), m_buffer->numberOfChannels()));
+            checkedOutput(0)->setNumberOfChannels(computeNumberOfOutputChannels(checkedInput(0)->numberOfChannels(), m_buffer->numberOfChannels()));
         }
     }
 
@@ -232,7 +234,7 @@ void ConvolverNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
         if (!isInitialized()) {
             // This will propagate the channel count to any nodes connected further
             // downstream in the graph.
-            output(0)->setNumberOfChannels(numberOfOutputChannels);
+            checkedOutput(0)->setNumberOfChannels(numberOfOutputChannels);
             initialize();
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ void StorageThread::dispatch(Function<void ()>&& function)
 {
     ASSERT(isMainThread());
     ASSERT(!m_queue.killed() && m_thread);
-    m_queue.append(makeUnique<Function<void ()>>(WTFMove(function)));
+    m_queue.append(makeUnique<Function<void ()>>(WTF::move(function)));
 }
 
 void StorageThread::terminate()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "Identifier.h"
-#include <variant>
+#include <JavaScriptCore/Identifier.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/PackedRefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -149,9 +149,9 @@ public:
 
     VariableEnvironment() { }
     VariableEnvironment(VariableEnvironment&& other)
-        : m_map(WTFMove(other.m_map))
+        : m_map(WTF::move(other.m_map))
         , m_isEverythingCaptured(other.m_isEverythingCaptured)
-        , m_rareData(WTFMove(other.m_rareData))
+        , m_rareData(WTF::move(other.m_rareData))
     {
     }
     VariableEnvironment(const VariableEnvironment& other)
@@ -180,18 +180,18 @@ public:
 
     ALWAYS_INLINE unsigned size() const { return m_map.size() + privateNamesSize(); }
     ALWAYS_INLINE unsigned mapSize() const { return m_map.size(); }
-    ALWAYS_INLINE bool contains(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.contains(identifier); }
-    ALWAYS_INLINE bool remove(const RefPtr<UniquedStringImpl>& identifier) { return m_map.remove(identifier); }
-    ALWAYS_INLINE Map::iterator find(const RefPtr<UniquedStringImpl>& identifier) { return m_map.find(identifier); }
-    ALWAYS_INLINE Map::const_iterator find(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.find(identifier); }
+    ALWAYS_INLINE bool contains(const UniquedStringImpl* identifier) const { return m_map.contains(identifier); }
+    ALWAYS_INLINE bool remove(const UniquedStringImpl* identifier) { return m_map.remove(identifier); }
+    ALWAYS_INLINE Map::iterator find(const UniquedStringImpl* identifier) { return m_map.find(identifier); }
+    ALWAYS_INLINE Map::const_iterator find(const UniquedStringImpl* identifier) const { return m_map.find(identifier); }
     void swap(VariableEnvironment& other);
-    void markVariableAsCapturedIfDefined(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsCaptured(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsCapturedIfDefined(const UniquedStringImpl* identifier);
+    void markVariableAsCaptured(const UniquedStringImpl* identifier);
     void markAllVariablesAsCaptured();
     bool hasCapturedVariables() const;
     bool captures(UniquedStringImpl* identifier) const;
-    void markVariableAsImported(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsImported(const UniquedStringImpl* identifier);
+    void markVariableAsExported(const UniquedStringImpl* identifier);
 
     bool isEverythingCaptured() const { return m_isEverythingCaptured; }
     bool isEmpty() const { return !m_map.size() && !privateNamesSize(); }
@@ -304,7 +304,7 @@ public:
 
         RareData() { }
         RareData(RareData&& other)
-            : m_privateNames(WTFMove(other.m_privateNames))
+            : m_privateNames(WTF::move(other.m_privateNames))
         {
         }
         RareData(const RareData&) = default;
@@ -341,7 +341,7 @@ class CompactTDZEnvironment {
 
     using Compact = Vector<PackedRefPtr<UniquedStringImpl>>;
     using Inflated = TDZEnvironment;
-    using Variables = std::variant<Compact, Inflated>;
+    using Variables = Variant<Compact, Inflated>;
 
 public:
     CompactTDZEnvironment(const TDZEnvironment&);
@@ -442,7 +442,7 @@ public:
         }
         Handle& operator=(Handle&& other)
         {
-            Handle handle(WTFMove(other));
+            Handle handle(WTF::move(other));
             swap(handle);
             return *this;
         }
@@ -488,14 +488,14 @@ private:
 
 class TDZEnvironmentLink : public RefCounted<TDZEnvironmentLink> {
     TDZEnvironmentLink(CompactTDZEnvironmentMap::Handle handle, RefPtr<TDZEnvironmentLink> parent)
-        : m_handle(WTFMove(handle))
-        , m_parent(WTFMove(parent))
+        : m_handle(WTF::move(handle))
+        , m_parent(WTF::move(parent))
     { }
 
 public:
     static RefPtr<TDZEnvironmentLink> create(CompactTDZEnvironmentMap::Handle handle, RefPtr<TDZEnvironmentLink> parent)
     {
-        return adoptRef(new TDZEnvironmentLink(WTFMove(handle), WTFMove(parent)));
+        return adoptRef(new TDZEnvironmentLink(WTF::move(handle), WTF::move(parent)));
     }
 
     bool contains(UniquedStringImpl* impl) const { return m_handle.environment().toTDZEnvironment().contains(impl); }

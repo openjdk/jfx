@@ -50,12 +50,12 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTree);
 
-using OrphanScrollingNodeMap = UncheckedKeyHashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
+using OrphanScrollingNodeMap = HashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
 
 struct CommitTreeState {
     // unvisitedNodes starts with all nodes in the map; we remove nodes as we visit them. At the end, it's the unvisited nodes.
     // We can't use orphanNodes for this, because orphanNodes won't contain descendants of removed nodes.
-    UncheckedKeyHashSet<ScrollingNodeID> unvisitedNodes { };
+    HashSet<ScrollingNodeID> unvisitedNodes { };
     // Nodes with non-empty synchronousScrollingReasons.
     HashSet<ScrollingNodeID> synchronousScrollingNodes { };
     // orphanNodes keeps child nodes alive while we rebuild child lists.
@@ -63,7 +63,7 @@ struct CommitTreeState {
     // Hosted subtrees needing attaching to scrolling tree after main commit has finished
     Vector<std::pair<LayerHostingContextIdentifier, Vector<std::unique_ptr<ScrollingStateTree>>>> pendingSubtreesNeedingCommit { };
     // Nodes that are descendants of a frame hosting node.
-    UncheckedKeyHashSet<ScrollingNodeID> hostedScrollingNodes { };
+    HashSet<ScrollingNodeID> hostedScrollingNodes { };
     // This has a value when doing a commit for a hosted subtree.
     RefPtr<ScrollingTreeFrameHostingNode> frameHostingNode { };
     // Identifier for the frame associated with this commit.
@@ -248,7 +248,7 @@ WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformW
 
         if (RefPtr scrollProxyNode = dynamicDowncast<ScrollingTreeOverflowScrollProxyNode>(*node)) {
             if (RefPtr relatedNode = nodeForID(scrollProxyNode->overflowScrollingNodeID())) {
-                node = WTFMove(relatedNode);
+                node = WTF::move(relatedNode);
                 continue;
             }
         }
@@ -271,18 +271,16 @@ OptionSet<EventListenerRegionType> ScrollingTree::eventListenerRegionTypesForPoi
 }
 #endif
 
-void ScrollingTree::traverseScrollingTree(VisitorFunction&& visitorFunction)
+void ScrollingTree::traverseScrollingTree(NOESCAPE const VisitorFunction& visitorFunction)
 {
     Locker locker { m_treeLock };
     RefPtr rootNode = m_rootNode;
     if (!rootNode)
         return;
-
-    auto function = WTFMove(visitorFunction);
-    traverseScrollingTreeRecursive(*rootNode, function);
+    traverseScrollingTreeRecursive(*rootNode, visitorFunction);
 }
 
-void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, const VisitorFunction& visitorFunction)
+void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, NOESCAPE const VisitorFunction& visitorFunction)
 {
     bool scrolledSinceLastCommit = false;
     std::optional<FloatPoint> scrollPosition;
@@ -357,13 +355,13 @@ bool ScrollingTree::commitTreeStateInternal(std::unique_ptr<ScrollingStateTree>&
     if (hostingContextIdentifier) {
         LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::commitTreeState - starting hosted tree commit for hosting context ID:  " << *hostingContextIdentifier);
         if (RefPtr scrollingNode = m_hostedSubtrees.get(*hostingContextIdentifier))
-            commitState.frameHostingNode = WTFMove(scrollingNode);
+            commitState.frameHostingNode = WTF::move(scrollingNode);
         else {
             LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::commitTreeState - parent not present for hosted tree commit");
             // Add to hosted subtrees needing pairing since the hosting node is not in the scrolling tree yet
             m_hostedSubtreesNeedingPairing.ensure(*hostingContextIdentifier, [] {
                 return Vector<std::unique_ptr<ScrollingStateTree>> { };
-            }).iterator->value.append(WTFMove(scrollingStateTree));
+            }).iterator->value.append(WTF::move(scrollingStateTree));
             return true;
         }
         if (!rootNode) {
@@ -440,12 +438,12 @@ bool ScrollingTree::commitTreeStateInternal(std::unique_ptr<ScrollingStateTree>&
     LOG_WITH_STREAM(ScrollingTree, stream << "committed ScrollingTree" << scrollingTreeAsText(debugScrollingStateTreeAsTextBehaviors));
 
     // Recursively commit subtrees that can now be attatched
-    auto subtrees = WTFMove(commitState.pendingSubtreesNeedingCommit);
+    auto subtrees = WTF::move(commitState.pendingSubtreesNeedingCommit);
     for (auto& pair : subtrees) {
         auto hostingID = pair.first;
         LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::commitTreeState - committing unparented subtrees for hosting context ID: " << hostingID);
         for (auto& subtree : pair.second)
-            succeeded &= commitTreeStateInternal(WTFMove(subtree), hostingID);
+            succeeded &= commitTreeStateInternal(WTF::move(subtree), hostingID);
     }
 
     didCommitTree();
@@ -457,7 +455,7 @@ bool ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scroll
 {
     SetForScope inCommitTreeState(m_inCommitTreeState, true);
     Locker locker { m_treeLock };
-    return commitTreeStateInternal(WTFMove(scrollingStateTree), hostingContextIdentifier);
+    return commitTreeStateInternal(WTF::move(scrollingStateTree), hostingContextIdentifier);
 }
 
 bool ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* stateNode, CommitTreeState& state)
@@ -477,7 +475,7 @@ bool ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
 
     RefPtr<ScrollingTreeNode> node;
     if (it != m_nodeMap.end()) {
-        node = it->value;
+        node = it->value.ptr();
         state.unvisitedNodes.remove(nodeID);
     } else {
         node = createScrollingTreeNode(stateNode->nodeType(), nodeID);
@@ -490,10 +488,10 @@ bool ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
             removeAllNodes();
         }
 
-        m_nodeMap.set(nodeID, node.get());
+        m_nodeMap.set(nodeID, *node);
         {
             Locker locker { m_frameIDMapLock };
-            m_nodeMapPerFrame.ensure(state.frameId, [] { return UncheckedKeyHashSet<ScrollingNodeID> { }; }).iterator->value.add(node->scrollingNodeID());
+            m_nodeMapPerFrame.ensure(state.frameId, [] { return HashSet<ScrollingNodeID> { }; }).iterator->value.add(node->scrollingNodeID());
         }
         node->setFrameIdentifier(state.frameId);
     }
@@ -565,7 +563,7 @@ void ScrollingTree::removeAllNodes()
 {
     auto nodes = std::exchange(m_nodeMap, { });
     for (auto iter : nodes)
-        iter.value->willBeDestroyed();
+        Ref { iter.value }->willBeDestroyed();
 
     m_nodeMap.clear();
     {
@@ -685,6 +683,12 @@ ScrollbarWidth ScrollingTree::mainFrameScrollbarWidth() const
     return m_rootNode ? m_rootNode->scrollbarWidthStyle() : ScrollbarWidth::Auto;
 }
 
+std::optional<ScrollbarColor> ScrollingTree::mainFrameScrollbarColor() const
+{
+    Locker locker { m_treeLock };
+    return m_rootNode ? m_rootNode->scrollbarColorStyle() : std::nullopt;
+}
+
 OverscrollBehavior ScrollingTree::mainFrameVerticalOverscrollBehavior() const
 {
     Locker locker { m_treeLock };
@@ -730,22 +734,22 @@ FloatRect ScrollingTree::layoutViewport() const
 void ScrollingTree::viewWillStartLiveResize()
 {
     Locker locker { m_treeLock };
-    if (m_rootNode)
-        m_rootNode->viewWillStartLiveResize();
+    if (RefPtr rootNode = m_rootNode)
+        rootNode->viewWillStartLiveResize();
 }
 
 void ScrollingTree::viewWillEndLiveResize()
 {
     Locker locker { m_treeLock };
-    if (m_rootNode)
-        m_rootNode->viewWillEndLiveResize();
+    if (RefPtr rootNode = m_rootNode)
+        rootNode->viewWillEndLiveResize();
 }
 
 void ScrollingTree::viewSizeDidChange()
 {
     Locker locker { m_treeLock };
-    if (m_rootNode)
-        m_rootNode->viewSizeDidChange();
+    if (RefPtr rootNode = m_rootNode)
+        rootNode->viewSizeDidChange();
 }
 
 void ScrollingTree::setGestureState(std::optional<WheelScrollGestureState> gestureState)
@@ -870,7 +874,7 @@ bool ScrollingTree::hasNodeWithActiveScrollAnimations()
     return !m_treeState.nodesWithActiveScrollAnimations.isEmpty();
 }
 
-UncheckedKeyHashSet<ScrollingNodeID> ScrollingTree::nodesWithActiveScrollAnimations()
+HashSet<ScrollingNodeID> ScrollingTree::nodesWithActiveScrollAnimations()
 {
     Locker locker { m_treeStateLock };
     return m_treeState.nodesWithActiveScrollAnimations;
@@ -911,12 +915,12 @@ void ScrollingTree::addPendingScrollUpdate(ScrollUpdate&& update)
     Locker locker { m_pendingScrollUpdatesLock };
     for (auto& existingUpdate : m_pendingScrollUpdates) {
         if (existingUpdate.canMerge(update)) {
-            existingUpdate.merge(WTFMove(update));
+            existingUpdate.merge(WTF::move(update));
             return;
         }
     }
 
-    m_pendingScrollUpdates.append(WTFMove(update));
+    m_pendingScrollUpdates.append(WTF::move(update));
 }
 
 Vector<ScrollUpdate> ScrollingTree::takePendingScrollUpdates()
@@ -1051,15 +1055,15 @@ String ScrollingTree::scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBeha
 
     {
         TextStream::GroupScope scope(ts);
-        ts << "scrolling tree";
+        ts << "scrolling tree"_s;
 
         Locker locker { m_treeStateLock };
 
         if (auto latchedNodeID = m_latchingController.latchedNodeID())
-            ts.dumpProperty("latched node", latchedNodeID.value());
+            ts.dumpProperty("latched node"_s, latchedNodeID.value());
 
         if (!m_treeState.mainFrameScrollPosition.isZero())
-            ts.dumpProperty("main frame scroll position", m_treeState.mainFrameScrollPosition);
+            ts.dumpProperty("main frame scroll position"_s, m_treeState.mainFrameScrollPosition);
 
         if (RefPtr rootNode = m_rootNode) {
             TextStream::GroupScope scope(ts);
@@ -1069,32 +1073,32 @@ String ScrollingTree::scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBeha
         if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
             if (!m_overflowRelatedNodesMap.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "overflow related nodes";
+                ts << "overflow related nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (auto& it : m_overflowRelatedNodesMap)
-                        ts << "\n" << indent << it.key << " -> " << it.value;
+                        ts << '\n' << indent << it.key << " -> "_s << it.value;
                 }
             }
 
 #if ENABLE(SCROLLING_THREAD)
             if (!m_activeOverflowScrollProxyNodes.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "overflow scroll proxy nodes";
+                ts << "overflow scroll proxy nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (auto& node : m_activeOverflowScrollProxyNodes)
-                        ts << "\n" << indent << node->scrollingNodeID();
+                        ts << '\n' << indent << node->scrollingNodeID();
                 }
             }
 
             if (!m_activePositionedNodes.isEmpty()) {
                 TextStream::GroupScope scope(ts);
-                ts << "active positioned nodes";
+                ts << "active positioned nodes"_s;
                 {
                     TextStream::IndentScope indentScope(ts);
                     for (const auto& node : m_activePositionedNodes)
-                        ts << "\n" << indent << node->scrollingNodeID();
+                        ts << '\n' << indent << node->scrollingNodeID();
                 }
             }
 #endif // ENABLE(SCROLLING_THREAD)

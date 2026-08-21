@@ -28,9 +28,11 @@
 
 #pragma once
 
-#include "IntPoint.h"
+#include <WebCore/DoubleSize.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -42,11 +44,7 @@ typedef struct CGSize CGSize;
 #endif
 
 #if PLATFORM(MAC)
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGSize NSSize;
-#else
-typedef struct _NSSize NSSize;
-#endif
 #endif // PLATFORM(MAC)
 
 namespace WTF {
@@ -143,14 +141,19 @@ public:
         return FloatSize(m_height, m_width);
     }
 
+    FloatSize scaledBy(float scale) const
+    {
+        return scaledBy(scale, scale);
+    }
+
+    FloatSize scaledBy(float scaleX, float scaleY) const
+    {
+        return FloatSize(m_width * scaleX, m_height * scaleY);
+    }
+
 #if USE(CG)
     WEBCORE_EXPORT explicit FloatSize(const CGSize&); // don't do this implicitly since it's lossy
     WEBCORE_EXPORT operator CGSize() const;
-#endif
-
-#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    WEBCORE_EXPORT explicit FloatSize(const NSSize&); // don't do this implicitly since it's lossy
-    operator NSSize() const;
 #endif
 
     static constexpr FloatSize nanSize();
@@ -159,19 +162,9 @@ public:
     WEBCORE_EXPORT String toJSONString() const;
     WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
 
+    operator DoubleSize() const { return { m_width, m_height }; }
+
     friend bool operator==(const FloatSize&, const FloatSize&) = default;
-
-    struct MarkableTraits {
-        constexpr static bool isEmptyValue(const FloatSize& size)
-        {
-            return size.isNaN();
-        }
-
-        constexpr static FloatSize emptyValue()
-        {
-            return FloatSize::nanSize();
-        }
-    };
 
 private:
     float m_width { 0 };
@@ -249,22 +242,22 @@ inline bool areEssentiallyEqual(const FloatSize& a, const FloatSize& b)
 
 inline IntSize roundedIntSize(const FloatSize& p)
 {
-    return IntSize(clampToInteger(roundf(p.width())), clampToInteger(roundf(p.height())));
+    return IntSize(clampTo<int>(roundf(p.width())), clampTo<int>(roundf(p.height())));
 }
 
 inline IntSize flooredIntSize(const FloatSize& p)
 {
-    return IntSize(clampToInteger(floorf(p.width())), clampToInteger(floorf(p.height())));
+    return IntSize(clampTo<int>(floorf(p.width())), clampTo<int>(floorf(p.height())));
 }
 
 inline IntSize expandedIntSize(const FloatSize& p)
 {
-    return IntSize(clampToInteger(ceilf(p.width())), clampToInteger(ceilf(p.height())));
+    return IntSize(clampTo<int>(ceilf(p.width())), clampTo<int>(ceilf(p.height())));
 }
 
 inline IntPoint flooredIntPoint(const FloatSize& p)
 {
-    return IntPoint(clampToInteger(floorf(p.width())), clampToInteger(floorf(p.height())));
+    return IntPoint(clampTo<int>(floorf(p.width())), clampTo<int>(floorf(p.height())));
 }
 
 constexpr FloatSize FloatSize::nanSize()
@@ -295,6 +288,19 @@ struct LogArgument<WebCore::FloatSize> {
     static String toString(const WebCore::FloatSize& size)
     {
         return size.toJSONString();
+    }
+};
+
+template<>
+struct MarkableTraits<WebCore::FloatSize> {
+    constexpr static bool isEmptyValue(const WebCore::FloatSize& size)
+    {
+        return size.isNaN();
+    }
+
+    constexpr static WebCore::FloatSize emptyValue()
+    {
+        return WebCore::FloatSize::nanSize();
     }
 };
 

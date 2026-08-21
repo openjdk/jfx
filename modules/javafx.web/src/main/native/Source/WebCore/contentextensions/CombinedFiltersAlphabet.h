@@ -27,8 +27,8 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionsDebugging.h"
-#include "Term.h"
+#include <WebCore/ContentExtensionsDebugging.h>
+#include <WebCore/Term.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
@@ -53,7 +53,7 @@ private:
         static const bool safeToCompareToEmptyOrDeleted = false;
     };
 
-    UncheckedKeyHashSet<const Term*, TermPointerHash> m_uniqueTerms;
+    HashSet<const Term*, TermPointerHash> m_uniqueTerms;
     Vector<std::unique_ptr<Term>> m_internedTermsStorage;
 };
 

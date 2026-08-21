@@ -27,11 +27,16 @@
 
 #import "HardwareCapabilities.h"
 #import <Metal/Metal.h>
+#import <bmalloc/CompactAllocationMode.h>
+#import <wtf/Assertions.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
+#import <wtf/HashSet.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/RefPtr.h>
 #import <wtf/TZoneMalloc.h>
+#import <wtf/ThreadSafeWeakPtr.h>
 #import <wtf/WeakPtr.h>
 
 struct WGPUAdapterImpl {
@@ -48,7 +53,7 @@ class Adapter : public WGPUAdapterImpl, public RefCounted<Adapter> {
 public:
     static Ref<Adapter> create(id<MTLDevice> device, Instance& instance, bool xrCompatible, HardwareCapabilities&& capabilities)
     {
-        return adoptRef(*new Adapter(device, instance, xrCompatible, WTFMove(capabilities)));
+        return adoptRef(*new Adapter(device, instance, xrCompatible, WTF::move(capabilities)));
     }
     static Ref<Adapter> createInvalid(Instance& instance)
     {

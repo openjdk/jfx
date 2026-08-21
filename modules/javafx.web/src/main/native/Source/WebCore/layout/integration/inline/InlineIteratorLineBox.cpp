@@ -30,14 +30,15 @@
 #include "InlineIteratorBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 
 namespace WebCore {
 namespace InlineIterator {
 
 LineBoxIterator::LineBoxIterator(LineBox::PathVariant&& pathVariant)
-    : m_lineBox(WTFMove(pathVariant))
+    : m_lineBox(WTF::move(pathVariant))
 {
 }
 
@@ -99,7 +100,6 @@ LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent& inlineContent
 {
     return { LineBoxIteratorModernPath { inlineContent, lineIndex } };
 }
-
 
 LineBoxIterator LineBox::next() const
 {
@@ -178,6 +178,18 @@ RenderObject::HighlightState LineBox::ellipsisSelectionState() const
 
     auto [selectionStart, selectionEnd] = formattingContextRoot().view().selection().rangeForTextBox(text->renderer(), selectionRange);
     return selectionStart <= *selectionRange.truncation && selectionEnd >= *selectionRange.truncation ? RenderObject::HighlightState::Inside : RenderObject::HighlightState::None;
+}
+
+LeafBoxIterator LineBox::blockLevelBox() const
+{
+    if (!hasBlockContent())
+        return { };
+    auto blockBox = lineRightmostLeafBox();
+    if (!blockBox || !blockBox->isBlockLevelBox()) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    return blockBox;
 }
 
 }

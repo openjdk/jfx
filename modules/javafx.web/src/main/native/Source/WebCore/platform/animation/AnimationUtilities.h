@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "IntPoint.h"
-#include "IterationCompositeOperation.h"
-#include "LayoutPoint.h"
+#include <WebCore/Color.h>
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IterationCompositeOperation.h>
+#include <WebCore/LayoutPoint.h>
+#include <wtf/MathExtras.h>
 
 namespace WebCore {
 
@@ -38,13 +40,17 @@ struct BlendingContext {
     CompositeOperation compositeOperation { CompositeOperation::Replace };
     IterationCompositeOperation iterationCompositeOperation { IterationCompositeOperation::Replace };
     double currentIteration { 0 };
+    Color fromCurrentColor { };
+    Color toCurrentColor { };
 
-    BlendingContext(double progress = 0, bool isDiscrete = false, CompositeOperation compositeOperation = CompositeOperation::Replace, IterationCompositeOperation iterationCompositeOperation = IterationCompositeOperation::Replace, double currentIteration = 0)
+    BlendingContext(double progress = 0, bool isDiscrete = false, CompositeOperation compositeOperation = CompositeOperation::Replace, IterationCompositeOperation iterationCompositeOperation = IterationCompositeOperation::Replace, double currentIteration = 0, Color fromCurrentColor = { }, Color toCurrentColor = { })
         : progress(progress)
         , isDiscrete(isDiscrete)
         , compositeOperation(compositeOperation)
         , iterationCompositeOperation(iterationCompositeOperation)
         , currentIteration(currentIteration)
+        , fromCurrentColor(fromCurrentColor)
+        , toCurrentColor(toCurrentColor)
     {
     }
 
@@ -68,27 +74,27 @@ struct BlendingContext {
 inline int blend(int from, int to, const BlendingContext& context)
 {
     if (context.iterationCompositeOperation == IterationCompositeOperation::Accumulate && context.currentIteration) {
-        auto iterationIncrement = static_cast<int>(context.currentIteration * static_cast<double>(to));
+        auto iterationIncrement = truncateDoubleToInt32(context.currentIteration * static_cast<double>(to));
         from += iterationIncrement;
         to += iterationIncrement;
     }
 
     if (context.compositeOperation == CompositeOperation::Replace)
-        return static_cast<int>(roundTowardsPositiveInfinity(from + (static_cast<double>(to) - from) * context.progress));
-    return static_cast<int>(roundTowardsPositiveInfinity(static_cast<double>(from) + static_cast<double>(from) + static_cast<double>(to - from) * context.progress));
+        return truncateDoubleToInt32(roundTowardsPositiveInfinity(from + (static_cast<double>(to) - from) * context.progress));
+    return truncateDoubleToInt32(roundTowardsPositiveInfinity(static_cast<double>(from) + static_cast<double>(from) + static_cast<double>(to - from) * context.progress));
 }
 
 inline unsigned blend(unsigned from, unsigned to, const BlendingContext& context)
 {
     if (context.iterationCompositeOperation == IterationCompositeOperation::Accumulate && context.currentIteration) {
-        auto iterationIncrement = static_cast<unsigned>(context.currentIteration * static_cast<double>(to));
+        auto iterationIncrement = truncateDoubleToUint32(context.currentIteration * static_cast<double>(to));
         from += iterationIncrement;
         to += iterationIncrement;
     }
 
     if (context.compositeOperation == CompositeOperation::Replace)
-        return static_cast<unsigned>(lround(from + (static_cast<double>(to) - from) * context.progress));
-    return static_cast<unsigned>(lround(from + from + (static_cast<double>(to) - from) * context.progress));
+        return truncateDoubleToUint32(lround(from + (static_cast<double>(to) - from) * context.progress));
+    return truncateDoubleToUint32(lround(from + from + (static_cast<double>(to) - from) * context.progress));
 }
 
 inline double blend(double from, double to, const BlendingContext& context)
@@ -124,14 +130,17 @@ inline LayoutUnit blend(LayoutUnit from, LayoutUnit to, const BlendingContext& c
 
 inline IntPoint blend(const IntPoint& from, const IntPoint& to, const BlendingContext& context)
 {
-    return IntPoint(blend(from.x(), to.x(), context),
-        blend(from.y(), to.y(), context));
+    return IntPoint(blend(from.x(), to.x(), context), blend(from.y(), to.y(), context));
+}
+
+inline FloatPoint blend(const FloatPoint& from, const FloatPoint& to, const BlendingContext& context)
+{
+    return FloatPoint(blend(from.x(), to.x(), context), blend(from.y(), to.y(), context));
 }
 
 inline LayoutPoint blend(const LayoutPoint& from, const LayoutPoint& to, const BlendingContext& context)
 {
-    return LayoutPoint(blend(from.x(), to.x(), context),
-        blend(from.y(), to.y(), context));
+    return LayoutPoint(blend(from.x(), to.x(), context), blend(from.y(), to.y(), context));
 }
 
 } // namespace WebCore

@@ -26,8 +26,10 @@
 
 #pragma once
 
+#include <span>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if USE(UNIX_DOMAIN_SOCKETS)
@@ -53,6 +55,7 @@ class ProcessIdentity;
 class SharedBuffer;
 
 enum class MemoryLedger { None, Default, Network, Media, Graphics, Neural };
+enum class SharedMemoryProtection : bool { ReadOnly, ReadWrite };
 
 WEBCORE_EXPORT bool isMemoryAttributionDisabled();
 
@@ -67,13 +70,23 @@ public:
         Win32Handle;
 #endif
 
+    // Note: this function should not be used to share writable arbitrary malloc memory to
+    // another process, as a misbehaving process needs to be destroyed before the memory
+    // can be reused by malloc. Typically this is not possible to guarantee.
+    // The memory objects must be controllable by the caller.
+    WEBCORE_EXPORT static std::optional<SharedMemoryHandle> createVMShare(std::span<const uint8_t>, SharedMemoryProtection);
+    // Creates copy that reuses current virtual memory mappings.
+    WEBCORE_EXPORT static std::optional<SharedMemoryHandle> createVMCopy(std::span<const uint8_t>, SharedMemoryProtection);
+    // Creates copy with new memory mappings.
+    WEBCORE_EXPORT static std::optional<SharedMemoryHandle> createCopy(std::span<const uint8_t>, SharedMemoryProtection);
+
     SharedMemoryHandle(SharedMemoryHandle&&) = default;
 #if USE(UNIX_DOMAIN_SOCKETS)
     explicit SharedMemoryHandle(const SharedMemoryHandle&);
 #else
     explicit SharedMemoryHandle(const SharedMemoryHandle&) = default;
 #endif
-    WEBCORE_EXPORT SharedMemoryHandle(SharedMemoryHandle::Type&&, size_t);
+    WEBCORE_EXPORT SharedMemoryHandle(SharedMemoryHandle::Type&&, uint64_t);
 
     SharedMemoryHandle& operator=(SharedMemoryHandle&&) = default;
 
@@ -89,24 +102,23 @@ public:
 #endif
 
 private:
-    friend struct IPC::ArgumentCoder<SharedMemoryHandle, void>;
+    friend struct IPC::ArgumentCoder<SharedMemoryHandle>;
     friend class SharedMemory;
 
     Type m_handle;
-    size_t m_size { 0 };
+    uint64_t m_size { 0 };
 };
 
 class SharedMemory : public ThreadSafeRefCounted<SharedMemory> {
 public:
     using Handle = SharedMemoryHandle;
-
-    enum class Protection : bool { ReadOnly, ReadWrite };
+    using Protection = SharedMemoryProtection;
+    enum class CopyOnWrite : bool { No, Yes };
 
     // FIXME: Change these factory functions to return Ref<SharedMemory> and crash on failure.
     WEBCORE_EXPORT static RefPtr<SharedMemory> allocate(size_t);
     WEBCORE_EXPORT static RefPtr<SharedMemory> copyBuffer(const WebCore::FragmentedSharedBuffer&);
-    WEBCORE_EXPORT static RefPtr<SharedMemory> copySpan(std::span<const uint8_t>);
-    WEBCORE_EXPORT static RefPtr<SharedMemory> map(Handle&&, Protection);
+    WEBCORE_EXPORT static RefPtr<SharedMemory> map(Handle&&, Protection, CopyOnWrite = CopyOnWrite::No);
 #if USE(UNIX_DOMAIN_SOCKETS)
     WEBCORE_EXPORT static RefPtr<SharedMemory> wrapMap(void*, size_t, int fileDescriptor);
 #elif OS(DARWIN)
@@ -119,8 +131,8 @@ public:
 
     size_t size() const { return m_size; }
 
-    std::span<const uint8_t> span() const { return unsafeMakeSpan(static_cast<const uint8_t*>(m_data), m_size); }
-    std::span<uint8_t> mutableSpan() const { return unsafeMakeSpan(static_cast<uint8_t*>(m_data), m_size); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return unsafeMakeSpan(static_cast<const uint8_t*>(m_data), m_size); }
+    std::span<uint8_t> mutableSpan() const LIFETIME_BOUND { return unsafeMakeSpan(static_cast<uint8_t*>(m_data), m_size); }
 
 #if OS(WINDOWS)
     HANDLE handle() const { return m_handle.get(); }

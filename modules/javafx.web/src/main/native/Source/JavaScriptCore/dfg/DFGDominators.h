@@ -38,7 +38,7 @@ namespace JSC { namespace DFG {
 template <typename CFGKind>
 class Dominators : public WTF::Dominators<CFGKind> {
     WTF_MAKE_NONCOPYABLE(Dominators);
-    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(Dominators);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE(Dominators);
 public:
     Dominators(Graph& graph)
         : WTF::Dominators<CFGKind>(selectCFG<CFGKind>(graph))
@@ -46,21 +46,33 @@ public:
     }
 };
 
-WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename CFGKind>, Dominators<CFGKind>);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL(template<typename CFGKind>, Dominators<CFGKind>);
 
 using SSADominators = Dominators<SSACFG>;
 using CPSDominators = Dominators<CPSCFG>;
 
-template <typename T, typename = typename std::enable_if<std::is_same<T, CPSCFG>::value>::type>
-CPSDominators& ensureDominatorsForCFG(Graph& graph)
-{
-    return graph.ensureCPSDominators();
-}
+template<typename> struct DominatorsSelection;
 
-template <typename T, typename = typename std::enable_if<std::is_same<T, SSACFG>::value>::type>
-SSADominators& ensureDominatorsForCFG(Graph& graph)
-{
+template<>
+struct DominatorsSelection<CPSCFG> {
+    static CPSDominators& select(Graph& graph LIFETIME_BOUND)
+    {
+    return graph.ensureCPSDominators();
+    }
+};
+
+template<>
+struct DominatorsSelection<SSACFG> {
+    static SSADominators& select(Graph& graph LIFETIME_BOUND)
+    {
     return graph.ensureSSADominators();
+    }
+};
+
+template<typename T>
+auto& ensureDominatorsForCFG(Graph& graph LIFETIME_BOUND)
+{
+    return DominatorsSelection<T>::select(graph);
 }
 
 } } // namespace JSC::DFG

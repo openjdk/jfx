@@ -22,13 +22,16 @@
 
 #pragma once
 
-#include "PaintPhase.h"
-#include "RenderElement.h"
+#include <WebCore/PaintPhase.h>
+#include <WebCore/RenderElement.h>
 #include <wtf/OptionSet.h>
+#include <wtf/UniquelyOwned.h>
 
 namespace WebCore {
 
 class BlendingKeyframes;
+class GraphicsLayerAnimation;
+class LegacyRenderSVGResourceClipper;
 class RenderLayer;
 class RenderSVGResourceClipper;
 class RenderSVGResourceFilter;
@@ -37,8 +40,13 @@ class RenderSVGResourceMasker;
 class RenderSVGResourcePaintServer;
 class SVGGraphicsElement;
 
+namespace Style {
+struct SVGMarkerResource;
+enum class TransformResolverOption : uint8_t;
+}
+
 class RenderLayerModelObject : public RenderElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLayerModelObject);
+    WTF_MAKE_TZONE_ALLOCATED(RenderLayerModelObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayerModelObject);
 public:
     virtual ~RenderLayerModelObject();
@@ -49,8 +57,8 @@ public:
     RenderLayer* layer() const { return m_layer.get(); }
     CheckedPtr<RenderLayer> checkedLayer() const;
 
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     virtual bool requiresLayer() const = 0;
 
@@ -60,7 +68,7 @@ public:
 
     // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
     // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
-    virtual bool applyCachedClipAndScrollPosition(RepaintRects&, const RenderLayerModelObject*, VisibleRectContext) const { return false; }
+    virtual bool applyCachedClipAndScrollPosition(RepaintRects&, const RenderLayerModelObject*, VisibleRectContext) const;
 
     virtual bool isScrollableOrRubberbandableBox() const { return false; }
 
@@ -68,9 +76,9 @@ public:
 
     std::optional<LayoutRect> cachedLayerClippedOverflowRect() const;
 
-    bool startAnimation(double timeOffset, const Animation&, const BlendingKeyframes&) override;
-    void animationPaused(double timeOffset, const String& name) override;
-    void animationFinished(const String& name) override;
+    bool startAnimation(double timeOffset, const GraphicsLayerAnimation&, const BlendingKeyframes&) override;
+    void animationPaused(double timeOffset, const BlendingKeyframes&) override;
+    void animationFinished(const BlendingKeyframes&) override;
     void transformRelatedPropertyDidChange() override;
 
     void suspendAnimations(MonotonicTime = MonotonicTime()) override;
@@ -87,7 +95,7 @@ public:
     // This lives in RenderLayerModelObject, which is the common base-class for all SVG renderers.
     void mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const;
 
-    void applySVGTransform(TransformationMatrix&, const SVGGraphicsElement&, const RenderStyle&, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption>) const;
+    void applySVGTransform(TransformationMatrix&, const SVGGraphicsElement&, const RenderStyle&, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<Style::TransformResolverOption>) const;
     void updateHasSVGTransformFlags();
     virtual bool needsHasSVGTransformFlags() const { ASSERT_NOT_REACHED(); return false; }
 
@@ -107,15 +115,20 @@ public:
     RenderSVGResourceMarker* svgMarkerMidResourceFromStyle() const;
     RenderSVGResourceMarker* svgMarkerEndResourceFromStyle() const;
 
+    LegacyRenderSVGResourceClipper* legacySVGClipperResourceFromStyle() const;
+
     bool pointInSVGClippingArea(const FloatPoint&) const;
+
     void paintSVGClippingMask(PaintInfo&, const FloatRect& objectBoundingBox) const;
     void paintSVGMask(PaintInfo&, const LayoutPoint& adjustedPaintOffset) const;
 
     TransformationMatrix* layerTransform() const;
 
     virtual void updateLayerTransform();
-    virtual void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const = 0;
+    virtual void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption>) const = 0;
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox) const;
+
+    inline bool shouldUsePositionedClipping() const;
 
 protected:
     RenderLayerModelObject(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -127,9 +140,9 @@ protected:
     virtual void updateFromStyle() { }
 
 private:
-    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const String& markerResource) const;
+    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const Style::SVGMarkerResource&) const;
 
-    std::unique_ptr<RenderLayer> m_layer;
+    UniquelyOwnedPtr<RenderLayer> m_layer;
 
     // Used to store state between styleWillChange and styleDidChange
     static bool s_wasFloating;

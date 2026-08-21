@@ -26,25 +26,67 @@
 #pragma once
 
 #include <wtf/CompactPointerTuple.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WTF {
 
 template<typename T, typename Type>
 class CompactRefPtrTuple final {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(CompactRefPtrTuple);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CompactRefPtrTuple);
 
     static_assert(::allowCompactPointers<T>());
 public:
     CompactRefPtrTuple() = default;
+    CompactRefPtrTuple(T* pointer, Type type)
+    {
+        setPointer(pointer);
+        setType(type);
+    }
+
+    CompactRefPtrTuple(RefPtr<T>&& pointer, Type type)
+    {
+        setPointer(WTF::move(pointer));
+        setType(type);
+    }
+
+    CompactRefPtrTuple(const CompactRefPtrTuple& other)
+    {
+        setPointer(other.pointer());
+        setType(other.type());
+    }
+
+    CompactRefPtrTuple(CompactRefPtrTuple&& other)
+    {
+        m_data.setPointer(other.pointer());
+        m_data.setType(other.type());
+        other.m_data.setPointer(nullptr);
+        other.m_data.setType({ });
+    }
+
+    CompactRefPtrTuple& operator=(const CompactRefPtrTuple& other)
+    {
+        CompactRefPtrTuple copied(other);
+        swap(copied);
+        return *this;
+    }
+
+    CompactRefPtrTuple& operator=(CompactRefPtrTuple&& other)
+    {
+        CompactRefPtrTuple moved(WTF::move(other));
+        swap(moved);
+        return *this;
+    }
+
     ~CompactRefPtrTuple()
     {
         WTF::DefaultRefDerefTraits<T>::derefIfNotNull(m_data.pointer());
+        secureZeroSpan(singleElementSpan(m_data));
     }
 
-    T* pointer() const
+    T* pointer() const LIFETIME_BOUND
     {
         return m_data.pointer();
     }
@@ -58,7 +100,7 @@ public:
 
     void setPointer(RefPtr<T>&& pointer)
     {
-        auto willRelease = WTFMove(pointer);
+        auto willRelease = WTF::move(pointer);
         auto* old = m_data.pointer();
         m_data.setPointer(willRelease.leakRef());
         WTF::DefaultRefDerefTraits<T>::derefIfNotNull(old);
@@ -66,7 +108,7 @@ public:
 
     void setPointer(Ref<T>&& pointer)
     {
-        auto willRelease = WTFMove(pointer);
+        auto willRelease = WTF::move(pointer);
         auto* old = m_data.pointer();
         m_data.setPointer(&willRelease.leakRef());
         WTF::DefaultRefDerefTraits<T>::derefIfNotNull(old);
@@ -76,6 +118,11 @@ public:
     void setType(Type type)
     {
         m_data.setType(type);
+    }
+
+    void swap(CompactRefPtrTuple<T, Type>& other)
+    {
+        m_data.swap(other.m_data);
     }
 
 private:

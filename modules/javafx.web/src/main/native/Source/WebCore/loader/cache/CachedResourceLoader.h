@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "CachedResource.h"
-#include "CachedResourceHandle.h"
-#include "CachedResourceRequest.h"
-#include "ContentSecurityPolicy.h"
-#include "Document.h"
-#include "KeepaliveRequestTracker.h"
-#include "MixedContentChecker.h"
-#include "ResourceTimingInformation.h"
-#include "Timer.h"
+#include <WebCore/CachedResource.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/CachedResourceRequest.h>
+#include <WebCore/ContentSecurityPolicy.h>
+#include <WebCore/Document.h>
+#include <WebCore/KeepaliveRequestTracker.h>
+#include <WebCore/MixedContentChecker.h>
+#include <WebCore/ResourceTimingInformation.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
@@ -83,7 +83,7 @@ const String& convertEnumerationToString(FetchMetadataSite);
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
 class CachedResourceLoader : public RefCountedAndCanMakeWeakPtr<CachedResourceLoader> {
-    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResourceLoader, Loader);
 friend class ImageLoader;
 friend class ResourceCacheValidationSuppressor;
 
@@ -167,7 +167,7 @@ public:
     void stopUnusedPreloadsTimer();
 
     bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, FetchMetadataSite, const URL& preRedirectURL);
-    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL()) const;
+    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL(), bool shouldReportViolationAsConsoleMessage = true) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
 
@@ -175,7 +175,7 @@ public:
 
     ResourceTimingInformation& resourceTimingInformation() { return m_resourceTimingInfo; }
 
-    KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
+    KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker.get(); }
 
     Vector<CachedResourceHandle<CachedResource>> visibleResourcesToPrioritize();
 
@@ -196,7 +196,7 @@ private:
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
     void updateHTTPRequestHeaders(FrameLoader&, CachedResource::Type, CachedResourceRequest&);
 
-    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload, MixedContentChecker::IsUpgradable);
+    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload, MixedContentChecker::IsUpgradable, bool isLinkPreload);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
@@ -231,7 +231,7 @@ private:
     Timer m_garbageCollectDocumentResourcesTimer;
 
     ResourceTimingInformation m_resourceTimingInfo;
-    KeepaliveRequestTracker m_keepaliveRequestTracker;
+    const Ref<KeepaliveRequestTracker> m_keepaliveRequestTracker;
 
     bool m_autoLoadImages { true };
     bool m_imagesEnabled { true };
@@ -240,7 +240,7 @@ private:
 
 class ResourceCacheValidationSuppressor {
     WTF_MAKE_NONCOPYABLE(ResourceCacheValidationSuppressor);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceCacheValidationSuppressor, Loader);
 public:
     ResourceCacheValidationSuppressor(CachedResourceLoader& loader)
         : m_loader(loader)

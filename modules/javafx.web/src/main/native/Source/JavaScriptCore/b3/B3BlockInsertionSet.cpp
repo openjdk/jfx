@@ -64,14 +64,14 @@ BasicBlock* BlockInsertionSet::splitForward(
 
     // Remove everything prior to 'valueIndex' from 'block', since those things are now in the
     // new block.
-    block->m_values.remove(0, valueIndex);
+    block->m_values.removeAt(0, valueIndex);
 
     // This is being used in a forward loop over 'block'. Update the index of the loop so that
     // it can continue to the next block.
     valueIndex = 0;
 
     // Fixup the predecessors of 'block'. They now must jump to the new block.
-    result->predecessors() = WTFMove(block->predecessors());
+    result->predecessors() = WTF::move(block->predecessors());
     block->addPredecessor(result);
     for (BasicBlock* predecessor : result->predecessors())
         predecessor->replaceSuccessor(block, result);

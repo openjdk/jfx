@@ -31,6 +31,7 @@
 
 namespace WebCore {
 
+class AXLocalFrame;
 class AXRemoteFrame;
 class AccessibilityScrollbar;
 class Scrollbar;
@@ -38,8 +39,8 @@ class ScrollView;
 
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
-    static Ref<AccessibilityScrollView> create(AXID, ScrollView&);
-    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
+    static Ref<AccessibilityScrollView> create(AXID, ScrollView&, AXObjectCache&);
+    AccessibilityRole determineAccessibilityRole() final;
     ScrollView* scrollView() const final { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
@@ -49,8 +50,16 @@ public:
 
     RefPtr<AXRemoteFrame> remoteFrame() const { return m_remoteFrame; }
 
+    String ownerDebugDescription() const;
+    String extraDebugInfo() const final;
+
+#if ENABLE_ACCESSIBILITY_LOCAL_FRAME
+    AccessibilityObject* crossFrameParentObject() const final;
+    AccessibilityObject* crossFrameChildObject() const final;
+#endif
+
 private:
-    explicit AccessibilityScrollView(AXID, ScrollView&);
+    explicit AccessibilityScrollView(AXID, ScrollView&, AXObjectCache&);
     void detachRemoteParts(AccessibilityDetachmentType) final;
 
     ScrollView* currentScrollView() const;
@@ -61,6 +70,7 @@ private:
     bool isEnabled() const final { return true; }
     bool hasRemoteFrameChild() const final { return m_remoteFrame; }
 
+    bool isRoot() const final;
     bool isAttachment() const final;
     PlatformWidget platformWidget() const final;
     Widget* widgetForAttachmentView() const final { return currentScrollView(); }
@@ -74,22 +84,30 @@ private:
     void setFocused(bool) final;
     bool canSetFocusAttribute() const final;
     bool isFocused() const final;
+    void addLocalFrameChild();
     void addRemoteFrameChild();
 
     Document* document() const final;
     LocalFrameView* documentFrameView() const final;
     LayoutRect elementRect() const final;
+    LayoutRect boundingBoxRect() const final { return elementRect(); }
     AccessibilityObject* parentObject() const final;
+    RefPtr<AccessibilityObject> protectedHorizontalScrollbar() const { return m_horizontalScrollbar; }
+    RefPtr<AccessibilityObject> protectedVerticalScrollbar() const { return m_verticalScrollbar; }
+    RefPtr<HTMLFrameOwnerElement> protectedFrameOwnerElement() const { return m_frameOwnerElement.get(); }
 
     AccessibilityObject* firstChild() const final { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
 
+    bool m_childrenDirty;
     SingleThreadWeakPtr<ScrollView> m_scrollView;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_frameOwnerElement;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
-    bool m_childrenDirty;
+#if ENABLE_ACCESSIBILITY_LOCAL_FRAME
+    RefPtr<AXLocalFrame> m_localFrame;
+#endif
     RefPtr<AXRemoteFrame> m_remoteFrame;
 };
 

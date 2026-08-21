@@ -37,6 +37,7 @@
 #include "ProbeContext.h"
 #include "ScratchRegisterAllocator.h"
 #include "WasmExceptionType.h"
+#include "WasmMergedProfile.h"
 #include "WasmOperations.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -64,6 +65,34 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromWasmThunkGenerator(const
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk);
     linkBuffer.link<OperationPtrTag>(call, operationWasmToJSException);
     return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "throwExceptionFromWasmThunk"_s, "Throw exception from Wasm");
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromOMGThunkGenerator(const AbstractLocker&)
+{
+    CCallHelpers jit;
+    JIT_COMMENT(jit, "throwExceptionFromOMGThunkGenerator");
+
+    // Do not perform emitFunctionPrologue intentionally. This thunk is called by OMG, but we will throw an error. So there is no
+    // reason to construct the correct stack frames here. preserveReturnAddressAfterCall extracts the caller's returnAddress,
+    // used by StackVisitor to reconstruct CallSiteIndex. And this also pops return-address in x64, which means that callFrameRegister
+    // will become the same to caller's one (OMG's one).
+    jit.preserveReturnAddressAfterCall(GPRInfo::argumentGPR2);
+
+    // The thing that jumps here must move ExceptionType into the argumentGPR1 before jumping here.
+    // We're allowed to use temp registers here. We are not allowed to use callee saves.
+    jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR0);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfVM()), GPRInfo::argumentGPR3);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR3, VM::topEntryFrameOffset()), GPRInfo::argumentGPR3);
+    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(GPRInfo::argumentGPR3);
+
+    jit.prepareWasmCallOperation(GPRInfo::argumentGPR0);
+    CCallHelpers::Call call = jit.call(OperationPtrTag);
+    jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
+    jit.breakpoint(); // We should not reach this.
+
+    LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk);
+    linkBuffer.link<OperationPtrTag>(call, operationThrowExceptionFromOMG);
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "throwExceptionFromOMG"_s, "Throw exception from OMG");
 }
 
 // This is just here to give us a unique backtrace if we ever actually hit this.
@@ -113,6 +142,105 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(c
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk);
     return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "throwStackOverflowFromWasmThunk"_s, "Throw stack overflow from Wasm");
 }
+
+#if ENABLE(WEBASSEMBLY_BBQJIT)
+MacroAssemblerCodeRef<JITThunkPtrTag> materializeBaselineDataGenerator(const AbstractLocker&)
+{
+    CCallHelpers jit;
+    JIT_COMMENT(jit, "materializeBaselineDataGenerator");
+    jit.emitFunctionPrologue();
+
+    const unsigned extraPaddingBytes = 0;
+    RegisterSetBuilder builder;
+    for (auto regs : wasmCallingConvention().jsrArgs)
+        builder.add(regs, IgnoreVectors);
+    for (auto reg : wasmCallingConvention().fprArgs)
+        builder.add(reg, Options::useWasmSIMD() ? Width128 : Width64);
+
+    auto registersToSpill = RegisterSetBuilder::registersToSaveForCCall(builder.buildWithLowerBits()).buildWithLowerBits();
+    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(jit, registersToSpill, extraPaddingBytes);
+
+    // We can clobber these argument registers now since we saved them and later we restore them.
+    jit.move(GPRInfo::nonPreservedNonArgumentGPR0, GPRInfo::argumentGPR0);
+    jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR1);
+    jit.move(MacroAssembler::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationWasmMaterializeBaselineData)), GPRInfo::argumentGPR2);
+    jit.call(GPRInfo::argumentGPR2, OperationPtrTag);
+
+    ScratchRegisterAllocator::restoreRegistersFromStackForCall(jit, registersToSpill, { }, numberOfStackBytesUsedForRegisterPreservation, extraPaddingBytes);
+
+    jit.emitFunctionEpilogue();
+    jit.ret();
+    LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk);
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "materializeBaselineDataThunk"_s, "Materialize BaselineData");
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> callPolymorphicCalleeGenerator(const AbstractLocker&)
+{
+    // nonPreservedNonArgumentGPR0 and nonPreservedNonArgumentGPR1 are modified in this thunk.
+    CCallHelpers jit;
+    JIT_COMMENT(jit, "callPolymorphicCalleeGenerator");
+
+    auto needsPolyMaterialization = jit.branchTestPtr(CCallHelpers::Zero, jit.scratchRegister(), CCallHelpers::TrustedImm32(CallProfile::Polymorphic));
+    jit.subPtr(jit.scratchRegister(), CCallHelpers::TrustedImm32(CallProfile::Polymorphic), GPRInfo::wasmContextInstancePointer);
+
+    auto handleCase = [&](unsigned index) {
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, CallProfile::PolymorphicCallee::offsetOfData() + sizeof(CallProfile) * index + CallProfile::offsetOfBoxedCallee()), jit.scratchRegister());
+        auto found = jit.branchPtr(CCallHelpers::Equal, GPRInfo::nonPreservedNonArgumentGPR0, jit.scratchRegister());
+        auto next = jit.branchTestPtr(CCallHelpers::NonZero, jit.scratchRegister());
+
+        jit.storePtr(GPRInfo::nonPreservedNonArgumentGPR0, CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, CallProfile::PolymorphicCallee::offsetOfData() + sizeof(CallProfile) * index + CallProfile::offsetOfBoxedCallee()));
+
+        found.link(jit);
+        jit.add32(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, CallProfile::PolymorphicCallee::offsetOfData() + sizeof(CallProfile) * index + CallProfile::offsetOfCount()));
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfTargetInstance()), GPRInfo::wasmContextInstancePointer);
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation()), GPRInfo::nonPreservedNonArgumentGPR1);
+        jit.farJump(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1), WasmEntryPtrTag);
+
+        next.link(jit);
+    };
+
+    for (unsigned i = 0; i < CallProfile::maxPolymorphicCallees; ++i)
+        handleCase(i);
+
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::wasmContextInstancePointer, CallProfile::PolymorphicCallee::offsetOfProfile()), GPRInfo::nonPreservedNonArgumentGPR0);
+    jit.orPtr(CCallHelpers::TrustedImm32(CallProfile::Megamorphic | CallProfile::Polymorphic), GPRInfo::wasmContextInstancePointer);
+    jit.storePtr(GPRInfo::wasmContextInstancePointer, CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR0, CallProfile::offsetOfBoxedCallee()));
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfTargetInstance()), GPRInfo::wasmContextInstancePointer);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation()), GPRInfo::nonPreservedNonArgumentGPR1);
+    jit.farJump(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1), WasmEntryPtrTag);
+
+    needsPolyMaterialization.link(jit);
+    jit.emitFunctionPrologue();
+    const unsigned extraPaddingBytes = 0;
+    RegisterSetBuilder builder;
+    for (auto regs : wasmCallingConvention().jsrArgs)
+        builder.add(regs, IgnoreVectors);
+    for (auto reg : wasmCallingConvention().fprArgs)
+        builder.add(reg, Options::useWasmSIMD() ? Width128 : Width64);
+
+    auto registersToSpill = RegisterSetBuilder::registersToSaveForCCall(builder.buildWithLowerBits()).buildWithLowerBits();
+    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(jit, registersToSpill, extraPaddingBytes);
+
+    // We can clobber these argument registers now since we saved them and later we restore them.
+    jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR0);
+    jit.move(GPRInfo::nonPreservedNonArgumentGPR1, GPRInfo::argumentGPR1);
+    jit.move(MacroAssembler::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationWasmMaterializePolymorphicCallee)), GPRInfo::argumentGPR2);
+    jit.call(GPRInfo::argumentGPR2, OperationPtrTag);
+    jit.move(GPRInfo::returnValueGPR, GPRInfo::nonPreservedNonArgumentGPR1);
+
+    ScratchRegisterAllocator::restoreRegistersFromStackForCall(jit, registersToSpill, { }, numberOfStackBytesUsedForRegisterPreservation, extraPaddingBytes);
+
+    jit.emitFunctionEpilogue();
+
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfTargetInstance()), GPRInfo::wasmContextInstancePointer);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1, WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation()), GPRInfo::nonPreservedNonArgumentGPR1);
+    jit.untagReturnAddress();
+    jit.farJump(CCallHelpers::Address(GPRInfo::nonPreservedNonArgumentGPR1), WasmEntryPtrTag);
+
+    LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk);
+    return FINALIZE_WASM_CODE(linkBuffer, JITThunkPtrTag, "callPolymorphicCalleeThunk"_s, "callPolymorphicCallee");
+}
+#endif
 
 #if USE(JSVALUE64)
 MacroAssemblerCodeRef<JITThunkPtrTag> catchInWasmThunkGenerator(const AbstractLocker&)

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
- * Copyright (C) 2011 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,14 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Database.h"
 #include "DatabaseManager.h"
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "FrameDestructionObserverInlines.h"
 #include "LegacySchemeRegistry.h"
 #include "Page.h"
 #include "ScriptExecutionContext.h"
@@ -138,7 +141,7 @@ DatabaseThread* DatabaseContext::databaseThread()
 
         // Create the database thread on first request - but not if at least one database was already opened,
         // because in that case we already had a database thread and terminated it and should not create another.
-        m_databaseThread = DatabaseThread::create();
+        lazyInitialize(m_databaseThread, DatabaseThread::create());
         m_databaseThread->start();
     }
 
@@ -165,10 +168,10 @@ bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* synchronizer)
         m_hasRequestedTermination = true;
     }
 
-    auto& context = *scriptExecutionContext();
-    if (context.databaseContext()) {
-        ASSERT(context.databaseContext() == this);
-        context.setDatabaseContext(nullptr);
+    Ref context = *scriptExecutionContext();
+    if (context->databaseContext()) {
+        ASSERT(context->databaseContext() == this);
+        context->setDatabaseContext(nullptr);
     }
 
     return result;
@@ -178,7 +181,7 @@ bool DatabaseContext::allowDatabaseAccess() const
 {
     RefPtr context = scriptExecutionContext();
     if (RefPtr document = dynamicDowncast<Document>(*context)) {
-        if (!document->page() || (document->page()->usesEphemeralSession() && !LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document->securityOrigin().protocol())))
+        if (!document->page() || (document->page()->usesEphemeralSession() && !LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document->protectedSecurityOrigin()->protocol())))
             return false;
         return true;
     }
@@ -192,10 +195,15 @@ void DatabaseContext::databaseExceededQuota(const String& name, DatabaseDetails 
     RefPtr context = scriptExecutionContext();
     if (RefPtr document = dynamicDowncast<Document>(*context)) {
         if (RefPtr page = document->page())
-            page->chrome().client().exceededDatabaseQuota(*document->frame(), name, details);
+            page->chrome().client().exceededDatabaseQuota(*document->protectedFrame(), name, details);
         return;
     }
     ASSERT(context->isWorkerGlobalScope());
+}
+
+Document* DatabaseContext::document() const
+{
+    return downcast<Document>(ActiveDOMObject::scriptExecutionContext());
 }
 
 const SecurityOriginData& DatabaseContext::securityOrigin() const
@@ -205,7 +213,7 @@ const SecurityOriginData& DatabaseContext::securityOrigin() const
 
 bool DatabaseContext::isContextThread() const
 {
-    return scriptExecutionContext()->isContextThread();
+    return protectedScriptExecutionContext()->isContextThread();
 }
 
 } // namespace WebCore

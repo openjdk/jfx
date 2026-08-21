@@ -29,9 +29,10 @@
 #include "config.h"
 #include "StyleScopeRuleSets.h"
 
+#include "CSSPropertyParser.h"
 #include "CSSStyleSheet.h"
 #include "CSSViewTransitionRule.h"
-#include "CascadeLevel.h"
+#include "DeclarationOrigin.h"
 #include "DocumentInlines.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
@@ -44,6 +45,8 @@
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -96,16 +99,16 @@ RuleSet* ScopeRuleSets::userStyle() const
     return m_userStyle.get();
 }
 
-RuleSet* ScopeRuleSets::styleForCascadeLevel(CascadeLevel level)
+RuleSet* ScopeRuleSets::styleForDeclarationOrigin(DeclarationOrigin origin)
 {
-    switch (level) {
-    case CascadeLevel::Author:
+    switch (origin) {
+    case DeclarationOrigin::Author:
         return m_authorStyle.get();
 
-    case CascadeLevel::User:
+    case DeclarationOrigin::User:
         return userStyle();
 
-    case CascadeLevel::UserAgent:
+    case DeclarationOrigin::UserAgent:
         return userAgentMediaQueryStyle();
     }
 
@@ -120,7 +123,7 @@ void ScopeRuleSets::initializeUserStyle()
 
     auto userStyle = RuleSet::create();
 
-    if (auto* pageUserSheet = extensionStyleSheets->pageUserSheet()) {
+    if (RefPtr pageUserSheet = extensionStyleSheets->pageUserSheet()) {
         RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
         builder.addRulesFromSheet(pageUserSheet->contents());
     }
@@ -141,10 +144,10 @@ void ScopeRuleSets::initializeUserStyle()
     collectRulesFromUserStyleSheets(extensionStyleSheets->documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
 
     if (userStyle->ruleCount() > 0 || userStyle->pageRules().size() > 0)
-        m_userStyle = WTFMove(userStyle);
+        m_userStyle = WTF::move(userStyle);
 }
 
-void ScopeRuleSets::collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& userSheets, RuleSet& userStyle, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
+void ScopeRuleSets::collectRulesFromUserStyleSheets(const Vector<Ref<CSSStyleSheet>>& userSheets, RuleSet& userStyle, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
 {
     RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
     for (auto& sheet : userSheets) {
@@ -233,7 +236,7 @@ std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamic
             return;
         if (auto changes = ruleSet->evaluateDynamicMediaQueryRules(evaluator)) {
             if (evaluationChanges)
-                evaluationChanges->append(WTFMove(*changes));
+                evaluationChanges->append(WTF::move(*changes));
             else
                 evaluationChanges = changes;
         }
@@ -246,9 +249,9 @@ std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamic
     return evaluationChanges;
 }
 
-void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets, MQ::MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
+void ScopeRuleSets::appendAuthorStyleSheets(std::span<const Ref<CSSStyleSheet>> styleSheets, MQ::MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
 {
-    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable, RuleSetBuilder::ShouldResolveNesting::Yes);
+    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable);
 
     RefPtr<CSSStyleSheet> previous;
     for (auto& cssSheet : styleSheets) {
@@ -257,14 +260,14 @@ void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&
         // the content is exact same to the previous one.
         if (previous) {
             if (&previous->contents() == &cssSheet->contents() && previous->mediaQueries().isEmpty() && cssSheet->mediaQueries().isEmpty()) {
-                inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
+                inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet);
                 continue;
             }
         }
 
         builder.addRulesFromSheet(cssSheet->contents(), cssSheet->mediaQueries());
-        inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet.get());
-        previous = cssSheet;
+        inspectorCSSOMWrappers.collectFromStyleSheetIfNeeded(cssSheet);
+        previous = cssSheet.ptr();
     }
 
     collectFeatures();
@@ -275,23 +278,18 @@ void ScopeRuleSets::collectFeatures() const
     RELEASE_ASSERT(!m_isInvalidatingStyleWithRuleSets);
 
     m_features.clear();
-    // Collect all ids and rules using sibling selectors (:first-child and similar)
-    // in the current set of stylesheets. Style sharing code uses this information to reject
-    // sharing candidates.
     if (UserAgentStyle::defaultStyle)
         m_features.add(UserAgentStyle::defaultStyle->features());
     m_defaultStyleVersionOnFeatureCollection = UserAgentStyle::defaultStyleVersion;
 
-    if (auto* userAgentMediaQueryStyle = this->userAgentMediaQueryStyle())
+    if (RefPtr userAgentMediaQueryStyle = this->userAgentMediaQueryStyle())
         m_features.add(userAgentMediaQueryStyle->features());
 
     if (m_authorStyle)
         m_features.add(m_authorStyle->features());
-    if (auto* userStyle = this->userStyle())
+    if (RefPtr userStyle = this->userStyle())
         m_features.add(userStyle->features());
 
-    m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
-    m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
     m_scopeBreakingHasPseudoClassInvalidationRuleSet = makeRuleSet(m_features.scopeBreakingHasPseudoClassRules);
 
     m_idInvalidationRuleSets.clear();
@@ -308,20 +306,28 @@ void ScopeRuleSets::collectFeatures() const
 }
 
 template<typename KeyType, typename RuleFeatureVectorType, typename Hash, typename HashTraits>
-static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, UncheckedKeyHashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const UncheckedKeyHashMap<KeyType, std::unique_ptr<RuleFeatureVectorType>, Hash, HashTraits>& ruleFeatures)
+static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, HashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const HashMap<KeyType, std::unique_ptr<RuleFeatureVectorType>, Hash, HashTraits>& ruleFeatures)
 {
     return ruleSetMap.ensure(key, [&] () -> std::unique_ptr<Vector<InvalidationRuleSet>> {
         auto* features = ruleFeatures.get(key);
         if (!features)
             return nullptr;
 
-        UncheckedKeyHashMap<std::tuple<uint8_t, bool, bool>, InvalidationRuleSet> invalidationRuleSetMap;
+        struct Builder {
+            RefPtr<RuleSet> ruleSet;
+            Vector<const CSSSelectorList*> invalidationSelectors;
+            MatchElement matchElement;
+            IsNegation isNegation;
+        };
+        using BuilderKey = std::tuple<uint8_t, bool, bool>;
+
+        HashMap<BuilderKey, Builder> builderMap;
 
         for (auto& feature : *features) {
-            auto key = std::tuple { static_cast<uint8_t>(feature.matchElement), static_cast<bool>(feature.isNegation), true };
+            auto key = BuilderKey { static_cast<uint8_t>(feature.matchElement), static_cast<bool>(feature.isNegation), true };
 
-            auto& invalidationRuleSet = invalidationRuleSetMap.ensure(key, [&] {
-                return InvalidationRuleSet {
+            auto& builder = builderMap.ensure(key, [&] {
+                return Builder {
                     RuleSet::create(),
                     { },
                     feature.matchElement,
@@ -329,17 +335,33 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& ke
                 };
             }).iterator->value;
 
-            invalidationRuleSet.ruleSet->addRule(*feature.styleRule, feature.selectorIndex, feature.selectorListIndex);
+            builder.ruleSet->addRule(*feature.styleRule, feature.selectorIndex, feature.selectorListIndex);
 
             if constexpr (std::is_same<typename RuleFeatureVectorType::ValueType, RuleFeatureWithInvalidationSelector>::value) {
-                if (feature.invalidationSelector)
-                    invalidationRuleSet.invalidationSelectors.append(feature.invalidationSelector);
+                auto alreadyContains = [&](const CSSSelectorList& invalidationSelector) {
+                    constexpr auto maximumSearchCount = 8;
+                    auto count = 0;
+                    for (auto& existing : builder.invalidationSelectors | std::views::reverse) {
+                        if (++count > maximumSearchCount)
+                            break;
+                        if (invalidationSelector == *existing)
+                            return true;
+                    }
+                    return false;
+                };
+                if (!alreadyContains(feature.invalidationSelector))
+                builder.invalidationSelectors.append(&feature.invalidationSelector);
             }
         }
 
-        return makeUnique<Vector<InvalidationRuleSet>>(WTF::map(invalidationRuleSetMap.values(), [](auto&& invalidationRuleSet) {
-            invalidationRuleSet.ruleSet->shrinkToFit();
-            return WTFMove(invalidationRuleSet);
+        return makeUnique<Vector<InvalidationRuleSet>>(WTF::map(builderMap.values(), [](auto&& builder) {
+            builder.ruleSet->shrinkToFit();
+            return InvalidationRuleSet {
+                WTF::move(builder.ruleSet),
+                CSSSelectorList::makeJoining(builder.invalidationSelectors),
+                builder.matchElement,
+                builder.isNegation
+            };
         }));
     }).iterator->value.get();
 }
@@ -369,10 +391,10 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::hasPseudoClassInvalidationRule
     return ensureInvalidationRuleSets(key, m_hasPseudoClassInvalidationRuleSets, m_features.hasPseudoClassRules);
 }
 
-const UncheckedKeyHashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
+const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
 {
     if (!m_customPropertyNamesInStyleContainerQueries) {
-        UncheckedKeyHashSet<AtomString> propertyNames;
+        HashSet<AtomString> propertyNames;
 
         auto collectPropertyNames = [&](auto* ruleSet) {
             if (!ruleSet)
@@ -417,7 +439,7 @@ bool ScopeRuleSets::hasMatchingUserOrAuthorStyle(NOESCAPE const WTF::Function<bo
     if (m_authorStyle && predicate(*m_authorStyle))
         return true;
 
-    if (auto* userStyle = this->userStyle(); userStyle && predicate(*userStyle))
+    if (RefPtr userStyle = this->userStyle(); userStyle && predicate(*userStyle))
         return true;
 
     return false;

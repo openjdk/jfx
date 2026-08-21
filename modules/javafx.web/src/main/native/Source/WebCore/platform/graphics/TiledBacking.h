@@ -25,23 +25,19 @@
 
 #pragma once
 
-#include "BoxExtents.h"
-#include "IntPoint.h"
-#include "PlatformLayerIdentifier.h"
-#include "TileGridIdentifier.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/TileGridIdentifier.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
-namespace WebCore {
-class TiledBackingClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TiledBackingClient> : std::true_type { };
-}
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include <WebCore/DynamicContentScalingDisplayList.h>
+#endif
 
 namespace WebCore {
 
@@ -75,7 +71,7 @@ enum class TileRevalidationType : uint8_t {
 using TileIndex = IntPoint;
 class TiledBacking;
 
-class TiledBackingClient : public CanMakeWeakPtr<TiledBackingClient> {
+class TiledBackingClient : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
 public:
     virtual ~TiledBackingClient() = default;
 
@@ -95,6 +91,10 @@ public:
 
     virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
     virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+#endif
 };
 
 
@@ -195,6 +195,10 @@ public:
 #if USE(CA)
     virtual PlatformCALayer* tiledScrollingIndicatorLayer() = 0;
 #endif
+
+    virtual void clearObscuredInsetsAdjustments() = 0;
+    virtual void obscuredInsetsWillChange(FloatBoxExtent&&) = 0;
+    virtual FloatRect adjustedTileClipRectForObscuredInsets(const FloatRect&) const = 0;
 };
 
 } // namespace WebCore

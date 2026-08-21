@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,7 +80,7 @@ static const URLSchemesMap& allBuiltinSchemes()
         };
 
         // Other misc schemes that the LegacySchemeRegistry doesn't know about.
-        static constexpr ASCIILiteral otherSchemes[] = {
+        static constexpr auto otherSchemes = std::to_array<ASCIILiteral>({
             "webkit-fake-url"_s,
 #if PLATFORM(MAC)
             "safari-extension"_s,
@@ -91,7 +91,7 @@ static const URLSchemesMap& allBuiltinSchemes()
 #if ENABLE(CONTENT_FILTERING)
             ContentFilter::urlScheme(),
 #endif
-        };
+        });
 
         URLSchemesMap set;
         {
@@ -115,6 +115,9 @@ static const URLSchemesMap& builtinLocalURLSchemes() WTF_REQUIRES_LOCK(schemeReg
         "file"_s,
 #if PLATFORM(COCOA)
         "applewebdata"_s,
+#endif
+#if PLATFORM(JAVA)
+        "jar:file"_s,
 #endif
     };
     return schemes;
@@ -141,6 +144,9 @@ static std::span<const ASCIILiteral> builtinSecureSchemes()
         "about"_s,
         "data"_s,
         "wss"_s,
+#if ENABLE(SWIFT_DEMO_URI_SCHEME)
+        "x-swift-demo"_s,
+#endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         "resource"_s,
 #endif
@@ -245,6 +251,9 @@ static MemoryCompactRobinHoodHashSet<String>& schemesHandledBySchemeHandler() WT
 
 void LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(const String& scheme)
 {
+    if (scheme == "about"_s)
+        return;
+
     Locker locker { schemeRegistryLock };
     schemesHandledBySchemeHandler().add(scheme);
 }
@@ -446,6 +455,9 @@ bool LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(const String& s
 
 void LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(const String& scheme)
 {
+    if (scheme == "about"_s)
+        return;
+
     ASSERT(!isInNetworkProcess());
     if (scheme.isNull())
         return;

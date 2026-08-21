@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -795,5 +797,145 @@ public class ExpressionHelperTest {
 
             api.assertCollectable(collectable);
         });
+    }
+
+    @Test
+    public void shouldNotModifyExistingListenersWhenChangeListenerIsRemoved() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        final AtomicReference<Object> oldValueRef = new AtomicReference<>(UNDEFINED);
+        final AtomicReference<Object> newValueRef = new AtomicReference<>(UNDEFINED);
+        final ChangeListener<Object> listenerB = (observable, oldValue, newValue) -> {};
+        final ChangeListener<Object> listenerC = (observable, oldValue, newValue) -> {
+            oldValueRef.set(oldValue);
+            newValueRef.set(newValue);
+        };
+        final ChangeListener<Object> listenerA = (observable, oldValue, newValue) ->
+                helper = ExpressionHelper.removeListener(helper, listenerB);
+
+        helper = ExpressionHelper.addListener(helper, observable, listenerA);
+        helper = ExpressionHelper.addListener(helper, observable, listenerB);
+        helper = ExpressionHelper.addListener(helper, observable, listenerC);
+
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals(DATA_1, oldValueRef.get(), "ListenerC should observe the old value");
+        assertEquals(DATA_2, newValueRef.get(), "ListenerC should observe the new value");
+    }
+
+    @Test
+    public void shouldNotifyExistingListenersWhenChangeListenerIsRemoved() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        final List<Object> list = new ArrayList<>();
+        final ChangeListener<Object> listenerB = (observable, oldValue, newValue) -> {};
+        final ChangeListener<Object> listenerC = (observable, oldValue, newValue) ->
+                list.add(newValue);
+        final ChangeListener<Object> listenerD = (observable, oldValue, newValue) ->
+                list.add(newValue);
+
+        final ChangeListener<Object> listenerA = (observable, oldValue, newValue) ->
+                helper = ExpressionHelper.removeListener(helper, listenerB);
+
+        helper = ExpressionHelper.addListener(helper, observable, listenerA);
+        helper = ExpressionHelper.addListener(helper, observable, listenerB);
+        helper = ExpressionHelper.addListener(helper, observable, listenerC);
+        helper = ExpressionHelper.addListener(helper, observable, listenerD);
+
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals(List.of(DATA_2, DATA_2), list, "Listeners C and D should get notified once with the new value");
+
+        list.clear();
+        observable.set(DATA_1);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals(List.of(DATA_1, DATA_1), list, "Listeners C and D should still get notified once with the new value");
+    }
+
+    @Test
+    public void shouldNotModifyInvalidationListenersWhenChangeListenersAreRemoved() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        final ChangeListener<Object> listenerB = (observable, oldValue, newValue) -> {};
+        final ChangeListener<Object> listenerA = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+                helper = ExpressionHelper.removeListener(helper, listenerB);
+                helper = ExpressionHelper.removeListener(helper, this);
+            }
+        };
+
+        helper = ExpressionHelper.addListener(helper, observable, listenerA);
+        helper = ExpressionHelper.addListener(helper, observable, listenerB);
+
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        invalidationListener[0].check(observable, 1);
+        invalidationListener[1].check(observable, 1);
+    }
+
+    @Test
+    public void shouldNotNotifyPendingListenersWithNullValueWhenSomeChangeListenersAreRemoved() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        final AtomicReference<Object> newValueRef = new AtomicReference<>(UNDEFINED);
+        final ChangeListener<Object> listenerB = (observable, oldValue, newValue) ->
+                newValueRef.set(newValue);
+        final ChangeListener<Object> listenerC = (observable, oldValue, newValue) -> {};
+        final ChangeListener<Object> listenerA = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+                helper = ExpressionHelper.removeListener(helper, listenerB);
+                helper = ExpressionHelper.removeListener(helper, this);
+            }
+        };
+
+        helper = ExpressionHelper.addListener(helper, observable, listenerA);
+        helper = ExpressionHelper.addListener(helper, observable, listenerB);
+        helper = ExpressionHelper.addListener(helper, observable, listenerC);
+
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals(DATA_2, newValueRef.get(), "listenerB should observe the new non-null value," +
+                " even if listenerA removed some change listeners during the notification");
+    }
+
+    @Test
+    public void shouldNotNotifyPendingListenersWithNullValueWhenAllChangeListenersAreRemoved() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        final AtomicReference<Object> newValueRef = new AtomicReference<>(UNDEFINED);
+        final ChangeListener<Object> listenerB = (observable, oldValue, newValue) ->
+                newValueRef.set(newValue);
+        final ChangeListener<Object> listenerC = (observable, oldValue, newValue) -> {};
+        final ChangeListener<Object> listenerA = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+                helper = ExpressionHelper.removeListener(helper, listenerB);
+                helper = ExpressionHelper.removeListener(helper, listenerC);
+                helper = ExpressionHelper.removeListener(helper, this);
+            }
+        };
+
+        // Register A before the others
+        helper = ExpressionHelper.addListener(helper, observable, listenerA);
+        helper = ExpressionHelper.addListener(helper, observable, listenerB);
+        helper = ExpressionHelper.addListener(helper, observable, listenerC);
+
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+
+        assertEquals(DATA_2, newValueRef.get(), "listenerB should observe the new non-null value," +
+                " even if listenerA removed all the change listeners during the notification");
     }
 }

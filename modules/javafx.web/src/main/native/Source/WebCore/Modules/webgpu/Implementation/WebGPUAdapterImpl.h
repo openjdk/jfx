@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class AdapterImpl final : public Adapter {
 public:
     static Ref<AdapterImpl> create(WebGPUPtr<WGPUAdapter>&& adapter, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new AdapterImpl(WTFMove(adapter), convertToBackingContext));
+        return adoptRef(*new AdapterImpl(WTF::move(adapter), convertToBackingContext));
     }
 
     virtual ~AdapterImpl();
@@ -58,14 +58,19 @@ private:
     AdapterImpl& operator=(AdapterImpl&&) = delete;
 
     WGPUAdapter backing() const { return m_backing.get(); }
+    bool isAdapterImpl() const final { return true; }
     bool xrCompatible() final;
 
     void requestDevice(const DeviceDescriptor&, CompletionHandler<void(RefPtr<Device>&&)>&&) final;
 
     WebGPUPtr<WGPUAdapter> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::AdapterImpl)
+    static bool isType(const WebCore::WebGPU::Adapter& adapter) { return adapter.isAdapterImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

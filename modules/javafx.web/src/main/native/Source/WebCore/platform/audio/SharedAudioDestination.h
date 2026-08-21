@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(WEB_AUDIO)
 
-#include "AudioDestination.h"
+#include <WebCore/AudioDestination.h>
+#include <WebCore/PageIdentifier.h>
 
 namespace WebCore {
 
@@ -35,17 +37,17 @@ class SharedAudioDestinationAdapter;
 
 class SharedAudioDestination final : public AudioDestination, public ThreadSafeRefCounted<SharedAudioDestination, WTF::DestructionThread::Main> {
 public:
-    using AudioDestinationCreationFunction = Function<Ref<AudioDestination>(AudioIOCallback&)>;
-    WEBCORE_EXPORT static Ref<SharedAudioDestination> create(AudioIOCallback&, unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&&);
+    using AudioDestinationCreationFunction = Function<Ref<AudioDestination>(const CreationOptions&)>;
+    WEBCORE_EXPORT static Ref<SharedAudioDestination> create(const CreationOptions&, AudioDestinationCreationFunction&&);
     WEBCORE_EXPORT virtual ~SharedAudioDestination();
 
     void ref() const final { return ThreadSafeRefCounted::ref(); }
     void deref() const final { return ThreadSafeRefCounted::deref(); }
 
-    void sharedRender(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition&);
+    void sharedRender(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition&);
 
 private:
-    SharedAudioDestination(AudioIOCallback&, unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&&);
+    SharedAudioDestination(const CreationOptions&, AudioDestinationCreationFunction&&);
 
     // AudioDestination
     void start(Function<void(Function<void()>&&)>&& dispatchToRenderThread, CompletionHandler<void(bool)>&&) final;
@@ -53,6 +55,9 @@ private:
     bool isPlaying() final { return m_isPlaying; }
     unsigned framesPerBuffer() const final;
     MediaTime outputLatency() const final;
+#if PLATFORM(IOS_FAMILY)
+    void setSceneIdentifier(const String&) final;
+#endif
 
     void setIsPlaying(bool);
 

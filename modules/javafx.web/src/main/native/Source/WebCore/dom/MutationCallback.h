@@ -45,10 +45,14 @@ class MutationCallback : public RefCounted<MutationCallback>, public ActiveDOMCa
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     virtual bool hasCallback() const = 0;
 
-    virtual CallbackResult<void> handleEvent(MutationObserver&, const Vector<Ref<MutationRecord>>&, MutationObserver&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(MutationObserver&, const Vector<Ref<MutationRecord>>&, MutationObserver&) = 0;
+    virtual CallbackResult<void> invoke(MutationObserver&, const Vector<Ref<MutationRecord>>&, MutationObserver&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(MutationObserver&, const Vector<Ref<MutationRecord>>&, MutationObserver&) = 0;
 };
 
 } // namespace WebCore

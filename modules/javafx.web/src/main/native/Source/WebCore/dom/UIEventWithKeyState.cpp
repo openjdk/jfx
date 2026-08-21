@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,11 +21,13 @@
 #include "config.h"
 #include "UIEventWithKeyState.h"
 
+#include "KeyboardEvent.h"
+#include "MouseEvent.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(UIEventWithKeyState);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UIEventWithKeyState);
 
 auto UIEventWithKeyState::modifiersFromInitializer(const EventModifierInit& initializer) -> OptionSet<Modifier>
 {
@@ -75,12 +77,13 @@ void UIEventWithKeyState::setModifierKeys(bool ctrlKey, bool altKey, bool shiftK
     m_modifiers = result;
 }
 
-UIEventWithKeyState* findEventWithKeyState(Event* event)
+RefPtr<UIEventWithKeyState> findEventWithKeyState(Event* event)
 {
-    for (Event* e = event; e; e = e->underlyingEvent())
-        if (e->isKeyboardEvent() || e->isMouseEvent())
-            return static_cast<UIEventWithKeyState*>(e);
-    return 0;
+    for (RefPtr e = event; e; e = e->underlyingEvent()) {
+        if (is<KeyboardEvent>(*e) || is<MouseEvent>(*e))
+            return downcast<UIEventWithKeyState>(WTF::move(e));
+    }
+    return nullptr;
 }
 
 } // namespace WebCore

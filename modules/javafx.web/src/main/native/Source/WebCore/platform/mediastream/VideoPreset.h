@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(MEDIA_STREAM)
 
-#include "ImageBuffer.h"
-#include "RealtimeMediaSource.h"
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/RealtimeMediaSource.h>
+#include <ranges>
 #include <wtf/Lock.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/RunLoop.h>
@@ -53,11 +55,11 @@ struct VideoPresetData {
 class VideoPreset {
 public:
     explicit VideoPreset(VideoPresetData&& data)
-        : m_data(WTFMove(data))
+        : m_data(WTF::move(data))
     {
     }
     VideoPreset(IntSize size, Vector<FrameRateRange>&& frameRateRanges, std::optional<double> minZoom, std::optional<double> maxZoom, bool isEfficient)
-        : m_data { size, WTFMove(frameRateRanges), minZoom.value_or(1), maxZoom.value_or(1), isEfficient }
+        : m_data { size, WTF::move(frameRateRanges), minZoom.value_or(1), maxZoom.value_or(1), isEfficient }
     {
         ASSERT(m_data.maxZoom >= m_data.minZoom);
     }
@@ -118,10 +120,7 @@ inline double VideoPreset::maxFrameRate() const
 
 inline void VideoPreset::sortFrameRateRanges()
 {
-    std::sort(m_data.frameRateRanges.begin(), m_data.frameRateRanges.end(),
-        [&] (const auto& a, const auto& b) -> bool {
-            return a.minimum < b.minimum;
-    });
+    std::ranges::sort(m_data.frameRateRanges, { }, &FrameRateRange::minimum);
 }
 
 } // namespace WebCore

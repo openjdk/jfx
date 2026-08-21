@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "CagedBarrierPtr.h"
-#include "DirectArgumentsOffset.h"
-#include "GenericArgumentsImpl.h"
+#include <JavaScriptCore/CagedBarrierPtr.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/DirectArgumentsOffset.h>
+#include <JavaScriptCore/GenericArgumentsImpl.h>
 #include <wtf/CagedPtr.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -52,7 +53,7 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
-        return &vm.variableSizedCellSpace();
+        return &vm.heap.cellSpace;
     }
 
     // Creates an arguments object but leaves it uninitialized. This is dangerous if we GC right
@@ -78,7 +79,7 @@ public:
     {
             VM& vm = getVM(globalObject);
             auto scope = DECLARE_THROW_SCOPE(vm);
-        if (UNLIKELY(m_mappedArguments)) {
+        if (m_mappedArguments) [[unlikely]] {
             JSValue value = get(globalObject, vm.propertyNames->length);
             RETURN_IF_EXCEPTION(scope, { });
             RELEASE_AND_RETURN(scope, value.toUInt32(globalObject));

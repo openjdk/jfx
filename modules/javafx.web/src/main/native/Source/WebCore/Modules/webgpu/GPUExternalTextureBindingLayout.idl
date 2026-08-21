@@ -26,7 +26,7 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpuexternaltexturebindinglayout
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUExternalTextureBindingLayout {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUExternalTextureBindingLayout {
 };

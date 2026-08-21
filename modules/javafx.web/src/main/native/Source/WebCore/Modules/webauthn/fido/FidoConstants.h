@@ -31,10 +31,15 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "PublicKeyCredentialType.h"
+#include <WebCore/PublicKeyCredentialType.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace fido {
+
+enum class PINUVAuthProtocol : uint8_t {
+    kPinProtocol1 = 1,
+    kPinProtocol2 = 2,
+};
 
 enum class ProtocolVersion {
     kCtap2,
@@ -178,6 +183,10 @@ constexpr uint8_t kHidMaxLockSeconds = 10;
 
 constexpr size_t kPINMaxSizeInBytes = 63;
 
+// HKDF info strings for PIN/UV Auth Protocol 2 key derivation (CTAP 2.1 spec 6.5.7)
+constexpr std::array<uint8_t, 14> kHKDFInfoHMACKey { 'C', 'T', 'A', 'P', '2', ' ', 'H', 'M', 'A', 'C', ' ', 'k', 'e', 'y' };
+constexpr std::array<uint8_t, 13> kHKDFInfoAESKey { 'C', 'T', 'A', 'P', '2', ' ', 'A', 'E', 'S', ' ', 'k', 'e', 'y' };
+
 // Messages are limited to an initiation packet and 128 continuation packets.
 constexpr size_t kHidMaxMessageSize = 7609;
 
@@ -279,6 +288,8 @@ constexpr int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
 constexpr int64_t kCtapMakeCredentialExcludeListKey = 5;
 constexpr int64_t kCtapMakeCredentialExtensionsKey = 6;
 constexpr int64_t kCtapMakeCredentialRequestOptionsKey = 7;
+constexpr int64_t kCtapMakeCredentialPinUvAuthParamKey = 8;
+constexpr int64_t kCtapMakeCredentialPinUvAuthProtocolKey = 9;
 
 constexpr int64_t kCtapGetAssertionRpIdKey = 1;
 constexpr int64_t kCtapGetAssertionClientDataHashKey = 2;
@@ -287,6 +298,52 @@ constexpr int64_t kCtapGetAssertionExtensionsKey = 4;
 constexpr int64_t kCtapGetAssertionRequestOptionsKey = 5;
 constexpr int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
 constexpr int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
+
+// CTAP2 authenticatorMakeCredential response keys
+constexpr int64_t kCtapMakeCredentialResponseFormatKey = 1;
+constexpr int64_t kCtapMakeCredentialResponseAuthDataKey = 2;
+constexpr int64_t kCtapMakeCredentialResponseAttStmtKey = 3;
+constexpr int64_t kCtapMakeCredentialResponseUnsignedExtensionOutputsKey = 6;
+
+// CTAP2 authenticatorGetAssertion response keys
+constexpr int64_t kCtapGetAssertionResponseCredentialKey = 1;
+constexpr int64_t kCtapGetAssertionResponseAuthDataKey = 2;
+constexpr int64_t kCtapGetAssertionResponseSignatureKey = 3;
+constexpr int64_t kCtapGetAssertionResponseUserKey = 4;
+constexpr int64_t kCtapGetAssertionResponseNumberOfCredentialsKey = 5;
+constexpr int64_t kCtapGetAssertionResponseUnsignedExtensionOutputsKey = 8;
+
+constexpr int64_t kCtapAuthenticatorGetInfoVersionsKey = 0x01;
+constexpr int64_t kCtapAuthenticatorGetInfoExtensionsKey = 0x02;
+constexpr int64_t kCtapAuthenticatorGetInfoAAGUIDKey = 0x03;
+constexpr int64_t kCtapAuthenticatorGetInfoOptionsKey = 0x04;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxMsgSizeKey = 0x05;
+constexpr int64_t kCtapAuthenticatorGetInfoPinUVAuthProtocolsKey = 0x06;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialCountInListKey = 0x07;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialIdLengthKey = 0x08;
+constexpr int64_t kCtapAuthenticatorGetInfoTransportsKey = 0x09;
+constexpr int64_t kCtapAuthenticatorGetInfoAlgorithmsKey = 0x0a;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxSerializedLargeBlobArrayKey = 0x0b;
+constexpr int64_t kCtapAuthenticatorGetInfoForcePINChangeKey = 0x0c;
+constexpr int64_t kCtapAuthenticatorGetInfoMinPINLengthKey = 0x0d;
+constexpr int64_t kCtapAuthenticatorGetInfoFirmwareVersionKey = 0x0e;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredBlobLengthKey = 0x0f;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxRPIDsForSetMinPINLengthKey = 0x10;
+constexpr int64_t kCtapAuthenticatorGetInfoPreferredPlatformUvAttemptsKey = 0x11;
+constexpr int64_t kCtapAuthenticatorGetInfoUVModalitysKey = 0x12;
+constexpr int64_t kCtapAuthenticatorGetInfoCertificationsKey = 0x13;
+constexpr int64_t kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey = 0x14;
+constexpr int64_t kCtapAuthenticatorGetInfoVendorPrototypeConfigCommandsKey = 0x15;
+
+// Extension constants
+constexpr auto kExtensionHmacSecret = "hmac-secret"_s;
+constexpr auto kExtensionHmacSecretMc = "hmac-secret-mc"_s;
+
+// hmac-secret extension CBOR map keys (used in hmac-secret and hmac-secret-mc)
+constexpr int64_t kHmacSecretKeyAgreementKey = 0x01;
+constexpr int64_t kHmacSecretSaltEncKey = 0x02;
+constexpr int64_t kHmacSecretSaltAuthKey = 0x03;
+constexpr int64_t kHmacSecretPinUvAuthProtocolKey = 0x04;
 
 } // namespace fido
 

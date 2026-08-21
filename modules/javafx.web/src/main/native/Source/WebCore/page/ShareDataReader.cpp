@@ -28,12 +28,13 @@
 
 #include "BlobLoader.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "SharedBuffer.h"
 
 namespace WebCore {
 
 ShareDataReader::ShareDataReader(CompletionHandler<void(ExceptionOr<ShareDataWithParsedURL&>)>&& completionHandler)
-    : m_completionHandler(WTFMove(completionHandler))
+    : m_completionHandler(WTF::move(completionHandler))
 {
 
 }
@@ -46,14 +47,15 @@ ShareDataReader::~ShareDataReader()
 void ShareDataReader::start(Document* document, ShareDataWithParsedURL&& shareData)
 {
     m_filesReadSoFar = 0;
-    m_shareData = WTFMove(shareData);
+    m_shareData = WTF::move(shareData);
     int count = 0;
     m_pendingFileLoads.reserveInitialCapacity(m_shareData.shareData.files.size());
     for (auto& blob : m_shareData.shareData.files) {
-        m_pendingFileLoads.append(makeUniqueRef<BlobLoader>([this, count, fileName = blob->name()](BlobLoader&) {
+        Ref blobLoader = BlobLoader::create([this, count, fileName = blob->name()](BlobLoader&) {
             this->didFinishLoading(count, fileName);
-        }));
-        m_pendingFileLoads.last()->start(blob, document, FileReaderLoader::ReadAsArrayBuffer);
+        });
+        m_pendingFileLoads.append(blobLoader.copyRef());
+        blobLoader->start(blob, document, FileReaderLoader::ReadAsArrayBuffer);
         if (m_pendingFileLoads.isEmpty()) {
             // The previous load failed synchronously and cancel() was called. We should not attempt to do any further loads.
             break;
@@ -76,12 +78,12 @@ void ShareDataReader::didFinishLoading(int loadIndex, const String& fileName)
         return;
     }
 
-    auto arrayBuffer = m_pendingFileLoads[loadIndex]->arrayBufferResult();
+    auto arrayBuffer = Ref { m_pendingFileLoads[loadIndex] }->arrayBufferResult();
 
     RawFile file;
     file.fileName = fileName;
     file.fileData = SharedBuffer::create(arrayBuffer->span());
-    m_shareData.files.append(WTFMove(file));
+    m_shareData.files.append(WTF::move(file));
     m_filesReadSoFar++;
 
     if (m_filesReadSoFar == static_cast<int>(m_pendingFileLoads.size())) {

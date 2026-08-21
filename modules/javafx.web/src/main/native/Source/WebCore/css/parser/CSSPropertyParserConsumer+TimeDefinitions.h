@@ -31,7 +31,7 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct TimeValidator {
-    static constexpr std::optional<CSS::TimeUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::TimeUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
         return CSS::UnitTraits<CSS::TimeUnit>::validate(unitType);
     }

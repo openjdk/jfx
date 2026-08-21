@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2018 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -30,8 +30,37 @@
 #include "RegExpGlobalDataInlines.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpObject.h"
+#include "RegExpPrototype.h"
 
 namespace JSC {
+
+ALWAYS_INLINE bool RegExpObject::isSymbolReplaceFastAndNonObservable()
+{
+    JSGlobalObject* globalObject = this->globalObject();
+    if (!globalObject->regExpPrimordialPropertiesWatchpointSet().isStillValid())
+        return false;
+
+    if (!globalObject->stringSymbolReplaceWatchpointSet().isStillValid())
+        return false;
+
+    if (!getLastIndex().isNumber())
+        return false;
+
+    Structure* structure = this->structure();
+    if (structure == globalObject->regExpStructure()) [[likely]]
+        return true;
+
+    if (structure->hasPolyProto())
+        return false;
+
+    if (structure->storedPrototype() != globalObject->regExpPrototype())
+        return false;
+
+    if (hasCustomProperties())
+        return false;
+
+    return true;
+}
 
 inline Structure* RegExpObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -44,7 +73,7 @@ ALWAYS_INLINE unsigned getRegExpObjectLastIndexAsUnsigned(JSGlobalObject* global
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue jsLastIndex = regExpObject->getLastIndex();
     unsigned lastIndex;
-    if (LIKELY(jsLastIndex.isUInt32())) {
+    if (jsLastIndex.isUInt32()) [[likely]] {
         lastIndex = jsLastIndex.asUInt32();
         if (lastIndex > input.length())
             return UINT_MAX;
@@ -126,16 +155,16 @@ ALWAYS_INLINE MatchResult RegExpObject::matchInline(JSGlobalObject* globalObject
     return result;
 }
 
-inline unsigned advanceStringUnicode(StringView s, unsigned length, unsigned currentIndex)
+inline uint64_t advanceStringUnicode(StringView s, unsigned length, uint64_t currentIndex)
 {
     if (currentIndex + 1 >= length)
         return currentIndex + 1;
 
-    UChar first = s[currentIndex];
+    char16_t first = s[currentIndex];
     if (!U16_IS_LEAD(first))
         return currentIndex + 1;
 
-    UChar second = s[currentIndex + 1];
+    char16_t second = s[currentIndex + 1];
     if (!U16_IS_TRAIL(second))
         return currentIndex + 1;
 
@@ -163,14 +192,14 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
         size_t end = result.end;
         size_t length = end - result.start;
         array->putDirectIndex(globalObject, arrayIndex++, jsSubstringOfResolved(vm, string, result.start, length));
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             hasException = true;
             return;
         }
         if (!length)
             end = fixEnd(end);
         result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, s, end);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             hasException = true;
             return;
         }
@@ -206,7 +235,7 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
             do {
                 iterate();
                 EXCEPTION_ASSERT(!!scope.exception() == hasException);
-                if (UNLIKELY(hasException))
+                if (hasException) [[unlikely]]
                     return { };
             } while (result);
 
@@ -215,7 +244,7 @@ JSValue collectMatches(VM& vm, JSGlobalObject* globalObject, JSString* string, S
 
         iterate();
         EXCEPTION_ASSERT(!!scope.exception() == hasException);
-        if (UNLIKELY(hasException))
+        if (hasException) [[unlikely]]
             return { };
     } while (result);
 
@@ -287,7 +316,7 @@ ALWAYS_INLINE JSValue collectGlobalAtomMatches(JSGlobalObject* globalObject, JSS
         }
     }
 
-    if (UNLIKELY(numberOfMatches > MAX_STORAGE_VECTOR_LENGTH)) {
+    if (numberOfMatches > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return jsUndefined();
     }

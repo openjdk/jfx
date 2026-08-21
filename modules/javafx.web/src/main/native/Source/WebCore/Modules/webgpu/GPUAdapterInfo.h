@@ -36,13 +36,14 @@ class GPUAdapterInfo : public RefCounted<GPUAdapterInfo> {
 public:
     static Ref<GPUAdapterInfo> create(String&& name)
     {
-        return adoptRef(*new GPUAdapterInfo(WTFMove(name)));
+        return adoptRef(*new GPUAdapterInfo(WTF::move(name)));
     }
 
     String vendor() const { auto v = m_name.split(' '); return v.size() ? normalizedIdentifier(v[0]) : ""_s; }
     String architecture() const { return vendor(); }
     String device() const { return vendor(); }
     String description() const { return vendor(); }
+    bool isFallbackAdapter() const { return false; }
 
 private:
     GPUAdapterInfo(String&& name)

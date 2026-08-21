@@ -32,13 +32,15 @@
 
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Page;
 
 class EditorClientJava final : public EditorClient, public TextCheckerClient {
-    WTF_MAKE_NONCOPYABLE(EditorClientJava); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(EditorClientJava);
+    WTF_MAKE_TZONE_ALLOCATED(EditorClientJava);
 public:
     EditorClientJava(const JLObject &webPage);
     ~EditorClientJava() override;
@@ -151,6 +153,7 @@ public:
     // identification. Noramlly it's the text surrounding the "word" for which we are getting correction suggestions.
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
+    void requestExtendedCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
     bool canShowFontPanel() const  { return false; }
 

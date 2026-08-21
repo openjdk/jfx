@@ -28,14 +28,14 @@
 
 namespace WTF {
 
-// A `CompactVariant` acts like a `std::variant` with the following differences:
-// - All alternatives must be pointers, smart pointers, have size of 56 bits or fewer, or be specialized for `CompactVariantTraits`.
+// A `CompactVariant` acts like a `Variant` with the following differences:
+// - All alternatives must be pointers, smart pointers, have size of 48 bits or fewer, or be specialized for `CompactVariantTraits`.
 // - Can only contain 254 or fewer alternatives.
 // - Has a more limited API, only offering `holds_alternative()` for type checking and `switchOn()` for value access.
 
 template<CompactVariantAlternative... Ts> class CompactVariant {
     static_assert(sizeof...(Ts) < 255);
-    using StdVariant = std::variant<Ts...>;
+    using StdVariant = Variant<Ts...>;
     using Index = uint8_t;
     using Storage = uint64_t;
     using Operations = CompactVariantOperations<Ts...>;
@@ -50,16 +50,16 @@ public:
         m_data = Operations::template encode<typename VariantBestMatch<StdVariant, U>::type>(std::forward<U>(value));
     }
 
-    template<typename T, typename... Args> explicit constexpr CompactVariant(std::in_place_type_t<T>, Args&&... args)
+    template<typename T, typename... Args> explicit constexpr CompactVariant(WTF::InPlaceTypeT<T>, Args&&... args)
         requires std::constructible_from<StdVariant, T>
     {
         m_data = Operations::template encodeFromArguments<T>(std::forward<Args>(args)...);
     }
 
-    template<size_t I, typename... Args> explicit constexpr CompactVariant(std::in_place_index_t<I>, Args&&... args)
-        requires std::constructible_from<StdVariant, std::variant_alternative_t<I, StdVariant>>
+    template<size_t I, typename... Args> explicit constexpr CompactVariant(WTF::InPlaceIndexT<I>, Args&&... args)
+        requires std::constructible_from<StdVariant, WTF::VariantAlternativeT<I, StdVariant>>
     {
-        m_data = Operations::template encodeFromArguments<std::variant_alternative_t<I, StdVariant>>(std::forward<Args>(args)...);
+        m_data = Operations::template encodeFromArguments<WTF::VariantAlternativeT<I, StdVariant>>(std::forward<Args>(args)...);
     }
 
     CompactVariant(const CompactVariant& other)
@@ -132,7 +132,7 @@ public:
     template<size_t I, typename... Args> void emplace(Args&&... args)
     {
         Operations::destruct(m_data);
-        m_data = Operations::template encodeFromArguments<std::variant_alternative_t<I, StdVariant>>(std::forward<Args>(args)...);
+        m_data = Operations::template encodeFromArguments<WTF::VariantAlternativeT<I, StdVariant>>(std::forward<Args>(args)...);
     }
 
     constexpr Index index() const
@@ -147,13 +147,13 @@ public:
 
     template<typename T> constexpr bool holdsAlternative() const
     {
-        static_assert(alternativeIndexV<T, StdVariant> <= std::variant_size_v<StdVariant>);
+        static_assert(alternativeIndexV<T, StdVariant> <= WTF::VariantSizeV<StdVariant>);
         return index() == alternativeIndexV<T, StdVariant>;
     }
 
     template<size_t I> constexpr bool holdsAlternative() const
     {
-        static_assert(I <= std::variant_size_v<StdVariant>);
+        static_assert(I <= WTF::VariantSizeV<StdVariant>);
         return index() == I;
     }
 

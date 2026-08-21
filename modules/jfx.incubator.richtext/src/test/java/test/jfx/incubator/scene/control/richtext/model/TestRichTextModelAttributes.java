@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class TestRichTextModelAttributes {
         t(
             null,
             (m) -> {
-                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", false);
+                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n");
             },
             "{}{!}\n{}{!}"
         );
@@ -58,7 +58,7 @@ public class TestRichTextModelAttributes {
         t(
             null,
             (m) -> {
-                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n\n", false);
+                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n\n");
             },
             "{}{!}\n{}{!}\n{}{!}"
         );
@@ -67,7 +67,7 @@ public class TestRichTextModelAttributes {
         t(
             "{b}{i}0123{!}",
             (m) -> {
-                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", false);
+                m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n");
             },
             "{!}\n{b}{i}0123{!}"
         );
@@ -76,7 +76,7 @@ public class TestRichTextModelAttributes {
         t(
             "{b}{i}0123{!}",
             (m) -> {
-                m.replace(null, TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 2), "\n", false);
+                m.replace(null, TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 2), "\n");
             },
             "{b}{i}01{!}\n{0}23{!}"
         );
@@ -85,7 +85,7 @@ public class TestRichTextModelAttributes {
         t(
             "{b}{i}0123{!}",
             (m) -> {
-                m.replace(null, TextPos.ofLeading(0, 4), TextPos.ofLeading(0, 4), "\n", false);
+                m.replace(null, TextPos.ofLeading(0, 4), TextPos.ofLeading(0, 4), "\n");
             },
             "{b}{i}0123{!}\n{!}"
         );
@@ -96,7 +96,7 @@ public class TestRichTextModelAttributes {
         t(
             "{fs|24.0}{tc|808080}aaaaa:  {fs|24.0}bbbbb{!}",
             (m) -> {
-                m.replace(null, p(0, 13), p(0, 0), "", false);
+                m.replace(null, p(0, 13), p(0, 0), "");
             },
             "{!}"
         );
@@ -107,7 +107,7 @@ public class TestRichTextModelAttributes {
         t(
             "{fs|24.0}{tc|808080}a: {fs|24.0}b{!}\n{0}c: {1}d{!}",
             (m) -> {
-                m.replace(null, p(0, 4), p(1, 0), "", false);
+                m.replace(null, p(0, 4), p(1, 0), "");
             },
             "{fs|24.0}{tc|808080}a: {fs|24.0}b{0}c: {1}d{!}"
         );
@@ -125,13 +125,13 @@ public class TestRichTextModelAttributes {
             // set initial text
             if (initial != null) {
                 StyledInput in = h.createStyledInput(initial, null);
-                TextPos end = m.replace(null, TextPos.ZERO, TextPos.ZERO, in, false);
+                TextPos end = m.replace(null, TextPos.ZERO, TextPos.ZERO, in);
                 // check initial text
                 StringWriter wr = new StringWriter();
                 StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
                 m.export(TextPos.ZERO, end, out);
                 String s = wr.toString();
-                Assertions.assertEquals(initial, s, "problem setting initial text");
+                Assertions.assertEquals(TestRichTextModel.header() + initial, s, "problem setting initial text");
             }
 
             op.accept(m);
@@ -143,7 +143,7 @@ public class TestRichTextModelAttributes {
                 TextPos end = m.getDocumentEnd();
                 m.export(TextPos.ZERO, end, out);
                 String s = wr.toString();
-                Assertions.assertEquals(expected, s, "operation failed");
+                Assertions.assertEquals(TestRichTextModel.header() + expected, s, "operation failed");
             }
         } catch(IOException e) {
             Assertions.fail(e);

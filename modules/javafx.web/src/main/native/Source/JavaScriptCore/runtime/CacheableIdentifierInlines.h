@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "CacheableIdentifier.h"
+#include <JavaScriptCore/CacheableIdentifier.h>
 
-#include "Identifier.h"
-#include "JSCJSValueInlines.h"
-#include "JSCell.h"
-#include "VM.h"
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSCell.h>
+#include <JavaScriptCore/VM.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {
@@ -110,6 +110,25 @@ inline bool CacheableIdentifier::isCacheableIdentifierCell(JSValue value)
     if (!value.isCell())
         return false;
     return isCacheableIdentifierCell(value.asCell());
+}
+
+inline GCOwnedDataScope<const UniquedStringImpl*> CacheableIdentifier::getCacheableIdentifier(JSCell* cell)
+{
+    if (cell->isSymbol())
+        return { cell, &asSymbol(cell)->uid() };
+    if (!cell->isString())
+        return { };
+    JSString* string = jsCast<JSString*>(cell);
+    if (const StringImpl* impl = string->tryGetValueImpl(); impl && impl->isAtom())
+        return { cell, static_cast<const AtomStringImpl*>(impl) };
+    return { };
+}
+
+inline GCOwnedDataScope<const UniquedStringImpl*> CacheableIdentifier::getCacheableIdentifier(JSValue value)
+{
+    if (!value.isCell())
+        return { };
+    return getCacheableIdentifier(value.asCell());
 }
 
 inline bool CacheableIdentifier::isSymbolCell() const

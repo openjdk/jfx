@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,12 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-#include "FetchOptions.h"
-#include "WorkerThreadType.h"
 #include <JavaScriptCore/Debugger.h>
 #include <JavaScriptCore/JSRunLoopTimer.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/WorkerThreadType.h>
 #include <wtf/CheckedPtr.h>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/MessageQueue.h>
@@ -45,6 +44,7 @@ class Exception;
 class JSGlobalObject;
 class JSModuleRecord;
 class VM;
+enum class TrustedTypesEnforcement;
 }
 
 namespace WebCore {
@@ -85,11 +85,11 @@ public:
     // forbidExecution()/isExecutionForbidden() to guard against reentry into JS.
     // Can be called from any thread.
     void scheduleExecutionTermination();
-    bool isTerminatingExecution() const;
+    WEBCORE_EXPORT bool isTerminatingExecution() const;
 
     // Called on Worker thread when JS exits with termination exception caused by forbidExecution() request,
     // or by Worker thread termination code to prevent future entry into JS.
-    void forbidExecution();
+    WEBCORE_EXPORT void forbidExecution();
     bool isExecutionForbidden() const;
 
     JSC::VM& vm() { return *m_vm; }
@@ -98,7 +98,7 @@ public:
 
     void disableEval(const String& errorMessage);
     void disableWebAssembly(const String& errorMessage);
-    void setRequiresTrustedTypes(bool required);
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement);
 
     void evaluate(const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     void evaluate(const ScriptSourceCode&, NakedPtr<JSC::Exception>& returnedException, String* returnedExceptionMessage = nullptr);

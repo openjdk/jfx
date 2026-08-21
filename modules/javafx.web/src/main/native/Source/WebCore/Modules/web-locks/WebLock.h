@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
-#include "WebLockIdentifier.h"
-#include "WebLockMode.h"
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/WebLockIdentifier.h>
+#include <WebCore/WebLockMode.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 

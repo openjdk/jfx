@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CharacterData.h"
-#include "ContainerNode.h"
-#include "EditingBoundary.h"
-#include "TextAffinity.h"
+#include <WebCore/CharacterData.h>
+#include <WebCore/ContainerNode.h>
+#include <WebCore/EditingBoundary.h>
+#include <WebCore/TextAffinity.h>
 
 namespace WTF {
 class TextStream;
@@ -122,9 +122,9 @@ public:
     Node* deprecatedNode() const { return m_anchorNode.get(); }
     RefPtr<Node> protectedDeprecatedNode() const { return m_anchorNode; }
 
-    Document* document() const { return m_anchorNode ? &m_anchorNode->document() : nullptr; }
-    TreeScope* treeScope() const { return m_anchorNode ? &m_anchorNode->treeScope() : nullptr; }
-    Element* rootEditableElement() const
+    inline Document* document() const; // Defined in PositionInlines.h.
+    inline TreeScope* treeScope() const;
+    inline Element* rootEditableElement() const
     {
         RefPtr container = containerNode();
         return container ? container->rootEditableElement() : nullptr;
@@ -225,11 +225,7 @@ private:
 bool operator==(const Position&, const Position&);
 
 template<TreeType treeType> std::partial_ordering treeOrder(const Position&, const Position&);
-WEBCORE_EXPORT std::partial_ordering documentOrder(const Position&, const Position&);
-bool operator<(const Position&, const Position&);
-bool operator>(const Position&, const Position&);
-bool operator>=(const Position&, const Position&);
-bool operator<=(const Position&, const Position&);
+WEBCORE_EXPORT std::partial_ordering operator<=>(const Position&, const Position&);
 
 Position makeContainerOffsetPosition(RefPtr<Node>&&, unsigned offset);
 WEBCORE_EXPORT Position makeContainerOffsetPosition(const BoundaryPoint&);
@@ -248,7 +244,7 @@ Position positionAfterNode(Node* anchorNode);
 
 // firstPositionInNode and lastPositionInNode return parent-anchored positions, lastPositionInNode construction is O(n) due to countChildNodes()
 Position firstPositionInNode(Node* anchorNode);
-Position lastPositionInNode(Node* anchorNode);
+inline Position lastPositionInNode(Node* anchorNode);
 
 bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode);
 
@@ -263,16 +259,34 @@ struct PositionRange {
 
 std::optional<SimpleRange> makeSimpleRange(const PositionRange&);
 
+class PositionWithAffinity {
+public:
+    PositionWithAffinity() = default;
+
+    PositionWithAffinity(const Position& position, Affinity affinity = Affinity::Downstream)
+        : m_position(position)
+        , m_affinity(affinity)
+    {
+    }
+
+    const Position& position() const { return m_position; }
+    Affinity affinity() const { return m_affinity; }
+
+private:
+    Position m_position;
+    Affinity m_affinity { Affinity::Downstream };
+};
+
 // inlines
 
 inline Position makeContainerOffsetPosition(RefPtr<Node>&& node, unsigned offset)
 {
-    return { WTFMove(node), offset, Position::PositionIsOffsetInAnchor };
+    return { WTF::move(node), offset, Position::PositionIsOffsetInAnchor };
 }
 
 inline Position makeDeprecatedLegacyPosition(RefPtr<Node>&& node, unsigned offset)
 {
-    return { WTFMove(node), offset, Position::LegacyEditingPositionFlag::On };
+    return { WTF::move(node), offset, Position::LegacyEditingPositionFlag::On };
 }
 
 // FIXME: Positions at the same document location with different anchoring will return false; that's unlike <= and >=.
@@ -281,26 +295,6 @@ inline Position makeDeprecatedLegacyPosition(RefPtr<Node>&& node, unsigned offse
 inline bool operator==(const Position& a, const Position& b)
 {
     return a.anchorNode() == b.anchorNode() && a.deprecatedEditingOffset() == b.deprecatedEditingOffset() && a.anchorType() == b.anchorType();
-}
-
-inline bool operator<(const Position& a, const Position& b)
-{
-    return is_lt(documentOrder(a, b));
-}
-
-inline bool operator>(const Position& a, const Position& b)
-{
-    return is_gt(documentOrder(a, b));
-}
-
-inline bool operator>=(const Position& a, const Position& b)
-{
-    return is_gteq(documentOrder(a, b));
-}
-
-inline bool operator<=(const Position& a, const Position& b)
-{
-    return is_lteq(documentOrder(a, b));
 }
 
 // positionBeforeNode and positionAfterNode return neighbor-anchored positions, construction is O(1)
@@ -324,23 +318,7 @@ inline Position firstPositionInNode(Node* anchorNode)
     return Position(anchorNode, Position::PositionIsBeforeChildren);
 }
 
-inline Position lastPositionInNode(Node* anchorNode)
-{
-    if (anchorNode->isCharacterDataNode())
-        return Position(anchorNode, anchorNode->length(), Position::PositionIsOffsetInAnchor);
-    return Position(anchorNode, Position::PositionIsAfterChildren);
-}
-
-inline bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode)
-{
-    if (auto* characterData = dynamicDowncast<CharacterData>(*anchorNode))
-        return offset < characterData->length();
-
-    unsigned currentOffset = 0;
-    for (Node* node = anchorNode->firstChild(); node && currentOffset < offset; node = node->nextSibling())
-        currentOffset++;
-    return offset < currentOffset;
-}
+inline bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode);
 
 } // namespace WebCore
 

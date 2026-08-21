@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FECompositeNeonArithmeticApplier);
 FECompositeNeonArithmeticApplier::FECompositeNeonArithmeticApplier(const FEComposite& effect)
     : Base(effect)
 {
-    ASSERT(m_effect.operation() == CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
+    ASSERT(m_effect->operation() == CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
 }
 
 template <int b1, int b4>
@@ -96,22 +96,22 @@ inline void FECompositeNeonArithmeticApplier::applyPlatform(const uint8_t* sourc
     computePixels<1, 1>(source, destination, pixelArrayLength, k1, k2, k3, k4);
 }
 
-bool FECompositeNeonArithmeticApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeNeonArithmeticApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
-    Ref input2 = inputs[1];
+    auto& input = inputs[0].get();
+    auto& input2 = inputs[1].get();
 
     auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     IntRect effectADrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto sourcePixelBuffer = input->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect, m_effect->operatingColorSpace());
+    auto sourcePixelBuffer = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
     IntRect effectBDrawingRect = result.absoluteImageRectRelativeTo(input2);
-    input2->copyPixelBuffer(*destinationPixelBuffer, effectBDrawingRect);
+    input2.copyPixelBuffer(*destinationPixelBuffer, effectBDrawingRect);
 
     auto* sourcePixelBytes = sourcePixelBuffer->bytes().data();
     auto* destinationPixelBytes = destinationPixelBuffer->bytes().data();

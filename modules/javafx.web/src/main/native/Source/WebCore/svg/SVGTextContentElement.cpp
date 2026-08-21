@@ -25,15 +25,19 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ContainerNodeInlines.h"
 #include "DOMPoint.h"
 #include "FrameSelection.h"
 #include "LegacyRenderSVGResource.h"
 #include "LocalFrame.h"
-#include "RenderObject.h"
+#include "NodeInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGPoint.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGRect.h"
 #include "SVGTextQuery.h"
 #include "XMLNames.h"
@@ -42,27 +46,28 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTextContentElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGTextContentElement);
 
 SVGTextContentElement::SVGTextContentElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
-    : SVGGraphicsElement(tagName, document, WTFMove(propertyRegistry))
+    : SVGGraphicsElement(tagName, document, WTF::move(propertyRegistry))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::textLengthAttr, &SVGTextContentElement::m_textLength>();
         PropertyRegistry::registerProperty<SVGNames::lengthAdjustAttr, SVGLengthAdjustType, &SVGTextContentElement::m_lengthAdjust>();
-    });
+    }
 }
 
 unsigned SVGTextContentElement::getNumberOfChars()
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return SVGTextQuery(checkedRenderer().get()).numberOfCharacters();
 }
 
 float SVGTextContentElement::getComputedTextLength()
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return SVGTextQuery(checkedRenderer().get()).textLength();
 }
 
@@ -110,7 +115,7 @@ ExceptionOr<float> SVGTextContentElement::getRotationOfChar(unsigned charnum)
 
 int SVGTextContentElement::getCharNumAtPosition(DOMPointInit&& pointInit)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     FloatPoint transformPoint {static_cast<float>(pointInit.x), static_cast<float>(pointInit.y)};
     return SVGTextQuery(checkedRenderer().get()).characterNumberAtPosition(transformPoint);
 }
@@ -165,10 +170,10 @@ void SVGTextContentElement::collectPresentationalHintsForAttribute(const Qualifi
 
 void SVGTextContentElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     if (name == SVGNames::lengthAdjustAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGLengthAdjustType>::fromString(newValue);
+        auto propertyValue = SVGPropertyTraits<SVGLengthAdjustType>::fromString(*this, newValue);
         if (propertyValue > 0)
             m_lengthAdjust->setBaseValInternal<SVGLengthAdjustType>(propertyValue);
     } else if (name == SVGNames::textLengthAttr)

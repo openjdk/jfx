@@ -24,14 +24,14 @@
  */
 
 #pragma once
-#include "CredentialRequestCoordinatorClient.h"
+#include <WebCore/CredentialRequestCoordinatorClient.h>
 
 #if ENABLE(WEB_AUTHN)
-
+#include <WebCore/UnvalidatedDigitalCredentialRequest.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMalloc.h>
-
 namespace WebCore {
+
 struct DigitalCredentialsResponseData;
 
 class WEBCORE_EXPORT DummyCredentialRequestCoordinatorClient final : public CredentialRequestCoordinatorClient {
@@ -41,9 +41,12 @@ public:
     DummyCredentialRequestCoordinatorClient();
     ~DummyCredentialRequestCoordinatorClient() final;
 
+    static Ref<DummyCredentialRequestCoordinatorClient> create();
+
 private:
-    void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&&);
+    void showDigitalCredentialsPicker(Vector<WebCore::UnvalidatedDigitalCredentialRequest>&&, const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&&);
     void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&&) final;
+    ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&) final;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,12 +55,12 @@ private:
     }
 
     Kind kind() const final { return Kind::Main; }
-    std::optional<AtomString> trackUID() const { return AtomString { m_streamTrack->id() }; }
-    AtomString label() const final { return AtomString { m_streamTrack->label() }; }
-    AtomString language() const final { return emptyAtom(); }
+    std::optional<String> trackUID() const { return m_streamTrack->id(); }
+    String label() const final { return m_streamTrack->label(); }
+    String language() const final { return emptyString(); }
     int trackIndex() const final { return m_index; }
 
-    Ref<MediaStreamTrackPrivate> m_streamTrack;
+    const Ref<MediaStreamTrackPrivate> m_streamTrack;
     int m_index { 0 };
 };
 

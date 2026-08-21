@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 The Chromium Authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,12 +26,14 @@
 
 #pragma once
 
-#include "InspectorFrontendRouter.h"
-#include "InspectorProtocolTypes.h"
+#include <JavaScriptCore/InspectorFrontendRouter.h>
+#include <JavaScriptCore/InspectorProtocolTypes.h>
 #include <functional>
 #include <wtf/Function.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -40,18 +42,30 @@ class BackendDispatcher;
 
 typedef String ErrorString;
 
+template<typename T>
+using CommandResult = Inspector::Protocol::ErrorStringOr<T>;
+
+template <typename T>
+using CommandCallback = Function<void(CommandResult<T>)>;
+
+template <typename... ArgTypes>
+using CommandResultOf = Inspector::Protocol::ErrorStringOr<std::tuple<ArgTypes...>>;
+
+template <typename... ArgTypes>
+using CommandCallbackOf = Function<void(CommandResultOf<ArgTypes...>)>;
+
 class SupplementalBackendDispatcher : public RefCounted<SupplementalBackendDispatcher> {
 public:
     JS_EXPORT_PRIVATE SupplementalBackendDispatcher(BackendDispatcher&);
     JS_EXPORT_PRIVATE virtual ~SupplementalBackendDispatcher();
     virtual void dispatch(long requestId, const String& method, Ref<JSON::Object>&& message) = 0;
 protected:
-    Ref<BackendDispatcher> m_backendDispatcher;
+    const Ref<BackendDispatcher> m_backendDispatcher;
 };
 
-class BackendDispatcher : public RefCounted<BackendDispatcher> {
+class BackendDispatcher : public RefCountedAndCanMakeWeakPtr<BackendDispatcher> {
 public:
-    JS_EXPORT_PRIVATE static Ref<BackendDispatcher> create(Ref<FrontendRouter>&&);
+    JS_EXPORT_PRIVATE static Ref<BackendDispatcher> create(Ref<FrontendRouter>&&, BackendDispatcher* fallback = nullptr);
 
     class CallbackBase : public RefCounted<CallbackBase> {
     public:
@@ -65,7 +79,7 @@ public:
         JS_EXPORT_PRIVATE void sendFailure(const ErrorString&);
 
     private:
-        Ref<BackendDispatcher> m_backendDispatcher;
+        const Ref<BackendDispatcher> m_backendDispatcher;
         long m_requestId;
         bool m_alreadySent { false };
     };
@@ -107,12 +121,12 @@ public:
     JS_EXPORT_PRIVATE RefPtr<JSON::Array> getArray(JSON::Object*, const String& name, bool required);
 
 private:
-    BackendDispatcher(Ref<FrontendRouter>&&);
+    BackendDispatcher(Ref<FrontendRouter>&&, BackendDispatcher* fallback);
 
     template<typename T>
     WTF_INTERNAL T getPropertyValue(JSON::Object*, const String& name, bool required, std::function<T(JSON::Value&)> converter, ASCIILiteral typeName);
 
-    Ref<FrontendRouter> m_frontendRouter;
+    const Ref<FrontendRouter> m_frontendRouter;
     UncheckedKeyHashMap<String, SupplementalBackendDispatcher*> m_dispatchers;
 
     // Protocol errors reported for the top-level request being processed.
@@ -123,6 +137,8 @@ private:
     // For synchronously handled requests, avoid plumbing requestId through every
     // call that could potentially fail with a protocol error.
     std::optional<long> m_currentRequestId { std::nullopt };
+
+    WeakPtr<BackendDispatcher> m_fallbackDispatcher;
 };
 
 } // namespace Inspector

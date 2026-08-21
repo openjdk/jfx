@@ -94,7 +94,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::RequiresUserGestureToLoadVideo);
         disableBehavior(SDKAlignedBehavior::LinkPreviewEnabledByDefault);
         disableBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToBlank);
-        disableBehavior(SDKAlignedBehavior::NoTheSecretSocietyHiddenMysteryWindowOpenQuirk);
         disableBehavior(SDKAlignedBehavior::UnprefixedPlaysInlineAttribute);
     }
 
@@ -114,7 +113,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
     }
 
     if (linkedBefore(dyld_spring_2018_os_versions, DYLD_IOS_VERSION_11_3, DYLD_MACOSX_VERSION_10_13_4)) {
-        disableBehavior(SDKAlignedBehavior::DisallowsSettingAnyXHRHeaderFromFileURLs);
         disableBehavior(SDKAlignedBehavior::DefaultsToPassiveTouchListenersOnDocument);
     }
 
@@ -122,13 +120,11 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::ScrollViewContentInsetsAreNotObscuringInsets);
         disableBehavior(SDKAlignedBehavior::UIScrollViewDoesNotApplyKeyboardInsetsUnconditionally);
         disableBehavior(SDKAlignedBehavior::MainThreadReleaseAssertionInWebPageProxy);
-        disableBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk);
         disableBehavior(SDKAlignedBehavior::TimerThreadSafetyChecks);
     }
 
     if (linkedBefore(dyld_spring_2019_os_versions, DYLD_IOS_VERSION_12_2, DYLD_MACOSX_VERSION_10_14_4)) {
         disableBehavior(SDKAlignedBehavior::LazyGestureRecognizerInstallation);
-        disableBehavior(SDKAlignedBehavior::ProcessSwapOnCrossSiteNavigation);
     }
 
     if (linkedBefore(dyld_fall_2019_os_versions, DYLD_IOS_VERSION_13_0, DYLD_MACOSX_VERSION_10_15)) {
@@ -139,9 +135,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::ExceptionsForRelatedWebViewsUsingDifferentDataStores);
         disableBehavior(SDKAlignedBehavior::ModernCompabilityModeByDefault);
         disableBehavior(SDKAlignedBehavior::HasUIContextMenuInteraction);
-        disableBehavior(SDKAlignedBehavior::WKContentViewDoesNotOverrideKeyCommands);
-        disableBehavior(SDKAlignedBehavior::SupportsOverflowHiddenOnMainFrame);
-        disableBehavior(SDKAlignedBehavior::NoIMDbCSSOMViewScrollingQuirk);
         disableBehavior(SDKAlignedBehavior::DownloadDelegatesCalledOnTheMainThread);
     }
 
@@ -159,19 +152,13 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::InitializeWebKit2MainThreadAssertion);
         disableBehavior(SDKAlignedBehavior::WKWebsiteDataStoreInitReturningNil);
         disableBehavior(SDKAlignedBehavior::WebSQLDisabledByDefaultInLegacyWebKit);
-        disableBehavior(SDKAlignedBehavior::NoLaBanquePostaleQuirks);
         disableBehavior(SDKAlignedBehavior::NoPokerBrosBuiltInTagQuirk);
     }
-
-    if (linkedBefore(dyld_late_fall_2020_os_versions, DYLD_IOS_VERSION_14_2, DYLD_MACOSX_VERSION_10_16))
-        disableBehavior(SDKAlignedBehavior::SupportsiOSAppsOnMacOS);
 
     if (linkedBefore(dyld_spring_2021_os_versions, DYLD_IOS_VERSION_14_5, DYLD_MACOSX_VERSION_11_3)) {
         disableBehavior(SDKAlignedBehavior::DataURLFragmentRemoval);
         disableBehavior(SDKAlignedBehavior::HTMLDocumentSupportedPropertyNames);
         disableBehavior(SDKAlignedBehavior::ObservesClassProperty);
-        disableBehavior(SDKAlignedBehavior::NoWeChatScrollingQuirk);
-        disableBehavior(SDKAlignedBehavior::SharedNetworkProcess);
         disableBehavior(SDKAlignedBehavior::BlanksViewOnJSPrompt);
         disableBehavior(SDKAlignedBehavior::NoClientCertificateLookup);
         disableBehavior(SDKAlignedBehavior::DefaultsToPassiveWheelListenersOnDocument);
@@ -204,7 +191,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::InspectableDefaultsToDisabled);
         disableBehavior(SDKAlignedBehavior::PushStateFilePathRestriction);
         disableBehavior(SDKAlignedBehavior::NoUNIQLOLazyIframeLoadingQuirk);
-        disableBehavior(SDKAlignedBehavior::UsesGameControllerPhysicalInputProfile);
         disableBehavior(SDKAlignedBehavior::ScreenOrientationAPIEnabled);
     }
 
@@ -212,7 +198,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContent);
         disableBehavior(SDKAlignedBehavior::RunningBoardThrottling);
         disableBehavior(SDKAlignedBehavior::PopoverAttributeEnabled);
-        disableBehavior(SDKAlignedBehavior::LiveRangeSelectionEnabledForAllApps);
         disableBehavior(SDKAlignedBehavior::DoesNotOverrideUAFromNSUserDefault);
         disableBehavior(SDKAlignedBehavior::EvaluateJavaScriptWithoutTransientActivation);
         disableBehavior(SDKAlignedBehavior::ResettingTransitionCancelsRunningTransitionQuirk);
@@ -233,13 +218,28 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContentImmediately);
         disableBehavior(SDKAlignedBehavior::ApplicationStateTrackerDoesNotObserveWindow);
         disableBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess);
-        disableBehavior(SDKAlignedBehavior::BlockOptionallyBlockableMixedContent);
         disableBehavior(SDKAlignedBehavior::LaxCookieSameSiteAttribute);
         disableBehavior(SDKAlignedBehavior::UseCFNetworkNetworkLoader);
-        disableBehavior(SDKAlignedBehavior::BrowsingContextControllerSPIAccessRemoved);
         disableBehavior(SDKAlignedBehavior::BlocksConnectionsToAddressWithOnlyZeros);
         disableBehavior(SDKAlignedBehavior::BlockCrossOriginRedirectDownloads);
+        disableBehavior(SDKAlignedBehavior::SupportGameControllerEventInteractionAPI);
     }
+
+    if (linkedBefore(dyld_2024_SU_C_os_versions, DYLD_IOS_VERSION_18_2, DYLD_MACOSX_VERSION_15_2))
+        disableBehavior(SDKAlignedBehavior::BlobFileAccessEnforcementAndNetworkProcessRoundTrip);
+
+    if (linkedBefore(dyld_2024_SU_E_os_versions, DYLD_IOS_VERSION_18_4, DYLD_MACOSX_VERSION_15_4)) {
+        disableBehavior(SDKAlignedBehavior::DevolvableWidgets);
+        disableBehavior(SDKAlignedBehavior::SetSelectionRangeCachesSelectionIfNotFocusedOrSelected);
+        disableBehavior(SDKAlignedBehavior::DispatchFocusEventBeforeNotifyingClient);
+        disableBehavior(SDKAlignedBehavior::BlobFileAccessEnforcement);
+    }
+
+    if (linkedBefore(dyld_2024_SU_F_os_versions, DYLD_IOS_VERSION_18_5, DYLD_MACOSX_VERSION_15_5))
+        disableBehavior(SDKAlignedBehavior::NavigationActionSourceFrameNonNull);
+
+    if (linkedBefore(dyld_2025_SU_B_os_versions, DYLD_IOS_VERSION_26_1, DYLD_MACOSX_VERSION_26_1))
+        disableBehavior(SDKAlignedBehavior::GetBoundingClientRectZoomed);
 
     disableAdditionalSDKAlignedBehaviors(behaviors);
 
@@ -359,15 +359,31 @@ void clearApplicationBundleIdentifierTestingOverride()
 #endif
 }
 
+#if USE(SOURCE_APPLICATION_AUDIT_DATA)
+
+static std::optional<audit_token_t> applicationAuditTokenStorage;
+
+void setApplicationAuditToken(audit_token_t token)
+{
+    applicationAuditTokenStorage = token;
+}
+
+std::optional<audit_token_t> applicationAuditToken()
+{
+    return applicationAuditTokenStorage;
+}
+
+#endif
+
 static bool applicationBundleIsEqualTo(const String& bundleIdentifierString)
 {
     return applicationBundleIdentifier() == bundleIdentifierString;
 }
 
-bool CocoaApplication::isIBooks()
+bool CocoaApplication::isAppleBooks()
 {
-    static bool isIBooks = applicationBundleIsEqualTo("com.apple.iBooksX"_s) || applicationBundleIsEqualTo("com.apple.iBooks"_s);
-    return isIBooks;
+    static bool isAppleBooks = applicationBundleIsEqualTo("com.apple.iBooksX"_s) || applicationBundleIsEqualTo("com.apple.iBooks"_s);
+    return isAppleBooks;
 }
 
 bool CocoaApplication::isWebkitTestRunner()
@@ -376,13 +392,58 @@ bool CocoaApplication::isWebkitTestRunner()
     return isWebkitTestRunner;
 }
 
+bool CocoaApplication::isAppleApplication()
+{
+    static bool isAppleApplication = applicationBundleIdentifier().startsWith("com.apple."_s);
+    return isAppleApplication;
+}
+
+bool CocoaApplication::isDumpRenderTree()
+{
+#if PLATFORM(MAC)
+    static bool isDumpRenderTree = applicationBundleIsEqualTo("com.apple.WebKit.DumpRenderTree"_s);
+    return isDumpRenderTree;
+#else
+    static bool isDumpRenderTree = applicationBundleIsEqualTo("org.webkit.DumpRenderTree"_s);
+    return isDumpRenderTree;
+#endif
+}
+
+bool CocoaApplication::shouldOSFaultLogForAppleApplicationUsingWebKit1()
+{
+    static bool bundleIdentifierShouldLog = [] {
+        if (!isAppleApplication())
+            return false;
+
+        String bundleIdentifier = applicationBundleIdentifier();
+        if (bundleIdentifier.startsWith("com.apple.InstallerRemotePluginService."_s))
+            return false;
+        if (applicationBundleIsEqualTo("com.apple.WebKit.TestWebKitAPI"_s))
+            return false;
+        if (applicationBundleIsEqualTo("com.apple.ibtool"_s))
+            return false;
+        if (CocoaApplication::isDumpRenderTree())
+            return false;
+
+        return true;
+    }();
+
+    return bundleIdentifierShouldLog && !((rand() * 1000) % 1000);
+}
+
 #if PLATFORM(MAC)
 
 bool MacApplication::isSafari()
 {
     static bool isSafari = applicationBundleIsEqualTo("com.apple.Safari"_s)
-        || applicationBundleIsEqualTo("com.apple.SafariTechnologyPreview"_s)
+        || isSafariTechnologyPreview()
         || applicationBundleIdentifier().startsWith("com.apple.Safari."_s);
+    return isSafari;
+}
+
+bool MacApplication::isSafariTechnologyPreview()
+{
+    static bool isSafari = applicationBundleIsEqualTo("com.apple.SafariTechnologyPreview"_s);
     return isSafari;
 }
 
@@ -422,6 +483,12 @@ bool MacApplication::isHRBlock()
     return isHRBlock;
 }
 
+bool MacApplication::isTurboTax()
+{
+    static bool isTurboTax = applicationBundleIdentifier().startsWith("com.intuit.turbotax."_s);
+    return isTurboTax;
+}
+
 bool MacApplication::isEpsonSoftwareUpdater()
 {
     static bool isEpsonSoftwareUpdater = applicationBundleIsEqualTo("com.epson.EPSON_Software_Updater"_s);
@@ -438,9 +505,10 @@ bool MacApplication::isMimeoPhotoProject()
 
 #if PLATFORM(IOS_FAMILY)
 
-static bool applicationBundleStartsWith(const String& bundleIdentifierPrefix)
+bool IOSApplication::isAppleWebApp()
 {
-    return applicationBundleIdentifier().startsWith(bundleIdentifierPrefix);
+    static bool isWebApp = applicationBundleIsEqualTo("com.apple.webapp"_s);
+    return isWebApp;
 }
 
 bool IOSApplication::isMobileMail()
@@ -467,30 +535,10 @@ bool IOSApplication::isSafariViewService()
     return isSafariViewService;
 }
 
-bool IOSApplication::isIMDb()
-{
-    static bool isIMDb = applicationBundleIsEqualTo("com.imdb.imdb"_s);
-    return isIMDb;
-}
-
-bool IOSApplication::isGmail()
-{
-    static bool isGmail = applicationBundleIsEqualTo("com.google.Gmail"_s);
-    return isGmail;
-}
-
 bool IOSApplication::isWebBookmarksD()
 {
     static bool isWebBookmarksD = applicationBundleIsEqualTo("com.apple.webbookmarksd"_s);
     return isWebBookmarksD;
-}
-
-bool IOSApplication::isDumpRenderTree()
-{
-    // We use a prefix match instead of strict equality since multiple instances of DumpRenderTree
-    // may be launched, where the bundle identifier of each instance has a unique suffix.
-    static bool isDumpRenderTree = applicationBundleIsEqualTo("org.webkit.DumpRenderTree"_s); // e.g. org.webkit.DumpRenderTree0
-    return isDumpRenderTree;
 }
 
 bool IOSApplication::isMobileStore()
@@ -499,58 +547,10 @@ bool IOSApplication::isMobileStore()
     return isMobileStore;
 }
 
-bool IOSApplication::isSpringBoard()
-{
-    static bool isSpringBoard = applicationBundleIsEqualTo("com.apple.springboard"_s);
-    return isSpringBoard;
-}
-
 // FIXME: this needs to be changed when the WebProcess is changed to an XPC service.
 bool IOSApplication::isWebProcess()
 {
     return isInWebProcess();
-}
-
-bool IOSApplication::isBackboneApp()
-{
-    static bool isBackboneApp = applicationBundleIsEqualTo("com.backbonelabs.backboneapp"_s);
-    return isBackboneApp;
-}
-
-bool IOSApplication::isIBooksStorytime()
-{
-    static bool isIBooksStorytime = applicationBundleIsEqualTo("com.apple.TVBooks"_s);
-    return isIBooksStorytime;
-}
-
-bool IOSApplication::isTheSecretSocietyHiddenMystery()
-{
-    static bool isTheSecretSocietyHiddenMystery = applicationBundleIsEqualTo("com.g5e.secretsociety"_s);
-    return isTheSecretSocietyHiddenMystery;
-}
-
-bool IOSApplication::isCardiogram()
-{
-    static bool isCardiogram = applicationBundleIsEqualTo("com.cardiogram.ios.heart"_s);
-    return isCardiogram;
-}
-
-bool IOSApplication::isNike()
-{
-    static bool isNike = applicationBundleIsEqualTo("com.nike.omega"_s);
-    return isNike;
-}
-
-bool IOSApplication::isMoviStarPlus()
-{
-    static bool isMoviStarPlus = applicationBundleIsEqualTo("com.prisatv.yomvi"_s);
-    return isMoviStarPlus;
-}
-
-bool IOSApplication::isFirefox()
-{
-    static bool isFirefox = applicationBundleIsEqualTo("org.mozilla.ios.Firefox"_s);
-    return isFirefox;
 }
 
 bool IOSApplication::isHoYoLAB()
@@ -563,24 +563,6 @@ bool IOSApplication::isAmazon()
 {
     static bool isAmazon = applicationBundleIsEqualTo("com.amazon.Amazon"_s);
     return isAmazon;
-}
-
-bool IOSApplication::isAppleApplication()
-{
-    static bool isAppleApplication = applicationBundleStartsWith("com.apple."_s);
-    return isAppleApplication;
-}
-
-bool IOSApplication::isEvernote()
-{
-    static bool isEvernote = applicationBundleIsEqualTo("com.evernote.iPhone.Evernote"_s);
-    return isEvernote;
-}
-
-bool IOSApplication::isEventbrite()
-{
-    static bool isEventbrite = applicationBundleIsEqualTo("com.eventbrite.attendee"_s);
-    return isEventbrite;
 }
 
 bool IOSApplication::isDataActivation()
@@ -613,88 +595,16 @@ bool IOSApplication::isFeedly()
     return isFeedly;
 }
 
-bool IOSApplication::isPocketCity()
-{
-    static bool isPocketCity = applicationBundleIsEqualTo("com.codebrewgames.pocketcity"_s);
-    return isPocketCity;
-}
-
 bool IOSApplication::isEssentialSkeleton()
 {
     static bool isEssentialSkeleton = applicationBundleIsEqualTo("com.3d4medical.EssentialSkeleton"_s);
     return isEssentialSkeleton;
 }
 
-bool IOSApplication::isLaBanquePostale()
-{
-    static bool isLaBanquePostale = applicationBundleIsEqualTo("fr.labanquepostale.moncompte"_s);
-    return isLaBanquePostale;
-}
-
-bool IOSApplication::isESPNFantasySports()
-{
-    static bool isESPNFantasySports = applicationBundleIsEqualTo("com.espn.fantasyFootball"_s);
-    return isESPNFantasySports;
-}
-
-bool IOSApplication::isDoubleDown()
-{
-    static bool isDoubleDown = applicationBundleIsEqualTo("com.doubledowninteractive.DDCasino"_s);
-    return isDoubleDown;
-}
-
-bool IOSApplication::isFIFACompanion()
-{
-    static bool isFIFACompanion = applicationBundleIsEqualTo("com.ea.ios.fifaultimate"_s);
-    return isFIFACompanion;
-}
-
-bool IOSApplication::isNoggin()
-{
-    static bool isNoggin = applicationBundleIsEqualTo("com.mtvn.noggin"_s);
-    return isNoggin;
-}
-
-bool IOSApplication::isOKCupid()
-{
-    static bool isOKCupid = applicationBundleIsEqualTo("com.okcupid.app"_s);
-    return isOKCupid;
-}
-
-bool IOSApplication::isJWLibrary()
-{
-    static bool isJWLibrary = applicationBundleIsEqualTo("org.jw.jwlibrary"_s);
-    return isJWLibrary;
-}
-
-bool IOSApplication::isPaperIO()
-{
-    static bool isPaperIO = applicationBundleIsEqualTo("io.voodoo.paperio"_s);
-    return isPaperIO;
-}
-
-bool IOSApplication::isCrunchyroll()
-{
-    static bool isCrunchyroll = applicationBundleIsEqualTo("com.crunchyroll.iphone"_s);
-    return isCrunchyroll;
-}
-
-bool IOSApplication::isWechat()
-{
-    static bool isWechat = applicationBundleIsEqualTo("com.tencent.xin"_s);
-    return isWechat;
-}
-
 bool IOSApplication::isUNIQLOApp()
 {
     static bool isUNIQLO = applicationBundleIdentifier().startsWith("com.uniqlo"_s);
     return isUNIQLO;
-}
-
-bool IOSApplication::isLutron()
-{
-    static bool isLutronApp = applicationBundleIsEqualTo("com.lutron.lsb"_s);
-    return isLutronApp;
 }
 
 bool IOSApplication::isDOFUSTouch()

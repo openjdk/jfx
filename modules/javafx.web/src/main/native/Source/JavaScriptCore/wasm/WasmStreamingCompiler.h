@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "WasmStreamingParser.h"
+#include <JavaScriptCore/WasmStreamingParser.h>
+#include <wtf/Platform.h>
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "DeferredWorkTimer.h"
-#include "JSCJSValue.h"
+#include <JavaScriptCore/DeferredWorkTimer.h>
+#include <JavaScriptCore/JSCJSValue.h>
 
 namespace JSC {
 
@@ -47,7 +48,7 @@ class StreamingPlan;
 
 class StreamingCompiler final : public StreamingParserClient, public ThreadSafeRefCounted<StreamingCompiler> {
 public:
-    JS_EXPORT_PRIVATE static Ref<StreamingCompiler> create(VM&, CompilerMode, JSGlobalObject*, JSPromise*, JSObject*);
+    JS_EXPORT_PRIVATE static Ref<StreamingCompiler> create(VM&, CompilerMode, JSGlobalObject*, JSPromise*, JSObject*, const SourceCode&);
 
     JS_EXPORT_PRIVATE ~StreamingCompiler();
 
@@ -58,13 +59,16 @@ public:
 
     void didCompileFunction(StreamingPlan&);
 
+    JS_EXPORT_PRIVATE JSGlobalObject* globalObjectIfActive();
+
 private:
-    JS_EXPORT_PRIVATE StreamingCompiler(VM&, CompilerMode, JSGlobalObject*, JSPromise*, JSObject*);
+    JS_EXPORT_PRIVATE StreamingCompiler(VM&, CompilerMode, JSGlobalObject*, JSPromise*, JSObject*, const SourceCode&);
 
     bool didReceiveFunctionData(FunctionCodeIndex, const FunctionData&) final;
     void didFinishParsing() final;
     void didComplete() WTF_REQUIRES_LOCK(m_lock);
     void completeIfNecessary() WTF_REQUIRES_LOCK(m_lock);
+    RefPtr<DeferredWorkTimer::Ticket> takeTicketIfActive();
 
     VM& m_vm;
     CompilerMode m_compilerMode;
@@ -73,10 +77,11 @@ private:
     bool m_threadedCompilationStarted { false };
     Lock m_lock;
     unsigned m_remainingCompilationRequests { 0 };
-    DeferredWorkTimer::Ticket m_ticket;
-    Ref<Wasm::ModuleInformation> m_info;
+    ThreadSafeWeakPtr<DeferredWorkTimer::Ticket> m_ticket;
+    const Ref<Wasm::ModuleInformation> m_info;
     StreamingParser m_parser;
     RefPtr<EntryPlan> m_plan;
+    SourceCode m_source;
 };
 
 

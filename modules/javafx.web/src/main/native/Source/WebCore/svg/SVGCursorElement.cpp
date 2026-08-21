@@ -23,7 +23,10 @@
 #include "SVGCursorElement.h"
 
 #include "Document.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGStringList.h"
 #include "StyleCursorImage.h"
 #include <wtf/NeverDestroyed.h>
@@ -31,7 +34,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGCursorElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGCursorElement);
 
 inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -40,11 +43,12 @@ inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document
 {
     ASSERT(hasTagName(SVGNames::cursorTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGCursorElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGCursorElement::m_y>();
-    });
+    }
 }
 
 Ref<SVGCursorElement> SVGCursorElement::create(const QualifiedName& tagName, Document& document)
@@ -54,13 +58,13 @@ Ref<SVGCursorElement> SVGCursorElement::create(const QualifiedName& tagName, Doc
 
 SVGCursorElement::~SVGCursorElement()
 {
-    for (auto& client : m_clients)
-        client.cursorElementRemoved(*this);
+    for (Ref client : m_clients)
+        client->cursorElementRemoved(*this);
 }
 
 void SVGCursorElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     if (name == SVGNames::xAttr)
         Ref { m_x }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
@@ -88,8 +92,8 @@ void SVGCursorElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        for (auto& client : m_clients)
-            client.cursorElementChanged(*this);
+        for (Ref client : m_clients)
+            client->cursorElementChanged(*this);
         return;
     }
 

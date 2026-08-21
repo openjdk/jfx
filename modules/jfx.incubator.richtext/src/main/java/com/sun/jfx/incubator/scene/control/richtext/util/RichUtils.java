@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,9 +32,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.Supplier;
 import javax.imageio.ImageIO;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.css.CssMetaData;
@@ -47,7 +51,10 @@ import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -61,13 +68,21 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * RichTextArea specific utility methods.
  */
 public final class RichUtils {
 
+    /// enables debug output
+    private static final boolean DEBUG = Boolean.getBoolean("jfx.incubator.richtext.DEBUG");
+    /// includes FILE.METHOD:LINE in the debug output
+    private static final boolean CALLER = Boolean.getBoolean("jfx.incubator.richtext.CALLER");
     private static final DecimalFormat format = new DecimalFormat("#0.##");
 
     private RichUtils() {
@@ -160,34 +175,40 @@ public final class RichUtils {
         return Platform.isSupported(ConditionalFeature.INPUT_TOUCH);
     }
 
+    /// Computes text length for the TextFlow embedded into TextCell,
+    /// ignoring unmanagement Nodes (highlights) and counting non-Text nodes
+    /// as having length=1.
     public static int getTextLength(TextFlow f) {
         int len = 0;
         for (Node n : f.getChildrenUnmodifiable()) {
             if (n instanceof Text t) {
                 len += t.getText().length();
-            } else {
-                // treat non-Text nodes as having 1 character
+            } else if (n.isManaged()) {
+                // treat non-Text nodes as having 1 character (excluding decorations)
                 len++;
             }
         }
         return len;
     }
 
-    // TODO javadoc
-    // translates path elements from src frame of reference to target, with additional shift by dx, dy
-    // only MoveTo, LineTo are supported
-    // may return null
-    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements, double deltax, double deltay) {
-        //System.out.println("translatePath from=" + dump(elements) + " dx=" + deltax + " dy=" + deltay); // FIX
+    /**
+     * Translates path (which must contain only LineTo and MoveTo elements) from src frame of reference
+     * to the target frame of reference.
+     * @param tgt the target Region
+     * @param src the source Region
+     * @param elements the path elements
+     * @return translated path array, or null
+     * @throws RuntimeException if path elements contain something other than LineTo or MoveTo
+     */
+    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements) {
         Point2D ps = src.localToScreen(0.0, 0.0);
         if (ps == null) {
             return null;
         }
 
         Point2D pt = tgt.localToScreen(tgt.snappedLeftInset(), tgt.snappedTopInset());
-        double dx = ps.getX() - pt.getX() + deltax;
-        double dy = ps.getY() - pt.getY() + deltay;
-        //System.out.println("dx=" + dx + " dy=" + dy); // FIX
+        double dx = ps.getX() - pt.getX();
+        double dy = ps.getY() - pt.getY();
 
         for (int i = 0; i < elements.length; i++) {
             PathElement em = elements[i];
@@ -201,7 +222,6 @@ public final class RichUtils {
 
             elements[i] = em;
         }
-        //System.out.println("translatePath to=" + dump(elements)); // FIX
         return elements;
     }
 
@@ -343,37 +363,6 @@ public final class RichUtils {
 
     public static String formatDouble(Double value) {
         return format.format(value);
-    }
-
-    @Deprecated // FIX remove
-    public static char encodeAlignment(TextAlignment a) {
-        switch (a) {
-        case CENTER:
-            return 'C';
-        case JUSTIFY:
-            return 'J';
-        case RIGHT:
-            return 'R';
-        case LEFT:
-        default:
-            return 'L';
-        }
-    }
-
-    @Deprecated // FIX remove
-    public static TextAlignment decodeAlignment(int c) throws IOException {
-        switch (c) {
-        case 'C':
-            return TextAlignment.CENTER;
-        case 'J':
-            return TextAlignment.JUSTIFY;
-        case 'L':
-            return TextAlignment.LEFT;
-        case 'R':
-            return TextAlignment.RIGHT;
-        default:
-            throw new IOException("failed parsing alignment (" + (char)c + ")");
-        }
     }
 
     /**
@@ -694,5 +683,148 @@ public final class RichUtils {
         }
 
         return b.build();
+    }
+
+    /** returns true if both control and model are editable */
+    public static boolean canEdit(RichTextArea rta) {
+        if (rta.isEditable()) {
+            StyledTextModel m = rta.getModel();
+            if (m != null) {
+                return m.isWritable();
+            }
+        }
+        return false;
+    }
+
+    /** Returns the text positions at a positive offset relative to the 'start' position. */
+    public static TextPos advancePosition(TextPos start, int offset) {
+        return TextPos.ofLeading(start.index(), start.offset() + offset);
+    }
+
+    /** Returns true if the color scheme is DARK, checking first the node's scene, then platform preferences. */
+    public static boolean isDarkScheme(Node n) {
+        Scene sc = n.getScene();
+        if (sc != null) {
+            return (sc.getPreferences().getColorScheme() == ColorScheme.DARK);
+        }
+        return (Platform.getPreferences().getColorScheme() == ColorScheme.DARK);
+    }
+
+    /** Returns composed or committed text. */
+    public static String getImeText(InputMethodEvent ev) {
+        // it's either composed or committed but not both
+        if (ev.getComposed().size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (InputMethodTextRun run : ev.getComposed()) {
+                sb.append(run.getText());
+            }
+            return sb.toString();
+        } else {
+            return ev.getCommitted();
+        }
+    }
+
+    // borrowed from
+    // https://github.com/andy-goryachev/AppFramework/blob/1e9f2197ce510a77ec5f719a2cb7112b0b6cf7be/src/goryachev/fx/FX.java#L1081
+    // with the author's permission
+    /** returns a parent of the specified type, or null.  if node is an instance of the specified class, returns node */
+    public static <T extends Node> T getParentOfClass(Class<T> c, Node node) {
+        while (node != null) {
+            if (c.isInstance(node)) {
+                return (T)node;
+            }
+
+            node = node.getParent();
+        }
+        return null;
+    }
+
+    // removes inline node attributes
+    public static StyleAttributeMap filterOutNodeAttributes(StyleAttributeMap map) {
+        if (containsInlineNodes(map)) {
+            StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+            for (StyleAttribute a : map.getAttributes()) {
+                if (!a.isInlineNode()) {
+                    Object v = map.get(a);
+                    b.set(a, v);
+                }
+            }
+            return b.build();
+        }
+        return map;
+    }
+
+    public static boolean containsInlineNodes(StyleAttributeMap map) {
+        for (StyleAttribute<?> a : map.getAttributes()) {
+            if (a.isInlineNode()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap map, Set<StyleAttribute<?>> supported) {
+        if (supported != null) {
+            Set<StyleAttribute<?>> as = map.getAttributes();
+            // attributes sourced from the same model are all supported, so typically the process
+            // ends without filtering and re-allocation
+            boolean filter = false;
+            for (StyleAttribute a : as) {
+                if (!supported.contains(a)) {
+                    filter = true;
+                    break;
+                }
+            }
+            // but we must filter out unsupported attributes that come from a different model
+            if (filter) {
+                StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+                for (StyleAttribute a : as) {
+                    if (supported.contains(a)) {
+                        b.set(a, map.get(a));
+                    }
+                }
+                return b.build();
+            }
+        }
+        return map;
+    }
+
+    public static void log(Throwable e) {
+        if (DEBUG) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void log(Object x) {
+        if (DEBUG) {
+            output(x);
+        }
+    }
+
+    public static void log(String format, Object... items) {
+        if (DEBUG) {
+            String s = MessageFormat.format(format, items);
+            output(s);
+        }
+    }
+
+    public static void log(Supplier<Object> x) {
+        if (DEBUG) {
+            Object v = x.get();
+            output(v);
+        }
+    }
+
+    private static void output(Object x) {
+        if (CALLER) {
+            StackTraceElement em = new Throwable().getStackTrace()[2];
+            String f = em.getFileName();
+            if (f.endsWith(".java")) {
+                f = f.substring(0, f.length() - 5);
+            }
+            System.out.println(f + "." + em.getMethodName() + ":" + em.getLineNumber() + " " + x);
+        } else {
+            System.out.println(x);
+        }
     }
 }

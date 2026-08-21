@@ -26,9 +26,13 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#include <wtf/Platform.h>
 
+#if ENABLE(ASSEMBLER)
+
+#include "LinkBuffer.h"
 #include <stdio.h>
+#include <wtf/FileHandle.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMalloc.h>
@@ -41,18 +45,17 @@ class PerfLog {
     WTF_MAKE_NONCOPYABLE(PerfLog);
     friend class LazyNeverDestroyed<PerfLog>;
 public:
-    static void log(CString&&, const uint8_t* executableAddress, size_t);
-    static void flush();
+    static void log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag>);
 
 private:
     PerfLog();
     static PerfLog& singleton();
 
-    void write(const AbstractLocker&, const void*, size_t) WTF_REQUIRES_LOCK(m_lock);
+    void write(const AbstractLocker&, std::span<const uint8_t>) WTF_REQUIRES_LOCK(m_lock);
+    void write(const AbstractLocker& locker, std::span<const char> span) WTF_REQUIRES_LOCK(m_lock) { write(locker, unsafeMakeSpan(std::bit_cast<const uint8_t*>(span.data()), span.size_bytes())); }
     void flush(const AbstractLocker&) WTF_REQUIRES_LOCK(m_lock);
 
-    FILE* m_file { nullptr };
-    void* m_marker { nullptr };
+    WTF::FileSystemImpl::FileHandle m_file { };
     uint64_t m_codeIndex { 0 };
     int m_fd { -1 };
     Lock m_lock;
@@ -60,4 +63,4 @@ private:
 
 } // namespace JSC
 
-#endif  // ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#endif // ENABLE(ASSEMBLER)

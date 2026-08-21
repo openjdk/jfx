@@ -71,9 +71,9 @@ public:
         return forNode(edge);
     }
 
-    ALWAYS_INLINE void fastForwardAndFilterUnproven(AbstractValue& value, SpeculatedType type)
+    ALWAYS_INLINE FiltrationResult fastForwardAndFilterUnproven(AbstractValue& value, SpeculatedType type)
     {
-        value.filter(type);
+        return value.filter(type);
     }
 
     ALWAYS_INLINE void clearForNode(NodeFlowProjection node)
@@ -257,7 +257,6 @@ public:
     void setStructureClobberState(StructureClobberState state) { RELEASE_ASSERT(state == m_block->cfaStructureClobberStateAtTail); }
     void setIsValid(bool isValid) { m_block->cfaDidFinish = isValid; }
     void setBranchDirection(BranchDirection) { }
-    void setShouldTryConstantFolding(bool) { }
 
     void trustEdgeProofs() { m_trustEdgeProofs = true; }
     void dontTrustEdgeProofs() { m_trustEdgeProofs = false; }

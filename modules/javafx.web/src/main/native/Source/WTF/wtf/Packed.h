@@ -26,6 +26,7 @@
 #pragma once
 
 #include <array>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashFunctions.h>
@@ -41,7 +42,7 @@ namespace WTF {
 
 template<typename T>
 class Packed {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Packed);
 public:
     static constexpr bool isPackedType = true;
 
@@ -84,7 +85,8 @@ public:
         m_storage.swap(other.m_storage);
     }
 
-    template<typename Other, typename = std::enable_if_t<Other::isPackedType>>
+    template<typename Other>
+        requires Other::isPackedType
     void swap(Other& other)
     {
         T t1 = get();
@@ -108,7 +110,7 @@ private:
 // alignment information only when we can reduce the size of the storage.
 template<typename T, size_t passedAlignment>
 class PackedAlignedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PackedAlignedPtr);
 public:
     static_assert(::allowCompactPointers<T*>());
     static_assert(hasOneBitSet(passedAlignment), "Alignment needs to be power-of-two");
@@ -178,7 +180,7 @@ public:
 #else
         memcpySpan(std::span { m_storage }, asByteSpan(value).last(storageSize));
 #endif
-        ASSERT(std::bit_cast<uintptr_t>(get()) == value);
+        ASSERT(get() == passedValue);
     }
 
     void clear()
@@ -188,8 +190,9 @@ public:
 
     T* operator->() const { return get(); }
 
-    template <typename U = T>
-    typename std::enable_if<!std::is_void_v<U>, U&>::type operator*() const { return *get(); }
+    template<typename U = T>
+        requires (!std::is_void_v<U>)
+    U& operator*() const { return *get(); }
 
     bool operator!() const { return !get(); }
 
@@ -219,7 +222,8 @@ public:
         m_storage.swap(other.m_storage);
     }
 
-    template<typename Other, typename = std::enable_if_t<Other::isPackedType>>
+    template<typename Other>
+        requires Other::isPackedType
     void swap(Other& other)
     {
         T* t1 = get();
@@ -228,7 +232,7 @@ public:
         other.set(t1);
     }
 
-    void swap(T* t2)
+    void swap(T*& t2)
     {
         T* t1 = get();
         std::swap(t1, t2);
@@ -277,12 +281,6 @@ template<typename T, typename U>
 inline bool operator==(const PackedPtr<T>& a, U* b)
 {
     return a.get() == b;
-}
-
-template<typename T, typename U>
-inline bool operator==(T* a, const PackedPtr<U>& b)
-{
-    return a == b.get();
 }
 
 template<typename T>

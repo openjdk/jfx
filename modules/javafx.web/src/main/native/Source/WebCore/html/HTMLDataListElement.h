@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,15 +31,15 @@
 
 #pragma once
 
-#include "HTMLElement.h"
-#include "TypedElementDescendantIterator.h"
+#include <WebCore/HTMLElement.h>
+#include <WebCore/TypedElementDescendantIterator.h>
 
 namespace WebCore {
 
 class HTMLCollection;
 
 class HTMLDataListElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDataListElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLDataListElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDataListElement);
 public:
     static Ref<HTMLDataListElement> create(const QualifiedName&, Document&);

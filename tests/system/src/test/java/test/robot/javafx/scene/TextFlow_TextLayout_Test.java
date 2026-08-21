@@ -47,7 +47,6 @@ import javafx.scene.text.TextLineInfo;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,6 +95,76 @@ public class TextFlow_TextLayout_Test {
         // basic checks
         assertTrue(r2.getMinY() > r.getMinY());
         assertTrue(r2.getMinX() > r.getMinX());
+    }
+
+    // tests split caret with mixed text
+    @Test
+    public void testSplitCaret() {
+        String s = "Arabic:العربية:Arabic: العربية";
+        setText(s);
+        waitForIdle();
+
+        CaretInfo c1;
+        CaretInfo c2;
+
+        LayoutInfo la = textFlow.getLayoutInfo();
+        c1 = la.caretInfoAt(0, true);
+        assertEquals(1, c1.getSegmentCount());
+        double h1 = c1.getSegmentAt(0).getHeight() * 0.25;
+        double h3 = c1.getSegmentAt(0).getHeight() * 0.75;
+
+        // 6 leading x=64.9453125, y=0.0, h=28.265625
+        // 6 trailing x=70.1015625, y=0.0, h=14.1328125 + x=130.44143676757812, y=14.1328125, h=14.1328125
+        c1 = la.caretInfoAt(6, true);
+        c2 = la.caretInfoAt(6, false);
+        assertEquals(1, c1.getSegmentCount());
+        assertTrue(c1.getSegmentAt(0).getHeight() > h3);
+        assertEquals(2, c2.getSegmentCount());
+        assertTrue(c2.getSegmentAt(0).getHeight() < h3);
+        assertTrue(c2.getSegmentAt(0).getMinY() < h1);
+        assertTrue(c2.getSegmentAt(1).getHeight() < h3);
+        assertTrue(c2.getSegmentAt(1).getMinY() > h1);
+        assertTrue(c2.getSegmentAt(0).getMinX() < c2.getSegmentAt(1).getMinX());
+
+        // 7 leading x=130.44143676757812, y=0.0, h=14.1328125 + x=70.1015625, y=14.1328125, h=14.1328125
+        // 7 trailing x=124.7748794555664, y=0.0, h=28.265625
+        c1 = la.caretInfoAt(7, true);
+        assertEquals(2, c1.getSegmentCount());
+        assertTrue(Util.isNear(c2.getSegmentAt(1).getMinX(), c1.getSegmentAt(0).getMinX()));
+        assertTrue(c1.getSegmentAt(0).getMinY() < c2.getSegmentAt(1).getMinY());
+
+        c2 = la.caretInfoAt(7, false);
+        assertTrue(c1.getSegmentAt(0).getHeight() < h3);
+        assertTrue(c1.getSegmentAt(0).getMinY() < h1);
+        assertTrue(c1.getSegmentAt(1).getHeight() < h3);
+        assertTrue(c1.getSegmentAt(1).getMinY() > h1);
+        assertTrue(c1.getSegmentAt(0).getMinX() > c1.getSegmentAt(1).getMinX());
+        assertEquals(1, c2.getSegmentCount());
+        assertTrue(c2.getSegmentAt(0).getHeight() > h3);
+
+        /** if we ever need to debug this again
+        for(int i=0; i<s.length(); i++) {
+            CaretInfo c = la.caretInfoAt(i, true);
+            System.out.println(i + " leading " + f(c));
+            c = la.caretInfoAt(i, false);
+            System.out.println(i + " trailing " + f(c));
+        }
+        */
+    }
+
+    private static String f(CaretInfo c) {
+        if(c.getSegmentCount() == 2) {
+            Rectangle2D r0 = c.getSegmentAt(0);
+            Rectangle2D r1 = c.getSegmentAt(1);
+            return
+                "x=" + r0.getMinX() + ", y=" + r0.getMinY() + ", h=" + r0.getHeight() +
+                " + " +
+                "x=" + r1.getMinX() + ", y=" + r1.getMinY() + ", h=" + r1.getHeight();
+        } else {
+            Rectangle2D r0 = c.getSegmentAt(0);
+            return
+                "x=" + r0.getMinX() + ", y=" + r0.getMinY() + ", h=" + r0.getHeight();
+        }
     }
 
     // testing layout bounds

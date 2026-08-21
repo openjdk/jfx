@@ -29,7 +29,7 @@
 
 #include "B3SparseCollection.h"
 #include "BasicBlockLocation.h"
-#include "CheckPrivateBrandVariant.h"
+#include "CheckPrivateBrandStatus.h"
 #include "CodeBlock.h"
 #include "DFGAdjacencyList.h"
 #include "DFGArithMode.h"
@@ -50,6 +50,7 @@
 #include "DFGVariableAccessData.h"
 #include "DOMJITSignature.h"
 #include "DeleteByVariant.h"
+#include "GetByStatus.h"
 #include "GetByVariant.h"
 #include "InlineCacheCompiler.h"
 #include "JSCJSValue.h"
@@ -107,6 +108,16 @@ struct MultiDeleteByOffsetData {
     bool allVariantsStoreEmpty() const;
 };
 
+struct MultiGetByValData {
+    ArrayModes m_arrayModes { };
+    DFG::ArrayMode m_arrayMode { };
+};
+
+struct MultiPutByValData {
+    ArrayModes m_arrayModes { };
+    DFG::ArrayMode m_arrayMode { };
+};
+
 struct MatchStructureVariant {
     RegisteredStructure structure;
     bool result;
@@ -152,12 +163,7 @@ struct DataViewData {
 static_assert(sizeof(DataViewData) == sizeof(uint64_t));
 
 struct BranchTarget {
-    BranchTarget()
-        : block(nullptr)
-        , count(PNaN)
-    {
-    }
-
+    BranchTarget() = default;
     explicit BranchTarget(BasicBlock* block)
         : block(block)
         , count(PNaN)
@@ -172,8 +178,8 @@ struct BranchTarget {
 
     void dump(PrintStream&) const;
 
-    BasicBlock* block;
-    float count;
+    BasicBlock* block { nullptr };
+    float count { PNaN };
 };
 
 struct BranchData {
@@ -238,18 +244,19 @@ struct SwitchData {
     // Initializes most fields to obviously invalid values. Anyone
     // constructing this should make sure to initialize everything they
     // care about manually.
-    SwitchData()
-        : switchTableIndex(UINT_MAX)
-        , kind(static_cast<SwitchKind>(-1))
-        , didUseJumpTable(false)
+    SwitchData() = default;
+
+    bool hasSwitchTableIndex() const { return switchTableIndex != std::numeric_limits<size_t>::max(); }
+    void clearSwitchTableIndex()
     {
+        switchTableIndex = std::numeric_limits<size_t>::max();
     }
 
     Vector<SwitchCase> cases;
     BranchTarget fallThrough;
-    size_t switchTableIndex;
-    SwitchKind kind;
-    bool didUseJumpTable;
+    size_t switchTableIndex { std::numeric_limits<size_t>::max() };
+    SwitchKind kind { static_cast<SwitchKind>(-1) };
+    bool didUseJumpTable { false };
 };
 
 struct EntrySwitchData {
@@ -317,7 +324,7 @@ enum class BucketOwnerType : uint32_t {
 // Node represents a single operation in the data flow graph.
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DFGNode);
 struct Node {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DFGNode);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Node, DFGNode);
 public:
     static const char HashSetTemplateInstantiationString[];
 
@@ -687,6 +694,7 @@ public:
         children.setChild3(children.child2());
         children.setChild2(base);
         children.setChild1(storage);
+        children.child1().setUseKind(KnownStorageUse);
         m_op = PutByOffset;
     }
 
@@ -697,15 +705,44 @@ public:
         m_op = MultiPutByOffset;
     }
 
-    void convertToPhantomNewArrayWithConstantSize()
+    void convertToMultiGetByVal(MultiGetByValData* data)
     {
-        ASSERT(m_op == NewArrayWithConstantSize);
-        m_op = PhantomNewArrayWithConstantSize;
-        m_flags &= ~NodeHasVarArgs;
-        m_flags |= NodeMustGenerate;
-        // No need to clear the infos, as the indexing type and array
-        // size are still required for materialization when an OSR exit occurs.
+        ASSERT(m_op == GetByVal);
+        m_opInfo = data;
+        m_op = MultiGetByVal;
+    }
+
+    void convertToMultiPutByVal(MultiPutByValData* data)
+    {
+        ASSERT(m_op == PutByVal);
+        m_opInfo = data;
+        m_op = MultiPutByVal;
+    }
+
+    void convertToNewRegExp(FrozenValue* regExp, Edge index)
+    {
+        ASSERT(m_op == NewRegExpUntyped);
+        setOpAndDefaultFlags(NewRegExp);
+        m_opInfo = OpInfoWrapper(regExp);
+        m_opInfo2 = OpInfoWrapper();
         children = AdjacencyList();
+        children.setChild1(index);
+    }
+
+    void convertToPhantomNewArrayWithButterfly()
+    {
+        ASSERT(m_op == NewArrayWithButterfly);
+        setOpAndDefaultFlags(PhantomNewArrayWithButterfly);
+        // OpInfo/children shouldn't change and are needed for OSR exit.
+        ASSERT(child1().useKind() == Int32Use);
+    }
+
+    void convertToPhantomNewButterflyWithSize()
+    {
+        ASSERT(m_op == NewButterflyWithSize);
+        setOpAndDefaultFlags(PhantomNewButterflyWithSize);
+        // OpInfo/children shouldn't change and are needed for OSR exit.
+        ASSERT(child1().useKind() == Int32Use);
     }
 
     void convertToPhantomNewObject()
@@ -781,10 +818,10 @@ public:
         children = AdjacencyList();
     }
 
-    void convertToPhantomNewRegexp()
+    void convertToPhantomNewRegExp()
     {
-        ASSERT(m_op == NewRegexp);
-        setOpAndDefaultFlags(PhantomNewRegexp);
+        ASSERT(m_op == NewRegExp);
+        setOpAndDefaultFlags(PhantomNewRegExp);
         m_opInfo = OpInfoWrapper();
         m_opInfo2 = OpInfoWrapper();
         children = AdjacencyList();
@@ -886,7 +923,7 @@ public:
 
     void convertToNewArrayBuffer(FrozenValue* immutableButterfly);
     void convertToNewArrayWithSize();
-    void convertToNewArrayWithConstantSize(Graph&, uint32_t);
+    void convertToNewArrayWithButterfly(Graph&, Node* butterfly);
     void convertToNewArrayWithSizeAndStructure(Graph&, RegisteredStructure);
 
     void convertToNewBoundFunction(FrozenValue*);
@@ -1339,9 +1376,28 @@ public:
     NodeFlags arithNodeFlags()
     {
         NodeFlags result = m_flags & NodeArithFlagsMask;
-        if (op() == ArithMul || op() == ArithDiv || op() == ValueDiv || op() == ArithMod || op() == ArithNegate || op() == ArithPow || op() == ArithRound || op() == ArithFloor || op() == ArithCeil || op() == ArithTrunc || op() == DoubleAsInt32 || op() == ValueNegate || op() == ValueMul || op() == ValueDiv)
+        switch (op()) {
+        case ArithMul:
+        case ArithDiv:
+        case ArithMod:
+        case ArithNegate:
+        case ArithPow:
+        case ArithRound:
+        case ArithFloor:
+        case ArithCeil:
+        case ArithTrunc:
+        case ValueMul:
+        case ValueDiv:
+        case ValueMod:
+        case ValueNegate:
+        case ValuePow:
+        case DoubleAsInt32:
+        case Int52Rep:
+        case MultiGetByVal:
             return result;
+        default:
         return result & ~NodeBytecodeNeedsNegZero;
+    }
     }
 
     bool mayHaveNonIntResult()
@@ -1405,32 +1461,16 @@ public:
         return newArrayBufferData().vectorLengthHint;
     }
 
-    unsigned hasNewArraySize()
-    {
-        switch (op()) {
-        case NewArrayWithConstantSize:
-        case PhantomNewArrayWithConstantSize:
-        case MaterializeNewArrayWithConstantSize:
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    unsigned newArraySize()
-    {
-        ASSERT(hasNewArraySize());
-        return op() == MaterializeNewArrayWithConstantSize ? objectMaterializationData().m_newArraySize : m_opInfo2.as<unsigned>();
-    }
-
     bool hasIndexingType()
     {
         switch (op()) {
         case NewArray:
         case NewArrayWithSize:
-        case NewArrayWithConstantSize:
-        case PhantomNewArrayWithConstantSize:
-        case MaterializeNewArrayWithConstantSize:
+        case NewArrayWithButterfly:
+        case NewButterflyWithSize:
+        case PhantomNewArrayWithButterfly:
+        case PhantomNewButterflyWithSize:
+        case MaterializeNewArrayWithButterfly:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case NewArrayWithSpecies:
@@ -1621,7 +1661,7 @@ public:
 
     JSType queriedType()
     {
-        static_assert(std::is_same<uint8_t, std::underlying_type<JSType>::type>::value, "Ensure that uint8_t is the underlying type for JSType.");
+        static_assert(std::same_as<uint8_t, std::underlying_type_t<JSType>>);
         return static_cast<JSType>(m_opInfo.as<uint32_t>());
     }
 
@@ -1682,6 +1722,7 @@ public:
         case ValueBitNot:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ValueNegate:
             return true;
         default:
@@ -2013,6 +2054,7 @@ public:
         case GetByValMegamorphic:
         case GetByValWithThis:
         case GetByValWithThisMegamorphic:
+        case MultiGetByVal:
         case GetPrivateName:
         case GetPrivateNameById:
         case Call:
@@ -2028,6 +2070,7 @@ public:
         case CallForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
         case CallWasm:
+        case TailCallInlinedCallerWasm:
         case CallCustomAccessorGetter:
         case GetByOffset:
         case MultiGetByOffset:
@@ -2044,9 +2087,11 @@ public:
         case RegExpTestInline:
         case RegExpMatchFast:
         case RegExpMatchFastGlobal:
+        case RegExpSearch:
         case GetGlobalVar:
         case GetGlobalLexicalVariable:
         case StringReplace:
+        case StringReplaceAll:
         case StringReplaceRegExp:
         case StringReplaceString:
         case ToObject:
@@ -2128,7 +2173,7 @@ public:
         case NewBoundFunction:
         case CreateActivation:
         case MaterializeCreateActivation:
-        case NewRegexp:
+        case NewRegExp:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case CompareEqPtr:
@@ -2138,6 +2183,7 @@ public:
         case DirectConstruct:
         case DirectTailCallInlinedCaller:
         case CallWasm:
+        case TailCallInlinedCallerWasm:
         case RegExpExecNonGlobalOrSticky:
         case RegExpMatchFastGlobal:
         case RegExpTestInline:
@@ -2213,7 +2259,7 @@ public:
         case GetByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case AtomicsAdd:
         case AtomicsAnd:
@@ -2251,7 +2297,7 @@ public:
         case EnumeratorPutByVal:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
             return 3;
         case AtomicsAdd:
@@ -2354,9 +2400,11 @@ public:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
         case NewStringObject:
+        case NewRegExpUntyped:
         case NewMap:
         case NewSet:
         case NewArrayWithSizeAndStructure:
+        case NewTypedArrayBuffer:
             return true;
         default:
             return false;
@@ -2420,6 +2468,28 @@ public:
         return *m_opInfo.as<MultiDeleteByOffsetData*>();
     }
 
+    bool hasMultiGetByValData()
+    {
+        return op() == MultiGetByVal;
+    }
+
+    MultiGetByValData& multiGetByValData()
+    {
+        ASSERT(hasMultiGetByValData());
+        return *m_opInfo.as<MultiGetByValData*>();
+    }
+
+    bool hasMultiPutByValData()
+    {
+        return op() == MultiPutByVal;
+    }
+
+    MultiPutByValData& multiPutByValData()
+    {
+        ASSERT(hasMultiPutByValData());
+        return *m_opInfo.as<MultiPutByValData*>();
+    }
+
     bool hasMatchStructureData()
     {
         return op() == MatchStructure;
@@ -2435,7 +2505,7 @@ public:
     {
         switch (op()) {
         case MaterializeNewObject:
-        case MaterializeNewArrayWithConstantSize:
+        case MaterializeNewArrayWithButterfly:
         case MaterializeNewInternalFieldObject:
         case MaterializeCreateActivation:
             return true;
@@ -2523,7 +2593,8 @@ public:
     bool isPhantomAllocation()
     {
         switch (op()) {
-        case PhantomNewArrayWithConstantSize:
+        case PhantomNewArrayWithButterfly:
+        case PhantomNewButterflyWithSize:
         case PhantomNewObject:
         case PhantomDirectArguments:
         case PhantomCreateRest:
@@ -2537,10 +2608,34 @@ public:
         case PhantomNewAsyncGeneratorFunction:
         case PhantomNewInternalFieldObject:
         case PhantomCreateActivation:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
             return true;
         default:
             return false;
+        }
+    }
+
+    bool hasArrayModes()
+    {
+        switch (op()) {
+        case MultiGetByVal:
+        case MultiPutByVal:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    ArrayModes arrayModes()
+    {
+        ASSERT(hasArrayModes());
+        switch (op()) {
+        case MultiGetByVal:
+            return multiGetByValData().m_arrayModes;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayModes;
+        default:
+            return { };
         }
     }
 
@@ -2558,11 +2653,13 @@ public:
         case InByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case EnumeratorPutByVal:
         case GetByVal:
         case GetByValMegamorphic:
+        case MultiGetByVal:
+        case MultiPutByVal:
         case EnumeratorNextUpdateIndexAndMode:
         case EnumeratorGetByVal:
         case EnumeratorInByVal:
@@ -2599,11 +2696,18 @@ public:
     ArrayMode arrayMode()
     {
         ASSERT(hasArrayMode());
-        if (op() == ArrayifyToStructure)
+        switch (op()) {
+        case ArrayifyToStructure:
             return ArrayMode::fromWord(m_opInfo2.as<uint32_t>());
-        if (op() == NewArrayWithSpecies)
+        case NewArrayWithSpecies:
             return ArrayMode::fromWord(newArrayWithSpeciesData().arrayMode);
+        case MultiGetByVal:
+            return multiGetByValData().m_arrayMode;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayMode;
+        default:
         return ArrayMode::fromWord(m_opInfo.as<uint32_t>());
+    }
     }
 
     bool setArrayMode(ArrayMode arrayMode)
@@ -2611,14 +2715,33 @@ public:
         ASSERT(hasArrayMode());
         if (this->arrayMode() == arrayMode)
             return false;
-        if (op() == NewArrayWithSpecies) {
+
+        switch (op()) {
+        case ArrayifyToStructure:
+            m_opInfo2 = arrayMode.asWord();
+            return true;
+        case NewArrayWithSpecies: {
             auto data = newArrayWithSpeciesData();
             data.arrayMode = arrayMode.asWord();
             m_opInfo = data.asQuadWord();
             return true;
         }
+        case MultiGetByVal:
+            multiGetByValData().m_arrayMode = arrayMode;
+            return true;
+        case MultiPutByVal:
+            multiPutByValData().m_arrayMode = arrayMode;
+            return true;
+        default:
         m_opInfo = arrayMode.asWord();
         return true;
+    }
+    }
+
+    bool mayBeResizableOrGrowableSharedArrayBuffer()
+    {
+        ASSERT(op() == DataViewGetByteLength || op() == DataViewGetByteLengthAsInt52);
+        return m_opInfo.as<bool>();
     }
 
     bool hasECMAMode()
@@ -2632,11 +2755,12 @@ public:
         case PutByIdMegamorphic:
         case PutByIdWithThis:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case PutByValDirect:
         case PutByValWithThis:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
         case ToThis:
             return true;
@@ -2660,10 +2784,11 @@ public:
         case PutByIdMegamorphic:
         case PutByIdWithThis:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case PutByValDirect:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
             return ECMAMode::fromByte(m_opInfo2.as<uint8_t>());
         default:
@@ -2872,7 +2997,7 @@ public:
 
     bool isBinaryUseKind(UseKind left, UseKind right)
     {
-        return child1().useKind() == left && child2().useKind() == right;
+        return !hasVarArgs() && child1() && child1().useKind() == left && child2() && child2().useKind() == right;
     }
 
     bool isBinaryUseKind(UseKind useKind)
@@ -2883,6 +3008,12 @@ public:
     bool isSymmetricBinaryUseKind(UseKind left, UseKind right)
     {
         return isBinaryUseKind(left, right) || isBinaryUseKind(right, left);
+    }
+
+    // Can handle both Int32Use and KnownInt32Use
+    bool isBinaryInt32UseKind()
+    {
+        return isInt32(child1().useKind()) && isInt32(child2().useKind());
     }
 
     Edge childFor(UseKind useKind)
@@ -2924,6 +3055,11 @@ public:
     bool shouldSpeculateInt32OrBoolean()
     {
         return isInt32OrBooleanSpeculation(prediction());
+    }
+
+    bool shouldSpeculateInt32OrOther()
+    {
+        return isInt32OrOtherSpeculation(prediction());
     }
 
     bool shouldSpeculateInt32ForArithmetic()
@@ -2973,6 +3109,11 @@ public:
         // can trivially become Int52.
         //
         return enableInt52() && isInt32OrInt52Speculation(prediction());
+    }
+
+    bool shouldSpeculateInt52OrOther()
+    {
+        return enableInt52() && isInt32OrInt52OrOtherSpeculation(prediction());
     }
 
     bool shouldSpeculateDouble()
@@ -3105,6 +3246,11 @@ public:
     bool shouldSpeculateProxyObject()
     {
         return isProxyObjectSpeculation(prediction());
+    }
+
+    bool shouldSpeculateSetObject()
+    {
+        return isSetObjectSpeculation(prediction());
     }
 
     bool shouldSpeculateGlobalProxy()
@@ -3477,6 +3623,22 @@ public:
         return op() == CreateRest || op() == PhantomCreateRest || op() == GetRestLength || op() == GetMyArgumentByVal || op() == GetMyArgumentByValOutOfBounds;
     }
 
+    GetByStatus::LookupMode propertyLookupMode()
+    {
+        switch (op()) {
+        case GetByIdDirect:
+        case GetByIdDirectFlush:
+        case GetPrivateNameById:
+            return GetByStatus::LookupMode::Direct;
+        case GetById:
+        case GetByIdFlush:
+        case GetByIdMegamorphic:
+            return GetByStatus::LookupMode::Normal;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    }
+
     unsigned numberOfArgumentsToSkip()
     {
         ASSERT(hasNumberOfArgumentsToSkip());
@@ -3783,23 +3945,27 @@ private:
             u.int64 = std::bit_cast<uint64_t>(newArrayBufferData);
             return *this;
         }
-        template <typename T>
-        ALWAYS_INLINE auto as() const -> typename std::enable_if<std::is_pointer<T>::value && !std::is_const<typename std::remove_pointer<T>::type>::value, T>::type
+        template<typename T>
+            requires (std::is_pointer_v<T> && !std::is_const_v<std::remove_pointer_t<T>>)
+        ALWAYS_INLINE T as() const
         {
             return static_cast<T>(u.pointer);
         }
-        template <typename T>
-        ALWAYS_INLINE auto as() const -> typename std::enable_if<std::is_pointer<T>::value && std::is_const<typename std::remove_pointer<T>::type>::value, T>::type
+        template<typename T>
+            requires (std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>)
+        ALWAYS_INLINE T as() const
         {
             return static_cast<T>(u.constPointer);
         }
-        template <typename T>
-        ALWAYS_INLINE auto as() const -> typename std::enable_if<(std::is_integral<T>::value || std::is_enum<T>::value) && sizeof(T) <= 4, T>::type
+        template<typename T>
+            requires ((std::integral<T> || std::is_enum_v<T>) && sizeof(T) <= 4)
+        ALWAYS_INLINE T as() const
         {
             return static_cast<T>(u.int32);
         }
-        template <typename T>
-        ALWAYS_INLINE auto as() const -> typename std::enable_if<(std::is_integral<T>::value || std::is_enum<T>::value) && sizeof(T) == 8, T>::type
+        template<typename T>
+            requires ((std::integral<T> || std::is_enum_v<T>) && sizeof(T) == 8)
+        ALWAYS_INLINE T as() const
         {
             return static_cast<T>(u.int64);
         }
@@ -3872,7 +4038,7 @@ CString nodeMapDump(const T& nodeMap, DumpContext* context = nullptr)
         typename T::const_iterator iter = nodeMap.begin();
         iter != nodeMap.end(); ++iter)
         keys.append(iter->key);
-    std::sort(keys.begin(), keys.end(), NodeComparator());
+    std::ranges::sort(keys, NodeComparator());
     StringPrintStream out;
     CommaPrinter comma;
     for(unsigned i = 0; i < keys.size(); ++i)
@@ -3883,9 +4049,8 @@ CString nodeMapDump(const T& nodeMap, DumpContext* context = nullptr)
 template<typename T>
 CString nodeValuePairListDump(const T& nodeValuePairList, DumpContext* context = nullptr)
 {
-    using V = typename T::ValueType;
     T sortedList = nodeValuePairList;
-    std::sort(sortedList.begin(), sortedList.end(), [](const V& a, const V& b) {
+    std::ranges::sort(sortedList, [](const auto& a, const auto& b) {
         return NodeComparator()(a.node, b.node);
     });
 

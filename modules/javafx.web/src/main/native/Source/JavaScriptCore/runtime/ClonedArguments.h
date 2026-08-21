@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "ArgumentsMode.h"
-#include "JSObject.h"
+#include <JavaScriptCore/ArgumentsMode.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
@@ -58,9 +59,9 @@ public:
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         JSValue lengthValue;
-        if (LIKELY(!structure()->didTransition())) {
+        if (!structure()->didTransition()) [[likely]] {
             lengthValue = getDirect(clonedArgumentsLengthPropertyOffset);
-            if (LIKELY(lengthValue.isInt32()))
+            if (lengthValue.isInt32()) [[likely]]
                 return std::max(lengthValue.asInt32(), 0);
         } else {
             lengthValue = get(globalObject, vm.propertyNames->length);
@@ -104,7 +105,7 @@ private:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype, IndexingType);
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);

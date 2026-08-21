@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,37 @@
 
 #include "bmalloc.h"
 
-#include "DebugHeap.h"
 #include "Environment.h"
 #include "PerProcess.h"
 #include "ProcessCheck.h"
+#include "SystemHeap.h"
 
 #if BENABLE(LIBPAS)
 #include "bmalloc_heap_config.h"
 #include "pas_page_sharing_pool.h"
+#include "pas_platform.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_scavenger.h"
 #include "pas_thread_local_cache.h"
+#include "pas_mte_config.h"
 #endif
 
 namespace bmalloc { namespace api {
 
 #if BUSE(LIBPAS)
+
+#if BHAVE(36BIT_ADDRESS) && !PAS_HAVE(36BIT_ADDRESS)
+#error BHAVE(36BIT_ADDRESS) is true, but PAS_HAVE(36BIT_ADDRESS) is false. They should match.
+#elif !BHAVE(36BIT_ADDRESS) && PAS_HAVE(36BIT_ADDRESS)
+#error BHAVE(36BIT_ADDRESS) is false, but PAS_HAVE(36BIT_ADDRESS) is true. They should match.
+#endif
+
 namespace {
 static const bmalloc_type primitiveGigacageType = BMALLOC_TYPE_INITIALIZER(1, 1, "Primitive Gigacage");
 } // anonymous namespace
 
 pas_primitive_heap_ref gigacageHeaps[static_cast<size_t>(Gigacage::NumberOfKinds)] = {
-    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&primitiveGigacageType),
+    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&primitiveGigacageType, pas_bmalloc_heap_ref_kind_non_compact),
 };
 #endif
 
@@ -71,8 +80,8 @@ void* tryLargeZeroedMemalignVirtual(size_t requiredAlignment, size_t requestedSi
     RELEASE_BASSERT(size >= requestedSize);
 
     void* result;
-    if (auto* debugHeap = DebugHeap::tryGet())
-        result = debugHeap->memalignLarge(alignment, size);
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
+        result = systemHeap->memalignLarge(alignment, size);
     else {
 #if BUSE(LIBPAS)
         result = tryMemalign(alignment, size, mode, kind);
@@ -95,6 +104,7 @@ void* tryLargeZeroedMemalignVirtual(size_t requiredAlignment, size_t requestedSi
 
     if (result)
         vmZeroAndPurge(result, size);
+
     return result;
 }
 
@@ -103,14 +113,14 @@ void freeLargeVirtual(void* object, size_t size, HeapKind kind)
 #if BUSE(LIBPAS)
     BUNUSED(size);
     BUNUSED(kind);
-    if (auto* debugHeap = DebugHeap::tryGet()) {
-        debugHeap->freeLarge(object);
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc()) {
+        systemHeap->freeLarge(object);
         return;
     }
     bmalloc_deallocate_inline(object);
 #else
-    if (auto* debugHeap = DebugHeap::tryGet()) {
-        debugHeap->freeLarge(object);
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc()) {
+        systemHeap->freeLarge(object);
         return;
     }
     kind = mapToActiveHeapKind(kind);
@@ -129,7 +139,7 @@ void scavengeThisThread()
                                   pas_lock_is_not_held);
 #endif
 #if !BUSE(LIBPAS)
-    if (!DebugHeap::tryGet()) {
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc()) {
         for (unsigned i = numHeaps; i--;)
             Cache::scavenge(static_cast<HeapKind>(i));
         IsoTLS::scavenge();
@@ -143,8 +153,8 @@ void scavenge()
     pas_scavenger_run_synchronously_now();
 #endif
     scavengeThisThread();
-    if (DebugHeap* debugHeap = DebugHeap::tryGet())
-        debugHeap->scavenge();
+    if (SystemHeap* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
+        systemHeap->scavenge();
     else {
 #if !BUSE(LIBPAS)
         Scavenger::get()->scavenge();
@@ -154,7 +164,7 @@ void scavenge()
 
 bool isEnabled(HeapKind)
 {
-    return !Environment::get()->isDebugHeapEnabled();
+    return !Environment::get()->shouldBmallocAllocateThroughSystemHeap();
 }
 
 #if BOS(DARWIN)
@@ -164,7 +174,7 @@ void setScavengerThreadQOSClass(qos_class_t overrideClass)
     pas_scavenger_set_requested_qos_class(overrideClass);
 #endif
 #if !BUSE(LIBPAS)
-    if (!DebugHeap::tryGet()) {
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc()) {
         UniqueLockHolder lock(Heap::mutex());
         Scavenger::get()->setScavengerThreadQOSClass(overrideClass);
     }
@@ -179,7 +189,7 @@ void commitAlignedPhysical(void* object, size_t size, HeapKind kind)
 #if BUSE(LIBPAS)
     BUNUSED(kind);
 #else
-    if (!DebugHeap::tryGet())
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc())
         PerProcess<PerHeapKind<Heap>>::get()->at(kind).externalCommit(object, size);
 #endif
 }
@@ -191,7 +201,7 @@ void decommitAlignedPhysical(void* object, size_t size, HeapKind kind)
 #if BUSE(LIBPAS)
     BUNUSED(kind);
 #else
-    if (!DebugHeap::tryGet())
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc())
         PerProcess<PerHeapKind<Heap>>::get()->at(kind).externalDecommit(object, size);
 #endif
 }
@@ -212,13 +222,30 @@ void enableMiniMode(bool forceMiniMode)
 
     // Switch to bitfit allocation for anything that isn't isoheaped.
     bmalloc_intrinsic_runtime_config.base.max_segregated_object_size = 0;
-    bmalloc_intrinsic_runtime_config.base.max_bitfit_object_size = UINT_MAX;
     bmalloc_primitive_runtime_config.base.max_segregated_object_size = 0;
+    bmalloc_intrinsic_runtime_config.base.max_bitfit_object_size = UINT_MAX;
     bmalloc_primitive_runtime_config.base.max_bitfit_object_size = UINT_MAX;
-#endif
+
+    // If large-object delegation is enabled, we don't want to override that
+    // just because we've entered mini-mode.
+    // One way we could get around that would be to leave the bitfit object
+    // size limits the way they are. However, in cases where the bitfit
+    // size-limit had previously been constrained for performance, e.g. by
+    // setting them to 0, we do want enableMiniMode to be able to re-expand
+    // them.
+    // So we take the object-delegation path to be a special case and make
+    // sure to re-apply after performing the above expansion.
+    PAS_IGNORE_WARNINGS_BEGIN("unreachable-code");
+#if defined(PAS_MTE_USE_LARGE_OBJECT_DELEGATION)
+    if (PAS_MTE_USE_LARGE_OBJECT_DELEGATION)
+        pas_mte_force_nontaggable_user_allocations_into_large_heap();
+#endif // defined(PAS_MTE_USE_LARGE_OBJECT_DELEGATION)
+    PAS_IGNORE_WARNINGS_END;
+#endif // BENABLE(LIBPAS)
+
 #if !BUSE(LIBPAS)
     BUNUSED(forceMiniMode);
-    if (!DebugHeap::tryGet())
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc())
         Scavenger::get()->enableMiniMode();
 #endif
 }
@@ -229,7 +256,7 @@ void disableScavenger()
     pas_scavenger_suspend();
 #endif
 #if !BUSE(LIBPAS)
-    if (!DebugHeap::tryGet())
+    if (!SystemHeap::tryGetIfShouldSupplantBmalloc())
         Scavenger::get()->disable();
 #endif
 }

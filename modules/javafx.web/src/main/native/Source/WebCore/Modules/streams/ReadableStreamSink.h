@@ -26,16 +26,17 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <JavaScriptCore/Forward.h>
 #include <span>
 #include <wtf/Function.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class BufferSource;
 class ReadableStream;
+template<typename> class ExceptionOr;
 
 class ReadableStreamSink : public RefCounted<ReadableStreamSink> {
 public:
@@ -49,7 +50,7 @@ public:
 class ReadableStreamToSharedBufferSink final : public ReadableStreamSink {
 public:
     using Callback = Function<void(ExceptionOr<std::span<const uint8_t>*>&&)>;
-    static Ref<ReadableStreamToSharedBufferSink> create(Callback&& callback) { return adoptRef(*new ReadableStreamToSharedBufferSink(WTFMove(callback))); }
+    static Ref<ReadableStreamToSharedBufferSink> create(Callback&& callback) { return adoptRef(*new ReadableStreamToSharedBufferSink(WTF::move(callback))); }
     void pipeFrom(ReadableStream&);
     void clearCallback() { m_callback = { }; }
     bool hasCallback() const { return !!m_callback; }

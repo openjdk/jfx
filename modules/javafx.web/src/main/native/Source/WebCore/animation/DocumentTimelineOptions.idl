@@ -25,6 +25,8 @@
 
 typedef double DOMHighResTimeStamp;
 
-dictionary DocumentTimelineOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary DocumentTimelineOptions {
     DOMHighResTimeStamp originTime = 0;
 };

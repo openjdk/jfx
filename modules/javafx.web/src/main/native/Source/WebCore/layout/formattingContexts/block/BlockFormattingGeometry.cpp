@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +35,7 @@
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
 #include "Logging.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -194,7 +195,7 @@ ContentWidthAndMargin BlockFormattingGeometry::inFlowNonReplacedContentWidthAndM
             usedHorizontalMargin = { horizontalSpaceForMargin / 2, horizontalSpaceForMargin / 2 };
         }
 
-        auto shouldApplyCenterAlignForBlockContent = containingBlockStyle.textAlign() == TextAlignMode::WebKitCenter && (computedHorizontalMargin.start || computedHorizontalMargin.end);
+        auto shouldApplyCenterAlignForBlockContent = containingBlockStyle.textAlign() == Style::TextAlign::WebKitCenter && (computedHorizontalMargin.start || computedHorizontalMargin.end);
         if (shouldApplyCenterAlignForBlockContent) {
             auto borderBoxWidth = (borderLeft + paddingLeft  + *width + paddingRight + borderRight);
             auto marginStart = computedHorizontalMargin.start.value_or(0);
@@ -326,22 +327,23 @@ IntrinsicWidthConstraints BlockFormattingGeometry::intrinsicWidthConstraints(con
 {
     auto fixedMarginBorderAndPadding = [&](auto& layoutBox) {
         auto& style = layoutBox.style();
-        return fixedValue(style.marginStart()).value_or(0)
-            + LayoutUnit { style.borderLeftWidth() }
-            + fixedValue(style.paddingLeft()).value_or(0)
-            + fixedValue(style.paddingRight()).value_or(0)
-            + LayoutUnit { style.borderRightWidth() }
-            + fixedValue(style.marginEnd()).value_or(0);
+        const auto& zoomFactor = style.usedZoomForLength();
+        return fixedValue(style.marginStart(), zoomFactor).value_or(0)
+            + Style::evaluate<LayoutUnit>(style.usedBorderLeftWidth(), Style::ZoomNeeded { })
+            + fixedValue(style.paddingLeft(), zoomFactor).value_or(0)
+            + fixedValue(style.paddingRight(), zoomFactor).value_or(0)
+            + Style::evaluate<LayoutUnit>(style.usedBorderRightWidth(), Style::ZoomNeeded { })
+            + fixedValue(style.marginEnd(), zoomFactor).value_or(0);
     };
 
     auto computedIntrinsicWidthConstraints = [&]() -> IntrinsicWidthConstraints {
         auto logicalWidth = layoutBox.style().logicalWidth();
         // Minimum/maximum width can't be depending on the containing block's width.
-        auto needsResolvedContainingBlockWidth = logicalWidth.isCalculated() || logicalWidth.isPercent() || logicalWidth.isRelative();
+        auto needsResolvedContainingBlockWidth = logicalWidth.isPercentOrCalculated();
         if (needsResolvedContainingBlockWidth)
             return { };
 
-        if (auto width = fixedValue(logicalWidth))
+        if (auto width = fixedValue(logicalWidth, layoutBox.style().usedZoomForLength()))
             return { *width, *width };
 
         if (layoutBox.isReplacedBox()) {

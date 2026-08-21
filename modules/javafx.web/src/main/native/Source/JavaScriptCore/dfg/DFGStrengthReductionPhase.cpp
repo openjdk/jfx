@@ -35,10 +35,12 @@
 #include "DFGInsertionSet.h"
 #include "DFGJITCode.h"
 #include "DFGPhase.h"
+#include "JSBoundFunctionInlines.h"
 #include "JSObjectInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "MathCommon.h"
 #include "NumberPrototype.h"
+#include "RegExpCache.h"
 #include "RegExpObject.h"
 #include "StringPrototypeInlines.h"
 #include "WasmCallingConvention.h"
@@ -115,6 +117,9 @@ private:
         case ValueToInt32:
         case GlobalIsNaN:
         case NumberIsNaN:
+        case GlobalIsFinite:
+        case NumberIsFinite:
+        case NumberIsSafeInteger:
         case ParseInt:
         case ToIntegerOrInfinity:
         case ToLength:
@@ -157,7 +162,7 @@ private:
 
         case ArithBitLShift:
         case ArithBitRShift:
-        case BitURShift:
+        case ArithBitURShift:
             if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
                 convertToIdentityOverChild1();
                 break;
@@ -165,7 +170,7 @@ private:
             break;
 
         case UInt32ToNumber:
-            if (m_node->child1()->op() == BitURShift
+            if (m_node->child1()->op() == ArithBitURShift
                 && m_node->child1()->child2()->isInt32Constant()
                 && (m_node->child1()->child2()->asInt32() & 0x1f)
                 && m_node->arithMode() != Arith::DoOverflow) {
@@ -318,6 +323,30 @@ private:
                     break;
                 }
             }
+            break;
+        }
+
+        case GetUndetachedTypeArrayLength: {
+            if (m_node->child1()->op() != NewTypedArray)
+                break;
+
+            auto* typedArray = m_node->child1().node();
+            if (typedArray->child1().useKind() != UntypedUse)
+                break;
+            if (typedArray->child1()->op() != NewTypedArrayBuffer)
+                break;
+            TypedArrayType typedArrayType = typedArray->typedArrayType();
+            if (elementSize(typedArrayType) != 1)
+                break;
+
+            auto* arrayBuffer = typedArray->child1().node();
+            if (arrayBuffer->child1().useKind() != Int32Use)
+                break;
+
+            m_changed = true;
+            m_insertionSet.insertCheck(m_nodeIndex, m_node->origin, Edge(arrayBuffer->child1().node(), Int32Use));
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_node->convertToIdentityOn(arrayBuffer->child1().node());
             break;
         }
 
@@ -487,31 +516,71 @@ private:
         case MakeRope:
         case MakeAtomString:
         case StrCat: {
-            String leftString = m_node->child1()->tryGetString(m_graph);
-            if (!leftString)
+            // Constant folding.
+            String string0 = m_node->child1()->tryGetString(m_graph);
+            if (!string0) {
+                if (m_node->child2() && m_node->child3()) {
+                    String string1 = m_node->child2()->tryGetString(m_graph);
+                    if (!string1)
                 break;
-            if (!m_node->child2()) {
-                ASSERT(!m_node->child3());
+                    String string2 = m_node->child3()->tryGetString(m_graph);
+                    if (!string2)
+                        break;
+
+                    StringBuilder builder;
+                    builder.append(string1);
+                    builder.append(string2);
+                    if (!builder.hasOverflowed()) {
+                        LazyJSValue value = LazyJSValue::newString(m_graph, builder.toString());
+                        auto* constant = m_insertionSet.insertNode(m_nodeIndex, SpecNone, LazyJSConstant, m_node->origin, OpInfo(m_graph.m_lazyJSValues.add(value)));
+                        m_node->child2().setNode(constant);
+                        m_node->child3() = Edge();
+                        m_changed = true;
+                    }
+                }
                 break;
             }
-            String rightString = m_node->child2()->tryGetString(m_graph);
-            if (!rightString)
+
+            if (!m_node->child2()) {
+                ASSERT(!m_node->child3());
+                convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, string0));
+                m_changed = true;
                 break;
-            String extraString;
-            if (m_node->child3()) {
-                extraString = m_node->child3()->tryGetString(m_graph);
-                if (!extraString)
+            }
+
+            String string1 = m_node->child2()->tryGetString(m_graph);
+            if (!string1)
+                break;
+
+            StringBuilder builder;
+            builder.append(string0);
+            builder.append(string1);
+            if (!m_node->child3()) {
+                if (!builder.hasOverflowed()) {
+                    convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, builder.toString()));
+                    m_changed = true;
+                }
                     break;
             }
 
-            StringBuilder builder;
-            builder.append(leftString);
-            builder.append(rightString);
-            if (!!extraString)
-                builder.append(extraString);
+            String string2 = m_node->child3()->tryGetString(m_graph);
+            if (!string2) {
+                if (!builder.hasOverflowed()) {
+                    LazyJSValue value = LazyJSValue::newString(m_graph, builder.toString());
+                    auto* constant = m_insertionSet.insertNode(m_nodeIndex, SpecNone, LazyJSConstant, m_node->origin, OpInfo(m_graph.m_lazyJSValues.add(value)));
+                    m_node->child1().setNode(constant);
+                    m_node->child2() = m_node->child3();
+                    m_node->child3() = Edge();
+                    m_changed = true;
+                }
+                break;
+            }
 
+            builder.append(string2);
+            if (!builder.hasOverflowed()) {
             convertToLazyJSValue(m_node, LazyJSValue::newString(m_graph, builder.toString()));
             m_changed = true;
+            }
             break;
         }
 
@@ -556,6 +625,16 @@ private:
                 }
                 break;
             }
+
+            case StringObjectUse:
+            case StringOrStringObjectUse: {
+                if (child1->op() == NewStringObject && child1->child1().useKind() == KnownStringUse) {
+                    m_node->convertToIdentityOn(child1->child1().node());
+                    m_changed = true;
+                }
+                break;
+            }
+
             case KnownPrimitiveUse:
                 break;
 
@@ -588,6 +667,15 @@ private:
                     break;
                 }
             }
+            if (m_node->arrayMode().type() == Array::String) {
+                bool changed = false;
+                while (m_node->child1()->op() == ResolveRope) {
+                    m_node->child1() = m_node->child1()->child1();
+                    changed = true;
+                }
+                m_changed = changed;
+            break;
+        }
             break;
         }
 
@@ -600,6 +688,36 @@ private:
             break;
         }
 
+        case NewRegExpUntyped: {
+            if (m_node->child1().useKind() != StringUse || m_node->child2().useKind() != StringUse)
+                break;
+
+            String pattern = m_node->child1()->tryGetString(m_graph);
+            if (!pattern)
+                break;
+
+            String flagsString = m_node->child2()->tryGetString(m_graph);
+            if (!flagsString)
+                break;
+
+            auto flags = Yarr::parseFlags(flagsString);
+            if (!flags)
+                break;
+
+            // NewRegExp node does not have an explicit structure, so don't reduce cross-realm RegExp.
+            if (m_node->structure().get() != m_graph.globalObjectFor(m_node->origin.semantic)->regExpStructure())
+                break;
+
+            auto* regExp = vm().regExpCache()->lookup(vm(), pattern, flags.value());
+            if (!regExp)
+                break;
+
+            m_node->convertToNewRegExp(m_graph.freezeStrong(regExp), m_insertionSet.insertConstantForUse(m_nodeIndex, m_node->origin, jsNumber(0), UntypedUse));
+            m_changed = true;
+            break;
+        }
+
+        case RegExpSearch:
         case RegExpExec:
         case RegExpTest:
         case RegExpMatchFast:
@@ -623,7 +741,7 @@ private:
             Node* regExpObjectNode = nullptr;
             RegExp* regExp = nullptr;
             bool regExpObjectNodeIsConstant = false;
-            if (m_node->op() == RegExpExec || m_node->op() == RegExpTest || m_node->op() == RegExpMatchFast) {
+            if (m_node->op() == RegExpExec || m_node->op() == RegExpTest || m_node->op() == RegExpMatchFast || m_node->op() == RegExpSearch) {
                 regExpObjectNode = m_node->child2().node();
                 if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
                     JSGlobalObject* globalObject = regExpObject->globalObject();
@@ -634,7 +752,7 @@ private:
                     m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObject->regExp();
                     regExpObjectNodeIsConstant = true;
-                } else if (regExpObjectNode->op() == NewRegexp) {
+                } else if (regExpObjectNode->op() == NewRegExp) {
                     JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
                     if (globalObject->isRegExpRecompiled()) {
                         dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
@@ -795,6 +913,9 @@ private:
 
                 FrozenValue* globalObjectFrozenValue = m_graph.freeze(globalObject);
 
+                if (regExpObjectNode && regExpObjectNode->op() == NewRegExp && regExpObjectNode->child1()->isInt32Constant())
+                    lastIndex = regExpObjectNode->child1()->asUInt32();
+
                 MatchResult result;
                 Vector<int> ovector;
                 // We have to call the kind of match function that the main thread would have called.
@@ -914,8 +1035,13 @@ private:
                         m_node->convertToIdentityOn(resultNode);
                     } else
                         m_graph.convertToConstant(m_node, jsNull());
-                } else
+                } else if (m_node->op() == RegExpTest)
                     m_graph.convertToConstant(m_node, jsBoolean(!!result));
+                else {
+                    ASSERT(m_node->op() == RegExpSearch);
+                    int32_t searchResult = result ? result.start : -1;
+                    m_graph.convertToConstant(m_node, jsNumber(searchResult));
+                }
 
                 // Whether it's Exec or Test, we need to tell the globalObject and RegExpObject what's up.
                 // Because SetRegExpObjectLastIndex may exit and it clobbers exit state, we do that
@@ -1029,6 +1155,7 @@ private:
         }
 
         case StringReplace:
+        case StringReplaceAll:
         case StringReplaceRegExp: {
             Node* stringNode = m_node->child1().node();
             String string = stringNode->tryGetString(m_graph);
@@ -1053,7 +1180,7 @@ private:
                 }
                 m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObject->regExp();
-            } else if (regExpObjectNode->op() == NewRegexp) {
+            } else if (regExpObjectNode->op() == NewRegExp) {
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
                 if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
                     dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
@@ -1103,7 +1230,7 @@ private:
                     builder.appendSubstring(string, lastIndex, result.start - lastIndex);
                     if (replLen) {
                         StringBuilder replacement;
-                        substituteBackreferences(replacement, replace, string, ovector.data(), regExp);
+                        substituteBackreferences(replacement, replace, string, ovector.span().data(), regExp);
                         builder.append(replacement);
                     }
                 }
@@ -1165,9 +1292,6 @@ private:
             if (!replace)
                 break;
 
-            // String/String/String case.
-            // FIXME: Extract these operations and share it with runtime code.
-
             size_t matchStart = string.find(searchString);
             if (matchStart == notFound) {
                 m_changed = true;
@@ -1178,24 +1302,13 @@ private:
 
             size_t searchStringLength = searchString.length();
             size_t matchEnd = matchStart + searchStringLength;
-
-            size_t dollarSignPosition = replace.find('$');
-            if (dollarSignPosition != WTF::notFound) {
-                StringBuilder builder(OverflowPolicy::RecordOverflow);
-                int ovector[2] = { static_cast<int>(matchStart),  static_cast<int>(matchEnd) };
-                substituteBackreferencesSlow(builder, replace, string, ovector, nullptr, dollarSignPosition);
-                if (UNLIKELY(builder.hasOverflowed()))
+            String result = tryMakeReplacedString<StringReplaceSubstitutions::Yes>(string, replace, matchStart, matchEnd);
+            if (!result) [[unlikely]]
                     break;
-                replace = builder.toString();
-            }
-
-            auto result = tryMakeString(StringView(string).substring(0, matchStart), replace, StringView(string).substring(matchEnd, string.length() - matchEnd));
-            if (UNLIKELY(!result))
-                break;
 
             m_changed = true;
             m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
-            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTFMove(result)));
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTF::move(result)));
             break;
         }
 
@@ -1243,6 +1356,36 @@ private:
             break;
         }
 
+        case StringIndexOf: {
+            Node* stringNode = m_node->child1().node();
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            String searchString = m_node->child2()->tryGetString(m_graph);
+            if (!searchString)
+                break;
+
+            unsigned startPosition = 0;
+            if (m_node->child3()) {
+                if (!m_node->child3()->isInt32Constant())
+                    break;
+                int32_t pos = m_node->child3()->asInt32();
+                if (pos < 0)
+                    startPosition = 0;
+                else
+                    startPosition = std::min<unsigned>(pos, string.length());
+            }
+
+            size_t result = string.find(searchString, startPosition);
+            int32_t indexResult = (result == notFound) ? -1 : static_cast<int32_t>(result);
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_graph.convertToConstant(m_node, jsNumber(indexResult));
+            break;
+        }
+
         case GetByVal:
         case GetByValMegamorphic: {
             Edge& baseEdge = m_graph.child(m_node, 0);
@@ -1258,7 +1401,7 @@ private:
 
         case PutByVal:
         case PutByValDirect:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic: {
             Edge& baseEdge = m_graph.child(m_node, 0);
             Edge& keyEdge = m_graph.child(m_node, 1);
@@ -1275,7 +1418,7 @@ private:
             case Array::Float16Array:
             case Array::Float32Array:
             case Array::Float64Array: {
-                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValAlias) {
+                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValDirectResolved) {
                     Edge& valueEdge = m_graph.child(m_node, 2);
                     if (valueEdge.useKind() == DoubleRepUse) {
                         if (foldPurifyNaN(valueEdge))
@@ -1284,6 +1427,22 @@ private:
                 }
                 break;
             }
+
+            case Array::Uint8Array:
+            case Array::Uint16Array:
+            case Array::Uint32Array: {
+                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValDirectResolved) {
+                    Edge& valueEdge = m_graph.child(m_node, 2);
+                    if (valueEdge.useKind() == Int32Use) {
+                        if (valueEdge->op() == UInt32ToNumber && valueEdge->child1().useKind() == Int32Use) {
+                            valueEdge = valueEdge->child1();
+                            m_changed = true;
+                        }
+                    }
+                }
+                break;
+            }
+
             default:
                 break;
             }
@@ -1348,6 +1507,44 @@ private:
             break;
         }
 
+        case CheckInBounds: {
+            auto isInt32OrKnownInt32Use = [](UseKind useKind) {
+                return useKind == Int32Use || useKind == KnownInt32Use;
+            };
+
+            if (!isInt32OrKnownInt32Use(m_node->child1().useKind()) || !isInt32OrKnownInt32Use(m_node->child2().useKind()))
+                break;
+
+            if (m_node->child2()->isInt32Constant()) {
+                int32_t length = m_node->child2()->asInt32();
+                if (length < 0)
+                    break;
+
+                switch (m_node->child1()->op()) {
+                case ArithBitRShift: {
+                    if (!m_node->child1()->isBinaryUseKind(Int32Use))
+                        break;
+                    if (m_node->child1()->child2()->isInt32Constant()) {
+                        int32_t shiftAmount = m_node->child1()->child2()->asInt32();
+                        if (shiftAmount < 0 || shiftAmount > 31)
+                            break;
+                        auto result = static_cast<int64_t>(length) << shiftAmount;
+                        if (result > INT32_MAX)
+                            break;
+                        m_node->child1() = Edge(m_node->child1()->child1().node(), Int32Use);
+                        m_node->child2() = Edge(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, jsNumber(static_cast<int32_t>(result))), KnownInt32Use);
+                        m_changed = true;
+                        break;
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+            break;
+        }
+
         case Call:
         case Construct:
         case TailCallInlinedCaller:
@@ -1380,7 +1577,7 @@ private:
             // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
             // https://bugs.webkit.org/show_bug.cgi?id=220339
             if (executable->intrinsic() == WasmFunctionIntrinsic && !Options::forceICFailure()) {
-                if (m_node->op() != Call) // FIXME: We should support tail-call.
+                if (m_node->op() != Call && m_node->op() != TailCallInlinedCaller) // FIXME: We should support tail-call.
                     break;
                 if (!function)
                     break;

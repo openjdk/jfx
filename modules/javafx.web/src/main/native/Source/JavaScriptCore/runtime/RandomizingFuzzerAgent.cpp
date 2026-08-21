@@ -46,7 +46,7 @@ SpeculatedType RandomizingFuzzerAgent::getPrediction(CodeBlock* codeBlock, const
     uint32_t low = m_random.getUint32();
     SpeculatedType generated = static_cast<SpeculatedType>((static_cast<uint64_t>(high) << 32) | low) & SpecFullTop;
     if (Options::dumpFuzzerAgentPredictions())
-        dataLogLn("getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
+        dataLogLn("getPrediction name:(", codeBlock->inferredNameWithHash(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
     return generated;
 }
 

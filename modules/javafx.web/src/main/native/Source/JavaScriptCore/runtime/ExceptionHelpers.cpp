@@ -94,10 +94,10 @@ static String defaultApproximateSourceError(const String& originalMessage, Strin
 
 String defaultSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
-    if (occurrence == ErrorInstance::FoundApproximateSource)
+    if (occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource)
         return defaultApproximateSourceError(originalMessage, sourceText);
 
-    ASSERT(occurrence == ErrorInstance::FoundExactSource);
+    ASSERT(occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundExactSource);
     return makeString(clampErrorMessage(originalMessage), " (evaluating '"_s, sourceText, "')"_s);
 }
 
@@ -125,7 +125,7 @@ static StringView functionCallBase(StringView sourceText)
     // Note that we're scanning text right to left instead of the more common left to right,
     // so syntax detection is backwards.
     while (parenStack && idx) {
-        UChar curChar = sourceText[idx];
+        char16_t curChar = sourceText[idx];
         if (isInMultiLineComment) {
             if (curChar == '*' && sourceText[idx - 1] == '/') {
                 isInMultiLineComment = false;
@@ -163,10 +163,10 @@ String notAFunctionSourceAppender(const String& originalMessage, StringView sour
 {
     ASSERT(type != TypeFunction);
 
-    if (occurrence == ErrorInstance::FoundApproximateSource)
+    if (occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource)
         return defaultApproximateSourceError(originalMessage, sourceText);
 
-    ASSERT(occurrence == ErrorInstance::FoundExactSource);
+    ASSERT(occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundExactSource);
     auto notAFunctionIndex = originalMessage.reverseFind("is not a function"_s);
     RELEASE_ASSERT(notAFunctionIndex != notFound);
     auto displayValue = StringView { originalMessage }.left(notAFunctionIndex - 1);
@@ -195,10 +195,10 @@ static String invalidParameterInSourceAppender(const String& originalMessage, St
 {
     ASSERT_UNUSED(type, type != TypeObject);
 
-    if (occurrence == ErrorInstance::FoundApproximateSource)
+    if (occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource)
         return defaultApproximateSourceError(originalMessage, sourceText);
 
-    ASSERT(occurrence == ErrorInstance::FoundExactSource);
+    ASSERT(occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundExactSource);
     auto inIndex = sourceText.reverseFind("in"_s);
     if (inIndex == notFound) {
         // This should basically never happen, since JS code must use the literal
@@ -216,10 +216,10 @@ static String invalidParameterInSourceAppender(const String& originalMessage, St
 
 inline String invalidParameterInstanceofSourceAppender(const String& content, const String& originalMessage, StringView sourceText, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
-    if (occurrence == ErrorInstance::FoundApproximateSource)
+    if (occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource)
         return defaultApproximateSourceError(originalMessage, sourceText);
 
-    ASSERT(occurrence == ErrorInstance::FoundExactSource);
+    ASSERT(occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundExactSource);
     auto instanceofIndex = sourceText.reverseFind("instanceof"_s);
     // This can happen when Symbol.hasInstance function is directly called.
     if (instanceofIndex == notFound)
@@ -245,7 +245,7 @@ static String invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppende
 
 static String invalidPrototypeSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
-    if (occurrence == ErrorInstance::FoundApproximateSource)
+    if (occurrence == ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource)
         return defaultApproximateSourceError(originalMessage, sourceText);
 
     auto extendsIndex = sourceText.reverseFind("extends"_s);
@@ -271,7 +271,7 @@ JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String&
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto errorMessage = constructErrorMessage(globalObject, value, message);
-    if (UNLIKELY(scope.exception() || !errorMessage)) {
+    if (scope.exception() || !errorMessage) [[unlikely]] {
         // When we see an exception, we're not returning immediately because
         // we're in a CatchScope, i.e. no exceptions are thrown past this scope.
         // We're using a CatchScope because the contract for createError() is
@@ -338,6 +338,11 @@ JSObject* createErrorForInvalidGlobalFunctionDeclaration(JSGlobalObject* globalO
 JSObject* createErrorForInvalidGlobalVarDeclaration(JSGlobalObject* globalObject, const Identifier& ident)
 {
     return createTypeError(globalObject, makeString("Can't declare global variable '"_s, ident.string(), "': global object must be extensible"_s));
+}
+
+JSObject* createTDZError(JSGlobalObject* globalObject, StringView ident)
+{
+    return createReferenceError(globalObject, makeString("Cannot access '"_s, ident, "' before initialization."_s));
 }
 
 JSObject* createTDZError(JSGlobalObject* globalObject)

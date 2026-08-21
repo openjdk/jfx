@@ -29,17 +29,22 @@
 #include "config.h"
 #include "Editor.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSValueList.h"
 #include "Chrome.h"
 #include "CreateLinkCommand.h"
 #include "DocumentFragment.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
+#include "RenderStyle+GettersInlines.h"
 #include "Editing.h"
 #include "EditorClient.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "FormatBlockCommand.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLFontElement.h"
 #include "HTMLHRElement.h"
@@ -48,10 +53,9 @@
 #include "IndentOutdentCommand.h"
 #include "InsertListCommand.h"
 #include "InsertNestedListCommand.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "MutableStyleProperties.h"
-#include "Page.h"
 #include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Range.h"
@@ -83,7 +87,7 @@ public:
     bool (*allowExecutionWhenDisabled)(LocalFrame&, EditorCommandSource);
 };
 
-typedef UncheckedKeyHashMap<String, const EditorInternalCommand*, ASCIICaseInsensitiveHash> CommandMap;
+typedef HashMap<String, const EditorInternalCommand*, ASCIICaseInsensitiveHash> CommandMap;
 
 static const bool notTextInsertion = false;
 static const bool isTextInsertion = true;
@@ -107,11 +111,11 @@ static bool applyCommandToFrame(LocalFrame& frame, EditorCommandSource source, E
     switch (source) {
     case EditorCommandSource::MenuOrKeyBinding:
         // Use InvertColor for testing purposes. foreColor and backColor are never triggered with EditorCommandSource::MenuOrKeyBinding outside DRT/WTR.
-        frame.editor().applyStyleToSelection(WTFMove(style), action, Editor::ColorFilterMode::InvertColor);
+        frame.editor().applyStyleToSelection(WTF::move(style), action, Editor::ColorFilterMode::InvertColor);
         return true;
     case EditorCommandSource::DOM:
     case EditorCommandSource::DOMWithUserInterface:
-        frame.editor().applyStyle(WTFMove(style), action, Editor::ColorFilterMode::UseOriginalColor);
+        frame.editor().applyStyle(WTF::move(style), action, Editor::ColorFilterMode::UseOriginalColor);
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -165,7 +169,7 @@ static bool executeApplyParagraphStyle(LocalFrame& frame, EditorCommandSource so
 static bool executeInsertFragment(LocalFrame& frame, Ref<DocumentFragment>&& fragment)
 {
     ASSERT(frame.document());
-    ReplaceSelectionCommand::create(*frame.document(), WTFMove(fragment), ReplaceSelectionCommand::PreventNesting, EditAction::Insert)->apply();
+    ReplaceSelectionCommand::create(*frame.document(), WTF::move(fragment), ReplaceSelectionCommand::PreventNesting, EditAction::Insert)->apply();
     return true;
 }
 
@@ -174,7 +178,7 @@ static bool executeInsertNode(LocalFrame& frame, Ref<Node>&& content)
     auto fragment = DocumentFragment::create(*frame.document());
     if (fragment->appendChild(content).hasException())
         return false;
-    return executeInsertFragment(frame, WTFMove(fragment));
+    return executeInsertFragment(frame, WTF::move(fragment));
 }
 
 static bool expandSelectionToGranularity(LocalFrame& frame, TextGranularity granularity)
@@ -355,16 +359,16 @@ static bool executeDeleteToEndOfParagraph(LocalFrame& frame, Event*, EditorComma
 
 static bool executeDeleteToMark(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    auto& editor = frame.editor();
+    Ref editor = frame.editor();
     auto& selection = frame.selection();
-    auto markRange = editor.mark().toNormalizedRange();
+    auto markRange = editor->mark().toNormalizedRange();
     auto selectionRange = selection.selection().toNormalizedRange();
     if (markRange && selectionRange) {
         if (!selection.setSelectedRange(unionRange(*markRange, *selectionRange), Affinity::Downstream, FrameSelection::ShouldCloseTyping::Yes))
             return false;
     }
-    editor.performDelete();
-    editor.setMark(selection.selection());
+    editor->performDelete();
+    editor->setMark(selection.selection());
     return true;
 }
 
@@ -382,7 +386,7 @@ static bool executeDeleteWordForward(LocalFrame& frame, Event*, EditorCommandSou
 
 static bool executeFindString(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
-    return frame.editor().findString(value, { FindOption::CaseInsensitive, FindOption::WrapAround, FindOption::DoNotTraverseFlatTree });
+    return frame.editor().findString(value, { FindOption::CaseInsensitive, FindOption::WrapAround, FindOption::DoNotTraverseFlatTree }).has_value();
 }
 
 static bool executeFontName(LocalFrame& frame, Event*, EditorCommandSource source, const String& value)
@@ -415,7 +419,7 @@ static bool executeFormatBlock(LocalFrame& frame, Event*, EditorCommandSource, c
     if (lowercaseValue[0] == '<' && lowercaseValue[lowercaseValue.length() - 1] == '>')
         tagName = StringView(lowercaseValue).substring(1, lowercaseValue.length() - 2).toAtomString();
     else
-        tagName = AtomString { WTFMove(lowercaseValue) };
+        tagName = AtomString { WTF::move(lowercaseValue) };
 
     auto qualifiedTagName = Document::parseQualifiedName(xhtmlNamespaceURI, tagName);
     if (qualifiedTagName.hasException())
@@ -468,7 +472,7 @@ static bool executeInsertHorizontalRule(LocalFrame& frame, Event*, EditorCommand
     Ref<HTMLHRElement> rule = HTMLHRElement::create(*frame.document());
     if (!value.isEmpty())
         rule->setIdAttribute(AtomString { value });
-    return executeInsertNode(frame, WTFMove(rule));
+    return executeInsertNode(frame, WTF::move(rule));
 }
 
 static bool executeInsertHTML(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
@@ -479,10 +483,10 @@ static bool executeInsertHTML(LocalFrame& frame, Event*, EditorCommandSource, co
 static bool executeInsertImage(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
     // FIXME: If userInterface is true, we should display a dialog box and let the user choose a local image.
-    Ref<HTMLImageElement> image = HTMLImageElement::create(*frame.document());
+    Ref image = HTMLImageElement::create(*frame.document());
     if (!value.isEmpty())
-        image->setSrc(AtomString { value });
-    return executeInsertNode(frame, WTFMove(image));
+        image->setAttributeWithoutSynchronization(srcAttr, AtomString { value });
+    return executeInsertNode(frame, WTF::move(image));
 }
 
 static bool executeInsertLineBreak(LocalFrame& frame, Event* event, EditorCommandSource source, const String&)
@@ -995,7 +999,7 @@ static bool executePasteAsQuotation(LocalFrame& frame, Event*, EditorCommandSour
 
 static bool executePrint(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    Page* page = frame.page();
+    RefPtr page = frame.page();
     if (!page)
         return false;
     return page->chrome().print(frame);
@@ -1078,9 +1082,9 @@ static bool executeSelectSentence(LocalFrame& frame, Event*, EditorCommandSource
 
 static bool executeSelectToMark(LocalFrame& frame, Event*, EditorCommandSource, const String&)
 {
-    auto& editor = frame.editor();
+    Ref editor = frame.editor();
     auto& selection = frame.selection();
-    auto markRange = editor.mark().toNormalizedRange();
+    auto markRange = editor->mark().toNormalizedRange();
     auto selectionRange = selection.selection().toNormalizedRange();
     if (!markRange || !selectionRange) {
         SystemSoundManager::singleton().systemBeep();
@@ -1111,7 +1115,7 @@ static bool executeStrikethrough(LocalFrame& frame, Event*, EditorCommandSource 
 {
     Ref<EditingStyle> style = EditingStyle::create();
     style->setStrikeThroughChange(textDecorationChangeForToggling(frame.editor(), CSSPropertyWebkitTextDecorationsInEffect, "line-through"_s));
-    return applyCommandToFrame(frame, source, EditAction::StrikeThrough, WTFMove(style));
+    return applyCommandToFrame(frame, source, EditAction::StrikeThrough, WTF::move(style));
 }
 
 static bool executeStyleWithCSS(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
@@ -1182,7 +1186,7 @@ static bool executeUnderline(LocalFrame& frame, Event*, EditorCommandSource sour
     Ref<EditingStyle> style = EditingStyle::create();
     TextDecorationChange change = textDecorationChangeForToggling(frame.editor(), CSSPropertyWebkitTextDecorationsInEffect, "underline"_s);
     style->setUnderlineChange(change);
-    return applyCommandToFrame(frame, source, EditAction::Underline, WTFMove(style));
+    return applyCommandToFrame(frame, source, EditAction::Underline, WTF::move(style));
 }
 
 static bool executeUndo(LocalFrame& frame, Event*, EditorCommandSource, const String&)
@@ -1658,7 +1662,7 @@ struct CommandEntry {
 
 static const CommandMap& createCommandMap()
 {
-    static const CommandEntry commands[] = {
+    static constexpr auto commands = std::to_array<CommandEntry>({
         { "AlignCenter"_s, { executeJustifyCenter, supportedFromMenuOrKeyBinding, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "AlignJustified"_s, { executeJustifyFull, supportedFromMenuOrKeyBinding, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "AlignLeft"_s, { executeJustifyLeft, supportedFromMenuOrKeyBinding, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
@@ -1809,7 +1813,7 @@ static const CommandMap& createCommandMap()
 #if PLATFORM(COCOA)
         { "TakeFindStringFromSelection"_s, { executeTakeFindStringFromSelection, supportedFromMenuOrKeyBinding, enabledTakeFindStringFromSelection, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
 #endif
-    };
+    });
 
     // These unsupported commands are listed here since they appear in the Microsoft
     // documentation used as the starting point for our DOM executeCommand support.

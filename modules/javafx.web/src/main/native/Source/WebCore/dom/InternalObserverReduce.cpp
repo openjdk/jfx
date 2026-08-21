@@ -27,6 +27,7 @@
 #include "InternalObserverReduce.h"
 
 #include "AbortSignal.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Exception.h"
 #include "ExceptionCode.h"
 #include "InternalObserver.h"
@@ -46,7 +47,7 @@ class InternalObserverReduce final : public InternalObserver {
 public:
     static Ref<InternalObserverReduce> create(ScriptExecutionContext& context, Ref<AbortSignal>&& signal, Ref<ReducerCallback>&& callback, JSC::JSValue initialValue, Ref<DeferredPromise>&& promise)
     {
-        Ref internalObserver = adoptRef(*new InternalObserverReduce(context, WTFMove(signal), WTFMove(callback), initialValue, WTFMove(promise)));
+        Ref internalObserver = adoptRef(*new InternalObserverReduce(context, WTF::move(signal), WTF::move(callback), initialValue, WTF::move(promise)));
         internalObserver->suspendIfNeeded();
         return internalObserver;
     }
@@ -68,10 +69,10 @@ private:
         JSC::JSLockHolder lock(vm);
         auto scope = DECLARE_CATCH_SCOPE(vm);
 
-        auto result = protectedCallback()->handleEventRethrowingException(m_accumulator.getValue(), value, m_index++);
+        auto result = protectedCallback()->invokeRethrowingException(m_accumulator.getValue(), value, m_index++);
 
         JSC::Exception* exception = scope.exception();
-        if (UNLIKELY(exception)) {
+        if (exception) [[unlikely]] {
             scope.clearException();
             auto value = exception->value();
             protectedPromise()->reject<IDLAny>(value);
@@ -91,7 +92,7 @@ private:
     {
         InternalObserver::complete();
 
-        if (UNLIKELY(!m_accumulator)) {
+        if (!m_accumulator) [[unlikely]] {
             protectedPromise()->reject(Exception { ExceptionCode::TypeError, "No inital value for Observable with no values"_s });
             return;
         }
@@ -110,11 +111,11 @@ private:
 
     InternalObserverReduce(ScriptExecutionContext& context, Ref<AbortSignal>&& signal, Ref<ReducerCallback>&& callback, JSC::JSValue initialValue, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
-        , m_signal(WTFMove(signal))
-        , m_callback(WTFMove(callback))
-        , m_promise(WTFMove(promise))
+        , m_signal(WTF::move(signal))
+        , m_callback(WTF::move(callback))
+        , m_promise(WTF::move(promise))
     {
-        if (UNLIKELY(!initialValue.isUndefined()))
+        if (!initialValue.isUndefined()) [[unlikely]]
             m_accumulator.setWeakly(initialValue);
     }
 
@@ -141,8 +142,8 @@ void createInternalObserverOperatorReduce(ScriptExecutionContext& context, Obser
         promise->reject<IDLAny>(reason);
     });
 
-    Ref observer = InternalObserverReduce::create(context, WTFMove(signal), WTFMove(callback), initialValue, WTFMove(promise));
-    observable.subscribeInternal(context, WTFMove(observer), SubscribeOptions { .signal = WTFMove(dependentSignal) });
+    Ref observer = InternalObserverReduce::create(context, WTF::move(signal), WTF::move(callback), initialValue, WTF::move(promise));
+    observable.subscribeInternal(context, WTF::move(observer), SubscribeOptions { .signal = WTF::move(dependentSignal) });
 }
 
 } // namespace WebCore

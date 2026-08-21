@@ -33,6 +33,10 @@
 #include "ImageBuffer.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEBlendCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEBlend> FEBlend::create(BlendMode mode, DestinationColorSpace colorSpace)
@@ -59,6 +63,24 @@ bool FEBlend::setBlendMode(BlendMode mode)
     return true;
 }
 
+OptionSet<FilterRenderingMode> FEBlend::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEBlend::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEBlendCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEBlend::createSoftwareApplier() const
 {
 #if HAVE(ARM_NEON_INTRINSICS)
@@ -70,12 +92,12 @@ std::unique_ptr<FilterEffectApplier> FEBlend::createSoftwareApplier() const
 
 TextStream& FEBlend::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feBlend";
+    ts << indent << "[feBlend"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
     ts << " mode=\"" << (m_mode == BlendMode::Normal ? "normal"_s : compositeOperatorName(CompositeOperator::SourceOver, m_mode));
 
-    ts << "\"]\n";
+    ts << "\"]\n"_s;
     return ts;
 }
 

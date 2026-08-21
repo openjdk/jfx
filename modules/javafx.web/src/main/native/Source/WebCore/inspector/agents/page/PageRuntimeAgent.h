@@ -35,6 +35,7 @@
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorRuntimeAgent.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace JSC {
 class CallFrame;
@@ -71,10 +72,10 @@ private:
     void reportExecutionContextCreation();
     void notifyContextCreated(const Inspector::Protocol::Network::FrameId&, JSC::JSGlobalObject*, const DOMWrapperWorld&, SecurityOrigin* = nullptr);
 
-    std::unique_ptr<Inspector::RuntimeFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::RuntimeFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
 
-    InstrumentingAgents& m_instrumentingAgents;
+    WeakRef<InstrumentingAgents> m_instrumentingAgents;
 
     WeakRef<Page> m_inspectedPage;
 };

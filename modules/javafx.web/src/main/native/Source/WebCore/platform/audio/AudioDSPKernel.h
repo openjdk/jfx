@@ -32,6 +32,7 @@
 #define AudioDSPKernel_h
 
 #include "AudioDSPKernelProcessor.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -42,15 +43,14 @@ class AudioDSPKernel {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioDSPKernel);
     WTF_MAKE_NONCOPYABLE(AudioDSPKernel);
 public:
-    AudioDSPKernel(AudioDSPKernelProcessor* kernelProcessor)
+    explicit AudioDSPKernel(AudioDSPKernelProcessor* kernelProcessor)
         : m_kernelProcessor(kernelProcessor)
         , m_sampleRate(kernelProcessor->sampleRate())
     {
     }
 
-    AudioDSPKernel(float sampleRate)
-        : m_kernelProcessor(0)
-        , m_sampleRate(sampleRate)
+    explicit AudioDSPKernel(float sampleRate)
+        : m_sampleRate(sampleRate)
     {
     }
 
@@ -67,15 +67,17 @@ public:
     float sampleRate() const { return m_sampleRate; }
     double nyquist() const { return 0.5 * sampleRate(); }
 
-    AudioDSPKernelProcessor* processor() { return m_kernelProcessor; }
-    const AudioDSPKernelProcessor* processor() const { return m_kernelProcessor; }
+    AudioDSPKernelProcessor* processor() { return m_kernelProcessor.get(); }
+    const AudioDSPKernelProcessor* processor() const { return m_kernelProcessor.get(); }
 
     virtual double tailTime() const = 0;
     virtual double latencyTime() const = 0;
     virtual bool requiresTailProcessing() const = 0;
 
+    virtual bool isWaveShaperDSPKernel() const { return false; }
+
 protected:
-    AudioDSPKernelProcessor* m_kernelProcessor;
+    CheckedPtr<AudioDSPKernelProcessor> m_kernelProcessor;
     float m_sampleRate;
 };
 

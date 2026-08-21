@@ -28,7 +28,7 @@
 namespace WebCore {
 
 class SVGRectElement final : public SVGGeometryElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGRectElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGRectElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGRectElement);
 public:
     static Ref<SVGRectElement> create(const QualifiedName&, Document&);
@@ -49,12 +49,11 @@ public:
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGRectElement, SVGGeometryElement>;
 
+    SVGAnimatedProperty* propertyForAttribute(const QualifiedName&) const;
+
 private:
     SVGRectElement(const QualifiedName&, Document&);
 
-    friend PropertyRegistry;
-
-    SVGAnimatedProperty* propertyForAttribute(const QualifiedName&) const;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 

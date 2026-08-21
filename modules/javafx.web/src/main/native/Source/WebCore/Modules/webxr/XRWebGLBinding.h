@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
+#include "ExceptionOr.h"
 #include "XREye.h"
 
-#include <ExceptionOr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -57,16 +57,15 @@ struct XRQuadLayerInit;
 
 // https://immersive-web.github.io/layers/#XRWebGLBindingtype
 class XRWebGLBinding : public RefCounted<XRWebGLBinding> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRWebGLBinding);
+    WTF_MAKE_TZONE_ALLOCATED(XRWebGLBinding);
 public:
 
-    using WebXRWebGLRenderingContext = std::variant<
+    using WebXRWebGLRenderingContext = Variant<
         RefPtr<WebGLRenderingContext>,
         RefPtr<WebGL2RenderingContext>
     >;
 
     static ExceptionOr<Ref<XRWebGLBinding>> create(Ref<WebXRSession>&&, WebXRWebGLRenderingContext&&);
-    ~XRWebGLBinding() = default;
 
     double nativeProjectionScaleFactor() const { RELEASE_ASSERT_NOT_REACHED(); }
     bool usesDepthValues() const { RELEASE_ASSERT_NOT_REACHED(); }
@@ -79,6 +78,12 @@ public:
 
     ExceptionOr<Ref<XRWebGLSubImage>> getSubImage(const XRCompositionLayer&, const WebXRFrame&, XREye) { RELEASE_ASSERT_NOT_REACHED(); }
     ExceptionOr<Ref<XRWebGLSubImage>> getViewSubImage(const XRProjectionLayer&, const WebXRView&) { RELEASE_ASSERT_NOT_REACHED(); }
+
+private:
+    XRWebGLBinding(Ref<WebXRSession>&&, WebXRWebGLRenderingContext&&);
+
+    RefPtr<WebXRSession> m_session;
+    WebXRWebGLRenderingContext m_context;
 };
 
 } // namespace WebCore

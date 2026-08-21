@@ -29,11 +29,15 @@
 #include "config.h"
 #include "AccessibilitySlider.h"
 
+#include "AccessibilityObjectInlines.h"
+#include "AXLoggerBase.h"
 #include "AXObjectCache.h"
+#include "ContainerNodeInlines.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "RenderSlider.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SliderThumbElement.h"
 #include "StyleAppearance.h"
 #include <wtf/Scope.h>
@@ -42,27 +46,22 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilitySlider::AccessibilitySlider(AXID axID, RenderObject& renderer)
-    : AccessibilityRenderObject(axID, renderer)
+AccessibilitySlider::AccessibilitySlider(AXID axID, RenderObject& renderer, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, renderer, cache)
 {
 }
 
-Ref<AccessibilitySlider> AccessibilitySlider::create(AXID axID, RenderObject& renderer)
+Ref<AccessibilitySlider> AccessibilitySlider::create(AXID axID, RenderObject& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilitySlider(axID, renderer));
+    return adoptRef(*new AccessibilitySlider(axID, renderer, cache));
 }
 
-AccessibilityOrientation AccessibilitySlider::orientation() const
+std::optional<AccessibilityOrientation> AccessibilitySlider::explicitOrientation() const
 {
-    auto ariaOrientation = getAttribute(aria_orientationAttr);
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"_s))
-        return AccessibilityOrientation::Horizontal;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "vertical"_s))
-        return AccessibilityOrientation::Vertical;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"_s))
-        return AccessibilityOrientation::Undefined;
+    if (std::optional orientation = orientationFromARIA())
+        return orientation;
 
-    const auto* style = this->style();
+    CheckedPtr style = this->style();
     // Default to horizontal in the unknown case.
     if (!style)
         return AccessibilityOrientation::Horizontal;
@@ -84,13 +83,13 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
 
 void AccessibilitySlider::addChildren()
 {
-    ASSERT(!m_childrenInitialized);
+    AX_ASSERT(!m_childrenInitialized);
     m_childrenInitialized = true;
     auto clearDirtySubtree = makeScopeExit([&] {
         m_subtreeDirty = false;
     });
 
-    auto* cache = axObjectCache();
+    CheckedPtr cache = axObjectCache();
     if (!cache)
         return;
 
@@ -103,36 +102,40 @@ void AccessibilitySlider::addChildren()
         cache->remove(thumb->objectID());
     else
         addChild(thumb.get());
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (m_children.size()) {
-        ASSERT(m_children.size() == 1);
-        if (m_children[0]->elementRect().contains(point))
+        AX_ASSERT(m_children.size() == 1);
+        if (Ref { m_children[0] }->elementRect().contains(point))
             return dynamicDowncast<AccessibilityObject>(m_children[0].get());
     }
 
-    return axObjectCache()->getOrCreate(renderer());
+    return checkedAxObjectCache()->getOrCreate(checkedRenderer().get());
 }
 
 float AccessibilitySlider::valueForRange() const
 {
-    if (auto* input = inputElement())
-        return input->value().toFloat();
+    if (RefPtr input = inputElement())
+        return input->value()->toFloat();
     return 0;
 }
 
 float AccessibilitySlider::maxValueForRange() const
 {
-    if (auto* input = inputElement())
+    if (RefPtr input = inputElement())
         return static_cast<float>(input->maximum());
     return 0;
 }
 
 float AccessibilitySlider::minValueForRange() const
 {
-    if (auto* input = inputElement())
+    if (RefPtr input = inputElement())
         return static_cast<float>(input->minimum());
     return 0;
 }
@@ -154,14 +157,14 @@ HTMLInputElement* AccessibilitySlider::inputElement() const
 }
 
 
-AccessibilitySliderThumb::AccessibilitySliderThumb(AXID axID)
-    : AccessibilityMockObject(axID)
+AccessibilitySliderThumb::AccessibilitySliderThumb(AXID axID, AXObjectCache& cache)
+    : AccessibilityMockObject(axID, cache)
 {
 }
 
-Ref<AccessibilitySliderThumb> AccessibilitySliderThumb::create(AXID axID)
+Ref<AccessibilitySliderThumb> AccessibilitySliderThumb::create(AXID axID, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilitySliderThumb(axID));
+    return adoptRef(*new AccessibilitySliderThumb(axID, cache));
 }
 
 LayoutRect AccessibilitySliderThumb::elementRect() const
@@ -172,7 +175,7 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
     auto* sliderRenderer = dynamicDowncast<RenderSlider>(m_parent->renderer());
     if (!sliderRenderer)
         return LayoutRect();
-    if (auto* thumbRenderer = sliderRenderer->element().sliderThumbElement()->renderer())
+    if (CheckedPtr thumbRenderer = sliderRenderer->protectedElement()->sliderThumbElement()->renderer())
         return thumbRenderer->absoluteBoundingBoxRect();
     return LayoutRect();
 }

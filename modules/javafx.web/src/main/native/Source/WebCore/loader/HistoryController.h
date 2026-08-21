@@ -29,8 +29,9 @@
 
 #pragma once
 
-#include "BackForwardItemIdentifier.h"
-#include "FrameLoader.h"
+#include <WebCore/BackForwardItemIdentifier.h>
+#include <WebCore/FrameLoader.h>
+#include <WebCore/ProcessSwapDisposition.h>
 
 namespace WebCore {
 
@@ -47,7 +48,7 @@ struct StringWithDirection;
 
 class HistoryController final : public CanMakeWeakPtr<HistoryController>  {
     WTF_MAKE_NONCOPYABLE(HistoryController);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(HistoryController, Loader);
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
@@ -61,6 +62,7 @@ public:
     WEBCORE_EXPORT void restoreScrollPositionAndViewState();
 
     void updateBackForwardListForFragmentScroll();
+    void updateBackForwardListForReplaceState(RefPtr<SerializedScriptValue>&&, const String&);
 
     void saveDocumentState();
     WEBCORE_EXPORT void saveDocumentAndScrollState();
@@ -69,7 +71,7 @@ public:
     void invalidateCurrentItemCachedPage();
 
     void updateForBackForwardNavigation();
-    void updateForReload();
+    void updateForReloadOrReplace();
     void updateForStandardLoad(HistoryUpdateType updateType = UpdateAll);
     void updateForRedirectWithLockedBackForwardList();
     void updateForClientRedirect();
@@ -91,7 +93,6 @@ public:
     HistoryItem* provisionalItem() const { return m_provisionalItem.get(); }
     RefPtr<HistoryItem> protectedProvisionalItem() const;
     void setProvisionalItem(RefPtr<HistoryItem>&&);
-    void clearProvisionalItem();
 
     void pushState(RefPtr<SerializedScriptValue>&&, const String& url);
     void replaceState(RefPtr<SerializedScriptValue>&&, const String& url);
@@ -107,9 +108,9 @@ public:
 private:
     friend class Page;
     bool shouldStopLoadingForHistoryItem(HistoryItem&) const;
-    void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
+    void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad, ProcessSwapDisposition processSwapDisposition = ProcessSwapDisposition::None);
     void goToItemForNavigationAPI(HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
-    void goToItemShared(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&);
+    void goToItemShared(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&, ProcessSwapDisposition processSwapDisposition = ProcessSwapDisposition::None);
 
     void initializeItem(HistoryItem&, RefPtr<DocumentLoader>);
     Ref<HistoryItem> createItem(HistoryItemClient&, BackForwardItemIdentifier);
@@ -118,7 +119,7 @@ private:
     enum class ForNavigationAPI : bool { No, Yes };
     void recursiveSetProvisionalItem(HistoryItem&, HistoryItem*, ForNavigationAPI = ForNavigationAPI::No);
     void recursiveGoToItem(HistoryItem&, HistoryItem*, FrameLoadType, ShouldTreatAsContinuingLoad);
-    bool isReplaceLoadTypeWithProvisionalItem(FrameLoadType);
+    bool isMultipartReplaceLoadTypeWithProvisionalItem(FrameLoadType);
     bool isReloadTypeWithProvisionalItem(FrameLoadType);
     void recursiveUpdateForCommit();
     void recursiveUpdateForSameDocumentNavigation();

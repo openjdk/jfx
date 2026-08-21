@@ -34,12 +34,12 @@ namespace WebCore {
 
 #if ENABLE(APP_HIGHLIGHTS)
 
-class FragmentedSharedBuffer;
+class SharedBuffer;
 
 class AppHighlightRangeData {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(AppHighlightRangeData, WEBCORE_EXPORT);
 public:
-    WEBCORE_EXPORT static std::optional<AppHighlightRangeData> create(const FragmentedSharedBuffer&);
+    WEBCORE_EXPORT static std::optional<AppHighlightRangeData> create(const SharedBuffer&);
     struct NodePathComponent {
         String identifier;
         String nodeName;
@@ -47,9 +47,9 @@ public:
         uint32_t pathIndex { 0 };
 
         NodePathComponent(String&& elementIdentifier, String&& name, String&& data, uint32_t index)
-            : identifier(WTFMove(elementIdentifier))
-            , nodeName(WTFMove(name))
-            , textData(WTFMove(data))
+            : identifier(WTF::move(elementIdentifier))
+            , nodeName(WTF::move(name))
+            , textData(WTF::move(data))
             , pathIndex(index)
         {
         }
@@ -70,11 +70,11 @@ public:
     AppHighlightRangeData(const AppHighlightRangeData&) = default;
     AppHighlightRangeData() = default;
     AppHighlightRangeData(String&& identifier, String&& text, NodePath&& startContainer, uint64_t startOffset, NodePath&& endContainer, uint64_t endOffset)
-        : m_identifier(WTFMove(identifier))
-        , m_text(WTFMove(text))
-        , m_startContainer(WTFMove(startContainer))
+        : m_identifier(WTF::move(identifier))
+        , m_text(WTF::move(text))
+        , m_startContainer(WTF::move(startContainer))
         , m_startOffset(startOffset)
-        , m_endContainer(WTFMove(endContainer))
+        , m_endContainer(WTF::move(endContainer))
         , m_endOffset(endOffset)
     {
     }
@@ -98,7 +98,7 @@ public:
     const NodePath& endContainer() const { return m_endContainer; }
     uint32_t endOffset() const { return m_endOffset; }
 
-    Ref<FragmentedSharedBuffer> toSharedBuffer() const;
+    Ref<SharedBuffer> toSharedBuffer() const;
 
 private:
     String m_identifier;

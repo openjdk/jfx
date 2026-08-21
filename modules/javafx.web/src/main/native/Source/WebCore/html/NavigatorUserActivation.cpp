@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,30 +42,20 @@ NavigatorUserActivation::NavigatorUserActivation(Navigator& navigator)
 
 NavigatorUserActivation::~NavigatorUserActivation() = default;
 
-Ref<UserActivation> NavigatorUserActivation::userActivation(Navigator& navigator)
+UserActivation& NavigatorUserActivation::userActivation(Navigator& navigator)
 {
     return NavigatorUserActivation::from(navigator)->userActivation();
 }
 
-Ref<UserActivation> NavigatorUserActivation::userActivation()
-{
-    return m_userActivation;
-}
-
 NavigatorUserActivation* NavigatorUserActivation::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorUserActivation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorUserActivation>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorUserActivation>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral NavigatorUserActivation::supplementName()
-{
-    return "NavigatorUserActivation"_s;
-}
-
-}
+} // namespace WebCore

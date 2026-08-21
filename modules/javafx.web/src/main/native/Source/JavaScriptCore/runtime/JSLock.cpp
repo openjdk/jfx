@@ -96,7 +96,7 @@ void JSLock::lock(intptr_t lockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 #endif
 
     bool success = m_lock.tryLock();
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         if (currentThreadIsHoldingLock()) {
             m_lockCount += lockCount;
             return;
@@ -104,9 +104,8 @@ void JSLock::lock(intptr_t lockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
         m_lock.lock();
     }
 
-    m_ownerThread = &Thread::current();
-    WTF::storeStoreFence();
-    m_hasOwnerThread = true;
+    m_ownerThread = &Thread::currentSingleton();
+    m_hasOwnerThread.store(true, std::memory_order_release);
     ASSERT(!m_lockCount);
     m_lockCount = lockCount;
 
@@ -119,7 +118,7 @@ void JSLock::didAcquireLock()
     if (!m_vm)
         return;
 
-    Thread& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     ASSERT(!m_entryAtomStringTable);
     m_entryAtomStringTable = thread.setCurrentAtomStringTable(m_vm->atomStringTable());
     ASSERT(m_entryAtomStringTable);
@@ -151,7 +150,7 @@ void JSLock::didAcquireLock()
 #if ENABLE(SAMPLING_PROFILER)
     {
         SamplingProfiler* samplingProfiler = m_vm->samplingProfiler();
-        if (UNLIKELY(samplingProfiler))
+        if (samplingProfiler) [[unlikely]]
             samplingProfiler->noticeJSLockAcquisition();
     }
 #endif
@@ -177,7 +176,7 @@ void JSLock::unlock(intptr_t unlockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     m_lockCount -= unlockCount;
 
     if (!m_lockCount) {
-        m_hasOwnerThread = false;
+        m_hasOwnerThread.store(false, std::memory_order_release);
         m_lock.unlock();
     }
 }
@@ -210,7 +209,7 @@ void JSLock::willReleaseLock()
     }
 
     if (m_entryAtomStringTable) {
-        Thread::current().setCurrentAtomStringTable(m_entryAtomStringTable);
+        Thread::currentSingleton().setCurrentAtomStringTable(m_entryAtomStringTable);
         m_entryAtomStringTable = nullptr;
     }
 }
@@ -235,7 +234,7 @@ unsigned JSLock::dropAllLocks(DropAllLocks* dropper)
 
     dropper->setDropDepth(m_lockDropDepth);
 
-    Thread& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     thread.setSavedStackPointerAtVMEntry(m_vm->stackPointerAtVMEntry());
     thread.setSavedLastStackTop(m_vm->lastStackTop());
 
@@ -262,7 +261,7 @@ void JSLock::grabAllLocks(DropAllLocks* dropper, unsigned droppedLockCount)
 
     --m_lockDropDepth;
 
-    Thread& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     m_vm->setStackPointerAtVMEntry(thread.savedStackPointerAtVMEntry());
     m_vm->setLastStackTop(thread);
 }

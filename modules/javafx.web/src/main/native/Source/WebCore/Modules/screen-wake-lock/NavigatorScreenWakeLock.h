@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -47,10 +48,15 @@ public:
 private:
     WakeLock& wakeLock();
 
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorScreenWakeLock"_s; }
+    bool isNavigatorScreenWakeLock() const final { return true; }
 
-    RefPtr<WakeLock> m_wakeLock;
-    Navigator& m_navigator;
+    const RefPtr<WakeLock> m_wakeLock;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorScreenWakeLock)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorScreenWakeLock(); }
+SPECIALIZE_TYPE_TRAITS_END()

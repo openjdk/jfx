@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "IDLTypes.h"
-#include "ScriptWrappable.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/ScriptWrappable.h>
 #include <atomic>
 #include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
@@ -46,7 +45,6 @@ class CanvasBase;
 class CSSStyleImageValue;
 class DestinationColorSpace;
 class FloatSize;
-class GLFence;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -71,9 +69,11 @@ enum class RenderingMode : uint8_t;
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class DetachedImageBitmap {
 public:
+    DetachedImageBitmap(const DetachedImageBitmap&);
     DetachedImageBitmap(DetachedImageBitmap&&);
     WEBCORE_EXPORT ~DetachedImageBitmap();
     DetachedImageBitmap& operator=(DetachedImageBitmap&&);
@@ -88,9 +88,9 @@ private:
 };
 
 class ImageBitmap final : public ScriptWrappable, public RefCounted<ImageBitmap> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageBitmap);
+    WTF_MAKE_TZONE_ALLOCATED(ImageBitmap);
 public:
-    using Source = std::variant<
+    using Source = Variant<
         RefPtr<HTMLImageElement>,
 #if ENABLE(VIDEO)
         RefPtr<HTMLVideoElement>,
@@ -141,12 +141,6 @@ public:
     bool isDetached() const { return !m_bitmap; }
     void close();
 
-#if USE(SKIA)
-    void prepareForCrossThreadTransfer();
-    void finalizeCrossThreadTransfer();
-#endif
-
-
     size_t memoryCost() const;
 private:
     friend class ImageBitmapImageObserver;
@@ -173,16 +167,12 @@ private:
     static void createCompletionHandler(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
     static void createCompletionHandler(ScriptExecutionContext&, RefPtr<CSSStyleImageValue>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
     static void createFromBuffer(ScriptExecutionContext&, Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
-    void updateMemoryCost();
 
     RefPtr<ImageBuffer> m_bitmap;
-    std::atomic<size_t> m_memoryCost { 0 };
+    std::atomic<size_t> m_memoryCost { 0 }; // Atomic, accessed from arbitrary thread by GC.
     const bool m_originClean : 1 { false };
     const bool m_premultiplyAlpha : 1 { false };
     const bool m_forciblyPremultiplyAlpha : 1 { false };
-#if USE(SKIA)
-    std::unique_ptr<GLFence> m_fence;
-#endif
 };
 
 }

@@ -29,12 +29,15 @@
 
 #include <WebCore/DataTransfer.h>
 #include <WebCore/Frame.h>
+#include "LocalFrameInlines.h"
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DragClientJava);
 
 DragClientJava::DragClientJava(const JLObject &webPage)
     : m_webPage(webPage)
@@ -68,7 +71,7 @@ OptionSet<DragSourceAction> DragClientJava::dragSourceActionMaskForPoint(const I
     return WebCore::anyDragSourceAction();
 }
 
-void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame& localFrame)
+void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame& localFrame,const std::optional<NodeIdentifier>& nodeIdentifier)
 {
     auto& dragImage = item.image;
     auto dragImageOrigin = item.dragLocationInContentCoordinates;

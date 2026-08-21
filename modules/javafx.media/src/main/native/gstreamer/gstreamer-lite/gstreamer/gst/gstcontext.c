@@ -378,3 +378,43 @@ gst_context_replace (GstContext ** old_context, GstContext * new_context)
   return gst_mini_object_replace ((GstMiniObject **) old_context,
       (GstMiniObject *) new_context);
 }
+
+/**
+ * gst_context_is_writable:
+ * @context: a #GstContext
+ *
+ * Tests if you can safely modify @context. It is only safe to modify context when
+ * there is only one owner of the context - ie, the object is writable.
+ */
+gboolean
+gst_context_is_writable (const GstContext * context)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (context));
+}
+
+/**
+ * gst_context_make_writable:
+ * @context: (transfer full): a #GstContext
+ *
+ * Returns a writable copy of @context.
+ *
+ * If there is only one reference count on @context, the caller must be the owner,
+ * and so this function will return the context object unchanged. If on the other
+ * hand there is more than one reference on the object, a new context object will
+ * be returned. The caller's reference on @context will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the context in the argument and refs the context
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_context_ref().
+ *
+ * Returns: (transfer full): a writable context which may or may not be the
+ *     same as @context
+ */
+GstContext *
+gst_context_make_writable (GstContext * context)
+{
+  return
+      GST_CONTEXT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (context)));
+}

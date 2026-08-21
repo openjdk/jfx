@@ -35,13 +35,13 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlFactory);
 
 #if !PLATFORM(COCOA) && !USE(THEME_ADWAITA)
-RefPtr<ControlFactory> ControlFactory::create()
+Ref<ControlFactory> ControlFactory::create()
 {
-    return adoptRef(new EmptyControlFactory());
+    return adoptRef(*new EmptyControlFactory());
 }
 #endif
 
-ControlFactory& ControlFactory::shared()
+ControlFactory& ControlFactory::singleton()
 {
     static MainThreadNeverDestroyed<RefPtr<ControlFactory>> shared { create() };
     return *shared.get();

@@ -61,7 +61,7 @@ public:
 
     UniqueRef<ScriptModuleLoader> shadowRealmLoader(JSC::JSGlobalObject* realmGlobal) const;
 
-    ScriptExecutionContext* context() { return m_context.get(); }
+    ScriptExecutionContext* context();
 
     JSC::Identifier resolve(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue moduleName, JSC::JSValue importerModuleKey, JSC::JSValue scriptFetcher);
     JSC::JSInternalPromise* fetch(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue moduleKey, JSC::JSValue parameters, JSC::JSValue scriptFetcher);
@@ -77,7 +77,7 @@ private:
 
     WeakPtr<ScriptExecutionContext> m_context;
     MemoryCompactRobinHoodHashMap<String, URL> m_requestURLToResponseURLMap;
-    UncheckedKeyHashSet<Ref<ModuleScriptLoader>> m_loaders;
+    HashSet<Ref<ModuleScriptLoader>> m_loaders;
     OwnerType m_ownerType;
     JSC::JSGlobalObject* m_shadowRealmGlobal { nullptr };
 };

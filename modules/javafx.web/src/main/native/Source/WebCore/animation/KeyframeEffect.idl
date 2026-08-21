@@ -41,20 +41,25 @@ typedef (double? or TimelineRangeOffset or DOMString) KeyframeOffset;
     [CallWith=CurrentGlobalObject&CurrentDocument, ImplementedAs=setBindingsKeyframes] undefined setKeyframes(object? keyframes);
 };
 
-dictionary BasePropertyIndexedKeyframe {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BasePropertyIndexedKeyframe {
     (sequence<KeyframeOffset> or KeyframeOffset) offset = [];
     (sequence<DOMString> or DOMString) easing = [];
     (sequence<CompositeOperationOrAuto> or CompositeOperationOrAuto) composite = [];
 };
 
-dictionary BaseKeyframe {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BaseKeyframe {
     KeyframeOffset offset = null;
     DOMString easing = "linear";
     CompositeOperationOrAuto composite = "auto";
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary BaseComputedKeyframe {
      KeyframeOffset offset = null;
      unrestricted double computedOffset;

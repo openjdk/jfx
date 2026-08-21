@@ -43,7 +43,7 @@ class DatabaseTaskSynchronizer;
 class Document;
 class SQLTransactionCoordinator;
 
-class DatabaseThread : public ThreadSafeRefCounted<DatabaseThread> {
+class DatabaseThread : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DatabaseThread> {
 public:
     static Ref<DatabaseThread> create() { return adoptRef(*new DatabaseThread); }
     ~DatabaseThread();
@@ -61,7 +61,7 @@ public:
     void recordDatabaseClosed(Database&);
     Thread* getThread() { return m_thread.get(); }
 
-    SQLTransactionCoordinator* transactionCoordinator() { return m_transactionCoordinator.get(); }
+    SQLTransactionCoordinator& transactionCoordinator() { return m_transactionCoordinator; }
 
 private:
     DatabaseThread();
@@ -69,7 +69,7 @@ private:
     void databaseThread();
 
     Lock m_threadCreationMutex;
-    RefPtr<Thread> m_thread;
+    const RefPtr<Thread> m_thread;
     RefPtr<DatabaseThread> m_selfRef;
 
     MessageQueue<DatabaseTask> m_queue;
@@ -79,7 +79,7 @@ private:
     mutable Lock m_openDatabaseSetLock;
     DatabaseSet m_openDatabaseSet WTF_GUARDED_BY_LOCK(m_openDatabaseSetLock);
 
-    std::unique_ptr<SQLTransactionCoordinator> m_transactionCoordinator;
+    const UniqueRef<SQLTransactionCoordinator> m_transactionCoordinator;
     DatabaseTaskSynchronizer* m_cleanupSync { nullptr };
 };
 

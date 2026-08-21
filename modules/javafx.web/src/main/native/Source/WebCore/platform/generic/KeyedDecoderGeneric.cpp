@@ -27,7 +27,6 @@
 #include "KeyedDecoderGeneric.h"
 
 #include "KeyedEncoderGeneric.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
@@ -40,14 +39,14 @@ typedef KeyedDecoderGeneric::Dictionary KeyedDecoderGenericDictionary;
 class KeyedDecoderGeneric::Dictionary {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(KeyedDecoderGenericDictionary);
 public:
-    using Node = std::variant<Vector<uint8_t>, bool, uint32_t, uint64_t, int32_t, int64_t, float, double, String, std::unique_ptr<Dictionary>, std::unique_ptr<Array>>;
+    using Node = Variant<Vector<uint8_t>, bool, uint32_t, uint64_t, int32_t, int64_t, float, double, String, std::unique_ptr<Dictionary>, std::unique_ptr<Array>>;
 
     template <typename T>
     void add(const String& key, T&& value) { m_map.add(key, makeUniqueWithoutFastMallocCheck<Node>(std::forward<T>(value))); }
     Node* get(const String& key) { return m_map.get(key); }
 
 private:
-    UncheckedKeyHashMap<String, std::unique_ptr<Node>> m_map;
+    HashMap<String, std::unique_ptr<Node>> m_map;
 };
 
 static std::optional<String> readString(WTF::Persistence::Decoder& decoder)
@@ -62,7 +61,7 @@ static std::optional<String> readString(WTF::Persistence::Decoder& decoder)
     if (!decoder.bufferIsLargeEnoughToContain<uint8_t>(*size))
         return std::nullopt;
     Vector<uint8_t> buffer(size.value());
-    if (!decoder.decodeFixedLengthData({ buffer.data(), size.value() }))
+    if (!decoder.decodeFixedLengthData(buffer.mutableSpan()))
         return std::nullopt;
     auto result = String::fromUTF8(buffer.span());
     if (result.isNull())
@@ -81,7 +80,7 @@ static bool readSimpleValue(WTF::Persistence::Decoder& decoder, KeyedDecoderGene
     decoder >> value;
     if (!value)
         return false;
-    dictionary.add(key.value(), WTFMove(value.value()));
+    dictionary.add(key.value(), WTF::move(value.value()));
     return true;
 }
 
@@ -121,10 +120,10 @@ KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
             if (!ok)
                 break;
             Vector<uint8_t> buffer(*size);
-            ok = decoder.decodeFixedLengthData({ buffer.data(), *size });
+            ok = decoder.decodeFixedLengthData(buffer.mutableSpan());
             if (!ok)
                 break;
-            m_dictionaryStack.last()->add(*key, WTFMove(buffer));
+            m_dictionaryStack.last()->add(*key, WTF::move(buffer));
             break;
         }
         case KeyedEncoderGeneric::Type::Bool:
@@ -159,7 +158,7 @@ KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
                 ok = false;
             if (!ok)
                 break;
-            m_dictionaryStack.last()->add(*key, WTFMove(*value));
+            m_dictionaryStack.last()->add(*key, WTF::move(*value));
             break;
         }
         case KeyedEncoderGeneric::Type::BeginObject: {
@@ -171,7 +170,7 @@ KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
             auto* currentDictinary = m_dictionaryStack.last();
             auto newDictionary = makeUnique<Dictionary>();
             m_dictionaryStack.append(newDictionary.get());
-            currentDictinary->add(*key, WTFMove(newDictionary));
+            currentDictinary->add(*key, WTF::move(newDictionary));
             break;
         }
         case KeyedEncoderGeneric::Type::EndObject:
@@ -187,7 +186,7 @@ KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
                 break;
             auto newArray = makeUnique<Array>();
             m_arrayStack.append(newArray.get());
-            m_dictionaryStack.last()->add(*key, WTFMove(newArray));
+            m_dictionaryStack.last()->add(*key, WTF::move(newArray));
             break;
         }
         case KeyedEncoderGeneric::Type::BeginArrayElement: {
@@ -196,7 +195,7 @@ KeyedDecoderGeneric::KeyedDecoderGeneric(std::span<const uint8_t> data)
                 break;
             auto newDictionary = makeUnique<Dictionary>();
             m_dictionaryStack.append(newDictionary.get());
-            m_arrayStack.last()->append(WTFMove(newDictionary));
+            m_arrayStack.last()->append(WTF::move(newDictionary));
             break;
         }
         case KeyedEncoderGeneric::Type::EndArrayElement:

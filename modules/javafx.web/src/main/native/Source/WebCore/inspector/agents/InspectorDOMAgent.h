@@ -34,8 +34,10 @@
 #include "InspectorWebAgentBase.h"
 #include "Timer.h"
 #include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -78,11 +80,12 @@ class RenderObject;
 class RevalidateStyleAttributeTask;
 class ShadowRoot;
 
+enum class ExceptionCode : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;
 
-class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorDOMAgent> {
+class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler, public CanMakeWeakPtr<InspectorDOMAgent>, public CanMakeCheckedPtr<InspectorDOMAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorDOMAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorDOMAgent);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorDOMAgent);
@@ -107,7 +110,7 @@ public:
     static JSC::JSValue nodeAsScriptValue(JSC::JSGlobalObject&, Node*);
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // DOMBackendDispatcherHandler
@@ -115,6 +118,8 @@ public:
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> querySelectorAll(Inspector::Protocol::DOM::NodeId, const String& selector);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Node>> getDocument();
     Inspector::Protocol::ErrorStringOr<void> requestChildNodes(Inspector::Protocol::DOM::NodeId, std::optional<int>&& depth);
+    Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> requestAssignedSlot(Inspector::Protocol::DOM::NodeId);
+    Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> requestAssignedNodes(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<void> setAttributeValue(Inspector::Protocol::DOM::NodeId, const String& name, const String& value);
     Inspector::Protocol::ErrorStringOr<void> setAttributesAsText(Inspector::Protocol::DOM::NodeId, const String& text, const String& name);
     Inspector::Protocol::ErrorStringOr<void> removeAttribute(Inspector::Protocol::DOM::NodeId, const String& name);
@@ -261,7 +266,7 @@ private:
     Ref<Inspector::Protocol::DOM::AccessibilityProperties> buildObjectForAccessibilityProperties(Node&);
     void processAccessibilityChildren(AXCoreObject&, JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>&);
 
-    Node* nodeForPath(const String& path);
+    RefPtr<Node> nodeForPath(const String& path);
     Node* nodeForObjectId(const Inspector::Protocol::Runtime::RemoteObjectId&);
 
     void discardBindings();
@@ -275,8 +280,8 @@ private:
     Ref<InspectorOverlay> protectedOverlay() const;
 
     Inspector::InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::DOMBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::DOMBackendDispatcher> m_backendDispatcher;
     WeakRef<Page> m_inspectedPage;
     WeakRef<InspectorOverlay> m_overlay;
     WeakHashMap<Node, Inspector::Protocol::DOM::NodeId, WeakPtrImplWithEventTargetData> m_nodeToId;

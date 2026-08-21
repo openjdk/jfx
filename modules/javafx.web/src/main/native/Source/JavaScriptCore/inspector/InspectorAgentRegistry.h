@@ -26,13 +26,13 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-class BackendDispatcher;
-class FrontendRouter;
 class InspectorAgentBase;
 
 enum class DisconnectReason;
@@ -42,9 +42,9 @@ public:
     JS_EXPORT_PRIVATE AgentRegistry();
     JS_EXPORT_PRIVATE ~AgentRegistry();
 
-    JS_EXPORT_PRIVATE void append(std::unique_ptr<InspectorAgentBase>);
+    JS_EXPORT_PRIVATE void append(UniqueRef<InspectorAgentBase>&&);
 
-    JS_EXPORT_PRIVATE void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*);
+    JS_EXPORT_PRIVATE void didCreateFrontendAndBackend();
     JS_EXPORT_PRIVATE void willDestroyFrontendAndBackend(DisconnectReason);
     JS_EXPORT_PRIVATE void discardValues();
 
@@ -54,7 +54,7 @@ private:
     AgentRegistry(const AgentRegistry&) = delete;
     AgentRegistry& operator=(const AgentRegistry&) = delete;
 
-    Vector<std::unique_ptr<InspectorAgentBase>> m_agents;
+    Vector<UniqueRef<InspectorAgentBase>> m_agents;
 };
 
 } // namespace Inspector

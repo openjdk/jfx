@@ -28,7 +28,7 @@ class HTMLInputElement;
 class MouseEvent;
 
 class RenderSlider final : public RenderFlexibleBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSlider);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSlider);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSlider);
 public:
     static const int defaultTrackLength;
@@ -37,6 +37,9 @@ public:
     virtual ~RenderSlider();
 
     HTMLInputElement& element() const;
+    Ref<HTMLInputElement> protectedElement() const;
+
+    bool canHaveGeneratedChildren() const override { return false; }
 
     bool inDragMode() const;
 
@@ -45,7 +48,6 @@ public:
 private:
     ASCIILiteral renderName() const override { return "RenderSlider"_s; }
 
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
 

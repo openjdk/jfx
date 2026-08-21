@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverDrop.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "Observable.h"
 #include "ScriptExecutionContext.h"
@@ -52,7 +53,7 @@ public:
             return adoptRef(*new InternalObserverDrop::SubscriberCallbackDrop(context, source, amount));
         }
 
-        CallbackResult<void> handleEvent(Subscriber& subscriber) final
+        CallbackResult<void> invoke(Subscriber& subscriber) final
         {
             RefPtr context = scriptExecutionContext();
 
@@ -62,15 +63,15 @@ public:
             }
 
             SubscribeOptions options;
-            options.signal = &subscriber.signal();
+            options.signal = subscriber.signal();
             m_sourceObservable->subscribeInternal(*context, InternalObserverDrop::create(*context, subscriber, m_amount), options);
 
             return { };
         }
 
-        CallbackResult<void> handleEventRethrowingException(Subscriber& subscriber) final
+        CallbackResult<void> invokeRethrowingException(Subscriber& subscriber) final
         {
-            return handleEvent(subscriber);
+            return invoke(subscriber);
         }
 
     private:

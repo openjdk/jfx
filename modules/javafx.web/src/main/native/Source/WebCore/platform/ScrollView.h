@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Holger Hans Peter Freyther
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,35 +26,38 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
-#include "Scrollbar.h"
-#include "ScrollableArea.h"
-#include "ScrollTypes.h"
-#include "Widget.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollableArea.h>
+#include <WebCore/Scrollbar.h>
+#include <WebCore/Widget.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
-
-OBJC_CLASS WAKScrollView;
-OBJC_CLASS WAKView;
-
 #ifndef NSScrollView
 #define NSScrollView WAKScrollView
 #endif
-
 #ifndef NSView
 #define NSView WAKView
 #endif
-
 #endif // PLATFORM(IOS_FAMILY)
 
-#if PLATFORM(COCOA) && defined __OBJC__
-@class NSScrollView;
+#if PLATFORM(COCOA)
+OBJC_CLASS NSScrollView;
+OBJC_CLASS NSView;
+
+#ifdef __OBJC__
 @protocol WebCoreFrameScrollView;
+#define PlatformScrollView NSScrollView<WebCoreFrameScrollView>
+#else
+#define PlatformScrollView NSScrollView
 #endif
+#endif // PLATFORM(COCOA)
 
 namespace WebCore {
 
@@ -81,6 +84,7 @@ public:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     USING_CAN_MAKE_WEAKPTR(Widget);
 
@@ -102,7 +106,7 @@ public:
     virtual IntRect windowClipRect() const = 0;
 
     // Functions for child manipulation and inspection.
-    const UncheckedKeyHashSet<Ref<Widget>>& children() const { return m_children; }
+    const HashSet<Ref<Widget>>& children() const { return m_children; }
     WEBCORE_EXPORT virtual void addChild(Widget&);
     WEBCORE_EXPORT virtual void removeChild(Widget&);
 
@@ -137,7 +141,6 @@ public:
 
     WEBCORE_EXPORT virtual void setCanHaveScrollbars(bool);
 
-
     void setScrollbarOverlayStyle(ScrollbarOverlayStyle) final;
 
     // By default you only receive paint events for the area that is visible. In the case of using a
@@ -166,13 +169,13 @@ public:
         WTF_MAKE_TZONE_ALLOCATED(ProhibitScrollingWhenChangingContentSizeForScope);
     public:
         ProhibitScrollingWhenChangingContentSizeForScope(ScrollView&);
-        ~ProhibitScrollingWhenChangingContentSizeForScope();
+        WEBCORE_EXPORT ~ProhibitScrollingWhenChangingContentSizeForScope();
 
     private:
         SingleThreadWeakPtr<ScrollView> m_scrollView;
     };
 
-    std::unique_ptr<ProhibitScrollingWhenChangingContentSizeForScope> prohibitScrollingWhenChangingContentSizeForScope();
+    WEBCORE_EXPORT std::unique_ptr<ProhibitScrollingWhenChangingContentSizeForScope> prohibitScrollingWhenChangingContentSizeForScope();
 
     // Whether or not a scroll view will blit visible contents when it is scrolled. Blitting is disabled in situations
     // where it would cause rendering glitches (such as with fixed backgrounds or when the view is partially transparent).
@@ -305,10 +308,12 @@ public:
     WEBCORE_EXPORT void setScrollbarsSuppressed(bool suppressed, bool repaintOnUnsuppress = false);
     bool scrollbarsSuppressed() const { return m_scrollbarsSuppressed; }
 
+    WEBCORE_EXPORT DoublePoint rootViewToContents(const DoublePoint&) const;
     WEBCORE_EXPORT FloatPoint rootViewToContents(const FloatPoint&) const;
     WEBCORE_EXPORT IntPoint rootViewToContents(const IntPoint&) const;
     WEBCORE_EXPORT IntPoint contentsToRootView(const IntPoint&) const;
     WEBCORE_EXPORT FloatPoint contentsToRootView(const FloatPoint&) const;
+    WEBCORE_EXPORT DoublePoint contentsToRootView(const DoublePoint&) const;
     WEBCORE_EXPORT IntRect rootViewToContents(const IntRect&) const;
     WEBCORE_EXPORT IntRect contentsToRootView(const IntRect&) const;
     WEBCORE_EXPORT FloatRect rootViewToContents(const FloatRect&) const;
@@ -321,6 +326,9 @@ public:
 
     FloatPoint viewToContents(const FloatPoint&) const;
     FloatPoint contentsToView(const FloatPoint&) const;
+
+    DoublePoint viewToContents(const DoublePoint&) const;
+    DoublePoint contentsToView(const DoublePoint&) const;
 
     IntRect viewToContents(IntRect) const;
     IntRect contentsToView(IntRect) const;
@@ -336,10 +344,16 @@ public:
     // Event coordinates are assumed to be in the coordinate space of a window that contains
     // the entire widget hierarchy. It is up to the platform to decide what the precise definition
     // of containing window is. (For example on Mac it is the containing NSWindow.)
-    WEBCORE_EXPORT IntPoint windowToContents(const IntPoint&) const;
-    WEBCORE_EXPORT IntPoint contentsToWindow(const IntPoint&) const;
+    WEBCORE_EXPORT IntPoint windowToContents(IntPoint) const;
+    WEBCORE_EXPORT FloatPoint windowToContents(FloatPoint) const;
+    WEBCORE_EXPORT DoublePoint windowToContents(DoublePoint) const;
     WEBCORE_EXPORT IntRect windowToContents(const IntRect&) const;
+    FloatRect windowToContents(const FloatRect&) const;
+
+    WEBCORE_EXPORT IntPoint contentsToWindow(IntPoint) const;
+    FloatPoint contentsToWindow(FloatPoint) const;
     WEBCORE_EXPORT IntRect contentsToWindow(const IntRect&) const;
+    FloatRect contentsToWindow(const FloatRect&) const;
 
     // Functions for converting to and from screen coordinates.
     WEBCORE_EXPORT IntRect contentsToScreen(const IntRect&) const;
@@ -363,7 +377,11 @@ public:
 
     IntPoint convertChildToSelf(const Widget*, IntPoint) const;
     FloatPoint convertChildToSelf(const Widget*, FloatPoint) const;
+    DoublePoint convertChildToSelf(const Widget*, DoublePoint) const;
+
     IntPoint convertSelfToChild(const Widget*, IntPoint) const;
+    FloatPoint convertSelfToChild(const Widget*, FloatPoint) const;
+    DoublePoint convertSelfToChild(const Widget*, DoublePoint) const;
 
     // Widget override. Handles painting of the contents of the view as well as the scrollbars.
     WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) final;
@@ -448,12 +466,14 @@ protected:
 
     virtual void didFinishProhibitingScrollingWhenChangingContentSize() = 0;
 
-#if PLATFORM(COCOA) && defined __OBJC__
+#if PLATFORM(COCOA)
 public:
     WEBCORE_EXPORT NSView* documentView() const;
+    WEBCORE_EXPORT RetainPtr<NSView> protectedDocumentView() const;
 
 private:
-    NSScrollView<WebCoreFrameScrollView>* scrollView() const;
+    PlatformScrollView* scrollView() const;
+    RetainPtr<PlatformScrollView> protectedScrollView() const;
 #endif
 
 private:
@@ -522,7 +542,7 @@ private:
             didFinishProhibitingScrollingWhenChangingContentSize();
     }
 
-    UncheckedKeyHashSet<Ref<Widget>> m_children;
+    HashSet<Ref<Widget>> m_children;
 
     RefPtr<Scrollbar> m_horizontalScrollbar;
     RefPtr<Scrollbar> m_verticalScrollbar;

@@ -11,6 +11,7 @@
 		<attributes>
 			<attribute name="test" value="true"/>
 			<attribute name="optional" value="true"/>
+			<attribute name="add-exports" value="javafx.graphics/com.sun.javafx.text=javafx.controls"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" output="testbin" path="src/test/resources">

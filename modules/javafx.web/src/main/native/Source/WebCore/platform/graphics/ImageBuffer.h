@@ -27,13 +27,13 @@
 
 #pragma once
 
-#include "ImageBufferAllocator.h"
-#include "ImageBufferBackend.h"
-#include "ImageBufferPixelFormat.h"
-#include "PlatformScreen.h"
-#include "ProcessIdentity.h"
-#include "RenderingMode.h"
-#include "RenderingResourceIdentifier.h"
+#include <WebCore/ImageBufferAllocator.h>
+#include <WebCore/ImageBufferBackend.h>
+#include <WebCore/ImageBufferFormat.h>
+#include <WebCore/PlatformScreen.h>
+#include <WebCore/ProcessIdentity.h>
+#include <WebCore/RenderingMode.h>
+#include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/Function.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
@@ -41,12 +41,12 @@
 #include <wtf/ThreadSafeWeakPtr.h>
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-#include "DynamicContentScalingResourceCache.h"
+#include <WebCore/DynamicContentScalingResourceCache.h>
 #endif
 
 #if HAVE(IOSURFACE)
-#include "IOSurface.h"
-#include "IOSurfacePool.h"
+#include <WebCore/IOSurface.h>
+#include <WebCore/IOSurfacePool.h>
 #endif
 
 #if USE(SKIA)
@@ -85,7 +85,7 @@ struct ImageBufferParameters {
     FloatSize logicalSize;
     float resolutionScale;
     DestinationColorSpace colorSpace;
-    ImageBufferPixelFormat pixelFormat;
+    ImageBufferFormat bufferFormat;
     RenderingPurpose purpose;
 };
 
@@ -93,24 +93,39 @@ class ImageBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Image
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageBuffer, WEBCORE_EXPORT);
 public:
     using Parameters = ImageBufferParameters;
-    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, GraphicsClient* = nullptr);
+
+    static RefPtr<ImageBuffer> create(const FloatSize& size, RenderingMode mode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat bufferFormat, GraphicsClient* client = nullptr)
+    {
+        return create(size, mode, purpose, resolutionScale, colorSpace, ImageBufferFormat { bufferFormat }, client);
+    }
+
+    WEBCORE_EXPORT static RefPtr<ImageBuffer> create(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferFormat, GraphicsClient* = nullptr);
 
     template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
-    static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext, Arguments&&... arguments)
+    static RefPtr<ImageBufferType> create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferFormat bufferFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext, Arguments&&... arguments)
     {
-        Parameters parameters { size, resolutionScale, colorSpace, pixelFormat, purpose };
+        Parameters parameters { size, resolutionScale, colorSpace, bufferFormat, purpose };
         auto backendParameters = ImageBuffer::backendParameters(parameters);
         auto backend = BackendType::create(backendParameters, creationContext);
         if (!backend)
             return nullptr;
         auto backendInfo = populateBackendInfo<BackendType>(backendParameters);
-        return create<ImageBufferType>(parameters, backendInfo, creationContext, WTFMove(backend), std::forward<Arguments>(arguments)...);
+        return create<ImageBufferType>(parameters, backendInfo, creationContext, WTF::move(backend), std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename BackendType, typename ImageBufferType = ImageBuffer, typename... Arguments>
+    static RefPtr<ImageBufferType> create(const FloatSize& size, const ImageBufferCreationContext& creationContext, std::unique_ptr<ImageBufferBackend>&& backend, Arguments&&... arguments)
+    {
+        auto backendParameters = backend->parameters();
+        auto parameters = Parameters { size, backendParameters.resolutionScale, backendParameters.colorSpace, backendParameters.bufferFormat, backendParameters.purpose };
+        auto backendInfo = populateBackendInfo<BackendType>(backendParameters);
+        return create<ImageBufferType>(parameters, backendInfo, creationContext, WTF::move(backend), std::forward<Arguments>(arguments)...);
     }
 
     template<typename ImageBufferType = ImageBuffer, typename... Arguments>
     static RefPtr<ImageBufferType> create(Parameters parameters, const ImageBufferBackend::Info& backendInfo, const WebCore::ImageBufferCreationContext& creationContext, std::unique_ptr<ImageBufferBackend>&& backend, Arguments&&... arguments)
     {
-        return adoptRef(new ImageBufferType(parameters, backendInfo, creationContext, WTFMove(backend), std::forward<Arguments>(arguments)...));
+        return adoptRef(new ImageBufferType(parameters, backendInfo, creationContext, WTF::move(backend), std::forward<Arguments>(arguments)...));
     }
 
     template<typename BackendType>
@@ -159,7 +174,7 @@ public:
     DestinationColorSpace colorSpace() const { return m_parameters.colorSpace; }
 
     RenderingPurpose renderingPurpose() const { return m_parameters.purpose; }
-    ImageBufferPixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
+    PixelFormat pixelFormat() const { return m_parameters.bufferFormat.pixelFormat; }
     const Parameters& parameters() const { return m_parameters; }
 
     RenderingMode renderingMode() const { return m_backendInfo.renderingMode; }
@@ -204,10 +219,6 @@ public:
     //     buffer = nullptr;
     WEBCORE_EXPORT static RefPtr<NativeImage> sinkIntoNativeImage(RefPtr<ImageBuffer>);
     WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoBufferForDifferentThread(RefPtr<ImageBuffer>);
-#if USE(SKIA)
-    static RefPtr<ImageBuffer> sinkIntoImageBufferForCrossThreadTransfer(RefPtr<ImageBuffer>);
-    static RefPtr<ImageBuffer> sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer>, std::unique_ptr<GLFence>&&);
-#endif
     static std::unique_ptr<SerializedImageBuffer> sinkIntoSerializedImageBuffer(RefPtr<ImageBuffer>&&);
     WEBCORE_EXPORT static RefPtr<SharedBuffer> sinkIntoPDFDocument(RefPtr<ImageBuffer>);
 
@@ -221,7 +232,7 @@ public:
     WEBCORE_EXPORT static Vector<uint8_t> toData(Ref<ImageBuffer> source, const String& mimeType, std::optional<double> quality = std::nullopt, PreserveResolution = PreserveResolution::No);
 
     WEBCORE_EXPORT virtual RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& = ImageBufferAllocator()) const;
-    WEBCORE_EXPORT virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint = { }, AlphaPremultiplication destFormat = AlphaPremultiplication::Premultiplied);
+    WEBCORE_EXPORT virtual void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint = { }, AlphaPremultiplication destFormat = AlphaPremultiplication::Premultiplied);
 
     WEBCORE_EXPORT virtual RefPtr<SharedBuffer> sinkIntoPDFDocument();
 
@@ -269,6 +280,7 @@ public:
     virtual ~SerializedImageBuffer() = default;
 
     virtual size_t memoryCost() const = 0;
+    virtual std::unique_ptr<SerializedImageBuffer> clone() const { return nullptr; }
 
     WEBCORE_EXPORT static RefPtr<ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<SerializedImageBuffer>, GraphicsClient* = nullptr);
 

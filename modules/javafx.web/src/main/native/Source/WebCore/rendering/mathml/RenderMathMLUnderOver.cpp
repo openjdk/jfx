@@ -29,20 +29,22 @@
 
 #if ENABLE(MATHML)
 
+#include "FontCascadeInlines.h"
 #include "MathMLElement.h"
 #include "MathMLOperatorDictionary.h"
 #include "MathMLUnderOverElement.h"
 #include "RenderIterator.h"
 #include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLOperator.h"
+#include "RenderObjectInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLUnderOver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLUnderOver);
 
 RenderMathMLUnderOver::RenderMathMLUnderOver(MathMLUnderOverElement& element, RenderStyle&& style)
-    : RenderMathMLScripts(Type::MathMLUnderOver, element, WTFMove(style))
+    : RenderMathMLScripts(Type::MathMLUnderOver, element, WTF::move(style))
 {
     ASSERT(isRenderMathMLUnderOver());
 }
@@ -184,7 +186,7 @@ RenderBox& RenderMathMLUnderOver::over() const
 
 void RenderMathMLUnderOver::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     if (!isValid()) {
         RenderMathMLRow::computePreferredLogicalWidths();
@@ -211,7 +213,7 @@ void RenderMathMLUnderOver::computePreferredLogicalWidths()
 
     adjustPreferredLogicalWidthsForBorderAndPadding();
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutUnit RenderMathMLUnderOver::horizontalOffset(const RenderBox& child) const
@@ -381,11 +383,7 @@ void RenderMathMLUnderOver::layoutBlock(RelayoutChildren relayoutChildren, Layou
 
     adjustLayoutForBorderAndPadding();
 
-    layoutPositionedObjects(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
+    layoutOutOfFlowBoxes(relayoutChildren);
 }
 
 }

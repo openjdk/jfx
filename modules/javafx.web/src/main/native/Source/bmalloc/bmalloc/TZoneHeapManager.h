@@ -25,7 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BExport.h"
+#include "BPlatform.h"
 
 #if BUSE(TZONE)
 
@@ -70,6 +73,7 @@ class TZoneHeapManager {
         unsigned usedBucketBitmap;
         Vector<unsigned> bucketUseCounts;
 #endif
+        TZoneBucket nonCompactBucket;
         TZoneBucket buckets[1];
     };
 
@@ -184,3 +188,5 @@ private:
 #endif // BUSE(LIBPAS)
 
 #endif // BUSE(TZONE)
+
+#endif // __cplusplus

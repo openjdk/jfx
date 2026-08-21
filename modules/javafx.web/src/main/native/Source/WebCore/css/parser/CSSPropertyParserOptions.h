@@ -26,20 +26,38 @@
 #pragma once
 
 #include "CSSParserMode.h"
+#include <optional>
 
 namespace WebCore {
 
 enum class AnchorPolicy : bool { Forbid, Allow };
 enum class AnchorSizePolicy : bool { Forbid, Allow };
-enum class UnitlessQuirk : bool { Allow, Forbid };
 enum class UnitlessZeroQuirk : bool { Allow, Forbid };
 
 struct CSSPropertyParserOptions {
-    CSSParserMode parserMode                    { HTMLStandardMode };
+    // Generally, the parser mode will be determined via the mode on the CSSParserContext, but
+    // in a few cases, it is necessary to override the mode to force a specific behavior.
+    std::optional<CSSParserMode> overrideParserMode { };
+
+    // Generally, anchor() is forbidden, but in a few cases specified in CSS Anchor Positioning
+    // spec it can be allowed.
+    // https://drafts.csswg.org/css-anchor-position-1/#anchor-pos
     AnchorPolicy anchorPolicy                   { AnchorPolicy::Forbid };
+
+    // Generally, anchor-size() is forbidden, but in a few cases specified in CSS Anchor Positioning
+    // spec it can be allowed.
+    // https://drafts.csswg.org/css-anchor-position-1/#anchor-size-fn
     AnchorSizePolicy anchorSizePolicy           { AnchorSizePolicy::Forbid };
-    UnitlessQuirk unitless                      { UnitlessQuirk::Forbid };
-    UnitlessZeroQuirk unitlessZero              { UnitlessZeroQuirk::Forbid };
+
+    // Generally, unitless zero is forbidden for <angle> values, but in a few legacy cases, it is
+    // it can be allowed.
+    // https://drafts.csswg.org/css-values-4/#angles
+    UnitlessZeroQuirk unitlessZeroAngle         { UnitlessZeroQuirk::Forbid };
+
+    // Generally, unitless zero is allowed for <length> values, but in a few cases, when it is
+    // ambiguous with a <number> production, it can be forbidden.
+    // https://drafts.csswg.org/css-values-4/#lengths
+    UnitlessZeroQuirk unitlessZeroLength        { UnitlessZeroQuirk::Allow };
 };
 
 } // namespace WebCore

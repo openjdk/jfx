@@ -107,8 +107,8 @@ void* Page::lowWatermarkFromVisitingDirtyChunks()
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Stack);
 
 Stack::Stack(Stack&& other)
-    : m_stackBounds(WTFMove(other.m_stackBounds))
-    , m_pages(WTFMove(other.m_pages))
+    : m_stackBounds(WTF::move(other.m_stackBounds))
+    , m_pages(WTF::move(other.m_pages))
 {
     m_savedStackPointer = other.m_savedStackPointer;
 #if ASSERT_ENABLED
@@ -118,7 +118,9 @@ Stack::Stack(Stack&& other)
 
 bool Stack::hasWritesToFlush()
 {
-    return std::any_of(m_pages.begin(), m_pages.end(), [] (auto& it) { return it.value->hasWritesToFlush(); });
+    return std::ranges::any_of(m_pages, [] (auto& it) {
+        return it.value->hasWritesToFlush();
+    });
 }
 
 void Stack::flushWrites()
@@ -138,11 +140,11 @@ Page* Stack::ensurePageFor(void* address)
     // before allocating a new one,
     void* baseAddress = Page::baseAddressFor(address);
     auto it = m_pages.find(baseAddress);
-    if (LIKELY(it != m_pages.end()))
+    if (it != m_pages.end()) [[likely]]
         m_lastAccessedPage = it->value.get();
     else {
         std::unique_ptr<Page> page = makeUnique<Page>(baseAddress);
-        auto result = m_pages.add(baseAddress, WTFMove(page));
+        auto result = m_pages.add(baseAddress, WTF::move(page));
         m_lastAccessedPage = result.iterator->value.get();
     }
     m_lastAccessedPageBaseAddress = baseAddress;

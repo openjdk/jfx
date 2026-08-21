@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "CryptoAlgorithmIdentifier.h"
-#include "CryptoKey.h"
-#include "ExceptionOr.h"
+#include <WebCore/CryptoAlgorithmIdentifier.h>
+#include <WebCore/CryptoKey.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
@@ -36,6 +35,7 @@
 namespace WebCore {
 
 class CryptoAlgorithmParameters;
+template<typename> class ExceptionOr;
 
 struct JsonWebKey;
 

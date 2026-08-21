@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,7 +46,7 @@ using namespace JSC;
 
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<EventTarget>&& value)
 {
-    return createWrapper<EventTarget>(globalObject, WTFMove(value));
+    return createWrapper<EventTarget>(globalObject, WTF::move(value));
 }
 
 EventTarget* JSEventTarget::toWrapped(VM&, JSValue value)

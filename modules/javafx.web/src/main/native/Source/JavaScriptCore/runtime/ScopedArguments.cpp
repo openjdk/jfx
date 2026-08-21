@@ -27,6 +27,7 @@
 #include "ScopedArguments.h"
 
 #include "GenericArgumentsImplInlines.h"
+#include "JSArray.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -147,7 +148,7 @@ void ScopedArguments::unmapArgument(JSGlobalObject* globalObject, uint32_t i)
     unsigned namedLength = m_table->length();
     if (i < namedLength) {
         auto* maybeCloned = m_table->trySet(vm, i, ScopeOffset());
-        if (UNLIKELY(!maybeCloned)) {
+        if (!maybeCloned) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
@@ -169,16 +170,83 @@ bool ScopedArguments::isIteratorProtocolFastAndNonObservable()
     if (!globalObject->isArgumentsPrototypeIteratorProtocolFastAndNonObservable())
         return false;
 
-    if (UNLIKELY(m_overrodeThings))
+    if (m_overrodeThings) [[unlikely]]
         return false;
 
-    if (UNLIKELY(m_hasUnmappedArgument))
+    if (m_hasUnmappedArgument) [[unlikely]]
         return false;
 
     if (structure->didTransition())
         return false;
 
     return true;
+}
+
+JSArray* ScopedArguments::fastSlice(JSGlobalObject* globalObject, ScopedArguments* arguments, uint64_t startIndex, uint64_t count)
+{
+    VM& vm = globalObject->vm();
+
+    if (count >= MIN_SPARSE_ARRAY_INDEX)
+        return nullptr;
+
+    if (arguments->m_overrodeThings) [[unlikely]]
+        return nullptr;
+
+    if (arguments->m_hasUnmappedArgument) [[unlikely]]
+        return nullptr;
+
+    if (startIndex + count > arguments->m_totalLength)
+        return nullptr;
+
+    uint32_t resultLength = static_cast<uint32_t>(count);
+
+    if (!resultLength)
+        return constructEmptyArray(globalObject, nullptr);
+
+    // Determine the optimal indexing type based on the values being sliced
+    IndexingType indexingType = IsArray;
+    for (uint32_t i = 0; i < resultLength; ++i) {
+        JSValue value = arguments->getIndexQuickly(startIndex + i);
+        indexingType = leastUpperBoundOfIndexingTypeAndValue(indexingType, value);
+    }
+
+    Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType);
+    IndexingType resultIndexingType = resultStructure->indexingType();
+
+    if (hasAnyArrayStorage(resultIndexingType)) [[unlikely]]
+        return nullptr;
+
+    ASSERT(!globalObject->isHavingABadTime());
+
+    unsigned vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, resultLength);
+    void* memory = vm.auxiliarySpace().allocate(
+        vm,
+        Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
+        nullptr, AllocationFailureMode::ReturnNull);
+    if (!memory) [[unlikely]]
+        return nullptr;
+
+    DeferGC deferGC(vm);
+    auto* resultButterfly = Butterfly::fromBase(memory, 0, 0);
+    resultButterfly->setVectorLength(vectorLength);
+    resultButterfly->setPublicLength(resultLength);
+
+    if (hasDouble(resultIndexingType)) {
+        for (uint32_t i = 0; i < resultLength; ++i) {
+            JSValue value = arguments->getIndexQuickly(startIndex + i);
+            ASSERT(value.isNumber());
+            resultButterfly->contiguousDouble().atUnsafe(i) = value.asNumber();
+        }
+    } else if (hasInt32(resultIndexingType) || hasContiguous(resultIndexingType)) {
+        for (uint32_t i = 0; i < resultLength; ++i) {
+            JSValue value = arguments->getIndexQuickly(startIndex + i);
+            resultButterfly->contiguous().atUnsafe(i).setWithoutWriteBarrier(value);
+        }
+    } else
+        RELEASE_ASSERT_NOT_REACHED();
+
+    Butterfly::clearRange(resultIndexingType, resultButterfly, resultLength, vectorLength);
+    return JSArray::createWithButterfly(vm, nullptr, resultStructure, resultButterfly);
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,62 +44,71 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorkerJob);
 
-ServiceWorkerJob::ServiceWorkerJob(ServiceWorkerJobClient& client, RefPtr<DeferredPromise>&& promise, ServiceWorkerJobData&& jobData)
+Ref<ServiceWorkerJob> ServiceWorkerJob::create(ServiceWorkerJobClient& client, Ref<DeferredPromise>&& promise, ServiceWorkerJobData&& jobData)
+{
+    return adoptRef(*new ServiceWorkerJob(client, WTF::move(promise), WTF::move(jobData)));
+}
+
+ServiceWorkerJob::ServiceWorkerJob(ServiceWorkerJobClient& client, Ref<DeferredPromise>&& promise, ServiceWorkerJobData&& jobData)
     : m_client(client)
-    , m_jobData(WTFMove(jobData))
-    , m_promise(WTFMove(promise))
+    , m_jobData(WTF::move(jobData))
+    , m_promise(WTF::move(promise))
     , m_contextIdentifier(client.contextIdentifier())
 {
 }
 
 ServiceWorkerJob::~ServiceWorkerJob()
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
 }
 
-RefPtr<DeferredPromise> ServiceWorkerJob::takePromise()
+Ref<DeferredPromise> ServiceWorkerJob::takePromise()
 {
-    return WTFMove(m_promise);
+    return WTF::move(m_promise);
 }
 
 void ServiceWorkerJob::failedWithException(const Exception& exception)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
 
     m_completed = true;
-    m_client.jobFailedWithException(*this, exception);
+    if (RefPtr client = m_client.get())
+        client->jobFailedWithException(*this, exception);
 }
 
 void ServiceWorkerJob::resolvedWithRegistration(ServiceWorkerRegistrationData&& data, ShouldNotifyWhenResolved shouldNotifyWhenResolved)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
 
     m_completed = true;
-    m_client.jobResolvedWithRegistration(*this, WTFMove(data), shouldNotifyWhenResolved);
+    if (RefPtr client = m_client.get())
+        client->jobResolvedWithRegistration(*this, WTF::move(data), shouldNotifyWhenResolved);
 }
 
 void ServiceWorkerJob::resolvedWithUnregistrationResult(bool unregistrationResult)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
 
     m_completed = true;
-    m_client.jobResolvedWithUnregistrationResult(*this, unregistrationResult);
+    if (RefPtr client = m_client.get())
+        client->jobResolvedWithUnregistrationResult(*this, unregistrationResult);
 }
 
 void ServiceWorkerJob::startScriptFetch(FetchOptions::Cache cachePolicy)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
 
-    m_client.startScriptFetchForJob(*this, cachePolicy);
+    if (RefPtr client = m_client.get())
+        client->startScriptFetchForJob(*this, cachePolicy);
 }
 
 static ResourceRequest scriptResourceRequest(ScriptExecutionContext& context, const URL& url)
 {
-    ResourceRequest request { url };
+    ResourceRequest request { URL { url } };
     request.setInitiatorIdentifier(context.resourceRequestIdentifier());
     return request;
 }
@@ -117,16 +126,17 @@ static FetchOptions scriptFetchOptions(FetchOptions::Cache cachePolicy, FetchOpt
 
 void ServiceWorkerJob::fetchScriptWithContext(ScriptExecutionContext& context, FetchOptions::Cache cachePolicy)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
 
     auto source = m_jobData.workerType == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
 
-    m_scriptLoader = WorkerScriptLoader::create();
+    Ref scriptLoader = WorkerScriptLoader::create();
+    m_scriptLoader = scriptLoader.copyRef();
     auto request = scriptResourceRequest(context, m_jobData.scriptURL);
     request.addHTTPHeaderField(HTTPHeaderName::ServiceWorker, "script"_s);
 
-    m_scriptLoader->loadAsynchronously(context, WTFMove(request), source, scriptFetchOptions(cachePolicy, FetchOptions::Destination::Serviceworker), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this, WorkerRunLoop::defaultMode());
+    scriptLoader->loadAsynchronously(context, WTF::move(request), source, scriptFetchOptions(cachePolicy, FetchOptions::Destination::Serviceworker), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this, WorkerRunLoop::defaultMode());
 }
 
 ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorkerJobData& jobData, const ResourceResponse& response)
@@ -156,7 +166,7 @@ ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorke
 
 void ServiceWorkerJob::didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse& response)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(!m_completed);
     ASSERT(m_scriptLoader);
 
@@ -164,29 +174,33 @@ void ServiceWorkerJob::didReceiveResponse(ScriptExecutionContextIdentifier, std:
     if (error.isNull())
         return;
 
-    m_scriptLoader->cancel();
+    Ref { *m_scriptLoader }->cancel();
     m_scriptLoader = nullptr;
 
+    if (RefPtr client = m_client.get()) {
     Exception exception { ExceptionCode::SecurityError, error.localizedDescription() };
-    m_client.jobFailedLoadingScript(*this, WTFMove(error), WTFMove(exception));
+        client->jobFailedLoadingScript(*this, WTF::move(error), WTF::move(exception));
+    }
 }
 
 void ServiceWorkerJob::notifyFinished(std::optional<ScriptExecutionContextIdentifier>)
 {
-    ASSERT(m_creationThread.ptr() == &Thread::current());
+    ASSERT(m_creationThread.ptr() == &Thread::currentSingleton());
     ASSERT(m_scriptLoader);
 
     auto scriptLoader = std::exchange(m_scriptLoader, { });
 
     if (!scriptLoader->failed()) {
-        m_client.jobFinishedLoadingScript(*this, scriptLoader->fetchResult());
+        if (RefPtr client = m_client.get())
+            client->jobFinishedLoadingScript(*this, scriptLoader->fetchResult());
         return;
     }
 
+    if (RefPtr client = m_client.get()) {
     auto& error = scriptLoader->error();
     ASSERT(!error.isNull());
-
-    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? ExceptionCode::SecurityError : ExceptionCode::TypeError, makeString("Script "_s, scriptLoader->url().string(), " load failed"_s) });
+        client->jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? ExceptionCode::SecurityError : ExceptionCode::TypeError, makeString("Script "_s, scriptLoader->url().string(), " load failed"_s) });
+    }
 }
 
 bool ServiceWorkerJob::cancelPendingLoad()
@@ -196,6 +210,11 @@ bool ServiceWorkerJob::cancelPendingLoad()
         return true;
     }
     return false;
+}
+
+bool ServiceWorkerJob::isRegistering() const
+{
+    return !m_completed && m_jobData.type == ServiceWorkerJobType::Register;
 }
 
 } // namespace WebCore

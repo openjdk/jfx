@@ -42,7 +42,7 @@ namespace WebCore::WebGPU {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ShaderModuleImpl);
 
 ShaderModuleImpl::ShaderModuleImpl(WebGPUPtr<WGPUShaderModule>&& shaderModule, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(shaderModule))
+    : m_backing(WTF::move(shaderModule))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -72,21 +72,17 @@ static void compilationInfoCallback(WGPUCompilationInfoRequestStatus status, con
 
 void ShaderModuleImpl::compilationInfo(CompletionHandler<void(Ref<CompilationInfo>&&)>&& callback)
 {
-    auto blockPtr = makeBlockPtr([callback = WTFMove(callback)](WGPUCompilationInfoRequestStatus, const WGPUCompilationInfo* compilationInfo) mutable {
+    auto blockPtr = makeBlockPtr([callback = WTF::move(callback)](WGPUCompilationInfoRequestStatus, const WGPUCompilationInfo* compilationInfo) mutable {
         Vector<Ref<CompilationMessage>> messages;
         if (!compilationInfo || !compilationInfo->messageCount) {
-            callback(CompilationInfo::create(WTFMove(messages)));
+            callback(CompilationInfo::create(WTF::move(messages)));
             return;
         }
 
-        for (size_t i = 0; i < compilationInfo->messageCount; ++i) {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            auto& message = compilationInfo->messages[i];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        for (auto& message : messagesSpan(*compilationInfo))
             messages.append(CompilationMessage::create(message.message, convertFromBacking(message.type), message.lineNum, message.linePos + 1, message.offset, message.length));
-        }
 
-        callback(CompilationInfo::create(WTFMove(messages)));
+        callback(CompilationInfo::create(WTF::move(messages)));
     });
 
     wgpuShaderModuleGetCompilationInfo(m_backing.get(), &compilationInfoCallback, Block_copy(blockPtr.get()));

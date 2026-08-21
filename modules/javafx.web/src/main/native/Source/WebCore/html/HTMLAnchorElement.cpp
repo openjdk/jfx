@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
@@ -27,10 +27,14 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
 #include "FrameSelection.h"
@@ -40,7 +44,7 @@
 #include "HTMLPictureElement.h"
 #include "KeyboardEvent.h"
 #include "LoaderStrategy.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "MouseEvent.h"
 #include "OriginAccessPatterns.h"
@@ -55,8 +59,11 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
+#include "SpeculationRulesMatcher.h"
+#include "SystemPreviewInfo.h"
 #include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakHashMap.h>
@@ -69,7 +76,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAnchorElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLAnchorElement);
 
 using namespace HTMLNames;
 
@@ -114,22 +121,22 @@ bool HTMLAnchorElement::isInteractiveContent() const
     return isLink();
 }
 
-bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool HTMLAnchorElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
     if (!isFocusable())
         return false;
 
     // Anchor is focusable if the base element supports focus and is focusable.
     if (isFocusable() && Element::supportsFocus())
-        return HTMLElement::isKeyboardFocusable(event);
+        return HTMLElement::isKeyboardFocusable(focusEventData);
 
     RefPtr frame = document().frame();
     if (!frame)
         return false;
 
-    if (isLink() && !frame->eventHandler().tabsToLinks(event))
+    if (isLink() && !frame->eventHandler().tabsToLinks(focusEventData))
         return false;
-    return HTMLElement::isKeyboardFocusable(event);
+    return HTMLElement::isKeyboardFocusable(focusEventData);
 }
 
 static void appendServerMapMousePosition(StringBuilder& url, Event& event)
@@ -156,6 +163,9 @@ static void appendServerMapMousePosition(StringBuilder& url, Event& event)
 
 void HTMLAnchorElement::defaultEventHandler(Event& event)
 {
+    if (m_prefetchEagerness == PrefetchEagerness::Conservative && (event.type() == eventNames().keydownEvent || event.type() == eventNames().mousedownEvent || event.type() == eventNames().pointerdownEvent))
+        protectedDocument()->prefetch(href(), m_speculationRulesTags, m_prefetchReferrerPolicy);
+
     if (isLink()) {
         if (focused() && isEnterKeyKeydownEvent(event) && treatLinkAsLiveForEventType(NonMouseEvent)) {
             event.setDefaultHandled();
@@ -173,7 +183,7 @@ void HTMLAnchorElement::defaultEventHandler(Event& event)
             // for the LiveWhenNotFocused editable link behavior
             auto& eventNames = WebCore::eventNames();
             if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); event.type() == eventNames.mousedownEvent && mouseEvent && mouseEvent->button() != MouseButton::Right && document().frame()) {
-                setRootEditableElementForSelectionOnMouseDown(document().frame()->selection().selection().rootEditableElement());
+                setRootEditableElementForSelectionOnMouseDown(document().frame()->selection().selection().protectedRootEditableElement().get());
                 m_wasShiftKeyDownOnMouseDown = mouseEvent->shiftKey();
             } else if (event.type() == eventNames.mouseoverEvent) {
                 // These are cleared on mouseover and not mouseout because their values are needed for drag events,
@@ -232,7 +242,11 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
     } else if (name == nameAttr)
-        document().processInternalResourceLinks(this);
+        protectedDocument()->processInternalResourceLinks(this);
+
+    // Check speculation rules for any attribute change to catch either an href attribute change
+    // or anything that can impact CSS selectors.
+    checkForSpeculationRules();
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
@@ -259,12 +273,7 @@ bool HTMLAnchorElement::draggable() const
 
 URL HTMLAnchorElement::href() const
 {
-    return document().completeURL(attributeWithoutSynchronization(hrefAttr));
-}
-
-void HTMLAnchorElement::setHref(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(hrefAttr, value);
+    return protectedDocument()->completeURL(attributeWithoutSynchronization(hrefAttr));
 }
 
 bool HTMLAnchorElement::hasRel(Relation relation) const
@@ -275,7 +284,7 @@ bool HTMLAnchorElement::hasRel(Relation relation) const
 DOMTokenList& HTMLAnchorElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return document.settings().systemPreviewEnabled();
@@ -283,7 +292,7 @@ DOMTokenList& HTMLAnchorElement::relList()
             UNUSED_PARAM(document);
 #endif
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
-        });
+        }));
     }
     return *m_relList;
 }
@@ -325,7 +334,7 @@ String HTMLAnchorElement::text()
 
 void HTMLAnchorElement::setText(String&& text)
 {
-    setTextContent(WTFMove(text));
+    setTextContent(WTF::move(text));
 }
 
 bool HTMLAnchorElement::isLiveLink() const
@@ -338,16 +347,14 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
     if (!document().frame())
         return;
 
-    if (!document().settings().hyperlinkAuditingEnabled())
-        return;
-
     const auto& pingValue = attributeWithoutSynchronization(pingAttr);
     if (pingValue.isNull())
         return;
 
+    Ref document = this->document();
     SpaceSplitString pingURLs(pingValue, SpaceSplitString::ShouldFoldCase::No);
     for (auto& pingURL : pingURLs)
-        PingLoader::sendPing(*document().frame(), document().completeURL(pingURL), destinationURL);
+        PingLoader::sendPing(*document->protectedFrame(), document->completeURL(pingURL), destinationURL);
 }
 
 #if USE(SYSTEM_PREVIEW)
@@ -385,12 +392,13 @@ std::optional<URL> HTMLAnchorElement::attributionDestinationURLForPCM() const
 
 std::optional<RegistrableDomain> HTMLAnchorElement::mainDocumentRegistrableDomainForPCM() const
 {
-    if (auto* page = document().page()) {
+    Ref document = this->document();
+    if (RefPtr page = document->page()) {
         if (auto mainFrameURL = page->mainFrameURL(); !mainFrameURL.isEmpty())
             return RegistrableDomain(mainFrameURL);
     }
 
-    protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
+    document->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
     return std::nullopt;
 }
 
@@ -442,13 +450,13 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
 
     auto privateClickMeasurement = PrivateClickMeasurement {
         SourceID(0),
-        SourceSite(WTFMove(*mainDocumentRegistrableDomain)),
+        SourceSite(WTF::move(*mainDocumentRegistrableDomain)),
         AttributionDestinationSite(*attributionDestinationDomain),
         bundleID,
         WallTime::now(),
         PCM::AttributionEphemeral::No
     };
-    privateClickMeasurement.setEphemeralSourceNonce(WTFMove(*attributionSourceNonce));
+    privateClickMeasurement.setEphemeralSourceNonce(WTF::move(*attributionSourceNonce));
     privateClickMeasurement.setAdamID(*adamID);
     return privateClickMeasurement;
 }
@@ -459,7 +467,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     using SourceSite = PCM::SourceSite;
     using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
-    RefPtr page = document().protectedPage();
+    RefPtr page = document().page();
     if (!page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
         return std::nullopt;
 
@@ -516,7 +524,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
 
     PrivateClickMeasurement privateClickMeasurement {
         SourceID(attributionSourceID.value()),
-        SourceSite(WTFMove(mainDocumentRegistrableDomain)),
+        SourceSite(WTF::move(mainDocumentRegistrableDomain)),
         AttributionDestinationSite(destinationURL),
         bundleID,
         WallTime::now(),
@@ -524,7 +532,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     };
 
     if (auto ephemeralNonce = attributionSourceNonceForPCM())
-        privateClickMeasurement.setEphemeralSourceNonce(WTFMove(*ephemeralNonce));
+        privateClickMeasurement.setEphemeralSourceNonce(WTF::move(*ephemeralNonce));
 
     return privateClickMeasurement;
 }
@@ -570,14 +578,14 @@ void HTMLAnchorElement::handleClick(Event& event)
     systemPreviewInfo.isPreview = isSystemPreviewLink() && document->settings().systemPreviewEnabled();
 
     if (systemPreviewInfo.isPreview) {
-        systemPreviewInfo.element.elementIdentifier = identifier();
+        systemPreviewInfo.element.nodeIdentifier = nodeIdentifier();
         systemPreviewInfo.element.documentIdentifier = document->identifier();
         systemPreviewInfo.element.webPageIdentifier = document->pageID();
         if (auto* child = firstElementChild())
             systemPreviewInfo.previewRect = child->boundsInRootViewSpace();
 
         if (RefPtr page = document->page())
-            page->beginSystemPreview(completedURL, document->topOrigin().data(), WTFMove(systemPreviewInfo), [keepBlobAlive = URLKeepingBlobAlive(completedURL, document->topOrigin().data())] { });
+            page->beginSystemPreview(completedURL, document->topOrigin().data(), WTF::move(systemPreviewInfo), [keepBlobAlive = URLKeepingBlobAlive(completedURL, document->topOrigin().data())] { });
         return;
     }
 #endif
@@ -594,14 +602,14 @@ void HTMLAnchorElement::handleClick(Event& event)
     // Thus, URLs should be empty for now.
     ASSERT(!privateClickMeasurement || (privateClickMeasurement->attributionReportClickSourceURL().isNull() && privateClickMeasurement->attributionReportClickDestinationURL().isNull()));
 
-    frame->protectedLoader()->changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document->shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, WTFMove(privateClickMeasurement));
+    frame->loader().changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document->shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, WTF::move(privateClickMeasurement), NavigationHistoryBehavior::Push, this);
 
     sendPings(completedURL);
 
     // Preconnect to the link's target for improved page load time.
     if (completedURL.protocolIsInHTTPFamily() && document->settings().linkPreconnectEnabled() && ((frame->isMainFrame() && isSelfTargetFrameName(effectiveTarget)) || isBlankTargetFrameName(effectiveTarget))) {
         auto storageCredentialsPolicy = frame->page() && frame->page()->canUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
-        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), completedURL, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, [] (ResourceError) { });
+        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), ResourceRequest { WTF::move(completedURL) }, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, [] (ResourceError) { });
     }
 }
 
@@ -675,7 +683,7 @@ Element* HTMLAnchorElement::rootEditableElementForSelectionOnMouseDown() const
 {
     if (!m_hasRootEditableElementForSelectionOnMouseDown)
         return 0;
-    return rootEditableElementMap().get(*this).get();
+    return rootEditableElementMap().get(*this);
 }
 
 void HTMLAnchorElement::clearRootEditableElementForSelectionOnMouseDown()
@@ -697,11 +705,6 @@ void HTMLAnchorElement::setRootEditableElementForSelectionOnMouseDown(Element* e
     m_hasRootEditableElementForSelectionOnMouseDown = true;
 }
 
-void HTMLAnchorElement::setReferrerPolicyForBindings(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(referrerpolicyAttr, value);
-}
-
 String HTMLAnchorElement::referrerPolicyForBindings() const
 {
     return referrerPolicyToString(referrerPolicy());
@@ -714,9 +717,47 @@ ReferrerPolicy HTMLAnchorElement::referrerPolicy() const
 
 Node::InsertedIntoAncestorResult HTMLAnchorElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    auto result = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    document().processInternalResourceLinks(this);
-    return result;
+    HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    protectedDocument()->processInternalResourceLinks(this);
+    if (document().settings().speculationRulesPrefetchEnabled())
+        return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+    return InsertedIntoAncestorResult::Done;
+}
+
+void HTMLAnchorElement::didFinishInsertingNode()
+{
+    HTMLElement::didFinishInsertingNode();
+    checkForSpeculationRules();
+}
+
+void HTMLAnchorElement::setFullURL(const URL& fullURL)
+{
+    setAttributeWithoutSynchronization(hrefAttr, AtomString { fullURL.string() });
+    checkForSpeculationRules();
+}
+
+void HTMLAnchorElement::setShouldBePrefetched(SpeculationRules::Eagerness eagerness, Vector<String>&& tags, std::optional<ReferrerPolicy>&& referrerPolicy)
+{
+    // Map SpeculationRules::Eagerness to the anchor's PrefetchEagerness.
+    // Only Immediate triggers immediate prefetch; all others fall back to conservative behavior.
+    m_prefetchEagerness = eagerness == SpeculationRules::Eagerness::Immediate ? PrefetchEagerness::Immediate : PrefetchEagerness::Conservative;
+    m_speculationRulesTags = WTF::move(tags);
+    m_prefetchReferrerPolicy = WTF::move(referrerPolicy);
+    if (m_prefetchEagerness == PrefetchEagerness::Immediate)
+        protectedDocument()->prefetch(href(), m_speculationRulesTags, m_prefetchReferrerPolicy, true);
+}
+
+void HTMLAnchorElement::checkForSpeculationRules()
+{
+    if (!document().settings().speculationRulesPrefetchEnabled())
+        return;
+    if (auto prefetchRule = SpeculationRulesMatcher::hasMatchingRule(protectedDocument(), *this))
+        setShouldBePrefetched(prefetchRule->eagerness, WTF::move(prefetchRule->tags), WTF::move(prefetchRule->referrerPolicy));
+    else {
+        m_prefetchEagerness = PrefetchEagerness::None;
+        m_speculationRulesTags.clear();
+        m_prefetchReferrerPolicy = std::nullopt;
+    }
 }
 
 }

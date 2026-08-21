@@ -62,7 +62,7 @@ pas_bitfit_page_config_variant_get_string(pas_bitfit_page_config_variant variant
     case pas_marge_bitfit_page_config_variant:
         return "marge";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -77,7 +77,7 @@ pas_bitfit_page_config_variant_get_capitalized_string(pas_bitfit_page_config_var
     case pas_marge_bitfit_page_config_variant:
         return "Marge";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

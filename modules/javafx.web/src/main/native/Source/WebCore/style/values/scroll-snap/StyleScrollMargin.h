@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,87 +24,71 @@
 
 #pragma once
 
-#include "BoxExtents.h"
-#include "CSSPrimitiveNumericUnits.h"
-#include "Length.h"
-#include "StyleValueTypes.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 
-class CSSValue;
 class LayoutRect;
 class LayoutUnit;
-class RenderStyle;
 
 namespace Style {
-
-class BuilderState;
 
 // <'scroll-margin-*'> = <length>
 // https://drafts.csswg.org/css-scroll-snap-1/#margin-longhands-physical
 struct ScrollMarginEdge {
-    ScrollMarginEdge(WebCore::Length&& value)
-        : m_value { WTFMove(value) }
+    using Fixed = Length<CSS::AllUnzoomed>;
+
+    ScrollMarginEdge(Fixed&& fixed) : m_value(fixed) { }
+    ScrollMarginEdge(const Fixed& fixed) : m_value(fixed) { }
+
+    ScrollMarginEdge(CSS::ValueLiteral<CSS::LengthUnit::Px> literal) : m_value(literal) { }
+
+    ALWAYS_INLINE bool isZero() const { return m_value.isZero(); }
+    ALWAYS_INLINE bool isPositive() const { return m_value.isPositive(); }
+    ALWAYS_INLINE bool isNegative() const { return m_value.isNegative(); }
+
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
     {
-        RELEASE_ASSERT(m_value.isSpecified());
+        auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
+
+        return visitor(m_value);
     }
-
-    ScrollMarginEdge(CSS::ValueLiteral<CSS::LengthUnit::Px> pixels)
-        : m_value { pixels.value, WebCore::LengthType::Fixed }
-    {
-    }
-
-    ScrollMarginEdge(CSS::ValueLiteral<CSS::PercentageUnit::Percentage> percentage)
-        : m_value { percentage.value, WebCore::LengthType::Percent }
-    {
-    }
-
-    LayoutUnit evaluate(LayoutUnit referenceLength) const;
-    float evaluate(float referenceLength) const;
-
-    Ref<CSSValue> toCSS(const RenderStyle&) const;
-
-    bool isZero() const { return m_value.isZero(); }
 
     bool operator==(const ScrollMarginEdge&) const = default;
 
 private:
-    WebCore::Length m_value;
+    friend struct Evaluation<ScrollMarginEdge, LayoutUnit>;
+    friend struct Evaluation<ScrollMarginEdge, float>;
+
+    Fixed m_value;
 };
 
 // <'scroll-margin'> = <length>{1,4}
 // https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-margin
-struct ScrollMargin : SpaceSeparatedRectEdges<ScrollMarginEdge> {
-    using Wrapped = SpaceSeparatedRectEdges<ScrollMarginEdge>;
-    using Wrapped::Wrapped;
-    using Wrapped::operator=;
-
-    template<size_t I> friend const auto& get(const ScrollMargin& self)
-    {
-        return get<I>(static_cast<const Wrapped&>(self));
-    }
-
-    bool operator==(const ScrollMargin&) const = default;
-};
+using ScrollMarginBox = MinimallySerializingSpaceSeparatedRectEdges<ScrollMarginEdge>;
 
 // MARK: - Conversion
 
-ScrollMarginEdge scrollMarginEdgeFromCSSValue(const CSSValue&, BuilderState&);
+template<> struct CSSValueConversion<ScrollMarginEdge> { auto operator()(BuilderState&, const CSSValue&) -> ScrollMarginEdge; };
 
 // MARK: - Evaluation
 
-template<> struct Evaluation<ScrollMarginEdge> {
-    template<typename T> auto operator()(const ScrollMarginEdge& edge, T referenceLength) -> T
-    {
-        return edge.evaluate(referenceLength);
-    }
+template<> struct Evaluation<ScrollMarginEdge, LayoutUnit> {
+    auto operator()(const ScrollMarginEdge&, LayoutUnit referenceLength, ZoomFactor) -> LayoutUnit;
+    auto operator()(const ScrollMarginEdge&, ZoomFactor) -> LayoutUnit;
+};
+template<> struct Evaluation<ScrollMarginEdge, float> {
+    auto operator()(const ScrollMarginEdge&, float referenceLength, ZoomFactor) -> float;
+    auto operator()(const ScrollMarginEdge&, ZoomFactor) -> float;
 };
 
 // MARK: - Extent
 
-LayoutBoxExtent extentForRect(const ScrollMargin&, const LayoutRect&);
+LayoutBoxExtent extentForRect(const ScrollMarginBox&, const LayoutRect&, ZoomFactor);
 
 } // namespace Style
 } // namespace WebCore
 
-DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::ScrollMargin, 4)
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::ScrollMarginEdge)

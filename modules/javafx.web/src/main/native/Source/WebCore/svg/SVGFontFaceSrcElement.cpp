@@ -28,11 +28,12 @@
 #include "SVGFontFaceNameElement.h"
 #include "SVGFontFaceUriElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFontFaceSrcElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFontFaceSrcElement);
 
 using namespace SVGNames;
 
@@ -50,16 +51,16 @@ Ref<SVGFontFaceSrcElement> SVGFontFaceSrcElement::create(const QualifiedName& ta
 Ref<CSSValueList> SVGFontFaceSrcElement::createSrcValue() const
 {
     CSSValueListBuilder list;
-    for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (RefPtr element = dynamicDowncast<SVGFontFaceUriElement>(child)) {
+    for (Ref child : childrenOfType<SVGElement>(*this)) {
+        if (RefPtr element = dynamicDowncast<SVGFontFaceUriElement>(child.get())) {
             if (auto srcValue = element->createSrcValue(); !srcValue->isEmpty())
-                list.append(WTFMove(srcValue));
-        } else if (RefPtr element = dynamicDowncast<SVGFontFaceNameElement>(child)) {
+                list.append(WTF::move(srcValue));
+        } else if (RefPtr element = dynamicDowncast<SVGFontFaceNameElement>(child.get())) {
             if (auto srcValue = element->createSrcValue(); !srcValue->isEmpty())
-                list.append(WTFMove(srcValue));
+                list.append(WTF::move(srcValue));
     }
     }
-    return CSSValueList::createCommaSeparated(WTFMove(list));
+    return CSSValueList::createCommaSeparated(WTF::move(list));
 }
 
 void SVGFontFaceSrcElement::childrenChanged(const ChildChange& change)

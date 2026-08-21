@@ -42,6 +42,9 @@ public:
     static StyleSheetContents* quirksStyleSheet;
     static StyleSheetContents* svgStyleSheet;
     static StyleSheetContents* mathMLStyleSheet;
+    static StyleSheetContents* mathMLCoreExtrasStyleSheet;
+    static StyleSheetContents* mathMLFontSizeMathStyleSheet;
+    static StyleSheetContents* mathMLLegacyFontSizeMathStyleSheet;
     static StyleSheetContents* mediaQueryStyleSheet;
     static StyleSheetContents* horizontalFormControlsStyleSheet;
     static StyleSheetContents* htmlSwitchControlStyleSheet;

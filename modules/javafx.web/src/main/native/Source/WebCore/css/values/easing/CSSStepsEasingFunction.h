@@ -59,7 +59,7 @@ struct StepsEasingParameters {
     using End       = Kind<Integer<Range{1,Range::infinity}>, Keyword::End, ShouldSerializeKeyword::No>;
     using JumpNone  = Kind<Integer<Range{2,Range::infinity}>, Keyword::JumpNone>;
 
-    std::variant<
+    Variant<
         JumpStart,
         JumpEnd,
         JumpBoth,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010 &yet, LLC. (nate@andyet.net)
@@ -11,7 +11,7 @@
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
- * the Initial Developer. All Rights Reserved.
+ * the Initial Developer. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -73,6 +73,7 @@
 #include <wtf/DateMath.h>
 
 #include <algorithm>
+#include <charconv>
 #include <limits>
 #include <stdint.h>
 #include <time.h>
@@ -95,9 +96,9 @@
 namespace WTF {
 
 static Lock innerTimeZoneOverrideLock;
-static Vector<UChar>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOverrideLock)
+static Vector<char16_t>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOverrideLock)
 {
-    static NeverDestroyed<Vector<UChar>> timeZoneOverride;
+    static NeverDestroyed<Vector<char16_t>> timeZoneOverride;
     return timeZoneOverride;
 }
 
@@ -133,8 +134,8 @@ static void appendTwoDigitNumber(StringBuilder& builder, int number)
 {
     ASSERT(number >= 0);
     ASSERT(number < 100);
-    builder.append(static_cast<LChar>('0' + number / 10));
-    builder.append(static_cast<LChar>('0' + number % 10));
+    builder.append(static_cast<Latin1Character>('0' + number / 10));
+    builder.append(static_cast<Latin1Character>('0' + number % 10));
 }
 
 static inline double msToMilliseconds(double ms)
@@ -302,11 +303,11 @@ static double calculateDSTOffset(time_t localTime, double utcOffset)
 LocalTimeOffset calculateLocalTimeOffset(double ms, TimeType inputTimeType)
 {
 #if HAVE(TM_GMTOFF)
-    double localToUTCTimeOffset = inputTimeType == LocalTime ? calculateUTCOffset() : 0;
+    double localToUTCTimeOffset = inputTimeType == TimeType::LocalTime ? calculateUTCOffset() : 0;
 #else
     double localToUTCTimeOffset = calculateUTCOffset();
 #endif
-    if (inputTimeType == LocalTime)
+    if (inputTimeType == TimeType::LocalTime)
         ms -= localToUTCTimeOffset;
 
     // On Mac OS X, the call to localtime (see calculateDSTOffset) will return historically accurate
@@ -371,10 +372,11 @@ static inline double ymdhmsToMilliseconds(int year, long mon, long day, long hou
 
 // We follow the recommendation of RFC 2822 to consider all
 // obsolete time zones not listed here equivalent to "-0000".
-static constexpr struct KnownZone {
+struct KnownZone {
     ASCIILiteral tzName;
     int tzOffset;
-} knownZones[] = {
+};
+static constexpr auto knownZones = std::to_array<KnownZone>({
     { "ut"_s, 0 },
     { "gmt"_s, 0 },
     { "est"_s, -300 },
@@ -385,9 +387,9 @@ static constexpr struct KnownZone {
     { "mdt"_s, -360 },
     { "pst"_s, -480 },
     { "pdt"_s, -420 }
-};
+});
 
-inline static void skipSpacesAndComments(std::span<const LChar>& s)
+inline static void skipSpacesAndComments(std::span<const Latin1Character>& s)
 {
     int nesting = 0;
     while (!s.empty()) {
@@ -405,12 +407,12 @@ inline static void skipSpacesAndComments(std::span<const LChar>& s)
 }
 
 // returns 0-11 (Jan-Dec); -1 on failure
-static int findMonth(std::span<const LChar> monthStr)
+static int findMonth(std::span<const Latin1Character> monthStr)
 {
     if (monthStr.size() < 3)
             return -1;
 
-    std::array<LChar, 3> needle;
+    std::array<Latin1Character, 3> needle;
     for (unsigned i = 0; i < 3; ++i)
         needle[i] = toASCIILower(monthStr[i]);
     constexpr auto haystack = "janfebmaraprmayjunjulaugsepoctnovdec"_span;
@@ -421,37 +423,41 @@ static int findMonth(std::span<const LChar> monthStr)
     return -1;
 }
 
-static bool parseInt(std::span<const LChar>& string, int base, int* result)
+template<typename T, typename ValidateLongLambda>
+static bool safeStringToInteger(std::span<const Latin1Character>& string, int base, const ValidateLongLambda& validateResult, T* result)
 {
-    char* stopPosition;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    long longResult = strtol(byteCast<char>(string.data()), &stopPosition, base);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    // Avoid the use of errno as it is not available on Windows CE
-    if (byteCast<char>(string.data()) == stopPosition || longResult <= std::numeric_limits<int>::min() || longResult >= std::numeric_limits<int>::max())
+    auto charSpan = byteCast<char>(string);
+    // strtol() skips leading whitespace ('\t', '\n', '\v', '\f', '\r', ' ') while std::from_chars() does not.
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(charSpan);
+    // strtol() skips leading '+' sign.
+    skipExactly(charSpan, '+');
+    long value;
+    auto [ptr, ec] = std::from_chars(std::to_address(charSpan.begin()), std::to_address(charSpan.end()), value, base);
+    if (ec != std::errc { } || !validateResult(value))
         return false;
-    skip(string, stopPosition - byteCast<char>(string.data()));
-    *result = longResult;
+    string = byteCast<Latin1Character>(charSpan.subspan(ptr - std::to_address(charSpan.begin())));
+    *result = static_cast<T>(value);
     return true;
 }
 
-static bool parseLong(std::span<const LChar>& string, int base, long* result)
+static bool parseInt(std::span<const Latin1Character>& string, int base, int* result)
 {
-    char* stopPosition;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    *result = strtol(byteCast<char>(string.data()), &stopPosition, base);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    // Avoid the use of errno as it is not available on Windows CE
-    if (byteCast<char>(string.data()) == stopPosition || *result == std::numeric_limits<long>::min() || *result == std::numeric_limits<long>::max())
-        return false;
-    skip(string, stopPosition - byteCast<char>(string.data()));
-    return true;
+    return safeStringToInteger(string, base, [](long value) {
+        return value > std::numeric_limits<int>::min() && value < std::numeric_limits<int>::max();
+    }, result);
+}
+
+static bool parseLong(std::span<const Latin1Character>& string, int base, long* result)
+{
+    return safeStringToInteger(string, base, [](long value) {
+        return value != std::numeric_limits<long>::min() && value != std::numeric_limits<long>::max();
+    }, result);
 }
 
 // Parses a date with the format YYYY[-MM[-DD]].
 // Year parsing is lenient, allows any number of digits, and +/-.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& year, long& month, long& day)
+static bool parseES5DatePortion(std::span<const Latin1Character>& currentPosition, int& year, long& month, long& day, bool& isSingleDigit)
 {
     // This is a bit more lenient on the year string than ES5 specifies:
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
@@ -471,7 +477,9 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
     auto postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &month))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if ((postParsePosition.data() - currentPosition.data()) == 1)
+        isSingleDigit = true;
+    else if ((postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
 
@@ -484,7 +492,9 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
     postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &day))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if ((postParsePosition.data() - currentPosition.data()) == 1)
+        isSingleDigit = true;
+    else if ((postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
     return true;
@@ -493,7 +503,7 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
 // Parses a time with the format HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)].
 // Fractional seconds parsing is lenient, allows any number of digits.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds)
+static bool parseES5TimePortion(std::span<const Latin1Character>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds, bool hasTSymbol)
 {
     isLocalTime = false;
 
@@ -503,7 +513,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     auto postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &hours))
         return false;
-    if (postParsePosition.empty() || postParsePosition.front() != ':' || (postParsePosition.data() - currentPosition.data()) != 2)
+    if (postParsePosition.empty() || postParsePosition.front() != ':' || (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2))
         return false;
     currentPosition = postParsePosition.subspan(1);
 
@@ -512,7 +522,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &minutes))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
 
@@ -523,7 +533,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
         postParsePosition = currentPosition;
         if (!parseLong(postParsePosition, 10, &seconds))
             return false;
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
         if (!postParsePosition.empty() && postParsePosition.front() == '.') {
             currentPosition = postParsePosition.subspan(1);
@@ -570,7 +580,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     if (!parseLong(postParsePosition, 10, &tzHours))
         return false;
     if (postParsePosition.empty() || postParsePosition.front() != ':') {
-        if ((postParsePosition.data() - currentPosition.data()) == 2) {
+        if (!hasTSymbol && (postParsePosition.data() - currentPosition.data()) == 2) {
             // "00" case.
             tzHoursAbs = labs(tzHours);
         } else if ((postParsePosition.data() - currentPosition.data()) == 4) {
@@ -582,7 +592,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
             return false;
     } else {
         // "00:00" case.
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
         tzHoursAbs = labs(tzHours);
         currentPosition = postParsePosition.subspan(1); // Skip ":".
@@ -592,12 +602,12 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
         postParsePosition = currentPosition;
         if (!parseLong(postParsePosition, 10, &tzMinutes))
             return false;
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
     }
     currentPosition = postParsePosition;
 
-    if (tzHoursAbs > 24)
+    if (tzHoursAbs > 23)
         return false;
     if (tzMinutes < 0 || tzMinutes > 59)
         return false;
@@ -609,7 +619,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     return true;
 }
 
-double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
+double parseES5Date(std::span<const Latin1Character> dateString, bool& isLocalTime)
 {
     isLocalTime = false;
 
@@ -628,21 +638,31 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
     long seconds = 0;
     double milliseconds = 0;
     long timeZoneSeconds = 0;
+    bool isSingleDigit = false;
 
     // Parse the date YYYY[-MM[-DD]]
-    if (!parseES5DatePortion(dateString, year, month, day))
+    if (!parseES5DatePortion(dateString, year, month, day, isSingleDigit))
         return std::numeric_limits<double>::quiet_NaN();
     // Look for a time portion.
     // Note: As of ES2016, when a UTC offset is missing, date-time forms are local time while date-only forms are UTC.
     if (!dateString.empty() && (dateString.front() == 'T' || dateString.front() == 't' || dateString.front() == ' ')) {
+        const bool hasTSymbol = dateString.front() == 'T' || dateString.front() == 't';
         skip(dateString, 1);
+
+        // when dataString does not follow ISO8601 format, return NaN
+        if (isSingleDigit && hasTSymbol)
+            return std::numeric_limits<double>::quiet_NaN();
+
         // Parse the time HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)]
-        if (!parseES5TimePortion(dateString, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds))
+        if (!parseES5TimePortion(dateString, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds, hasTSymbol))
             return std::numeric_limits<double>::quiet_NaN();
     }
     // Check that we have parsed all characters in the string.
     if (!dateString.empty())
         return std::numeric_limits<double>::quiet_NaN();
+
+    if (isSingleDigit)
+        isLocalTime = true;
 
     // A few of these checks could be done inline above, but since many of them are interrelated
     // we would be sacrificing readability to "optimize" the (presumably less common) failure path.
@@ -669,7 +689,7 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
 }
 
 // Odd case where 'exec' is allowed to be 0, to accomodate a caller in WebCore.
-double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
+double parseDate(std::span<const Latin1Character> dateString, bool& isLocalTime)
 {
     isLocalTime = true;
     int offset = 0;
@@ -957,16 +977,19 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
     }
     ASSERT(year);
 
+    if (day <= 0 || day > 31)
+        return std::numeric_limits<double>::quiet_NaN();
+
     return ymdhmsToMilliseconds(year.value(), month + 1, day, hour, minute, second, 0) - offset * (secondsPerMinute * msPerSecond);
 }
 
-double parseDate(std::span<const LChar> dateString)
+double parseDate(std::span<const Latin1Character> dateString)
 {
     bool isLocalTime;
     double value = parseDate(dateString, isLocalTime);
 
     if (isLocalTime)
-        value -= calculateLocalTimeOffset(value, LocalTime).offset;
+        value -= calculateLocalTimeOffset(value, TimeType::LocalTime).offset;
 
     return value;
 }
@@ -992,11 +1015,11 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     return stringBuilder.toString();
 }
 
-static std::optional<Vector<UChar, 32>> validateTimeZone(StringView timeZone)
+static std::optional<Vector<char16_t, 32>> validateTimeZone(StringView timeZone)
 {
     auto buffer = timeZone.upconvertedCharacters();
-    const UChar* characters = buffer;
-    Vector<UChar, 32> canonicalBuffer;
+    const char16_t* characters = buffer;
+    Vector<char16_t, 32> canonicalBuffer;
     auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, characters, timeZone.length(), canonicalBuffer, nullptr);
     if (!U_SUCCESS(status))
         return std::nullopt;
@@ -1022,12 +1045,12 @@ bool setTimeZoneOverride(StringView timeZone)
 
     {
         Locker locker { innerTimeZoneOverrideLock };
-        innerTimeZoneOverride() = WTFMove(*canonicalBuffer);
+        innerTimeZoneOverride() = WTF::move(*canonicalBuffer);
     }
     return true;
 }
 
-void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID)
+void getTimeZoneOverride(Vector<char16_t, 32>& timeZoneID)
 {
     Locker locker { innerTimeZoneOverrideLock };
     timeZoneID = innerTimeZoneOverride();

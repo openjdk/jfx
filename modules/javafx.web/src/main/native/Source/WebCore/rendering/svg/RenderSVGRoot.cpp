@@ -32,11 +32,13 @@
 #include "Page.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderTreeBuilder.h"
@@ -48,22 +50,23 @@
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
 #include "TransformState.h"
+#include "VisibleRectContext.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGRoot);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGRoot);
 
 const int defaultWidth = 300;
 const int defaultHeight = 150;
 
 RenderSVGRoot::RenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
-    : RenderReplaced(Type::SVGRoot, element, WTFMove(style))
+    : RenderReplaced(Type::SVGRoot, element, WTF::move(style))
 {
     ASSERT(isRenderSVGRoot());
-    LayoutSize intrinsicSize(calculateIntrinsicSize());
+    LayoutSize intrinsicSize(computeIntrinsicSize());
     if (!intrinsicSize.width())
         intrinsicSize.setWidth(defaultWidth);
     if (!intrinsicSize.height())
@@ -96,38 +99,45 @@ bool RenderSVGRoot::hasIntrinsicAspectRatio() const
     return computeIntrinsicAspectRatio();
 }
 
-FloatSize RenderSVGRoot::calculateIntrinsicSize() const
+FloatSize RenderSVGRoot::computeIntrinsicSize() const
 {
-    return FloatSize(floatValueForLength(svgSVGElement().intrinsicWidth(), 0), floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
+    ASSERT_IMPLIES(view().frameView().layoutContext().isInRenderTreeLayout(), !shouldApplySizeContainment());
+    // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
+    FloatSize intrinsicSize = { svgSVGElement().intrinsicWidth(), svgSVGElement().intrinsicHeight() };
+    // Transpose for vertical writing mode
+    if (!isHorizontalWritingMode())
+        return intrinsicSize.transposedSize();
+    return intrinsicSize;
 }
 
-void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
+FloatSize RenderSVGRoot::preferredAspectRatio() const
 {
     ASSERT(!shouldApplySizeContainment());
 
-    // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
-    intrinsicSize = calculateIntrinsicSize();
+    if (style().aspectRatio().isRatio())
+        return FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value);
 
-    if (style().aspectRatioType() == AspectRatioType::Ratio) {
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
-        return;
-    }
-
+    auto intrinsicSize = computeIntrinsicSize();
     std::optional<LayoutSize> intrinsicRatioValue;
     if (!intrinsicSize.isEmpty())
         intrinsicRatioValue = { intrinsicSize.width(), intrinsicSize.height() };
     else {
-        FloatSize viewBoxSize = svgSVGElement().viewBox().size();
+        FloatSize viewBoxSize = svgSVGElement().currentViewBoxRect().size();
         if (!viewBoxSize.isEmpty()) {
             // The viewBox can only yield an intrinsic ratio, not an intrinsic size.
+            if (isHorizontalWritingMode())
             intrinsicRatioValue = { viewBoxSize.width(), viewBoxSize.height() };
+            else
+                intrinsicRatioValue = { viewBoxSize.height(), viewBoxSize.width() };
         }
     }
 
     if (intrinsicRatioValue)
-        intrinsicRatio = *intrinsicRatioValue;
-    else if (style().aspectRatioType() == AspectRatioType::AutoAndRatio)
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
+        return *intrinsicRatioValue;
+    if (style().aspectRatio().isAutoAndRatio())
+        return FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value);
+    return { };
+
 }
 
 bool RenderSVGRoot::isEmbeddedThroughSVGImage() const
@@ -298,7 +308,7 @@ void RenderSVGRoot::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     // sit above the background/border.
     if ((paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground) && hasNonVisibleOverflow() && layer() && layer()->scrollableArea()
         && style().usedVisibility() == Visibility::Visible && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
-        layer()->scrollableArea()->paintOverflowControls(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
+        layer()->scrollableArea()->paintOverflowControls(paintInfo.context(), paintInfo.paintBehavior, roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
 }
 
 void RenderSVGRoot::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -398,9 +408,14 @@ bool RenderSVGRoot::paintingAffectedByExternalOffset() const
     return false;
 }
 
+std::optional<FloatRect> RenderSVGRoot::computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject*, VisibleRectContext) const
+{
+    return { };
+}
+
 bool RenderSVGRoot::needsHasSVGTransformFlags() const
 {
-    // Only mark us as transformed if really needed. Whenver a non-zero paintOffset could reach
+    // Only mark us as transformed if really needed. Whenever a non-zero paintOffset could reach
     // RenderSVGRoot from an ancestor, the pixel snapping logic needs to be applied. Since the rest
     // of the SVG subtree doesn't know anything about subpixel offsets, we'll have to stop use/set
     // 'adjustedSubpixelOffset' starting at the RenderSVGRoot boundary. This mostly affects inline
@@ -467,7 +482,7 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
 bool RenderSVGRoot::hasRelativeDimensions() const
 {
-    return svgSVGElement().intrinsicHeight().isPercentOrCalculated() || svgSVGElement().intrinsicWidth().isPercentOrCalculated();
+    return false;
 }
 
 FloatSize RenderSVGRoot::computeViewportSize() const

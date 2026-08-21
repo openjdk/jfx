@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CommonIdentifiers.h"
-#include "Identifier.h"
-#include "MathCommon.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/MathCommon.h>
 #include <array>
 #include <type_traits>
 #include <wtf/SegmentedVector.h>
@@ -40,7 +40,7 @@ namespace JSC {
 
     DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(IdentifierArena);
     class IdentifierArena {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena, IdentifierArena);
     public:
         IdentifierArena()
         {
@@ -50,7 +50,7 @@ namespace JSC {
         template <typename T>
         ALWAYS_INLINE const Identifier& makeIdentifier(VM&, std::span<const T> characters);
         ALWAYS_INLINE const Identifier& makeEmptyIdentifier(VM&);
-        ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM&, std::span<const UChar> characters);
+        ALWAYS_INLINE const Identifier& makeLatin1Identifier(VM&, std::span<const char16_t> characters);
         ALWAYS_INLINE const Identifier& makeIdentifier(VM&, SymbolImpl*);
 
         const Identifier* makeBigIntDecimalIdentifier(VM&, const Identifier&, uint8_t radix);
@@ -111,12 +111,12 @@ namespace JSC {
         return vm.propertyNames->emptyIdentifier;
     }
 
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM& vm, std::span<const UChar> characters)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeLatin1Identifier(VM& vm, std::span<const char16_t> characters)
     {
         if (characters.empty())
             return vm.propertyNames->emptyIdentifier;
         if (characters.front() >= MaximumCachableCharacter) {
-            m_identifiers.append(Identifier::createLCharFromUChar(vm, characters));
+            m_identifiers.append(Identifier::createLatin1(vm, characters));
             return m_identifiers.last();
         }
         if (characters.size() == 1) {
@@ -129,7 +129,7 @@ namespace JSC {
         Identifier* ident = m_recentIdentifiers[characters.front()];
         if (ident && Identifier::equal(ident->impl(), characters))
             return *ident;
-        m_identifiers.append(Identifier::createLCharFromUChar(vm, characters));
+        m_identifiers.append(Identifier::createLatin1(vm, characters));
         m_recentIdentifiers[characters.front()] = &m_identifiers.last();
         return m_identifiers.last();
     }
@@ -137,12 +137,11 @@ namespace JSC {
     inline const Identifier& IdentifierArena::makeNumericIdentifier(VM& vm, double number)
     {
         Identifier token;
-        // This is possible that number can be -0, but it is OK since ToString(-0) is "0".
-        if (canBeInt32(number))
-            token = Identifier::from(vm, static_cast<int32_t>(number));
+        if (auto int32Value = tryConvertToStrictInt32(number))
+            token = Identifier::from(vm, int32Value.value());
         else
             token = Identifier::from(vm, number);
-        m_identifiers.append(WTFMove(token));
+        m_identifiers.append(WTF::move(token));
         return m_identifiers.last();
     }
 
@@ -169,7 +168,7 @@ namespace JSC {
             ASSERT(size <= freeablePoolSize);
             size_t alignedSize = alignSize(size);
             ASSERT(alignedSize <= freeablePoolSize);
-            if (UNLIKELY(static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize))
+            if (static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize) [[unlikely]]
                 allocateFreeablePool();
             void* block = m_freeableMemory;
             m_freeableMemory += alignedSize;
@@ -191,7 +190,7 @@ namespace JSC {
 
         IdentifierArena& identifierArena()
         {
-            if (UNLIKELY (!m_identifierArena))
+            if (!m_identifierArena) [[unlikely]]
                 m_identifierArena = makeUnique<IdentifierArena>();
             return *m_identifierArena;
         }

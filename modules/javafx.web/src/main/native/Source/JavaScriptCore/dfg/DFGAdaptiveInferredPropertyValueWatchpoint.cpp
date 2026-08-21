@@ -28,13 +28,13 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "CodeBlock.h"
+#include "CodeBlockInlines.h"
 #include "DFGCommon.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(AdaptiveInferredPropertyValueWatchpoint);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(AdaptiveInferredPropertyValueWatchpoint);
 
 AdaptiveInferredPropertyValueWatchpoint::AdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition& key, CodeBlock* codeBlock)
     : Base(key)

@@ -26,8 +26,10 @@
 #include "config.h"
 #include "URLPatternParser.h"
 
+#include "ExceptionOr.h"
 #include "URLPatternCanonical.h"
 #include "URLPatternTokenizer.h"
+#include <ranges>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -35,7 +37,7 @@ namespace URLPatternUtilities {
 
 URLPatternParser::URLPatternParser(EncodingCallbackType type, String&& segmentWildcardRegexp)
     : m_callbackType(type)
-    , m_segmentWildcardRegexp(WTFMove(segmentWildcardRegexp))
+    , m_segmentWildcardRegexp(WTF::move(segmentWildcardRegexp))
 {
 }
 
@@ -63,7 +65,7 @@ ExceptionOr<void> URLPatternParser::performParse(const URLPatternStringOptions& 
 
             auto modifierToken = tryToConsumeModifierToken();
 
-            maybeFunctionException = addPart(WTFMove(prefix), nameToken, regexOrWildcardToken, { }, modifierToken);
+            maybeFunctionException = addPart(WTF::move(prefix), nameToken, regexOrWildcardToken, { }, modifierToken);
             if (maybeFunctionException.hasException())
                 return maybeFunctionException.releaseException();
 
@@ -76,7 +78,7 @@ ExceptionOr<void> URLPatternParser::performParse(const URLPatternStringOptions& 
             fixedToken = tryToConsumeToken(TokenType::EscapedChar);
 
         if (!fixedToken.isNull()) {
-            m_pendingFixedValue.append(WTFMove(fixedToken.value));
+            m_pendingFixedValue.append(WTF::move(fixedToken.value));
 
             continue;
         }
@@ -90,7 +92,7 @@ ExceptionOr<void> URLPatternParser::performParse(const URLPatternStringOptions& 
             consumeRequiredToken(TokenType::Close);
             auto modifierToken = tryToConsumeModifierToken();
 
-            maybeFunctionException = addPart(WTFMove(prefix), nameToken, regexOrWildcardToken, WTFMove(suffix), modifierToken);
+            maybeFunctionException = addPart(WTF::move(prefix), nameToken, regexOrWildcardToken, WTF::move(suffix), modifierToken);
             if (maybeFunctionException.hasException())
                 return maybeFunctionException.releaseException();
 
@@ -206,7 +208,7 @@ ExceptionOr<void> URLPatternParser::addPart(String&& prefix, const Token& nameTo
     }
 
     if (nameToken.isNull() && regexpOrWildcardToken.isNull() && modifier == Modifier::None) {
-        m_pendingFixedValue.append(WTFMove(prefix));
+        m_pendingFixedValue.append(WTF::move(prefix));
 
         return { };
     }
@@ -221,7 +223,7 @@ ExceptionOr<void> URLPatternParser::addPart(String&& prefix, const Token& nameTo
         if (prefix.isEmpty())
             return { };
 
-        auto encodedValue = callEncodingCallback(m_callbackType, WTFMove(prefix));
+        auto encodedValue = callEncodingCallback(m_callbackType, WTF::move(prefix));
         if (encodedValue.hasException())
             return encodedValue.releaseException();
 
@@ -261,15 +263,15 @@ ExceptionOr<void> URLPatternParser::addPart(String&& prefix, const Token& nameTo
     if (isDuplicateName(name))
         return Exception { ExceptionCode::TypeError, "Duplicate name token produced when adding to parser part list."_s };
 
-    auto encodedPrefix = callEncodingCallback(m_callbackType, WTFMove(prefix));
+    auto encodedPrefix = callEncodingCallback(m_callbackType, WTF::move(prefix));
     if (encodedPrefix.hasException())
         return encodedPrefix.releaseException();
 
-    auto encodedSuffix = callEncodingCallback(m_callbackType, WTFMove(suffix));
+    auto encodedSuffix = callEncodingCallback(m_callbackType, WTF::move(suffix));
     if (encodedSuffix.hasException())
         return encodedSuffix.releaseException();
 
-    m_partList.append(Part { type, WTFMove(regexValue), modifier, WTFMove(name), encodedPrefix.releaseReturnValue(), encodedSuffix.releaseReturnValue() });
+    m_partList.append(Part { type, WTF::move(regexValue), modifier, WTF::move(name), encodedPrefix.releaseReturnValue(), encodedSuffix.releaseReturnValue() });
 
     return { };
 }
@@ -308,13 +310,13 @@ String generateSegmentWildcardRegexp(const URLPatternStringOptions& options)
 template<typename CharacterType>
 static String escapeRegexStringForCharacters(std::span<const CharacterType> characters)
 {
-    static constexpr std::array regexEscapeCharacters { '.', '+', '*', '?', '^', '$', '{', '}', '(', ')', '[', ']', '|', '/', '\\' }; // NOLINT
+    static constexpr auto regexEscapeCharacters = std::to_array<const CharacterType>({ '.', '+', '*', '?', '^', '$', '{', '}', '(', ')', '[', ']', '|', '/', '\\' }); // NOLINT
 
     StringBuilder result;
     result.reserveCapacity(characters.size());
 
     for (auto character : characters) {
-        if (std::find(regexEscapeCharacters.begin(), regexEscapeCharacters.end(), character) != regexEscapeCharacters.end())
+        if (std::ranges::find(regexEscapeCharacters, character) != regexEscapeCharacters.end())
             result.append('\\');
 
         result.append(character);
@@ -417,7 +419,7 @@ std::pair<String, Vector<String>> generateRegexAndNameList(const Vector<Part>& p
 
     result.append('$');
 
-    return { result.toString(), WTFMove(nameList) };
+    return { result.toString(), WTF::move(nameList) };
 }
 
 // https://urlpattern.spec.whatwg.org/#generate-a-pattern-string
@@ -506,13 +508,13 @@ String generatePatternString(const Vector<Part>& partList, const URLPatternStrin
 template<typename CharacterType>
 static String escapePatternStringForCharacters(std::span<const CharacterType> characters)
 {
-    static constexpr std::array escapeCharacters { '+', '*', '?', ':', '(', ')', '\\', '{', '}' }; // NOLINT
+    static constexpr auto escapeCharacters = std::to_array<const CharacterType>({ '+', '*', '?', ':', '(', ')', '\\', '{', '}' }); // NOLINT
 
     StringBuilder result;
     result.reserveCapacity(characters.size());
 
     for (auto character : characters) {
-        if (std::find(escapeCharacters.begin(), escapeCharacters.end(), character) != escapeCharacters.end())
+        if (std::ranges::find(escapeCharacters, character) != escapeCharacters.end())
             result.append('\\');
 
         result.append(character);
@@ -533,7 +535,7 @@ String escapePatternString(StringView input)
 }
 
 // https://urlpattern.spec.whatwg.org/#is-a-valid-name-code-point
-bool isValidNameCodepoint(UChar codepoint, URLPatternUtilities::IsFirst first)
+bool isValidNameCodepoint(char16_t codepoint, URLPatternUtilities::IsFirst first)
 {
     if (first == URLPatternUtilities::IsFirst::Yes)
         return u_hasBinaryProperty(codepoint, UCHAR_ID_START) || codepoint == '_' || codepoint == '$';

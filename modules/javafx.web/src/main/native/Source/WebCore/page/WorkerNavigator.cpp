@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,15 @@
 #include "WorkerNavigator.h"
 
 #include "Chrome.h"
+#include "ContextDestructionObserverInlines.h"
 #include "GPU.h"
 #include "JSDOMPromiseDeferred.h"
+#include "NavigatorUAData.h"
 #include "Page.h"
 #include "PushEvent.h"
 #include "ServiceWorkerGlobalScope.h"
+#include "UserAgentStringData.h"
+#include "UserAgentStringParser.h"
 #include "WorkerBadgeProxy.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
@@ -40,7 +44,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerNavigator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerNavigator);
 
 WorkerNavigator::WorkerNavigator(ScriptExecutionContext& context, const String& userAgent, bool isOnline)
     : NavigatorBase(&context)
@@ -65,29 +69,16 @@ GPU* WorkerNavigator::gpu()
 {
 #if HAVE(WEBGPU_IMPLEMENTATION)
     if (!m_gpuForWebGPU) {
-        auto scriptExecutionContext = this->scriptExecutionContext();
-        if (scriptExecutionContext->isWorkerGlobalScope()) {
-            WorkerGlobalScope& workerGlobalScope = downcast<WorkerGlobalScope>(*scriptExecutionContext);
-            if (!workerGlobalScope.graphicsClient())
+        Ref context = downcast<WorkerGlobalScope>(*this->scriptExecutionContext());
+        if (!context->graphicsClient())
     return nullptr;
 
-            RefPtr gpu = workerGlobalScope.graphicsClient()->createGPUForWebGPU();
-            if (!gpu)
-                return nullptr;
-
-            m_gpuForWebGPU = GPU::create(*gpu);
-        } else if (scriptExecutionContext->isDocument()) {
-            Ref document = downcast<Document>(*scriptExecutionContext);
-            RefPtr page = document->page();
-            if (!page)
-                return nullptr;
-            RefPtr gpu = page->chrome().createGPUForWebGPU();
+        RefPtr gpu = context->graphicsClient()->createGPUForWebGPU();
             if (!gpu)
                 return nullptr;
 
             m_gpuForWebGPU = GPU::create(*gpu);
         }
-    }
 
     return m_gpuForWebGPU.get();
 #else
@@ -98,28 +89,41 @@ GPU* WorkerNavigator::gpu()
 void WorkerNavigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    if (is<ServiceWorkerGlobalScope>(scriptExecutionContext())) {
-        if (RefPtr declarativePushEvent = downcast<ServiceWorkerGlobalScope>(scriptExecutionContext())->declarativePushEvent()) {
-            declarativePushEvent->setUpdatedAppBadge(WTFMove(badge));
+    if (RefPtr context = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext())) {
+        if (RefPtr declarativePushEvent = context->declarativePushEvent()) {
+            declarativePushEvent->setUpdatedAppBadge(WTF::move(badge));
             return;
         }
     }
 #endif // ENABLE(DECLARATIVE_WEB_PUSH)
 
-    auto* scope = downcast<WorkerGlobalScope>(scriptExecutionContext());
+    RefPtr scope = downcast<WorkerGlobalScope>(scriptExecutionContext());
     if (!scope) {
         promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    if (auto* workerBadgeProxy = scope->thread().workerBadgeProxy())
+    if (CheckedPtr workerBadgeProxy = scope->thread()->workerBadgeProxy())
         workerBadgeProxy->setAppBadge(badge);
     promise->resolve();
 }
 
 void WorkerNavigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 {
-    setAppBadge(0, WTFMove(promise));
+    setAppBadge(0, WTF::move(promise));
 }
+
+NavigatorUAData& WorkerNavigator::userAgentData() const
+{
+    Ref parser = UserAgentStringParser::create(m_userAgent);
+    std::optional userAgentStringData = parser->parse();
+    if (userAgentStringData) {
+        m_navigatorUAData = NavigatorUAData::create(WTF::move(*userAgentStringData));
+        return *m_navigatorUAData;
+    }
+
+    m_navigatorUAData = NavigatorUAData::create();
+    return *m_navigatorUAData;
+};
 
 } // namespace WebCore

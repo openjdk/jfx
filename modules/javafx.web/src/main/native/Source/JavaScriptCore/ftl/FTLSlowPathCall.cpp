@@ -119,7 +119,7 @@ SlowPathCallContext::~SlowPathCallContext()
 SlowPathCallKey SlowPathCallContext::keyWithTarget(CodePtr<CFunctionPtrTag> callTarget) const
 {
     uint8_t numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled = 0;
-    if (UNLIKELY(Options::clobberAllRegsInFTLICSlowPath()))
+    if (Options::clobberAllRegsInFTLICSlowPath()) [[unlikely]]
         numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled = std::min(NUMBER_OF_ARGUMENT_REGISTERS, m_numArgs);
     return SlowPathCallKey(m_thunkSaveSet, callTarget, numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled, m_offset, 0);
 }
@@ -127,7 +127,7 @@ SlowPathCallKey SlowPathCallContext::keyWithTarget(CodePtr<CFunctionPtrTag> call
 SlowPathCallKey SlowPathCallContext::keyWithTarget(CCallHelpers::Address address) const
 {
     uint8_t numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled = 0;
-    if (UNLIKELY(Options::clobberAllRegsInFTLICSlowPath()))
+    if (Options::clobberAllRegsInFTLICSlowPath()) [[unlikely]]
         numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled = std::min(NUMBER_OF_ARGUMENT_REGISTERS, m_numArgs);
     return SlowPathCallKey(m_thunkSaveSet, nullptr, numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled, m_offset, address.offset);
 }

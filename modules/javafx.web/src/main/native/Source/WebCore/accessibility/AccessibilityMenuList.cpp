@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,34 @@
 #include "config.h"
 #include "AccessibilityMenuList.h"
 
+#include "AXLoggerBase.h"
+#include "AXNotifications.h"
+#include "AccessibilityObjectInlines.h"
 #include "AXObjectCache.h"
 #include "AccessibilityMenuListPopup.h"
+#include "FrameDestructionObserverInlines.h"
+#include "HTMLSelectElement.h"
 #include "RenderMenuList.h"
+#include "RenderObjectDocument.h"
 #include <wtf/Scope.h>
 
 namespace WebCore {
 
 AccessibilityMenuList::AccessibilityMenuList(AXID axID, RenderMenuList& renderer, AXObjectCache& cache)
-    : AccessibilityRenderObject(axID, renderer)
+    : AccessibilityRenderObject(axID, renderer, cache)
     , m_popup(downcast<AccessibilityMenuListPopup>(*cache.create(AccessibilityRole::MenuListPopup)))
 {
-    m_popup->setParent(this);
-
-    addChild(m_popup.get());
-    m_childrenInitialized = true;
 }
 
 Ref<AccessibilityMenuList> AccessibilityMenuList::create(AXID axID, RenderMenuList& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityMenuList(axID, renderer, cache));
+    Ref menuList = adoptRef(*new AccessibilityMenuList(axID, renderer, cache));
+    // We have to do this setup here and not in the constructor to avoid an
+    // adoptionIsRequired ASSERT in RefCounted.h.
+    menuList->m_popup->setParent(menuList.ptr());
+    menuList->addChild(menuList->m_popup.get());
+    menuList->m_childrenInitialized = true;
+    return menuList;
 }
 
 bool AccessibilityMenuList::press()
@@ -54,17 +62,17 @@ bool AccessibilityMenuList::press()
         return false;
 
 #if !PLATFORM(IOS_FAMILY)
-    RefPtr element = this->element();
+    RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(element());
     auto notification = AXNotification::PressDidFail;
-    if (CheckedPtr menuList = dynamicDowncast<RenderMenuList>(renderer()); menuList && element && !element->isDisabledFormControl()) {
-        if (menuList->popupIsVisible())
-            menuList->hidePopup();
+    if (selectElement && !selectElement->isDisabledFormControl()) {
+        if (selectElement->popupIsVisible())
+            selectElement->hidePopup();
         else
-            menuList->showPopup();
+            selectElement->showPopup();
         notification = AXNotification::PressDidSucceed;
     }
     if (CheckedPtr cache = axObjectCache())
-        cache->postNotification(element.get(), notification);
+        cache->postNotification(selectElement.get(), notification);
     return true;
 #endif
     return false;
@@ -87,10 +95,10 @@ void AccessibilityMenuList::updateChildrenIfNecessary()
 
 void AccessibilityMenuList::addChildren()
 {
-    // This class sets its children once in the constructor, and should never
+    // This class sets its children once in the create function, and should never
     // have dirty or uninitialized children afterwards.
-    ASSERT(m_childrenInitialized);
-    ASSERT(!m_childrenDirty);
+    AX_ASSERT(m_childrenInitialized);
+    AX_ASSERT(!m_childrenDirty);
 }
 
 bool AccessibilityMenuList::isCollapsed() const
@@ -101,8 +109,8 @@ bool AccessibilityMenuList::isCollapsed() const
         return true;
 
 #if !PLATFORM(IOS_FAMILY)
-    CheckedPtr menuList = dynamicDowncast<RenderMenuList>(renderer());
-    return !(menuList && menuList->popupIsVisible());
+    RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(element());
+    return !(selectElement && selectElement->usesMenuList() && selectElement->popupIsVisible());
 #else
     return true;
 #endif
@@ -122,8 +130,8 @@ void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
 
     const auto& childObjects = unignoredChildren();
     if (!childObjects.isEmpty()) {
-        ASSERT(childObjects.size() == 1);
-        ASSERT(is<AccessibilityMenuListPopup>(childObjects[0].get()));
+        AX_ASSERT(childObjects.size() == 1);
+        AX_ASSERT(is<AccessibilityMenuListPopup>(childObjects[0].get()));
 
         // We might be calling this method in situations where the renderers for list items
         // associated to the menu list have not been created (e.g. they might be rendered

@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include "LoaderMalloc.h"
-#include "SecurityOriginHash.h"
-#include "Timer.h"
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/SecurityOriginHash.h>
+#include <WebCore/Timer.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -61,8 +62,11 @@ struct ClientOrigin;
 // -------|-----+++++++++++++++|
 // -------|-----+++++++++++++++|+++++
 
-class MemoryCache {
-    WTF_MAKE_NONCOPYABLE(MemoryCache); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+class MemoryCache final : public CanMakeCheckedPtr<MemoryCache> {
+    WTF_MAKE_NONCOPYABLE(MemoryCache);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MemoryCache, Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MemoryCache);
+
     friend NeverDestroyed<MemoryCache>;
     friend class Internals;
 public:
@@ -157,13 +161,13 @@ public:
     void resourceAccessed(CachedResource&);
     bool inLiveDecodedResourcesList(CachedResource&) const;
 
-    typedef UncheckedKeyHashSet<RefPtr<SecurityOrigin>> SecurityOriginSet;
+    using SecurityOriginSet = HashSet<RefPtr<SecurityOrigin>>;
     WEBCORE_EXPORT void removeResourcesWithOrigin(const SecurityOrigin&);
     void removeResourcesWithOrigin(const SecurityOrigin&, const String& cachePartition);
     WEBCORE_EXPORT void removeResourcesWithOrigin(const ClientOrigin&);
     WEBCORE_EXPORT void removeResourcesWithOrigins(PAL::SessionID, const HashSet<RefPtr<SecurityOrigin>>&);
     WEBCORE_EXPORT void getOriginsWithCache(SecurityOriginSet& origins);
-    WEBCORE_EXPORT UncheckedKeyHashSet<RefPtr<SecurityOrigin>> originsWithCache(PAL::SessionID) const;
+    WEBCORE_EXPORT HashSet<RefPtr<SecurityOrigin>> originsWithCache(PAL::SessionID) const;
 
     // pruneDead*() - Flush decoded and encoded data from resources not referenced by Web pages.
     // pruneLive*() - Flush decoded data from resources still referenced by Web pages.

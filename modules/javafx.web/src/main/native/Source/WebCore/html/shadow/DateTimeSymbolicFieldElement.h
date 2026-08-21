@@ -32,7 +32,7 @@
 namespace WebCore {
 
 class DateTimeSymbolicFieldElement : public DateTimeFieldElement, public TypeAheadDataSource {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeSymbolicFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeSymbolicFieldElement);
 protected:
     DateTimeSymbolicFieldElement(Document&, DateTimeFieldElementFieldOwner&, const Vector<String>&, int);
     size_t symbolsSize() const { return m_symbols.size(); }
@@ -49,7 +49,7 @@ private:
     void adjustMinInlineSize(RenderStyle&) const final;
     void stepDown() final;
     void stepUp() final;
-    String value() const final;
+    ValueOrReference<String> value() const final;
     String placeholderValue() const final;
     void handleKeyboardEvent(KeyboardEvent&) final;
 

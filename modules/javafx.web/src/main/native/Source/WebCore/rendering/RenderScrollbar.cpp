@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2013, 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,18 @@
 #include "config.h"
 #include "RenderScrollbar.h"
 
+#include "ContainerNodeInlines.h"
+#include "DocumentView.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbarPart.h"
 #include "RenderScrollbarTheme.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderWidget.h"
-#include "StyleInheritedData.h"
+#include "ScrollbarInlines.h"
 #include "StyleResolver.h"
 
 namespace WebCore {
@@ -55,7 +60,7 @@ RenderScrollbar::RenderScrollbar(ScrollableArea& scrollableArea, ScrollbarOrient
     int width = 0;
     int height = 0;
     updateScrollbarPart(ScrollbarBGPart);
-    if (RenderScrollbarPart* part = m_parts.get(ScrollbarBGPart)) {
+    if (CheckedPtr part = m_parts.get(ScrollbarBGPart)) {
         part->layout();
         width = part->width();
         height = part->height();
@@ -71,13 +76,12 @@ RenderScrollbar::~RenderScrollbar() = default;
 
 RenderBox* RenderScrollbar::owningRenderer() const
 {
-    if (m_owningFrame) {
-        RenderWidget* currentRenderer = m_owningFrame->ownerRenderer();
-        return currentRenderer;
-    }
+    if (RefPtr frame = m_owningFrame.get())
+        return frame->ownerRenderer();
+
     ASSERT(m_ownerElement);
-    if (m_ownerElement->renderer())
-        return &m_ownerElement->renderer()->enclosingBox();
+    if (CheckedPtr renderer = m_ownerElement->renderer())
+        return &renderer->enclosingBox();
     return nullptr;
 }
 
@@ -137,9 +141,10 @@ void RenderScrollbar::setPressedPart(ScrollbarPart part)
     updateScrollbarPart(TrackBGPart);
 }
 
-std::unique_ptr<RenderStyle> RenderScrollbar::getScrollbarPseudoStyle(ScrollbarPart partType, PseudoId pseudoId) const
+std::unique_ptr<RenderStyle> RenderScrollbar::getScrollbarPseudoStyle(ScrollbarPart partType, PseudoElementType pseudoElementType) const
 {
-    if (!owningRenderer())
+    CheckedPtr renderer = owningRenderer();
+    if (!renderer)
         return nullptr;
 
     StyleScrollbarState scrollbarState;
@@ -149,15 +154,18 @@ std::unique_ptr<RenderStyle> RenderScrollbar::getScrollbarPseudoStyle(ScrollbarP
     scrollbarState.orientation = orientation();
     scrollbarState.buttonsPlacement = theme().buttonsPlacement();
     scrollbarState.enabled = enabled();
-    scrollbarState.scrollCornerIsVisible = scrollableArea().isScrollCornerVisible();
+    scrollbarState.scrollCornerIsVisible = checkedScrollableArea()->isScrollCornerVisible();
 
-    std::unique_ptr<RenderStyle> result = owningRenderer()->getUncachedPseudoStyle({ pseudoId, scrollbarState }, &owningRenderer()->style());
+    std::unique_ptr<RenderStyle> result = renderer->getUncachedPseudoStyle({ pseudoElementType, scrollbarState }, renderer->checkedStyle().ptr());
     // Scrollbars for root frames should always have background color
     // unless explicitly specified as transparent. So we force it.
     // This is because WebKit assumes scrollbar to be always painted and missing background
     // causes visual artifact like non-repainted dirty region.
-    if (result && m_owningFrame && m_owningFrame->view() && !m_owningFrame->view()->isTransparent() && !result->hasBackground())
+    if (result && m_owningFrame && !result->hasBackground()) {
+        RefPtr view = m_owningFrame->view();
+        if (view && !view->isTransparent())
         result->setBackgroundColor(Color::white);
+    }
 
     return result;
 }
@@ -178,42 +186,41 @@ void RenderScrollbar::updateScrollbarParts()
     bool isHorizontal = orientation() == ScrollbarOrientation::Horizontal;
     int oldThickness = isHorizontal ? height() : width();
     int newThickness = 0;
-    RenderScrollbarPart* part = m_parts.get(ScrollbarBGPart);
-    if (part) {
+    if (CheckedPtr part = m_parts.get(ScrollbarBGPart)) {
         part->layout();
         newThickness = isHorizontal ? part->height() : part->width();
     }
 
     if (newThickness != oldThickness) {
         setFrameRect(IntRect(location(), IntSize(isHorizontal ? width() : newThickness, isHorizontal ? newThickness : height())));
-        if (RenderBox* box = owningRenderer())
+        if (CheckedPtr box = owningRenderer())
             box->setChildNeedsLayout();
     }
 }
 
-static PseudoId pseudoForScrollbarPart(ScrollbarPart part)
+static PseudoElementType pseudoForScrollbarPart(ScrollbarPart part)
 {
     switch (part) {
         case BackButtonStartPart:
         case ForwardButtonStartPart:
         case BackButtonEndPart:
         case ForwardButtonEndPart:
-            return PseudoId::WebKitScrollbarButton;
+            return PseudoElementType::WebKitScrollbarButton;
         case BackTrackPart:
         case ForwardTrackPart:
-            return PseudoId::WebKitScrollbarTrackPiece;
+            return PseudoElementType::WebKitScrollbarTrackPiece;
         case ThumbPart:
-            return PseudoId::WebKitScrollbarThumb;
+            return PseudoElementType::WebKitScrollbarThumb;
         case TrackBGPart:
-            return PseudoId::WebKitScrollbarTrack;
+            return PseudoElementType::WebKitScrollbarTrack;
         case ScrollbarBGPart:
-            return PseudoId::WebKitScrollbar;
+            return PseudoElementType::WebKitScrollbar;
         case NoPart:
         case AllParts:
             break;
     }
     ASSERT_NOT_REACHED();
-    return PseudoId::WebKitScrollbar;
+    return PseudoElementType::WebKitScrollbar;
 }
 
 void RenderScrollbar::updateScrollbarPart(ScrollbarPart partType)
@@ -253,16 +260,16 @@ void RenderScrollbar::updateScrollbarPart(ScrollbarPart partType)
     }
 
     if (auto& partRendererSlot = m_parts.add(partType, nullptr).iterator->value)
-        partRendererSlot->setStyle(WTFMove(*partStyle));
+        partRendererSlot->setStyle(WTF::move(*partStyle));
     else {
-        partRendererSlot = createRenderer<RenderScrollbarPart>(owningRenderer()->document(), WTFMove(*partStyle), this, partType);
+        partRendererSlot = createRenderer<RenderScrollbarPart>(owningRenderer()->protectedDocument(), WTF::move(*partStyle), this, partType);
         partRendererSlot->initializeStyle();
     }
 }
 
 void RenderScrollbar::paintPart(GraphicsContext& graphicsContext, ScrollbarPart partType, const IntRect& rect)
 {
-    RenderScrollbarPart* partRenderer = m_parts.get(partType);
+    CheckedPtr partRenderer = m_parts.get(partType);
     if (!partRenderer)
         return;
     partRenderer->paintIntoRect(graphicsContext, location(), rect);
@@ -270,7 +277,7 @@ void RenderScrollbar::paintPart(GraphicsContext& graphicsContext, ScrollbarPart 
 
 IntRect RenderScrollbar::buttonRect(ScrollbarPart partType) const
 {
-    RenderScrollbarPart* partRenderer = m_parts.get(partType);
+    CheckedPtr partRenderer = m_parts.get(partType);
     if (!partRenderer)
         return IntRect();
 
@@ -302,7 +309,7 @@ IntRect RenderScrollbar::buttonRect(ScrollbarPart partType) const
 
 IntRect RenderScrollbar::trackRect(int startLength, int endLength) const
 {
-    RenderScrollbarPart* part = m_parts.get(TrackBGPart);
+    CheckedPtr part = m_parts.get(TrackBGPart);
     if (part)
         part->layout();
 
@@ -326,7 +333,7 @@ IntRect RenderScrollbar::trackRect(int startLength, int endLength) const
 
 IntRect RenderScrollbar::trackPieceRectWithMargins(ScrollbarPart partType, const IntRect& oldRect) const
 {
-    RenderScrollbarPart* partRenderer = m_parts.get(partType);
+    CheckedPtr partRenderer = m_parts.get(partType);
     if (!partRenderer)
         return oldRect;
 
@@ -345,7 +352,7 @@ IntRect RenderScrollbar::trackPieceRectWithMargins(ScrollbarPart partType, const
 
 int RenderScrollbar::minimumThumbLength() const
 {
-    RenderScrollbarPart* partRenderer = m_parts.get(ThumbPart);
+    CheckedPtr partRenderer = m_parts.get(ThumbPart);
     if (!partRenderer)
         return 0;
     partRenderer->layout();
@@ -354,11 +361,11 @@ int RenderScrollbar::minimumThumbLength() const
 
 float RenderScrollbar::opacity() const
 {
-    RenderScrollbarPart* partRenderer = m_parts.get(ScrollbarBGPart);
+    CheckedPtr partRenderer = m_parts.get(ScrollbarBGPart);
     if (!partRenderer)
         return 1;
 
-    return partRenderer->style().opacity();
+    return partRenderer->style().opacity().value.value;
 }
 
 bool RenderScrollbar::isHiddenByStyle() const

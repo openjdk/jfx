@@ -126,7 +126,7 @@ private:
 
 class PolymorphicAccess {
     WTF_MAKE_NONCOPYABLE(PolymorphicAccess);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolymorphicAccess, PolymorphicAccess);
 public:
     friend class InlineCacheCompiler;
 
@@ -204,13 +204,13 @@ public:
     InlineCacheHandler* next() const { return m_next.get(); }
     void setNext(RefPtr<InlineCacheHandler>&& next)
     {
-        m_next = WTFMove(next);
+        m_next = WTF::move(next);
     }
 
     AccessCase* accessCase() const { return m_accessCase.get(); }
     void setAccessCase(RefPtr<AccessCase>&& accessCase)
     {
-        m_accessCase = WTFMove(accessCase);
+        m_accessCase = WTF::move(accessCase);
     }
 
     static constexpr ptrdiff_t offsetOfCallTarget() { return OBJECT_OFFSETOF(InlineCacheHandler, m_callTarget); }
@@ -283,9 +283,14 @@ private:
     std::unique_ptr<StructureStubInfoClearingWatchpoint> m_watchpoint;
 };
 
+ALWAYS_INLINE bool canUseMegamorphicGetByIdExcludingIndex(VM& vm, UniquedStringImpl* uid)
+{
+    return uid != vm.propertyNames->length && uid != vm.propertyNames->name && uid != vm.propertyNames->prototype && uid != vm.propertyNames->underscoreProto;
+}
+
 inline bool canUseMegamorphicGetById(VM& vm, UniquedStringImpl* uid)
 {
-    return !parseIndex(*uid) && uid != vm.propertyNames->length && uid != vm.propertyNames->name && uid != vm.propertyNames->prototype && uid != vm.propertyNames->underscoreProto;
+    return !parseIndex(*uid) && canUseMegamorphicGetByIdExcludingIndex(vm, uid);
 }
 
 inline bool canUseMegamorphicInById(VM& vm, UniquedStringImpl* uid)
@@ -302,7 +307,7 @@ bool canBeViaGlobalProxy(AccessCase::AccessType);
 
 inline AccessGenerationResult::AccessGenerationResult(Kind kind, Ref<InlineCacheHandler>&& handler)
     : m_kind(kind)
-    , m_handler(WTFMove(handler))
+    , m_handler(WTF::move(handler))
 {
     RELEASE_ASSERT(kind == GeneratedNewCode || kind == GeneratedFinalCode || kind == GeneratedMegamorphicCode);
 }
@@ -326,7 +331,7 @@ public:
     struct SpillState {
         SpillState() = default;
         SpillState(ScalarRegisterSet&& regs, unsigned usedStackBytes)
-            : spilledRegisters(WTFMove(regs))
+            : spilledRegisters(WTF::move(regs))
             , numberOfStackBytesUsedForRegisterPreservation(usedStackBytes)
         {
         }
@@ -517,6 +522,22 @@ MacroAssemblerCodeRef<JITThunkPtrTag> deleteByValWithSymbolDeleteNonConfigurable
 MacroAssemblerCodeRef<JITThunkPtrTag> deleteByValWithSymbolDeleteMissHandler(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> checkPrivateBrandHandler(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> setPrivateBrandHandler(VM&);
+
+bool doesJSCalls(AccessCase::AccessType);
+
+#if CPU(X86_64)
+static constexpr size_t prologueSizeInBytesDataIC = 1;
+#elif CPU(ARM64E)
+static constexpr size_t prologueSizeInBytesDataIC = 8;
+#elif CPU(ARM64)
+static constexpr size_t prologueSizeInBytesDataIC = 4;
+#elif CPU(ARM_THUMB2)
+static constexpr size_t prologueSizeInBytesDataIC = 6;
+#elif CPU(RISCV64)
+static constexpr size_t prologueSizeInBytesDataIC = 12;
+#else
+#error "unsupported architecture"
+#endif
 
 } // namespace JSC
 

@@ -30,6 +30,7 @@
 
 #include "GamepadProvider.h"
 #include <libmanette.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/RunLoop.h>
 
@@ -38,7 +39,7 @@ namespace WebCore {
 class ManetteGamepad;
 class GamepadProviderClient;
 
-class ManetteGamepadProvider final : public GamepadProvider {
+class ManetteGamepadProvider final : public GamepadProvider, public CanMakeWeakPtr<ManetteGamepadProvider> {
     WTF_MAKE_NONCOPYABLE(ManetteGamepadProvider);
     friend class NeverDestroyed<ManetteGamepadProvider>;
 public:
@@ -76,7 +77,6 @@ private:
     bool m_initialGamepadsConnected { false };
 
     GRefPtr<ManetteMonitor> m_monitor;
-    RunLoop::Timer m_initialGamepadsConnectedTimer;
     RunLoop::Timer m_inputNotificationTimer;
 };
 

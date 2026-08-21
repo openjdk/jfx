@@ -27,6 +27,7 @@
 #include "GPUBuffer.h"
 
 #include "GPUDevice.h"
+#include "JSDOMConvertNull.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSGPUBufferMapState.h"
 
@@ -35,7 +36,7 @@ namespace WebCore {
 GPUBuffer::~GPUBuffer() = default;
 
 GPUBuffer::GPUBuffer(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation, GPUDevice& device)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
     , m_bufferSize(bufferSize)
     , m_usage(usage)
     , m_mapState(mappedAtCreation ? GPUBufferMapState::Mapped : GPUBufferMapState::Unmapped)
@@ -53,7 +54,7 @@ String GPUBuffer::label() const
 
 void GPUBuffer::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, std::optional<GPUSize64> size, MapAsyncPromise&& promise)
@@ -68,7 +69,7 @@ void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, 
 
     m_pendingMapPromise = promise;
     // FIXME: Should this capture a weak pointer to |this| instead?
-    m_backing->mapAsync(convertMapModeFlagsToBacking(mode), offset.value_or(0), size, [promise = WTFMove(promise), protectedThis = Ref { *this }, offset, size](bool success) mutable {
+    m_backing->mapAsync(convertMapModeFlagsToBacking(mode), offset.value_or(0), size, [promise = WTF::move(promise), protectedThis = Ref { *this }, offset, size](bool success) mutable {
         if (!protectedThis->m_pendingMapPromise) {
             if (protectedThis->m_destroyed)
                 promise.reject(Exception { ExceptionCode::OperationError, "buffer destroyed during mapAsync"_s });
@@ -92,17 +93,17 @@ void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, 
     });
 }
 
-static auto makeArrayBuffer(std::variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
+static auto makeArrayBuffer(Variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
 {
     RefPtr<ArrayBuffer> arrayBuffer;
-    std::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
+    WTF::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
         arrayBuffer = ArrayBuffer::create(source);
     }, [&](size_t numberOfElements) {
         arrayBuffer = ArrayBuffer::create(numberOfElements, 1);
     }), source);
 
     cachedArrayBuffers.append({ arrayBuffer.get(), offset });
-    cachedArrayBuffers.last().buffer->pin();
+    arrayBuffer->pin();
     if (device)
         device->addBufferToUnmap(buffer);
     return arrayBuffer;
@@ -194,8 +195,8 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> GPUBuffer::getMappedRange(std::optional<GPUSi
 void GPUBuffer::unmap(ScriptExecutionContext& scriptExecutionContext)
 {
     internalUnmap(scriptExecutionContext);
-    if (m_device)
-        m_device->removeBufferToUnmap(*this);
+    if (RefPtr device = m_device.get())
+        device->removeBufferToUnmap(*this);
 }
 
 void GPUBuffer::internalUnmap(ScriptExecutionContext& scriptExecutionContext)

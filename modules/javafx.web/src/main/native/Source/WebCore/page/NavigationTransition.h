@@ -32,25 +32,28 @@
 namespace WebCore {
 
 class DOMPromise;
+class DeferredPromise;
+class Exception;
 
 class NavigationTransition final : public RefCounted<NavigationTransition> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationTransition);
+    WTF_MAKE_TZONE_ALLOCATED(NavigationTransition);
 public:
-    static Ref<NavigationTransition> create(NavigationNavigationType type, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished) { return adoptRef(*new NavigationTransition(type, WTFMove(fromEntry), WTFMove(finished))); };
+    static Ref<NavigationTransition> create(NavigationNavigationType type, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished) { return adoptRef(*new NavigationTransition(type, WTF::move(fromEntry), WTF::move(finished))); };
 
     NavigationNavigationType navigationType() { return m_navigationType; };
     NavigationHistoryEntry& from() { return m_from; };
-    DOMPromise* finished();
+    DOMPromise& finished();
 
     void resolvePromise();
     void rejectPromise(Exception&, JSC::JSValue exceptionObject);
+    void rejectPromise(JSC::JSValue exceptionObject);
 
 private:
     explicit NavigationTransition(NavigationNavigationType, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished);
 
     NavigationNavigationType m_navigationType;
-    Ref<NavigationHistoryEntry> m_from;
-    Ref<DeferredPromise> m_finished;
+    const Ref<NavigationHistoryEntry> m_from;
+    const Ref<DeferredPromise> m_finished;
     RefPtr<DOMPromise> m_finishedDOMPromise;
 };
 

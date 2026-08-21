@@ -29,6 +29,7 @@
 
 #include "TrackListBase.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
 #include "ScriptExecutionContext.h"
 #include "TrackEvent.h"
@@ -36,26 +37,31 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrackListBase);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TrackListBase);
 
-TrackListBase::TrackListBase(ScriptExecutionContext* context, Type type)
+TrackListBase::TrackListBase(ScriptExecutionContext* context)
     : ActiveDOMObject(context)
-    , m_type(type)
 {
 }
 
 TrackListBase::~TrackListBase() = default;
 
+ScriptExecutionContext* TrackListBase::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+}
+
 void TrackListBase::didMoveToNewDocument(Document& newDocument)
 {
     ActiveDOMObject::didMoveToNewDocument(newDocument);
-    for (RefPtr track : m_inbandTracks)
+    for (Ref track : m_inbandTracks)
         track->didMoveToNewDocument(newDocument);
 }
 
 WebCoreOpaqueRoot TrackListBase::opaqueRoot()
 {
-    if (auto* rootObserver = m_opaqueRootObserver.get())
+    // Cannot ref the observer as this gets called on the GC thread.
+    SUPPRESS_UNCOUNTED_LOCAL if (auto* rootObserver = m_opaqueRootObserver.get())
         return (*rootObserver)();
     return WebCoreOpaqueRoot { this };
 }
@@ -72,7 +78,7 @@ RefPtr<TrackBase> TrackListBase::find(TrackID trackID) const
     });
     if (index == notFound)
         return nullptr;
-    return m_inbandTracks[index];
+    return m_inbandTracks[index].copyRef();
 }
 
 void TrackListBase::remove(TrackID trackID, bool scheduleEvent)
@@ -90,17 +96,17 @@ void TrackListBase::remove(TrackBase& track, bool scheduleEvent)
     if (track.trackList() == this)
         track.clearTrackList();
 
-    Ref<TrackBase> trackRef = *m_inbandTracks[index];
+    Ref trackRef = m_inbandTracks[index];
 
-    m_inbandTracks.remove(index);
+    m_inbandTracks.removeAt(index);
 
     if (scheduleEvent)
-        scheduleRemoveTrackEvent(WTFMove(trackRef));
+        scheduleRemoveTrackEvent(WTF::move(trackRef));
 }
 
 bool TrackListBase::contains(TrackBase& track) const
 {
-    return m_inbandTracks.find(&track) != notFound;
+    return m_inbandTracks.contains(&track);
 }
 
 bool TrackListBase::contains(TrackID trackID) const
@@ -110,7 +116,7 @@ bool TrackListBase::contains(TrackID trackID) const
 
 void TrackListBase::scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&& track)
 {
-    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, TrackEvent::create(eventName, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
+    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, TrackEvent::create(eventName, Event::CanBubble::No, Event::IsCancelable::No, WTF::move(track)));
 }
 
 void TrackListBase::scheduleAddTrackEvent(Ref<TrackBase>&& track)
@@ -133,7 +139,7 @@ void TrackListBase::scheduleAddTrackEvent(Ref<TrackBase>&& track)
     // bubble and is not cancelable, and that uses the TrackEvent interface, with
     // the track attribute initialized to the text track's TextTrack object, at
     // the media element's textTracks attribute's TextTrackList object.
-    scheduleTrackEvent(eventNames().addtrackEvent, WTFMove(track));
+    scheduleTrackEvent(eventNames().addtrackEvent, WTF::move(track));
 }
 
 void TrackListBase::scheduleRemoveTrackEvent(Ref<TrackBase>&& track)
@@ -160,7 +166,7 @@ void TrackListBase::scheduleRemoveTrackEvent(Ref<TrackBase>&& track)
     // interface, with the track attribute initialized to the text track's
     // TextTrack object, at the media element's textTracks attribute's
     // TextTrackList object.
-    scheduleTrackEvent(eventNames().removetrackEvent, WTFMove(track));
+    scheduleTrackEvent(eventNames().removetrackEvent, WTF::move(track));
 }
 
 void TrackListBase::scheduleChangeEvent()
@@ -174,9 +180,11 @@ void TrackListBase::scheduleChangeEvent()
     // selected, the user agent must queue a task to fire a simple event named
     // change at the VideoTrackList object.
     m_isChangeEventScheduled = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-        m_isChangeEventScheduled = false;
-        dispatchEvent(Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& trackList) {
+        if (trackList.isContextStopped())
+            return;
+        trackList.m_isChangeEventScheduled = false;
+        trackList.dispatchEvent(Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 

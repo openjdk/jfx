@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,10 @@
 #include "JSWindowProxy.h"
 
 #include "CommonVM.h"
+#include "Document.h"
 #include "Frame.h"
 #include "FrameLoaderTypes.h"
-#include "GCController.h"
+#include "GarbageCollectionController.h"
 #include "JSDOMWindow.h"
 #include "JSDOMWindowProperties.h"
 #include "JSEventTarget.h"
@@ -50,7 +51,6 @@
 #endif
 
 namespace WebCore {
-using namespace JSC;
 
 using namespace JSC;
 
@@ -81,19 +81,15 @@ JSWindowProxy& JSWindowProxy::create(VM& vm, DOMWindow& window, DOMWrapperWorld&
 
 void JSWindowProxy::destroy(JSCell* cell)
 {
-    static_cast<JSWindowProxy*>(cell)->JSWindowProxy::~JSWindowProxy();
-}
-
-DOMWrapperWorld& JSWindowProxy::world()
-{
-    return m_world;
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSWindowProxy*>(cell)->JSWindowProxy::~JSWindowProxy();
 }
 
 void JSWindowProxy::setWindow(VM& vm, JSDOMGlobalObject& window)
 {
     ASSERT(window.classInfo() == JSDOMWindow::info());
     setTarget(vm, &window);
-    GCController::singleton().garbageCollectSoon();
+    GarbageCollectionController::singleton().garbageCollectSoon();
 }
 
 void JSWindowProxy::setWindow(DOMWindow& domWindow)
@@ -191,11 +187,6 @@ JSC::GCClient::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
     return &downcast<JSVMClientData>(vm.clientData)->windowProxySpace();
 }
 
-Ref<DOMWrapperWorld> JSWindowProxy::protectedWorld()
-{
-    return m_world;
-}
-
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
 
 struct FrameInfo {
@@ -218,7 +209,7 @@ static std::optional<FrameInfo> frameInfo(JSGlobalObject* globalObject)
         return std::nullopt;
 
     Ref mainFrame { frame->mainFrame() };
-    return FrameInfo { frame.releaseNonNull(), WTFMove(mainFrame) };
+    return FrameInfo { frame.releaseNonNull(), WTF::move(mainFrame) };
 }
 
 static bool hasSameMainFrame(const Frame* a, const FrameInfo& b)
@@ -226,7 +217,7 @@ static bool hasSameMainFrame(const Frame* a, const FrameInfo& b)
     return a && (&a->mainFrame() == b.mainFrame.ptr());
 }
 
-static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<PropertyName, unsigned>& propertyName)
+static void logCrossTabPropertyAccess(Frame& childFrame, const Variant<PropertyName, unsigned>& propertyName)
 {
 #if LOG_DISABLED
     UNUSED_PARAM(childFrame);
@@ -250,7 +241,7 @@ static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<Prop
 #endif // #if LOG_DISABLED
 }
 
-static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const std::variant<PropertyName, unsigned>& propertyName)
+static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const Variant<PropertyName, unsigned>& propertyName)
 {
     if (!proxy || !lexicalGlobalObject)
         return;

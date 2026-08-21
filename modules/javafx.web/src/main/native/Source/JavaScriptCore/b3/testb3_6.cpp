@@ -26,6 +26,8 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <numbers>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if ENABLE(B3_JIT)
@@ -281,7 +283,7 @@ void testSelectDoubleCompareFloat(float a, float b)
             arguments[2],
             arguments[3]));
 
-    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b), 42.1, -M_PI), a < b ? 42.1 : -M_PI));
+    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b), 42.1, -std::numbers::pi), a < b ? 42.1 : -std::numbers::pi));
 }
 
 void testSelectFloatCompareFloat(float a, float b)
@@ -1797,7 +1799,7 @@ void testInterpreter()
     if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
-    CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
+    CHECK(!invoke<intptr_t>(*interpreter, data.span().data(), code.span().data(), &stream));
 
     CHECK_EQ(stream.size(), 100u);
     for (unsigned i = 0; i < 100; ++i)

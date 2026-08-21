@@ -26,22 +26,20 @@
 #include "CSSCalcTree+Simplification.h"
 
 #include "AnchorPositionEvaluator.h"
+#include "CSSCalcExecutor.h"
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCalcSymbolTable.h"
-#include "CSSCalcTree+ContainerProgressEvaluator.h"
 #include "CSSCalcTree+Copy.h"
 #include "CSSCalcTree+Evaluation.h"
 #include "CSSCalcTree+Mappings.h"
-#include "CSSCalcTree+MediaProgressEvaluator.h"
 #include "CSSCalcTree+NumericIdentity.h"
 #include "CSSCalcTree+Traversal.h"
 #include "CSSCalcTree.h"
+#include "CSSPrimitiveNumericCategory.h"
 #include "CSSPrimitiveValue.h"
-#include "CalculationCategory.h"
-#include "CalculationExecutor.h"
-#include "ContainerQueryFeatures.h"
-#include "MediaQueryFeatures.h"
+#include "CSSUnevaluatedCalc.h"
 #include "RenderStyle.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleBuilderState.h"
 #include "StyleLengthResolution.h"
 #include <wtf/StdLibExtras.h>
@@ -49,10 +47,7 @@
 namespace WebCore {
 namespace CSSCalc {
 
-static auto copyAndSimplify(const MQ::MediaProgressProviding*, const SimplificationOptions&) -> const MQ::MediaProgressProviding*;
-static auto copyAndSimplify(const CQ::ContainerProgressProviding*, const SimplificationOptions&) -> const CQ::ContainerProgressProviding*;
-static auto copyAndSimplify(const Random::CachingOptions&, const SimplificationOptions&) -> Random::CachingOptions;
-static auto copyAndSimplify(const AtomString&, const SimplificationOptions&) -> AtomString;
+static auto copyAndSimplify(const Random::Sharing&, const SimplificationOptions&) -> Random::Sharing;
 static auto copyAndSimplify(const CSS::Keyword::None&, const SimplificationOptions&) -> CSS::Keyword::None;
 static auto copyAndSimplify(const Children&, const SimplificationOptions&) -> Children;
 static auto copyAndSimplify(const ChildOrNone&, const SimplificationOptions&) -> ChildOrNone;
@@ -61,7 +56,7 @@ static auto copyAndSimplify(const std::optional<T>&, const SimplificationOptions
 
 template<typename Op, typename... Args> static double executeMathOperation(Args&&... args)
 {
-    return Calculation::executeOperation<ToCalculationTreeOp<Op>>(std::forward<Args>(args)...);
+    return executeOperation<ToCalculationTreeOp<Op>::op>(std::forward<Args>(args)...);
 }
 
 template<typename... F> static decltype(auto) switchTogether(const Child& a, const Child& b, F&&... f)
@@ -84,19 +79,19 @@ template<typename... F> static decltype(auto) switchTogether(const Child& a, con
 static bool percentageResolveToDimension(const SimplificationOptions& options)
 {
     switch (options.category) {
-    case Calculation::Category::Integer:
-    case Calculation::Category::Number:
-    case Calculation::Category::Length:
-    case Calculation::Category::Percentage:
-    case Calculation::Category::Angle:
-    case Calculation::Category::Time:
-    case Calculation::Category::Frequency:
-    case Calculation::Category::Resolution:
-    case Calculation::Category::Flex:
+    case CSS::Category::Integer:
+    case CSS::Category::Number:
+    case CSS::Category::Length:
+    case CSS::Category::Percentage:
+    case CSS::Category::Angle:
+    case CSS::Category::Time:
+    case CSS::Category::Frequency:
+    case CSS::Category::Resolution:
+    case CSS::Category::Flex:
         return false;
 
-    case Calculation::Category::AnglePercentage:
-    case Calculation::Category::LengthPercentage:
+    case CSS::Category::AnglePercentage:
+    case CSS::Category::LengthPercentage:
         return true;
     }
 
@@ -177,12 +172,8 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
     };
 
     auto tryMakeCanonical = [&](double value, CSS::LengthUnit lengthUnit) -> std::optional<CanonicalDimension> {
-        if (conversionData) {
-            // We are only interested in canonicalizing to `px`, not adjusting for zoom, which will be handled later. When computing font-size, zoom is not applied in the same way, so must be special cased here.
-            if (conversionData->computingFontSize())
-                return CanonicalDimension { .value = Style::computeNonCalcLengthDouble(value, lengthUnit, *conversionData), .dimension = CanonicalDimension::Dimension::Length };
-            return CanonicalDimension { .value = Style::computeNonCalcLengthDouble(value, lengthUnit, *conversionData) / conversionData->style()->usedZoom(), .dimension = CanonicalDimension::Dimension::Length };
-        }
+        if (conversionData)
+            return CanonicalDimension { .value = Style::computeCanonicalNonCalcLengthDouble(value, lengthUnit, *conversionData), .dimension = CanonicalDimension::Dimension::Length };
         return { };
     };
 
@@ -293,7 +284,6 @@ std::optional<CanonicalDimension> canonicalize(NonCanonicalDimension root, const
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;
@@ -420,7 +410,7 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 
     // Special case a root with one child to avoid doing any work at all, and just returning the child.
     if (root.children.size() == 1)
-        return { WTFMove(root.children[0]) };
+        return { WTF::move(root.children[0]) };
 
     // Map of unit types (via NumericIdentity) to the first index in `root.children` where a value with that unit can be found.
     // More specifically, it maps the unit to the index + 1, as 0 is used to indicate no units of that type have been found.
@@ -467,7 +457,7 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 
     // If all the removal from merges leaves a single child, that means everything merged into the first child.
     if (combinedChildrenSize == 1)
-        return { WTFMove(root.children[0]) };
+        return { WTF::move(root.children[0]) };
 
     Vector<Child> combinedChildren;
     combinedChildren.reserveInitialCapacity(combinedChildrenSize);
@@ -479,18 +469,18 @@ template<typename Op> static std::optional<Child> simplifyForMinMax(Op& root, co
 
                 // If the stored offset for this type is unset (as it would be for percentages if merging them is disallowed) or is set to this index (as it would be for the first instance of a merged type), append the child as normal.
                 if (!offset || (offset - 1) == i) {
-                    combinedChildren.append(WTFMove(root.children[i]));
+                    combinedChildren.append(WTF::move(root.children[i]));
                     return;
                 }
 
                 // Otherwise, it's one that can be dropped.
             },
             [&](const auto&) {
-                combinedChildren.append(WTFMove(root.children[i]));
+                combinedChildren.append(WTF::move(root.children[i]));
             }
         );
     }
-    root.children = WTFMove(combinedChildren);
+    root.children = WTF::move(combinedChildren);
 
     return { };
 }
@@ -506,7 +496,7 @@ std::optional<Child> simplify(Number&, const SimplificationOptions&)
 std::optional<Child> simplify(Percentage&, const SimplificationOptions&)
 {
     // 1.1. If root is a percentage that will be resolved against another value, and there is enough information available to resolve it, do so, and express the resulting numeric value in the appropriate canonical unit. Return the value.
-    // NOTE: Handled by the Calculation::Tree / CalculationValue types at use time.
+    // NOTE: Handled by the Style::Calculation::Tree / Style::Calculation::Value types at use time.
     return { };
 }
 
@@ -522,7 +512,7 @@ std::optional<Child> simplify(NonCanonicalDimension& root, const SimplificationO
 
     // 1.2. If root is a dimension that is not expressed in its canonical unit, and there is enough information available to convert it to the canonical unit, do so, and return the value.
     if (auto canonical = canonicalize(root, options.conversionData))
-        return makeChild(WTFMove(*canonical));
+        return makeChild(WTF::move(*canonical));
 
     return { };
 }
@@ -538,6 +528,26 @@ std::optional<Child> simplify(Symbol& root, const SimplificationOptions& options
     return { };
 }
 
+std::optional<Child> simplify(SiblingCount&, const SimplificationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (!options.conversionData->styleBuilderState()->element())
+        return { };
+
+    return makeChild(Number { .value = static_cast<double>(options.conversionData->protectedStyleBuilderState()->siblingCount()) });
+}
+
+std::optional<Child> simplify(SiblingIndex&, const SimplificationOptions& options)
+{
+    if (!options.conversionData || !options.conversionData->styleBuilderState())
+        return { };
+    if (!options.conversionData->styleBuilderState()->element())
+        return { };
+
+    return makeChild(Number { .value = static_cast<double>(options.conversionData->protectedStyleBuilderState()->siblingIndex()) });
+}
+
 std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 {
     ASSERT(!root.children.isEmpty());
@@ -549,11 +559,11 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
         Vector<Child> newChildren;
         for (auto& child : root.children) {
             if (auto* childSum = get_if<IndirectNode<Sum>>(&child))
-                newChildren.appendVector(WTFMove((*childSum)->children.value));
+                newChildren.appendVector(WTF::move((*childSum)->children.value));
             else
-                newChildren.append(WTFMove(child));
+                newChildren.append(WTF::move(child));
         }
-        root.children = WTFMove(newChildren);
+        root.children = WTF::move(newChildren);
     }
 
     // 8.2. For each set of root’s children that are numeric values with identical units, remove those children and replace them with a single numeric value containing the sum of the removed nodes, and with the same unit. (E.g. combine numbers, combine percentages, combine px values, etc.)
@@ -586,7 +596,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
     // Special case a root with one child to avoid doing any work at all, and just returning the child.
     if (root.children.size() == 1)
-        return { WTFMove(root.children[0]) };
+        return { WTF::move(root.children[0]) };
 
     // Map of unit types (via NumericIdentity) to the first index in `root.children` where a value with that unit can be found.
     // More specifically, it maps the unit to the index + 1, as 0 is used to indicate no units of that type have been found.
@@ -611,7 +621,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
                     auto [mergedChild, mergedValue] = evaluate(root.children[firstInstance.offset - 1], root.children[i]);
 
                     // Store the merged value in the original array.
-                    root.children[firstInstance.offset - 1] = WTFMove(mergedChild);
+                    root.children[firstInstance.offset - 1] = WTF::move(mergedChild);
 
                     // Update the `merges` count and `canRemove` bit for the new merged value.
                     firstInstance.merges += 1;
@@ -648,7 +658,7 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
     // If all the removal from merges leaves a single child, that means everything merged into the first child.
     if ((root.children.size() - childrenToRemoveFromMerges) == 1)
-        return { WTFMove(root.children[0]) };
+        return { WTF::move(root.children[0]) };
 
     auto combinedChildrenSize = root.children.size() - childrenToRemoveTotal;
 
@@ -666,17 +676,17 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
                     // If the stored offset for this type is set to this index and it's not one that can be removed, this is the 1 child to return.
                     if ((firstInstance.offset - 1) == i && !firstInstance.canRemove)
-                        return { WTFMove(root.children[i]) };
+                        return { WTF::move(root.children[i]) };
 
                     // Otherwise, it's one that can be dropped.
                     return { };
                 },
                 [&](const auto&) -> std::optional<Child> {
-                    return { WTFMove(root.children[i]) };
+                    return { WTF::move(root.children[i]) };
                 }
             );
             if (replacement)
-                return { WTFMove(*replacement) };
+                return { WTF::move(*replacement) };
         }
     }
 
@@ -691,18 +701,18 @@ std::optional<Child> simplify(Sum& root, const SimplificationOptions& options)
 
                 // If the stored offset for this type is set to this index and it's not one that can be removed, append the child as normal
                 if ((firstInstance.offset - 1) == i && !firstInstance.canRemove) {
-                    combinedChildren.append(WTFMove(root.children[i]));
+                    combinedChildren.append(WTF::move(root.children[i]));
                     return;
                 }
 
                 // Otherwise, it's one that can be dropped.
             },
             [&](const auto&) {
-                combinedChildren.append(WTFMove(root.children[i]));
+                combinedChildren.append(WTF::move(root.children[i]));
             }
         );
     }
-    root.children = WTFMove(combinedChildren);
+    root.children = WTF::move(combinedChildren);
 
     return { };
 }
@@ -731,7 +741,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
             else
                 numericProduct = Number { .value = childValue->value };
         } else
-            newChildren.append(WTFMove(child));
+            newChildren.append(WTF::move(child));
     };
 
     for (auto& child : root.children) {
@@ -759,7 +769,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
                     return makeChildWithValueBasedOn(numeric.value * numericProduct->value, numeric);
                 },
                 [&](IndirectNode<Sum>& sum) -> std::optional<Child> {
-                    if (!std::ranges::all_of(sum->children, [](auto& child) { return isNumeric(child); }))
+                    if (!std::ranges::all_of(sum->children, isNumeric))
                         return { };
 
                     for (auto& child : sum->children) {
@@ -769,7 +779,7 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
                         );
                     }
 
-                    return { Child { WTFMove(sum) } };
+                    return { Child { WTF::move(sum) } };
                 },
                 [&](IndirectNode<Invert>& invert) -> std::optional<Child> {
                     return WTF::switchOn(invert->a,
@@ -787,14 +797,14 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
             );
 
             if (replacement)
-                return { WTFMove(*replacement) };
+                return { WTF::move(*replacement) };
         }
 
         // If there was more than one child or no replacement was found, append the product from step 9.2 into the newChildren array.
         newChildren.append(makeChild(*numericProduct));
     }
 
-    root.children = WTFMove(newChildren);
+    root.children = WTF::move(newChildren);
 
     // 9.4. If root contains only numeric values and/or Invert nodes containing numeric values, and multiplying the types of all the children (noting that the type of an Invert node is the inverse of its child’s type) results in a type that matches any of the types that a math function can resolve to, return the result of multiplying all the values of the children (noting that the value of an Invert node is the reciprocal of its child’s value), expressed in the result’s canonical unit.
 
@@ -872,26 +882,26 @@ std::optional<Child> simplify(Product& root, const SimplificationOptions& option
     if (success) {
         if (auto category = productResult.type.calculationCategory()) {
             switch (*category) {
-            case Calculation::Category::Integer:
-            case Calculation::Category::Number:
+            case CSS::Category::Integer:
+            case CSS::Category::Number:
                 return makeChild(Number { .value = productResult.value });
-            case Calculation::Category::Percentage:
+            case CSS::Category::Percentage:
                 return makeChild(Percentage { .value = productResult.value, .hint = Type::determinePercentHint(options.category) });
-            case Calculation::Category::LengthPercentage:
+            case CSS::Category::LengthPercentage:
                 return makeChild(Percentage { .value = productResult.value, .hint = PercentHint::Length });
-            case Calculation::Category::Length:
+            case CSS::Category::Length:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Length });
-            case Calculation::Category::Angle:
+            case CSS::Category::Angle:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Angle });
-            case Calculation::Category::AnglePercentage:
+            case CSS::Category::AnglePercentage:
                 return makeChild(Percentage { .value = productResult.value, .hint = PercentHint::Angle });
-            case Calculation::Category::Time:
+            case CSS::Category::Time:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Time });
-            case Calculation::Category::Frequency:
+            case CSS::Category::Frequency:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Frequency });
-            case Calculation::Category::Resolution:
+            case CSS::Category::Resolution:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Resolution });
-            case Calculation::Category::Flex:
+            case CSS::Category::Flex:
                 return makeChild(CanonicalDimension { .value = productResult.value, .dimension = CanonicalDimension::Dimension::Flex });
             }
         }
@@ -912,12 +922,12 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
         },
         [](IndirectNode<Negate>& a) -> std::optional<Child> {
             // 6.2. If root’s child is a Negate node, return the child’s child.
-            return { WTFMove(a->a) };
+            return { WTF::move(a->a) };
         },
         [](IndirectNode<Sum>& a) -> std::optional<Child> {
             // Not stated in spec, but needed for tests.
 
-            if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
+            if (!std::ranges::all_of(a->children, isNumeric))
                 return { };
 
             for (auto& child : a->children) {
@@ -927,12 +937,12 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
                 );
             }
 
-            return { Child { WTFMove(a) } };
+            return { Child { WTF::move(a) } };
         },
         [](IndirectNode<Product>& a) -> std::optional<Child> {
             // Not stated in spec, but needed for tests.
 
-            if (!std::ranges::all_of(a->children, [](auto& child) { return isNumeric(child); }))
+            if (!std::ranges::all_of(a->children, isNumeric))
                 return { };
 
             for (auto& child : a->children) {
@@ -942,7 +952,7 @@ std::optional<Child> simplify(Negate& root, const SimplificationOptions&)
                 );
             }
 
-            return { Child { WTFMove(a) } };
+            return { Child { WTF::move(a) } };
         },
         [](auto&) -> std::optional<Child> {
             return { };
@@ -961,7 +971,7 @@ std::optional<Child> simplify(Invert& root, const SimplificationOptions&)
         },
         [](IndirectNode<Invert>& a) -> std::optional<Child> {
             // 7.2. If root’s child is an Invert node, return the child’s child.
-            return { WTFMove(a->a) };
+            return { WTF::move(a->a) };
         },
         [](auto&) -> std::optional<Child> {
             return { };
@@ -986,7 +996,7 @@ std::optional<Child> simplify(Clamp& root, const SimplificationOptions& options)
 
     if (minIsNone && maxIsNone) {
         // - clamp(none, VAL, none) is equivalent to just calc(VAL).
-        return { WTFMove(root.val) };
+        return { WTF::move(root.val) };
     }
 
     // FIXME: Are any of these transforms kosher?
@@ -1159,7 +1169,7 @@ std::optional<Child> simplify(Hypot& root, const SimplificationOptions& options)
     struct PercentageTag { };
     struct DimensionTag { CanonicalDimension::Dimension dimension; };
     struct FailureTag { };
-    std::variant<std::monostate, NumberTag, PercentageTag, DimensionTag, FailureTag> result;
+    Variant<std::monostate, NumberTag, PercentageTag, DimensionTag, FailureTag> result;
 
     double value = executeMathOperation<Hypot>(root.children.value, [&](const auto& child) {
         return WTF::switchOn(result,
@@ -1301,8 +1311,6 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
 {
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
-    if (root.cachingOptions.perElement && !options.conversionData->styleBuilderState()->element())
-        return { };
     if (root.min.index() != root.max.index() || (root.step && root.step->index() != root.min.index()))
         return { };
 
@@ -1323,33 +1331,30 @@ std::optional<Child> simplify(Random& root, const SimplificationOptions& options
                 valueStep = numericStep.value;
             }
 
-            auto valueMin = numericMin.value;
-            auto valueMax = numericMax.value;
-
-            // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
-            // the result is always NaN if either is NaN, so we can return early here.
-            if (std::isnan(valueMin) || std::isnan(valueMax))
-                return makeChildWithValueBasedOn(std::numeric_limits<double>::quiet_NaN(), numericMin);
-
-            auto keyMap = options.conversionData->styleBuilderState()->randomKeyMap(
-                root.cachingOptions.perElement
+            auto randomBaseValue = WTF::switchOn(root.sharing,
+                [&](const Random::SharingOptions& sharingOptions) -> std::optional<double> {
+                    if (sharingOptions.elementShared.has_value() && !options.conversionData->styleBuilderState()->element())
+                        return { };
+                    return options.conversionData->protectedStyleBuilderState()->lookupCSSRandomBaseValue(
+                        sharingOptions.identifier,
+                        sharingOptions.elementShared
             );
-
-            auto randomUnitInterval = keyMap->lookupUnitInterval(
-                root.cachingOptions.identifier,
-                valueMin,
-                valueMax,
-                valueStep
+                },
+                [&](const Random::SharingFixed& sharingFixed) -> std::optional<double> {
+                    return WTF::switchOn(sharingFixed.value,
+                        [](const CSS::Number<CSS::ClosedUnitRange>::Raw& raw) -> std::optional<double> {
+                            return raw.value;
+                        },
+                        [](const CSS::Number<CSS::ClosedUnitRange>::Calc&) -> std::optional<double> {
+                            return { };
+                        }
             );
-
-            auto result = Calculation::executeOperation<ToCalculationTreeOp<Random>>(
-                randomUnitInterval,
-                valueMin,
-                valueMax,
-                valueStep
+                }
             );
+            if (!randomBaseValue)
+                return { };
 
-            return makeChildWithValueBasedOn(result, numericMin);
+            return makeChildWithValueBasedOn(executeMathOperation<Random>(*randomBaseValue, numericMin.value, numericMax.value, valueStep), numericMin);
         },
         [](const auto&) -> std::optional<Child> {
             return { };
@@ -1380,53 +1385,6 @@ std::optional<Child> simplify(Progress& root, const SimplificationOptions& optio
     );
 }
 
-std::optional<Child> simplify(MediaProgress& root, const SimplificationOptions& options)
-{
-    ASSERT(root.feature->category() == options.category);
-
-    if (!options.conversionData || !options.conversionData->styleBuilderState())
-        return { };
-
-    return switchTogether(root.start, root.end,
-        [&]<Numeric T>(const T& start, const T& end) -> std::optional<Child> {
-            if (!unitsMatch(start, end, options) || !fullyResolved(start, options))
-                return { };
-
-            Ref document = options.conversionData->styleBuilderState()->document();
-            auto value = evaluateMediaProgress(root, document, *options.conversionData);
-            return makeChild(Number { .value = executeMathOperation<Progress>(value, start.value, end.value) });
-        },
-        [](const auto&, const auto&) -> std::optional<Child> {
-            return { };
-        }
-    );
-}
-
-std::optional<Child> simplify(ContainerProgress& root, const SimplificationOptions& options)
-{
-    ASSERT(root.feature->category() == options.category);
-
-    if (!options.conversionData || !options.conversionData->styleBuilderState() || !options.conversionData->styleBuilderState()->element())
-        return { };
-
-    return switchTogether(root.start, root.end,
-        [&]<Numeric T>(const T& start, const T& end) -> std::optional<Child> {
-            if (!unitsMatch(start, end, options) || !fullyResolved(start, options))
-                return { };
-
-            Ref element = *options.conversionData->styleBuilderState()->element();
-            auto value = evaluateContainerProgress(root, element, *options.conversionData);
-            if (!value)
-                return { };
-
-            return makeChild(Number { .value = executeMathOperation<Progress>(*value, start.value, end.value) });
-        },
-        [](const auto&, const auto&) -> std::optional<Child> {
-            return { };
-        }
-    );
-}
-
 std::optional<Child> simplify(Anchor& anchor, const SimplificationOptions& options)
 {
     if (!options.conversionData || !options.conversionData->styleBuilderState())
@@ -1446,7 +1404,7 @@ std::optional<Child> simplify(Anchor& anchor, const SimplificationOptions& optio
         // If no fallback value is specified, it makes the declaration referencing it invalid at computed-value time."
 
         if (!anchor.fallback)
-            options.conversionData->styleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
+            options.conversionData->protectedStyleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
 
         // Replace the anchor node with the fallback node.
         return std::exchange(anchor.fallback, { });
@@ -1459,21 +1417,21 @@ std::optional<Child> simplify(AnchorSize& anchorSize, const SimplificationOption
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
 
-    auto& builderState = *options.conversionData->styleBuilderState();
+    CheckedPtr builderState = options.conversionData->styleBuilderState();
 
     std::optional<Style::ScopedName> anchorSizeScopedName;
     if (!anchorSize.elementName.isNull()) {
         anchorSizeScopedName = Style::ScopedName {
             .name = anchorSize.elementName,
-            .scopeOrdinal = builderState.styleScopeOrdinal()
+            .scopeOrdinal = builderState->styleScopeOrdinal()
         };
     }
 
-    auto result = Style::AnchorPositionEvaluator::evaluateSize(builderState, anchorSizeScopedName, anchorSize.dimension);
+    auto result = Style::AnchorPositionEvaluator::evaluateSize(*builderState, anchorSizeScopedName, anchorSize.dimension);
 
     if (!result) {
         if (!anchorSize.fallback)
-            options.conversionData->styleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
+            options.conversionData->protectedStyleBuilderState()->setCurrentPropertyInvalidAtComputedValueTime();
 
         return std::exchange(anchorSize.fallback, { });
     }
@@ -1483,22 +1441,7 @@ std::optional<Child> simplify(AnchorSize& anchorSize, const SimplificationOption
 
 // MARK: Copy & Simplify.
 
-const MQ::MediaProgressProviding* copyAndSimplify(const MQ::MediaProgressProviding* root, const SimplificationOptions&)
-{
-    return root;
-}
-
-const CQ::ContainerProgressProviding* copyAndSimplify(const CQ::ContainerProgressProviding* root, const SimplificationOptions&)
-{
-    return root;
-}
-
-Random::CachingOptions copyAndSimplify(const Random::CachingOptions& root, const SimplificationOptions&)
-{
-    return root;
-}
-
-AtomString copyAndSimplify(const AtomString& root, const SimplificationOptions&)
+Random::Sharing copyAndSimplify(const Random::Sharing& root, const SimplificationOptions&)
 {
     return root;
 }
@@ -1535,26 +1478,6 @@ template<typename Op> static auto copyAndSimplifyChildren(const IndirectNode<Op>
     return WTF::apply([&](const auto& ...x) { return Op { copyAndSimplify(x, options)... }; } , *root);
 }
 
-static auto copyAndSimplifyChildren(const IndirectNode<MediaProgress>& root, const SimplificationOptions& options) -> MediaProgress
-{
-    // Modify the category to match the media-progress() category following non-"math function" rules.
-    // FIXME: Catching cases like this would be a good reason to make non-"math function" nodes distinct, perhaps even using an explicitly nested Tree in some fashion.
-    SimplificationOptions nestedOptions = options;
-    nestedOptions.category = root->feature->category();
-
-    return WTF::apply([&](const auto& ...x) { return MediaProgress { copyAndSimplify(x, nestedOptions)... }; } , *root);
-}
-
-static auto copyAndSimplifyChildren(const IndirectNode<ContainerProgress>& root, const SimplificationOptions& options) -> ContainerProgress
-{
-    // Modify the category to match the container-progress() category following non-"math function" rules.
-    // FIXME: Catching cases like this would be a good reason to make non-"math function" nodes distinct, perhaps even using an explicitly nested Tree in some fashion.
-    SimplificationOptions nestedOptions = options;
-    nestedOptions.category = root->feature->category();
-
-    return WTF::apply([&](const auto& ...x) { return ContainerProgress { copyAndSimplify(x, nestedOptions)... }; } , *root);
-}
-
 static auto copyAndSimplifyChildren(const IndirectNode<Anchor>& anchor, const SimplificationOptions& options) -> Anchor
 {
     return Anchor { .elementName = anchor->elementName, .side = copy(anchor->side), .fallback = copyAndSimplify(anchor->fallback, options) };
@@ -1578,9 +1501,9 @@ Child copyAndSimplify(const Child& root, const SimplificationOptions& options)
 
             // Attempt to simplify the term itself, using the result as a replacement if successful.
             if (auto replacement = simplify(simplified, options))
-                return WTFMove(*replacement);
+                return WTF::move(*replacement);
 
-            return makeChild(WTFMove(simplified), getType(root));
+            return makeChild(WTF::move(simplified), getType(root));
         }
     );
 }
@@ -1592,7 +1515,6 @@ Tree copyAndSimplify(const Tree& tree, const SimplificationOptions& options)
         .type = tree.type,
         .stage = tree.stage,
         .requiresConversionData = tree.requiresConversionData,
-        .unique = tree.unique,
     };
 }
 

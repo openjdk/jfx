@@ -22,9 +22,10 @@
 
 #include "ElementInlines.h"
 #include "LegacyRenderSVGResourceContainer.h"
-#include "SVGRenderStyle.h"
+#include "RenderElementInlines.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -50,7 +51,7 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
         return;
 
     // Put object in cache.
-    SVGResources& resources = *m_cache.add(renderer, WTFMove(newResources)).iterator->value;
+    SVGResources& resources = *m_cache.add(renderer, WTF::move(newResources)).iterator->value;
     renderer.setHasCachedSVGResource(true);
 
     // Run cycle-detection _afterwards_, so self-references can be caught as well.
@@ -128,7 +129,7 @@ void SVGResourcesCache::clientLayoutChanged(RenderElement& renderer)
     // Invalidate the resources if either the RenderElement itself changed,
     // or we have filter resources, which could depend on the layout of children.
     if ((renderer.selfNeedsLayout() || resources->filter()) && hasResourcesRequiringRemovalOnClientLayoutChange(*resources))
-        resources->removeClientFromCache(renderer, false);
+        resources->removeClientFromCacheAndMarkForInvalidation(renderer, false);
 }
 
 static inline bool rendererCanHaveResources(RenderObject& renderer)
@@ -136,7 +137,7 @@ static inline bool rendererCanHaveResources(RenderObject& renderer)
     return renderer.node() && renderer.node()->isSVGElement() && !renderer.isRenderSVGInlineText();
 }
 
-void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDifference diff, const RenderStyle* oldStyle, const RenderStyle& newStyle)
+void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, Style::Difference diff, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
     // Verify that LBSE does not make use of SVGResourcesCache.
     if (renderer.document().settings().layerBasedSVGEngineEnabled())
@@ -154,10 +155,10 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
     // Since diff can be Equal even if we have have a filter property change
     // (due to how RenderElement::adjustStyleDifference works), in general we
     // want to continue to the comparison of oldStyle and newStyle below, and
-    // so we don't return early just when diff == StyleDifference::Equal. But
+    // so we don't return early just when diff == Style::DifferenceResult::Equal. But
     // this isn't necessary for filter primitives, to which the filter property
     // doesn't apply, so we check for it here too.
-    if (renderer.isLegacyRenderSVGResourceFilterPrimitive() && (diff == StyleDifference::Equal || diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
+    if (renderer.isLegacyRenderSVGResourceFilterPrimitive() && (diff == Style::DifferenceResult::Equal || diff == Style::DifferenceResult::Repaint || diff == Style::DifferenceResult::RepaintIfText))
         return;
 
     auto hasStyleDifferencesAffectingResources = [&] {
@@ -167,11 +168,11 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
         if (!oldStyle)
             return true;
 
-        if (!arePointingToEqualData(oldStyle->clipPath(), newStyle.clipPath()))
+        if (oldStyle->clipPath() != newStyle.clipPath())
             return true;
 
         // RenderSVGResourceMarker only supports SVG <mask> references.
-        if (!arePointingToEqualData(oldStyle->maskImage(), newStyle.maskImage()))
+        if (oldStyle->maskLayers().usedFirst().image() != newStyle.maskLayers().usedFirst().image())
             return true;
 
         if (oldStyle->filter() != newStyle.filter())
@@ -181,13 +182,19 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
         if (oldStyle->appleColorFilter() != newStyle.appleColorFilter())
             return true;
 
-        Ref oldSVGStyle = oldStyle->svgStyle();
-        Ref newSVGStyle = newStyle.svgStyle();
-
-        if (oldSVGStyle->fillPaintUri() != newSVGStyle->fillPaintUri())
+        if (oldStyle->fill().urlDisregardingType() != newStyle.fill().urlDisregardingType())
             return true;
 
-        if (oldSVGStyle->strokePaintUri() != newSVGStyle->strokePaintUri())
+        if (oldStyle->stroke().urlDisregardingType() != newStyle.stroke().urlDisregardingType())
+            return true;
+
+        if (oldStyle->markerStart() != newStyle.markerStart())
+            return true;
+
+        if (oldStyle->markerMid() != newStyle.markerMid())
+            return true;
+
+        if (oldStyle->markerEnd() != newStyle.markerEnd())
             return true;
 
         return false;
@@ -251,7 +258,7 @@ void SVGResourcesCache::clientDestroyed(RenderElement& renderer)
         return;
 
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
-        resources->removeClientFromCache(renderer);
+        resources->removeClientFromCacheAndMarkForInvalidation(renderer);
         resourcesCacheFromRenderer(renderer).removeResourcesFromRenderer(renderer);
     }
 }

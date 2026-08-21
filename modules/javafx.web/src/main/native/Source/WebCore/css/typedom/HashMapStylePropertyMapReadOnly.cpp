@@ -27,16 +27,17 @@
 #include "HashMapStylePropertyMapReadOnly.h"
 
 #include "CSSPropertyParser.h"
+#include "Document.h"
 
 namespace WebCore {
 
-Ref<HashMapStylePropertyMapReadOnly> HashMapStylePropertyMapReadOnly::create(UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>>&& map)
+Ref<HashMapStylePropertyMapReadOnly> HashMapStylePropertyMapReadOnly::create(HashMap<AtomString, RefPtr<CSSValue>>&& map)
 {
-    return adoptRef(*new HashMapStylePropertyMapReadOnly(WTFMove(map)));
+    return adoptRef(*new HashMapStylePropertyMapReadOnly(WTF::move(map)));
 }
 
-HashMapStylePropertyMapReadOnly::HashMapStylePropertyMapReadOnly(UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>>&& map)
-    : m_map(WTFMove(map))
+HashMapStylePropertyMapReadOnly::HashMapStylePropertyMapReadOnly(HashMap<AtomString, RefPtr<CSSValue>>&& map)
+    : m_map(WTF::move(map))
 {
 }
 
@@ -65,13 +66,13 @@ unsigned HashMapStylePropertyMapReadOnly::size() const
 
 auto HashMapStylePropertyMapReadOnly::entries(ScriptExecutionContext* context) const -> Vector<StylePropertyMapEntry>
 {
-    auto* document = context ? documentFromContext(*context) : nullptr;
+    RefPtr document = context ? documentFromContext(*context) : nullptr;
     if (!document)
         return { };
 
     return WTF::map(m_map, [&](auto& entry) -> StylePropertyMapEntry {
         auto& [propertyName, cssValue] = entry;
-        return makeKeyValuePair(propertyName,  Vector<RefPtr<CSSStyleValue>> { reifyValue(cssValue.get(), cssPropertyID(propertyName), *document) });
+        return makeKeyValuePair(propertyName,  Vector<RefPtr<CSSStyleValue>> { reifyValue(*document, cssValue.get(), cssPropertyID(propertyName)) });
     });
 }
 

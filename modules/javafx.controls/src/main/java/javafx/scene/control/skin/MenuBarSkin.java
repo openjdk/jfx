@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -495,21 +495,25 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private static void setSystemMenu(Stage stage) {
-        if (stage != null && stage.isFocused()) {
-            while (stage != null && stage.getOwner() instanceof Stage) {
-                MenuBarSkin skin = getMenuBarSkin(stage);
-                if (skin != null && skin.wrappedMenus != null) {
-                    break;
-                } else {
-                    // This is a secondary stage (dialog) that doesn't
-                    // have own menu bar.
-                    //
-                    // Continue looking for a menu bar in the parent stage.
-                    stage = (Stage)stage.getOwner();
+        if (stage != null) {
+            if (stage.isFocused()) {
+                while (stage != null && stage.getOwner() instanceof Stage) {
+                    MenuBarSkin skin = getMenuBarSkin(stage);
+                    if (skin != null && skin.wrappedMenus != null) {
+                        break;
+                    } else {
+                        // This is a secondary stage (dialog) that doesn't
+                        // have own menu bar.
+                        //
+                        // Continue looking for a menu bar in the parent stage.
+                        stage = (Stage)stage.getOwner();
+                    }
                 }
+            } else {
+                // The stage lost focus, but we don't need to remove its menubar now.
+                // If an owned dialog is shown, the owner stage should keep it as it was.
+                return;
             }
-        } else {
-            stage = null;
         }
 
         if (stage != currentMenuBarStage) {
@@ -912,9 +916,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 // If the system menu references this MenuBarSkin, then we're done with rebuilding the UI.
                 // If the system menu does not reference this MenuBarSkin, then the MenuBar is a child of the scene
                 // and we continue with the update.
-                // If there is no system menu but this skinnable uses the system menu bar, then the
-                // stage just isn't focused yet (see setSystemMenu) and we're done rebuilding the UI.
-                if (currentMenuBarStage != null ? getMenuBarSkin(currentMenuBarStage) == MenuBarSkin.this : getSkinnable().isUseSystemMenuBar()) {
+                // If there is no system menu but this skinnable uses the system menu bar and there is no CustomMenuItem,
+                // then the stage just isn't focused yet (see setSystemMenu) and we're done rebuilding the UI.
+                if (currentMenuBarStage != null ? getMenuBarSkin(currentMenuBarStage) == MenuBarSkin.this :
+                        getSkinnable().isUseSystemMenuBar() && !menusContainCustomMenuItem()) {
                     return;
                 }
 

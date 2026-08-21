@@ -26,14 +26,19 @@
 #pragma once
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 
-#include "ExceptionOr.h"
-#include "PushPermissionState.h"
-#include "PushSubscriptionData.h"
-#include "PushSubscriptionIdentifier.h"
+#include <WebCore/PushPermissionState.h>
+#include <WebCore/PushSubscriptionData.h>
+#include <WebCore/PushSubscriptionIdentifier.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-class WEBCORE_EXPORT PushStrategy {
+template<typename> class ExceptionOr;
+
+class WEBCORE_EXPORT PushStrategy : public AbstractCanMakeCheckedPtr {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PushStrategy);
 public:
     virtual ~PushStrategy() = default;
 

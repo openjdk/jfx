@@ -29,6 +29,7 @@
 OBJC_CLASS NSImage;
 #endif
 
+#include <wtf/Platform.h>
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 OBJC_CLASS NSAdaptiveImageGlyph;
 #endif
@@ -37,20 +38,13 @@ OBJC_CLASS NSAdaptiveImageGlyph;
 struct CGContext;
 #endif
 
-#if PLATFORM(GTK)
-#include <wtf/glib/GRefPtr.h>
-typedef struct _GdkPixbuf GdkPixbuf;
-#if USE(GTK4)
-typedef struct _GdkTexture GdkTexture;
-#endif
-#endif
-
 #if PLATFORM(WIN)
 typedef struct tagSIZE SIZE;
 typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
+#include <WebCore/NativeImage.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -65,7 +59,6 @@ namespace WebCore {
 
 class Image;
 class IntSize;
-class NativeImage;
 
 class ImageAdapter {
     WTF_MAKE_TZONE_ALLOCATED(ImageAdapter);
@@ -93,25 +86,18 @@ public:
     NSAdaptiveImageGlyph *multiRepresentationHEIC();
 #endif
 
-#if PLATFORM(GTK)
-    GRefPtr<GdkPixbuf> gdkPixbuf();
-#if USE(GTK4)
-    GRefPtr<GdkTexture> gdkTexture();
-#endif
-#endif
-
 #if PLATFORM(WIN)
     WEBCORE_EXPORT bool getHBITMAP(HBITMAP);
     WEBCORE_EXPORT bool getHBITMAPOfSize(HBITMAP, const IntSize*);
 #endif
     void invalidate();
 
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT static RetainPtr<CFDataRef> tiffRepresentation(const Vector<Ref<NativeImage>>&);
+#endif
+
 private:
     Image& image() const { return m_image.get(); }
-
-#if PLATFORM(COCOA)
-    static RetainPtr<CFDataRef> tiffRepresentation(const Vector<Ref<NativeImage>>&);
-#endif
 
     RefPtr<NativeImage> nativeImageOfSize(const IntSize&);
     Vector<Ref<NativeImage>> allNativeImages();

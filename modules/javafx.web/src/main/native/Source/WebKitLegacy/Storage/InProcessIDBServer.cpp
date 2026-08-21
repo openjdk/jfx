@@ -397,6 +397,13 @@ void InProcessIDBServer::fireVersionChangeEvent(IDBServer::UniqueIDBDatabaseConn
     });
 }
 
+void InProcessIDBServer::generateIndexKeyForRecord(const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IDBIndexInfo& indexInfo, const std::optional<WebCore::IDBKeyPath>& keyPath, const WebCore::IDBKeyData& key, const WebCore::IDBValue& value, std::optional<int64_t> recordID)
+{
+    dispatchTaskReply([this, protectedThis = Ref { *this }, requestIdentifier = crossThreadCopy(requestIdentifier), indexInfo = crossThreadCopy(indexInfo), keyPath = crossThreadCopy(keyPath), key = crossThreadCopy(key), value = crossThreadCopy(value), recordID] {
+        m_connectionToServer->generateIndexKeyForRecord(requestIdentifier, indexInfo, keyPath, key, value, recordID);
+    });
+}
+
 void InProcessIDBServer::didStartTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier, const IDBError& error)
 {
     dispatchTaskReply([this, protectedThis = Ref { *this }, transactionIdentifier = transactionIdentifier.isolatedCopy(), error = error.isolatedCopy()] {
@@ -439,7 +446,7 @@ void InProcessIDBServer::abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifi
     std::optional<WebCore::IDBResourceIdentifier> transactionIdentifierCopy;
     if (transactionIdentifier)
         transactionIdentifierCopy = transactionIdentifier->isolatedCopy();
-    dispatchTask([this, protectedThis = Ref { *this }, databaseConnectionIdentifier, transactionIdentifier = WTFMove(transactionIdentifierCopy)] {
+    dispatchTask([this, protectedThis = Ref { *this }, databaseConnectionIdentifier, transactionIdentifier = WTF::move(transactionIdentifierCopy)] {
         Locker locker { m_serverLock };
         m_server->abortOpenAndUpgradeNeeded(databaseConnectionIdentifier, transactionIdentifier);
     });
@@ -450,6 +457,14 @@ void InProcessIDBServer::didFireVersionChangeEvent(IDBDatabaseConnectionIdentifi
     dispatchTask([this, protectedThis = Ref { *this }, databaseConnectionIdentifier, requestIdentifier = crossThreadCopy(requestIdentifier), connectionClosed] {
         Locker locker { m_serverLock };
         m_server->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, connectionClosed);
+    });
+}
+
+void InProcessIDBServer::didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    dispatchTask([this, protectedThis = Ref { *this }, transactionIdentifier = crossThreadCopy(transactionIdentifier), requestIdentifier = crossThreadCopy(requestIdentifier), indexInfo = crossThreadCopy(indexInfo), key = crossThreadCopy(key), indexKey = crossThreadCopy(indexKey), recordID] {
+        Locker locker { m_serverLock };
+        m_server->didGenerateIndexKeyForRecord(transactionIdentifier, requestIdentifier, indexInfo, key, indexKey, recordID);
     });
 }
 
@@ -471,8 +486,8 @@ void InProcessIDBServer::getAllDatabaseNamesAndVersions(const WebCore::IDBResour
 
 void InProcessIDBServer::didGetAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier& requestIdentifier, Vector<WebCore::IDBDatabaseNameAndVersion>&& databases)
 {
-    dispatchTaskReply([this, protectedThis = Ref { *this }, requestIdentifier, databases = crossThreadCopy(WTFMove(databases))]() mutable {
-        m_connectionToServer->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(databases));
+    dispatchTaskReply([this, protectedThis = Ref { *this }, requestIdentifier, databases = crossThreadCopy(WTF::move(databases))]() mutable {
+        m_connectionToServer->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTF::move(databases));
     });
 }
 
@@ -487,11 +502,11 @@ void InProcessIDBServer::closeAndDeleteDatabasesModifiedSince(WallTime modificat
 void InProcessIDBServer::dispatchTask(Function<void()>&& function)
 {
     ASSERT(isMainThread());
-    m_queue->dispatch(WTFMove(function));
+    m_queue->dispatch(WTF::move(function));
 }
 
 void InProcessIDBServer::dispatchTaskReply(Function<void()>&& function)
 {
     ASSERT(!isMainThread());
-    callOnMainThread(WTFMove(function));
+    callOnMainThread(WTF::move(function));
 }

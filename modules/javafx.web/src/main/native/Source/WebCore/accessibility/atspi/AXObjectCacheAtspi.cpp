@@ -21,11 +21,13 @@
 #include "AXObjectCache.h"
 
 #if USE(ATSPI)
+#include "AXNotifications.h"
 #include "AXTextStateChangeIntent.h"
 #include "AccessibilityObject.h"
 #include "AccessibilityObjectAtspi.h"
 #include "AccessibilityRenderObject.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "Element.h"
 #include "HTMLSelectElement.h"
 #include "Range.h"
@@ -44,7 +46,7 @@ void AXObjectCache::attachWrapper(AccessibilityObject& axObject)
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
 {
-    auto handleParentChanged = [&](const AXCoreObject& axObject) {
+    auto handleParentChanged = [&](const AccessibilityObject& axObject) {
         auto* wrapper = axObject.wrapper();
         if (!wrapper)
             return;
@@ -146,7 +148,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
 {
     if (!coreObject)
         coreObject = rootWebArea();
@@ -183,6 +185,10 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
         break;
     case AXTextEditTypeAttributesChange:
         wrapper->textAttributesChanged();
+        break;
+    case AXTextEditTypeReplace:
+        // Should call postTextReplacementPlatformNotification instead.
+        ASSERT_NOT_REACHED();
         break;
     case AXTextEditTypeUnknown:
         break;
@@ -231,15 +237,16 @@ void AXObjectCache::postTextReplacementPlatformNotification(AccessibilityObject*
         wrapper->textInserted(insertedText, position);
 }
 
-void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* coreObject, AXLoadingEvent loadingEvent)
+void AXObjectCache::frameLoadingEventPlatformNotification(RenderView* renderView, AXLoadingEvent loadingEvent)
 {
-    if (!coreObject)
+    if (!renderView)
         return;
 
-    if (coreObject->roleValue() != AccessibilityRole::WebArea)
+    RefPtr object = getOrCreate(*renderView);
+    if (!object || object->role() != AccessibilityRole::WebArea)
         return;
 
-    auto* wrapper = coreObject->wrapper();
+    auto* wrapper = object->wrapper();
     if (!wrapper)
         return;
 

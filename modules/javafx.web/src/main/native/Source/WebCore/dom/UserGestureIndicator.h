@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "DOMPasteAccess.h"
+#include <WebCore/DOMPasteAccess.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
@@ -66,7 +66,7 @@ public:
 
     void addDestructionObserver(Function<void(UserGestureToken&)>&& observer)
     {
-        m_destructionObservers.append(WTFMove(observer));
+        m_destructionObservers.append(WTF::move(observer));
     }
 
     DOMPasteAccessPolicy domPasteAccessPolicy() const { return m_domPasteAccessPolicy; }
@@ -88,12 +88,13 @@ public:
     enum class GestureScope { All, MediaOnly };
     void setScope(GestureScope scope) { m_scope = scope; }
     void resetScope() { m_scope = GestureScope::All; }
+    GestureScope scope() const { return m_scope; }
 
     // Expand the following methods if more propagation sources are added later.
-    enum class IsPropagatedFromFetch : bool { No, Yes };
-    void setIsPropagatedFromFetch(IsPropagatedFromFetch is) { m_isPropagatedFromFetch = is; }
-    void resetIsPropagatedFromFetch() { m_isPropagatedFromFetch = IsPropagatedFromFetch::No; }
-    bool isPropagatedFromFetch() const { return m_isPropagatedFromFetch == IsPropagatedFromFetch::Yes; }
+    enum class ShouldPropagateToMicroTask : bool { No, Yes };
+    void setShouldPropagateToMicroTask(ShouldPropagateToMicroTask is) { m_shouldPropagateToMicroTask = is; }
+    void resetShouldPropagateToMicroTask() { m_shouldPropagateToMicroTask = ShouldPropagateToMicroTask::No; }
+    bool shouldPropagateToMicroTask() const { return m_shouldPropagateToMicroTask == ShouldPropagateToMicroTask::Yes; }
 
     bool hasExpired(Seconds expirationInterval) const
     {
@@ -121,7 +122,7 @@ private:
     DOMPasteAccessPolicy m_domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
     GestureScope m_scope { GestureScope::All };
     MonotonicTime m_startTime { MonotonicTime::now() };
-    IsPropagatedFromFetch m_isPropagatedFromFetch { IsPropagatedFromFetch::No };
+    ShouldPropagateToMicroTask m_shouldPropagateToMicroTask { ShouldPropagateToMicroTask::No };
     std::optional<WTF::UUID> m_authorizationToken;
 };
 
@@ -130,6 +131,7 @@ class UserGestureIndicator {
     WTF_MAKE_NONCOPYABLE(UserGestureIndicator);
 public:
     WEBCORE_EXPORT static RefPtr<UserGestureToken> currentUserGesture();
+    static RefPtr<UserGestureToken> currentUserGestureForMainThread();
 
     WEBCORE_EXPORT static bool processingUserGesture(const Document* = nullptr);
     WEBCORE_EXPORT static bool processingUserGestureForMedia();
@@ -137,7 +139,7 @@ public:
     // If a document is provided, its last known user gesture timestamp is updated.
     enum class ProcessInteractionStyle { Immediate, Delayed, Never };
     WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<IsProcessingUserGesture>, Document* = nullptr, UserGestureType = UserGestureType::ActivationTriggering, ProcessInteractionStyle = ProcessInteractionStyle::Immediate, std::optional<WTF::UUID> authorizationToken = std::nullopt, CanRequestDOMPaste = CanRequestDOMPaste::Yes);
-    WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::IsPropagatedFromFetch = UserGestureToken::IsPropagatedFromFetch::No);
+    WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::ShouldPropagateToMicroTask = UserGestureToken::ShouldPropagateToMicroTask::No);
     WEBCORE_EXPORT ~UserGestureIndicator();
 
     WEBCORE_EXPORT std::optional<WTF::UUID> authorizationToken() const;

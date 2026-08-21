@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "LayerTreeAsTextOptions.h"
-#include "TiledBacking.h"
-#include "TransformationMatrix.h"
+#include <WebCore/ContentsFormat.h>
+#include <WebCore/LayerTreeAsTextOptions.h>
+#include <WebCore/TiledBacking.h>
+#include <WebCore/TransformationMatrix.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 
@@ -72,6 +73,9 @@ enum class PlatformLayerTreeAsTextFlags : uint8_t {
 enum class GraphicsLayerPaintBehavior : uint8_t {
     DefaultAsynchronousImageDecode = 1 << 0,
     ForceSynchronousImageDecode = 1 << 1,
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    TonemapHDRToDisplayHeadroom = 1 << 2,
+#endif
 };
 
 class GraphicsLayerClient {
@@ -91,7 +95,7 @@ public:
     // Notification that this layer requires a flush on the next display refresh.
     virtual void notifySubsequentFlushRequired(const GraphicsLayer*) { }
 
-    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, OptionSet<GraphicsLayerPaintBehavior>) { }
+    virtual void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& /* inClip */, OptionSet<GraphicsLayerPaintBehavior>) { }
     virtual void didChangePlatformLayerForLayer(const GraphicsLayer*) { }
 
     // Provides current transform (taking transform-origin and animations into account). Input matrix has been
@@ -108,7 +112,9 @@ public:
     virtual float pageScaleFactor() const { return 1; }
     virtual float zoomedOutPageScaleFactor() const { return 0; }
 
-    virtual std::optional<float> customContentsScale(const GraphicsLayer*) const { return { }; }
+    virtual FloatSize enclosingFrameViewVisibleSize() const { return { }; }
+
+    virtual std::optional<float> customContentsScale(const GraphicsLayer&) const { return { }; }
 
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
@@ -139,9 +145,11 @@ public:
     virtual bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const { return true; }
 #endif
 
-    virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
+    virtual bool layerNeedsPlatformContext(const GraphicsLayer&) const { return false; }
 
     virtual bool backdropRootIsOpaque(const GraphicsLayer*) const { return false; }
+
+    virtual OptionSet<ContentsFormat> screenContentsFormats() const { return { }; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

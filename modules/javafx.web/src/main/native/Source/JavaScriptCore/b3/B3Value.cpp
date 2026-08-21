@@ -32,6 +32,7 @@
 #include "B3AtomicValue.h"
 #include "B3BasicBlockInlines.h"
 #include "B3BottomProvider.h"
+#include "B3BulkMemoryValue.h"
 #include "B3CCallValue.h"
 #include "B3FenceValue.h"
 #include "B3MemoryValue.h"
@@ -52,7 +53,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(Value);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Value);
 
 #if ASSERT_ENABLED
 namespace B3ValueInternal {
@@ -325,6 +326,16 @@ Value* Value::subConstant(Procedure&, const Value*) const
 }
 
 Value* Value::mulConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::mulHighConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::uMulHighConstant(Procedure&, const Value*) const
 {
     return nullptr;
 }
@@ -656,6 +667,8 @@ Effects Value::effects() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Neg:
     case PurifyNaN:
     case BitAnd:
@@ -720,6 +733,8 @@ Effects Value::effects() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -783,7 +798,8 @@ Effects Value::effects() const
             result.writes = memory->fenceRange();
             result.fence = true;
         }
-        result.controlDependent = true;
+        result.controlDependent = memory->controlDependent();
+        result.readsMutability = memory->readsMutability();
         break;
     }
     case Store8:
@@ -795,6 +811,19 @@ Effects Value::effects() const
             result.reads = memory->fenceRange();
             result.fence = true;
         }
+        result.controlDependent = memory->controlDependent();
+        break;
+    }
+    case MemoryCopy: {
+        const auto* memory = as<BulkMemoryValue>();
+        result.reads = memory->readRange();
+        result.writes = memory->writeRange();
+        result.controlDependent = true;
+        break;
+    }
+    case MemoryFill: {
+        const auto* memory = as<BulkMemoryValue>();
+        result.writes = memory->writeRange();
         result.controlDependent = true;
         break;
     }
@@ -909,6 +938,8 @@ ValueKey Value::key() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:
@@ -926,7 +957,9 @@ ValueKey Value::key() const
     case Equal:
     case NotEqual:
     case LessThan:
+    case LessEqual:
     case GreaterThan:
+    case GreaterEqual:
     case Above:
     case Below:
     case AboveEqual:
@@ -959,6 +992,8 @@ ValueKey Value::key() const
         return ValueKey(
             SlotBase, type(),
             static_cast<int64_t>(as<SlotBaseValue>()->slot()->index()));
+    case Extract:
+        return ValueKey(kind(), type(), child(0), as<ExtractValue>()->index());
     case VectorNot:
     case VectorSplat:
     case VectorAbs:
@@ -1002,6 +1037,8 @@ ValueKey Value::key() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -1035,9 +1072,44 @@ ValueKey Value::key() const
         if (numChildren() == 2)
             return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), nullptr);
         return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), child(2));
-    default:
+    case Nop:
+    case Set:
+    case Get:
+    case Load:
+    case Load8Z:
+    case Load16Z:
+    case Load8S:
+    case Load16S:
+    case Store:
+    case Store8:
+    case Store16:
+    case AtomicWeakCAS:
+    case AtomicStrongCAS:
+    case AtomicXchgAdd:
+    case AtomicXchgAnd:
+    case AtomicXchgOr:
+    case AtomicXchgSub:
+    case AtomicXchgXor:
+    case AtomicXchg:
+    case WasmAddress:
+    case WasmBoundsCheck:
+    case MemoryCopy:
+    case MemoryFill:
+    case Fence:
+    case CCall:
+    case Patchpoint:
+    case Upsilon:
+    case Phi:
+    case Jump:
+    case Branch:
+    case Switch:
+    case EntrySwitch:
+    case Return:
+    case Oops:
         return ValueKey();
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return ValueKey();
 }
 
 Value* Value::foldIdentity() const
@@ -1088,6 +1160,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:

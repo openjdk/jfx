@@ -29,10 +29,10 @@
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-#include "ArrayBufferView.h"
-#include "JSArrayBufferView.h"
-#include "JSDataView.h"
-#include "TypedArrayType.h"
+#include <JavaScriptCore/ArrayBufferView.h>
+#include <JavaScriptCore/JSArrayBufferView.h>
+#include <JavaScriptCore/JSDataView.h>
+#include <JavaScriptCore/TypedArrayType.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
@@ -115,6 +115,21 @@ inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrappedAllowShared(VM&, JSVa
     return nullptr;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+inline void JSArrayBufferView::refreshVector(void* newData)
+{
+    // We ensure that the vector is really there because these notifications are delivered to
+    // incoming references of a buffer, and an incoming reference from a view to a buffer remains in
+    // place even after a view detaches.
+    if (hasVector()) {
+        void* newVectorPtr = static_cast<uint8_t*>(newData) + byteOffsetRaw();
+        m_vector.setWithoutBarrier(newVectorPtr);
+    }
+}
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 template<typename Getter>
 bool isArrayBufferViewOutOfBounds(JSArrayBufferView* view, Getter& getter)
 {
@@ -123,10 +138,10 @@ bool isArrayBufferViewOutOfBounds(JSArrayBufferView* view, Getter& getter)
     //
     // This function should work with DataView too.
 
-    if (UNLIKELY(view->isDetached()))
+    if (view->isDetached()) [[unlikely]]
         return true;
 
-    if (LIKELY(!view->isResizableOrGrowableShared()))
+    if (!view->isResizableOrGrowableShared()) [[likely]]
         return false;
 
     ASSERT(hasArrayBuffer(view->mode()) && isResizableOrGrowableShared(view->mode()));
@@ -156,10 +171,10 @@ std::optional<size_t> integerIndexedObjectLength(JSArrayBufferView* typedArray, 
 {
     // https://tc39.es/proposal-resizablearraybuffer/#sec-integerindexedobjectlength
 
-    if (UNLIKELY(isIntegerIndexedObjectOutOfBounds(typedArray, getter)))
+    if (isIntegerIndexedObjectOutOfBounds(typedArray, getter)) [[unlikely]]
         return std::nullopt;
 
-    if (LIKELY(!typedArray->isAutoLength()))
+    if (!typedArray->isAutoLength()) [[likely]]
         return typedArray->lengthRaw();
 
     ASSERT(hasArrayBuffer(typedArray->mode()) && isResizableOrGrowableShared(typedArray->mode()));
@@ -179,7 +194,7 @@ size_t integerIndexedObjectByteLength(JSArrayBufferView* typedArray, Getter& get
     if (!length || !length.value())
         return 0;
 
-    if (LIKELY(!typedArray->isAutoLength()))
+    if (!typedArray->isAutoLength()) [[likely]]
         return typedArray->byteLengthRaw();
 
     return length.value() << logElementSize(typedArray->type());
@@ -191,13 +206,13 @@ inline JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSArr
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!isTypedView(typedArray->type()))) {
+    if (!isTypedView(typedArray->type())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
         return nullptr;
     }
 
     IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
-    if (UNLIKELY(isIntegerIndexedObjectOutOfBounds(typedArray, getter))) {
+    if (isIntegerIndexedObjectOutOfBounds(typedArray, getter)) [[unlikely]] {
         throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
     return nullptr;
     }
@@ -209,13 +224,13 @@ inline JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSVal
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!typedArrayValue.isCell())) {
+    if (!typedArrayValue.isCell()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
     return nullptr;
     }
 
     JSCell* typedArrayCell = typedArrayValue.asCell();
-    if (UNLIKELY(!isTypedView(typedArrayCell->type()))) {
+    if (!isTypedView(typedArrayCell->type())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
         return nullptr;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +30,30 @@
 namespace WebCore {
 
 class DeferredPromise;
+class WebTransportSession;
 
 struct WebTransportReceiveStreamStats;
+struct WebTransportStreamIdentifierType;
 
-class WebTransportReceiveStream : public ReadableStream {
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+
+class WebTransportReceiveStream final : public ReadableStream {
 public:
-    static ExceptionOr<Ref<WebTransportReceiveStream>> create(JSDOMGlobalObject&, Ref<ReadableStreamSource>&&);
+    static ExceptionOr<Ref<WebTransportReceiveStream>> create(WebTransportStreamIdentifier, WebTransportSession&, JSDOMGlobalObject&, Ref<ReadableStreamSource>&&);
+    ~WebTransportReceiveStream() final;
 
-    void getStats(Ref<DeferredPromise>&&);
+    void getStats(ScriptExecutionContext&, Ref<DeferredPromise>&&);
 private:
-    WebTransportReceiveStream(Ref<InternalReadableStream>&&);
+    WebTransportReceiveStream(ScriptExecutionContext*, WebTransportStreamIdentifier, WebTransportSession&, Ref<InternalReadableStream>&&);
+
+    virtual Type type() const { return Type::WebTransport; }
+
+    const WebTransportStreamIdentifier m_identifier;
+    const ThreadSafeWeakPtr<WebTransportSession> m_session;
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebTransportReceiveStream)
+static bool isType(const WebCore::ReadableStream& stream) { return stream.type() == WebCore::ReadableStream::Type::WebTransport; }
+SPECIALIZE_TYPE_TRAITS_END()

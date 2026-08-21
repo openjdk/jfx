@@ -28,9 +28,7 @@
 
 #pragma once
 
-#include "ElementContext.h"
-#include "IntRect.h"
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 
 namespace WebCore {
 
@@ -49,6 +47,22 @@ enum class PolicyAction : uint8_t {
     LoadWillContinueInAnotherProcess
 };
 
+inline ASCIILiteral toString(PolicyAction action)
+{
+    switch (action) {
+    using enum PolicyAction;
+    case Download:
+        return "Download"_s;
+    case Ignore:
+        return "Ignore"_s;
+    case LoadWillContinueInAnotherProcess:
+        return "LoadWillContinueInAnotherProcess"_s;
+    case Use:
+        break;
+    }
+    return "Use"_s;
+}
+
 enum class ReloadOption : uint8_t {
     ExpiredOnly = 1 << 0,
     FromOrigin  = 1 << 1,
@@ -63,9 +77,10 @@ enum class FrameLoadType : uint8_t {
     Reload,
     Same, // user loads same URL again (but not reload button)
     RedirectWithLockedBackForwardList, // FIXME: Merge "lockBackForwardList", "lockHistory", "quickRedirect" and "clientRedirect" into a single concept of redirect.
-    Replace,
+    MultipartReplace,
     ReloadFromOrigin,
-    ReloadExpiredOnly
+    ReloadExpiredOnly,
+    NavigationAPIReplace
 };
 
 enum class IsMetaRefresh : bool { No, Yes };
@@ -93,6 +108,12 @@ enum class NavigationHistoryBehavior : uint8_t {
     Push,
     Replace,
     Reload // Internal, not part of the specification
+};
+
+enum class NavigationUpgradeToHTTPSBehavior : uint8_t {
+    Disabled,
+    HTTPFallback,
+    BasedOnPolicy
 };
 
 enum class ShouldOpenExternalURLsPolicy : uint8_t {
@@ -147,14 +168,6 @@ enum class LockBackForwardList : bool { No, Yes };
 enum class AllowNavigationToInvalidURL : bool { No, Yes };
 enum class HasInsecureContent : bool { No, Yes };
 enum class LoadWillContinueInAnotherProcess : bool { No, Yes };
-
-// FIXME: This should move to somewhere else. It no longer is related to frame loading.
-struct SystemPreviewInfo {
-    ElementContext element;
-
-    IntRect previewRect;
-    bool isPreview { false };
-};
 
 enum class LoadCompletionType : bool {
     Finish,

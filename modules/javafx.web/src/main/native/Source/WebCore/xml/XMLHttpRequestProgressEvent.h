@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class XMLHttpRequestProgressEvent final : public ProgressEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLHttpRequestProgressEvent);
+    WTF_MAKE_TZONE_ALLOCATED(XMLHttpRequestProgressEvent);
 public:
     static Ref<XMLHttpRequestProgressEvent> create(const AtomString& type, bool lengthComputable = false, unsigned long long loaded = 0, unsigned long long total = 0)
     {
@@ -49,3 +49,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT(XMLHttpRequestProgressEvent)

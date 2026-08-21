@@ -27,11 +27,12 @@
 #include "CustomPaintCanvas.h"
 
 #include "BitmapImage.h"
-#include "CSSParserContext.h"
 #include "CanvasRenderingContext.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -52,9 +53,6 @@ CustomPaintCanvas::CustomPaintCanvas(ScriptExecutionContext& context, unsigned w
 CustomPaintCanvas::~CustomPaintCanvas()
 {
     notifyObserversCanvasDestroyed();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 RefPtr<PaintRenderingContext2D> CustomPaintCanvas::getContext()
@@ -85,7 +83,7 @@ Image* CustomPaintCanvas::copiedImage() const
     if (!width() || !height())
         return nullptr;
     m_copiedImage = nullptr;
-    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (buffer) {
         if (m_context)
             m_context->replayDisplayList(buffer->context());
@@ -99,12 +97,15 @@ void CustomPaintCanvas::clearCopiedImage() const
     m_copiedImage = nullptr;
 }
 
-const CSSParserContext& CustomPaintCanvas::cssParserContext() const
+std::unique_ptr<CSSParserContext> CustomPaintCanvas::createCSSParserContext() const
 {
     // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
-    if (!m_cssParserContext)
-        m_cssParserContext = WTF::makeUnique<CSSParserContext>(HTMLStandardMode);
-    return *m_cssParserContext;
+    return makeUnique<CSSParserContext>(HTMLStandardMode);
+}
+
+ScriptExecutionContext* CustomPaintCanvas::canvasBaseScriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 } // namespace WebCore

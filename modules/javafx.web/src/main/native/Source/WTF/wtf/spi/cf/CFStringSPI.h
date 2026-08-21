@@ -25,6 +25,11 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
+DECLARE_SYSTEM_HEADER
+
 #include <CoreFoundation/CoreFoundation.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -34,7 +39,7 @@
 
 #else
 
-extern "C" {
+WTF_EXTERN_C_BEGIN
 
 typedef CF_ENUM(CFIndex, CFStringCharacterClusterType)
 {
@@ -43,13 +48,14 @@ typedef CF_ENUM(CFIndex, CFStringCharacterClusterType)
     kCFStringBackwardDeletionCluster = 4
 };
 
-}
+WTF_EXTERN_C_END
 
 #endif
 
-extern "C" {
+WTF_EXTERN_C_BEGIN
 
 CFRange CFStringGetRangeOfCharacterClusterAtIndex(CFStringRef, CFIndex charIndex, CFStringCharacterClusterType);
 void _CFStringGetUserDefaultEncoding(UInt32* scriptValue, UInt32* regionValue);
 
-}
+WTF_EXTERN_C_END
+

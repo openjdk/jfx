@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Image.h"
-#include "IntPoint.h"
-#include <variant>
+#include <WebCore/Image.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/Assertions.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -38,9 +38,8 @@ typedef HICON HCURSOR;
 #include <wtf/RefCounted.h>
 #elif PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
-#elif PLATFORM(GTK)
-#include "GRefPtrGtk.h"
-#elif PLATFORM(JAVA)
+#endif
+#if PLATFORM(JAVA)
 #include <jni.h>
 #endif
 
@@ -76,8 +75,6 @@ private:
 using PlatformCursor = RefPtr<SharedCursor>;
 #elif HAVE(NSCURSOR)
 using PlatformCursor = NSCursor *;
-#elif PLATFORM(GTK)
-using PlatformCursor = GRefPtr<GdkCursor>;
 #elif PLATFORM(JAVA)
 using PlatformCursor = jlong;
 #else
@@ -144,7 +141,7 @@ public:
         float scaleFactor { 0 };
 #endif
     };
-    using IPCData = std::variant<Type /* Non custom type */, std::optional<CustomCursorIPCData>>;
+    using IPCData = Variant<Type /* Non custom type */, std::optional<CustomCursorIPCData>>;
 
     Cursor() = default;
     static std::optional<Cursor> fromIPCData(IPCData&&);
@@ -258,7 +255,7 @@ inline Cursor::Type Cursor::type() const
 
 inline std::optional<Cursor> Cursor::fromIPCData(IPCData&& ipcData)
 {
-    return WTF::switchOn(WTFMove(ipcData), [](Type&& type) -> std::optional<Cursor> {
+    return WTF::switchOn(WTF::move(ipcData), [](Type&& type) -> std::optional<Cursor> {
         if (type == Type::Invalid || type == Type::Custom)
             return std::nullopt;
         auto& cursorReference = Cursor::fromType(type);
@@ -283,7 +280,7 @@ inline auto Cursor::ipcData() const -> IPCData
     auto type = this->type();
     if (type != Type::Custom)
         return type;
-    if (m_image->isNull())
+    if (Ref { *m_image }->isNull())
         return std::nullopt;
     return CustomCursorIPCData {
         *m_image

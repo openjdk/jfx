@@ -27,9 +27,11 @@
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSRequestPriority.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "RequestPriority.h"
 #include "Settings.h"
@@ -40,7 +42,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLScriptElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLScriptElement);
 
 using namespace HTMLNames;
 
@@ -77,6 +79,7 @@ void HTMLScriptElement::removedFromAncestor(RemovalType type, ContainerNode& con
 {
     HTMLElement::removedFromAncestor(type, container);
     unblockRendering();
+    unregisterSpeculationRules();
 }
 
 void HTMLScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -107,7 +110,7 @@ void HTMLScriptElement::didFinishInsertingNode()
 
 void HTMLScriptElement::setText(String&& value)
 {
-    setTextContent(WTFMove(value));
+    setTextContent(WTF::move(value));
 }
 
 DOMTokenList& HTMLScriptElement::blocking()
@@ -147,14 +150,14 @@ void HTMLScriptElement::unblockRendering()
 }
 
 // https://html.spec.whatwg.org/multipage/scripting.html#dom-script-text
-ExceptionOr<void> HTMLScriptElement::setText(std::variant<RefPtr<TrustedScript>, String>&& value)
+ExceptionOr<void> HTMLScriptElement::setText(Variant<RefPtr<TrustedScript>, String>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement text"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement text"_s));
 }
 
-ExceptionOr<void> HTMLScriptElement::setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&& value)
+ExceptionOr<void> HTMLScriptElement::setTextContent(std::optional<Variant<RefPtr<TrustedScript>, String>>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), value ? WTFMove(*value) : emptyString(), "HTMLScriptElement textContent"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), value ? WTF::move(*value) : emptyString(), "HTMLScriptElement textContent"_s));
 }
 
 ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
@@ -165,20 +168,20 @@ ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
     auto newValue = value.releaseReturnValue();
 
     setTrustedScriptText(newValue);
-    setTextContent(WTFMove(newValue));
+    setTextContent(WTF::move(newValue));
     return { };
 }
 
-ExceptionOr<void> HTMLScriptElement::setInnerText(std::variant<RefPtr<TrustedScript>, String>&& value)
+ExceptionOr<void> HTMLScriptElement::setInnerText(Variant<RefPtr<TrustedScript>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement innerText"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement innerText"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
     auto newValue = stringValueHolder.releaseReturnValue();
 
     setTrustedScriptText(newValue);
-    setInnerText(WTFMove(newValue));
+    setInnerText(WTF::move(newValue));
     return { };
 }
 
@@ -193,11 +196,6 @@ bool HTMLScriptElement::async() const
     return hasAttributeWithoutSynchronization(asyncAttr) || forceAsync();
 }
 
-void HTMLScriptElement::setCrossOrigin(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(crossoriginAttr, value);
-}
-
 String HTMLScriptElement::crossOrigin() const
 {
     return parseCORSSettingsAttribute(attributeWithoutSynchronization(crossoriginAttr));
@@ -208,9 +206,9 @@ String HTMLScriptElement::src() const
     return getURLAttributeForBindings(WebCore::HTMLNames::srcAttr).string();
 }
 
-ExceptionOr<void> HTMLScriptElement::setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&& value)
+ExceptionOr<void> HTMLScriptElement::setSrc(Variant<RefPtr<TrustedScriptURL>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement src"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement src"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
@@ -278,24 +276,19 @@ bool HTMLScriptElement::isScriptPreventedByAttributes() const
     auto& eventAttribute = attributeWithoutSynchronization(eventAttr);
     auto& forAttribute = attributeWithoutSynchronization(forAttr);
     if (!eventAttribute.isNull() && !forAttribute.isNull()) {
-        if (!equalLettersIgnoringASCIICase(StringView(forAttribute).trim(isASCIIWhitespace<UChar>), "window"_s))
+        if (!equalLettersIgnoringASCIICase(StringView(forAttribute).trim(isASCIIWhitespace<char16_t>), "window"_s))
             return true;
 
-        auto eventAttributeView = StringView(eventAttribute).trim(isASCIIWhitespace<UChar>);
+        auto eventAttributeView = StringView(eventAttribute).trim(isASCIIWhitespace<char16_t>);
         if (!equalLettersIgnoringASCIICase(eventAttributeView, "onload"_s) && !equalLettersIgnoringASCIICase(eventAttributeView, "onload()"_s))
             return true;
     }
     return false;
 }
 
-Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
+Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
 {
     return adoptRef(*new HTMLScriptElement(tagQName(), document, false, alreadyStarted()));
-}
-
-void HTMLScriptElement::setReferrerPolicyForBindings(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(referrerpolicyAttr, value);
 }
 
 String HTMLScriptElement::referrerPolicyForBindings() const
@@ -306,11 +299,6 @@ String HTMLScriptElement::referrerPolicyForBindings() const
 ReferrerPolicy HTMLScriptElement::referrerPolicy() const
 {
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-}
-
-void HTMLScriptElement::setFetchPriorityForBindings(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(fetchpriorityAttr, value);
 }
 
 String HTMLScriptElement::fetchPriorityForBindings() const

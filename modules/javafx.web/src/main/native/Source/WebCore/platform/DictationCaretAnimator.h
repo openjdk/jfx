@@ -26,16 +26,20 @@
 #pragma once
 
 #include "CaretAnimator.h"
+#include "FloatRect.h"
 #include <wtf/TZoneMalloc.h>
 
 #if HAVE(REDESIGNED_TEXT_CURSOR)
 
 namespace WebCore {
 
+class FloatRoundedRect;
+class Gradient;
 class Path;
 
 class DictationCaretAnimator final : public CaretAnimator {
     WTF_MAKE_TZONE_ALLOCATED(DictationCaretAnimator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DictationCaretAnimator);
 public:
     explicit DictationCaretAnimator(CaretAnimationClient&);
 

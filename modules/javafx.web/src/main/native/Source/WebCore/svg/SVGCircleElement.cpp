@@ -27,23 +27,27 @@
 #include "NodeName.h"
 #include "RenderSVGEllipse.h"
 #include "SVGElementInlines.h"
+#include "SVGParsingError.h"
+#include "SVGPropertyOwnerRegistry.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGCircleElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGCircleElement);
 
 inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::circleTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::cxAttr, &SVGCircleElement::m_cx>();
         PropertyRegistry::registerProperty<SVGNames::cyAttr, &SVGCircleElement::m_cy>();
         PropertyRegistry::registerProperty<SVGNames::rAttr, &SVGCircleElement::m_r>();
-    });
+    }
 }
 
 Ref<SVGCircleElement> SVGCircleElement::create(const QualifiedName& tagName, Document& document)
@@ -64,7 +68,7 @@ SVGAnimatedProperty* SVGCircleElement::propertyForAttribute(const QualifiedName&
 
 void SVGCircleElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::cxAttr:
@@ -99,8 +103,8 @@ void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGCircleElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-        return createRenderer<RenderSVGEllipse>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGEllipse>(*this, WTFMove(style));
+        return createRenderer<RenderSVGEllipse>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGEllipse>(*this, WTF::move(style));
 }
 
 }

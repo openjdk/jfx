@@ -28,8 +28,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "CSSParser.h"
-#include "CSSSelectorList.h"
+#include "CSSSelectorParser.h"
 #include "CommonAtomStrings.h"
 #include "ContentExtensionError.h"
 #include "ContentExtensionRule.h"
@@ -84,7 +83,7 @@ static Expected<Vector<String>, std::error_code> getDomainList(const JSON::Array
             domain = domain.substring(1);
         }
 
-        std::array<std::pair<UChar, ASCIILiteral>, 9> escapeTable { {
+        std::array<std::pair<char16_t, ASCIILiteral>, 9> escapeTable { {
             { '\\', "\\\\"_s },
             { '{', "\\{"_s },
             { '}', "\\}"_s },
@@ -166,6 +165,15 @@ static Expected<Trigger, std::error_code> loadTrigger(const JSON::Object& ruleOb
             return makeUnexpected(error);
     }
 
+    if (auto requestMethodValue = triggerObject->getValue("request-method"_s)) {
+        auto requestMethod = readRequestMethod(requestMethodValue->asString());
+
+        if (!requestMethod.has_value())
+            return makeUnexpected(ContentExtensionError::JSONInvalidRequestMethod);
+
+        trigger.flags |= static_cast<ResourceFlags>(requestMethod.value());
+    }
+
     auto checkCondition = [&] (ASCIILiteral key, Expected<Vector<String>, std::error_code> (*listReader)(const JSON::Array&), ActionCondition actionCondition) -> std::error_code {
         if (auto value = triggerObject->getValue(key)) {
             if (trigger.flags & ActionConditionMask)
@@ -176,7 +184,7 @@ static Expected<Trigger, std::error_code> loadTrigger(const JSON::Object& ruleOb
             auto list = listReader(*array);
             if (!list.has_value())
                 return list.error();
-            trigger.conditions = WTFMove(list.value());
+            trigger.conditions = WTF::move(list.value());
             if (trigger.conditions.isEmpty())
                 return ContentExtensionError::JSONInvalidConditionList;
             trigger.flags |= static_cast<ResourceFlags>(actionCondition);
@@ -215,8 +223,7 @@ bool isValidCSSSelector(const String& selector)
     // we want to use quirks mode in parsing, but automatic mode when actually applying the content blocker styles.
     // FIXME: rdar://105733691 (Parse/apply content blocker style sheets in both standards and quirks mode lazily).
     WebCore::CSSParserContext context(HTMLQuirksMode);
-    CSSParser parser(context);
-    return !!parser.parseSelectorList(selector);
+    return !!CSSSelectorParser::parseSelectorList(selector, context);
 }
 
 WebCore::CSSParserContext contentExtensionCSSParserContext()
@@ -225,7 +232,7 @@ WebCore::CSSParserContext contentExtensionCSSParserContext()
     return context;
 }
 
-static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::Object& ruleObject, const String& urlFilter)
+static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::Object& ruleObject, const String& urlFilter, CSSSelectorsAllowed selectorsAllowed)
 {
     auto actionObject = ruleObject.getObject("action"_s);
     if (!actionObject)
@@ -237,15 +244,23 @@ static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::O
         return Action { BlockLoadAction() };
     if (actionType == "ignore-previous-rules"_s)
         return Action { IgnorePreviousRulesAction() };
+    if (actionType == "ignore-following-rules"_s)
+        return Action { IgnoreFollowingRulesAction() };
     if (actionType == "block-cookies"_s)
         return Action { BlockCookiesAction() };
     if (actionType == "css-display-none"_s) {
+        ASSERT(selectorsAllowed == CSSSelectorsAllowed::Yes);
+        if (selectorsAllowed == CSSSelectorsAllowed::No) {
+            // Skip css-display-none rules if CSS selectors aren't allowed.
+            return std::nullopt;
+        }
+
         String selectorString = actionObject->getString("selector"_s);
         if (!selectorString)
             return makeUnexpected(ContentExtensionError::JSONInvalidCSSDisplayNoneActionType);
         if (!isValidCSSSelector(selectorString))
             return std::nullopt; // Skip rules with invalid selectors to be backwards-compatible.
-        return Action { CSSDisplayNoneSelectorAction { { WTFMove(selectorString) } } };
+        return Action { CSSDisplayNoneSelectorAction { { WTF::move(selectorString) } } };
     }
     if (actionType == "make-https"_s)
         return Action { MakeHTTPSAction() };
@@ -253,39 +268,58 @@ static std::optional<Expected<Action, std::error_code>> loadAction(const JSON::O
         String notification = actionObject->getString("notification"_s);
         if (!notification)
             return makeUnexpected(ContentExtensionError::JSONInvalidNotification);
-        return Action { NotifyAction { { WTFMove(notification) } } };
+        return Action { NotifyAction { { WTF::move(notification) } } };
     }
     if (actionType == "redirect"_s) {
         auto action = RedirectAction::parse(*actionObject, urlFilter);
         if (!action)
             return makeUnexpected(action.error());
-        return Action { RedirectAction { WTFMove(*action) } };
+        return Action { RedirectAction { WTF::move(*action) } };
     }
     if (actionType == "modify-headers"_s) {
         auto action = ModifyHeadersAction::parse(*actionObject);
         if (!action)
             return makeUnexpected(action.error());
-        return Action { WTFMove(*action) };
+        return Action { WTF::move(*action) };
     }
     return makeUnexpected(ContentExtensionError::JSONInvalidActionType);
 }
 
-static std::optional<Expected<ContentExtensionRule, std::error_code>> loadRule(const JSON::Object& ruleObject)
+static std::optional<Expected<ContentExtensionRule, std::error_code>> loadRule(const JSON::Object& ruleObject, CSSSelectorsAllowed selectorsAllowed)
 {
     auto trigger = loadTrigger(ruleObject);
     if (!trigger.has_value())
         return makeUnexpected(trigger.error());
 
-    auto action = loadAction(ruleObject, trigger->urlFilter);
+    auto action = loadAction(ruleObject, trigger->urlFilter, selectorsAllowed);
     if (!action)
         return std::nullopt;
     if (!action->has_value())
         return makeUnexpected(action->error());
 
-    return { { { WTFMove(trigger.value()), WTFMove(action->value()) } } };
+    return { { { WTF::move(trigger.value()), WTF::move(action->value()) } } };
 }
 
-static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(const String& ruleJSON)
+static std::optional<Expected<ContentExtensionRule, std::error_code>> loadRuleIdentifier(const JSON::Object& ruleObject)
+{
+    auto identifierValue = ruleObject.getValue("_identifier"_s);
+    if (!identifierValue || !identifierValue->asValue())
+        return std::nullopt;
+
+    auto identifier = identifierValue->asValue()->asDouble();
+    if (!identifier.has_value())
+        return makeUnexpected(ContentExtensionError::JSONInvalidRuleIdentifier);
+
+    auto rulesetIdentifier = ruleObject.getString("_rulesetIdentifier"_s);
+
+    auto trigger = loadTrigger(ruleObject);
+    if (!trigger.has_value())
+        return makeUnexpected(trigger.error());
+
+    return { { { WTF::move(trigger.value()), Action { ReportIdentifierAction { rulesetIdentifier, identifier.value() } } } } };
+}
+
+static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(const String& ruleJSON, CSSSelectorsAllowed selectorsAllowed)
 {
     auto decodedRules = JSON::Value::parseJSON(ruleJSON);
 
@@ -297,7 +331,6 @@ static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(
         return makeUnexpected(ContentExtensionError::JSONTopLevelStructureNotAnArray);
 
     Vector<ContentExtensionRule> ruleList;
-
     constexpr size_t maxRuleCount = 150000;
     if (topLevelArray->length() > maxRuleCount)
         return makeUnexpected(ContentExtensionError::JSONTooManyRules);
@@ -307,24 +340,31 @@ static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(
         if (!ruleObject)
             return makeUnexpected(ContentExtensionError::JSONInvalidRule);
 
-        auto rule = loadRule(*ruleObject);
+        auto rule = loadRule(*ruleObject, selectorsAllowed);
         if (!rule)
             continue;
         if (!rule->has_value())
             return makeUnexpected(rule->error());
-        ruleList.append(WTFMove(rule->value()));
+        ruleList.append(WTF::move(rule->value()));
+
+        auto ruleIdentifier = loadRuleIdentifier(*ruleObject);
+        if (!ruleIdentifier)
+            continue;
+        if (!ruleIdentifier->has_value())
+            return makeUnexpected(ruleIdentifier->error());
+        ruleList.append(WTF::move(ruleIdentifier->value()));
     }
 
     return ruleList;
 }
 
-Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(const String& ruleJSON)
+Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(const String& ruleJSON, CSSSelectorsAllowed selectorsAllowed)
 {
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime loadExtensionStartTime = MonotonicTime::now();
 #endif
 
-    auto ruleList = loadEncodedRules(ruleJSON);
+    auto ruleList = loadEncodedRules(ruleJSON, selectorsAllowed);
 
     if (!ruleList.has_value())
         return makeUnexpected(ruleList.error());

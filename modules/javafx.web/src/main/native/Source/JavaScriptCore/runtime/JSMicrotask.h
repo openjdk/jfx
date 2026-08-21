@@ -25,15 +25,12 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "Microtask.h"
-#include "Structure.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/Structure.h>
 
 namespace JSC {
 
-class JSArray;
-
-JS_EXPORT_PRIVATE Ref<Microtask> createJSMicrotask(VM&, JSValue job, JSValue, JSValue, JSValue, JSValue);
-JS_EXPORT_PRIVATE void runJSMicrotask(JSGlobalObject*, MicrotaskIdentifier, JSValue job, JSValue, JSValue, JSValue, JSValue);
+JS_EXPORT_PRIVATE void runInternalMicrotask(JSGlobalObject*, InternalMicrotask, uint8_t, std::span<const JSValue, maxMicrotaskArguments>);
 
 } // namespace JSC

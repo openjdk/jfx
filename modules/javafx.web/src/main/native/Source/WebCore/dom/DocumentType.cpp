@@ -26,11 +26,12 @@
 #include "Document.h"
 #include "Element.h"
 #include "NamedNodeMap.h"
+#include "SerializedNode.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentType);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DocumentType);
 
 DocumentType::DocumentType(Document& document, const String& name, const String& publicId, const String& systemId)
     : Node(document, DOCUMENT_TYPE_NODE, { })
@@ -45,9 +46,14 @@ String DocumentType::nodeName() const
     return name();
 }
 
-Ref<Node> DocumentType::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*)
+Ref<Node> DocumentType::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*) const
 {
     return create(document, m_name, m_publicId, m_systemId);
+}
+
+SerializedNode DocumentType::serializeNode(CloningOperation) const
+{
+    return { SerializedNode::DocumentType { m_name, m_publicId, m_systemId } };
 }
 
 }

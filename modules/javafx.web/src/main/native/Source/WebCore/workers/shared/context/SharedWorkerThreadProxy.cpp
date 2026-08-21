@@ -29,10 +29,12 @@
 #include "BadgeClient.h"
 #include "CacheStorageProvider.h"
 #include "Chrome.h"
+#include "DocumentSettingsValues.h"
 #include "ErrorEvent.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
+#include "IDBConnectionProxy.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
 #include "MessageEvent.h"
@@ -44,6 +46,7 @@
 #include "SharedWorkerContextManager.h"
 #include "SharedWorkerGlobalScope.h"
 #include "SharedWorkerThread.h"
+#include "SocketProvider.h"
 #include "WebRTCProvider.h"
 #include "WorkerClient.h"
 #include "WorkerFetchResult.h"
@@ -54,9 +57,9 @@
 
 namespace WebCore {
 
-static HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
+static HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>> map;
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>> map;
     return map;
 }
 
@@ -68,7 +71,7 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
         document.url(),
         workerOptions.name,
         makeString("sharedworker:"_s, Inspector::IdentifiersFactory::createIdentifier()),
-        WTFMove(initializationData.userAgent),
+        WTF::move(initializationData.userAgent),
         platformStrategies()->loaderStrategy()->isOnLine(),
         workerFetchResult.contentSecurityPolicy,
         false,
@@ -80,16 +83,16 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
         document.settingsValues(),
         WorkerThreadMode::CreateNewThread,
         *document.sessionID(),
-        WTFMove(initializationData.serviceWorkerData),
+        WTF::move(initializationData.serviceWorkerData),
         *initializationData.clientIdentifier,
         document.advancedPrivacyProtections(),
         document.noiseInjectionHashSalt()
     };
 }
 
-SharedWorkerThreadProxy* SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
+RefPtr<SharedWorkerThreadProxy> SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
 {
-    return allSharedWorkerThreadProxies().get(identifier);
+    return allSharedWorkerThreadProxies().get(identifier).get();
 }
 
 bool SharedWorkerThreadProxy::hasInstances()
@@ -98,10 +101,10 @@ bool SharedWorkerThreadProxy::hasInstances()
 }
 
 SharedWorkerThreadProxy::SharedWorkerThreadProxy(Ref<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, CacheStorageProvider& cacheStorageProvider)
-    : m_page(WTFMove(page))
+    : m_page(WTF::move(page))
     , m_document(*m_page->localTopDocument())
     , m_contextIdentifier(*initializationData.clientIdentifier)
-    , m_workerThread(SharedWorkerThread::create(sharedWorkerIdentifier, generateWorkerParameters(workerFetchResult, WTFMove(workerOptions), WTFMove(initializationData), m_document), WTFMove(workerFetchResult.script), *this, *this, *this, *this, WorkerThreadStartMode::Normal, clientOrigin.topOrigin.securityOrigin(), m_document->idbConnectionProxy(), m_document->socketProvider(), JSC::RuntimeFlags::createAllEnabled()))
+    , m_workerThread(SharedWorkerThread::create(sharedWorkerIdentifier, generateWorkerParameters(workerFetchResult, WTF::move(workerOptions), WTF::move(initializationData), m_document), WTF::move(workerFetchResult.script), *this, *this, *this, *this, WorkerThreadStartMode::Normal, clientOrigin.topOrigin.securityOrigin(), m_document->protectedIDBConnectionProxy().get(), m_document->protectedSocketProvider().get(), JSC::RuntimeFlags::createAllEnabled()))
     , m_cacheStorageProvider(cacheStorageProvider)
     , m_clientOrigin(clientOrigin)
 {
@@ -115,7 +118,7 @@ SharedWorkerThreadProxy::SharedWorkerThreadProxy(Ref<Page>&& page, SharedWorkerI
     }
 
     if (auto workerClient = m_page->chrome().createWorkerClient(thread()))
-        thread().setWorkerClient(WTFMove(workerClient));
+        thread().setWorkerClient(WTF::move(workerClient));
 }
 
 SharedWorkerThreadProxy::~SharedWorkerThreadProxy()
@@ -173,7 +176,7 @@ RefPtr<CacheStorageConnection> SharedWorkerThreadProxy::createCacheStorageConnec
 {
     ASSERT(isMainThread());
     if (!m_cacheStorageConnection)
-        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection();
+        m_cacheStorageConnection = Ref { m_cacheStorageProvider.get() }->createCacheStorageConnection();
     return m_cacheStorageConnection;
 }
 
@@ -190,7 +193,7 @@ ScriptExecutionContextIdentifier SharedWorkerThreadProxy::loaderContextIdentifie
 
 void SharedWorkerThreadProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
-    callOnMainThread([task = WTFMove(task), protectedThis = Ref { *this }] () mutable {
+    callOnMainThread([task = WTF::move(task), protectedThis = Ref { *this }] () mutable {
         task.performTask(protectedThis->m_document.get());
     });
 }
@@ -200,7 +203,7 @@ bool SharedWorkerThreadProxy::postTaskForModeToWorkerOrWorkletGlobalScope(Script
     if (m_isTerminatingOrTerminated)
         return false;
 
-    m_workerThread->runLoop().postTaskForMode(WTFMove(task), mode);
+    m_workerThread->runLoop().postTaskForMode(WTF::move(task), mode);
     return true;
 }
 
@@ -216,8 +219,10 @@ void SharedWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool)
 
 void SharedWorkerThreadProxy::networkStateChanged(bool isOnLine)
 {
-    for (auto& proxy : allSharedWorkerThreadProxies().values())
+    for (auto& weakProxy : allSharedWorkerThreadProxies().values()) {
+        if (RefPtr proxy = weakProxy.get())
         proxy->notifyNetworkStateChange(isOnLine);
+    }
 }
 
 void SharedWorkerThreadProxy::workerGlobalScopeClosed()
@@ -235,7 +240,7 @@ ReportingClient* SharedWorkerThreadProxy::reportingClient() const
 void SharedWorkerThreadProxy::setAppBadge(std::optional<uint64_t> badge)
 {
     ASSERT(!isMainThread());
-    callOnMainRunLoop([badge = WTFMove(badge), this, protectedThis = Ref { *this }] {
+    callOnMainRunLoop([badge = WTF::move(badge), this, protectedThis = Ref { *this }] {
         m_page->badgeClient().setAppBadge(nullptr, m_clientOrigin.clientOrigin, badge);
     });
 }

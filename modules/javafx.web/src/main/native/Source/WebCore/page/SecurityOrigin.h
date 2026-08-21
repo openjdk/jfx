@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -205,8 +205,12 @@ public:
 
     const SecurityOriginData& data() const { return m_data; }
 
+    // This method checks that the scheme for this origin is an HTTP-family
+    // scheme, e.g. HTTP and HTTPS.
+    bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
+
 private:
-    friend struct IPC::ArgumentCoder<SecurityOrigin, void>;
+    friend struct IPC::ArgumentCoder<SecurityOrigin>;
     WEBCORE_EXPORT SecurityOrigin();
     explicit SecurityOrigin(const URL&);
     explicit SecurityOrigin(const SecurityOrigin*);
@@ -214,10 +218,6 @@ private:
     void initializeShared(const URL&);
 
     bool hasLocalUnseparatedPath(const SecurityOrigin&) const;
-
-    // This method checks that the scheme for this origin is an HTTP-family
-    // scheme, e.g. HTTP and HTTPS.
-    bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
 
     enum class ShouldAllowFromThirdParty : uint8_t { AlwaysAllowFromThirdParty, MaybeAllowFromThirdParty };
     WEBCORE_EXPORT bool canAccessStorage(const SecurityOrigin*, ShouldAllowFromThirdParty = ShouldAllowFromThirdParty::MaybeAllowFromThirdParty) const;

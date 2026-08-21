@@ -106,7 +106,7 @@ public:
     WTF_EXPORT_PRIVATE ~ThreadSuspendLocker();
 };
 
-class WTF_CAPABILITY("is current") Thread : public ThreadSafeRefCounted<Thread>, ThreadLike {
+class WTF_CAPABILITY("is current") Thread : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Thread>, ThreadLike {
 public:
     friend class ThreadGroup;
     friend WTF_EXPORT_PRIVATE void initialize();
@@ -114,6 +114,17 @@ public:
     class ClientData : public ThreadSafeRefCounted<ClientData> {
     public:
         virtual ~ClientData() = default;
+
+        enum class Type : uint8_t {
+            WebCoreThreadGlobalData
+        };
+        Type type() const { return Type::WebCoreThreadGlobalData; }
+
+    protected:
+        explicit ClientData(Type type)
+        {
+            ASSERT_UNUSED(type, type == Type::WebCoreThreadGlobalData);
+        }
     };
 
     WTF_EXPORT_PRIVATE ~Thread();
@@ -141,11 +152,10 @@ public:
     WTF_EXPORT_PRIVATE static Ref<Thread> create(ASCIILiteral threadName, Function<void()>&&, ThreadType = ThreadType::Unknown, QOS = QOS::UserInitiated, SchedulingPolicy = SchedulingPolicy::Other);
 
     // Returns Thread object.
-    static Thread& current();
+    static Thread& currentSingleton();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static UncheckedKeyHashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
-    WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
+    WTF_EXPORT_PRIVATE static ThreadSafeWeakHashSet<Thread>& allThreads();
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
 
@@ -154,7 +164,7 @@ public:
 #if OS(WINDOWS)
     // Returns ThreadIdentifier directly. It is useful if the user only cares about identity
     // of threads. At that time, users should know that holding this ThreadIdentifier does not ensure
-    // that the thread information is alive. While Thread::current() is not safe if it is called
+    // that the thread information is alive. While Thread::currentSingleton() is not safe if it is called
     // from the destructor of the other TLS data, currentID() always returns meaningful thread ID.
     WTF_EXPORT_PRIVATE static ThreadIdentifier currentID();
 
@@ -209,6 +219,8 @@ public:
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInteractive(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInitiated(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static QOS currentThreadQOS();
+    WTF_EXPORT_PRIVATE static bool currentThreadIsRealtime();
+    bool isRealtime() const { return m_isRealtime; }
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
@@ -301,12 +313,15 @@ public:
 #endif
 
 protected:
-    Thread() = default;
+    explicit Thread(SchedulingPolicy schedulingPolicy)
+        : m_isRealtime(schedulingPolicy == SchedulingPolicy::Realtime)
+    {
+    }
 
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*, std::optional<size_t> stackSize, QOS, SchedulingPolicy);
+    bool establishHandle(NewThreadContext&, std::optional<size_t> stackSize, QOS, SchedulingPolicy);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -346,7 +361,6 @@ protected:
 
     // These functions are only called from ThreadGroup.
     ThreadGroupAddResult addToThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup&);
-    void removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup&);
 
     // For pthread, the Thread instance is ref'ed and held in thread-specific storage. It will be deref'ed by destructTLS at thread destruction time.
     // It employs pthreads-specific 2-pass destruction to reliably remove Thread.
@@ -368,22 +382,21 @@ protected:
     static Thread& initializeTLS(Ref<Thread>&&);
     WTF_EXPORT_PRIVATE static Thread& initializeCurrentTLS();
 
-    static Lock s_allThreadsLock;
-
     JoinableState m_joinableState { Joinable };
     bool m_isShuttingDown : 1 { false };
     bool m_didExit : 1 { false };
     bool m_isDestroyedOnce : 1 { false };
     bool m_isCompilationThread: 1 { false };
-    bool m_didUnregisterFromAllThreads : 1 { false };
     bool m_isJSThread : 1 { false };
     unsigned m_gcThreadType : 2 { static_cast<unsigned>(GCThreadType::None) };
+
+    bool m_isRealtime : 1 { false };
 
     // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
     WordLock m_mutex;
     StackBounds m_stack { StackBounds::emptyBounds() };
-    HashMap<ThreadGroup*, std::weak_ptr<ThreadGroup>> m_threadGroupMap;
+    ThreadSafeWeakHashSet<ThreadGroup> m_threadGroups;
     PlatformThreadHandle m_handle;
     uint32_t m_uid { ++s_uid };
 #if OS(WINDOWS)
@@ -427,19 +440,19 @@ inline Thread* Thread::currentMayBeNull()
 }
 #endif
 
-inline Thread& Thread::current()
+inline Thread& Thread::currentSingleton()
 {
     // WRT WebCore:
-    //    Thread::current() is used on main thread before it could possibly be used
+    //    Thread::currentSingleton() is used on main thread before it could possibly be used
     //    on secondary ones, so there is no need for synchronization here.
     // WRT JavaScriptCore:
     //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
     //    this is initially called in a std::call_once locked context.
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
-    if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
+    if (Thread::s_key == InvalidThreadSpecificKey) [[unlikely]]
         WTF::initialize();
 #endif
-    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); thread) [[likely]]
         return *thread;
     return initializeCurrentTLS();
 }

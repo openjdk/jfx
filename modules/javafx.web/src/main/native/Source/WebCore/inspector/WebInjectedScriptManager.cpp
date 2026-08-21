@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "WebInjectedScriptManager.h"
 
 #include "CommandLineAPIModule.h"
+#include "Document.h"
 #include "JSExecState.h"
 #include "LocalDOMWindow.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -37,9 +38,40 @@ using namespace Inspector;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WebInjectedScriptManager);
 
-WebInjectedScriptManager::WebInjectedScriptManager(InspectorEnvironment& environment, Ref<InjectedScriptHost>&& host)
-    : InjectedScriptManager(environment, WTFMove(host))
+Ref<WebInjectedScriptManager> WebInjectedScriptManager::create(Inspector::InspectorEnvironment& environment, Ref<Inspector::InjectedScriptHost>&& host)
 {
+    return adoptRef(*new WebInjectedScriptManager(environment, WTF::move(host)));
+}
+
+WebInjectedScriptManager::WebInjectedScriptManager(InspectorEnvironment& environment, Ref<InjectedScriptHost>&& host)
+    : InjectedScriptManager(environment, WTF::move(host))
+{
+}
+
+WebInjectedScriptManager::~WebInjectedScriptManager()
+{
+    ASSERT(!m_clientCount);
+    if (m_clientCount > 0) {
+        m_clientCount = 0;
+        disconnect();
+    }
+}
+
+void WebInjectedScriptManager::addClient()
+{
+    ++m_clientCount;
+    if (m_clientCount == 1)
+        connect();
+}
+
+void WebInjectedScriptManager::removeClient()
+{
+    ASSERT(m_clientCount > 0);
+    --m_clientCount;
+    if (!m_clientCount) {
+        // FIXME <https://webkit.org/b/305415>: Figure out why the commandLineAPIHost may still be used after the last client disconnects, and call disconnect here instead.
+        discardInjectedScripts();
+    }
 }
 
 void WebInjectedScriptManager::connect()
@@ -53,10 +85,7 @@ void WebInjectedScriptManager::disconnect()
 {
     InjectedScriptManager::disconnect();
 
-    if (m_commandLineAPIHost) {
-        m_commandLineAPIHost->disconnect();
         m_commandLineAPIHost = nullptr;
-    }
 }
 
 void WebInjectedScriptManager::discardInjectedScripts()
@@ -77,7 +106,7 @@ void WebInjectedScriptManager::discardInjectedScriptsFor(LocalDOMWindow& window)
     if (m_scriptStateToId.isEmpty())
         return;
 
-    auto* document = window.document();
+    RefPtr document = window.document();
     if (!document)
         return;
 

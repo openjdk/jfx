@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithInlineAndStyleNames(String text, String style, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -136,7 +136,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithStyleNames(String text, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -152,7 +152,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithInlineStyle(String text, String style) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromInlineStyle(style);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -168,7 +168,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addSegment(String text, StyleAttributeMap a) {
         // TODO split into paragraphs if \n is found, or check for \n ?
         Objects.requireNonNull(a);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -182,7 +182,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel highlight(int start, int length, Color c) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addHighlight(start, length, c);
         return this;
     }
@@ -198,7 +198,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @since 25
      */
     public SimpleViewOnlyStyledModel highlight(int start, int length, String ... css) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addHighlight(start, length, css);
         return this;
     }
@@ -212,8 +212,8 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, Color c) {
-        Paragraph p = lastParagraph();
-        p.addSquiggly(start, length, c);
+        Paragraph p = textParagraph();
+        p.addWavyUnderline(start, length, c);
         return this;
     }
 
@@ -228,19 +228,24 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @since 25
      */
     public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, String ... css) {
-        Paragraph p = lastParagraph();
-        p.addSquiggly(start, length, css);
+        Paragraph p = textParagraph();
+        p.addWavyUnderline(start, length, css);
         return this;
     }
 
-    private Paragraph lastParagraph() {
+    // returns the last text paragraph, adding one if necessary
+    private Paragraph textParagraph() {
         int sz = paragraphs.size();
-        if (sz == 0) {
-            Paragraph p = new Paragraph();
-            paragraphs.add(p);
-            return p;
+        if (sz > 0) {
+            Paragraph p = paragraphs.get(sz - 1);
+            if (p.isTextParagraph()) {
+                return p;
+            }
+            // not a text paragraph, create new
         }
-        return paragraphs.get(sz - 1);
+        Paragraph p = new Paragraph();
+        paragraphs.add(p);
+        return p;
     }
 
     /**
@@ -293,7 +298,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addNodeSegment(Supplier<Node> generator) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addInlineNode(generator);
         return this;
     }
@@ -322,13 +327,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     @Override
-    public StyleAttributeMap getStyleAttributeMap(StyleResolver r, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver r, TextPos pos, boolean forInsert) {
         int index = pos.index();
         if (index < paragraphs.size()) {
-            int off = pos.offset();
             Paragraph par = paragraphs.get(index);
             StyleAttributeMap pa = par.paragraphAttributes;
-            StyleAttributeMap a = par.getStyleAttrs(r, off);
+            int cix = pos.charIndex();
+            boolean leading = pos.isLeading();
+            StyleAttributeMap a = par.getStyleAttrs(r, cix, leading, forInsert);
             if (pa == null) {
                 return a;
             } else {
@@ -345,18 +351,22 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel setParagraphAttributes(StyleAttributeMap a) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.setParagraphAttributes(a);
         return this;
     }
 
     /** Encapsulates a paragraph */
-    static class Paragraph {
+    private static class Paragraph {
         private ArrayList<StyledSegment> segments;
         private ArrayList<Consumer<TextCell>> highlights;
         private StyleAttributeMap paragraphAttributes;
 
         public Paragraph() {
+        }
+
+        public boolean isTextParagraph() {
+            return true;
         }
 
         public static Paragraph of(Supplier<Region> paragraphGenerator) {
@@ -375,6 +385,11 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 public void export(int start, int end, StyledOutput out) throws IOException {
                     StyledSegment seg = StyledSegment.ofRegion(paragraphGenerator);
                     out.consume(seg);
+                }
+
+                @Override
+                public boolean isTextParagraph() {
+                    return false;
                 }
             };
         }
@@ -449,22 +464,22 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         }
 
         /**
-         * Adds a squiggly line (as seen in a spell checker) with the given color.
+         * Adds a wavy underline (as seen in a spell checker) with the given color.
          * @param start the start offset
          * @param length the end offset
          * @param color the background color
          */
-        void addSquiggly(int start, int length, Color color) {
+        void addWavyUnderline(int start, int length, Color color) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, color);
+                cell.addWavyUnderline(start, end, color);
             });
         }
 
-        void addSquiggly(int start, int length, String[] css) {
+        void addWavyUnderline(int start, int length, String[] css) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, css);
+                cell.addWavyUnderline(start, end, css);
             });
         }
 
@@ -486,7 +501,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * @param generator the generator that provides the actual {@code Node}
          */
         void addInlineNode(Supplier<Node> generator) {
-            StyledSegment seg = StyledSegment.ofInlineNode(generator);
+            StyledSegment seg = StyledSegment.ofInlineNode(generator, null);
             segments().add(seg);
         }
 
@@ -498,7 +513,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         }
 
         private List<StyledSegment> getSegments() {
-            return segments;
+            return segments == null ? List.of() : segments;
         }
 
         private int size() {
@@ -541,19 +556,58 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         }
 
         // for use by SimpleReadOnlyStyledModel
-        StyleAttributeMap getStyleAttrs(StyleResolver resolver, int offset) {
-            int off = 0;
+        StyleAttributeMap getStyleAttrs(StyleResolver r, int charIndex, boolean leading, boolean forInsert) {
+            int pos = 0;
             int ct = size();
+            int last = ct - 1;
             for (int i = 0; i < ct; i++) {
                 StyledSegment seg = segments.get(i);
                 int len = seg.getTextLength();
-                if (offset < (off + len) || (i == ct - 1)) {
-                    return seg.getStyleAttributeMap(resolver);
+                pos += len;
+
+                boolean use;
+                if (i == last) {
+                    use = true;
+                } else if (charIndex == pos) {
+                    // forInsert ? leading : false;
+                    use = forInsert && leading;
+                } else {
+                    use = charIndex < pos;
                 }
-                off += len;
+
+                if (use) {
+                    return seg.getStyleAttributeMap(r);
+                }
             }
             return StyleAttributeMap.EMPTY;
         }
+        /*
+        public StyleAttributeMap getStyleAttributeMap(int charIndex, boolean leading, boolean forInsert) {
+            int pos = 0;
+            int ct = size();
+            int last = ct - 1;
+            for (int i = 0; i < ct; i++) {
+                RSegment seg = get(i);
+                int len = seg.getTextLength();
+                pos += len;
+
+                boolean use;
+                if (i == last) {
+                    use = true;
+                } else if (charIndex == pos) {
+                    // forInsert ? leading : false;
+                    use = forInsert && leading;
+                } else {
+                    use = charIndex < pos;
+                }
+
+                if (use) {
+                    return seg.getStyleAttributeMap();
+                }
+            }
+            return StyleAttributeMap.EMPTY;
+        }
+        */
 
         public RichParagraph toRichParagraph() {
             return new RichParagraph() {
@@ -568,11 +622,6 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 }
 
                 @Override
-                final List<StyledSegment> getSegments() {
-                    return Paragraph.this.getSegments();
-                }
-
-                @Override
                 public final Supplier<Region> getParagraphRegion() {
                     return Paragraph.this.getParagraphRegion();
                 }
@@ -580,6 +629,16 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 @Override
                 final List<Consumer<TextCell>> getHighlights() {
                     return highlights;
+                }
+
+                @Override
+                public int getSegmentCount() {
+                    return Paragraph.this.getSegments().size();
+                }
+
+                @Override
+                public StyledSegment getSegment(int index) {
+                    return Paragraph.this.getSegments().get(index);
                 }
             };
         }

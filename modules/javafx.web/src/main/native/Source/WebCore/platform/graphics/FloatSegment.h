@@ -26,6 +26,7 @@
 #pragma once
 
 #include <algorithm>
+#include <ranges>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -55,9 +56,7 @@ struct FloatSegment {
 // return differenceWithDilation({ 0, totalWidth }, intersections);
 inline Vector<FloatSegment> differenceWithDilation(FloatSegment a, Vector<FloatSegment>&& bs, float dilationAmount)
 {
-    std::sort(bs.begin(), bs.end(), [](auto&& a, auto&& b) {
-        return a.begin < b.begin;
-    });
+    std::ranges::sort(bs, { }, &FloatSegment::begin);
 
     auto result = bs.begin();
     for (auto b : bs) {
@@ -76,7 +75,7 @@ inline Vector<FloatSegment> differenceWithDilation(FloatSegment a, Vector<FloatS
     bs.shrink(result - bs.begin());
     if (a.length() > dilationAmount)
         bs.append(a);
-    return WTFMove(bs);
+    return WTF::move(bs);
 }
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, FloatSegment);

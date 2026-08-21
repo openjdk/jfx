@@ -48,20 +48,26 @@ Ref<PathJava> PathJava::create()
     return adoptRef(*new PathJava);
 }
 
-Ref<PathJava> PathJava::create(const PathStream& stream)
+Ref<PathJava> PathJava::create(std::span<const PathSegment> segments)
 {
     auto pathJava = PathJava::create();
 
-    for (auto& segment : stream.segments())
+    for (auto& segment : segments)
         pathJava->addSegment(segment);
     return pathJava;
 }
 
-Ref<PathJava> PathJava::create(const PathSegment& segment)
+PlatformPathPtr PathJava::emptyPlatformPath()
 {
-    auto pathJava = PathJava::create();
-    pathJava->addSegment(segment);
-    return pathJava;
+       JNIEnv* env = WTF::GetJavaEnv();
+       static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
+           "createWCPath", "()Lcom/sun/webkit/graphics/WCPath;");
+       ASSERT(mid);
+
+       JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid));
+       ASSERT(ref);
+       WTF::CheckAndClearException(env);
+       return RQRef::create(ref);
 }
 
 RefPtr<RQRef> createEmptyPath()
@@ -79,7 +85,11 @@ RefPtr<RQRef> createEmptyPath()
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    ImageBufferFormat format {
+        PixelFormat::BGRA8,
+        UseLosslessCompression::No
+    };
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), format);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -105,7 +115,7 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
 
 Ref<PathJava> PathJava::create(RefPtr<RQRef>&& platformPath, RefPtr<PathStream>&& elementsStream)
 {
-    return adoptRef(*new PathJava(WTFMove(platformPath), WTFMove(elementsStream)));
+    return adoptRef(*new PathJava(WTF::move(platformPath), WTF::move(elementsStream)));
 }
 
 PathJava::PathJava()
@@ -115,8 +125,8 @@ PathJava::PathJava()
 }
 
 PathJava::PathJava(RefPtr<RQRef>&& platformPath, RefPtr<PathStream>&& elementsStream)
-    : m_platformPath(WTFMove(platformPath))
-    , m_elementsStream(WTFMove(elementsStream))
+    : m_platformPath(WTF::move(platformPath))
+    , m_elementsStream(WTF::move(elementsStream))
 {
     ASSERT(m_platformPath);
 }
@@ -127,7 +137,7 @@ Ref<PathImpl> PathJava::copy() const
 
     auto elementsStream = m_elementsStream ? RefPtr<PathImpl> { m_elementsStream->copy() } : nullptr;
 
-    return PathJava::create(WTFMove(platformPathCopy), downcast<PathStream>(WTFMove(elementsStream)));
+    return PathJava::create(WTF::move(platformPathCopy), downcast<PathStream>(WTF::move(elementsStream)));
 }
 
 PlatformPathPtr PathJava::platformPath() const
@@ -147,7 +157,7 @@ bool PathJava::definitelyEqual(const PathImpl& otherImpl) const
 }
 void PathJava::add(PathContinuousRoundedRect continuousRoundedRect)
 {
-    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, CornerRadii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
 }
 
 void PathJava::add(PathMoveTo moveto)
@@ -294,7 +304,8 @@ void PathJava::add(PathRect rect)
 
 void PathJava::add(PathRoundedRect roundedRect)
 {
-    addBeziersForRoundedRect(roundedRect.roundedRect);
+    for (auto& segment : PathImpl::beziersForRoundedRect(roundedRect.roundedRect))
+        addSegment(segment);
 }
 
 void PathJava::add(PathCloseSubpath)
@@ -442,7 +453,7 @@ bool PathJava::strokeContains(const FloatPoint& p, const Function<void(GraphicsC
 
     size_t size = strokeStyle == StrokeStyle::SolidStroke ? 0 : dashes.size();
     JLocalRef<jdoubleArray> dashArray(env->NewDoubleArray(size));
-    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.data());
+    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.span().data());
 
     jboolean res = env->CallBooleanMethod(*m_platformPath, mid, (jdouble)p.x(),
         (jdouble)p.y(), (jdouble) thickness, (jdouble) miterLimit,

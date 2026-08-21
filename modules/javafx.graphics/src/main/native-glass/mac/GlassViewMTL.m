@@ -41,6 +41,7 @@
 {
     GET_MAIN_JENV;
     long mtlCommandQueuePtr = 0l;
+    BOOL isVsyncEnabled = YES;
 
     int depthBits = 0;
     if (jproperties != NULL)
@@ -78,6 +79,16 @@
                 mtlCommandQueuePtr = jmtlQueuePtr;
             }
         }
+
+        jobject isVsyncEnabledKey = (*env)->NewStringUTF(env, "isVsyncEnabled");
+        jobject isVsyncEnabledValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, isVsyncEnabledKey);
+        GLASS_CHECK_EXCEPTION(env);
+        if (isVsyncEnabledValue != NULL)
+        {
+            jlong isVsyncEnabledLongValue = (*env)->CallLongMethod(env, isVsyncEnabledValue, jLongValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
+            isVsyncEnabled = isVsyncEnabledLongValue == 1l ? YES : NO;
+        }
     }
 
     if (mtlCommandQueuePtr == 0l) {
@@ -89,6 +100,7 @@
                                     andClientContext:nil
                                          mtlQueuePtr:mtlCommandQueuePtr
                                       withHiDPIAware:YES
+                                      isVsyncEnabled:isVsyncEnabled
                                         withIsSwPipe:isSwPipe
                                          useMTLForSW:mtlForSW];
 

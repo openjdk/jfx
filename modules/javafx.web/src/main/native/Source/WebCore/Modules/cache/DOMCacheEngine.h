@@ -26,16 +26,18 @@
 
 #pragma once
 
-#include "DOMCacheIdentifier.h"
-#include "FetchHeaders.h"
-#include "FetchOptions.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
+#include <WebCore/DOMCacheIdentifier.h>
+#include <WebCore/FetchHeaders.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
+class Exception;
 class ScriptExecutionContext;
 
 struct CacheQueryOptions;
@@ -58,12 +60,12 @@ Exception convertToExceptionAndLog(ScriptExecutionContext*, Error);
 WEBCORE_EXPORT bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cachedRequest, const ResourceResponse&, const CacheQueryOptions&);
 WEBCORE_EXPORT bool queryCacheMatch(const ResourceRequest&, const URL&, bool hasVaryStar, const HashMap<String, String>& varyHeaders, const CacheQueryOptions&);
 
-using ResponseBody = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+using ResponseBody = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
 WEBCORE_EXPORT ResponseBody isolatedResponseBody(const ResponseBody&);
 WEBCORE_EXPORT ResponseBody copyResponseBody(const ResponseBody&);
 
 struct Record {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Record);
     WEBCORE_EXPORT Record copy() const;
 
     uint64_t identifier;
@@ -81,7 +83,7 @@ struct Record {
 };
 
 struct CrossThreadRecord {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CrossThreadRecord);
     CrossThreadRecord(const CrossThreadRecord&) = delete;
     CrossThreadRecord& operator=(const CrossThreadRecord&) = delete;
     CrossThreadRecord() = default;
@@ -91,12 +93,12 @@ struct CrossThreadRecord {
         : identifier(identifier)
         , updateResponseCounter(updateResponseCounter)
         , requestHeadersGuard(requestHeadersGuard)
-        , request(WTFMove(request))
+        , request(WTF::move(request))
         , options(options)
-        , referrer(WTFMove(referrer))
+        , referrer(WTF::move(referrer))
         , responseHeadersGuard(responseHeadersGuard)
-        , response(WTFMove(response))
-        , responseBody(WTFMove(responseBody))
+        , response(WTF::move(response))
+        , responseBody(WTF::move(responseBody))
         , responseBodySize(responseBodySize)
     {
     }
@@ -122,7 +124,7 @@ struct CacheInfo {
     String name;
 
     CacheInfo isolatedCopy() const & { return { identifier, name.isolatedCopy() }; }
-    CacheInfo isolatedCopy() && { return { identifier, WTFMove(name).isolatedCopy() }; }
+    CacheInfo isolatedCopy() && { return { identifier, WTF::move(name).isolatedCopy() }; }
 };
 
 struct CacheInfos {
@@ -130,7 +132,7 @@ struct CacheInfos {
     uint64_t updateCounter;
 
     CacheInfos isolatedCopy() const & { return { crossThreadCopy(infos), updateCounter }; }
-    CacheInfos isolatedCopy() && { return { crossThreadCopy(WTFMove(infos)), updateCounter }; }
+    CacheInfos isolatedCopy() && { return { crossThreadCopy(WTF::move(infos)), updateCounter }; }
 };
 
 struct CacheIdentifierOperationResult {

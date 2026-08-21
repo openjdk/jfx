@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "Attribute.h"
-#include "SpaceSplitString.h"
+#include <WebCore/Attribute.h>
+#include <WebCore/SpaceSplitString.h>
 #include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -41,7 +42,7 @@ class UniqueElementData;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ElementData);
 class ElementData : public RefCounted<ElementData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ElementData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ElementData, ElementData);
 public:
     // Override RefCounted's deref() to ensure operator delete is called on
     // the appropriate subclass type.
@@ -49,7 +50,7 @@ public:
 
     static const unsigned attributeNotFound = static_cast<unsigned>(-1);
 
-    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTFMove(classNames); }
+    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTF::move(classNames); }
     const SpaceSplitString& classNames() const { return m_classNames; }
     static constexpr ptrdiff_t classNamesMemoryOffset() { return OBJECT_OFFSETOF(ElementData, m_classNames); }
 
@@ -63,7 +64,7 @@ public:
     unsigned length() const;
     bool isEmpty() const { return !length(); }
 
-    std::span<const Attribute> attributes() const;
+    std::span<const Attribute> attributes() const LIFETIME_BOUND;
     const Attribute& attributeAt(unsigned index) const;
     const Attribute* findAttributeByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const QualifiedName&) const;
@@ -147,7 +148,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableElementData);
 class ShareableElementData : public ElementData {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ShareableElementData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ShareableElementData, ShareableElementData);
 public:
     static Ref<ShareableElementData> createWithAttributes(std::span<const Attribute>);
 
@@ -170,12 +171,12 @@ public:
 
     // These functions do no error/duplicate checking.
     void addAttribute(const QualifiedName&, const AtomString&);
-    void removeAttribute(unsigned index);
+    void removeAttributeAt(unsigned index);
 
     Attribute& attributeAt(unsigned index);
     Attribute* findAttributeByName(const QualifiedName&);
 
-    std::span<const Attribute> attributes() const { return m_attributeVector.span(); }
+    std::span<const Attribute> attributes() const LIFETIME_BOUND { return m_attributeVector.span(); }
 
     UniqueElementData();
     explicit UniqueElementData(const ShareableElementData&);
@@ -205,7 +206,7 @@ inline unsigned ElementData::length() const
 inline const Attribute* ElementData::attributeBase() const
 {
     if (auto* uniqueData = dynamicDowncast<UniqueElementData>(*this))
-        return uniqueData->m_attributeVector.data();
+        return uniqueData->m_attributeVector.span().data();
     return uncheckedDowncast<ShareableElementData>(*this).m_attributeArray;
 }
 
@@ -216,7 +217,7 @@ inline const ImmutableStyleProperties* ElementData::presentationalHintStyle() co
         return nullptr;
 }
 
-inline std::span<const Attribute> ElementData::attributes() const
+inline std::span<const Attribute> ElementData::attributes() const LIFETIME_BOUND
 {
     if (isUnique())
         return uncheckedDowncast<UniqueElementData>(*this).attributes();
@@ -283,9 +284,9 @@ inline void UniqueElementData::addAttribute(const QualifiedName& attributeName, 
     m_attributeVector.append(Attribute(attributeName, value));
 }
 
-inline void UniqueElementData::removeAttribute(unsigned index)
+inline void UniqueElementData::removeAttributeAt(unsigned index)
 {
-    m_attributeVector.remove(index);
+    m_attributeVector.removeAt(index);
 }
 
 inline Attribute& UniqueElementData::attributeAt(unsigned index)

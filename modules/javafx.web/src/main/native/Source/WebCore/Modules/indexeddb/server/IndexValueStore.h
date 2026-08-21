@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "IDBCursorInfo.h"
-#include "IDBKeyData.h"
-#include "IndexValueEntry.h"
+#include <WebCore/IDBCursorInfo.h>
+#include <WebCore/IDBKeyData.h>
+#include <WebCore/IndexValueEntry.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -42,7 +42,7 @@ namespace IDBServer {
 
 class MemoryIndex;
 
-typedef HashMap<IDBKeyData, std::unique_ptr<IndexValueEntry>, IDBKeyDataHash, IDBKeyDataHashTraits> IndexKeyValueMap;
+typedef HashMap<IDBKeyData, std::unique_ptr<IndexValueEntry>, DefaultHash<IDBKeyData>, IDBKeyDataHashTraits> IndexKeyValueMap;
 
 class IndexValueStore final : public CanMakeThreadSafeCheckedPtr<IndexValueStore> {
     WTF_MAKE_TZONE_ALLOCATED(IndexValueStore);
@@ -55,11 +55,15 @@ public:
     uint64_t countForKey(const IDBKeyData&) const;
     IDBKeyData lowestKeyWithRecordInRange(const IDBKeyRangeData&) const;
     bool contains(const IDBKeyData&) const;
+    std::optional<Vector<IDBKeyData>> valueKeys(const IDBKeyData&) const;
+    Vector<IDBKeyData> allKeys() const;
 
     IDBError addRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey);
     void removeRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey);
+    void removeRecord(const IDBKeyData& indexKey);
 
     void removeEntriesWithValueKey(MemoryIndex&, const IDBKeyData& valueKey);
+    Vector<IDBKeyData> findKeysWithValueKey(const IDBKeyData& valueKey);
 
     class Iterator {
         friend class IndexValueStore;

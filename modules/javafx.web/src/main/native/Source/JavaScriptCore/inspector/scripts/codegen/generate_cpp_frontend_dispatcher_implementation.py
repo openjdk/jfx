@@ -77,6 +77,8 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
     def _generate_dispatcher_implementations_for_domain(self, domain):
         implementations = []
         events = self.events_for_domain(domain)
+        implementations.append('%sFrontendDispatcher::%sFrontendDispatcher(FrontendRouter& frontendRouter) : m_frontendRouter(frontendRouter) { }' % (domain.domain_name, domain.domain_name))
+        implementations.append('%sFrontendDispatcher::~%sFrontendDispatcher() = default;' % (domain.domain_name, domain.domain_name))
         for event in events:
             implementations.append(self._generate_dispatcher_implementation_for_event(event, domain))
 
@@ -109,7 +111,7 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
             elif CppGenerator.should_dereference_argument(_type, parameter.is_optional):
                 parameter_value = '*' + parameter_value
             elif CppGenerator.should_move_argument(_type, parameter.is_optional):
-                parameter_value = 'WTFMove(%s)' % parameter_value
+                parameter_value = 'WTF::move(%s)' % parameter_value
 
             parameter_args = {
                 'parameterKey': parameter.parameter_name,
@@ -128,6 +130,7 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
 
         event_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as,
             'eventName': event.event_name,
             'formalParameters': ", ".join(formal_parameters)
         }
@@ -135,14 +138,14 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
         lines.append('void %(domainName)sFrontendDispatcher::%(eventName)s(%(formalParameters)s)' % event_args)
         lines.append('{')
         lines.append('    auto protocol_jsonMessage = JSON::Object::create();')
-        lines.append('    protocol_jsonMessage->setString("method"_s, "%(domainName)s.%(eventName)s"_s);' % event_args)
+        lines.append('    protocol_jsonMessage->setString("method"_s, "%(domainExposedAs)s.%(eventName)s"_s);' % event_args)
 
         if len(parameter_assignments) > 0:
             lines.append('    auto protocol_paramsObject = JSON::Object::create();')
             lines.extend(parameter_assignments)
-            lines.append('    protocol_jsonMessage->setObject("params"_s, WTFMove(protocol_paramsObject));')
+            lines.append('    protocol_jsonMessage->setObject("params"_s, WTF::move(protocol_paramsObject));')
 
         lines.append('')
-        lines.append('    m_frontendRouter.sendEvent(protocol_jsonMessage->toJSONString());')
+        lines.append('    m_frontendRouter->sendEvent(protocol_jsonMessage->toJSONString());')
         lines.append('}')
         return self.wrap_with_guard_for_condition(event.condition, "\n".join(lines))

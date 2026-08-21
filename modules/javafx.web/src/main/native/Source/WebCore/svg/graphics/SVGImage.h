@@ -26,7 +26,8 @@
 
 #pragma once
 
-#include "Image.h"
+#include <WebCore/Image.h>
+#include <WebCore/Timer.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -44,7 +45,7 @@ class Settings;
 class SVGImage final : public Image {
 public:
     static Ref<SVGImage> create(ImageObserver* observer) { return adoptRef(*new SVGImage(observer)); }
-    WEBCORE_EXPORT static RefPtr<SVGImage> tryCreateFromData(std::span<const uint8_t>);
+    WEBCORE_EXPORT static void tryCreateFromData(std::span<const uint8_t>, CompletionHandler<void(RefPtr<SVGImage>&&)>&&);
     WEBCORE_EXPORT static bool isDataDecodable(const Settings&, std::span<const uint8_t>);
 
     RenderBox* embeddedContentBox() const;
@@ -52,6 +53,9 @@ public:
     RefPtr<LocalFrameView> protectedFrameView() const;
 
     bool isSVGImage() const final { return true; }
+
+    void subresourcesAreFinished(Document*, CompletionHandler<void()>&&) final;
+
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_intrinsicSize; }
 
     bool renderingTaintsOrigin() const final;
@@ -85,7 +89,7 @@ private:
     void setContainerSize(const FloatSize&) final;
     IntSize containerSize() const;
     bool usesContainerSize() const final { return true; }
-    void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
+    void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
 
     void reportApproximateMemoryCost() const;
     EncodedDataStatus dataChanged(bool allDataReceived) final;
@@ -94,7 +98,9 @@ private:
 
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const final { return false; }
+    bool currentFrameIsComplete() const final { return !!m_page; }
 
+    bool hasHDRContent() const final;
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) final;
 
     void startAnimationTimerFired();

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "JSDOMConvertNullable.h"
 #include "SVGAnimatedPrimitiveProperty.h"
 
 namespace WebCore {
@@ -36,7 +37,7 @@ enum class IsHrefProperty : bool {
     Yes,
 };
 
-using StringOrTrustedScriptURL = std::variant<String, RefPtr<TrustedScriptURL>>;
+using StringOrTrustedScriptURL = Variant<String, RefPtr<TrustedScriptURL>>;
 
 class SVGAnimatedString : public SVGAnimatedPrimitiveProperty<String> {
 public:

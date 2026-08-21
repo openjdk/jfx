@@ -123,7 +123,7 @@ def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
 // Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR",
-        "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
@@ -141,9 +141,6 @@ if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
 if (sourceDateEpoch != null) {
     linkFlags.add("/experimental:deterministic")
 }
-
-// Remove C++ static linking
-ccFlags -= ["/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB"]
 
 ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
@@ -330,9 +327,9 @@ WIN.glass.rcFlags = [
 WIN.glass.ccFlags = [ccFlags].flatten()
 WIN.glass.linker = linker
 WIN.glass.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
-        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "version.lib",
+        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "shlwapi.lib", "version.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
-        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll", "/DELAYLOAD:version.dll"]).flatten()
+        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll", "/DELAYLOAD:shlwapi.dll", "/DELAYLOAD:version.dll"]).flatten()
 WIN.glass.lib = "glass"
 
 WIN.decora = [:]

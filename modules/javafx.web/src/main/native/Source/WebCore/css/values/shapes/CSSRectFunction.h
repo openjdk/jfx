@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "CSSBorderRadius.h"
-#include "CSSPrimitiveNumericTypes.h"
-#include "RectEdges.h"
+#include <WebCore/CSSBorderRadius.h>
+#include <WebCore/CSSPrimitiveNumericTypes.h>
+#include <WebCore/RectEdges.h>
 
 namespace WebCore {
 namespace CSS {
@@ -34,7 +34,7 @@ namespace CSS {
 // <rect()> = rect( [ <length-percentage> | auto ]{4} [ round <'border-radius'> ]? )
 // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-rect
 struct Rect {
-    using Edge = std::variant<LengthPercentage<>, Keyword::Auto>;
+    using Edge = Variant<LengthPercentage<>, Keyword::Auto>;
 
     SpaceSeparatedRectEdges<Edge> edges;
     BorderRadius radii;

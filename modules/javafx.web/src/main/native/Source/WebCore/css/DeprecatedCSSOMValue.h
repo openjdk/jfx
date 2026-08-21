@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,19 @@
 
 #pragma once
 
-#include "CSSStyleDeclaration.h"
-#include "CSSValue.h"
-#include "ExceptionOr.h"
+#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/ExceptionOr.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class DeprecatedCSSOMValue : public RefCountedAndCanMakeWeakPtr<DeprecatedCSSOMValue> {
+// NOTE: This destructor is non-virtual for memory and performance reasons.
+// Don't go making it virtual again unless you know exactly what you're doing!
+class DeprecatedCSSOMValue : public RefCountedAndCanMakeWeakPtr<DeprecatedCSSOMValue>, public NoVirtualDestructorBase {
 public:
     // Exactly match the IDL. No reason to add anything if it's not in the IDL.
     enum Type : unsigned short {
@@ -58,9 +61,6 @@ public:
 
     CSSStyleDeclaration& owner() const { return m_owner; }
 
-    // NOTE: This destructor is non-virtual for memory and performance reasons.
-    // Don't go making it virtual again unless you know exactly what you're doing!
-    ~DeprecatedCSSOMValue() = default;
     WEBCORE_EXPORT void operator delete(DeprecatedCSSOMValue*, std::destroying_delete_t);
 
 protected:
@@ -85,14 +85,14 @@ protected:
     unsigned m_valueSeparator : CSSValue::ValueSeparatorBits;
     unsigned m_classType : ClassTypeBits; // ClassType
 
-    Ref<CSSStyleDeclaration> m_owner;
+    const Ref<CSSStyleDeclaration> m_owner;
 };
 
 class DeprecatedCSSOMComplexValue : public DeprecatedCSSOMValue {
 public:
     static Ref<DeprecatedCSSOMComplexValue> create(Ref<const CSSValue> value, CSSStyleDeclaration& owner)
     {
-        return adoptRef(*new DeprecatedCSSOMComplexValue(WTFMove(value), owner));
+        return adoptRef(*new DeprecatedCSSOMComplexValue(WTF::move(value), owner));
     }
 
     String cssText() const;
@@ -101,14 +101,12 @@ public:
 protected:
     DeprecatedCSSOMComplexValue(Ref<const CSSValue> value, CSSStyleDeclaration& owner)
         : DeprecatedCSSOMValue(ClassType::Complex, owner)
-        , m_value(WTFMove(value))
+        , m_value(WTF::move(value))
     {
     }
 
-    Ref<const CSSValue> protectedValue() const { return m_value; }
-
 private:
-    Ref<const CSSValue> m_value;
+    const Ref<const CSSValue> m_value;
 };
 
 } // namespace WebCore

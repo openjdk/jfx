@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "HTMLFormElement.h"
+#include <WebCore/HTMLFormElement.h>
 
 namespace WebCore {
 
@@ -32,13 +32,16 @@ public:
 
     virtual ~FormAssociatedElement() { RELEASE_ASSERT(!m_form); }
     virtual HTMLElement& asHTMLElement() = 0;
+    Ref<HTMLElement> asProtectedHTMLElement() { return asHTMLElement(); }
     virtual const HTMLElement& asHTMLElement() const = 0;
+    Ref<const HTMLElement> asProtectedHTMLElement() const { return asHTMLElement(); }
     virtual bool isFormListedElement() const = 0;
 
     virtual void formWillBeDestroyed() { m_form = nullptr; }
 
     HTMLFormElement* form() const { return m_form.get(); }
-    virtual HTMLFormElement* formForBindings() const;
+    RefPtr<HTMLFormElement> protectedForm() const { return m_form.get(); }
+    virtual RefPtr<HTMLFormElement> formForBindings() const;
 
     void setForm(RefPtr<HTMLFormElement>&&);
     virtual void elementInsertedIntoAncestor(Element&, Node::InsertionType);
@@ -63,7 +66,7 @@ private:
 inline void FormAssociatedElement::setForm(RefPtr<HTMLFormElement>&& newForm)
 {
     if (m_form.get() != newForm)
-        setFormInternal(WTFMove(newForm));
+        setFormInternal(WTF::move(newForm));
 }
 
 } // namespace WebCore

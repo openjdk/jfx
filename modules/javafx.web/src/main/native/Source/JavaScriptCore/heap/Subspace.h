@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "AllocationFailureMode.h"
-#include "AllocatorForMode.h"
-#include "Allocator.h"
-#include "MarkedBlock.h"
-#include "MarkedSpace.h"
+#include <JavaScriptCore/AllocationFailureMode.h>
+#include <JavaScriptCore/Allocator.h>
+#include <JavaScriptCore/AllocatorForMode.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/MarkedSpace.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
@@ -53,7 +53,7 @@ class Subspace {
 public:
     JS_EXPORT_PRIVATE virtual ~Subspace();
 
-    const char* name() const { return m_name.data(); }
+    const char* name() const LIFETIME_BOUND { return m_name.data(); }
     unsigned nameHash() const { return m_name.hash(); } // FIXME: rdar://139998916
     MarkedSpace& space() const { return m_space; }
 

@@ -31,7 +31,7 @@ class GraphicsContext;
 class SVGMaskElement;
 
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceMasker);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGResourceMasker);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceMasker);
 public:
     RenderSVGResourceMasker(SVGMaskElement&, RenderStyle&&);
@@ -61,7 +61,7 @@ private:
     void element() const = delete;
 
     ASCIILiteral renderName() const final { return "RenderSVGResourceMasker"_s; }
-    UncheckedKeyHashMap<SingleThreadWeakRef<const RenderLayerModelObject>, RefPtr<ImageBuffer>> m_masker;
+    HashMap<SingleThreadWeakRef<const RenderLayerModelObject>, RefPtr<ImageBuffer>> m_masker;
 };
 
 }

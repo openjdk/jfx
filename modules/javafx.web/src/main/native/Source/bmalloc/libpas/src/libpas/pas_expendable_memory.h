@@ -51,7 +51,7 @@ struct pas_expendable_memory {
     pas_expendable_memory_state states[1];
 };
 
-#define PAS_EXPENDABLE_MEMORY_PAGE_SIZE 16384lu
+#define PAS_EXPENDABLE_MEMORY_PAGE_SIZE 16384llu
 
 PAS_API extern pas_expendable_memory_state_version pas_expendable_memory_version_counter;
 

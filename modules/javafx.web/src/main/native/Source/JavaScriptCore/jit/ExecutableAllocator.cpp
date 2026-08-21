@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "ExecutableAllocationFuzz.h"
 #include "JITOperationValidation.h"
 #include "LinkBuffer.h"
+#include <bit>
 #include <wtf/ByteOrder.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FastBitVector.h>
@@ -42,6 +43,7 @@
 #include <wtf/ProcessID.h>
 #include <wtf/RedBlackTree.h>
 #include <wtf/Scope.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
@@ -64,29 +66,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #include <fcntl.h>
 #include <mach/mach.h>
 #include <mach/mach_time.h>
-
-extern "C" {
-    /* Routine mach_vm_remap */
-#ifdef mig_external
-    mig_external
-#else
-    extern
-#endif /* mig_external */
-    kern_return_t mach_vm_remap
-    (
-     vm_map_t target_task,
-     mach_vm_address_t *target_address,
-     mach_vm_size_t size,
-     mach_vm_offset_t mask,
-     int flags,
-     vm_map_t src_task,
-     mach_vm_address_t src_address,
-     boolean_t copy,
-     vm_prot_t *cur_protection,
-     vm_prot_t *max_protection,
-     vm_inherit_t inheritance
-     );
-}
+#include <wtf/spi/cocoa/MachVMSPI.h>
 #endif
 
 #if USE(INLINE_JIT_PERMISSIONS_API)
@@ -192,6 +172,10 @@ void ExecutableAllocator::disableJIT()
     bool shouldDisableJITMemory = processHasEntitlement("com.apple.security.cs.allow-jit"_s) && !isKernOpenSource();
 #endif
     if (shouldDisableJITMemory) {
+#if PLATFORM(MAC)
+        RELEASE_ASSERT(processHasEntitlement("com.apple.private.verified-jit"));
+        RELEASE_ASSERT(processHasEntitlement("com.apple.security.cs.single-jit"));
+#endif
         // Because of an OS quirk, even after the JIT region has been unmapped,
         // the OS thinks that region is reserved, and as such, can cause Gigacage
         // allocation to fail. We work around this by initializing the Gigacage
@@ -287,11 +271,9 @@ static ALWAYS_INLINE MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerato
 
     auto stubBaseCodePtr = CodePtr<LinkBufferPtrTag>(tagCodePtr<LinkBufferPtrTag>(stubBase));
     LinkBuffer linkBuffer(jit, stubBaseCodePtr, stubSize, LinkBuffer::Profile::Thunk);
-    // We don't use FINALIZE_CODE() for two reasons.
-    // The first is that we don't want the writeable address, as disassembled instructions,
-    // to appear in the console or anywhere in memory, via the PrintStream buffer.
-    // The second is we can't guarantee that the code is readable when using the
-    // asyncDisassembly option as our caller will set our pages execute only.
+    // We don't use FINALIZE_CODE() because we don't want the writeable address, as
+    // disassembled instructions, to appear in the console or anywhere in memory, via
+    // the PrintStream buffer.
     return linkBuffer.finalizeCodeWithoutDisassembly<JITThunkPtrTag>(nullptr);
 }
 #else // not USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
@@ -409,20 +391,23 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         jit_heap_runtime_config.max_segregated_object_size = 0;
 #endif
 
-    auto tryCreatePageReservation = [] (size_t reservationSize) {
+    auto tryCreatePageReservation = [] (size_t reservationSize, void* hintAddress) {
 #if OS(LINUX)
         // On Linux, if we use uncommitted reservation, mmap operation is recorded with small page size in perf command's output.
         // This makes the following JIT code logging broken and some of JIT code is not recorded correctly.
         // To avoid this problem, we use committed reservation if we need perf JITDump logging.
-        if (Options::logJITCodeForPerf())
-            return PageReservation::tryReserveAndCommitWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true, false);
+        if (Options::useJITDump())
+            return PageReservation::tryReserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, hintAddress, EXECUTABLE_POOL_WRITABLE, true, true, false);
 #endif
         if (Options::useJITCage() && JSC_ALLOW_JIT_CAGE_SPECIFIC_RESERVATION)
-            return PageReservation::tryReserve(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true, Options::useJITCage());
-        return PageReservation::tryReserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true, false);
+            return PageReservation::tryReserve(reservationSize, OSAllocator::JSJITCodePages, hintAddress, EXECUTABLE_POOL_WRITABLE, true, false, Options::useJITCage());
+        return PageReservation::tryReserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, hintAddress, EXECUTABLE_POOL_WRITABLE, true, false, false);
     };
 
-    reservation.pageReservation = tryCreatePageReservation(reservation.size);
+    void* addressHint = reinterpret_cast<void*>(Options::jitMemoryReservationAddress());
+    reservation.pageReservation = tryCreatePageReservation(reservation.size, addressHint);
+    if (addressHint)
+        RELEASE_ASSERT(reservation.pageReservation.base() == addressHint && "Failed to accomodate JSC_jitMemoryReservationAddress");
 
     if (Options::verboseExecutablePoolAllocation())
         dataLog(getpid(), ": Got executable pool reservation at ", RawPointer(reservation.pageReservation.base()), "...", RawPointer(reservation.pageReservation.end()), ", while I'm at ", RawPointer(reinterpret_cast<void*>(initializeJITPageReservation)), "\n");
@@ -459,8 +444,10 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
         {
             uint64_t pid = getCurrentProcessID();
             auto uuid = WTF::UUID::createVersion5(jscJITNamespace, std::span { std::bit_cast<const uint8_t*>(&pid), sizeof(pid) });
-            kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), WTF::byteSwap64(uuid.high()), WTF::byteSwap64(uuid.low()), std::bit_cast<uintptr_t>(reservation.base), 0);
+            kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), std::byteswap(uuid.high()), std::byteswap(uuid.low()), std::bit_cast<uintptr_t>(reservation.base), 0);
         }
+#elif USE(SYSPROF_CAPTURE)
+        WTFEmitSignpost(reservation, InitJITPageReservation);
 #endif
     }
 
@@ -472,7 +459,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 class FixedVMPoolExecutableAllocator final {
     // This does not need to be TZONE_ALLOCATED because it's only used as a singleton
     // and is only allocated once long before any scripts are executed.
-    WTF_MAKE_FAST_ALLOCATED(FixedVMPoolExecutableAllocator);
+    WTF_MAKE_SEQUESTERED_IMMORTAL_ALLOCATED(FixedVMPoolExecutableAllocator);
 
 #if ENABLE(JUMP_ISLANDS)
     class Islands;
@@ -486,7 +473,7 @@ public:
 #endif
     {
         JITReservation reservation = initializeJITPageReservation();
-        m_reservation = WTFMove(reservation.pageReservation);
+        m_reservation = WTF::move(reservation.pageReservation);
         if (m_reservation) {
 #if ENABLE(JUMP_ISLANDS)
             // Consider this scenario:
@@ -564,7 +551,7 @@ public:
     {
 #if ENABLE(LIBPAS_JIT_HEAP)
         Vector<void*, 0> randomAllocations;
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]] {
             // Let's fragment the executable memory agressively
             auto bytesAllocated = m_bytesAllocated.load(std::memory_order_relaxed);
             uint64_t allocationRoom = (m_reservation.size() - bytesAllocated) * 1 / 100 / sizeInBytes;
@@ -572,7 +559,7 @@ public:
                 allocationRoom = 1;
             int count = cryptographicallyRandomNumber<uint32_t>() % allocationRoom;
 
-            randomAllocations.resize(count);
+            randomAllocations.grow(count);
 
             for (int i = 0; i < count; ++i) {
                 void* result = jit_heap_try_allocate(sizeInBytes);
@@ -580,16 +567,16 @@ public:
                     // We are running out of memory, so make sure this allocation will succeed.
                     for (int j = 0; j < i; ++j)
                         jit_heap_deallocate(randomAllocations[j]);
-                    randomAllocations.resize(0);
+                    randomAllocations.shrink(0);
                     break;
                 }
                 randomAllocations[i] = result;
             }
         }
         auto result = ExecutableMemoryHandle::createImpl(sizeInBytes);
-        if (LIKELY(result))
+        if (result) [[likely]]
             m_bytesAllocated.fetch_add(result->sizeInBytes(), std::memory_order_relaxed);
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]] {
             for (unsigned i = 0; i < randomAllocations.size(); ++i)
                 jit_heap_deallocate(randomAllocations[i]);
         }
@@ -598,7 +585,7 @@ public:
         Locker locker { getLock() };
 
         unsigned start = 0;
-        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation()))
+        if (Options::useRandomizingExecutableIslandAllocation()) [[unlikely]]
             start = cryptographicallyRandomNumber<uint32_t>() % m_allocators.size();
 
         unsigned i = start;
@@ -792,7 +779,7 @@ public:
                 visitRight = true;
         });
 
-        for (Islands* islands : toRemove)
+        SUPPRESS_UNCHECKED_LOCAL for (Islands* islands : toRemove)
             freeIslands(locker, islands);
 
         if (ASSERT_ENABLED) {
@@ -847,16 +834,16 @@ private:
 
     void* islandForJumpLocation(const Locker<Lock>& locker, uintptr_t jumpLocation, uintptr_t target, bool concurrently, bool useMemcpy)
     {
-        Islands* islands = m_islandsForJumpSourceLocation.findExact(std::bit_cast<void*>(jumpLocation));
+        CheckedPtr islands = m_islandsForJumpSourceLocation.findExact(std::bit_cast<void*>(jumpLocation));
         if (islands) {
             // FIXME: We could create some method of reusing already allocated islands here, but it's
             // unlikely to matter in practice.
             if (!concurrently)
-                freeJumpIslands(locker, islands);
+                freeJumpIslands(locker, islands.get());
         } else {
             islands = new Islands;
             islands->jumpSourceLocation = CodeLocationLabel<ExecutableMemoryPtrTag>(tagCodePtr<ExecutableMemoryPtrTag>(std::bit_cast<void*>(jumpLocation)));
-            m_islandsForJumpSourceLocation.insert(islands);
+            m_islandsForJumpSourceLocation.insert(islands.get());
         }
 
         RegionAllocator* allocator = findRegion(jumpLocation > target ? jumpLocation - m_regionSize : jumpLocation);
@@ -870,9 +857,9 @@ private:
             auto emitJumpTo = [&] (void* target) {
                 RELEASE_ASSERT(Assembler::canEmitJump(std::bit_cast<void*>(jumpLocation), target));
                 if (useMemcpy)
-                    Assembler::fillNearTailCall<MachineCodeCopyMode::Memcpy>(currentIsland, target);
+                    Assembler::fillNearTailCall<memcpyRepatchFlush>(currentIsland, target);
                 else
-                    Assembler::fillNearTailCall<MachineCodeCopyMode::JITMemcpy>(currentIsland, target);
+                    Assembler::fillNearTailCall<jitMemcpyRepatchFlush>(currentIsland, target);
             };
 
             if (Assembler::canEmitJump(std::bit_cast<void*>(jumpLocation), std::bit_cast<void*>(target))) {
@@ -1034,7 +1021,7 @@ private:
             const size_t maxIslandsInThisRegion = this->maxIslandsInThisRegion();
 
             RELEASE_ASSERT(oldSize <= maxIslandsInThisRegion);
-            if (UNLIKELY(oldSize == maxIslandsInThisRegion))
+            if (oldSize == maxIslandsInThisRegion) [[unlikely]]
                 crashOnJumpIslandExhaustion();
 
             const size_t newSize = std::min(oldSize + islandsPerPage(), maxIslandsInThisRegion);
@@ -1098,11 +1085,11 @@ private:
 #if ENABLE(JUMP_ISLANDS)
         for (RegionAllocator& allocator : m_allocators) {
             using FunctionResultType = decltype(function(allocator));
-            if constexpr (std::is_same<IterationStatus, FunctionResultType>::value) {
+            if constexpr (std::same_as<IterationStatus, FunctionResultType>) {
                 if (function(allocator) == IterationStatus::Done)
                     break;
             } else {
-                static_assert(std::is_same<void, FunctionResultType>::value);
+                static_assert(std::same_as<void, FunctionResultType>);
                 function(allocator);
             }
         }
@@ -1112,8 +1099,9 @@ private:
     }
 
 #if ENABLE(JUMP_ISLANDS)
-    class Islands : public RedBlackTree<Islands, void*>::Node {
+    class Islands final : public RedBlackTree<Islands, void*>::ThreadSafeNode {
         WTF_MAKE_TZONE_ALLOCATED(Islands);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Islands);
     public:
         void* key() { return jumpSourceLocation.dataLocation(); }
         CodeLocationLabel<ExecutableMemoryPtrTag> jumpSourceLocation;
@@ -1330,8 +1318,6 @@ void* endOfFixedExecutableMemoryPoolImpl()
     return allocator->memoryEnd();
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 void dumpJITMemory(const void* dst, const void* src, size_t size)
 {
     RELEASE_ASSERT(Options::dumpJITMemoryPath());
@@ -1339,8 +1325,8 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
 #if OS(DARWIN)
     static Lock dumpJITMemoryLock;
     static int fd WTF_GUARDED_BY_LOCK(dumpJITMemoryLock) = -1;
-    static uint8_t* buffer;
     static constexpr size_t bufferSize = fixedExecutableMemoryPoolSize;
+    static LazyNeverDestroyed<Vector<uint8_t>> buffer;
     static size_t offset WTF_GUARDED_BY_LOCK(dumpJITMemoryLock) = 0;
     static bool needsToFlush WTF_GUARDED_BY_LOCK(dumpJITMemoryLock) = false;
     static LazyNeverDestroyed<Ref<WorkQueue>> flushQueue;
@@ -1354,7 +1340,8 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
                 fd = open(FileSystem::fileSystemRepresentation(path).data(), O_CREAT | O_TRUNC | O_APPEND | O_WRONLY | O_EXLOCK | O_NONBLOCK, 0666);
                 RELEASE_ASSERT(fd != -1);
             }
-            ::write(fd, buffer, offset);
+            auto writeSpan = buffer->mutableSpan().first(offset);
+            ::write(fd, writeSpan.data(), offset);
             offset = 0;
             needsToFlush = false;
         }
@@ -1373,19 +1360,20 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
             });
         }
 
-        static void write(const void* src, size_t size) WTF_REQUIRES_LOCK(dumpJITMemoryLock)
+        static void write(std::span<const uint8_t> sourceSpan) WTF_REQUIRES_LOCK(dumpJITMemoryLock)
         {
-            if (UNLIKELY(offset + size > bufferSize))
+            if (offset + sourceSpan.size() > bufferSize) [[unlikely]]
                 flush();
-            memcpy(buffer + offset, src, size);
-            offset += size;
+            auto bufferSpan = buffer->mutableSpan().subspan(offset);
+            memcpySpan(bufferSpan, sourceSpan);
+            offset += sourceSpan.size();
             enqueueFlush();
         }
     };
 
     static std::once_flag once;
     std::call_once(once, [] {
-        buffer = std::bit_cast<uint8_t*>(malloc(bufferSize));
+        buffer.construct(bufferSize);
         flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue"_s, WorkQueue::QOS::Background));
         std::atexit([] {
             Locker locker { dumpJITMemoryLock };
@@ -1400,10 +1388,10 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     uint64_t dst64 = std::bit_cast<uintptr_t>(dst);
     uint64_t size64 = size;
     TraceScope(DumpJITMemoryStart, DumpJITMemoryStop, time, dst64, size64);
-    DumpJIT::write(&time, sizeof(time));
-    DumpJIT::write(&dst64, sizeof(dst64));
-    DumpJIT::write(&size64, sizeof(size64));
-    DumpJIT::write(src, size);
+    DumpJIT::write(asByteSpan(time));
+    DumpJIT::write(asByteSpan(dst64));
+    DumpJIT::write(asByteSpan(size64));
+    DumpJIT::write(unsafeMakeSpan(static_cast<const uint8_t*>(src), size));
 #else
     UNUSED_PARAM(dst);
     UNUSED_PARAM(src);
@@ -1411,8 +1399,6 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
     RELEASE_ASSERT_NOT_REACHED();
 #endif
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if ENABLE(MPROTECT_RX_TO_RWX)
 void ExecutableAllocator::startWriting(const void* start, size_t sizeInBytes) { g_jscConfig.fixedVMPoolExecutableAllocator->startWriting(start, sizeInBytes); }
@@ -1441,11 +1427,11 @@ ExecutableMemoryHandle::~ExecutableMemoryHandle()
     AssemblyCommentRegistry::singleton().unregisterCodeRange(start().untaggedPtr(), end().untaggedPtr());
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
     allocator->handleWillBeReleased(*this, sizeInBytes());
-    if (UNLIKELY(Options::zeroExecutableMemoryOnFree())) {
+    if (Options::zeroExecutableMemoryOnFree()) [[unlikely]] {
         // We don't have a performJITMemset so just use a zeroed buffer.
         auto zeros = MallocSpan<uint8_t>::zeroedMalloc(sizeInBytes());
         auto span = zeros.span();
-        performJITMemcpy(start().untaggedPtr(), span.data(), span.size());
+        performJITMemcpy<jitMemcpyRepatch>(start().untaggedPtr(), span.data(), span.size());
     }
     jit_heap_deallocate(key());
 }

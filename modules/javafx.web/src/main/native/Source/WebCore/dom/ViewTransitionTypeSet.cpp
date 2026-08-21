@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,11 @@
 
 #include "Document.h"
 #include "PseudoClassChangeInvalidation.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ViewTransitionTypeSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ViewTransitionTypeSet);
 
 ViewTransitionTypeSet::ViewTransitionTypeSet(Document& document, Vector<AtomString>&& initialActiveTypes)
     : m_typeSet()
@@ -54,9 +53,9 @@ void ViewTransitionTypeSet::clearFromSetLike()
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (!m_document)
         return;
-    if (m_document->documentElement()) {
+    if (RefPtr documentElement = m_document->documentElement()) {
         styleInvalidation.emplace(
-            *m_document->documentElement(),
+            *documentElement,
             CSSSelector::PseudoClass::ActiveViewTransitionType,
             Style::PseudoClassChangeInvalidation::AnyValue
         );
@@ -70,9 +69,9 @@ void ViewTransitionTypeSet::addToSetLike(const AtomString& type)
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (!m_document)
         return;
-    if (m_document->documentElement()) {
+    if (RefPtr documentElement = m_document->documentElement()) {
         styleInvalidation.emplace(
-            *m_document->documentElement(),
+            *documentElement,
             CSSSelector::PseudoClass::ActiveViewTransitionType,
             Style::PseudoClassChangeInvalidation::AnyValue
         );
@@ -86,9 +85,9 @@ bool ViewTransitionTypeSet::removeFromSetLike(const AtomString& type)
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (!m_document)
         return false;
-    if (m_document->documentElement()) {
+    if (RefPtr documentElement = m_document->documentElement()) {
         styleInvalidation.emplace(
-            *m_document->documentElement(),
+            *documentElement,
             CSSSelector::PseudoClass::ActiveViewTransitionType,
             Style::PseudoClassChangeInvalidation::AnyValue
         );

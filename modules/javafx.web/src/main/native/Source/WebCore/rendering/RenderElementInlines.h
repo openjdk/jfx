@@ -19,137 +19,113 @@
 
 #pragma once
 
-#include "RenderElement.h"
-#include "RenderObjectInlines.h"
+#include <WebCore/PseudoElement.h>
+#include <WebCore/RenderBox.h>
+#include <WebCore/RenderObjectDocument.h>
+#include <WebCore/RenderObjectNode.h>
+#include <WebCore/RenderStyle+GettersInlines.h>
+#include <WebCore/StyleOpacity.h>
+#include <WebCore/StyleShapeOutside.h>
 
 namespace WebCore {
 
 inline Overflow RenderElement::effectiveOverflowBlockDirection() const { return writingMode().isHorizontal() ? effectiveOverflowY() : effectiveOverflowX(); }
 inline Overflow RenderElement::effectiveOverflowInlineDirection() const { return writingMode().isHorizontal() ? effectiveOverflowX() : effectiveOverflowY(); }
-inline bool RenderElement::hasBackdropFilter() const { return style().hasBackdropFilter(); }
-inline bool RenderElement::hasBackground() const { return style().hasBackground(); }
-inline bool RenderElement::hasBlendMode() const { return style().hasBlendMode(); }
-inline bool RenderElement::hasClip() const { return isOutOfFlowPositioned() && style().hasClip(); }
-inline bool RenderElement::hasClipOrNonVisibleOverflow() const { return hasClip() || hasNonVisibleOverflow(); }
-inline bool RenderElement::hasClipPath() const { return style().clipPath(); }
-inline bool RenderElement::hasFilter() const { return style().hasFilter(); }
-inline bool RenderElement::hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibility::Hidden; }
-inline bool RenderElement::hasMask() const { return style().hasMask(); }
-inline bool RenderElement::hasOutline() const { return style().hasOutline() || hasOutlineAnnotation(); }
-inline bool RenderElement::hasShapeOutside() const { return style().shapeOutside(); }
-inline bool RenderElement::isTransparent() const { return style().hasOpacity(); }
-inline float RenderElement::opacity() const { return style().opacity(); }
-inline FloatRect RenderElement::transformReferenceBoxRect() const { return transformReferenceBoxRect(style()); }
-inline FloatRect RenderElement::transformReferenceBoxRect(const RenderStyle& style) const { return referenceBoxRect(transformBoxToCSSBoxType(style.transformBox())); }
+inline Element* RenderElement::element() const { return downcast<Element>(RenderObject::node()); }
+inline RefPtr<Element> RenderElement::protectedElement() const { return element(); }
+inline Element* RenderElement::nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+inline RefPtr<Element> RenderElement::protectedNonPseudoElement() const { return nonPseudoElement(); }
 
-#if HAVE(CORE_MATERIAL)
-inline bool RenderElement::hasAppleVisualEffect() const { return style().hasAppleVisualEffect(); }
-inline bool RenderElement::hasAppleVisualEffectRequiringBackdropFilter() const { return style().hasAppleVisualEffectRequiringBackdropFilter(); }
+inline bool RenderElement::isFixedPositioned() const
+{
+    return isOutOfFlowPositioned() && style().position() == PositionType::Fixed;
+}
+
+inline bool RenderElement::isAbsolutelyPositioned() const
+{
+    return isOutOfFlowPositioned() && style().position() == PositionType::Absolute;
+}
+
+inline bool RenderElement::isBlockLevelBox() const
+{
+    // block-level boxes are boxes that participate in a block formatting context.
+    auto* renderBox = dynamicDowncast<RenderBox>(*this);
+    if (!renderBox)
+        return false;
+
+    if (renderBox->isFlexItem() || renderBox->isGridItem() || renderBox->isRenderTableCell())
+        return false;
+    return style().isDisplayBlockLevel();
+}
+
+inline bool RenderElement::isAnonymousBlock() const
+{
+    return isAnonymous()
+        && (style().display() == DisplayType::Block || style().display() == DisplayType::Box)
+        && !style().pseudoElementType()
+        && isRenderBlock()
+#if ENABLE(MATHML)
+        && !isRenderMathMLBlock()
 #endif
-
-inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
-{
-    return isRenderView()
-        || style().position() != PositionType::Static
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (hasBackdropFilter() && !isDocumentElementRenderer())
-#if HAVE(CORE_MATERIAL)
-        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
-#endif
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned(isDocumentElementRenderer()))
-        || isRenderOrLegacyRenderSVGForeignObject()
-        || shouldApplyLayoutContainment()
-        || shouldApplyPaintContainment();
+        && !isRenderListMarker()
+        && !isRenderFragmentedFlow()
+        && !isRenderMultiColumnSet()
+        && !isRenderView()
+        && !isViewTransitionContainingBlock();
 }
 
-inline bool RenderElement::canContainFixedPositionObjects() const
+inline bool RenderElement::isBlockContainer() const
 {
-    return isRenderView()
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (hasBackdropFilter() && !isDocumentElementRenderer())
-#if HAVE(CORE_MATERIAL)
-        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
-#endif
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned(isDocumentElementRenderer()))
-        || isRenderOrLegacyRenderSVGForeignObject()
-        || shouldApplyLayoutContainment()
-        || shouldApplyPaintContainment();
+    auto display = style().display();
+    return (display == DisplayType::Block
+        || display == DisplayType::InlineBlock
+        || display == DisplayType::FlowRoot
+        || display == DisplayType::ListItem
+        || display == DisplayType::TableCell
+        || display == DisplayType::TableCaption) && !isRenderReplaced();
 }
 
-inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
+inline bool RenderElement::isBlockBox() const
 {
-    return style.hasOpacity()
-        || style.hasMask()
-        || style.clipPath()
-        || style.hasFilter()
-        || style.hasBackdropFilter()
-#if HAVE(CORE_MATERIAL)
-        || style.hasAppleVisualEffect()
-#endif
-        || style.hasBlendMode();
+    // A block-level box that is also a block container.
+    return isBlockLevelBox() && isBlockContainer();
 }
 
-inline bool RenderElement::shouldApplyAnyContainment() const
+inline bool RenderElement::hasPotentiallyScrollableOverflow() const
 {
-    return shouldApplyLayoutContainment() || shouldApplySizeContainment() || shouldApplyInlineSizeContainment() || shouldApplyStyleContainment() || shouldApplyPaintContainment();
+    // We only need to test one overflow dimension since 'visible' and 'clip' always get accompanied
+    // with 'clip' or 'visible' in the other dimension (see Style::Adjuster::adjust).
+    return hasNonVisibleOverflow() && style().overflowX() != Overflow::Clip && style().overflowX() != Overflow::Visible;
 }
 
-inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
+inline bool RenderElement::isBeforeContent() const
 {
-    return shouldApplySizeContainment() || shouldApplyInlineSizeContainment();
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoElementType::Before)
+        return false;
+    return true;
 }
 
-inline bool RenderElement::shouldApplyLayoutContainment() const
+inline bool RenderElement::isAfterContent() const
 {
-    return element() && WebCore::shouldApplyLayoutContainment(style(), *element());
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoElementType::After)
+        return false;
+    return true;
 }
 
-inline bool RenderElement::shouldApplySizeContainment() const
+inline bool RenderElement::isBeforeOrAfterContent() const
 {
-    return element() && WebCore::shouldApplySizeContainment(style(), *element());
+    return isBeforeContent() || isAfterContent();
 }
 
-inline bool RenderElement::shouldApplyInlineSizeContainment() const
+inline Element* RenderElement::generatingElement() const
 {
-    return element() && WebCore::shouldApplyInlineSizeContainment(style(), *element());
-}
-
-inline bool RenderElement::shouldApplyStyleContainment() const
-{
-    return element() && WebCore::shouldApplyStyleContainment(style(), *element());
-}
-
-inline bool RenderElement::shouldApplyPaintContainment() const
-{
-    return element() && WebCore::shouldApplyPaintContainment(style(), *element());
-}
-
-inline bool RenderElement::visibleToHitTesting(const std::optional<HitTestRequest>& request) const
-{
-    auto visibility = !request || request->userTriggered() ? style().usedVisibility() : style().visibility();
-    return visibility == Visibility::Visible
-        && !isSkippedContent()
-        && ((request && request->ignoreCSSPointerEventsProperty()) || usedPointerEvents() != PointerEvents::None);
-}
-
-inline int adjustForAbsoluteZoom(int value, const RenderElement& renderer)
-{
-    return adjustForAbsoluteZoom(value, renderer.style());
-}
-
-inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize size, const RenderElement& renderer)
-{
-    return adjustLayoutSizeForAbsoluteZoom(size, renderer.style());
-}
-
-inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderElement& renderer)
-{
-    return adjustLayoutUnitForAbsoluteZoom(value, renderer.style());
-}
-
-inline bool isSkippedContentRoot(const RenderElement& renderer)
-{
-    return renderer.element() && WebCore::isSkippedContentRoot(renderer.style(), *renderer.element());
+    return isPseudoElement() ? downcast<PseudoElement>(*element()).hostElement() : element();
 }
 
 } // namespace WebCore

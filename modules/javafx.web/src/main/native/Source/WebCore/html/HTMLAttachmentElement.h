@@ -25,10 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-#include "HTMLElement.h"
-#include "Image.h"
+#include <WebCore/HTMLElement.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ class ShadowRoot;
 class FragmentedSharedBuffer;
 
 class HTMLAttachmentElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAttachmentElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLAttachmentElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLAttachmentElement);
 public:
     static Ref<HTMLAttachmentElement> create(const QualifiedName&, Document&);
@@ -63,8 +64,6 @@ public:
 
     WEBCORE_EXPORT void updateAttributes(std::optional<uint64_t>&& newFileSize, const AtomString& newContentType, const AtomString& newFilename);
     WEBCORE_EXPORT void updateAssociatedElementWithData(const String& contentType, Ref<FragmentedSharedBuffer>&& data);
-    WEBCORE_EXPORT void updateThumbnailForNarrowLayout(const RefPtr<Image>& thumbnail);
-    WEBCORE_EXPORT void updateThumbnailForWideLayout(Vector<uint8_t>&&);
     WEBCORE_EXPORT void updateIconForNarrowLayout(const RefPtr<Image>& icon, const WebCore::FloatSize&);
     WEBCORE_EXPORT void updateIconForWideLayout(Vector<uint8_t>&&);
 
@@ -82,7 +81,6 @@ public:
     const AtomString& attachmentSubtitleForDisplay() const;
     WEBCORE_EXPORT String attachmentType() const;
     String attachmentPath() const;
-    RefPtr<Image> thumbnail() const { return m_thumbnail; }
     RefPtr<Image> icon() const { return m_icon; }
     void requestIconIfNeededWithSize(const FloatSize&);
     void requestWideLayoutIconIfNeeded();
@@ -98,6 +96,16 @@ public:
     bool isWideLayout() const { return m_implementation == Implementation::WideLayout; }
     HTMLElement* wideLayoutShadowContainer() const { return m_containerElement.get(); }
     HTMLElement* wideLayoutImageElement() const;
+    WEBCORE_EXPORT static String shadowUserAgentStyleSheetText();
+
+    enum class HighlightState : uint8_t {
+        None, // The object is not selected.
+        Start, // The object either contains the start of a selection run or is the start of a run
+        Inside, // The object is fully encompassed by a selection run
+        End, // The object either contains the end of a selection run or is the end of a run
+        Both // The object contains an entire run or is the sole selected object in that run
+    };
+    void addSelectionClasses(HighlightState);
 
 private:
     friend class AttachmentSaveEventListener;
@@ -114,7 +122,7 @@ private:
     void setNeedsIconRequest();
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool isReplaced(const RenderStyle&) const final { return true; }
+    bool isReplaced(const RenderStyle* = nullptr) const final { return true; }
     bool shouldSelectOnMouseDown() final {
 #if PLATFORM(IOS_FAMILY)
         return false;
@@ -134,22 +142,19 @@ private:
 
     RefPtr<File> m_file;
     String m_uniqueIdentifier;
-    RefPtr<Image> m_thumbnail;
     RefPtr<Image> m_icon;
     FloatSize m_iconSize;
 
-    // The thumbnail is shown if non-empty, otherwise the icon is shown if non-empty.
-    Vector<uint8_t> m_thumbnailForWideLayout;
     Vector<uint8_t> m_iconForWideLayout;
 
-    RefPtr<HTMLImageElement> m_imageElement;
-    RefPtr<HTMLElement> m_containerElement;
-    RefPtr<HTMLElement> m_placeholderElement;
-    RefPtr<HTMLElement> m_progressElement;
-    RefPtr<HTMLElement> m_informationBlock;
-    RefPtr<HTMLElement> m_actionTextElement;
-    RefPtr<HTMLElement> m_titleElement;
-    RefPtr<HTMLElement> m_subtitleElement;
+    const RefPtr<HTMLImageElement> m_imageElement;
+    const RefPtr<HTMLElement> m_containerElement;
+    const RefPtr<HTMLElement> m_placeholderElement;
+    const RefPtr<HTMLElement> m_progressElement;
+    const RefPtr<HTMLElement> m_informationBlock;
+    const RefPtr<HTMLElement> m_actionTextElement;
+    const RefPtr<HTMLElement> m_titleElement;
+    const RefPtr<HTMLElement> m_subtitleElement;
     RefPtr<HTMLElement> m_saveArea;
     RefPtr<HTMLElement> m_saveButton;
     mutable RefPtr<DOMRectReadOnly> m_saveButtonClientRect;

@@ -57,12 +57,10 @@ void CoordinatedPlatformLayerBufferProxy::setTargetLayer(CoordinatedPlatformLaye
 
     m_layer = layer;
     if (m_layer) {
-        m_isValid = true;
 #if ENABLE(VIDEO) && USE(GSTREAMER)
         m_compositingRunLoop = m_layer->compositingRunLoop();
 #endif
     } else {
-        m_isValid = false;
         m_pendingBuffer = nullptr;
 #if ENABLE(VIDEO) && USE(GSTREAMER)
         m_compositingRunLoop = nullptr;
@@ -78,31 +76,30 @@ void CoordinatedPlatformLayerBufferProxy::consumePendingBufferIfNeeded()
         return;
 
     if (m_layer)
-        m_layer->setContentsBuffer(WTFMove(m_pendingBuffer));
+        m_layer->setContentsBuffer(WTF::move(m_pendingBuffer));
     else
         m_pendingBuffer = nullptr;
 }
 
-bool CoordinatedPlatformLayerBufferProxy::setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& buffer)
+void CoordinatedPlatformLayerBufferProxy::setDisplayBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&& buffer)
 {
+    RefPtr<CoordinatedPlatformLayer> layer;
+    {
     Locker locker { m_lock };
-    if (!m_isValid)
-        return false;
-
     if (!m_layer) {
-        m_pendingBuffer = WTFMove(buffer);
-        return true;
+            m_pendingBuffer = WTF::move(buffer);
+        return;
     }
 
     m_pendingBuffer = nullptr;
+        layer = m_layer;
+    }
 
     {
-        Locker layerLocker { m_layer->lock() };
-        m_layer->setContentsBuffer(WTFMove(buffer), CoordinatedPlatformLayer::RequireComposition::No);
+        Locker layerLocker { layer->lock() };
+        layer->setContentsBuffer(WTF::move(buffer), std::nullopt, CoordinatedPlatformLayer::RequireComposition::No);
     }
-    m_layer->requestComposition();
-
-    return true;
+    layer->requestComposition(CompositionReason::VideoFrame);
 }
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
@@ -111,7 +108,7 @@ void CoordinatedPlatformLayerBufferProxy::dropCurrentBufferWhilePreservingTextur
     RefPtr<RunLoop> compositingRunLoop;
     {
         Locker locker { m_lock };
-        if (!m_isValid || !m_layer || !m_compositingRunLoop)
+        if (!m_layer || !m_compositingRunLoop)
             return;
 
         compositingRunLoop = m_compositingRunLoop;
@@ -119,19 +116,19 @@ void CoordinatedPlatformLayerBufferProxy::dropCurrentBufferWhilePreservingTextur
 
     auto dropCurrentBuffer = [this, protectedThis = Ref { *this }] {
         Locker locker { m_lock };
-        if (!m_isValid || !m_layer)
+        if (!m_layer)
             return;
 
         m_layer->replaceCurrentContentsBufferWithCopy();
     };
 
     if (shouldWait == ShouldWait::No) {
-        compositingRunLoop->dispatch(WTFMove(dropCurrentBuffer));
+        compositingRunLoop->dispatch(WTF::move(dropCurrentBuffer));
         return;
     }
 
     BinarySemaphore semaphore;
-    compositingRunLoop->dispatch([&semaphore, function = WTFMove(dropCurrentBuffer)]() mutable {
+    compositingRunLoop->dispatch([&semaphore, function = WTF::move(dropCurrentBuffer)]() mutable {
         function();
         semaphore.signal();
     });

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FilterEffect.h"
-#include "FilterImageVector.h"
-#include "ImageBufferAllocator.h"
+#include <WebCore/FilterEffect.h>
+#include <WebCore/FilterImageVector.h>
+#include <WebCore/ImageBufferAllocator.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -45,18 +45,18 @@ public:
     ImageBufferAllocator& allocator() const { return *m_allocator; }
 
     FilterImage* effectResult(FilterEffect&) const;
-    void setEffectResult(FilterEffect&, const FilterImageVector& inputs, Ref<FilterImage>&& result);
+    void setEffectResult(FilterEffect&, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result);
     void clearEffectResult(FilterEffect&);
 
 private:
     size_t memoryCost() const;
     bool canCacheResult(const FilterImage&) const;
 
-    UncheckedKeyHashMap<Ref<FilterEffect>, Ref<FilterImage>> m_results;
+    HashMap<Ref<FilterEffect>, Ref<FilterImage>> m_results;
 
     // The value is a list of FilterEffects, whose FilterImages depend on the key FilterImage.
-    using FilterEffectSet = UncheckedKeyHashSet<Ref<FilterEffect>>;
-    UncheckedKeyHashMap<Ref<FilterImage>, FilterEffectSet> m_resultReferences;
+    using FilterEffectSet = HashSet<Ref<FilterEffect>>;
+    HashMap<Ref<FilterImage>, FilterEffectSet> m_resultReferences;
 
     std::unique_ptr<ImageBufferAllocator> m_allocator;
 };

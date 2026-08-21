@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "DeferGC.h"
-#include "Weak.h"
-#include "WeakGCHashTable.h"
+#include <JavaScriptCore/DeferGC.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakGCHashTable.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -36,7 +36,7 @@ namespace JSC {
 
 template<typename KeyArg, typename ValueArg, typename HashArg = DefaultHash<KeyArg>, typename KeyTraitsArg = HashTraits<KeyArg>>
 class WeakGCMap final : public WeakGCHashTable {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakGCMap);
     typedef Weak<ValueArg> ValueType;
     typedef UncheckedKeyHashMap<KeyArg, ValueType, HashArg, KeyTraitsArg> HashMapType;
 
@@ -56,7 +56,7 @@ public:
 
     AddResult set(const KeyType& key, ValueType value)
     {
-        return m_map.set(key, WTFMove(value));
+        return m_map.set(key, WTF::move(value));
     }
 
     template<typename Functor>
@@ -65,11 +65,11 @@ public:
         // If functor invokes GC, GC can prune WeakGCMap, and manipulate UncheckedKeyHashMap while we are touching it in ensure function.
         // The functor must not invoke GC.
         AssertNoGC assertNoGC;
-        AddResult result = m_map.ensure(key, std::forward<Functor>(functor));
+        AddResult result = m_map.ensure(key, functor);
         ValueArg* value = result.iterator->value.get();
         if (!result.isNewEntry && !value) {
             value = functor();
-            result.iterator->value = WTFMove(value);
+            result.iterator->value = WTF::move(value);
         }
         return value;
     }

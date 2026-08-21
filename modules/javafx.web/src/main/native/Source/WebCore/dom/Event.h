@@ -23,12 +23,11 @@
 
 #pragma once
 
-#include "DOMHighResTimeStamp.h"
-#include "EventInit.h"
-#include "EventInterfaces.h"
-#include "EventOptions.h"
-#include "ExceptionOr.h"
-#include "ScriptWrappable.h"
+#include <WebCore/DOMHighResTimeStamp.h>
+#include <WebCore/EventInit.h>
+#include <WebCore/EventInterfaces.h>
+#include <WebCore/EventOptions.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TypeCasts.h>
@@ -39,6 +38,10 @@ namespace WTF {
 class TextStream;
 }
 
+namespace JSC {
+class JSGlobalObject;
+}
+
 namespace WebCore {
 
 class EventPath;
@@ -46,7 +49,7 @@ class EventTarget;
 class ScriptExecutionContext;
 
 class Event : public ScriptWrappable, public RefCountedAndCanMakeWeakPtr<Event> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Event);
+    WTF_MAKE_TZONE_ALLOCATED(Event);
 public:
     using IsTrusted = EventIsTrusted;
     using CanBubble = EventCanBubble;
@@ -76,6 +79,7 @@ public:
     enum EventInterfaceType interfaceType() const { return static_cast<enum EventInterfaceType>(m_eventInterface); }
 
     EventTarget* target() const { return m_target.get(); }
+    RefPtr<EventTarget> protectedTarget() const;
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
@@ -94,7 +98,7 @@ public:
     MonotonicTime timeStamp() const { return m_createTime; }
 
     void setEventPath(const EventPath&);
-    Vector<Ref<EventTarget>> composedPath() const;
+    Vector<Ref<EventTarget>> composedPath(JSC::JSGlobalObject&) const;
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }
@@ -106,25 +110,13 @@ public:
     void setLegacyReturnValue(bool);
 
     virtual bool isBeforeTextInsertedEvent() const { return false; }
-    virtual bool isBeforeUnloadEvent() const { return false; }
-    virtual bool isClipboardEvent() const { return false; }
-    virtual bool isCommandEvent() const { return false; }
-    virtual bool isCompositionEvent() const { return false; }
-    virtual bool isErrorEvent() const { return false; }
-    virtual bool isFocusEvent() const { return false; }
-    virtual bool isInputEvent() const { return false; }
-    virtual bool isKeyboardEvent() const { return false; }
     virtual bool isMouseEvent() const { return false; }
-    virtual bool isPointerEvent() const { return false; }
-    virtual bool isTextEvent() const { return false; }
-    virtual bool isToggleEvent() const { return false; }
-    virtual bool isTouchEvent() const { return false; }
     virtual bool isUIEvent() const { return false; }
-    virtual bool isVersionChangeEvent() const { return false; }
-    virtual bool isWheelEvent() const { return false; }
+    virtual bool isUIEventWithKeyState() const { return false; }
 
 #if PLATFORM(JAVA) // FIXME-java: used in JavaEvent.cpp, or enable RTTI
     virtual bool isMutationEvent() const { return false; };
+
 #endif
 
     bool propagationStopped() const { return m_propagationStopped || m_immediatePropagationStopped; }
@@ -162,6 +154,9 @@ public:
     bool isAutofillEvent() { return m_isAutofillEvent; }
     void setIsAutofillEvent() { m_isAutofillEvent = true; }
 
+    bool isShadowRootAttachedEvent() { return m_isShadowRootAttachedEvent; }
+    void setIsShadowRootAttachedEvent() { m_isShadowRootAttachedEvent = true; }
+
 protected:
     explicit Event(enum EventInterfaceType, IsTrusted = IsTrusted::No);
     Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
@@ -191,6 +186,7 @@ private:
     unsigned m_isExecutingPassiveEventListener : 1;
     unsigned m_currentTargetIsInShadowTree : 1;
     unsigned m_isAutofillEvent : 1;
+    unsigned m_isShadowRootAttachedEvent : 1;
 
     unsigned m_eventPhase : 2;
 
@@ -200,7 +196,7 @@ private:
 
     unsigned m_eventInterface : 7 { 0 };
 
-    // 9-bits left.
+    // 8-bits left.
 
     AtomString m_type;
 
@@ -243,6 +239,11 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Event&);
 } // namespace WebCore
 
 #define SPECIALIZE_TYPE_TRAITS_EVENT(ToValueTypeName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::Event& event) { return event.interfaceType() == WebCore::EventInterfaceType::ToValueTypeName; } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+#define SPECIALIZE_TYPE_TRAITS_EVENT_POLYMORPHIC(ToValueTypeName) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
     static bool isType(const WebCore::Event& event) { return event.is##ToValueTypeName(); } \
 SPECIALIZE_TYPE_TRAITS_END()

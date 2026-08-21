@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,26 +27,24 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
-#include "WebGPUXRProjectionLayer.h"
+#include "PlatformXR.h"
 #include "WebXRRigidTransform.h"
 #include "XRCompositionLayer.h"
 
+#if PLATFORM(COCOA)
 #include <wtf/MachSendRight.h>
+#endif
 
 namespace WebCore {
-
-namespace WebGPU {
-class XRProjectionLayer;
-}
 
 class GPUTexture;
 
 class XRProjectionLayer : public XRCompositionLayer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRProjectionLayer);
+    WTF_MAKE_TZONE_ALLOCATED(XRProjectionLayer);
 public:
-    static Ref<XRProjectionLayer> create(ScriptExecutionContext& scriptExecutionContext, Ref<WebCore::WebGPU::XRProjectionLayer>&& backing)
+    static Ref<XRProjectionLayer> create(ScriptExecutionContext& scriptExecutionContext, Ref<XRLayerBacking>&& backing)
     {
-        return adoptRef(*new XRProjectionLayer(scriptExecutionContext, WTFMove(backing)));
+        return adoptRef(*new XRProjectionLayer(scriptExecutionContext, WTF::move(backing)));
     }
     virtual ~XRProjectionLayer();
 
@@ -56,21 +54,30 @@ public:
 
     bool ignoreDepthValues() const;
     std::optional<float> fixedFoveation() const;
-    [[noreturn]] void setFixedFoveation(std::optional<float>);
+    void setFixedFoveation(std::optional<float>);
     WebXRRigidTransform* deltaPose() const;
-    [[noreturn]] void setDeltaPose(WebXRRigidTransform*);
+    void setDeltaPose(WebXRRigidTransform*);
 
     // WebXRLayer
     void startFrame(PlatformXR::FrameData&) final;
     PlatformXR::Device::Layer endFrame() final;
+#if ENABLE(WEBGPU)
+    std::optional<PlatformXR::FrameData::LayerData> layerData() const;
+#endif
 
-    WebCore::WebGPU::XRProjectionLayer& backing();
 private:
-    XRProjectionLayer(ScriptExecutionContext&, Ref<WebCore::WebGPU::XRProjectionLayer>&&);
+    XRProjectionLayer(ScriptExecutionContext&, Ref<XRLayerBacking>&&);
 
-    Ref<WebCore::WebGPU::XRProjectionLayer> m_backing;
+    bool isXRProjectionLayer() const final { return true; }
+
+    std::optional<PlatformXR::FrameData::LayerData> m_layerData;
+    RefPtr<WebXRRigidTransform> m_transform;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XRProjectionLayer)
+    static bool isType(const WebCore::WebXRLayer& layer) { return layer.isXRProjectionLayer(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

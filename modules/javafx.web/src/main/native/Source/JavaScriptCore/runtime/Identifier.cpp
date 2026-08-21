@@ -27,10 +27,10 @@
 
 namespace JSC {
 
-Ref<AtomStringImpl> Identifier::add8(VM& vm, std::span<const UChar> s)
+Ref<AtomStringImpl> Identifier::add8(VM& vm, std::span<const char16_t> s)
 {
     if (s.size() == 1) {
-        UChar c = s.front();
+        char16_t c = s.front();
         ASSERT(isLatin1(c));
         if (canUseSingleCharacterString(c))
             return vm.smallStrings.singleCharacterStringRep(c);
@@ -74,7 +74,7 @@ void Identifier::checkCurrentAtomStringTable(VM& vm)
 {
     // Check the identifier table accessible through the threadspecific matches the
     // vm's identifier table.
-    ASSERT_UNUSED(vm, vm.atomStringTable() == Thread::current().atomStringTable());
+    ASSERT_UNUSED(vm, vm.atomStringTable() == Thread::currentSingleton().atomStringTable());
 }
 
 #else

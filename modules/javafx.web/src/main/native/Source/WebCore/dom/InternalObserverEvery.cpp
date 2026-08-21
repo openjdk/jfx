@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Marais Rossouw <me@marais.co>. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +28,10 @@
 #include "InternalObserverEvery.h"
 
 #include "AbortSignal.h"
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
+#include "JSDOMConvertAny.h"
+#include "JSDOMConvertBoolean.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Observable.h"
 #include "PredicateCallback.h"
@@ -43,7 +47,7 @@ class InternalObserverEvery final : public InternalObserver {
 public:
     static Ref<InternalObserverEvery> create(ScriptExecutionContext& context, Ref<PredicateCallback>&& callback, Ref<AbortSignal>&& signal, Ref<DeferredPromise>&& promise)
     {
-        Ref internalObserver = adoptRef(*new InternalObserverEvery(context, WTFMove(callback), WTFMove(signal), WTFMove(promise)));
+        Ref internalObserver = adoptRef(*new InternalObserverEvery(context, WTF::move(callback), WTF::move(signal), WTF::move(promise)));
         internalObserver->suspendIfNeeded();
         return internalObserver;
     }
@@ -65,14 +69,14 @@ private:
             // abort signal and promise rejection.
             auto scope = DECLARE_CATCH_SCOPE(vm);
 
-            auto result = protectedCallback()->handleEventRethrowingException(value, m_idx++);
+            auto result = m_callback->invokeRethrowingException(value, m_idx++);
 
             JSC::Exception* exception = scope.exception();
-            if (UNLIKELY(exception)) {
+            if (exception) [[unlikely]] {
                 scope.clearException();
                 auto value = exception->value();
-                protectedPromise()->reject<IDLAny>(value);
-                protectedSignal()->signalAbort(value);
+                m_promise->reject<IDLAny>(value);
+                m_signal->signalAbort(value);
                 return;
             }
 
@@ -81,20 +85,20 @@ private:
         }
 
         if (!hasPassed) {
-            protectedPromise()->resolve<IDLBoolean>(false);
-            protectedSignal()->signalAbort(JSC::jsUndefined());
+            m_promise->resolve<IDLBoolean>(false);
+            m_signal->signalAbort(JSC::jsUndefined());
         }
     }
 
     void error(JSC::JSValue value) final
     {
-        protectedPromise()->reject<IDLAny>(value);
+        m_promise->reject<IDLAny>(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
-        protectedPromise()->resolve<IDLBoolean>(true);
+        m_promise->resolve<IDLBoolean>(true);
     }
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
@@ -102,15 +106,11 @@ private:
         m_callback->visitJSFunction(visitor);
     }
 
-    Ref<AbortSignal> protectedSignal() const { return m_signal; }
-    Ref<DeferredPromise> protectedPromise() const { return m_promise; }
-    Ref<PredicateCallback> protectedCallback() const { return m_callback; }
-
     InternalObserverEvery(ScriptExecutionContext& context, Ref<PredicateCallback>&& callback, Ref<AbortSignal>&& signal, Ref<DeferredPromise>&& promise)
         : InternalObserver(context)
-        , m_callback(WTFMove(callback))
-        , m_signal(WTFMove(signal))
-        , m_promise(WTFMove(promise))
+        , m_callback(WTF::move(callback))
+        , m_signal(WTF::move(signal))
+        , m_promise(WTF::move(promise))
     {
     }
 
@@ -136,9 +136,9 @@ void createInternalObserverOperatorEvery(ScriptExecutionContext& context, Observ
         promise->reject<IDLAny>(reason);
     });
 
-    Ref observer = InternalObserverEvery::create(context, WTFMove(callback), WTFMove(signal), WTFMove(promise));
+    Ref observer = InternalObserverEvery::create(context, WTF::move(callback), WTF::move(signal), WTF::move(promise));
 
-    observable.subscribeInternal(context, WTFMove(observer), SubscribeOptions { .signal = WTFMove(dependentSignal) });
+    observable.subscribeInternal(context, WTF::move(observer), SubscribeOptions { .signal = WTF::move(dependentSignal) });
 }
 
 } // namespace WebCore

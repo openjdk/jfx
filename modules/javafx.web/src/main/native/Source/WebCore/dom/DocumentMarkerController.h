@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "DocumentMarker.h"
-#include "Timer.h"
+#include <WebCore/DocumentMarker.h>
+#include <WebCore/Timer.h>
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class Document;
+class FloatRect;
 class FontCascade;
 class LayoutPoint;
 class Node;
@@ -62,9 +63,9 @@ public:
 
     void detach();
 
-    WEBCORE_EXPORT void addMarker(const SimpleRange&, DocumentMarkerType, const DocumentMarker::Data& = { });
-    void addMarker(Node&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
-    WEBCORE_EXPORT void addMarker(Node&, DocumentMarker&&);
+    WEBCORE_EXPORT bool addMarker(const SimpleRange&, DocumentMarkerType, const DocumentMarker::Data& = { });
+    bool addMarker(Node&, unsigned startOffset, unsigned length, DocumentMarkerType, DocumentMarker::Data&& = { });
+    WEBCORE_EXPORT bool addMarker(Node&, DocumentMarker&&);
     void addDraggedContentMarker(const SimpleRange&);
     WEBCORE_EXPORT void addTransparentContentMarker(const SimpleRange&, WTF::UUID);
 
@@ -117,7 +118,7 @@ private:
     };
     Vector<TextRange> collectTextRanges(const SimpleRange&);
 
-    using MarkerMap = UncheckedKeyHashMap<Ref<Node>, std::unique_ptr<Vector<RenderedDocumentMarker>>>;
+    using MarkerMap = HashMap<Ref<Node>, std::unique_ptr<Vector<RenderedDocumentMarker>>>;
 
     bool possiblyHasMarkers(OptionSet<DocumentMarkerType>) const;
     OptionSet<DocumentMarkerType> removeMarkersFromList(MarkerMap::iterator, OptionSet<DocumentMarkerType>, NOESCAPE const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filterFunction = nullptr);

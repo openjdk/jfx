@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "JSCJSValueInlines.h"
-#include "VM.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/VM.h>
 
 #if ENABLE(REFTRACKER)
-#include "InitializeThreading.h"
+#include <JavaScriptCore/InitializeThreading.h>
 #endif
 
 namespace JSC {
@@ -55,16 +55,5 @@ inline void Strong<T, shouldStrongDestructorGrabLock>::set(VM& vm, ExternalType 
         setSlot(vm.heap.handleSet()->allocate());
     set(value);
 }
-
-#if ENABLE(REFTRACKER)
-inline void initializeSystemForStrongRefTracker()
-{
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        WTF::initializeMainThread();
-        JSC::initialize();
-    });
-}
-#endif // ENABLE(REFTRACKER)
 
 } // namespace JSC

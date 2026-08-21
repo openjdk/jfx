@@ -33,6 +33,7 @@
 #include "JSDOMExceptionHandling.h"
 #include "JSTrustedScript.h"
 #include "LocalDOMWindow.h"
+#include "MathMLNames.h"
 #include "SVGNames.h"
 #include "TrustedTypePolicy.h"
 #include "TrustedTypePolicyFactory.h"
@@ -117,11 +118,11 @@ ASCIILiteral trustedTypeToCallbackName(TrustedType trustedType)
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#process-value-with-a-default-policy-algorithm
-std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext& scriptExecutionContext, TrustedType expectedType, const String& input, const String& sink)
+Variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Ref<TrustedScriptURL>> processValueWithDefaultPolicy(ScriptExecutionContext& scriptExecutionContext, TrustedType expectedType, const String& input, const String& sink)
 {
     RefPtr<TrustedTypePolicy> protectedPolicy;
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-        if (RefPtr window = document->domWindow())
+        if (RefPtr window = document->window())
             protectedPolicy = WindowOrWorkerGlobalScopeTrustedTypes::trustedTypes(*window)->defaultPolicy();
     } else if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
         protectedPolicy = WindowOrWorkerGlobalScopeTrustedTypes::trustedTypes(*workerGlobalScope)->defaultPolicy();
@@ -130,11 +131,12 @@ std::variant<std::monostate, Exception, Ref<TrustedHTML>, Ref<TrustedScript>, Re
         return std::monostate();
 
     VM& vm = scriptExecutionContext.vm();
+    JSC::JSLockHolder locker(vm);
 
     auto jsExpectedType = JSC::jsString(vm, String(trustedTypeToString(expectedType)));
     auto jsSink = JSC::jsString(vm, sink);
     FixedVector<JSC::Strong<JSC::Unknown>> arguments({ { vm, jsExpectedType }, { vm, jsSink } });
-    auto policyValueHolder = protectedPolicy->getPolicyValue(expectedType, input, WTFMove(arguments), IfMissing::ReturnNull);
+    auto policyValueHolder = protectedPolicy->getPolicyValue(expectedType, input, WTF::move(arguments), IfMissing::ReturnNull);
     if (policyValueHolder.hasException())
         return { policyValueHolder.releaseException() };
 
@@ -168,7 +170,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext))
         requireTrustedTypes = document->requiresTrustedTypes();
     else {
-    CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
+        CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
         requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup("script"_s);
     }
@@ -178,17 +180,16 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
 
     auto convertedInput = processValueWithDefaultPolicy(scriptExecutionContext, expectedType, stringValue, sink);
     if (std::holds_alternative<Exception>(convertedInput))
-        return WTFMove(std::get<Exception>(convertedInput));
+        return WTF::move(std::get<Exception>(convertedInput));
 
     if (!std::holds_alternative<std::monostate>(convertedInput)) {
-        stringValue = std::visit(TrustedTypeVisitor { }, convertedInput);
+        stringValue = WTF::visit(TrustedTypeVisitor { }, convertedInput);
         if (stringValue.isNull())
             convertedInput = std::monostate();
     }
 
     if (std::holds_alternative<std::monostate>(convertedInput)) {
-        CheckedPtr contentSecurityPolicy = scriptExecutionContext.checkedContentSecurityPolicy();
-        auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
+        auto allowMissingTrustedTypes = scriptExecutionContext.checkedContentSecurityPolicy()->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, "script"_s, stringValue);
 
         if (!allowMissingTrustedTypes)
             return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
@@ -197,10 +198,10 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
     return stringValue;
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedHTML>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedHTML>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
-        WTFMove(input),
+        WTF::move(input),
         [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
             return trustedTypeCompliantString(TrustedType::TrustedHTML, scriptExecutionContext, string, sink);
         },
@@ -210,10 +211,10 @@ ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExe
     );
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScript>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedScript>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
-        WTFMove(input),
+        WTF::move(input),
         [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
             return trustedTypeCompliantString(TrustedType::TrustedScript, scriptExecutionContext, string, sink);
         },
@@ -223,10 +224,10 @@ ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExe
     );
 }
 
-ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, std::variant<RefPtr<TrustedScriptURL>, String>&& input, const String& sink)
+ExceptionOr<String> trustedTypeCompliantString(ScriptExecutionContext& scriptExecutionContext, Variant<RefPtr<TrustedScriptURL>, String>&& input, const String& sink)
 {
     return WTF::switchOn(
-        WTFMove(input),
+        WTF::move(input),
         [&scriptExecutionContext, &sink](const String& string) -> ExceptionOr<String> {
             return trustedTypeCompliantString(TrustedType::TrustedScriptURL, scriptExecutionContext, string, sink);
         },
@@ -247,7 +248,7 @@ AttributeTypeAndSink trustedTypeForAttribute(const String& elementName, const St
     QualifiedName element(nullAtom(), AtomString(localName), elementNS);
     QualifiedName attribute(nullAtom(), AtomString(attributeName), attributeNS);
 
-    if (attributeNS.isNull() && !attributeName.isNull()) {
+    if (attributeNS.isNull() && !attributeName.isNull() && (elementNS == HTMLNames::xhtmlNamespaceURI || elementNS == SVGNames::svgNamespaceURI || elementNS == MathMLNames::mathmlNamespaceURI)) {
         if (isEventHandlerAttribute(attribute)) {
             returnValues.sink = makeString("Element "_s, attributeName);
             returnValues.attributeType = trustedTypeToString(TrustedType::TrustedScript);
@@ -278,7 +279,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
     auto sink = "Location href"_s;
     auto expectedType = TrustedType::TrustedScript;
 
-    auto contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
+    CheckedPtr contentSecurityPolicy = scriptExecutionContext.contentSecurityPolicy();
 
     auto requireTrustedTypes = contentSecurityPolicy && contentSecurityPolicy->requireTrustedTypesForSinkGroup(sinkGroup);
 
@@ -289,25 +290,27 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
     auto decodedURLString = PAL::decodeURLEscapeSequences(urlString);
     auto scriptSource = decodedURLString.substring(javascriptSchemeLength);
 
+    VM& vm = scriptExecutionContext.vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
     auto convertedScriptSource = processValueWithDefaultPolicy(scriptExecutionContext, expectedType, scriptSource, sink);
     if (std::holds_alternative<Exception>(convertedScriptSource))
-        return WTFMove(std::get<Exception>(convertedScriptSource));
+        TRY_CLEAR_EXCEPTION(throwScope, WTF::move(std::get<Exception>(convertedScriptSource)));
+    else if (!std::holds_alternative<std::monostate>(convertedScriptSource)) {
+        auto stringifiedConvertedScriptSource = WTF::visit(TrustedTypeVisitor { }, convertedScriptSource);
 
-    if (std::holds_alternative<std::monostate>(convertedScriptSource)) {
+        auto newURL = URL(makeString("javascript:"_s, stringifiedConvertedScriptSource));
+
+        if (newURL.isValid())
+            return String(newURL.string());
+    }
+
         auto allowMissingTrustedTypes = contentSecurityPolicy->allowMissingTrustedTypesForSinkGroup(trustedTypeToString(expectedType), sink, sinkGroup, scriptSource);
 
         if (!allowMissingTrustedTypes)
             return Exception { ExceptionCode::TypeError, makeString("This assignment requires a "_s, trustedTypeToString(expectedType)) };
 
         return String(urlString);
-    }
-
-    auto stringifiedConvertedScriptSource = std::visit(TrustedTypeVisitor { }, convertedScriptSource);
-
-    auto newURL = URL(makeString("javascript:"_s, stringifiedConvertedScriptSource));
-    return String(newURL.isValid()
-        ? newURL.string()
-        : nullString());
 }
 
 ExceptionOr<bool> canCompile(ScriptExecutionContext& scriptExecutionContext, JSC::CompilationType compilationType, String codeString, const JSC::ArgList& args)
@@ -324,11 +327,7 @@ ExceptionOr<bool> canCompile(ScriptExecutionContext& scriptExecutionContext, JSC
                 isTrusted = false;
                 break;
             }
-            if (auto trustedScript = JSTrustedScript::toWrapped(vm, arg)) {
-                if (!trustedScript) {
-                    isTrusted = false;
-                    break;
-                }
+            if (RefPtr trustedScript = JSTrustedScript::toWrapped(vm, arg)) {
                 auto argString = arg.toWTFString(scriptExecutionContext.globalObject());
                 RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
                 if (trustedScript->toString() != argString) {
@@ -363,14 +362,43 @@ bool isEventHandlerAttribute(const QualifiedName& attributeName)
         return false;
 
     // Fast early return for names that don't start with "on".
-    AtomStringImpl& localName = *attributeName.localName().impl();
-    if (localName.length() < 3 || localName[0] != 'o' || localName[1] != 'n')
+    if (!attributeName.localName().startsWith("on"_s))
         return false;
     static const NeverDestroyed<WTF::HashSet<AtomString>> eventHandlerNames([] {
         return eventNames().allEventHandlerNames();
     }());
 
-    return eventHandlerNames->contains(&localName);
+    return eventHandlerNames->contains(attributeName.localName());
+}
+
+ExceptionOr<AtomString> trustedTypesCompliantAttributeValue(ScriptExecutionContext& scriptExecutionContext, const String& attributeType, const TrustedTypeOrString& value, const String& sink)
+{
+    auto stringValueHolder = WTF::switchOn(value,
+        [&](const String& string) -> ExceptionOr<String> {
+            if (attributeType.isNull())
+                return String(string);
+            return trustedTypeCompliantString(stringToTrustedType(attributeType), scriptExecutionContext, string, sink);
+        },
+        [&](const RefPtr<TrustedHTML>& trustedHTML) -> ExceptionOr<String> {
+            if (attributeType.isNull() || attributeType == "TrustedHTML"_s)
+                return trustedHTML->toString();
+            return trustedTypeCompliantString(stringToTrustedType(attributeType), scriptExecutionContext, trustedHTML->toString(), sink);
+        },
+        [&](const RefPtr<TrustedScript>& trustedScript) -> ExceptionOr<String> {
+            if (attributeType.isNull() || attributeType == "TrustedScript"_s)
+                return trustedScript->toString();
+            return trustedTypeCompliantString(stringToTrustedType(attributeType), scriptExecutionContext, trustedScript->toString(), sink);
+        },
+        [&](const RefPtr<TrustedScriptURL>& trustedScriptURL) -> ExceptionOr<String> {
+            if (attributeType.isNull() || attributeType == "TrustedScriptURL"_s)
+                return trustedScriptURL->toString();
+            return trustedTypeCompliantString(stringToTrustedType(attributeType), scriptExecutionContext, trustedScriptURL->toString(), sink);
+        }
+    );
+    if (stringValueHolder.hasException())
+        return stringValueHolder.releaseException();
+
+    return AtomString { stringValueHolder.releaseReturnValue() };
 }
 
 } // namespace WebCore

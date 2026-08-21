@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,11 +38,11 @@ namespace WebCore {
 
 Ref<CSSImageSetValue> CSSImageSetValue::create(CSSValueListBuilder builder)
 {
-    return adoptRef(*new CSSImageSetValue(WTFMove(builder)));
+    return adoptRef(*new CSSImageSetValue(WTF::move(builder)));
 }
 
 CSSImageSetValue::CSSImageSetValue(CSSValueListBuilder builder)
-    : CSSValueContainingVector(ClassType::ImageSet, CommaSeparator, WTFMove(builder))
+    : CSSValueContainingVector(ClassType::ImageSet, CommaSeparator, WTF::move(builder))
 {
 }
 
@@ -65,8 +65,8 @@ RefPtr<StyleImage> CSSImageSetValue::createStyleImage(const Style::BuilderState&
     size_t length = this->length();
 
     Vector<ImageWithScale> images(length, [&](size_t i) {
-        auto option = downcast<CSSImageSetOptionValue>(item(i));
-        return ImageWithScale { state.createStyleImage(option->image()), option->resolution()->resolveAsResolution<float>(state.cssToLengthConversionData()), option->type() };
+        RefPtr<const CSSImageSetOptionValue> option = downcast<CSSImageSetOptionValue>(item(i));
+        return ImageWithScale { state.createStyleImage(option->image()), option->protectedResolution()->resolveAsResolution<float>(state.cssToLengthConversionData()), option->type() };
     });
 
     // Sort the images so that they are stored in order from lowest resolution to highest.
@@ -78,7 +78,7 @@ RefPtr<StyleImage> CSSImageSetValue::createStyleImage(const Style::BuilderState&
         return images[lhs].scaleFactor < images[rhs].scaleFactor;
     });
 
-    return StyleImageSet::create(WTFMove(images), WTFMove(sortedIndices));
+    return StyleImageSet::create(WTF::move(images), WTF::move(sortedIndices));
 }
 
 } // namespace WebCore

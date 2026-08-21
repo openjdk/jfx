@@ -28,8 +28,10 @@
 #include "ActiveDOMObject.h"
 #include "EventHandler.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "HistoryItem.h"
 #include "ReferrerPolicy.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/RefCounted.h>
 
 namespace JSC {
@@ -38,17 +40,22 @@ class JSValue;
 
 namespace WebCore {
 
+class JSDOMGlobalObject;
 class Navigation;
 class SerializedScriptValue;
 
 class NavigationHistoryEntry final : public RefCounted<NavigationHistoryEntry>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationHistoryEntry);
+    WTF_MAKE_TZONE_ALLOCATED(NavigationHistoryEntry);
 public:
     static Ref<NavigationHistoryEntry> create(Navigation&, Ref<HistoryItem>&&);
     static Ref<NavigationHistoryEntry> create(Navigation&, const NavigationHistoryEntry&);
 
+    ~NavigationHistoryEntry();
+
+    // ContextDestructionObserver.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const String& url() const;
     String key() const;
@@ -61,6 +68,7 @@ public:
     SerializedScriptValue* state() const { return m_state.get(); }
 
     HistoryItem& associatedHistoryItem() const { return m_associatedHistoryItem; }
+
     void dispatchDisposeEvent();
 
 private:
@@ -79,6 +87,7 @@ private:
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
@@ -88,10 +97,12 @@ private:
     const WTF::UUID m_key;
     const WTF::UUID m_id;
     RefPtr<SerializedScriptValue> m_state;
-    Ref<HistoryItem> m_associatedHistoryItem;
+    const Ref<HistoryItem> m_associatedHistoryItem;
     DocumentState m_originalDocumentState;
     bool m_hasDisposeEventListener { false };
     bool m_hasDispatchedDisposeEvent { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(NavigationHistoryEntry)

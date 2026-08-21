@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "ImageTypes.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/ImageTypes.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -57,7 +57,7 @@ public:
     static constexpr float maxArea = maxSide * maxSide;
 
 private:
-    Ref<ImageBuffer> m_imageBuffer;
+    const Ref<ImageBuffer> m_imageBuffer;
     FloatSize m_scaleFactor;
     FloatRect m_destinationRect;
     FloatRect m_sourceRect;

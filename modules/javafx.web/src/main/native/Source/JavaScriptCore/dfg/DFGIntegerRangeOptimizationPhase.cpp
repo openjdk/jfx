@@ -122,6 +122,7 @@ public:
     {
     }
 
+    // left <kind> (right + offset)
     Relationship(NodeFlowProjection left, NodeFlowProjection right, Kind kind, int offset = 0)
         : m_left(left)
         , m_right(right)
@@ -1018,6 +1019,54 @@ public:
     {
     }
 
+    std::optional<std::tuple<int32_t, int32_t>> rangeFor(Node* node)
+    {
+        if (node->isInt32Constant()) {
+            int32_t value = node->asInt32();
+            return std::tuple { value, value };
+        }
+
+        auto iter = m_relationships.find(node);
+        if (iter == m_relationships.end())
+            return std::nullopt;
+
+        int32_t minValue = std::numeric_limits<int32_t>::min();
+        int32_t maxValue = std::numeric_limits<int32_t>::max();
+        for (Relationship relationship : iter->value) {
+            minValue = std::max(minValue, relationship.minValueOfLeft());
+            maxValue = std::min(maxValue, relationship.maxValueOfLeft());
+        }
+        return std::tuple { minValue, maxValue };
+    }
+
+    // Be careful: do not use this to infer a relationship that will not be pruned later,
+    // otherwise it might break the inductive reasoning around phis/upsilons.
+    // For example, if lhs > 0 => node(lhs) > 0, you can't add that relationship. Pruning
+    // relationships involving lhs won't prune this new relationship.
+    bool provablyGreaterThan(Node* lhs, Node* rhs, int32_t minOffset = 0)
+    {
+        auto iter = m_relationships.find(lhs);
+        if (iter != m_relationships.end()) {
+            for (Relationship relationship : iter->value) {
+                if (relationship.right() == rhs
+                    && relationship.offset() >= minOffset
+                    && relationship.kind() == Relationship::GreaterThan)
+                        return true;
+            }
+        }
+        return false;
+    }
+
+    bool provablyGreaterThanOrEqual(Node* lhs, Node* rhs)
+    {
+        return provablyGreaterThan(lhs, rhs, -1);
+    }
+
+    bool provablyNonNegative(Node* lhs)
+    {
+        return provablyGreaterThanOrEqual(lhs, m_zero);
+    }
+
     bool run()
     {
         ASSERT(m_graph.m_form == SSA);
@@ -1130,12 +1179,16 @@ public:
                 // information to the taken and notTaken paths. This handles:
                 // - Branch on int32.
                 // - Branch on LogicalNot on int32.
-                // - Branch on compare on int32's.
-                // - Branch on LogicalNot of compare on int32's.
+                // - Branch on compare on int32s.
+                // - Branch on LogicalNot of compare on int32s.
+                // - Branch on ArithBitOr of int32s
                 Node* terminal = block->terminal();
                 bool alreadyMerged = false;
                 if (terminal->op() == Branch) {
-                    Relationship relationshipForTrue;
+                    // Each relationship must be true independently, so it is not correct
+                    // to invert any of these relationships unless there is only one.
+                    Vector<Relationship, 1> relationshipForTrue;
+                    Vector<Relationship, 1> relationshipForFalse;
                     BranchData* branchData = terminal->branchData();
 
                     bool invert = false;
@@ -1144,73 +1197,86 @@ public:
                         invert = true;
                     }
 
-                    if (terminal->child1().useKind() == Int32Use) {
-                        relationshipForTrue = Relationship::safeCreate(
-                            terminal->child1().node(), m_zero, Relationship::NotEqual, 0);
-                    } else {
+                    auto extractRelationship = [&](Node* compare) -> Relationship {
                         // FIXME: Handle CompareBelow and CompareBelowEq.
-                        Node* compare = terminal->child1().node();
-                        switch (compare->op()) {
-                        case CompareEq:
-                        case CompareStrictEq:
-                        case CompareLess:
-                        case CompareLessEq:
-                        case CompareGreater:
-                        case CompareGreaterEq: {
-                            if (!compare->isBinaryUseKind(Int32Use))
-                                break;
-
+                        if (!compare || !compare->isBinaryUseKind(Int32Use))
+                            return Relationship();
                             switch (compare->op()) {
                             case CompareEq:
                             case CompareStrictEq:
-                                relationshipForTrue = Relationship::safeCreate(
+                            return Relationship::safeCreate(
                                     compare->child1().node(), compare->child2().node(),
                                     Relationship::Equal, 0);
-                                break;
                             case CompareLess:
-                                relationshipForTrue = Relationship::safeCreate(
+                            return Relationship::safeCreate(
                                     compare->child1().node(), compare->child2().node(),
                                     Relationship::LessThan, 0);
-                                break;
                             case CompareLessEq:
-                                relationshipForTrue = Relationship::safeCreate(
+                            return Relationship::safeCreate(
                                     compare->child1().node(), compare->child2().node(),
                                     Relationship::LessThan, 1);
-                                break;
                             case CompareGreater:
-                                relationshipForTrue = Relationship::safeCreate(
+                            return Relationship::safeCreate(
                                     compare->child1().node(), compare->child2().node(),
                                     Relationship::GreaterThan, 0);
-                                break;
                             case CompareGreaterEq:
-                                relationshipForTrue = Relationship::safeCreate(
+                            return Relationship::safeCreate(
                                     compare->child1().node(), compare->child2().node(),
                                     Relationship::GreaterThan, -1);
-                                break;
                             default:
-                                DFG_CRASH(m_graph, compare, "Invalid comparison node type");
-                                break;
-                            }
-                            break;
+                            return Relationship();
                         }
+                    };
 
-                        default:
-                            break;
+                    auto extractBooleansFromBitwise = [&](Node* bitwise) -> std::pair<Node*, Node*> {
+                        if (!bitwise->isBinaryUseKind(Int32Use))
+                            return std::make_pair(nullptr, nullptr);
+                        if (bitwise->child1()->op() != BooleanToNumber || bitwise->child2()->op() != BooleanToNumber)
+                            return std::make_pair(nullptr, nullptr);
+                        return std::make_pair(bitwise->child1().node()->child1().node(), bitwise->child2().node()->child1().node());
+                    };
+
+                    auto* condition = terminal->child1().node();
+                    if (terminal->child1().useKind() == Int32Use) {
+                        relationshipForTrue.append(Relationship::safeCreate(
+                            terminal->child1().node(), m_zero, Relationship::NotEqual, 0));
+                        relationshipForFalse.append(Relationship::safeCreate(
+                            terminal->child1().node(), m_zero, Relationship::Equal, 0));
+
+                        auto [l, r] = extractBooleansFromBitwise(condition);
+
+                        if (condition->op() == ArithBitAnd) {
+                            if (auto relationship = extractRelationship(l))
+                                relationshipForTrue.append(relationship);
+                            if (auto relationship = extractRelationship(r))
+                                relationshipForTrue.append(relationship);
+                        } else if (condition->op() == ArithBitOr) {
+                            if (auto relationship = extractRelationship(l).inverse())
+                                relationshipForFalse.append(relationship);
+                            if (auto relationship = extractRelationship(r).inverse())
+                                relationshipForFalse.append(relationship);
                         }
+                    } else {
+                        if (auto relationship = extractRelationship(condition))
+                            relationshipForTrue.append(relationship);
+                        if (auto relationship = extractRelationship(condition).inverse())
+                            relationshipForFalse.append(relationship);
                     }
 
                     if (invert)
-                        relationshipForTrue = relationshipForTrue.inverse();
+                        std::swap(relationshipForTrue, relationshipForFalse);
 
-                    if (relationshipForTrue) {
+                    if (relationshipForTrue.size() || relationshipForFalse.size()) {
                         RelationshipMap forTrue = m_relationships;
                         RelationshipMap forFalse = m_relationships;
 
-                        dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "Dealing with true:");
-                        setRelationship(forTrue, relationshipForTrue);
-                        if (Relationship relationshipForFalse = relationshipForTrue.inverse()) {
-                            dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "Dealing with false:");
-                            setRelationship(forFalse, relationshipForFalse);
+                        for (auto relationship : relationshipForTrue) {
+                            dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "Dealing with true: ", relationship);
+                            setRelationship(forTrue, relationship);
+                        }
+                        for (auto relationship : relationshipForFalse) {
+                            dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "Dealing with false: ", relationship);
+                            setRelationship(forFalse, relationship);
                         }
 
                         changed |= mergeTo(forTrue, branchData->taken.block);
@@ -1242,23 +1308,17 @@ public:
                     if (node->child1().useKind() != Int32Use)
                         break;
 
-                    auto iter = m_relationships.find(node->child1().node());
-                    if (iter == m_relationships.end())
+                    auto range = rangeFor(node->child1().node());
+                    if (!range)
                         break;
-
-                    int minValue = std::numeric_limits<int>::min();
-                    int maxValue = std::numeric_limits<int>::max();
-                    for (Relationship relationship : iter->value) {
-                        minValue = std::max(minValue, relationship.minValueOfLeft());
-                        maxValue = std::min(maxValue, relationship.maxValueOfLeft());
-                    }
+                    auto [minValue, maxValue] = range.value();
 
                     executeNode(block->at(nodeIndex));
 
                     if (minValue >= 0) {
                         node->convertToIdentityOn(node->child1().node());
                         changed = true;
-                        break;
+                        continue;
                     }
                     bool absIsUnchecked = !shouldCheckOverflow(node->arithMode());
                     if (maxValue < 0 || (absIsUnchecked && maxValue <= 0)) {
@@ -1266,39 +1326,44 @@ public:
                         if (absIsUnchecked || minValue > std::numeric_limits<int>::min())
                             node->setArithMode(Arith::Unchecked);
                         changed = true;
-                        break;
+                        continue;
                     }
                     if (minValue > std::numeric_limits<int>::min()) {
                         node->setArithMode(Arith::Unchecked);
                         changed = true;
-                        break;
+                        continue;
                     }
 
-                    break;
+                    continue;
                 }
                 case ArithAdd: {
                     if (!node->isBinaryUseKind(Int32Use))
                         break;
                     if (node->arithMode() != Arith::CheckOverflow)
                         break;
-                    if (!node->child2()->isInt32Constant())
+
+                    auto leftRange = rangeFor(node->child1().node());
+                    if (!leftRange)
+                        break;
+                    auto [leftMinValue, leftMaxValue] = leftRange.value();
+
+                    auto rightRange = rangeFor(node->child2().node());
+                    if (!rightRange)
+                        break;
+                    auto [rightMinValue, rightMaxValue] = rightRange.value();
+
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    leftMinValue = ", leftMinValue, ", leftMaxValue = ", leftMaxValue, ", rightMinValue = ", rightMinValue, ", rightMaxValue = ", rightMaxValue);
+
+                    if ((CheckedInt32 { leftMinValue } + rightMinValue).hasOverflowed())
                         break;
 
-                    auto iter = m_relationships.find(node->child1().node());
-                    if (iter == m_relationships.end())
+                    if ((CheckedInt32 { leftMaxValue } + rightMinValue).hasOverflowed())
                         break;
 
-                    int minValue = std::numeric_limits<int>::min();
-                    int maxValue = std::numeric_limits<int>::max();
-                    for (Relationship relationship : iter->value) {
-                        minValue = std::max(minValue, relationship.minValueOfLeft());
-                        maxValue = std::min(maxValue, relationship.maxValueOfLeft());
-                    }
+                    if ((CheckedInt32 { leftMinValue } + rightMaxValue).hasOverflowed())
+                        break;
 
-                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    minValue = ", minValue, ", maxValue = ", maxValue);
-
-                    if (sumOverflows<int>(minValue, node->child2()->asInt32()) ||
-                        sumOverflows<int>(maxValue, node->child2()->asInt32()))
+                    if ((CheckedInt32 { leftMaxValue } + rightMaxValue).hasOverflowed())
                         break;
 
                     dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    It's in bounds.");
@@ -1306,7 +1371,94 @@ public:
                     executeNode(block->at(nodeIndex));
                     node->setArithMode(Arith::Unchecked);
                     changed = true;
+                    continue;
+                    }
+
+                case ArithSub: {
+                    if (!node->isBinaryUseKind(Int32Use))
+                        break;
+                    if (node->arithMode() != Arith::CheckOverflow)
+                        break;
+
+                    auto leftRange = rangeFor(node->child1().node());
+                    if (!leftRange)
+                        break;
+                    auto [leftMinValue, leftMaxValue] = leftRange.value();
+
+                    auto rightRange = rangeFor(node->child2().node());
+                    if (!rightRange)
+                        break;
+                    auto [rightMinValue, rightMaxValue] = rightRange.value();
+
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    leftMinValue = ", leftMinValue, ", leftMaxValue = ", leftMaxValue, ", rightMinValue = ", rightMinValue, ", rightMaxValue = ", rightMaxValue);
+
+                    if ((CheckedInt32 { leftMinValue } - rightMinValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMaxValue } - rightMinValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMinValue } - rightMaxValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMaxValue } - rightMaxValue).hasOverflowed())
+                        break;
+
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    It's in bounds.");
+
+                    executeNode(block->at(nodeIndex));
+                    node->setArithMode(Arith::Unchecked);
+                    changed = true;
+                    continue;
+                }
+
+                case ArithMul: {
+                    if (!node->isBinaryUseKind(Int32Use))
                     break;
+                    if (node->arithMode() != Arith::CheckOverflow && node->arithMode() != Arith::CheckOverflowAndNegativeZero)
+                        break;
+
+                    auto leftRange = rangeFor(node->child1().node());
+                    if (!leftRange)
+                        break;
+                    auto [leftMinValue, leftMaxValue] = leftRange.value();
+
+                    auto rightRange = rangeFor(node->child2().node());
+                    if (!rightRange)
+                        break;
+                    auto [rightMinValue, rightMaxValue] = rightRange.value();
+
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    leftMinValue = ", leftMinValue, ", leftMaxValue = ", leftMaxValue, ", rightMinValue = ", rightMinValue, ", rightMaxValue = ", rightMaxValue);
+
+                    if ((CheckedInt32 { leftMinValue } * rightMinValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMaxValue } * rightMinValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMinValue } * rightMaxValue).hasOverflowed())
+                        break;
+
+                    if ((CheckedInt32 { leftMaxValue } * rightMaxValue).hasOverflowed())
+                        break;
+
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "    It's in bounds.");
+
+                    executeNode(block->at(nodeIndex));
+                    if (node->arithMode() == Arith::CheckOverflow) {
+                        node->setArithMode(Arith::Unchecked);
+                        changed = true;
+                    } else {
+                        // If both sign are the same, negative zero never appears.
+                        if (leftMinValue >= 0 && rightMinValue >= 0) {
+                            node->setArithMode(Arith::Unchecked);
+                            changed = true;
+                        } else if (leftMaxValue < 0 && rightMaxValue < 0) {
+                            node->setArithMode(Arith::Unchecked);
+                            changed = true;
+                }
+                    }
+                    continue;
                 }
 
                 case CheckInBounds: {
@@ -1331,16 +1483,18 @@ public:
                         }
                     }
 
-                    if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
-                        dataLogLn("CheckInBounds ", node, " has: ", nonNegative, " ", lessThanLength);
+                    dataLogLnIf(DFGIntegerRangeOptimizationPhaseInternal::verbose, "CheckInBounds ", node, " has: ", nonNegative, " ", lessThanLength);
 
                     if (nonNegative && lessThanLength) {
                         executeNode(block->at(nodeIndex));
-                        if (UNLIKELY(Options::validateBoundsCheckElimination()) && node->op() == CheckInBounds)
+                        if (Options::validateBoundsCheckElimination()) [[unlikely]] {
+                            if (node->op() == CheckInBounds)
                             m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
+                        }
                         // We just need to make sure we are a value-producing node.
                         node->convertToIdentityOn(node->child1().node());
                         changed = true;
+                        continue;
                     }
                     break;
                 }
@@ -1364,7 +1518,7 @@ public:
                     executeNode(block->at(nodeIndex));
                     m_graph.convertToConstant(node, jsUndefined());
                     changed = true;
-                    break;
+                    continue;
                 }
 
                 default:
@@ -1517,8 +1671,41 @@ private:
             break;
         }
 
-        case GetArrayLength:
-        case GetVectorLength:
+        case GetArrayLength: {
+            setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+            switch (node->arrayMode().type()) {
+            case Array::Undecided:
+            case Array::Int32:
+            case Array::Double:
+            case Array::Contiguous:
+                setRelationship(Relationship(node, m_zero, Relationship::LessThan, (MAX_STORAGE_VECTOR_LENGTH + 1)));
+                break;
+            default:
+                break;
+            }
+            break;
+        }
+
+        case ToLength: {
+            if (node->child1().useKind() == UntypedUse)
+                break;
+            // Consider b = ToLength(a)
+            // If a < 0, then b == 0; b >= a
+            // If a >= 0, then b = a; b >= a still
+            setRelationship(Relationship(node, node->child1().node(), Relationship::GreaterThan, -1));
+            // Note that we cannot conclude that b == 0 because it won't get pruned.
+            if (provablyNonNegative(node->child1().node()))
+                setRelationship(Relationship(node, node->child1().node(), Relationship::Equal));
+            break;
+        }
+
+        case GetVectorLength: {
+            setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+            setRelationship(Relationship(node, m_zero, Relationship::LessThan, (MAX_STORAGE_VECTOR_LENGTH + 1)));
+            break;
+        }
+
+        case DataViewGetByteLength:
         case GetUndetachedTypeArrayLength: {
             setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
             break;
@@ -1531,6 +1718,47 @@ private:
             // Another way to think of it, is that we are maintaining the invariant that relationshipMaps are pruned by liveness.
             kill(shadowNode);
             setEquivalence(node->child1().node(), shadowNode);
+            break;
+        }
+
+        case GetByVal: {
+            ArrayMode arrayMode = node->arrayMode();
+            if (!arrayMode.isOutOfBounds()) {
+                switch (arrayMode.type()) {
+                case Array::Int8Array:
+                    // result > (INT8_MIN - 1)
+                    // result < (INT8_MAX + 1)
+                    setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, (static_cast<int32_t>(INT8_MIN) - 1)));
+                    setRelationship(Relationship(node, m_zero, Relationship::LessThan, (static_cast<int32_t>(INT8_MAX) + 1)));
+                    break;
+                case Array::Uint8Array:
+                case Array::Uint8ClampedArray:
+                    // result > (0 - 1)
+                    // result < (UINT8_MAX + 1)
+                    setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+                    setRelationship(Relationship(node, m_zero, Relationship::LessThan, (static_cast<int32_t>(UINT8_MAX) + 1)));
+                    break;
+                case Array::Int16Array:
+                    // result > (INT16_MIN - 1)
+                    // result < (INT16_MAX + 1)
+                    setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, (static_cast<int32_t>(INT16_MIN) - 1)));
+                    setRelationship(Relationship(node, m_zero, Relationship::LessThan, (static_cast<int32_t>(INT16_MAX) + 1)));
+                    break;
+                case Array::Uint16Array:
+                    // result > (0 - 1)
+                    // result < (UINT8_MAX + 1)
+                    setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+                    setRelationship(Relationship(node, m_zero, Relationship::LessThan, (static_cast<int32_t>(UINT16_MAX) + 1)));
+                    break;
+                case Array::Int32Array:
+                    break;
+                case Array::Uint32Array:
+                    setRelationship(Relationship(node, m_zero, Relationship::GreaterThan, -1));
+                    break;
+                default:
+                    break;
+                }
+            }
             break;
         }
 
@@ -1920,4 +2148,3 @@ bool performIntegerRangeOptimization(Graph& graph)
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)
-

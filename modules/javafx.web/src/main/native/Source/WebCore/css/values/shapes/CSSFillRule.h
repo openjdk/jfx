@@ -24,12 +24,12 @@
 
 #pragma once
 
-#include "CSSValueTypes.h"
+#include <WebCore/CSSValueTypes.h>
 
 namespace WebCore {
 namespace CSS {
 
-using FillRule = std::variant<Keyword::Nonzero, Keyword::Evenodd>;
+using FillRule = Variant<Keyword::Nonzero, Keyword::Evenodd>;
 
 } // namespace CSS
 } // namespace WebCore

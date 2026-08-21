@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009, 2012 Ericsson AB. All rights reserved.
- * Copyright (C) 2010, 2016 Apple Inc. All rights reserved.
- * Copyright (C) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,18 +35,22 @@
 
 #include "CachedResourceRequestInitiatorTypes.h"
 #include "ContentSecurityPolicy.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTTPStatusCodes.h"
 #include "MessageEvent.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SecurityOrigin.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -54,7 +58,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EventSource);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EventSource);
 
 const uint64_t EventSource::defaultReconnectDelay = 3000;
 
@@ -90,18 +94,25 @@ EventSource::~EventSource()
     ASSERT(!m_requestInFlight);
 }
 
+ScriptExecutionContext* EventSource::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 void EventSource::connect()
 {
     ASSERT(m_state == CONNECTING);
     ASSERT(!m_requestInFlight);
 
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     request.setRequester(ResourceRequestRequester::EventSource);
     request.setHTTPMethod("GET"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream"_s);
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache"_s);
     if (!m_lastEventId.isEmpty())
         request.setHTTPHeaderField(HTTPHeaderName::LastEventID, m_lastEventId);
+
+    RefPtr context = scriptExecutionContext();
 
     ThreadableLoaderOptions options;
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
@@ -110,11 +121,10 @@ void EventSource::connect()
     options.mode = FetchOptions::Mode::Cors;
     options.cache = FetchOptions::Cache::NoStore;
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
-    options.contentSecurityPolicyEnforcement = scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
+    options.contentSecurityPolicyEnforcement = context->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
     options.initiatorType = cachedResourceRequestInitiatorTypes().eventsource;
 
-    ASSERT(scriptExecutionContext());
-    m_loader = ThreadableLoader::create(*scriptExecutionContext(), *this, WTFMove(request), options);
+    m_loader = ThreadableLoader::create(*context, *this, WTF::move(request), options);
 
     // FIXME: Can we just use m_loader for this, null it out when it's no longer in flight, and eliminate the m_requestInFlight member?
     if (m_loader)
@@ -136,8 +146,7 @@ void EventSource::scheduleInitialConnect()
     ASSERT(m_state == CONNECTING);
     ASSERT(!m_requestInFlight);
 
-    auto* context = scriptExecutionContext();
-    m_connectTimer = context->eventLoop().scheduleTask(0_s, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+    m_connectTimer = protectedScriptExecutionContext()->checkedEventLoop()->scheduleTask(0_s, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->connect();
     });
@@ -147,8 +156,7 @@ void EventSource::scheduleReconnect()
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
     m_state = CONNECTING;
-    auto* context = scriptExecutionContext();
-    m_connectTimer = context->eventLoop().scheduleTask(1_ms * m_reconnectDelay, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+    m_connectTimer = protectedScriptExecutionContext()->checkedEventLoop()->scheduleTask(1_ms * m_reconnectDelay, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->connect();
     });
@@ -182,7 +190,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream"_s)) {
         auto message = makeString("EventSource's response has a MIME type (\""_s, response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection."_s);
         // FIXME: Console message would be better with a source code location; where would we get that?
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
+        protectedScriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTF::move(message));
         return false;
     }
 
@@ -192,7 +200,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8"_s)) {
         auto message = makeString("EventSource's response has a charset (\""_s, charset, "\") that is not UTF-8. The response will be decoded as UTF-8."_s);
         // FIXME: Console message would be better with a source code location; where would we get that?
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
+        protectedScriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTF::move(message));
     }
 
     return true;
@@ -210,7 +218,7 @@ void EventSource::didReceiveResponse(ScriptExecutionContextIdentifier, std::opti
         return;
     }
 
-    m_eventStreamOrigin = SecurityOriginData::fromURL(response.url()).toString();
+    m_eventStreamOrigin = SecurityOrigin::create(response.url());
     m_state = OPEN;
     dispatchEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -325,7 +333,7 @@ void EventSource::parseEventStream()
                 break;
             case '\r':
                 m_discardTrailingNewline = true;
-                FALLTHROUGH;
+                [[fallthrough]];
             case '\n':
                 lineLength = i - position;
                 break;
@@ -349,7 +357,7 @@ void EventSource::parseEventStream()
     if (position == size)
         m_receiveBuffer.clear();
     else if (position)
-        m_receiveBuffer.remove(0, position);
+        m_receiveBuffer.removeAt(0, position);
 }
 
 void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned> fieldLength, unsigned lineLength)
@@ -383,7 +391,7 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
         m_eventName = m_receiveBuffer.subspan(position, valueLength);
     else if (field == "id"_s) {
         StringView parsedEventId = m_receiveBuffer.subspan(position, valueLength);
-        constexpr UChar nullCharacter = '\0';
+        constexpr char16_t nullCharacter = '\0';
         if (!parsedEventId.contains(nullCharacter))
             m_currentlyParsedEventId = parsedEventId.toString();
     } else if (field == "retry"_s) {
@@ -417,9 +425,9 @@ void EventSource::resume()
 
     m_isSuspendedForBackForwardCache = false;
     if (std::exchange(m_shouldReconnectOnResume, false)) {
-        scriptExecutionContext()->postTask([this, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext&) {
-            if (!isContextStopped())
-                scheduleReconnect();
+        protectedScriptExecutionContext()->postTask([pendingActivity = makePendingActivity(*this)](ScriptExecutionContext&) {
+            if (!pendingActivity->object().isContextStopped())
+                pendingActivity->object().scheduleReconnect();
         });
     }
 }
@@ -429,7 +437,7 @@ void EventSource::dispatchMessageEvent()
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
     if (!m_currentlyParsedEventId.isNull())
-        m_lastEventId = WTFMove(m_currentlyParsedEventId);
+        m_lastEventId = WTF::move(m_currentlyParsedEventId);
 
     auto& name = m_eventName.isEmpty() ? eventNames().messageEvent : m_eventName;
 
@@ -439,7 +447,7 @@ void EventSource::dispatchMessageEvent()
     String data(m_data.subspan(0, m_data.size() - 1));
     m_data = { };
 
-    dispatchEvent(MessageEvent::create(name, WTFMove(data), m_eventStreamOrigin, m_lastEventId));
+    dispatchEvent(MessageEvent::create(name, WTF::move(data), m_eventStreamOrigin.copyRef(), m_lastEventId));
 }
 
 } // namespace WebCore

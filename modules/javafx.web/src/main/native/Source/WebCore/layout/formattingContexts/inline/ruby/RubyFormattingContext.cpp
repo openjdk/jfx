@@ -29,7 +29,9 @@
 #include "InlineContentAligner.h"
 #include "InlineFormattingContext.h"
 #include "InlineLine.h"
-#include "RenderStyleInlines.h"
+#include "LayoutBoxInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Layout {
@@ -76,7 +78,7 @@ static InlineLayoutUnit baseLogicalWidthFromRubyBaseEnd(const Box& rubyBaseLayou
     // Canidate content is supposed to hold the base content and in case of soft wrap opportunities, line may have some base content too.
     auto baseLogicalWidth = InlineLayoutUnit { 0.f };
     auto hasSeenRubyBaseStart = false;
-    for (auto& candidateRun : makeReversedRange(candidateRuns)) {
+    for (auto& candidateRun : candidateRuns | std::views::reverse) {
         auto& inlineItem = candidateRun.inlineItem;
         if (inlineItem.isInlineBoxStart() && &inlineItem.layoutBox() == &rubyBaseLayoutBox) {
             hasSeenRubyBaseStart = true;
@@ -87,7 +89,7 @@ static InlineLayoutUnit baseLogicalWidthFromRubyBaseEnd(const Box& rubyBaseLayou
     if (hasSeenRubyBaseStart)
         return baseLogicalWidth;
     // Let's check the line for the rest of the base content.
-    for (auto& lineRun : makeReversedRange(lineRuns)) {
+    for (auto& lineRun : lineRuns | std::views::reverse) {
         if ((lineRun.isInlineBoxStart() || lineRun.isLineSpanningInlineBoxStart()) && &lineRun.layoutBox() == &rubyBaseLayoutBox)
             break;
         baseLogicalWidth += lineRun.logicalWidth();
@@ -138,7 +140,7 @@ InlineLayoutUnit RubyFormattingContext::baseEndAdditionalLogicalWidth(const Box&
     return annotationBoxLogicalWidth(rubyBaseLayoutBox, inlineFormattingContext);
 }
 
-size_t RubyFormattingContext::applyRubyAlignOnBaseContent(size_t rubyBaseStart, Line& line, UncheckedKeyHashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, InlineFormattingContext& inlineFormattingContext)
+size_t RubyFormattingContext::applyRubyAlignOnBaseContent(size_t rubyBaseStart, Line& line, HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, InlineFormattingContext& inlineFormattingContext)
 {
     auto& runs = line.runs();
     if (runs.isEmpty()) {
@@ -184,9 +186,9 @@ size_t RubyFormattingContext::applyRubyAlignOnBaseContent(size_t rubyBaseStart, 
     return rubyBaseEnd.value_or(runs.size());
 }
 
-UncheckedKeyHashMap<const Box*, InlineLayoutUnit> RubyFormattingContext::applyRubyAlign(Line& line, InlineFormattingContext& inlineFormattingContext)
+HashMap<const Box*, InlineLayoutUnit> RubyFormattingContext::applyRubyAlign(Line& line, InlineFormattingContext& inlineFormattingContext)
 {
-    UncheckedKeyHashMap<const Box*, InlineLayoutUnit> alignmentOffsetList;
+    HashMap<const Box*, InlineLayoutUnit> alignmentOffsetList;
     // https://drafts.csswg.org/css-ruby/#interlinear-inline
     // Within each base and annotation box, how the extra space is distributed when its content is narrower than
     // the measure of the box is specified by its ruby-align property.
@@ -204,7 +206,7 @@ InlineLayoutUnit RubyFormattingContext::applyRubyAlignOnAnnotationBox(Line& line
     return InlineContentAligner::applyRubyAlign(inlineFormattingContext.root().style().rubyAlign(), line.runs(), { 0, line.runs().size() }, spaceToDistribute);
 }
 
-void RubyFormattingContext::applyAlignmentOffsetList(InlineDisplay::Boxes& displayBoxes, const UncheckedKeyHashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, RubyBasesMayNeedResizing rubyBasesMayNeedResizing, InlineFormattingContext& inlineFormattingContext)
+void RubyFormattingContext::applyAlignmentOffsetList(InlineDisplay::Boxes& displayBoxes, const HashMap<const Box*, InlineLayoutUnit>& alignmentOffsetList, RubyBasesMayNeedResizing rubyBasesMayNeedResizing, InlineFormattingContext& inlineFormattingContext)
 {
     if (alignmentOffsetList.isEmpty())
         return;
@@ -332,7 +334,7 @@ void RubyFormattingContext::adjustLayoutBoundsAndStretchAncestorRubyBase(LineBox
         auto extraSpaceForAnnotation = InlineLayoutUnit { };
         if (!isFirstFormattedLine) {
             // Note that annotation may leak into the half leading space (gap between lines).
-            auto lineGap = rubyBaseLayoutBox.style().metricsOfPrimaryFont().intLineSpacing();
+            auto lineGap = InlineFormattingUtils::snapToInt(rubyBaseLayoutBox.style().metricsOfPrimaryFont().lineSpacing(), rubyBaseLayoutBox);
             extraSpaceForAnnotation = std::max(0.f, (lineGap - (ascent + descent)) / 2);
         }
         auto ascentWithAnnotation = (ascent + over) - extraSpaceForAnnotation;
@@ -376,7 +378,7 @@ void RubyFormattingContext::applyAnnotationContributionToLayoutBounds(LineBox& l
     // However, if the line-height specified on the ruby container is less than the distance between the top of the top ruby annotation
     // container and the bottom of the bottom ruby annotation container, then additional leading is added on the appropriate side(s).
     MaximumLayoutBoundsStretchMap descentRubySet;
-    for (auto& inlineLevelBox : makeReversedRange(lineBox.nonRootInlineLevelBoxes())) {
+    for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes() | std::views::reverse) {
         if (!inlineLevelBox.isInlineBox() || !inlineLevelBox.layoutBox().isRubyBase())
             continue;
         adjustLayoutBoundsAndStretchAncestorRubyBase(lineBox, inlineLevelBox, descentRubySet, inlineFormattingContext);

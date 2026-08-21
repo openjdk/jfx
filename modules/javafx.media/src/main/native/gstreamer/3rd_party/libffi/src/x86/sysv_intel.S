@@ -254,7 +254,7 @@ L(UW7):
         mov     [esp+closure_CF+36], eax        /* closure is user_data */
         jmp     L(do_closure_i386)
 L(UW8):
-	/* cfi_endproc */
+        /* cfi_endproc */
 ENDF(ffi_go_closure_EAX)
 
 ALIGN 16

@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "AbortSignal.h"
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
+#include <WebCore/AbortSignal.h>
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
@@ -54,10 +55,13 @@ public:
     void close();
     void destroy();
 
-    ScriptExecutionContext* scriptExecutionContext() const { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
+    // ContextDestructionObserver.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
 private:
     static Ref<CloseWatcher> establish(Document&);
 
@@ -80,3 +84,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(CloseWatcher)

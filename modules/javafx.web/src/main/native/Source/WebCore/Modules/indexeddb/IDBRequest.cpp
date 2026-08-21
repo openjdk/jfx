@@ -26,10 +26,12 @@
 #include "config.h"
 #include "IDBRequest.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"
@@ -46,14 +48,13 @@
 #include "ThreadSafeDataBuffer.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBRequest);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBRequest);
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
 {
@@ -193,7 +194,7 @@ void IDBRequest::setVersionChangeTransaction(IDBTransaction& transaction)
     ASSERT(transaction.isVersionChange());
     ASSERT(!transaction.isFinishedOrFinishing());
 
-    m_transaction = &transaction;
+    m_transaction = transaction;
 }
 
 RefPtr<WebCore::IDBTransaction> IDBRequest::transaction() const
@@ -244,7 +245,12 @@ IndexedDB::IndexRecordType IDBRequest::requestedIndexRecordType() const
     return m_requestedIndexRecordType;
 }
 
-enum EventTargetInterfaceType IDBRequest::eventTargetInterface() const
+ScriptExecutionContext* IDBRequest::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+EventTargetInterfaceType IDBRequest::eventTargetInterface() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -280,7 +286,7 @@ void IDBRequest::enqueueEvent(Ref<Event>&& event)
     if (isContextStopped())
         return;
 
-    queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTF::move(event));
 }
 
 void IDBRequest::dispatchEvent(Event& event)
@@ -292,11 +298,11 @@ void IDBRequest::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
     if (!event.isTrusted()) {
-        EventDispatcher::dispatchEvent({ this }, event);
+        EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
         return;
     }
 
-    m_eventBeingDispatched = &event;
+    m_eventBeingDispatched = event;
 
     if (event.type() != eventNames().blockedEvent) {
         m_readyState = ReadyState::Done;
@@ -313,34 +319,37 @@ void IDBRequest::dispatchEvent(Event& event)
         }
     }
 
-    Vector<EventTarget*> targets { this };
-
+    bool shouldDispatchOnTransaction = false;
     if (&event == m_openDatabaseSuccessEvent)
         m_openDatabaseSuccessEvent = nullptr;
     else if (m_transaction && !m_transaction->didDispatchAbortOrCommit())
-        targets = { this, m_transaction.get(), &m_transaction->database() };
+        shouldDispatchOnTransaction = true;
 
     {
         TransactionActivator activator(transaction().get());
-        EventDispatcher::dispatchEvent(targets, event);
+        if (shouldDispatchOnTransaction)
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_transaction.get(), &m_transaction->database() }), event);
+        else
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
     }
 
     m_eventBeingDispatched = nullptr;
-    if (!m_transaction)
+    RefPtr transaction = m_transaction;
+    if (!transaction)
         return;
 
     if (m_hasUncaughtException)
-        m_transaction->abortDueToFailedRequest(DOMException::create(ExceptionCode::AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
+        transaction->abortDueToFailedRequest(DOMException::create(ExceptionCode::AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
     else if (!event.defaultPrevented() && event.type() == eventNames().errorEvent && !m_transaction->isFinishedOrFinishing()) {
         ASSERT(m_domError);
-        m_transaction->abortDueToFailedRequest(*m_domError);
+        transaction->abortDueToFailedRequest(Ref { *m_domError });
     }
 
-    m_transaction->finishedDispatchEventForRequest(*this);
+    transaction->finishedDispatchEventForRequest(*this);
 
     // The request should only remain in the transaction's request list if it represents a pending cursor operation, or this is an open request that was blocked.
     if (!m_pendingCursor && event.type() != eventNames().blockedEvent)
-        m_transaction->removeRequest(*this);
+        transaction->removeRequest(*this);
 }
 
 void IDBRequest::uncaughtExceptionInEventHandler()
@@ -355,7 +364,7 @@ void IDBRequest::uncaughtExceptionInEventHandler()
         return;
     }
     if (m_transaction && m_idbError.code() != ExceptionCode::AbortError)
-        m_transaction->abortDueToFailedRequest(DOMException::create(ExceptionCode::AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
+        protectedTransaction()->abortDueToFailedRequest(DOMException::create(ExceptionCode::AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
 }
 
 void IDBRequest::setResult(const IDBKeyData& keyData)
@@ -463,7 +472,7 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     ASSERT(!m_pendingCursor);
     ASSERT(&cursor == resultCursor());
 
-    m_pendingCursor = &cursor;
+    m_pendingCursor = cursor;
     m_result = NullResultType::Undefined;
 
     RefPtr context = scriptExecutionContext();
@@ -489,9 +498,10 @@ void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
 
     m_result = NullResultType::Empty;
     if (resultData.type() == IDBResultType::IterateCursorSuccess || resultData.type() == IDBResultType::OpenCursorSuccess) {
-        m_pendingCursor->setGetResult(*this, resultData.getResult(), m_currentTransactionOperationID);
+        RefPtr pendingCursor = m_pendingCursor;
+        pendingCursor->setGetResult(*this, resultData.getResult(), m_currentTransactionOperationID);
         if (resultData.getResult().isDefined())
-            m_result = m_pendingCursor;
+            m_result = WTF::move(pendingCursor);
     }
 
     if (std::get_if<NullResultType>(&m_result))
@@ -544,7 +554,7 @@ void IDBRequest::setResult(Ref<IDBDatabase>&& database)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
 
-    m_result = RefPtr<IDBDatabase> { WTFMove(database) };
+    m_result = RefPtr<IDBDatabase> { WTF::move(database) };
     m_resultWrapper.clear();
 }
 
@@ -588,6 +598,11 @@ void IDBRequest::transactionTransitionedToFinishing()
         return;
 
     m_pendingActivity = PendingActivityType::None;
+}
+
+RefPtr<IDBTransaction> IDBRequest::protectedTransaction() const
+{
+    return m_transaction;
 }
 
 } // namespace WebCore

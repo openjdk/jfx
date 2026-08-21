@@ -27,15 +27,22 @@
 #ifndef JSCallbackObject_h
 #define JSCallbackObject_h
 
+#if JSC_OBJC_API_ENABLED || defined(JSC_GLIB_API_ENABLED)
+#include "JSAPIWrapperObject.h"
+#endif
+#if defined(JSC_GLIB_API_ENABLED)
+#include "JSAPIWrapperGlobalObject.h"
+#endif
+#include "JSGlobalObject.h"
+#include "JSObject.h"
 #include "JSObjectRef.h"
 #include "JSValueRef.h"
-#include "JSObject.h"
 #include <wtf/PlatformCallingConventions.h>
 
 namespace JSC {
 
 struct JSCallbackObjectData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(JSCallbackObjectData);
 public:
     JSCallbackObjectData(void* privateData, JSClassRef jsClass)
         : privateData(privateData)
@@ -84,7 +91,7 @@ public:
     void* privateData;
     JSClassRef jsClass;
     struct JSPrivatePropertyMap {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(JSPrivatePropertyMap);
     public:
         JSValue getPrivateProperty(const Identifier& propertyName) const
         {
@@ -160,10 +167,7 @@ public:
     void setPrivate(void* data);
     void* getPrivate();
 
-    // FIXME: We should fix the warnings for extern-template in JSObject template classes: https://bugs.webkit.org/show_bug.cgi?id=161979
-    IGNORE_CLANG_WARNINGS_BEGIN("undefined-var-template")
     DECLARE_INFO;
-    IGNORE_CLANG_WARNINGS_END
 
     JSClassRef classRef() const { return m_callbackObjectData->jsClass; }
     bool inherits(JSClassRef) const;
@@ -192,6 +196,8 @@ public:
     static EncodedJSValue staticFunctionGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
     static EncodedJSValue callbackGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
 
+    DECLARE_VISIT_CHILDREN;
+
 private:
     JSCallbackObject(JSGlobalObject*, Structure*, JSClassRef, void* data);
     JSCallbackObject(VM&, JSClassRef, Structure*);
@@ -213,12 +219,10 @@ private:
 
     static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
 
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static CallData getConstructData(JSCell*);
     static CallData getCallData(JSCell*);
-
-    DECLARE_VISIT_CHILDREN;
 
     void init(JSGlobalObject*);
 
@@ -248,6 +252,19 @@ void JSCallbackObject<Parent>::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Parent::visitChildren(thisObject, visitor);
     thisObject->m_callbackObjectData->visitChildren(visitor);
 }
+
+// JSCallbackObject<T>::info()'s forward definition triggers an undefined template var warning
+// without these declarations in the same translation unit.
+template<> const ClassInfo JSCallbackObject<JSGlobalObject>::s_info;
+template<> const ClassInfo JSCallbackObject<JSNonFinalObject>::s_info;
+
+#if defined(JSC_GLIB_API_ENABLED)
+template<> const ClassInfo JSCallbackObject<JSAPIWrapperGlobalObject>::s_info;
+#endif
+
+#if JSC_OBJC_API_ENABLED || defined(JSC_GLIB_API_ENABLED)
+template<> const ClassInfo JSCallbackObject<JSAPIWrapperObject>::s_info;
+#endif
 
 } // namespace JSC
 

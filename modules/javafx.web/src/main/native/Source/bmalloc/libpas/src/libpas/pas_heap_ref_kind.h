@@ -53,7 +53,7 @@ static inline const char* pas_heap_ref_kind_get_string(pas_heap_ref_kind kind)
     case pas_fake_heap_ref_kind:
         return "fake";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

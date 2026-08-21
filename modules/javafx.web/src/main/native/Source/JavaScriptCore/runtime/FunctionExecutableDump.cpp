@@ -35,12 +35,12 @@ void FunctionExecutableDump::dump(PrintStream& out) const
 {
     out.print(m_executable->ecmaName().string(), "#");
     if (m_executable->isGeneratedForCall())
-        out.print(m_executable->codeBlockForCall()->hashAsStringIfPossible());
+        out.print(m_executable->codeBlockForCall()->hash());
     else
         out.print("<nogen>");
     out.print("/");
     if (m_executable->isGeneratedForConstruct())
-        out.print(m_executable->codeBlockForConstruct()->hashAsStringIfPossible());
+        out.print(m_executable->codeBlockForConstruct()->hash());
     else
         out.print("<nogen>");
     out.print(":[", RawPointer(m_executable), "]");

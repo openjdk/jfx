@@ -47,7 +47,7 @@ static inline const char* pas_commit_mode_get_string(pas_commit_mode mode)
     case pas_committed:
         return "committed";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

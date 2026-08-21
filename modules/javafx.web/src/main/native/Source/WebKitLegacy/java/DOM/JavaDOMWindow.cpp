@@ -33,6 +33,10 @@
 #include <WebCore/DOMSelection.h>
 #include <WebCore/DOMWindow.h>
 #include <WebCore/Document.h>
+#if PLATFORM(JAVA)
+#include "ShadowRoot.h"
+#include "AddEventListenerOptionsInlines.h"
+#endif
 #include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>

@@ -40,7 +40,7 @@ JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) cons
 {
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
     auto result = wrapped().result();
-    if (UNLIKELY(result.hasException())) {
+    if (result.hasException()) [[unlikely]] {
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
         return jsNull();
     }
@@ -55,11 +55,11 @@ JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) cons
         return toJS<IDLUnsignedLongLong>(number);
     }, [&] (const RefPtr<IDBCursor>& cursor) {
         return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, resultWrapper, [&](JSC::ThrowScope& throwScope) {
-            return toJS<IDLInterface<IDBCursor>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, cursor.get());
+            return toJS<IDLInterface<IDBCursor>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, *cursor);
         });
     }, [&] (const RefPtr<IDBDatabase>& database) {
         return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, resultWrapper, [&](JSC::ThrowScope& throwScope) {
-            return toJS<IDLInterface<IDBDatabase>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, database.get());
+            return toJS<IDLInterface<IDBDatabase>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, *database);
         });
     }, [&] (const IDBKeyData& keyData) {
         return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, resultWrapper, [&](JSC::ThrowScope&) {
@@ -86,7 +86,7 @@ JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) cons
                 if (!result)
                     return jsNull();
                 list.append(result.value());
-                if (UNLIKELY(list.hasOverflowed())) {
+                if (list.hasOverflowed()) [[unlikely]] {
                     propagateException(lexicalGlobalObject, throwScope, Exception(ExceptionCode::UnknownError));
                     return jsNull();
                 }

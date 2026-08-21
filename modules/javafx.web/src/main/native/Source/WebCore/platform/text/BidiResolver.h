@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "BidiContext.h"
-#include "BidiRunList.h"
-#include "WritingMode.h"
+#include <WebCore/BidiContext.h>
+#include <WebCore/BidiRunList.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -98,7 +98,7 @@ struct BidiStatus {
         : eor(eor)
         , lastStrong(lastStrong)
         , last(last)
-        , context(WTFMove(context))
+        , context(WTF::move(context))
     {
     }
 
@@ -152,9 +152,9 @@ public:
     ~BidiCharacterRun()
     {
         // Delete the linked list in a loop to prevent destructor recursion.
-        auto next = WTFMove(m_next);
+        auto next = WTF::move(m_next);
         while (next)
-            next = WTFMove(next->m_next);
+            next = WTF::move(next->m_next);
     }
 
     unsigned start() const { return m_start; }
@@ -164,8 +164,8 @@ public:
     bool dirOverride(bool visuallyOrdered) { return m_override || visuallyOrdered; }
 
     BidiCharacterRun* next() const { return m_next.get(); }
-    std::unique_ptr<BidiCharacterRun> takeNext() { return WTFMove(m_next); }
-    void setNext(std::unique_ptr<BidiCharacterRun>&& next) { m_next = WTFMove(next); }
+    std::unique_ptr<BidiCharacterRun> takeNext() { return WTF::move(m_next); }
+    void setNext(std::unique_ptr<BidiCharacterRun>&& next) { m_next = WTF::move(next); }
 
 private:
     std::unique_ptr<BidiCharacterRun> m_next;
@@ -199,7 +199,7 @@ public:
     void increment() { static_cast<DerivedClass&>(*this).incrementInternal(); }
 
     BidiContext* context() const { return m_status.context.get(); }
-    void setContext(RefPtr<BidiContext>&& context) { m_status.context = WTFMove(context); }
+    void setContext(RefPtr<BidiContext>&& context) { m_status.context = WTF::move(context); }
 
     void setLastDir(UCharDirection lastDir) { m_status.last = lastDir; }
     void setLastStrongDir(UCharDirection lastStrongDir) { m_status.lastStrong = lastStrongDir; }
@@ -262,7 +262,7 @@ protected:
     WhitespaceCollapsingState<Iterator> m_whitespaceCollapsingState;
 
     unsigned m_nestedIsolateCount { 0 };
-    UncheckedKeyHashMap<Run*, unsigned> m_whitespaceCollapsingTransitionForIsolatedRun;
+    HashMap<Run*, unsigned> m_whitespaceCollapsingTransitionForIsolatedRun;
 
 private:
     void raiseExplicitEmbeddingLevel(UCharDirection from, UCharDirection to);
@@ -460,7 +460,7 @@ bool BidiResolverBase<Iterator, Run, DerivedClass>::commitExplicitEmbedding()
     else if (toLevel < fromLevel)
         lowerExplicitEmbeddingLevel(fromLevel % 2 ? U_RIGHT_TO_LEFT : U_LEFT_TO_RIGHT);
 
-    setContext(WTFMove(toContext));
+    setContext(WTF::move(toContext));
 
     m_currentExplicitEmbeddingSequence.clear();
 
@@ -502,7 +502,7 @@ inline void BidiResolverBase<Iterator, Run, DerivedClass>::updateStatusLastFromC
         // ignore these
         break;
     case U_EUROPEAN_NUMBER:
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         m_status.last = dirCurrent;
     }
@@ -607,13 +607,6 @@ void BidiResolverBase<Iterator, Run, DerivedClass>::createBidiRunsForLine(const 
                 dirCurrent = m_status.last;
         }
 
-#if PLATFORM(WIN) || PLATFORM(JAVA)
-        // Our Windows build hasn't updated its headers from ICU 6.1, which doesn't have these symbols.
-        const UCharDirection U_FIRST_STRONG_ISOLATE = static_cast<UCharDirection>(19);
-        const UCharDirection U_LEFT_TO_RIGHT_ISOLATE = static_cast<UCharDirection>(20);
-        const UCharDirection U_RIGHT_TO_LEFT_ISOLATE = static_cast<UCharDirection>(21);
-        const UCharDirection U_POP_DIRECTIONAL_ISOLATE = static_cast<UCharDirection>(22);
-#endif
         // We ignore all character directionality while in unicode-bidi: isolate spans.
         // We'll handle ordering the isolated characters in a second pass.
         if (inIsolate() || dirCurrent == U_FIRST_STRONG_ISOLATE || dirCurrent == U_LEFT_TO_RIGHT_ISOLATE || dirCurrent == U_RIGHT_TO_LEFT_ISOLATE || dirCurrent == U_POP_DIRECTIONAL_ISOLATE)
@@ -698,7 +691,7 @@ void BidiResolverBase<Iterator, Run, DerivedClass>::createBidiRunsForLine(const 
                 case U_EUROPEAN_NUMBER:
                 case U_ARABIC_NUMBER:
                     appendRun();
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case U_RIGHT_TO_LEFT:
                 case U_RIGHT_TO_LEFT_ARABIC:
                     break;
@@ -751,7 +744,7 @@ void BidiResolverBase<Iterator, Run, DerivedClass>::createBidiRunsForLine(const 
                     case U_COMMON_NUMBER_SEPARATOR:
                         if (m_status.eor == U_EUROPEAN_NUMBER)
                             break;
-                        FALLTHROUGH;
+                        [[fallthrough]];
                     case U_EUROPEAN_NUMBER_TERMINATOR:
                     case U_BOUNDARY_NEUTRAL:
                     case U_BLOCK_SEPARATOR:
@@ -799,7 +792,7 @@ void BidiResolverBase<Iterator, Run, DerivedClass>::createBidiRunsForLine(const 
                     m_direction = U_LEFT_TO_RIGHT;
                 break;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case U_ARABIC_NUMBER:
             dirCurrent = U_ARABIC_NUMBER;
             switch (m_status.last) {
@@ -818,7 +811,7 @@ void BidiResolverBase<Iterator, Run, DerivedClass>::createBidiRunsForLine(const 
                 case U_COMMON_NUMBER_SEPARATOR:
                     if (m_status.eor == U_ARABIC_NUMBER)
                         break;
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 case U_EUROPEAN_NUMBER_SEPARATOR:
                 case U_EUROPEAN_NUMBER_TERMINATOR:
                 case U_BOUNDARY_NEUTRAL:

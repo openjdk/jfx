@@ -67,9 +67,9 @@ String formatLocalizedString(const wchar_t* format, ...)
     va_start(arguments, format);
     int len = _vscwprintf(format, arguments);
     Vector<wchar_t> buffer(len + 1);
-    _vsnwprintf(buffer.data(), len + 1, format, arguments);
+    _vsnwprintf(buffer.mutableSpan().data(), len + 1, format, arguments);
     va_end(arguments);
-    return { buffer.data() };
+    return { buffer.span().data() };
 }
 #else
 // Because |format| is used as the second parameter to va_start, it cannot be a reference
@@ -90,13 +90,9 @@ String formatLocalizedString(const char* format, ...)
 #endif
 
 #if PLATFORM(COCOA)
-static CFBundleRef webCoreBundle()
+static CFBundleRef webCoreBundleSingleton()
 {
-    static LazyNeverDestroyed<RetainPtr<CFBundleRef>> bundle;
-    static std::once_flag flag;
-    std::call_once(flag, [&] mutable {
-        bundle.construct(CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore")));
-    });
+    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
     ASSERT(bundle.get());
     return bundle.get().get();
 }
@@ -105,7 +101,7 @@ RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
     static CFStringRef notFound = CFSTR("localized string not found");
 
-    auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
+    auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundleSingleton(), key, notFound, nullptr));
 
 #if ASSERT_ENABLED
     if (result.get() == notFound) {
@@ -506,14 +502,33 @@ String contextMenuItemTagTranslate(const String& selectedString)
 #if ENABLE(WRITING_TOOLS)
 String contextMenuItemTagWritingTools()
 {
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+    return WEB_UI_STRING("Show Writing Tools", "Writing Tools context menu item");
+#else
     return WEB_UI_STRING("Writing Tools", "Writing Tools context menu item");
+#endif
+}
+
+String contextMenuItemTagProofread()
+{
+    return WEB_UI_STRING("Proofread", "Proofread context menu item");
+}
+
+String contextMenuItemTagRewrite()
+{
+    return WEB_UI_STRING("Rewrite", "Rewrite context menu item");
+}
+
+String contextMenuItemTagSummarize()
+{
+    return WEB_UI_STRING("Summarize", "Summarize context menu item");
 }
 #endif
 
 #if ENABLE(UNIFIED_PDF)
-String contextMenuItemPDFOpenWithPreview()
+String contextMenuItemPDFOpenWithDefaultViewer(const String& appName)
 {
-    return WEB_UI_STRING("Open with Preview", "Open with Preview context menu item");
+    return WEB_UI_FORMAT_STRING("Open with %@", "Open with default PDF viewer context menu item", appName.createCFString().get());
 }
 #endif
 
@@ -598,6 +613,13 @@ String searchMenuClearRecentSearchesText()
 
 #endif // !PLATFORM(IOS_FAMILY)
 
+#if ENABLE(MEDIA_STREAM)
+String defaultSystemSpeakerLabel()
+{
+    return WEB_UI_STRING("Default", "label for the default system speaker");
+}
+#endif
+
 String AXWebAreaText()
 {
     return WEB_UI_STRING("HTML content", "accessibility role description for web area");
@@ -660,7 +682,12 @@ String AXSummaryText()
 
 String AXFooterRoleDescriptionText()
 {
-    return WEB_UI_STRING("footer", "accessibility role description for a footer");
+    return WEB_UI_STRING("section footer", "accessibility role description for a footer");
+}
+
+String AXHeaderRoleDescriptionText()
+{
+    return WEB_UI_STRING("section header", "accessibility role description for a header");
 }
 
 String AXSuggestionRoleDescriptionText()
@@ -808,6 +835,8 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
     if (ariaType == "ARIALandmarkContentInfo"_s)
         return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
+    if (ariaType == "ARIALandmarkForm"_s)
+        return WEB_UI_STRING("form", "An ARIA accessibility group that acts as a form region.");
     if (ariaType == "ARIALandmarkMain"_s)
         return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
     if (ariaType == "ARIALandmarkNavigation"_s)
@@ -816,6 +845,10 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
     if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIASectionFooter"_s)
+        return WEB_UI_STRING("section footer", "An ARIA accessibility group that acts as a footer region.");
+    if (ariaType == "ARIASectionHeader"_s)
+        return WEB_UI_STRING("section header", "An ARIA accessibility group that acts as a header region.");
     if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
     if (ariaType == "ARIATabPanel"_s)
@@ -1041,7 +1074,7 @@ String imageTitle(const String& filename, const IntSize& size)
 
     return WEB_UI_FORMAT_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.createCFString().get(), widthString.get(), heightString.get());
 #elif PLATFORM(WIN)
-    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().data(), size.width(), size.height());
+    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().span().data(), size.width(), size.height());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
@@ -1312,9 +1345,24 @@ String textTrackOffMenuItemText()
     return WEB_UI_STRING_KEY("Off", "Off (text track)", "Menu item label for the track that represents disabling closed captions.");
 }
 
+String textTrackOnMenuItemText()
+{
+    return WEB_UI_STRING_KEY("On", "On (text track)", "Menu item label for the track that represents enabling closed captions.");
+}
+
 String textTrackAutomaticMenuItemText()
 {
     return WEB_UI_STRING_KEY("Auto (Recommended)", "Auto (Recommended) (text track)", "Menu item label for automatic track selection behavior.");
+}
+
+String captionStylePreviewWithProfileName(const String& profileName)
+{
+    return WEB_UI_FORMAT_STRING("This is the %s subtitle style", "This is the %s subtitle style (Caption User Preferences)", profileName.utf8().data());
+}
+
+String captionStylePreview()
+{
+    return WEB_UI_STRING_KEY("This is a preview style", "This is a preview style (Caption User Preferences)", "Caption Style Preview String");
 }
 
 #if PLATFORM(COCOA)
@@ -1448,7 +1496,7 @@ String addAudioTrackKindCommentarySuffix(const String& text)
 
 String contextMenuItemTagShowMediaStats()
 {
-    return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+    return WEB_UI_STRING("Show Media Statistics", "Media statistics context menu item");
 }
 
 #endif // ENABLE(VIDEO)
@@ -1582,6 +1630,18 @@ String fullscreenControllerViewSpatial()
 String fullscreenControllerViewImmersive()
 {
     return WEB_UI_STRING("View Immersive", "Title for View Immersive action button while in fullscreen");
+}
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+String imageControlsLabelSpatial()
+{
+    return WEB_UI_STRING("SPATIAL", "Label for Spatial Photos with image controls next to spatial glyph");
+}
+
+String imageControlsLabelPanorama()
+{
+    return WEB_UI_STRING("PANORAMA", "Label for panorama photos with image controls next to pano glyph");
 }
 #endif
 

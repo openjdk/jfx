@@ -29,18 +29,27 @@
 #if USE(JSVALUE32_64) && ENABLE(B3_JIT)
 #include "AirCCallingConvention.h"
 #include "B3BasicBlock.h"
+#include "B3BasicBlockInlines.h"
 #include "B3BlockInsertionSet.h"
 #include "B3Const32Value.h"
 #include "B3ConstPtrValue.h"
 #include "B3ExtractValue.h"
 #include "B3InsertionSet.h"
 #include "B3InsertionSetInlines.h"
+#include "B3AtomicValue.h"
+#include "B3CCallValue.h"
+#include "B3CheckValue.h"
 #include "B3MemoryValue.h"
+#include "B3MemoryValueInlines.h"
+#include "B3PatchpointValue.h"
 #include "B3PhaseScope.h"
 #include "B3Procedure.h"
 #include "B3StackmapGenerationParams.h"
+#include "B3UpsilonValue.h"
 #include "B3Value.h"
+#include "B3ValueInlines.h"
 #include "B3Variable.h"
+#include "B3VariableValue.h"
 #include <wtf/CheckedArithmetic.h>
 
 namespace JSC {
@@ -504,9 +513,9 @@ private:
                     highArgs.append(childParts.second);
 
                     if (rep.isStack())
-                        rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                        rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                     else if (rep.isStackArgument())
-                        rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                        rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
 
                     highReps.append(rep);
                 } else
@@ -529,7 +538,7 @@ private:
                 }
                 for (unsigned i = 0; i < int64Count; ++i)
                     newTupleType.append(Int32);
-                returnType = m_proc.addTuple(WTFMove(newTupleType));
+                returnType = m_proc.addTuple(WTF::move(newTupleType));
             } else if (originalReturnType == Int64)
                 returnType = m_proc.addTuple({ Int32, Int32 });
 
@@ -571,9 +580,9 @@ private:
                     || rep.kind() == ValueRep::SomeLateRegister
                     || rep.isAny());
                 if (rep.isStack())
-                    rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                    rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                 else if (rep.isStackArgument())
-                    rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                    rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                 patchpoint->resultConstraints.append(rep);
                 setMapping(m_value, valueLo(patchpoint, m_index + 1), valueHi(patchpoint, m_index + 1));
                 valueReplaced();
@@ -996,6 +1005,8 @@ private:
         case Nop:
         case WasmAddress:
         case WasmBoundsCheck:
+        case MemoryCopy:
+        case MemoryFill:
             return;
         case Set: {
             if (m_value->child(0)->type() != Int64)

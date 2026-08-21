@@ -27,7 +27,7 @@
 #include "ToggleEventTask.h"
 
 #include "EventNames.h"
-
+#include "TaskSource.h"
 #include "ToggleEvent.h"
 
 namespace WebCore {
@@ -60,4 +60,4 @@ void ToggleEventTask::queue(ToggleState oldState, ToggleState newState)
     });
 }
 
-}
+} // namespace WebCore

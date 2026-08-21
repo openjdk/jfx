@@ -39,6 +39,7 @@
 #include "PaymentCoordinatorClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -59,7 +60,7 @@ public:
 
     void setCanMakePayments(bool canMakePayments) { m_canMakePayments = canMakePayments; }
     void setCanMakePaymentsWithActiveCard(bool canMakePaymentsWithActiveCard) { m_canMakePaymentsWithActiveCard = canMakePaymentsWithActiveCard; }
-    void setShippingAddress(MockPaymentAddress&& shippingAddress) { m_shippingAddress = WTFMove(shippingAddress); }
+    void setShippingAddress(MockPaymentAddress&& shippingAddress) { m_shippingAddress = WTF::move(shippingAddress); }
     void changeShippingOption(String&& shippingOption);
     void changePaymentMethod(ApplePayPaymentMethod&&);
 #if ENABLE(APPLE_PAY_COUPON_CODE)
@@ -118,6 +119,10 @@ public:
 
 #if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
     const String& merchantCategoryCode() const { return m_merchantCategoryCode; }
+#endif
+
+#if ENABLE(APPLE_PAY_DELEGATED_REQUEST)
+    const std::optional<bool> isDelegatedRequest() const { return m_isDelegatedRequest; }
 #endif
 
     bool installmentConfigurationReturnsNil() const;
@@ -202,6 +207,10 @@ private:
 
 #if ENABLE(APPLE_PAY_MERCHANT_CATEGORY_CODE)
     String m_merchantCategoryCode;
+#endif
+
+#if ENABLE(APPLE_PAY_DELEGATED_REQUEST)
+    std::optional<bool> m_isDelegatedRequest;
 #endif
 };
 

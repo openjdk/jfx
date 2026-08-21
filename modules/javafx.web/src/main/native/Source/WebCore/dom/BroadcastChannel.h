@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "BroadcastChannelIdentifier.h"
-#include "ClientOrigin.h"
-#include "EventTarget.h"
-#include "ExceptionOr.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/BroadcastChannelIdentifier.h>
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -41,9 +41,10 @@ class JSValue;
 namespace WebCore {
 
 class SerializedScriptValue;
+template<typename> class ExceptionOr;
 
 class BroadcastChannel : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<BroadcastChannel>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BroadcastChannel);
+    WTF_MAKE_TZONE_ALLOCATED(BroadcastChannel);
 public:
     static Ref<BroadcastChannel> create(ScriptExecutionContext& context, const String& name)
     {
@@ -56,6 +57,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     BroadcastChannelIdentifier identifier() const;
     String name() const;
@@ -74,7 +76,8 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::BroadcastChannel; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void derefEventTarget() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
     void eventListenersDidChange() final;
@@ -84,11 +87,11 @@ private:
     void stop() final { close(); }
 
     class MainThreadBridge;
-    Ref<MainThreadBridge> protectedMainThreadBridge() const;
-
-    Ref<MainThreadBridge> m_mainThreadBridge;
+    const Ref<MainThreadBridge> m_mainThreadBridge;
     bool m_isClosed { false };
     bool m_hasRelevantEventListener { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(BroadcastChannel)

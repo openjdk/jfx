@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,12 @@
 #include "Storage.h"
 
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "ScriptTelemetryCategory.h"
+#include "ScriptTrackingPrivacyCategory.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "StorageArea.h"
 #include "StorageType.h"
@@ -39,16 +41,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Storage);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Storage);
 
 Ref<Storage> Storage::create(LocalDOMWindow& window, Ref<StorageArea>&& storageArea)
 {
-    return adoptRef(*new Storage(window, WTFMove(storageArea)));
+    return adoptRef(*new Storage(window, WTF::move(storageArea)));
 }
 
 Storage::Storage(LocalDOMWindow& window, Ref<StorageArea>&& storageArea)
     : LocalDOMWindowProperty(&window)
-    , m_storageArea(WTFMove(storageArea))
+    , m_storageArea(WTF::move(storageArea))
 {
     ASSERT(frame());
 
@@ -62,7 +64,7 @@ Storage::~Storage()
 
 unsigned Storage::length() const
 {
-    if (requiresScriptExecutionTelemetry())
+    if (requiresScriptTrackingPrivacyProtection())
         return 0;
 
     return m_storageArea->length();
@@ -70,7 +72,7 @@ unsigned Storage::length() const
 
 String Storage::key(unsigned index) const
 {
-    if (requiresScriptExecutionTelemetry())
+    if (requiresScriptTrackingPrivacyProtection())
         return { };
 
     return m_storageArea->key(index);
@@ -78,7 +80,7 @@ String Storage::key(unsigned index) const
 
 String Storage::getItem(const String& key) const
 {
-    if (requiresScriptExecutionTelemetry())
+    if (requiresScriptTrackingPrivacyProtection())
         return { };
 
     return m_storageArea->item(key);
@@ -86,11 +88,11 @@ String Storage::getItem(const String& key) const
 
 ExceptionOr<void> Storage::setItem(const String& key, const String& value)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
-    if (requiresScriptExecutionTelemetry())
+    if (requiresScriptTrackingPrivacyProtection())
         return { };
 
     bool quotaException = false;
@@ -102,11 +104,11 @@ ExceptionOr<void> Storage::setItem(const String& key, const String& value)
 
 ExceptionOr<void> Storage::removeItem(const String& key)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
-    if (requiresScriptExecutionTelemetry())
+    if (requiresScriptTrackingPrivacyProtection())
         return { };
 
     m_storageArea->removeItem(*frame, key);
@@ -115,7 +117,7 @@ ExceptionOr<void> Storage::removeItem(const String& key)
 
 ExceptionOr<void> Storage::clear()
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
@@ -146,10 +148,10 @@ Ref<StorageArea> Storage::protectedArea() const
     return m_storageArea;
 }
 
-bool Storage::requiresScriptExecutionTelemetry() const
+bool Storage::requiresScriptTrackingPrivacyProtection() const
 {
-    RefPtr document = window() ? window()->document() : nullptr;
-    return document && document->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::LocalStorage);
+    RefPtr document = window() ? protectedWindow()->document() : nullptr;
+    return document && document->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::LocalStorage);
 }
 
 } // namespace WebCore

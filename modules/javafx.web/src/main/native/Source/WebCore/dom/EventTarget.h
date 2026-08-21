@@ -30,17 +30,22 @@
 
 #pragma once
 
-#include "EventListenerMap.h"
-#include "EventListenerOptions.h"
-#include "EventTargetInterfaces.h"
-#include "ExceptionOr.h"
-#include "ScriptWrappable.h"
+#include <WebCore/AddEventListenerOptions.h>
+#include <WebCore/EventListenerMap.h>
+#include <WebCore/EventListenerOptions.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/ScriptWrappable.h>
 #include <memory>
-#include <variant>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WeakPtrFactory.h>
+#include <wtf/WeakPtrImpl.h>
 
 namespace JSC {
 class JSValue;
@@ -49,7 +54,7 @@ class JSObject;
 
 namespace WebCore {
 
-struct AddEventListenerOptions;
+enum class EventTargetInterfaceType : uint8_t;
 class DOMWrapperWorld;
 class EventTarget;
 class JSEventListener;
@@ -80,31 +85,32 @@ private:
     EventTargetData m_eventTargetData;
 };
 
-class EventTarget : public ScriptWrappable, public CanMakeWeakPtrWithBitField<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventTarget);
+class WEBCORE_EXPORT EventTarget : public ScriptWrappable, public CanMakeWeakPtrWithBitField<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
+    WTF_MAKE_TZONE_ALLOCATED(EventTarget);
 public:
     static Ref<EventTarget> create(ScriptExecutionContext&);
 
-    inline void ref(); // Defined in Node.h.
-    inline void deref(); // Defined in Node.h.
+    inline void ref(); // Defined in EventTargetInlines.h.
+    inline void deref(); // Defined in EventTargetInlines.h.
 
     virtual enum EventTargetInterfaceType eventTargetInterface() const = 0;
     virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
-    WEBCORE_EXPORT virtual bool isPaymentRequest() const;
+    virtual bool isPaymentRequest() const;
 
-    using AddEventListenerOptionsOrBoolean = std::variant<AddEventListenerOptions, bool>;
-    WEBCORE_EXPORT void addEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&&, AddEventListenerOptionsOrBoolean&&);
-    using EventListenerOptionsOrBoolean = std::variant<EventListenerOptions, bool>;
-    WEBCORE_EXPORT void removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&&, EventListenerOptionsOrBoolean&&);
-    WEBCORE_EXPORT ExceptionOr<bool> dispatchEventForBindings(Event&);
+    using AddEventListenerOptionsOrBoolean = Variant<AddEventListenerOptions, bool>;
+    void addEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&&, AddEventListenerOptionsOrBoolean&&);
+    using EventListenerOptionsOrBoolean = Variant<EventListenerOptions, bool>;
+    void removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&&, EventListenerOptionsOrBoolean&&);
+    ExceptionOr<bool> dispatchEventForBindings(Event&);
 
-    WEBCORE_EXPORT virtual bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&);
-    WEBCORE_EXPORT virtual bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions& = { });
+    virtual bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&);
+    virtual bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions& = { });
 
-    WEBCORE_EXPORT virtual void removeAllEventListeners();
-    WEBCORE_EXPORT virtual void dispatchEvent(Event&);
-    WEBCORE_EXPORT virtual void uncaughtExceptionInEventHandler();
+    virtual void removeAllEventListeners();
+    virtual void dispatchEvent(Event&);
+    virtual void uncaughtExceptionInEventHandler();
 
     static const AtomString& legacyTypeForEvent(const Event&);
 
@@ -126,46 +132,19 @@ public:
     enum class EventInvokePhase { Capturing, Bubbling };
     void fireEventListeners(Event&, EventInvokePhase);
 
-    template<typename Visitor> void visitJSEventListeners(Visitor&);
+    template<typename Visitor>
+    inline void visitJSEventListeners(Visitor&);
     void invalidateJSEventListeners(JSC::JSObject*);
 
-    const EventTargetData* eventTargetData() const
-    {
-        if (hasEventTargetData())
-            return &weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
-
-    EventTargetData* eventTargetData()
-    {
-        if (hasEventTargetData())
-            return &weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
-
-    EventTargetData* eventTargetDataConcurrently()
-    {
-        bool flag = this->hasEventTargetData();
-        auto fencedFlag = Dependency::fence(flag);
-        if (flag)
-            return &fencedFlag.consume(this)->weakPtrFactory().impl()->eventTargetData();
-        return nullptr;
-    }
+    inline const EventTargetData* eventTargetData() const;
+    inline EventTargetData* eventTargetData();
+    inline EventTargetData* eventTargetDataConcurrently();
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(CallbackType callback) const
-    {
-        if (auto* data = eventTargetData())
-            data->eventListenerMap.enumerateEventListenerTypes(callback);
-    }
+    inline void enumerateEventListenerTypes(NOESCAPE const CallbackType&) const;
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(CallbackType callback) const
-    {
-        if (auto* data = eventTargetData())
-            return data->eventListenerMap.containsMatchingEventListener(callback);
-        return false;
-    }
+    inline bool containsMatchingEventListener(NOESCAPE const CallbackType&) const;
 
     bool hasEventTargetData() const { return hasEventTargetFlag(EventTargetFlag::HasEventTargetData); }
     bool isNode() const { return hasEventTargetFlag(EventTargetFlag::IsNode); }
@@ -176,6 +155,9 @@ public:
     bool hasValidQuerySelectorAllResults() const { return hasEventTargetFlag(EventTargetFlag::HasValidQuerySelectorAllResults); }
     void setHasValidQuerySelectorAllResults(bool flag) { setEventTargetFlag(EventTargetFlag::HasValidQuerySelectorAllResults, flag); }
 
+    bool hasInternalTouchEventHandling() const { return hasEventTargetFlag(EventTargetFlag::HasInternalTouchEventHandling); }
+    void setHasInternalTouchEventHandling(bool flag) { setEventTargetFlag(EventTargetFlag::HasInternalTouchEventHandling, flag); }
+
 protected:
     enum ConstructNodeTag { ConstructNode };
     EventTarget() = default;
@@ -184,7 +166,7 @@ protected:
         setEventTargetFlag(EventTargetFlag::IsNode, true);
     }
 
-    WEBCORE_EXPORT virtual ~EventTarget();
+    virtual ~EventTarget();
 
     // Flags for ownership & relationship.
     enum class EventTargetFlag : uint16_t {
@@ -204,20 +186,12 @@ protected:
         HasFormAssociatedCustomElementInterface = 1 << 11,
         HasShadowRootContainingSlots = 1 << 12,
         IsInTopLayer = 1 << 13,
-        // 1-bit free
+        HasInternalTouchEventHandling = 1 << 14,
         // SVGElement bits
         HasPendingResources = 1 << 15,
     };
 
-    EventTargetData& ensureEventTargetData()
-    {
-        if (auto* data = eventTargetData())
-            return *data;
-        initializeWeakPtrFactory();
-        WTF::storeStoreFence();
-        setEventTargetFlag(EventTargetFlag::HasEventTargetData, true);
-        return weakPtrFactory().impl()->eventTargetData();
-    }
+    EventTargetData& ensureEventTargetData();
 
     virtual void eventListenersDidChange() { }
 
@@ -232,42 +206,6 @@ private:
     void innerInvokeEventListeners(Event&, EventListenerVector, EventInvokePhase);
 };
 
-inline bool EventTarget::hasEventListeners() const
-{
-    auto* data = eventTargetData();
-    return data && !data->eventListenerMap.isEmpty();
-}
-
-inline bool EventTarget::hasEventListeners(const AtomString& eventType) const
-{
-    auto* data = eventTargetData();
-    return data && data->eventListenerMap.contains(eventType);
-}
-
-inline bool EventTarget::hasAnyEventListeners(Vector<AtomString> eventTypes) const
-{
-    if (auto* data = eventTargetData()) {
-        for (const auto& eventType : eventTypes) {
-            if (data->eventListenerMap.contains(eventType))
-                return true;
-        }
-    }
-    return false;
-}
-
-inline bool EventTarget::hasCapturingEventListeners(const AtomString& eventType)
-{
-    auto* data = eventTargetData();
-    return data && data->eventListenerMap.containsCapturing(eventType);
-}
-
-template<typename Visitor>
-void EventTarget::visitJSEventListeners(Visitor& visitor)
-{
-    if (auto* data = eventTargetDataConcurrently())
-        data->eventListenerMap.visitJSEventListeners(visitor);
-}
-
 inline void EventTarget::setEventTargetFlag(EventTargetFlag flag, bool value)
 {
     auto flags = OptionSet<EventTargetFlag>::fromRaw(weakPtrFactory().bitfield());
@@ -276,3 +214,8 @@ inline void EventTarget::setEventTargetFlag(EventTargetFlag flag, bool value)
 }
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ClassName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ClassName) \
+    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::EventTargetInterfaceType::ClassName; } \
+SPECIALIZE_TYPE_TRAITS_END()

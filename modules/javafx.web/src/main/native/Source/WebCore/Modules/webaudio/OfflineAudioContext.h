@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ namespace WebCore {
 struct OfflineAudioContextOptions;
 
 class OfflineAudioContext final : public BaseAudioContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OfflineAudioContext);
+    WTF_MAKE_TZONE_ALLOCATED(OfflineAudioContext);
 public:
     static ExceptionOr<Ref<OfflineAudioContext>> create(ScriptExecutionContext&, const OfflineAudioContextOptions&);
     static ExceptionOr<Ref<OfflineAudioContext>> create(ScriptExecutionContext&, unsigned numberOfChannels, unsigned length, float sampleRate);
@@ -51,7 +51,9 @@ public:
     bool shouldSuspend();
 
     OfflineAudioDestinationNode& destination() final { return m_destinationNode.get(); }
+    Ref<OfflineAudioDestinationNode> protectedDestination() { return destination(); }
     const OfflineAudioDestinationNode& destination() const final { return m_destinationNode.get(); }
+    Ref<const OfflineAudioDestinationNode> protectedDestination() const { return destination(); }
 
 private:
     OfflineAudioContext(Document&, const OfflineAudioContextOptions&);
@@ -68,9 +70,9 @@ private:
     void uninitialize() final;
     bool isOfflineContext() const final { return true; }
 
-    UniqueRef<OfflineAudioDestinationNode> m_destinationNode;
+    const UniqueRef<OfflineAudioDestinationNode> m_destinationNode;
     RefPtr<DeferredPromise> m_pendingRenderingPromise;
-    HashMap<unsigned /* frame */, RefPtr<DeferredPromise>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_suspendRequests;
+    HashMap<unsigned /* frame */, Ref<DeferredPromise>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_suspendRequests;
     unsigned m_length;
     bool m_didStartRendering { false };
 };

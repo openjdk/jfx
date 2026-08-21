@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,20 +33,20 @@
 namespace WebCore {
 
 class RTCErrorEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCErrorEvent);
+    WTF_MAKE_TZONE_ALLOCATED(RTCErrorEvent);
 public:
     struct Init : EventInit {
         RefPtr<RTCError> error;
     };
-    static Ref<RTCErrorEvent> create(const AtomString& type, Init&& init, IsTrusted isTrusted = IsTrusted::No) { return adoptRef(*new RTCErrorEvent(type, WTFMove(init), isTrusted)); }
-    static Ref<RTCErrorEvent> create(const AtomString& type, RefPtr<RTCError>&& error) { return create(type, Init { { }, WTFMove(error) }, IsTrusted::Yes); }
+    static Ref<RTCErrorEvent> create(const AtomString& type, Init&& init, IsTrusted isTrusted = IsTrusted::No) { return adoptRef(*new RTCErrorEvent(type, WTF::move(init), isTrusted)); }
+    static Ref<RTCErrorEvent> create(const AtomString& type, RefPtr<RTCError>&& error) { return create(type, Init { { }, WTF::move(error) }, IsTrusted::Yes); }
 
     RTCError& error() const { return m_error.get(); }
 
 private:
     RTCErrorEvent(const AtomString& type, Init&&, IsTrusted);
 
-    Ref<RTCError> m_error;
+    const Ref<RTCError> m_error;
 };
 
 } // namespace WebCore

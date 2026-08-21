@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
+#include <WebCore/ActiveDOMObject.h>
 #include "IDBCursorDirection.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBKeyPath.h"
-#include "IDBObjectStoreInfo.h"
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/IDBObjectStoreInfo.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Lock.h>
 #include <wtf/TZoneMalloc.h>
@@ -58,12 +57,14 @@ class WebCoreOpaqueRoot;
 
 struct IDBKeyRangeData;
 
+template<typename> class ExceptionOr;
+
 namespace IndexedDB {
 enum class ObjectStoreOverwriteMode : uint8_t;
 }
 
 class IDBObjectStore final : public ActiveDOMObject, public CanMakeCheckedPtr<IDBObjectStore> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBObjectStore);
+    WTF_MAKE_TZONE_ALLOCATED(IDBObjectStore);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IDBObjectStore);
 public:
     static UniqueRef<IDBObjectStore> create(ScriptExecutionContext&, const IDBObjectStoreInfo&, IDBTransaction&);
@@ -74,6 +75,7 @@ public:
     const std::optional<IDBKeyPath>& keyPath() const;
     Ref<DOMStringList> indexNames() const;
     IDBTransaction& transaction();
+    Ref<IDBTransaction> protectedTransaction();
     bool autoIncrement() const;
 
     struct IndexParameters {
@@ -117,7 +119,7 @@ public:
     void ref() const final;
     void deref() const final;
 
-    template<typename Visitor> void visitReferencedIndexes(Visitor&) const;
+    template<typename Visitor> void visitReferencedIndexesConcurrently(Visitor&) const;
     void renameReferencedIndex(IDBIndex&, const String& newName);
 
 private:
@@ -126,11 +128,11 @@ private:
     enum class InlineKeyCheck { Perform, DoNotPerform };
     ExceptionOr<Ref<IDBRequest>> putOrAdd(JSC::JSGlobalObject&, JSC::JSValue, RefPtr<IDBKey>, IndexedDB::ObjectStoreOverwriteMode, InlineKeyCheck, RefPtr<SerializedScriptValue>&& = nullptr);
     ExceptionOr<Ref<IDBRequest>> doCount(const IDBKeyRangeData&);
-    ExceptionOr<Ref<IDBRequest>> doDelete(Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doDelete(NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;

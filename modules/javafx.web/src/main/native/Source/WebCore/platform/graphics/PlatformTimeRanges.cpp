@@ -27,6 +27,7 @@
 #include "PlatformTimeRanges.h"
 
 #include <math.h>
+#include <numeric>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -46,7 +47,7 @@ PlatformTimeRanges::PlatformTimeRanges(const MediaTime& start, const MediaTime& 
 }
 
 PlatformTimeRanges::PlatformTimeRanges(Vector<Range>&& ranges)
-    : m_ranges { WTFMove(ranges) }
+    : m_ranges { WTF::move(ranges) }
 {
 }
 
@@ -137,7 +138,7 @@ PlatformTimeRanges& PlatformTimeRanges::operator-=(const Range& range)
         ranges.append({ m_ranges[0].start, firstEnd });
     if (secondStart != m_ranges.last().end)
         ranges.append({ secondStart, m_ranges.last().end });
-    intersectWith(WTFMove(ranges));
+    intersectWith(WTF::move(ranges));
 
     return *this;
 }
@@ -202,10 +203,8 @@ MediaTime PlatformTimeRanges::minimumBufferedTime() const
 
 void PlatformTimeRanges::add(const MediaTime& start, const MediaTime& end, AddTimeRangeOption addTimeRangeOption)
 {
-#if !PLATFORM(MAC) // https://bugs.webkit.org/show_bug.cgi?id=180253
     ASSERT(start.isValid());
     ASSERT(end.isValid());
-#endif
     ASSERT(start <= end);
 
     auto startTime = start;
@@ -233,7 +232,7 @@ void PlatformTimeRanges::add(const MediaTime& start, const MediaTime& end, AddTi
         if (addedRange.isOverlappingRange(m_ranges[overlappingArcIndex]) || addedRange.isContiguousWithRange(m_ranges[overlappingArcIndex])) {
             // We need to merge the addedRange and that range.
             addedRange = addedRange.unionWithOverlappingOrContiguousRange(m_ranges[overlappingArcIndex]);
-            m_ranges.remove(overlappingArcIndex);
+            m_ranges.removeAt(overlappingArcIndex);
             overlappingArcIndex--;
         } else {
             // Check the case for which there is no more to do
@@ -267,6 +266,44 @@ bool PlatformTimeRanges::contain(const MediaTime& time) const
     return find(time) != notFound;
 }
 
+bool PlatformTimeRanges::containWithEpsilon(const MediaTime& time, const MediaTime& epsilon) const
+{
+    return findWithEpsilon(time, epsilon) != notFound;
+}
+
+bool PlatformTimeRanges::containWithEpsilon(const PlatformTimeRanges& ranges, const MediaTime& epsilon) const
+{
+    if (ranges.length() < 1)
+        return true;
+
+    if (!length() || ranges.length() != 1)
+        return false;
+
+    PlatformTimeRanges bufferedRanges = *this;
+    bufferedRanges.intersectWith(ranges);
+
+    if (!bufferedRanges.length())
+        return false;
+
+    auto hasBufferedTime = [&] (const MediaTime& time) {
+        return abs(bufferedRanges.nearest(time) - time) <= epsilon;
+    };
+
+    if (!hasBufferedTime(ranges.minimumBufferedTime()) || !hasBufferedTime(ranges.maximumBufferedTime()))
+        return false;
+
+    if (bufferedRanges.length() == 1)
+        return true;
+
+    // Ensure that if we have a gap in the buffered range, it is smaller than the fudge factor;
+    for (unsigned i = 1; i < bufferedRanges.length(); i++) {
+        if (bufferedRanges.end(i) - bufferedRanges.start(i-1) > epsilon)
+            return false;
+    }
+
+    return true;
+}
+
 size_t PlatformTimeRanges::find(const MediaTime& time) const
 {
     bool ignoreInvalid;
@@ -277,11 +314,11 @@ size_t PlatformTimeRanges::find(const MediaTime& time) const
     return notFound;
 }
 
-size_t PlatformTimeRanges::findWithEpsilon(const MediaTime& time, const MediaTime& epsilon)
+size_t PlatformTimeRanges::findWithEpsilon(const MediaTime& time, const MediaTime& epsilon) const
 {
     bool ignoreInvalid;
     for (unsigned n = 0; n < length(); n++) {
-        if (time + epsilon >= start(n, ignoreInvalid) && time < end(n, ignoreInvalid))
+        if (time + epsilon >= start(n, ignoreInvalid) && time - epsilon <= end(n, ignoreInvalid))
             return n;
     }
     return notFound;
@@ -376,7 +413,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
 
     first = 0;
     last = m_ranges.size() - 1;
-    middle = first + ((last - first) / 2);
+    middle = std::midpoint(first, last);
 
     while (first < last && middle > 0) {
         if (m_ranges[middle].isBeforeRange(range)) {
@@ -385,7 +422,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
         } else
             last = middle - 1;
 
-        middle = first + ((last - first) / 2);
+        middle = std::midpoint(first, last);
     }
     return index;
 }

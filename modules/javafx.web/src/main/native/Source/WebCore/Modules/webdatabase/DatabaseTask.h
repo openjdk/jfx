@@ -28,16 +28,18 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 class Database;
 class SQLTransaction;
+template<typename> class ExceptionOr;
 
 // Can be used to wait until DatabaseTask is completed.
 // Has to be passed into DatabaseTask::create to be associated with the task.
@@ -73,7 +75,7 @@ public:
 
     void performTask();
 
-    Database& database() const { return m_database; }
+    Ref<Database> database() const { return m_database.get().releaseNonNull(); }
 
 #if ASSERT_ENABLED
     bool hasSynchronizer() const { return m_synchronizer; }
@@ -86,7 +88,7 @@ protected:
 private:
     virtual void doPerformTask() = 0;
 
-    Database& m_database;
+    ThreadSafeWeakPtr<Database> m_database;
     DatabaseTaskSynchronizer* m_synchronizer;
 
 #if !LOG_DISABLED
@@ -139,7 +141,7 @@ private:
     ASCIILiteral debugTaskName() const final;
 #endif
 
-    RefPtr<SQLTransaction> m_transaction;
+    const RefPtr<SQLTransaction> m_transaction;
     bool m_didPerformTask;
 };
 

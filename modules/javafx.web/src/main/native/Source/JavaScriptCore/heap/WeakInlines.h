@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-#include "JSCast.h"
-#include "WeakSetInlines.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/WeakSetInlines.h>
 #include <wtf/Assertions.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
@@ -67,7 +69,7 @@ template<typename T> inline void Weak<T>::swap(Weak& other)
 
 template<typename T> inline auto Weak<T>::operator=(Weak&& other) -> Weak&
 {
-    Weak weak = WTFMove(other);
+    Weak weak = WTF::move(other);
     swap(weak);
     return *this;
 }
@@ -108,6 +110,15 @@ template<typename T> inline bool Weak<T>::was(T* other) const
     return static_cast<T*>(m_impl->jsValue().asCell()) == other;
 }
 
+template<typename T> inline void Weak<T>::clear()
+{
+    auto* pointer = impl();
+    if (!pointer)
+        return;
+    pointer->clear();
+    m_impl = nullptr;
+}
+
 template<typename T> inline bool Weak<T>::operator!() const
 {
     auto* pointer = impl();
@@ -139,11 +150,6 @@ template <typename T> inline bool operator==(const Weak<T>& lhs, const Weak<T>& 
 template<typename T> inline bool operator==(const Weak<T>& lhs, const T* rhs)
 {
     return lhs.get() == rhs;
-}
-
-template<typename T> inline bool operator==(const T* lhs, const Weak<T>& rhs)
-{
-    return lhs == rhs.get();
 }
 
 // This function helps avoid modifying a weak table while holding an iterator into it. (Object allocation

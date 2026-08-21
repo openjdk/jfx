@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,8 @@ public:
     virtual Vector<RTCRtpSynchronizationSource> getSynchronizationSources() const { return { }; }
     virtual Ref<RTCRtpTransformBackend> rtcRtpTransformBackend() = 0;
     virtual std::unique_ptr<RTCDtlsTransportBackend> dtlsTransportBackend() = 0;
+
+    virtual bool isLibWebRTCRtpReceiverBackend() const { return false; }
 };
 
 } // namespace WebCore

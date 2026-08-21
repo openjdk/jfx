@@ -70,6 +70,11 @@
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
     //NSLog(@"windowDidBecomeKey: %p", self);
+
+    // store host menu if running embedded, otherwise we
+    // just store a default menu
+    self->hostMenu = [NSApp mainMenu];
+
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -93,6 +98,20 @@
 - (void)windowDidResignKey:(NSNotification *)notification
 {
     //NSLog(@"windowDidResignKey: %p", self);
+
+    NSMenu* menu = nil;
+
+    if (self->menubar != nil) {
+        menu = self->menubar->menu;
+    }
+
+    // restore menu of host application if running embedded,
+    // otherwise we just restore a default menu
+    if ([NSApp mainMenu] == menu) {
+        [NSApp setMainMenu:self->hostMenu];
+        [[NSApp mainMenu] update];
+    }
+
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;

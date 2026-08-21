@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLMediaElement.h"
+#include "HTMLMediaElementEnums.h"
+#include "JSValueInWrappedObject.h"
 #include "MediaSession.h"
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -39,6 +39,8 @@ namespace WebCore {
 
 class AudioTrack;
 class AudioTrackList;
+class ContextMenuItem;
+class DOMPromise;
 class Element;
 class WeakPtrImplWithEventTargetData;
 class HTMLElement;
@@ -47,20 +49,31 @@ class MediaControlTextTrackContainerElement;
 class TextTrack;
 class TextTrackList;
 class TextTrackRepresentation;
+class VTTCue;
 class VoidCallback;
 
+struct MediaControlsContextMenuItem;
+
 class MediaControlsHost final
-    : public RefCounted<MediaControlsHost>
+    : public CanMakeWeakPtr<MediaControlsHost>
 #if ENABLE(MEDIA_SESSION)
     , private MediaSessionObserver
 #endif
-    , public CanMakeWeakPtr<MediaControlsHost> {
-    WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
+    {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
     USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<MediaControlsHost>);
 
-    static Ref<MediaControlsHost> create(HTMLMediaElement&);
+    explicit MediaControlsHost(HTMLMediaElement&);
     ~MediaControlsHost();
+
+#if ENABLE(MEDIA_SESSION)
+    WEBCORE_EXPORT void ref() const final;
+    WEBCORE_EXPORT void deref() const final;
+#else
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
+#endif
 
     static const AtomString& automaticKeyword();
     static const AtomString& forcedOnlyKeyword();
@@ -71,14 +84,15 @@ public:
     double brightness() const { return 1; }
     void setBrightness(double) { }
 
-    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList&);
-    Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList&);
+    Vector<Ref<TextTrack>> sortedTrackListForMenu(TextTrackList&);
+    Vector<Ref<AudioTrack>> sortedTrackListForMenu(AudioTrackList&);
 
-    using TextOrAudioTrack = std::variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
+    using TextOrAudioTrack = Variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
     String displayNameForTrack(const std::optional<TextOrAudioTrack>&);
 
     static TextTrack& captionMenuOffItem();
     static TextTrack& captionMenuAutomaticItem();
+    static TextTrack& captionMenuOnItem();
     AtomString captionDisplayMode() const;
     void setSelectedTextTrack(TextTrack*);
     Element* textTrackContainer();
@@ -94,7 +108,9 @@ public:
     bool inWindowFullscreen() const;
     bool supportsRewind() const;
     bool needsChromeMediaControlsPseudoElement() const;
+    bool isMediaControlsMacInlineSizeSpecsEnabled() const;
 
+    void captionPreferencesChanged();
     enum class ForceUpdate : bool { No, Yes };
     void updateCaptionDisplaySizes(ForceUpdate = ForceUpdate::No);
     void updateTextTrackRepresentationImageIfNeeded();
@@ -112,14 +128,17 @@ public:
 
     static String generateUUID();
 
-    static String shadowRootCSSText();
+    Vector<String, 2> shadowRootStyleSheets() const;
     static String base64StringForIconNameAndType(const String& iconName, const String& iconType);
-    static String formattedStringForDuration(double);
+
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    Vector<MediaControlsContextMenuItem> mediaControlsContextMenuItemsForBindings(String&& optionsJSONString);
     bool showMediaControlsContextMenu(HTMLElement&, String&& optionsJSONString, Ref<VoidCallback>&&);
+    void showCaptionDisplaySettingsPreview();
+    void hideCaptionDisplaySettingsPreview();
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
 
-    using SourceType = HTMLMediaElement::SourceType;
+    using SourceType = HTMLMediaElementSourceType;
     std::optional<SourceType> sourceType() const;
 
     void presentationModeChanged();
@@ -128,11 +147,14 @@ public:
     void ensureMediaSessionObserver();
 #endif
 
-private:
-    explicit MediaControlsHost(HTMLMediaElement&);
+    const JSValueInWrappedObject& controllerWrapper() const { return m_controllerWrapper; }
+    JSValueInWrappedObject& controllerWrapper() { return m_controllerWrapper; }
 
+private:
     void savePreviouslySelectedTextTrackIfNecessary();
     void restorePreviouslySelectedTextTrackIfNecessary();
+
+    MediaControlTextTrackContainerElement* ensureTextTrackContainer();
 
 #if ENABLE(MEDIA_SESSION)
     RefPtr<MediaSession> mediaSession() const;
@@ -141,16 +163,47 @@ private:
     void metadataChanged(const RefPtr<MediaMetadata>&) final;
 #endif
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    enum class PlaybackSpeed;
+    enum class PictureInPictureTag;
+    enum class ShowMediaStatsTag;
+
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)
+    using MenuItem = ContextMenuItem;
+#else
+    using MenuItem = MediaControlsContextMenuItem;
+#endif
+    using MenuItemIdentifier = uint64_t;
+
+    using MenuData = Variant<
+        std::monostate, // This must be the first alternative for the empty value of HashTraits
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+        PictureInPictureTag,
+#endif
+        Ref<AudioTrack>,
+        Ref<TextTrack>,
+        Ref<VTTCue>,
+        PlaybackSpeed,
+        ShowMediaStatsTag
+    >;
+    using MenuDataMap = HashMap<MenuItemIdentifier, MenuData>;
+
+    std::pair<Vector<MenuItem>, MenuDataMap> mediaControlsContextMenuItems(String&& optionsJSONString);
+#endif
+
+    Ref<HTMLMediaElement> protectedMediaElement() const;
+
+    WeakRef<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
     RefPtr<TextTrack> m_previouslySelectedTextTrack;
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
     RefPtr<VoidCallback> m_showMediaControlsContextMenuCallback;
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+
+    JSValueInWrappedObject m_controllerWrapper;
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(VIDEO)
-

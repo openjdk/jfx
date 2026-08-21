@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "AvailableLineWidthOverride.h"
-#include "BlockLayoutState.h"
+#include <WebCore/AvailableLineWidthOverride.h>
+#include <WebCore/BlockLayoutState.h>
 
 namespace WebCore {
 namespace Layout {
@@ -53,10 +53,16 @@ public:
     void setLegacyClampedLineIndex(size_t lineIndex) { m_legacyClampedLineIndex = lineIndex; }
     std::optional<size_t> legacyClampedLineIndex() const { return m_legacyClampedLineIndex; }
 
-    void setHyphenationLimitLines(size_t hyphenationLimitLines) { m_hyphenationLimitLines = hyphenationLimitLines; }
+    void setLineCount(size_t lineCount) { m_lineCount = lineCount; }
+    size_t lineCount() const { return m_lineCount; }
+
+    void setLineCountWithInlineContentIncludingNestedBlocks(size_t lineCount) { m_lineCountWithInlineContentIncludingNestedBlocks = lineCount; }
+    size_t lineCountWithInlineContentIncludingNestedBlocks() const { return m_lineCountWithInlineContentIncludingNestedBlocks; }
+
+    void setHyphenationLimitLines(size_t hyphenateLimitLines) { m_hyphenateLimitLines = hyphenateLimitLines; }
     void incrementSuccessiveHyphenatedLineCount() { ++m_successiveHyphenatedLineCount; }
     void resetSuccessiveHyphenatedLineCount() { m_successiveHyphenatedLineCount = 0; }
-    bool isHyphenationDisabled() const { return m_hyphenationLimitLines && *m_hyphenationLimitLines <= m_successiveHyphenatedLineCount; }
+    bool isHyphenationDisabled() const { return m_hyphenateLimitLines && *m_hyphenateLimitLines <= m_successiveHyphenatedLineCount; }
 
     void setFirstLineStartTrimForInitialLetter(InlineLayoutUnit trimmedThisMuch) { m_firstLineStartTrimForInitialLetter = trimmedThisMuch; }
     InlineLayoutUnit firstLineStartTrimForInitialLetter() const { return m_firstLineStartTrimForInitialLetter; }
@@ -64,9 +70,12 @@ public:
     void setInStandardsMode() { m_inStandardsMode = true; }
     bool inStandardsMode() const { return m_inStandardsMode; }
 
+    void setShouldShapeTextAcrossInlineBoxes() { m_shouldShapeTextAcrossInlineBoxes = true; }
+    bool shouldShapeTextAcrossInlineBoxes() const { return m_shouldShapeTextAcrossInlineBoxes; }
+
     // Integration codepath
-    void setNestedListMarkerOffsets(UncheckedKeyHashMap<const ElementBox*, LayoutUnit>&& nestedListMarkerOffsets) { m_nestedListMarkerOffsets = WTFMove(nestedListMarkerOffsets); }
-    LayoutUnit nestedListMarkerOffset(const ElementBox& listMarkerBox) const { return m_nestedListMarkerOffsets.get(&listMarkerBox); }
+    void setNestedListMarkerOffsets(HashMap<CheckedRef<const ElementBox>, LayoutUnit>&& nestedListMarkerOffsets) { m_nestedListMarkerOffsets = WTF::move(nestedListMarkerOffsets); }
+    LayoutUnit nestedListMarkerOffset(const ElementBox& listMarkerBox) const { return m_nestedListMarkerOffsets.get(listMarkerBox); }
     void setShouldNotSynthesizeInlineBlockBaseline() { m_shouldNotSynthesizeInlineBlockBaseline = true; }
     bool shouldNotSynthesizeInlineBlockBaseline() const { return m_shouldNotSynthesizeInlineBlockBaseline; }
 
@@ -76,13 +85,16 @@ private:
     InlineLayoutUnit m_clearGapAfterLastLine { 0.f };
     InlineLayoutUnit m_firstLineStartTrimForInitialLetter { 0.f };
     std::optional<size_t> m_legacyClampedLineIndex { };
-    std::optional<size_t> m_hyphenationLimitLines { };
+    std::optional<size_t> m_hyphenateLimitLines { };
     size_t m_successiveHyphenatedLineCount { 0 };
+    size_t m_lineCount { 0 }; // Note that this does not include lines from nested blocks and it does not include lines with no content either.
+    size_t m_lineCountWithInlineContentIncludingNestedBlocks { 0 };
     // FIXME: This is required by the integaration codepath.
-    UncheckedKeyHashMap<const ElementBox*, LayoutUnit> m_nestedListMarkerOffsets;
+    HashMap<CheckedRef<const ElementBox>, LayoutUnit> m_nestedListMarkerOffsets;
     AvailableLineWidthOverride m_availableLineWidthOverride;
     bool m_shouldNotSynthesizeInlineBlockBaseline { false };
     bool m_inStandardsMode { false };
+    bool m_shouldShapeTextAcrossInlineBoxes { false };
 };
 
 inline InlineLayoutState::InlineLayoutState(BlockLayoutState& parentBlockLayoutState)

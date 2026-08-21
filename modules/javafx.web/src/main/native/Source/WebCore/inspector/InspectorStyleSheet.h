@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2023, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,12 @@
 
 #include "CSSPropertySourceData.h"
 #include "CSSStyleDeclaration.h"
+#include "Settings.h"
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/JSONValues.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -143,11 +146,11 @@ private:
     Vector<String> longhandProperties(const String& shorthandProperty) const;
 
     InspectorCSSId m_styleId;
-    Ref<CSSStyleDeclaration> m_style;
-    InspectorStyleSheet* m_parentStyleSheet;
+    const Ref<CSSStyleDeclaration> m_style;
+    WeakPtr<InspectorStyleSheet> m_parentStyleSheet;
 };
 
-class InspectorStyleSheet : public RefCounted<InspectorStyleSheet> {
+class InspectorStyleSheet : public RefCountedAndCanMakeWeakPtr<InspectorStyleSheet> {
 public:
     class Listener {
     public:
@@ -156,7 +159,7 @@ public:
         virtual void styleSheetChanged(InspectorStyleSheet*) = 0;
     };
 
-    using StyleDeclarationOrCSSRule = std::variant<CSSStyleDeclaration*, CSSRule*>;
+    using StyleDeclarationOrCSSRule = Variant<CSSStyleDeclaration*, CSSRule*>;
 
     static Ref<InspectorStyleSheet> create(InspectorPageAgent*, const String& id, RefPtr<CSSStyleSheet>&& pageStyleSheet, Inspector::Protocol::CSS::StyleSheetOrigin, const String& documentURL, Listener*);
     static String styleSheetURL(CSSStyleSheet* pageStyleSheet);
@@ -222,7 +225,7 @@ private:
     Vector<Ref<CSSStyleRule>> cssStyleRulesSplitFromSameRule(CSSStyleRule&);
     Vector<const CSSSelector*> selectorsForCSSStyleRule(CSSStyleRule&);
 
-    InspectorPageAgent* m_pageAgent;
+    CheckedPtr<InspectorPageAgent> m_pageAgent;
     String m_id;
     RefPtr<CSSStyleSheet> m_pageStyleSheet;
     Inspector::Protocol::CSS::StyleSheetOrigin m_origin;
@@ -258,7 +261,7 @@ private:
     const String& elementStyleText() const;
     Ref<CSSRuleSourceData> ruleSourceData() const;
 
-    Ref<StyledElement> m_element;
+    const Ref<StyledElement> m_element;
     RefPtr<CSSRuleSourceData> m_ruleSourceData;
     RefPtr<InspectorStyle> m_inspectorStyle;
 

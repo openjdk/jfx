@@ -38,6 +38,7 @@
 #include "B3Width.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
@@ -53,9 +54,21 @@ class SIMDValue;
 class PhiChildren;
 class Procedure;
 
+// B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
+// ARM64 cannot encode anything bigger. The IsLegalOffset concept is then used on B3 Value
+// methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
+// to fail, instead of causing implementation-defined behavior (which often turns to exploit).
+// OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
+// isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
+// of B3 to force them to reason about the target's offset.
+template<typename Int>
+concept IsLegalOffset = std::signed_integral<Int> && sizeof(Int) <= sizeof(int32_t);
+
 class JS_EXPORT_PRIVATE Value {
-    WTF_MAKE_TZONE_ALLOCATED(Value);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Value);
 public:
+    using OffsetType = int32_t;
+
     static const char* const dumpPrefix;
 
     static bool accepts(Kind) { return true; }
@@ -213,6 +226,8 @@ public:
     virtual Value* addConstant(Procedure&, const Value* other) const;
     virtual Value* subConstant(Procedure&, const Value* other) const;
     virtual Value* mulConstant(Procedure&, const Value* other) const;
+    virtual Value* mulHighConstant(Procedure&, const Value* other) const;
+    virtual Value* uMulHighConstant(Procedure&, const Value* other) const;
     virtual Value* checkAddConstant(Procedure&, const Value* other) const;
     virtual Value* checkSubConstant(Procedure&, const Value* other) const;
     virtual Value* checkMulConstant(Procedure&, const Value* other) const;
@@ -343,21 +358,6 @@ public:
     template<typename Functor>
     void walk(const Functor& functor, PhiChildren* = nullptr);
 
-    // B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
-    // ARM64 cannot encode anything bigger. The IsLegalOffset type trait is then used on B3 Value
-    // methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
-    // to fail, instead of causing implementation-defined behavior (which often turns to exploit).
-    // OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
-    // isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
-    // of B3 to force them to reason about the target's offset.
-    typedef int32_t OffsetType;
-    template<typename Int>
-    struct IsLegalOffset {
-        static constexpr bool value = std::is_integral<Int>::value
-            && std::is_signed<Int>::value
-            && sizeof(Int) <= sizeof(OffsetType);
-    };
-
 protected:
     Value* cloneImpl() const;
 
@@ -480,6 +480,8 @@ protected:
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -530,6 +532,8 @@ protected:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -557,6 +561,8 @@ protected:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
         case VectorRelaxedLaneSelect:
+        case MemoryFill:
+        case MemoryCopy:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -582,7 +588,7 @@ private:
         // We must allocate enough space that replaceWithIdentity can work without buffer overflow.
         size_t allocIdentitySize = sizeof(Value) + sizeof(Value*);
         size_t allocSize = std::max(size + adjacencyListSpace, allocIdentitySize);
-        return static_cast<char*>(WTF::fastMalloc(allocSize));
+        return static_cast<char*>(SequesteredArenaMalloc::malloc(allocSize));
     }
 
 protected:
@@ -639,10 +645,10 @@ private:
             break;
         case Three:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
-            FALLTHROUGH;
+            [[fallthrough]];
         case Two:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
-            FALLTHROUGH;
+            [[fallthrough]];
         case One:
             std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
             break;
@@ -661,11 +667,11 @@ private:
         case Jump:
         case Oops:
         case EntrySwitch:
-            if (UNLIKELY(numArgs))
+            if (numArgs) [[unlikely]]
                 badKind(kind, numArgs);
             return Zero;
         case Return:
-            if (UNLIKELY(numArgs > 1))
+            if (numArgs > 1) [[unlikely]]
                 badKind(kind, numArgs);
             return numArgs ? One : Zero;
         case Identity:
@@ -717,12 +723,14 @@ private:
         case VectorExtaddPairwise:
         case VectorDupElement:
         case VectorRelaxedTruncSat:
-            if (UNLIKELY(numArgs != 1))
+            if (numArgs != 1) [[unlikely]]
                 badKind(kind, numArgs);
             return One;
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -764,6 +772,8 @@ private:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -783,7 +793,7 @@ private:
         case VectorShiftByVector:
         case VectorRelaxedSwizzle:
         case Stitch:
-            if (UNLIKELY(numArgs != 2))
+            if (numArgs != 2) [[unlikely]]
                 badKind(kind, numArgs);
             return Two;
         case Select:
@@ -791,7 +801,9 @@ private:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
         case VectorRelaxedLaneSelect:
-            if (UNLIKELY(numArgs != 3))
+        case MemoryCopy:
+        case MemoryFill:
+            if (numArgs != 3) [[unlikely]]
                 badKind(kind, numArgs);
             return Three;
         default:

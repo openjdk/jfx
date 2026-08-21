@@ -32,12 +32,12 @@
 #include "CAAudioStreamDescription.h"
 #include "CVUtilities.h"
 #include "ContentType.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
 #include "Logging.h"
 #include "MediaRecorderPrivateEncoder.h"
 #include "MediaStreamPrivate.h"
-#include "Quirks.h"
 #include "RealtimeIncomingVideoSourceCocoa.h"
+#include "Settings.h"
 #include "SharedBuffer.h"
 #include "VideoFrameCV.h"
 #include "WebAudioBufferList.h"
@@ -115,19 +115,22 @@ std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create
         return nullptr;
 
     auto recorder = std::unique_ptr<MediaRecorderPrivateAVFImpl>(new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
-    if (selectedTracks.audioTrack) {
-        recorder->setAudioSource(&selectedTracks.audioTrack->source());
-        recorder->checkTrackState(*selectedTracks.audioTrack);
+    if (RefPtr audioTrack = selectedTracks.audioTrack.get()) {
+        recorder->setAudioSource(&audioTrack->source());
+        recorder->checkTrackState(*audioTrack);
     }
-    if (selectedTracks.videoTrack) {
-        recorder->setVideoSource(&selectedTracks.videoTrack->source());
-        recorder->checkTrackState(*selectedTracks.videoTrack);
+    if (RefPtr videoTrack = selectedTracks.videoTrack.get()) {
+        Ref source = videoTrack->source();
+        if (recorder->shouldApplyVideoRotation())
+            source->setShouldApplyRotation();
+        recorder->setVideoSource(WTF::move(source));
+        recorder->checkTrackState(*videoTrack);
     }
     return recorder;
 }
 
 MediaRecorderPrivateAVFImpl::MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateEncoder>&& muxer)
-    : m_encoder(WTFMove(muxer))
+    : m_encoder(WTF::move(muxer))
 {
 }
 
@@ -145,11 +148,13 @@ void MediaRecorderPrivateAVFImpl::startRecording(StartRecordingCallback&& callba
 void MediaRecorderPrivateAVFImpl::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetadata)
 {
     if (shouldMuteVideo()) {
-        if (!m_blackFrame) {
+        RefPtr blackFrame = m_blackFrame;
+        if (!blackFrame) {
             auto size = videoFrame.presentationSize();
-            m_blackFrame = VideoFrameCV::create(videoFrame.presentationTime(), videoFrame.isMirrored(), videoFrame.rotation(), createBlackPixelBuffer(size.width(), size.height()));
+            blackFrame = VideoFrameCV::create(videoFrame.presentationTime(), videoFrame.isMirrored(), videoFrame.rotation(), createBlackPixelBuffer(size.width(), size.height()));
+            m_blackFrame = blackFrame.copyRef();
         }
-        m_encoder->appendVideoFrame(*m_blackFrame);
+        m_encoder->appendVideoFrame(*blackFrame);
         return;
     }
 
@@ -196,8 +201,8 @@ void MediaRecorderPrivateAVFImpl::resumeRecording(CompletionHandler<void()>&& co
 
 void MediaRecorderPrivateAVFImpl::fetchData(FetchDataCallback&& completionHandler)
 {
-    m_encoder->fetchData([completionHandler = WTFMove(completionHandler), mimeType = mimeType()](RefPtr<FragmentedSharedBuffer>&& buffer, auto timeCode) mutable {
-        completionHandler(WTFMove(buffer), mimeType, timeCode);
+    m_encoder->fetchData([completionHandler = WTF::move(completionHandler), mimeType = mimeType()](Ref<FragmentedSharedBuffer>&& buffer, auto timeCode) mutable {
+        completionHandler(WTF::move(buffer), mimeType, timeCode);
     });
 }
 

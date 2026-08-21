@@ -51,11 +51,11 @@ public:
 
     static Ref<DMABufBuffer> create(const IntSize& size, uint32_t fourcc, Vector<WTF::UnixFileDescriptor>&& fds, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier)
     {
-        return adoptRef(*new DMABufBuffer(size, fourcc, WTFMove(fds), WTFMove(offsets), WTFMove(strides), modifier));
+        return adoptRef(*new DMABufBuffer(size, fourcc, WTF::move(fds), WTF::move(offsets), WTF::move(strides), modifier));
     }
     static Ref<DMABufBuffer> create(uint64_t id, Attributes&& attributes)
     {
-        return adoptRef(*new DMABufBuffer(id, WTFMove(attributes)));
+        return adoptRef(*new DMABufBuffer(id, WTF::move(attributes)));
     }
     ~DMABufBuffer();
 
@@ -63,9 +63,13 @@ public:
     const Attributes& attributes() const { return m_attributes; }
     std::optional<Attributes> takeAttributes();
 
-    enum class ColorSpace : uint8_t { BT601, BT709, BT2020, SMPTE240M };
+    enum class ColorSpace : uint8_t { Bt601, Bt709, Bt2020, Smpte240M };
     std::optional<ColorSpace> colorSpace() const { return m_colorSpace; }
     void setColorSpace(ColorSpace colorSpace) { m_colorSpace = colorSpace; }
+
+    enum class TransferFunction : uint8_t { Bt709, Pq };
+    std::optional<TransferFunction> transferFunction() const { return m_transferFunction; }
+    void setTransferFunction(TransferFunction transferFunction) { m_transferFunction = transferFunction; }
 
     CoordinatedPlatformLayerBuffer* buffer() const { return m_buffer.get(); }
     void setBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
@@ -77,6 +81,7 @@ private:
     uint64_t m_id { 0 };
     Attributes m_attributes;
     std::optional<ColorSpace> m_colorSpace;
+    std::optional<TransferFunction> m_transferFunction;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_buffer;
 };
 

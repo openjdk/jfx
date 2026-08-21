@@ -26,13 +26,8 @@
 
 #include "Node.h"
 #include "XSLStyleSheet.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/parserInternals.h>
 #include <libxslt/documents.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 
@@ -47,14 +42,14 @@ public:
     static Ref<XSLTProcessor> create() { return adoptRef(*new XSLTProcessor); }
     ~XSLTProcessor();
 
-    void setXSLStyleSheet(RefPtr<XSLStyleSheet>&& styleSheet) { m_stylesheet = WTFMove(styleSheet); }
+    void setXSLStyleSheet(RefPtr<XSLStyleSheet>&& styleSheet) { m_stylesheet = WTF::move(styleSheet); }
     bool transformToString(Node& source, String& resultMIMEType, String& resultString, String& resultEncoding);
     Ref<Document> createDocumentFromSource(const String& source, const String& sourceEncoding, const String& sourceMIMEType, Node* sourceNode, LocalFrame*);
 
     // DOM methods
     void importStylesheet(Ref<Node>&& style)
     {
-        m_stylesheetRootNode = WTFMove(style);
+        m_stylesheetRootNode = WTF::move(style);
     }
     RefPtr<DocumentFragment> transformToFragment(Node& source, Document& ouputDocument);
     RefPtr<Document> transformToDocument(Node& source);

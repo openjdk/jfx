@@ -28,12 +28,12 @@
 #include "ComputedEffectTiming.h"
 #include "InspectorWebAgentBase.h"
 #include "Timer.h"
+#include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 
@@ -60,7 +60,7 @@ public:
     ~InspectorAnimationAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // AnimationBackendDispatcherHandler
@@ -93,13 +93,15 @@ private:
 
     void stopTrackingStyleOriginatedAnimation(StyleOriginatedAnimation&);
 
-    std::unique_ptr<Inspector::AnimationFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::AnimationBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::AnimationFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::AnimationBackendDispatcher> m_backendDispatcher;
 
     Inspector::InjectedScriptManager& m_injectedScriptManager;
     WeakRef<Page> m_inspectedPage;
 
-    MemoryCompactRobinHoodHashMap<Inspector::Protocol::Animation::AnimationId, WebAnimation*> m_animationIdMap;
+    // FIXME <https://webkit.org/b/303593>: Animation should not be destroyed before notifying this agent to unbind it.
+    // The value type should be WeakRef or CheckedRef instead.
+    HashMap<Inspector::Protocol::Animation::AnimationId, WeakPtr<WebAnimation, WeakPtrImplWithEventTargetData>> m_animationIdMap;
 
     WeakHashMap<WebAnimation, Ref<Inspector::Protocol::Console::StackTrace>, WeakPtrImplWithEventTargetData> m_animationsPendingBinding;
     Timer m_animationBindingTimer;
@@ -108,7 +110,7 @@ private:
     Timer m_animationDestroyedTimer;
 
     struct TrackedStyleOriginatedAnimationData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(TrackedStyleOriginatedAnimationData);
         Inspector::Protocol::Animation::AnimationId trackingAnimationId;
         ComputedEffectTiming lastComputedTiming;
     };

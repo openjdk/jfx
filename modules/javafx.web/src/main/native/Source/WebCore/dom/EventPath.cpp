@@ -21,18 +21,21 @@
 #include "config.h"
 #include "EventPath.h"
 
+#include "ContainerNodeInlines.h"
+#include "DocumentFullscreen.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "EventContext.h"
 #include "EventNames.h"
-#include "FullscreenManager.h"
+#include "FocusEvent.h"
 #include "HTMLSlotElement.h"
 #include "LocalDOMWindow.h"
 #include "MouseEvent.h"
-#include "Node.h"
+#include "NodeInlines.h"
 #include "PseudoElement.h"
 #include "ShadowRoot.h"
 #include "TouchEvent.h"
+#include "TreeScopeInlines.h"
 #include <wtf/CheckedPtr.h>
 
 namespace WebCore {
@@ -63,9 +66,9 @@ private:
 
     void checkConsistency(Node& currentTarget);
 
-    Ref<Node> m_relatedNode;
+    const Ref<Node> m_relatedNode;
     RefPtr<Node> m_retargetedRelatedNode;
-    Vector<RefPtr<TreeScope>, 8> m_ancestorTreeScopes;
+    Vector<Ref<TreeScope>, 8> m_ancestorTreeScopes;
     unsigned m_lowestCommonAncestorIndex { 0 };
     bool m_hasDifferentTreeRoot { false };
 };
@@ -86,7 +89,7 @@ EventPath::EventPath(Node& originalTarget, Event& event)
 void EventPath::buildPath(Node& originalTarget, Event& event)
 {
     EventContext::Type contextType = [&]() {
-        if (is<MouseEvent>(event) || event.isFocusEvent())
+        if (is<MouseEvent>(event) || is<FocusEvent>(event))
             return EventContext::Type::MouseOrFocus;
 #if ENABLE(TOUCH_EVENTS)
         if (is<TouchEvent>(event))
@@ -106,32 +109,32 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
             m_path.append(EventContext { contextType, *node, eventTargetRespectingTargetRules(*node), target.get(), closedShadowDepth });
 
             if (RefPtr maybeShadowRoot = dynamicDowncast<ShadowRoot>(*node)) {
-                shadowRoot = WTFMove(maybeShadowRoot);
+                shadowRoot = WTF::move(maybeShadowRoot);
                 break;
             }
 
             RefPtr parent = node->parentNode();
-            if (UNLIKELY(!parent)) {
+            if (!parent) [[unlikely]] {
                 // https://dom.spec.whatwg.org/#interface-document
                 if (auto* document = dynamicDowncast<Document>(*node); document && event.type() != eventNames().loadEvent) {
                     ASSERT(target);
                     if (target) {
-                        if (RefPtr window = document->domWindow())
+                        if (RefPtr window = document->window())
                             m_path.append(EventContext { EventContext::Type::Window, node.get(), window.get(), target.get(), closedShadowDepth });
                     }
                 }
                 return;
             }
 
-            if (RefPtr shadowRootOfParent = parent->shadowRoot(); UNLIKELY(shadowRootOfParent)) {
+            if (RefPtr shadowRootOfParent = parent->shadowRoot(); shadowRootOfParent) [[unlikely]] {
                 if (RefPtr assignedSlot = shadowRootOfParent->findAssignedSlot(*node)) {
                     if (shadowRootOfParent->mode() != ShadowRootMode::Open)
                         closedShadowDepth++;
                     // node is assigned to a slot. Continue dispatching the event at this slot.
-                    parent = WTFMove(assignedSlot);
+                    parent = WTF::move(assignedSlot);
                 }
             }
-            node = WTFMove(parent);
+            node = WTF::move(parent);
         }
 
         bool exitingShadowTreeOfTarget = &target->treeScope() == &node->treeScope();
@@ -165,23 +168,23 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
 
         Ref currentTarget = *context.node();
         Ref currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+        if (previousTreeScope && currentTreeScope.ptr() != previousTreeScope) [[unlikely]]
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         RefPtr currentRelatedNode = retargeter.currentNode(currentTarget);
-        if (UNLIKELY(!originIsRelatedTarget && context.target() == currentRelatedNode)) {
+        if (!originIsRelatedTarget && context.target() == currentRelatedNode) [[unlikely]] {
             m_path.shrink(contextIndex);
             break;
         }
 
-        context.setRelatedTarget(WTFMove(currentRelatedNode));
+        context.setRelatedTarget(WTF::move(currentRelatedNode));
 
-        if (UNLIKELY(originIsRelatedTarget && context.node() == rootNodeInOriginTreeScope.ptr())) {
+        if (originIsRelatedTarget && context.node() == rootNodeInOriginTreeScope.ptr()) [[unlikely]] {
             m_path.shrink(contextIndex + 1);
             break;
         }
 
-        previousTreeScope = WTFMove(currentTreeScope);
+        previousTreeScope = WTF::move(currentTreeScope);
     }
 }
 
@@ -209,7 +212,7 @@ void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& tou
     for (auto& context : m_path) {
         Ref currentTarget = *context.node();
         Ref currentTreeScope = currentTarget->treeScope();
-        if (UNLIKELY(previousTreeScope && currentTreeScope.ptr() != previousTreeScope))
+        if (previousTreeScope && currentTreeScope.ptr() != previousTreeScope) [[unlikely]]
             retargeter.moveToNewTreeScope(previousTreeScope.get(), currentTreeScope);
 
         if (context.isTouchEventContext()) {
@@ -218,7 +221,7 @@ void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& tou
         } else
             ASSERT(context.isWindowContext());
 
-        previousTreeScope = WTFMove(currentTreeScope);
+        previousTreeScope = WTF::move(currentTreeScope);
     }
 }
 
@@ -279,9 +282,23 @@ Vector<Ref<EventTarget>> EventPath::computePathUnclosedToTarget(const EventTarge
     return path;
 }
 
-EventPath::EventPath(const Vector<EventTarget*>& targets)
+Vector<Ref<EventTarget>> EventPath::computePathTreatingAllShadowRootsAsOpen() const
 {
-    m_path = targets.map([&](auto* target) {
+    Vector<Ref<EventTarget>> path;
+    auto pathSize = m_path.size();
+    RELEASE_ASSERT(pathSize);
+    path.reserveInitialCapacity(pathSize);
+    for (auto& currentContext : m_path) {
+        if (auto* currentNode = currentContext.node(); currentNode && currentNode->hasBeenInUserAgentShadowTree())
+            continue;
+        path.append(*currentContext.currentTarget());
+    }
+    return path;
+}
+
+EventPath::EventPath(std::span<EventTarget* const> targets)
+{
+    m_path = WTF::map(targets, [&](auto* target) {
         ASSERT(target);
         ASSERT(!is<Node>(target));
         return EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 };
@@ -302,12 +319,12 @@ static Node* moveOutOfAllShadowRoots(Node& startingNode)
 }
 
 RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& target)
-    : m_relatedNode(WTFMove(relatedNode))
+    : m_relatedNode(WTF::move(relatedNode))
     , m_retargetedRelatedNode(m_relatedNode.copyRef())
 {
     auto& targetTreeScope = target.treeScope();
-    RefPtr currentTreeScope = &m_relatedNode->treeScope();
-    if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
+    RefPtr currentTreeScope = m_relatedNode->treeScope();
+    if (currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()) [[likely]]
         return;
 
     if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()
@@ -332,8 +349,8 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Ref<Node>&& relatedNode, Node& targ
 
     unsigned i = m_ancestorTreeScopes.size();
     unsigned j = targetTreeScopeAncestors.size();
-    ASSERT_WITH_SECURITY_IMPLICATION(m_ancestorTreeScopes.last() == targetTreeScopeAncestors.last().ptr());
-    while (m_ancestorTreeScopes[i - 1] == targetTreeScopeAncestors[j - 1].ptr()) {
+    ASSERT_WITH_SECURITY_IMPLICATION(m_ancestorTreeScopes.last().ptr() == targetTreeScopeAncestors.last().ptr());
+    while (m_ancestorTreeScopes[i - 1].ptr() == targetTreeScopeAncestors[j - 1].ptr()) {
         i--;
         j--;
         if (!i || !j)
@@ -378,7 +395,7 @@ void RelatedNodeRetargeter::moveToNewTreeScope(TreeScope* previousTreeScope, Tre
         if (m_lowestCommonAncestorIndex) {
             if (m_ancestorTreeScopes.isEmpty())
                 collectTreeScopes();
-            bool relatedNodeIsInSlot = m_ancestorTreeScopes[m_lowestCommonAncestorIndex - 1] == &newTreeScope;
+            bool relatedNodeIsInSlot = m_ancestorTreeScopes[m_lowestCommonAncestorIndex - 1].ptr() == &newTreeScope;
             if (relatedNodeIsInSlot) {
                 m_lowestCommonAncestorIndex--;
                 m_retargetedRelatedNode = nodeInLowestCommonAncestor();
@@ -406,8 +423,8 @@ inline Node* RelatedNodeRetargeter::nodeInLowestCommonAncestor()
 void RelatedNodeRetargeter::collectTreeScopes()
 {
     ASSERT(m_ancestorTreeScopes.isEmpty());
-    for (TreeScope* currentTreeScope = &m_relatedNode->treeScope(); currentTreeScope; currentTreeScope = currentTreeScope->parentTreeScope())
-        m_ancestorTreeScopes.append(currentTreeScope);
+    for (auto* currentTreeScope = &m_relatedNode->treeScope(); currentTreeScope; currentTreeScope = currentTreeScope->parentTreeScope())
+        m_ancestorTreeScopes.append(*currentTreeScope);
     ASSERT_WITH_SECURITY_IMPLICATION(!m_ancestorTreeScopes.isEmpty());
 }
 

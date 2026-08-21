@@ -103,7 +103,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     unsigned asyncOffset = isAsyncFunction ? strlen("async ") : 0;
     unsigned parametersStart = strlen("function (") + asyncOffset;
     unsigned startColumn = parametersStart;
-    int functionKeywordStart = strlen("(") + asyncOffset;
+    int functionKeywordStart = strlen("(");
     int functionNameStart = parametersStart;
     bool isInStrictContext = false;
     bool isArrowFunctionBodyExpression = false;
@@ -128,7 +128,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
                 continue;
             } else if (characters[i] == ',')
                 ++commas;
-            else if (!Lexer<LChar>::isWhiteSpace(characters[i]))
+            else if (!Lexer<Latin1Character>::isWhiteSpace(characters[i]))
                 sawOneParam = true;
 
             if (i + 2 < view.length() && characters[i] == '.' && characters[i + 1] == '.' && characters[i + 2] == '.') {
@@ -218,7 +218,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     metadata.overrideName(name);
     metadata.setEndPosition(positionBeforeLastNewline);
 
-    if (UNLIKELY(ASSERT_ENABLED || Options::validateBytecode())) {
+    if (ASSERT_ENABLED || Options::validateBytecode()) [[unlikely]] {
         JSTextPosition positionBeforeLastNewlineFromParser;
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
@@ -281,7 +281,7 @@ DEFINE_VISIT_AGGREGATE(BuiltinExecutables);
 
 void BuiltinExecutables::clear()
 {
-    std::fill(std::begin(m_unlinkedExecutables), std::end(m_unlinkedExecutables), nullptr);
+    std::ranges::fill(m_unlinkedExecutables, nullptr);
 }
 
 #define DEFINE_BUILTIN_EXECUTABLES(name, functionName, overrideName, length) \

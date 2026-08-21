@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "IDBActiveDOMObject.h"
-#include "IDBConnectionProxy.h"
-#include "IDBDatabaseConnectionIdentifier.h"
-#include "IDBDatabaseInfo.h"
-#include "IDBKeyPath.h"
-#include "IDBTransactionMode.h"
+#include <WebCore/EventNames.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDBActiveDOMObject.h>
+#include <WebCore/IDBConnectionProxy.h>
+#include <WebCore/IDBDatabaseConnectionIdentifier.h>
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/IDBTransactionMode.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
@@ -46,7 +48,7 @@ class IDBTransactionInfo;
 struct EventNames;
 
 class IDBDatabase final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<IDBDatabase>, public EventTarget, public IDBActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBDatabase);
+    WTF_MAKE_TZONE_ALLOCATED(IDBDatabase);
 public:
     static Ref<IDBDatabase> create(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBResultData&);
 
@@ -64,7 +66,7 @@ public:
 
     ExceptionOr<Ref<IDBObjectStore>> createObjectStore(const String& name, ObjectStoreParameters&&);
 
-    using StringOrVectorOfStrings = std::variant<String, Vector<String>>;
+    using StringOrVectorOfStrings = Variant<String, Vector<String>>;
     struct TransactionOptions {
         std::optional<IDBTransactionDurability> durability;
     };
@@ -77,7 +79,7 @@ public:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::IDBDatabase; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void derefEventTarget() final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
@@ -87,6 +89,7 @@ public:
 
     IDBDatabaseInfo& info() { return m_info; }
     IDBDatabaseConnectionIdentifier databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
+    std::optional<ScriptExecutionContextIdentifier> scriptExecutionContextIdentifier() const;
 
     Ref<IDBTransaction> startVersionChangeTransaction(const IDBTransactionInfo&, IDBOpenDBRequest&);
     void didStartTransaction(IDBTransaction&);
@@ -123,7 +126,9 @@ private:
 
     void maybeCloseInServer();
 
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    RefPtr<IDBTransaction> protectedVersionChangeTransaction() const;
+
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
     IDBDatabaseInfo m_info;
     IDBDatabaseConnectionIdentifier m_databaseConnectionIdentifier;
 
@@ -131,12 +136,14 @@ private:
     bool m_closedInServer { false };
 
     RefPtr<IDBTransaction> m_versionChangeTransaction;
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_activeTransactions;
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_committingTransactions;
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_abortingTransactions;
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_activeTransactions;
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_committingTransactions;
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_abortingTransactions;
 
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
     std::atomic<bool> m_isContextSuspended { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(IDBDatabase)

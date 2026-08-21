@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class CSSPaintImageValue final : public CSSValue {
 public:
     static Ref<CSSPaintImageValue> create(String name, Ref<CSSVariableData> arguments)
     {
-        return adoptRef(*new CSSPaintImageValue(WTFMove(name), WTFMove(arguments)));
+        return adoptRef(*new CSSPaintImageValue(WTF::move(name), WTF::move(arguments)));
     }
     ~CSSPaintImageValue();
 
@@ -57,7 +57,7 @@ private:
     explicit CSSPaintImageValue(String&&, Ref<CSSVariableData>&&);
 
     String m_name;
-    Ref<CSSVariableData> m_arguments;
+    const Ref<CSSVariableData> m_arguments;
 };
 
 } // namespace WebCore

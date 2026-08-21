@@ -26,11 +26,15 @@
 #include "config.h"
 #include "ImageQualityController.h"
 
+#include "DocumentView.h"
+#include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "RenderBoxModelObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -78,14 +82,14 @@ void ImageQualityController::removeObject(RenderBoxModelObject* object)
 
 void ImageQualityController::highQualityRepaintTimerFired()
 {
-    if (m_renderView.renderTreeBeingDestroyed())
+    if (m_renderView->renderTreeBeingDestroyed())
         return;
     if (!m_animatedResizeIsActive && !m_liveResizeOptimizationIsActive)
         return;
     m_animatedResizeIsActive = false;
 
     // If the FrameView is in live resize, punt the timer and hold back for now.
-    if (m_renderView.frameView().inLiveResize()) {
+    if (m_renderView->frameView().inLiveResize()) {
         restartTimer();
         return;
     }
@@ -115,6 +119,18 @@ std::optional<InterpolationQuality> ImageQualityController::interpolationQuality
         break;
     }
     return std::nullopt;
+}
+
+InterpolationQuality ImageQualityController::chooseInterpolationQualityForSVG(GraphicsContext& context, const RenderElement& renderElement, Image& image)
+{
+    // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
+    if (!(image.isBitmapImage() || image.isPDFDocumentImage()) || context.paintingDisabled())
+        return InterpolationQuality::Default;
+
+    if (auto styleInterpolation = interpolationQualityFromStyle(renderElement.style()))
+        return *styleInterpolation;
+
+    return InterpolationQuality::Default;
 }
 
 InterpolationQuality ImageQualityController::chooseInterpolationQuality(GraphicsContext& context, RenderBoxModelObject* object, Image& image, const void* layer, const LayoutSize& size)
@@ -164,7 +180,7 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
     }
 
     // There is no need to hash scaled images that always use low quality mode when the page demands it. This is the iChat case.
-    if (m_renderView.page().inLowQualityImageInterpolationMode()) {
+    if (m_renderView->page().inLowQualityImageInterpolationMode()) {
         double totalPixels = static_cast<double>(image.width()) * static_cast<double>(image.height());
         if (totalPixels > cInterpolationCutoff)
             return InterpolationQuality::Low;

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,7 +39,7 @@ enum class CompositeOperationType : uint8_t {
 };
 
 class FEComposite final : public FilterEffect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEComposite);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEComposite);
 public:
     WEBCORE_EXPORT static Ref<FEComposite> create(const CompositeOperationType&, float k1, float k2, float k3, float k4, DestinationColorSpace = DestinationColorSpace::SRGB());
@@ -72,6 +72,8 @@ private:
 
     bool resultIsValidPremultiplied() const override { return m_type != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC; }
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

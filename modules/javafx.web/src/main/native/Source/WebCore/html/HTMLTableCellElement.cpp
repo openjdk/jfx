@@ -27,17 +27,20 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
+#include "RenderElementInlines.h"
 #include "RenderTableCell.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableCellElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableCellElement);
 
 using namespace HTMLNames;
 
@@ -190,29 +193,29 @@ const AtomString& HTMLTableCellElement::scope() const
     return emptyAtom();
 }
 
-void HTMLTableCellElement::setScope(const AtomString& scope)
-{
-    setAttributeWithoutSynchronization(scopeAttr, scope);
-}
-
 void HTMLTableCellElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLTablePartElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(backgroundAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(backgroundAttr)));
 }
 
 HTMLTableCellElement* HTMLTableCellElement::cellAbove() const
 {
-    auto* tableCellRenderer = dynamicDowncast<RenderTableCell>(renderer());
+    CheckedPtr tableCellRenderer = dynamicDowncast<RenderTableCell>(renderer());
     if (!tableCellRenderer)
         return nullptr;
 
-    auto* cellAboveRenderer = tableCellRenderer->table()->cellAbove(tableCellRenderer);
+    CheckedPtr cellAboveRenderer = tableCellRenderer->checkedTable()->cellAbove(tableCellRenderer.get());
     if (!cellAboveRenderer)
         return nullptr;
 
     return downcast<HTMLTableCellElement>(cellAboveRenderer->element());
+}
+
+RefPtr<HTMLTableCellElement> HTMLTableCellElement::protectedCellAbove() const
+{
+    return cellAbove();
 }
 
 } // namespace WebCore

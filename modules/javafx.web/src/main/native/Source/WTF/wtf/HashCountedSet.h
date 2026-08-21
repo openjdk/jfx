@@ -15,7 +15,6 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -30,7 +29,7 @@ namespace WTF {
 
 template<typename Value, typename HashFunctions, typename Traits>
 class HashCountedSet final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(HashCountedSet);
 private:
     using ImplType = HashMap<Value, unsigned, HashFunctions, Traits>;
 public:
@@ -64,31 +63,31 @@ public:
     bool isEmpty() const;
 
     // Iterators iterate over pairs of values and counts.
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() LIFETIME_BOUND;
+    iterator end() LIFETIME_BOUND;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
 
-    iterator random() { return m_impl.random(); }
-    const_iterator random() const { return m_impl.random(); }
+    iterator random() LIFETIME_BOUND { return m_impl.random(); }
+    const_iterator random() const LIFETIME_BOUND { return m_impl.random(); }
 
-    ValuesIteratorRange values();
-    const ValuesConstIteratorRange values() const;
+    ValuesIteratorRange values() LIFETIME_BOUND;
+    const ValuesConstIteratorRange values() const LIFETIME_BOUND;
 
-    iterator find(const ValueType&);
-    const_iterator find(const ValueType&) const;
+    iterator find(const ValueType&) LIFETIME_BOUND;
+    const_iterator find(const ValueType&) const LIFETIME_BOUND;
     bool contains(const ValueType&) const;
     unsigned count(const ValueType&) const;
 
     // Increments the count if an equal value is already present.
     // The return value includes both an iterator to the value's location,
     // and an isNewEntry bool that indicates whether it is a new or existing entry.
-    AddResult add(const ValueType&);
-    AddResult add(ValueType&&);
+    AddResult add(const ValueType&) LIFETIME_BOUND;
+    AddResult add(ValueType&&) LIFETIME_BOUND;
 
     // Increments the count of a value by the passed amount.
-    AddResult add(const ValueType&, unsigned);
-    AddResult add(ValueType&&, unsigned);
+    AddResult add(const ValueType&, unsigned) LIFETIME_BOUND;
+    AddResult add(ValueType&&, unsigned) LIFETIME_BOUND;
 
     // Decrements the count of the value, and removes it if count goes down to zero.
     // Returns true if the value is removed.
@@ -107,18 +106,28 @@ public:
     void clear();
 
     // Overloads for smart pointer keys that take the raw pointer type as the parameter.
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, const_iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, bool>::type contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, unsigned>::type count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value, bool>::type remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
+    template<SmartPtr V = ValueType>
+    iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) LIFETIME_BOUND;
+    template<SmartPtr V = ValueType>
+    const_iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const LIFETIME_BOUND;
+    template<SmartPtr V = ValueType>
+    bool contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
+    template<SmartPtr V = ValueType>
+    unsigned count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*) const;
+    template<SmartPtr V = ValueType>
+    bool remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>*);
 
     // Overloads for non-nullable smart pointer values that take the raw reference type as the parameter.
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, const_iterator>::type find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, unsigned>::type count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
-    template<typename V = ValueType> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
+    template<NonNullableSmartPtr V = ValueType>
+    iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) LIFETIME_BOUND;
+    template<NonNullableSmartPtr V = ValueType>
+    const_iterator find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const LIFETIME_BOUND;
+    template<NonNullableSmartPtr V = ValueType>
+    bool contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
+    template<NonNullableSmartPtr V = ValueType>
+    unsigned count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&) const;
+    template<NonNullableSmartPtr V = ValueType>
+    bool remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>&);
 
     static bool isValidValue(const ValueType&);
 
@@ -152,49 +161,49 @@ inline bool HashCountedSet<Value, HashFunctions, Traits>::isEmpty() const
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::begin() -> iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::begin() LIFETIME_BOUND -> iterator
 {
     return m_impl.begin();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::end() -> iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::end() LIFETIME_BOUND -> iterator
 {
     return m_impl.end();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::begin() const -> const_iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::begin() const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.begin();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::end() const -> const_iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::end() const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.end();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::values() -> ValuesIteratorRange
+inline auto HashCountedSet<Value, HashFunctions, Traits>::values() LIFETIME_BOUND -> ValuesIteratorRange
 {
     return m_impl.keys();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::values() const -> const ValuesConstIteratorRange
+inline auto HashCountedSet<Value, HashFunctions, Traits>::values() const LIFETIME_BOUND -> const ValuesConstIteratorRange
 {
     return m_impl.keys();
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(const ValueType& value) -> iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(const ValueType& value) LIFETIME_BOUND -> iterator
 {
     return m_impl.find(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(const ValueType& value) const -> const_iterator
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(const ValueType& value) const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.find(value);
 }
@@ -212,7 +221,7 @@ inline unsigned HashCountedSet<Value, HashFunctions, Traits>::count(const ValueT
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType &value) -> AddResult
+inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType &value) LIFETIME_BOUND -> AddResult
 {
     auto result = m_impl.add(value, 0);
     ++result.iterator->value;
@@ -220,7 +229,7 @@ inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType &v
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::add(ValueType&& value) -> AddResult
+inline auto HashCountedSet<Value, HashFunctions, Traits>::add(ValueType&& value) LIFETIME_BOUND -> AddResult
 {
     auto result = m_impl.add(std::forward<Value>(value), 0);
     ++result.iterator->value;
@@ -228,7 +237,7 @@ inline auto HashCountedSet<Value, HashFunctions, Traits>::add(ValueType&& value)
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType& value, unsigned count) -> AddResult
+inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType& value, unsigned count) LIFETIME_BOUND -> AddResult
 {
     auto result = m_impl.add(value, 0);
     result.iterator->value += count;
@@ -236,7 +245,7 @@ inline auto HashCountedSet<Value, HashFunctions, Traits>::add(const ValueType& v
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::add(ValueType&& value, unsigned count) -> AddResult
+inline auto HashCountedSet<Value, HashFunctions, Traits>::add(ValueType&& value, unsigned count) LIFETIME_BOUND -> AddResult
 {
     auto result = m_impl.add(std::forward<Value>(value), 0);
     result.iterator->value += count;
@@ -313,71 +322,71 @@ inline bool HashCountedSet<Value, HashFunctions, Traits>::isValidValue(const Val
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
+template<SmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) LIFETIME_BOUND -> iterator
 {
     return m_impl.find(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, const_iterator>::type
+template<SmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const LIFETIME_BOUND -> const_iterator
 {
     return m_impl.find(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+template<SmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> bool
 {
     return m_impl.contains(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, unsigned>::type
+template<SmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> unsigned
 {
     return m_impl.get(value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+template<SmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> bool
 {
     return remove(find(value));
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type
+template<NonNullableSmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) LIFETIME_BOUND -> iterator
 {
     return find(&value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, const_iterator>::type
+template<NonNullableSmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const LIFETIME_BOUND -> const_iterator
 {
     return find(&value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
+template<NonNullableSmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> bool
 {
     return contains(&value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, unsigned>::type
+template<NonNullableSmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::count(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> unsigned
 {
     return count(&value);
 }
 
 template<typename Value, typename HashFunctions, typename Traits>
-template<typename V>
-inline auto HashCountedSet<Value, HashFunctions, Traits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
+template<NonNullableSmartPtr V>
+inline auto HashCountedSet<Value, HashFunctions, Traits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> bool
 {
     return remove(&value);
 }

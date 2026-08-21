@@ -40,6 +40,7 @@ namespace WebCore {
 
 class WorkerConsoleClient final : public JSC::ConsoleClient {
     WTF_MAKE_TZONE_ALLOCATED(WorkerConsoleClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerConsoleClient);
 public:
     explicit WorkerConsoleClient(WorkerOrWorkletGlobalScope&);
     virtual ~WorkerConsoleClient();
@@ -59,7 +60,9 @@ private:
     void recordEnd(JSC::JSGlobalObject*, Ref<Inspector::ScriptArguments>&&) override;
     void screenshot(JSC::JSGlobalObject*, Ref<Inspector::ScriptArguments>&&) override;
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    Ref<WorkerOrWorkletGlobalScope> protectedGlobalScope();
+
+    WeakRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

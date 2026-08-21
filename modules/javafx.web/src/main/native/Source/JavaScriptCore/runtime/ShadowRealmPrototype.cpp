@@ -110,7 +110,7 @@ JSC_DEFINE_HOST_FUNCTION(evalInRealm, (JSGlobalObject* globalObject, CallFrame* 
         JSValue error = executableError.get();
         ErrorInstance* errorInstance = jsDynamicCast<ErrorInstance*>(error);
         if (errorInstance != nullptr && errorInstance->errorType() == ErrorType::SyntaxError) {
-            scope.clearException();
+            TRY_CLEAR_EXCEPTION(scope, { });
             const String syntaxErrorMessage = errorInstance->sanitizedMessageString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
             return throwVMError(globalObject, scope, createSyntaxError(globalObject, syntaxErrorMessage));
@@ -122,10 +122,10 @@ JSC_DEFINE_HOST_FUNCTION(evalInRealm, (JSGlobalObject* globalObject, CallFrame* 
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue result = vm.interpreter.executeEval(eval, realmGlobalObject->globalThis(), realmGlobalObject->globalScope());
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         NakedPtr<Exception> exception = scope.exception();
         JSValue error = exception->value();
-        scope.clearException();
+        TRY_CLEAR_EXCEPTION(scope, { });
         auto typeError = createTypeErrorCopy(globalObject, error);
         RETURN_IF_EXCEPTION(scope, { });
         return throwVMError(globalObject, scope, typeError);

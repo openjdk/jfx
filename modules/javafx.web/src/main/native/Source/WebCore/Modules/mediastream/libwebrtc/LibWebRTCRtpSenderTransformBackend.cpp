@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,11 +24,12 @@
 
 #include "config.h"
 #include "LibWebRTCRtpSenderTransformBackend.h"
-#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "EventTarget.h"
 #include "LibWebRTCRtpTransformableFrame.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -36,12 +37,12 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpSenderTransformBackend);
 
 static inline LibWebRTCRtpSenderTransformBackend::MediaType mediaTypeFromSender(const webrtc::RtpSenderInterface& sender)
 {
-    return sender.media_type() == cricket::MEDIA_TYPE_AUDIO ? RTCRtpTransformBackend::MediaType::Audio : RTCRtpTransformBackend::MediaType::Video;
+    return sender.media_type() == webrtc::MediaType::AUDIO ? RTCRtpTransformBackend::MediaType::Audio : RTCRtpTransformBackend::MediaType::Video;
 }
 
-LibWebRTCRtpSenderTransformBackend::LibWebRTCRtpSenderTransformBackend(rtc::scoped_refptr<webrtc::RtpSenderInterface> rtcSender)
-    : LibWebRTCRtpTransformBackend(mediaTypeFromSender(*rtcSender), Side::Sender)
-    , m_rtcSender(WTFMove(rtcSender))
+LibWebRTCRtpSenderTransformBackend::LibWebRTCRtpSenderTransformBackend(Ref<webrtc::RtpSenderInterface>&& rtcSender)
+    : LibWebRTCRtpTransformBackend(mediaTypeFromSender(rtcSender), Side::Sender)
+    , m_rtcSender(WTF::move(rtcSender))
 {
 }
 
@@ -51,18 +52,21 @@ LibWebRTCRtpSenderTransformBackend::~LibWebRTCRtpSenderTransformBackend()
 
 void LibWebRTCRtpSenderTransformBackend::setTransformableFrameCallback(Callback&& callback)
 {
-    setInputCallback(WTFMove(callback));
+    setInputCallback(WTF::move(callback));
     if (m_isRegistered)
         return;
 
     m_isRegistered = true;
-    m_rtcSender->SetEncoderToPacketizerFrameTransformer(rtc::scoped_refptr<webrtc::FrameTransformerInterface>(this));
+    m_rtcSender->SetFrameTransformer(webrtc::scoped_refptr<webrtc::FrameTransformerInterface>(this));
 }
 
-void LibWebRTCRtpSenderTransformBackend::requestKeyFrame()
+bool LibWebRTCRtpSenderTransformBackend::requestKeyFrame(const String& rid)
 {
+    std::vector<std::string> rtcRids;
+    if (!rid.isEmpty())
+        rtcRids.push_back(rid.utf8().toStdString());
     ASSERT(mediaType() == MediaType::Video);
-    m_rtcSender->GenerateKeyFrame({ });
+    return m_rtcSender->GenerateKeyFrame(rtcRids).ok();
 }
 
 } // namespace WebCore

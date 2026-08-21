@@ -21,13 +21,14 @@
 
 #pragma once
 
+#include "SVGAnimatedString.h"
 #include "SVGElement.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SVGFEMergeNodeElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEMergeNodeElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEMergeNodeElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEMergeNodeElement);
 public:
     static Ref<SVGFEMergeNodeElement> create(const QualifiedName&, Document&);

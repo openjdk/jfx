@@ -27,7 +27,6 @@
 namespace WebCore {
 
 class CSSParserTokenRange;
-struct CSSPropertyParserOptions;
 
 namespace CSSPropertyParserHelpers {
 
@@ -42,6 +41,8 @@ bool consumeSlashIncludingWhitespace(CSSParserTokenRange&);
 // MARK: - Function
 // NOTE: consumeFunction expects the range starts with a FunctionToken.
 CSSParserTokenRange consumeFunction(CSSParserTokenRange&);
+
+std::optional<CSSParserTokenRange> consumeArgument(CSSParserTokenRange&, unsigned index);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

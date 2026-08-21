@@ -70,6 +70,9 @@ void SymbolConstructor::finishCreation(VM& vm, SymbolPrototype* prototype)
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_WELL_KNOWN_SYMBOLS)
+    if (Options::useExplicitResourceManagement()) {
+        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(INITIALIZE_WELL_KNOWN_SYMBOLS)
+    }
 }
 
 // ------------------------------ Functions ---------------------------
@@ -105,7 +108,7 @@ JSC_DEFINE_HOST_FUNCTION(symbolConstructorFor, (JSGlobalObject* globalObject, Ca
     auto string = stringKey->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    return JSValue::encode(Symbol::create(vm, vm.symbolRegistry().symbolForKey(string)));
+    return JSValue::encode(Symbol::create(vm, vm.checkedSymbolRegistry()->symbolForKey(string)));
 }
 
 const ASCIILiteral SymbolKeyForTypeError { "Symbol.keyFor requires that the first argument be a symbol"_s };

@@ -26,7 +26,6 @@
 #pragma once
 
 #include "WebGPUColor.h"
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,7 +48,7 @@ struct GPUColorDict {
     double a { 0 };
 };
 
-using GPUColor = std::variant<Vector<double>, GPUColorDict>;
+using GPUColor = Variant<Vector<double>, GPUColorDict>;
 
 inline WebGPU::Color convertToBacking(const GPUColor& color)
 {

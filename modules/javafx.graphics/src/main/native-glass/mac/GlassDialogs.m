@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -514,6 +514,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
 
         NSString *filename = [GlassHelper nsStringWithJavaString:jFilename withEnv:env];
         if ([filename length] > 0) {
+            filename = [filename stringByDeletingPathExtension];
             [panel setNameFieldStringValue:filename];
         }
 

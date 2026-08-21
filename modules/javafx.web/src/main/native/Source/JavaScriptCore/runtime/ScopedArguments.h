@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "GenericArgumentsImpl.h"
-#include "JSLexicalEnvironment.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/GenericArgumentsImpl.h>
+#include <JavaScriptCore/JSLexicalEnvironment.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -77,7 +78,7 @@ public:
     {
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
-        if (UNLIKELY(m_overrodeThings)) {
+        if (m_overrodeThings) [[unlikely]] {
             auto value = get(globalObject, vm.propertyNames->length);
             RETURN_IF_EXCEPTION(scope, 0);
             RELEASE_AND_RETURN(scope, value.toUInt32(globalObject));
@@ -153,6 +154,8 @@ public:
     }
 
     void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
+
+    static JSArray* fastSlice(JSGlobalObject*, ScopedArguments*, uint64_t startIndex, uint64_t count);
 
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
 

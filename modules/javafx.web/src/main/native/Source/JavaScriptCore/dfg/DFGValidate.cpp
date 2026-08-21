@@ -47,9 +47,8 @@ public:
         : m_graph(graph)
         , m_graphDumpMode(graphDumpMode)
         , m_graphDumpBeforePhase(graphDumpBeforePhase)
-        , m_myTupleRefCounts(m_graph.m_tupleData.size())
+        , m_myTupleRefCounts(m_graph.m_tupleData.size(), 0)
     {
-        m_myTupleRefCounts.fill(0);
     }
 
     #define VALIDATE(context, assertion) do { \
@@ -275,6 +274,7 @@ public:
                     case DoubleRepUse:
                     case BooleanUse:
                     case KnownBooleanUse:
+                    case KnownStorageUse:
                         break;
                     default:
                         VALIDATE((node), !"Bad use kind");
@@ -364,9 +364,17 @@ public:
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
                     }
                     break;
-                case MaterializeNewArrayWithConstantSize:
-                    VALIDATE((node), isNewArrayWithConstantSizeIndexingType(node->indexingType()));
+                case NewArrayWithButterfly:
+                case NewButterflyWithSize:
+                case MaterializeNewArrayWithButterfly: {
+                    // These only support constant size butterflies right now.
+                    Edge sizeChild = node->op() == MaterializeNewArrayWithButterfly ? m_graph.varArgChild(node, 0) : node->child1();
+                    VALIDATE((node), sizeChild->isInt32Constant());
+                    VALIDATE((node), !hasAnyArrayStorage(node->indexingType()));
+                    if (node->op() == MaterializeNewArrayWithButterfly)
+                        VALIDATE((node), !hasUndecided(node->indexingType()));
                     break;
+                }
                 case DoubleConstant:
                 case Int52Constant:
                     VALIDATE((node), node->isNumberConstant());
@@ -414,7 +422,7 @@ public:
                     VALIDATE((node), node->vectorLengthHint() >= node->numChildren());
                     break;
                 case NewArrayBuffer:
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
                 case GetByVal:
                     switch (node->arrayMode().type()) {
@@ -678,13 +686,14 @@ private:
                 case CheckInBounds:
                 case CheckInBoundsInt52:
                 case PhantomNewObject:
-                case PhantomNewArrayWithConstantSize:
+                case PhantomNewArrayWithButterfly:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
                 case PhantomNewAsyncGeneratorFunction:
                 case PhantomCreateActivation:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
                 case PutHint:
@@ -899,7 +908,7 @@ private:
                     continue;
                 switch (node->op()) {
                 case PhantomNewObject:
-                case PhantomNewArrayWithConstantSize:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -908,7 +917,7 @@ private:
                 case PhantomDirectArguments:
                 case PhantomCreateRest:
                 case PhantomClonedArguments:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case MovHint:
                 case Upsilon:
                 case ForwardVarargs:
@@ -918,6 +927,36 @@ private:
                 case ConstructForwardVarargs:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
+                    break;
+
+                case PhantomNewArrayWithButterfly:
+                    // Conceptually it is valid to sink/eliminate the Array wrapper around a butterfly.
+                    // The problem is that our GC doesn't scan auxilary buffers it sees on the stack since
+                    // they don't have an indexing header. This means any new objects that are stored into
+                    // the butterfly wouldn't be marked. e.g. something like:
+                    //
+                    // 1: NewButterflyWithSize
+                    // 2: PhantomNewArrayWithButterfly
+                    // 3: NewObject
+                    // -: PutByVal(@2, 1, @3, @1)
+                    // ... GC
+                    // 4: GetByVal(@2, 1, @1)
+                    // -: Use(@4) <-- UAF
+                    //
+                    // It's possible we work around this by one of:
+                    // 1) Allocating a JSCellButterfly but that only saves a few bytes so it probably
+                    //    wouldn't be profitable.
+                    // 2) Conservatively scanning any auxilary found on the stack but not visited by an
+                    //    object.
+                    //
+                    //
+                    // This assertion below is what we'd like to ASSERT but it's possible
+                    // (although inefficient) for ObjectAllocationSinking to sink an Array
+                    // but not the Butterfly then never store into said Butterfly.
+                    //
+                    // VALIDATE((node), node->child2()->op() == PhantomNewButterflyWithSize);
+                    //
+                    // Instead we rely on every store node validating that no child is a Phantom.
                     break;
 
                 case Check:
@@ -951,7 +990,7 @@ private:
 
                 case PhantomNewArrayBuffer:
                     VALIDATE((node), m_graph.m_form == SSA);
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
 
                 case NewArrayWithSpread: {

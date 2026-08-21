@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -29,18 +29,17 @@
 
 #pragma once
 
+#include "CSSProperty.h"
 #include "CSSValue.h"
 #include "CSSVariableReferenceValue.h"
 
 namespace WebCore {
 
-class CSSProperty;
-
 class CSSPendingSubstitutionValue final : public CSSValue {
 public:
     static Ref<CSSPendingSubstitutionValue> create(CSSPropertyID shorthandPropertyId, Ref<CSSVariableReferenceValue>&& shorthandValue)
     {
-        return adoptRef(*new CSSPendingSubstitutionValue(shorthandPropertyId, WTFMove(shorthandValue)));
+        return adoptRef(*new CSSPendingSubstitutionValue(shorthandPropertyId, WTF::move(shorthandValue)));
     }
 
     CSSVariableReferenceValue& shorthandValue() const { return m_shorthandValue; }
@@ -49,7 +48,7 @@ public:
     bool equals(const CSSPendingSubstitutionValue& other) const { return m_shorthandValue.ptr() == other.m_shorthandValue.ptr(); }
     static String customCSSText(const CSS::SerializationContext&) { return emptyString(); }
 
-    RefPtr<CSSValue> resolveValue(Style::BuilderState&, CSSPropertyID) const;
+    RefPtr<CSSValue> resolveValue(Style::Builder&, CSSPropertyID) const;
 
     IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
@@ -62,12 +61,12 @@ private:
     CSSPendingSubstitutionValue(CSSPropertyID shorthandPropertyId, Ref<CSSVariableReferenceValue>&& shorthandValue)
         : CSSValue(ClassType::PendingSubstitutionValue)
         , m_shorthandPropertyId(shorthandPropertyId)
-        , m_shorthandValue(WTFMove(shorthandValue))
+        , m_shorthandValue(WTF::move(shorthandValue))
     {
     }
 
     const CSSPropertyID m_shorthandPropertyId;
-    Ref<CSSVariableReferenceValue> m_shorthandValue;
+    const Ref<CSSVariableReferenceValue> m_shorthandValue;
 
     mutable Vector<CSSProperty> m_cachedPropertyValues;
 };

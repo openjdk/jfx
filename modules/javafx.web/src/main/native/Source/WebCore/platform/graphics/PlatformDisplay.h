@@ -24,19 +24,13 @@
  */
 
 #pragma once
-
+#if !PLATFORM(JAVA)
 #include "GLDisplay.h"
+#endif
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
-
-typedef intptr_t EGLAttrib;
-typedef void *EGLClientBuffer;
-typedef void *EGLContext;
-typedef void *EGLDisplay;
-typedef void *EGLImage;
-typedef unsigned EGLenum;
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
 #include "GRefPtrGStreamer.h"
@@ -81,22 +75,27 @@ public:
 #if USE(GBM)
         GBM,
 #endif
-#if PLATFORM(GTK)
+#if OS(ANDROID)
+        Android,
+#endif
+#if PLATFORM(GTK) || OS(ANDROID)
         Default,
 #endif
     };
 
     virtual Type type() const = 0;
-
+#if !PLATFORM(JAVA)
     WEBCORE_EXPORT GLContext* sharingGLContext();
     void clearGLContexts();
     EGLDisplay eglDisplay() const;
+    GLDisplay& glDisplay() const { return m_eglDisplay.get(); }
     bool eglCheckVersion(int major, int minor) const;
 
     const GLDisplay::Extensions& eglExtensions() const;
 
     EGLImage createEGLImage(EGLContext, EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
     bool destroyEGLImage(EGLImage) const;
+#endif
 #if USE(GBM)
     const Vector<GLDisplay::DMABufFormat>& dmabufFormats();
 #if USE(GSTREAMER)
@@ -117,15 +116,17 @@ public:
 
 #if USE(SKIA)
     GLContext* skiaGLContext();
-    GrDirectContext* skiaGrContext();
+    GrDirectContext* skiaGrContext() const;
     unsigned msaaSampleCount() const;
 #endif
 
 protected:
-    explicit PlatformDisplay(std::unique_ptr<GLDisplay>&&);
+#if !PLATFORM(JAVA)
+    explicit PlatformDisplay(Ref<GLDisplay>&&);
 
-    std::unique_ptr<GLDisplay> m_eglDisplay;
+    Ref<GLDisplay> m_eglDisplay;
     std::unique_ptr<GLContext> m_sharingGLContext;
+#endif
 
 #if ENABLE(WEBGL) && !PLATFORM(WIN)
     std::optional<int> m_anglePlatform;
@@ -137,15 +138,10 @@ private:
     void clearSkiaGLContext();
 #endif
 
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
-    void clearANGLESharingGLContext();
-#endif
-
     void terminateEGLDisplay();
 
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
+#if ENABLE(WEBGL) && !PLATFORM(WIN) && !PLATFORM(JAVA)
     mutable EGLDisplay m_angleEGLDisplay { nullptr };
-    EGLContext m_angleSharingGLContext { nullptr };
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)

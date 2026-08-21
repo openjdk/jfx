@@ -39,8 +39,12 @@ class ReportingObserverCallback : public RefCounted<ReportingObserverCallback>, 
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(const Vector<Ref<Report>>&, ReportingObserver&) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(const Vector<Ref<Report>>&, ReportingObserver&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(const Vector<Ref<Report>>&, ReportingObserver&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(const Vector<Ref<Report>>&, ReportingObserver&) = 0;
 
     virtual bool hasCallback() const = 0;
 };

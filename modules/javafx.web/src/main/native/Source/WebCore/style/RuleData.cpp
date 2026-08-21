@@ -34,7 +34,6 @@
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
-#include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
@@ -52,7 +51,7 @@ namespace Style {
 using namespace HTMLNames;
 
 struct SameSizeAsRuleData {
-    void* a;
+    uint64_t a;
     unsigned b;
     unsigned c;
     unsigned d[4];
@@ -62,7 +61,7 @@ static_assert(sizeof(RuleData) == sizeof(SameSizeAsRuleData), "RuleData should s
 
 static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector& selector)
 {
-    if (selector.tagHistory())
+    if (selector.precedingInComplexSelector())
         return MatchBasedOnRuleHash::None;
 
     if (selector.match() == CSSSelector::Match::Tag) {
@@ -86,61 +85,9 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
     return MatchBasedOnRuleHash::None;
 }
 
-static bool selectorCanMatchPseudoElement(const CSSSelector& rootSelector)
+static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector& selector)
 {
-    const CSSSelector* selector = &rootSelector;
-    do {
-        if (selector->matchesPseudoElement())
-            return true;
-
-        if (const CSSSelectorList* selectorList = selector->selectorList()) {
-            for (const CSSSelector* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
-                if (selectorCanMatchPseudoElement(*subSelector))
-                    return true;
-            }
-        }
-
-        selector = selector->tagHistory();
-    } while (selector);
-    return false;
-}
-
-static inline bool isCommonAttributeSelectorAttribute(const QualifiedName& attribute)
-{
-    // These are explicitly tested for equality in canShareStyleWithElement.
-    return attribute == typeAttr || attribute == readonlyAttr;
-}
-
-static bool computeContainsUncommonAttributeSelector(const CSSSelector& rootSelector, bool matchesRightmostElement = true)
-{
-    const CSSSelector* selector = &rootSelector;
-    do {
-        if (selector->isAttributeSelector()) {
-            // FIXME: considering non-rightmost simple selectors is necessary because of the style sharing of cousins.
-            // It is a primitive solution which disable a lot of style sharing on pages that rely on attributes for styling.
-            // We should investigate better ways of doing this.
-            if (!isCommonAttributeSelectorAttribute(selector->attribute()) || !matchesRightmostElement)
-                return true;
-        }
-
-        if (const CSSSelectorList* selectorList = selector->selectorList()) {
-            for (const CSSSelector* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
-                if (computeContainsUncommonAttributeSelector(*subSelector, matchesRightmostElement))
-                    return true;
-            }
-        }
-
-        if (selector->relation() != CSSSelector::Relation::Subselector)
-            matchesRightmostElement = false;
-
-        selector = selector->tagHistory();
-    } while (selector);
-    return false;
-}
-
-static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector* selector)
-{
-    for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
+    for (const CSSSelector* component = &selector; component; component = component->precedingInComplexSelector()) {
 #if ENABLE(VIDEO)
         // Property allow-list for `::cue`:
         if (component->match() == CSSSelector::Match::PseudoElement && component->pseudoElement() == CSSSelector::PseudoElement::UserAgentPart && component->value() == UserAgentParts::cue())
@@ -153,10 +100,10 @@ static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector* se
             return PropertyAllowlist::CueBackground;
 #endif
         if (component->match() == CSSSelector::Match::PseudoElement && component->pseudoElement() == CSSSelector::PseudoElement::Marker)
-            return propertyAllowlistForPseudoId(PseudoId::Marker);
+            return propertyAllowlistForPseudoElement(PseudoElementType::Marker);
 
-        if (const auto* selectorList = selector->selectorList()) {
-            for (const auto* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
+        if (const auto* selectorList = selector.selectorList()) {
+            for (auto& subSelector : *selectorList) {
                 auto allowlistType = determinePropertyAllowlist(subSelector);
                 if (allowlistType != PropertyAllowlist::None)
                     return allowlistType;
@@ -167,21 +114,18 @@ static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector* se
 }
 
 RuleData::RuleData(const StyleRule& styleRule, unsigned selectorIndex, unsigned selectorListIndex, unsigned position, IsStartingStyle isStartingStyle)
-    : m_styleRule(&styleRule)
-    , m_selectorIndex(selectorIndex)
+    : m_styleRuleWithSelectorIndex(&styleRule, static_cast<uint16_t>(selectorIndex))
     , m_selectorListIndex(selectorListIndex)
-    , m_position(position)
-    , m_matchBasedOnRuleHash(enumToUnderlyingType(computeMatchBasedOnRuleHash(*selector())))
-    , m_canMatchPseudoElement(selectorCanMatchPseudoElement(*selector()))
-    , m_containsUncommonAttributeSelector(computeContainsUncommonAttributeSelector(*selector()))
-    , m_linkMatchType(SelectorChecker::determineLinkMatchType(selector()))
+    , m_matchBasedOnRuleHash(enumToUnderlyingType(computeMatchBasedOnRuleHash(selector())))
+    , m_canMatchPseudoElement(complexSelectorCanMatchPseudoElement(selector()))
     , m_propertyAllowlist(enumToUnderlyingType(determinePropertyAllowlist(selector())))
     , m_isStartingStyle(enumToUnderlyingType(isStartingStyle))
     , m_isEnabled(true)
-    , m_descendantSelectorIdentifierHashes(SelectorFilter::collectHashes(*selector()))
+    , m_position(position)
+    , m_descendantSelectorIdentifierHashes(SelectorFilter::collectHashes(selector()))
 {
     ASSERT(m_position == position);
-    ASSERT(m_selectorIndex == selectorIndex);
+    ASSERT(this->selectorIndex() == selectorIndex);
 }
 
 } // namespace Style

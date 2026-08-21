@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ImageTypes.h"
+#include <WebCore/ImageTypes.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
@@ -55,10 +55,12 @@ public:
     virtual bool canDestroyDecodedData(const Image&) const { return true; }
     virtual void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) = 0;
     virtual void changedInRect(const Image&, const IntRect* changeRect = nullptr) = 0;
+    virtual void imageContentChanged(const Image&) = 0;
     virtual void scheduleRenderingUpdate(const Image&) = 0;
 
     virtual bool allowsAnimation(const Image&) const { return true; }
     virtual const Settings* settings() { return nullptr; }
+    virtual bool useSystemDarkAppearance() const { return false; }
 
 protected:
     ImageObserver() = default;

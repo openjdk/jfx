@@ -33,20 +33,22 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(MEDIA_STREAM)
 
-#include "CaptureDevice.h"
-#include "Image.h"
-#include "MediaAccessDenialReason.h"
-#include "MediaConstraints.h"
-#include "MediaDeviceHashSalts.h"
-#include "PhotoCapabilities.h"
-#include "PhotoSettings.h"
-#include "PlatformLayer.h"
-#include "RealtimeMediaSourceCapabilities.h"
-#include "RealtimeMediaSourceFactory.h"
-#include "RealtimeMediaSourceIdentifier.h"
-#include "VideoFrameTimeMetadata.h"
+#include <WebCore/CaptureDevice.h>
+#include <WebCore/Image.h>
+#include <WebCore/MediaAccessDenialReason.h>
+#include <WebCore/MediaConstraints.h>
+#include <WebCore/MediaDeviceHashSalts.h>
+#include <WebCore/PhotoCapabilities.h>
+#include <WebCore/PhotoSettings.h>
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/RealtimeMediaSourceCapabilities.h>
+#include <WebCore/RealtimeMediaSourceFactory.h>
+#include <WebCore/RealtimeMediaSourceIdentifier.h>
+#include <WebCore/VideoFrameTimeMetadata.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
@@ -60,17 +62,16 @@
 #include <wtf/text/WTFString.h>
 
 #if USE(GSTREAMER)
-#include "GUniquePtrGStreamer.h"
+#include <gst/gststructure.h>
 #include <wtf/glib/GRefPtr.h>
 #endif
 
 namespace WebCore {
-class RealtimeMediaSourceObserver;
-}
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RealtimeMediaSourceObserver> : std::true_type { };
+#if PLATFORM(COCOA)
+class ImageRotationSessionVT;
+#endif
+
 }
 
 namespace WTF {
@@ -94,7 +95,7 @@ struct CaptureSourceError;
 struct CaptureSourceOrError;
 struct VideoFrameAdaptor;
 
-class RealtimeMediaSourceObserver : public CanMakeWeakPtr<RealtimeMediaSourceObserver> {
+class RealtimeMediaSourceObserver : public CanMakeWeakPtr<RealtimeMediaSourceObserver>, public AbstractCanMakeCheckedPtr {
 public:
     WEBCORE_EXPORT RealtimeMediaSourceObserver();
     WEBCORE_EXPORT virtual ~RealtimeMediaSourceObserver();
@@ -119,15 +120,9 @@ class WEBCORE_EXPORT RealtimeMediaSource : public AbstractThreadSafeRefCountedAn
 #endif
 {
 public:
-    class AudioSampleObserver {
+    class AudioSampleObserver : public AbstractCanMakeCheckedPtr {
     public:
         virtual ~AudioSampleObserver() = default;
-
-        // CheckedPtr interface
-        virtual uint32_t checkedPtrCount() const = 0;
-        virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-        virtual void incrementCheckedPtrCount() const = 0;
-        virtual void decrementCheckedPtrCount() const = 0;
 
         // May be called on a background thread.
         virtual void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) = 0;
@@ -140,7 +135,7 @@ public:
         virtual void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) = 0;
 
 #if USE(GSTREAMER_WEBRTC)
-        virtual GUniquePtr<GstStructure> queryAdditionalStats() { return nullptr; }
+        virtual /* transfer full */ GstStructure* queryAdditionalStats() { return nullptr; }
 #endif
     };
 
@@ -225,6 +220,8 @@ public:
     bool echoCancellation() const { return m_echoCancellation; }
     void setEchoCancellation(bool);
 
+    virtual const AudioStreamDescription* audioStreamDescription() const;
+
     virtual const RealtimeMediaSourceCapabilities& capabilities() = 0;
     virtual const RealtimeMediaSourceSettings& settings() = 0;
 
@@ -240,7 +237,7 @@ public:
     struct ApplyConstraintsError {
         MediaConstraintType invalidConstraint;
         String message;
-        ApplyConstraintsError isolatedCopy() && { return { invalidConstraint, WTFMove(message).isolatedCopy() }; }
+        ApplyConstraintsError isolatedCopy() && { return { invalidConstraint, WTF::move(message).isolatedCopy() }; }
     };
     using ApplyConstraintsHandler = CompletionHandler<void(std::optional<ApplyConstraintsError>&&)>;
     virtual void applyConstraints(const MediaConstraints&, ApplyConstraintsHandler&&);
@@ -287,7 +284,9 @@ public:
     virtual void delaySamples(Seconds) { };
     virtual void setInterruptedForTesting(bool);
 
-    virtual bool setShouldApplyRotation(bool) { return false; }
+    virtual void setShouldApplyRotation();
+    bool isApplyingRotation() const;
+
     virtual void setIsInBackground(bool);
 
     std::optional<PageIdentifier> pageIdentifier() const { return m_pageIdentifier.asOptional(); }
@@ -305,6 +304,12 @@ public:
 #if USE(GSTREAMER)
     virtual std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const;
 #endif
+
+#if PLATFORM(COCOA)
+    void setCanUseIOSurface();
+#endif
+
+    virtual void configurationChanged();
 
 protected:
     RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, std::optional<PageIdentifier> = std::nullopt);
@@ -386,12 +391,17 @@ private:
     WeakHashSet<RealtimeMediaSourceObserver> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
-    UncheckedKeyHashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
+    HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
     mutable Lock m_videoFrameObserversLock;
     HashMap<VideoFrameObserver*, std::unique_ptr<VideoFrameAdaptor>> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
 
     CaptureDevice m_device;
+
+#if PLATFORM(COCOA)
+    std::unique_ptr<ImageRotationSessionVT> m_rotationSession;
+    std::atomic<bool> m_canUseIOSurface { false };
+#endif
 
     // Set on the main thread from constraints.
     IntSize m_size;
@@ -415,6 +425,7 @@ private:
     bool m_captureDidFailed { false };
     bool m_isEnded { false };
     bool m_hasStartedProducingData { false };
+    std::atomic<bool> m_isApplyingRotation { false };
 
     unsigned m_videoFrameObserversWithAdaptors { 0 };
 };
@@ -422,7 +433,7 @@ private:
 struct CaptureSourceError {
     CaptureSourceError() = default;
     CaptureSourceError(String&& errorMessage, MediaAccessDenialReason denialReason, MediaConstraintType invalidConstraint = MediaConstraintType::Unknown)
-        : errorMessage(WTFMove(errorMessage))
+        : errorMessage(WTF::move(errorMessage))
         , denialReason(denialReason)
         , invalidConstraint(invalidConstraint)
     {
@@ -442,8 +453,8 @@ struct CaptureSourceError {
 
 struct CaptureSourceOrError {
     CaptureSourceOrError() = default;
-    CaptureSourceOrError(Ref<RealtimeMediaSource>&& source) : captureSource(WTFMove(source)) { }
-    explicit CaptureSourceOrError(CaptureSourceError&& error) : error(WTFMove(error)) { }
+    CaptureSourceOrError(Ref<RealtimeMediaSource>&& source) : captureSource(WTF::move(source)) { }
+    explicit CaptureSourceOrError(CaptureSourceError&& error) : error(WTF::move(error)) { }
 
     operator bool()  const { return !!captureSource; }
     Ref<RealtimeMediaSource> source() { return captureSource.releaseNonNull(); }
@@ -476,6 +487,18 @@ inline void RealtimeMediaSource::setIsInBackground(bool)
 inline const String& RealtimeMediaSource::hashedGroupId() const
 {
     return m_hashedGroupId;
+}
+
+#if PLATFORM(COCOA)
+inline void RealtimeMediaSource::setCanUseIOSurface()
+{
+    m_canUseIOSurface = true;
+}
+#endif
+
+inline const AudioStreamDescription* RealtimeMediaSource::audioStreamDescription() const
+{
+    return nullptr;
 }
 
 } // namespace WebCore

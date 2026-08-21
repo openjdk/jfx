@@ -36,12 +36,12 @@ namespace WebCore {
 
 DOMHighResTimeStamp IdleDeadline::timeRemaining(Document& document) const
 {
-    RefPtr window { document.domWindow() };
+    RefPtr window { document.window() };
     if (!window || m_didTimeout == DidTimeout::Yes)
         return 0;
     Ref performance = window->performance();
     auto now = performance->now();
-    auto deadline = performance->relativeTimeFromTimeOriginInReducedResolution(document.windowEventLoop().computeIdleDeadline() - performance->timeResolution());
+    auto deadline = performance->relativeTimeFromTimeOriginInReducedResolution(document.protectedWindowEventLoop()->computeIdleDeadline() - performance->timeResolution());
     return deadline < now ? 0 : deadline - now;
 }
 

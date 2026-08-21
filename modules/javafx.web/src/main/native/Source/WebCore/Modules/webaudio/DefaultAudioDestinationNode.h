@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,8 @@ class AudioContext;
 class AudioDestination;
 
 class DefaultAudioDestinationNode final : public AudioDestinationNode, public AudioIOCallback {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DefaultAudioDestinationNode);
+    WTF_MAKE_TZONE_ALLOCATED(DefaultAudioDestinationNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DefaultAudioDestinationNode);
 public:
     explicit DefaultAudioDestinationNode(AudioContext&, std::optional<float> sampleRate = std::nullopt);
     ~DefaultAudioDestinationNode();
@@ -58,6 +59,10 @@ public:
     bool isPlayingAudio() const { return m_isEffectivelyPlayingAudio; }
     bool isConnected() const;
 
+#if PLATFORM(IOS_FAMILY)
+    void setSceneIdentifier(const String&) final;
+#endif
+
 private:
     void createDestination();
     void clearDestination();
@@ -66,7 +71,7 @@ private:
     // AudioIOCallback
     // The audio hardware calls render() to get the next render quantum of audio into destinationBus.
     // It will optionally give us local/live audio input in sourceBus (if it's not 0).
-    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition) final;
+    void render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition) final;
     void isPlayingDidChange() final;
 
     void setIsSilent(bool);

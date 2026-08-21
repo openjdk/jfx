@@ -26,10 +26,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "Exception.h"
+#include <WebCore/Exception.h>
+#include <utility>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/Expected.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Unexpected.h>
 
 namespace WebCore {
 
@@ -39,7 +41,10 @@ public:
 
     ExceptionOr(Exception&&);
     ExceptionOr(ReturnType&&);
-    template<typename OtherType> ExceptionOr(const OtherType&, typename std::enable_if<std::is_scalar<OtherType>::value && std::is_convertible<OtherType, ReturnType>::value>::type* = nullptr);
+    template<typename OtherType>
+        requires std::is_scalar_v<OtherType> && std::convertible_to<OtherType, ReturnType>
+    ExceptionOr(const OtherType&);
+
 
     bool hasException() const;
     const Exception& exception() const;
@@ -91,16 +96,19 @@ private:
 };
 
 template<typename ReturnType> inline ExceptionOr<ReturnType>::ExceptionOr(Exception&& exception)
-    : m_value(makeUnexpected(WTFMove(exception)))
+    : m_value(makeUnexpected(WTF::move(exception)))
 {
 }
 
 template<typename ReturnType> inline ExceptionOr<ReturnType>::ExceptionOr(ReturnType&& returnValue)
-    : m_value(WTFMove(returnValue))
+    : m_value(WTF::move(returnValue))
 {
 }
 
-template<typename ReturnType> template<typename OtherType> inline ExceptionOr<ReturnType>::ExceptionOr(const OtherType& returnValue, typename std::enable_if<std::is_scalar<OtherType>::value && std::is_convertible<OtherType, ReturnType>::value>::type*)
+template<typename ReturnType>
+template<typename OtherType>
+    requires std::is_scalar_v<OtherType> && std::convertible_to<OtherType, ReturnType>
+inline ExceptionOr<ReturnType>::ExceptionOr(const OtherType& returnValue)
     : m_value(static_cast<ReturnType>(returnValue))
 {
 }
@@ -119,7 +127,7 @@ template<typename ReturnType> inline const Exception& ExceptionOr<ReturnType>::e
 template<typename ReturnType> inline Exception ExceptionOr<ReturnType>::releaseException()
 {
     ASSERT(!std::exchange(m_wasReleased, true));
-    return WTFMove(m_value.error());
+    return WTF::move(m_value.error());
 }
 
 template<typename ReturnType> inline const ReturnType& ExceptionOr<ReturnType>::returnValue() const
@@ -131,11 +139,11 @@ template<typename ReturnType> inline const ReturnType& ExceptionOr<ReturnType>::
 template<typename ReturnType> inline ReturnType ExceptionOr<ReturnType>::releaseReturnValue()
 {
     ASSERT(!std::exchange(m_wasReleased, true));
-    return WTFMove(m_value.value());
+    return WTF::move(m_value.value());
 }
 
 template<typename ReturnReferenceType> inline ExceptionOr<ReturnReferenceType&>::ExceptionOr(Exception&& exception)
-    : m_value(WTFMove(exception))
+    : m_value(WTF::move(exception))
 {
 }
 
@@ -170,7 +178,7 @@ template<typename ReturnReferenceType> inline ReturnReferenceType& ExceptionOr<R
 }
 
 inline ExceptionOr<void>::ExceptionOr(Exception&& exception)
-    : m_value(makeUnexpected(WTFMove(exception)))
+    : m_value(makeUnexpected(WTF::move(exception)))
 {
 }
 
@@ -188,7 +196,7 @@ inline const Exception& ExceptionOr<void>::exception() const
 inline Exception ExceptionOr<void>::releaseException()
 {
     ASSERT(!std::exchange(m_wasReleased, true));
-    return WTFMove(m_value.error());
+    return WTF::move(m_value.error());
 }
 
 template <typename T> inline constexpr bool IsExceptionOr = WTF::IsTemplate<std::decay_t<T>, ExceptionOr>::value;

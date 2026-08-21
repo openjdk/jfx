@@ -22,6 +22,8 @@
 #include "RenderSVGResourceContainer.h"
 
 #include "RenderLayer.h"
+#include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "SVGElementTypeHelpers.h"
@@ -33,10 +35,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGResourceContainer);
 
 RenderSVGResourceContainer::RenderSVGResourceContainer(Type type, SVGElement& element, RenderStyle&& style)
-    : RenderSVGHiddenContainer(type, element, WTFMove(style), SVGModelObjectFlag::IsResourceContainer)
+    : RenderSVGHiddenContainer(type, element, WTF::move(style), SVGModelObjectFlag::IsResourceContainer)
     , m_id(element.getIdAttribute())
 {
     ASSERT(isRenderSVGResourceContainer());
@@ -50,7 +52,7 @@ void RenderSVGResourceContainer::willBeDestroyed()
     RenderSVGHiddenContainer::willBeDestroyed();
 }
 
-void RenderSVGResourceContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGResourceContainer::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
 
@@ -63,7 +65,7 @@ void RenderSVGResourceContainer::styleDidChange(StyleDifference diff, const Rend
 void RenderSVGResourceContainer::idChanged()
 {
     // Remove old id, that is guaranteed to be present in cache.
-    m_id = element().getIdAttribute();
+    m_id = protectedElement()->getIdAttribute();
 
     registerResource();
 }

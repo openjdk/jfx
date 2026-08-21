@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/BitVector.h>
 #include <wtf/IndexSparseSet.h>
 #include <wtf/StdLibExtras.h>
@@ -55,7 +56,7 @@ public:
 
     // This calculator has to be run in reverse.
     class LocalCalc {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LocalCalc);
     public:
         LocalCalc(Liveness& liveness, typename CFG::Node block)
             : m_liveness(liveness)
@@ -69,7 +70,7 @@ public:
         }
 
         class Iterable {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Iterable);
         public:
             Iterable(Liveness& liveness)
                 : m_liveness(liveness)
@@ -77,7 +78,7 @@ public:
             }
 
             class iterator {
-                WTF_MAKE_FAST_ALLOCATED;
+                WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
             public:
                 iterator(Adapter& adapter, Workset::const_iterator sparceSetIterator)
                     : m_adapter(adapter)
@@ -103,8 +104,8 @@ public:
                 Workset::const_iterator m_sparceSetIterator;
             };
 
-            iterator begin() const { return iterator(m_liveness, m_liveness.m_workset.begin()); }
-            iterator end() const { return iterator(m_liveness, m_liveness.m_workset.end()); }
+            iterator begin() const LIFETIME_BOUND { return iterator(m_liveness, m_liveness.m_workset.begin()); }
+            iterator end() const LIFETIME_BOUND { return iterator(m_liveness, m_liveness.m_workset.end()); }
 
             bool contains(const typename Adapter::Thing& thing) const
             {
@@ -160,7 +161,7 @@ public:
 
     template<typename UnderlyingIterable>
     class Iterable {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Iterable);
     public:
         Iterable(Liveness& liveness, const UnderlyingIterable& iterable)
             : m_liveness(liveness)
@@ -169,7 +170,7 @@ public:
         }
 
         class iterator {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
         public:
             iterator()
                 : m_liveness(nullptr)
@@ -205,8 +206,8 @@ public:
             typename UnderlyingIterable::const_iterator m_iter;
         };
 
-        iterator begin() const { return iterator(m_liveness, m_iterable.begin()); }
-        iterator end() const { return iterator(m_liveness, m_iterable.end()); }
+        iterator begin() const LIFETIME_BOUND { return iterator(m_liveness, m_iterable.begin()); }
+        iterator end() const LIFETIME_BOUND { return iterator(m_liveness, m_iterable.end()); }
 
         bool contains(const typename Adapter::Thing& thing) const
         {
@@ -231,7 +232,7 @@ public:
     Workset& workset() { return m_workset; }
 
     class LiveAtHead {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LiveAtHead);
     public:
         LiveAtHead(Liveness& liveness)
             : m_liveness(liveness)
@@ -241,7 +242,7 @@ public:
                 if (!block)
                     continue;
 
-                std::sort(m_liveness.m_liveAtHead[block].begin(), m_liveness.m_liveAtHead[block].end());
+                std::ranges::sort(m_liveness.m_liveAtHead[block]);
             }
         }
 
@@ -275,7 +276,7 @@ protected:
                     liveAtTail.append(index);
                 });
 
-            std::sort(liveAtTail.begin(), liveAtTail.end());
+            std::ranges::sort(liveAtTail);
             removeRepeatedElements(liveAtTail);
         }
 

@@ -40,12 +40,12 @@ Ref<PathStream> PathStream::create()
 
 Ref<PathStream> PathStream::create(PathSegment&& segment)
 {
-    return adoptRef(*new PathStream(WTFMove(segment)));
+    return adoptRef(*new PathStream(WTF::move(segment)));
 }
 
 Ref<PathStream> PathStream::create(Vector<PathSegment>&& segments)
 {
-    return adoptRef(*new PathStream(WTFMove(segments)));
+    return adoptRef(*new PathStream(WTF::move(segments)));
 }
 
 Ref<PathStream> PathStream::create(const Vector<PathSegment>& segments)
@@ -68,7 +68,7 @@ Ref<PathStream> PathStream::create(const Vector<FloatPoint>& points)
 }
 
 PathStream::PathStream(Vector<PathSegment>&& segments)
-    : m_segments(WTFMove(segments))
+    : m_segments(WTF::move(segments))
 {
 }
 
@@ -78,8 +78,9 @@ PathStream::PathStream(const Vector<PathSegment>& segments)
 }
 
 PathStream::PathStream(PathSegment&& segment)
-    : m_segments({ WTFMove(segment) })
 {
+    m_segments.reserveCapacity(16); // 16 is Vector's minCapacity, and we know we're going to append a second segment.
+    m_segments.append(WTF::move(segment));
 }
 
 bool PathStream::definitelyEqual(const PathImpl& other) const
@@ -101,7 +102,7 @@ Ref<PathImpl> PathStream::copy() const
 
 const PathMoveTo* PathStream::lastIfMoveTo() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return nullptr;
 
     return std::get_if<PathMoveTo>(&m_segments.last().data());
@@ -224,61 +225,10 @@ std::optional<PathSegment> PathStream::singleSegment() const
     return m_segments.first();
 }
 
-template<class DataType>
-std::optional<DataType> PathStream::singleDataType() const
-{
-    const auto segment = singleSegment();
-    if (!segment)
-        return std::nullopt;
-    const auto data = std::get_if<DataType>(&segment->data());
-    if (!data)
-        return std::nullopt;
-    return *data;
-}
-
-std::optional<PathDataLine> PathStream::singleDataLine() const
-{
-    return singleDataType<PathDataLine>();
-}
-
-std::optional<PathRect> PathStream::singleRect() const
-{
-    return singleDataType<PathRect>();
-}
-
-std::optional<PathRoundedRect> PathStream::singleRoundedRect() const
-{
-    return singleDataType<PathRoundedRect>();
-}
-
-std::optional<PathContinuousRoundedRect> PathStream::singleContinuousRoundedRect() const
-{
-    return singleDataType<PathContinuousRoundedRect>();
-}
-
-std::optional<PathArc> PathStream::singleArc() const
-{
-    return singleDataType<PathArc>();
-}
-
-std::optional<PathClosedArc> PathStream::singleClosedArc() const
-{
-    return singleDataType<PathClosedArc>();
-}
-
-std::optional<PathDataQuadCurve> PathStream::singleQuadCurve() const
-{
-    return singleDataType<PathDataQuadCurve>();
-}
-
-std::optional<PathDataBezierCurve> PathStream::singleBezierCurve() const
-{
-    return singleDataType<PathDataBezierCurve>();
-}
 
 bool PathStream::isClosed() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return false;
 
     return m_segments.last().closesSubpath();

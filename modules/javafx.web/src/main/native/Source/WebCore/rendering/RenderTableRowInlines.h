@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableRow.h"
 
 namespace WebCore {
 
-inline const BorderValue& RenderTableRow::borderAdjoiningTableStart() const { return style().borderStart(table()->writingMode()); }
-inline const BorderValue& RenderTableRow::borderAdjoiningTableEnd() const { return style().borderEnd(table()->writingMode()); }
+inline const BorderValue& RenderTableRow::borderAdjoiningTableStart() const { return checkedStyle()->borderStart(table()->writingMode()); }
+inline const BorderValue& RenderTableRow::borderAdjoiningTableEnd() const { return checkedStyle()->borderEnd(table()->writingMode()); }
 
 } // namespace WebCore

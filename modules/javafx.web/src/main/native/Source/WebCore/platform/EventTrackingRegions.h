@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Region.h"
+#include <WebCore/Region.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
@@ -42,6 +42,9 @@ enum class TrackingType : uint8_t {
 };
 
 enum class EventTrackingRegionsEventType : uint8_t {
+    Gesturechange,
+    Gestureend,
+    Gesturestart,
         Mousedown,
         Mousemove,
         Mouseup,
@@ -80,9 +83,11 @@ struct EventTrackingRegions {
     void uniteSynchronousRegion(EventType, const Region&);
     void unite(const EventTrackingRegions&);
 
-    TrackingType trackingTypeForPoint(EventType, const IntPoint&);
+    TrackingType trackingTypeForPoint(EventType, const IntPoint&) const;
 
     friend bool operator==(const EventTrackingRegions&, const EventTrackingRegions&) = default;
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const EventTrackingRegions&);
 
 } // namespace WebCore

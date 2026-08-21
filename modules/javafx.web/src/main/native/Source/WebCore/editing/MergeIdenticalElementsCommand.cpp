@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,55 +27,52 @@
 #include "MergeIdenticalElementsCommand.h"
 
 #include "Element.h"
+#include "NodeDocument.h"
 
 namespace WebCore {
 
 MergeIdenticalElementsCommand::MergeIdenticalElementsCommand(Ref<Element>&& first, Ref<Element>&& second)
     : SimpleEditCommand(first->document())
-    , m_element1(WTFMove(first))
-    , m_element2(WTFMove(second))
+    , m_element1(WTF::move(first))
+    , m_element2(WTF::move(second))
 {
     ASSERT(m_element1->nextSibling() == m_element2.ptr());
 }
 
 void MergeIdenticalElementsCommand::doApply()
 {
-    Ref element1 = protectedElement1();
-    Ref element2 = protectedElement2();
-    if (element1->nextSibling() != element2.ptr() || !element1->hasEditableStyle() || !element2->hasEditableStyle())
+    if (m_element1->nextSibling() != m_element2.ptr() || !m_element1->hasEditableStyle() || !m_element2->hasEditableStyle())
         return;
 
-    m_atChild = element2->firstChild();
+    m_atChild = m_element2->firstChild();
 
     Vector<Ref<Node>> children;
-    for (Node* child = element1->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = m_element1->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
-        element2->insertBefore(child, m_atChild.copyRef());
+    for (Ref child : children)
+        m_element2->insertBefore(child, m_atChild.copyRef());
 
-    element1->remove();
+    m_element1->remove();
 }
 
 void MergeIdenticalElementsCommand::doUnapply()
 {
-    RefPtr<Node> atChild = WTFMove(m_atChild);
+    RefPtr<Node> atChild = WTF::move(m_atChild);
 
-    Ref element2 = protectedElement2();
-    RefPtr parent = element2->parentNode();
+    RefPtr parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    Ref element1 = protectedElement1();
-    if (parent->insertBefore(element1, element2.copyRef()).hasException())
+    if (parent->insertBefore(m_element1, m_element2.copyRef()).hasException())
         return;
 
     Vector<Ref<Node>> children;
-    for (Node* child = element2->firstChild(); child && child != atChild; child = child->nextSibling())
+    for (RefPtr child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
-        element1->appendChild(child);
+    for (Ref child : children)
+        m_element1->appendChild(child);
 }
 
 #ifndef NDEBUG

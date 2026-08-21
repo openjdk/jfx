@@ -25,19 +25,21 @@
 
 #pragma once
 
-#include "BigIntPrototype.h"
-#include "BrandedStructure.h"
-#include "JSArrayBufferView.h"
-#include "JSCJSValueInlines.h"
-#include "JSGlobalObject.h"
-#include "JSObjectInlines.h"
-#include "PropertyTable.h"
-#include "StringPrototype.h"
-#include "Structure.h"
-#include "StructureChain.h"
-#include "StructureRareDataInlines.h"
-#include "SymbolPrototype.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/BigIntPrototype.h>
+#include <JavaScriptCore/BrandedStructure.h>
+#include <JavaScriptCore/JSArrayBufferView.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSObjectInlines.h>
+#include <JavaScriptCore/PropertyTable.h>
+#include <JavaScriptCore/StringPrototype.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/StructureChain.h>
+#include <JavaScriptCore/StructureRareDataInlines.h>
+#include <JavaScriptCore/SymbolPrototype.h>
+#include <JavaScriptCore/Watchpoint.h>
+#include <JavaScriptCore/WebAssemblyGCStructure.h>
+#include <JavaScriptCore/WriteBarrierInlines.h>
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
 
@@ -71,13 +73,44 @@ inline Structure* Structure::createStructure(VM& vm)
 inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    Structure* newStructure;
-    if (previous->isBrandedStructure())
-        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
-    else
-        newStructure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous);
-    newStructure->finishCreation(vm, previous, deferred);
-    return newStructure;
+    switch (previous->variant()) {
+    case StructureVariant::Normal: {
+        auto* result = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous->variant(), previous);
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::Branded: {
+        auto* result = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::WebAssemblyGC: {
+#if ENABLE(WEBASSEMBLY)
+        auto* result = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, jsCast<WebAssemblyGCStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+#else
+        return nullptr;
+#endif
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+}
+
+template<typename CellType, SubspaceAccess>
+inline GCClient::IsoSubspace* Structure::subspaceFor(VM& vm)
+{
+    return &vm.structureSpace();
+}
+
+inline void Structure::finishCreation(VM& vm, CreatingEarlyCellTag)
+{
+    Base::finishCreation(vm, this, CreatingEarlyCell);
+    ASSERT(m_prototype);
+    ASSERT(m_prototype.isNull());
+    ASSERT(!vm.structureStructure);
 }
 
 inline bool Structure::mayInterceptIndexedAccesses() const
@@ -108,7 +141,7 @@ inline bool Structure::holesMustForwardToPrototype(JSObject* base) const
     ASSERT(base->structure() == this);
     if (typeInfo().type() == ArrayType) {
         JSGlobalObject* globalObject = this->globalObject();
-        if (LIKELY(globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()))
+        if (globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()) [[likely]]
             return false;
     }
 
@@ -284,19 +317,19 @@ inline bool Structure::transitivelyTransitionedFrom(Structure* structureToFind)
     return false;
 }
 
-inline void Structure::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSImmutableButterfly* cached)
+inline void Structure::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSCellButterfly* cached)
 {
     ensureRareData(vm)->setCachedPropertyNames(vm, kind, cached);
 }
 
-inline JSImmutableButterfly* Structure::cachedPropertyNames(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* Structure::cachedPropertyNames(CachedPropertyNamesKind kind) const
 {
     if (!hasRareData())
         return nullptr;
     return rareData()->cachedPropertyNames(kind);
 }
 
-inline JSImmutableButterfly* Structure::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* Structure::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
 {
     if (!hasRareData())
         return nullptr;
@@ -374,7 +407,7 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
 
 inline void Structure::didReplaceProperty(PropertyOffset offset)
 {
-    if (LIKELY(!isWatchingReplacement()))
+    if (!isWatchingReplacement()) [[likely]]
         return;
     didReplacePropertySlow(offset);
 }
@@ -492,6 +525,8 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     }
     if (propertyName == vm.propertyNames->underscoreProto)
         setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
+    else if (propertyName == vm.propertyNames->then)
+        setHasSpecialProperties(true);
 
     auto rep = propertyName.uid();
 
@@ -650,13 +685,15 @@ ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, Prop
     }
     if (propertyName == vm.propertyNames->underscoreProto)
         setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
+    else if (propertyName == vm.propertyNames->then)
+        setHasSpecialProperties(true);
 
     PropertyOffset newOffset = table->nextOffset(m_inlineCapacity);
 
     m_propertyHash = m_propertyHash ^ rep->existingSymbolAwareHash();
     m_seenProperties.add(CompactPtr<UniquedStringImpl>::encode(rep));
 
-    auto [offset, attributes, result] = table->addAfterFind(vm, PropertyTableEntry(rep, newOffset, newAttributes), WTFMove(findResult));
+    auto [offset, attributes, result] = table->addAfterFind(vm, PropertyTableEntry(rep, newOffset, newAttributes), WTF::move(findResult));
     ASSERT_UNUSED(result, result);
     ASSERT_UNUSED(offset, offset == newOffset);
     UNUSED_VARIABLE(attributes);
@@ -803,7 +840,7 @@ ALWAYS_INLINE Structure* Structure::addPropertyTransitionToExistingStructureConc
     return addPropertyTransitionToExistingStructureImpl(structure, uid, attributes, offset);
 }
 
-ALWAYS_INLINE StructureTransitionTable::Hash::Key StructureTransitionTable::Hash::createFromStructure(Structure* structure)
+ALWAYS_INLINE StructureTransitionTable::Hash::Key StructureTransitionTable::Hash::createKeyFromStructure(Structure* structure)
 {
     switch (structure->transitionKind()) {
     case TransitionKind::ChangePrototype:
@@ -825,7 +862,11 @@ inline Structure* StructureTransitionTable::get(PointerKey rep, unsigned attribu
 {
     if (isUsingSingleSlot()) {
         auto* transition = trySingleTransition();
-        return (transition && Hash::createFromStructure(transition) == Hash::createKey(rep, attributes, transitionKind)) ? transition : nullptr;
+        if (!transition)
+            return nullptr;
+        if (Hash::createKeyFromStructure(transition) != Hash::createKey(rep, attributes, transitionKind))
+            return nullptr;
+        return transition;
     }
     return map()->get(StructureTransitionTable::Hash::createKey(rep, attributes, transitionKind));
 }

@@ -35,7 +35,7 @@
 #include "DOMJITCallDOMGetterSnippet.h"
 #include "DOMJITSignature.h"
 #include "InlineCallFrame.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 
 namespace JSC { namespace DFG {
 
@@ -145,6 +145,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case EnumeratorInByVal:
         case EnumeratorHasOwnProperty:
         case GetIndexedPropertyStorage:
+        case DataViewGetByteLength:
+        case DataViewGetByteLengthAsInt52:
         case GetArrayLength:
         case GetUndetachedTypeArrayLength:
         case GetTypedArrayLengthAsInt52:
@@ -155,10 +157,12 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case InByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case GetByVal:
         case GetByValMegamorphic:
+        case MultiGetByVal:
+        case MultiPutByVal:
         case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
@@ -236,7 +240,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case SameValue:
     case IsEmpty:
     case IsEmptyStorage:
-    case TypeOfIsUndefined:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
@@ -244,8 +247,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case NumberIsInteger:
     case IsObject:
     case IsTypedArrayView:
-    case ToBoolean:
-    case LogicalNot:
     case CheckInBounds:
     case CheckInBoundsInt52:
     case DoubleRep:
@@ -260,21 +261,34 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ValueToInt32:
     case GetExecutable:
     case BottomValue:
+        def(PureValue(node));
+        return;
+
+    // These nodes are realm-dependent when MasqueradesAsUndefined is involved.
+    // Including the globalObject in the PureValue ensures nodes from different realms are not folded by CSE.
+    case TypeOfIsUndefined:
+    case ToBoolean:
+    case LogicalNot:
     case TypeOf:
-        def(PureValue(node));
+        def(PureValue(node, graph.globalObjectFor(node->origin.semantic)));
         return;
 
+    // JSCallee for Eval can change the scope field.
+    case GetEvalScope:
+        read(World);
+        return;
+
+    case NumberIsFinite:
     case NumberIsNaN:
+    case NumberIsSafeInteger:
         def(PureValue(node));
         return;
 
-    case GlobalIsNaN: {
-        if (node->child1().useKind() == DoubleRepUse)
-            def(PureValue(node));
-        else
+    case GlobalIsFinite:
+    case GlobalIsNaN:
+        ASSERT(node->child1().useKind() == UntypedUse);
             clobberTop();
         return;
-    }
 
     case StringLocaleCompare:
         read(World);
@@ -362,7 +376,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ArithBitXor:
     case ArithBitLShift:
     case ArithBitRShift:
-    case BitURShift:
+    case ArithBitURShift:
         if (node->child1().useKind() == UntypedUse || node->child2().useKind() == UntypedUse) {
             clobberTop();
             return;
@@ -650,12 +664,12 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case TypeOfIsObject:
         read(MiscFields);
-        def(HeapLocation(TypeOfIsObjectLoc, MiscFields, node->child1()), LazyNode(node));
+        def(HeapLocation(TypeOfIsObjectLoc, MiscFields, node->child1(), graph.globalObjectFor(node->origin.semantic)), LazyNode(node));
         return;
 
     case TypeOfIsFunction:
         read(MiscFields);
-        def(HeapLocation(TypeOfIsFunctionLoc, MiscFields, node->child1()), LazyNode(node));
+        def(HeapLocation(TypeOfIsFunctionLoc, MiscFields, node->child1(), graph.globalObjectFor(node->origin.semantic)), LazyNode(node));
         return;
 
     case IsCallable:
@@ -773,6 +787,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ConstructForwardVarargs:
     case CallDirectEval:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
     case CallCustomAccessorGetter:
     case CallCustomAccessorSetter:
     case ToPrimitive:
@@ -804,7 +819,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case CreateAsyncGenerator:
     case InstanceOf:
     case InstanceOfMegamorphic:
-    case StringValueOf:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
     case ObjectGetOwnPropertySymbols:
@@ -812,6 +826,18 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ReflectOwnKeys:
         clobberTop();
         return;
+
+    case StringValueOf:
+        switch (node->child1().useKind()) {
+        case StringOrOtherUse:
+            read(World);
+            write(SideState);
+            def(PureValue(node));
+            return;
+        default:
+            clobberTop();
+            return;
+        }
 
     case ToNumber:
         switch (node->child1().useKind()) {
@@ -871,6 +897,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             def(PureValue(node));
             return;
         }
+        clobberTop();
+        return;
+
+    case ValueBitURShift:
+        // URShift >>> does not accept BigInt.
         clobberTop();
         return;
 
@@ -1128,6 +1159,73 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
     }
 
+    case MultiGetByVal: {
+        ArrayMode mode = node->arrayMode();
+        LocationKind indexedPropertyLoc = indexedPropertyLocForResultType(node->result());
+        bool canUseCSE = true;
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
+            ArrayModes oneArrayMode = 1ULL << i;
+            if (node->arrayModes() & oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32): {
+                    if (mode.isInBounds() || mode.isOutOfBoundsSaneChain()) {
+                        read(Butterfly_publicLength);
+                        read(IndexedInt32Properties);
+                        break;
+                    }
+                    clobberTop();
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble): {
+                    if (mode.isInBounds() || mode.isOutOfBoundsSaneChain()) {
+                        read(Butterfly_publicLength);
+                        read(IndexedDoubleProperties);
+                        break;
+                    }
+                    clobberTop();
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                    if (mode.isInBounds() || mode.isOutOfBoundsSaneChain()) {
+                        read(Butterfly_publicLength);
+                        read(IndexedContiguousProperties);
+                        break;
+                    }
+                    clobberTop();
+                    break;
+                }
+                case Int8ArrayMode:
+                case Int16ArrayMode:
+                case Int32ArrayMode:
+                case Uint8ArrayMode:
+                case Uint8ClampedArrayMode:
+                case Float16ArrayMode:
+                case Uint16ArrayMode:
+                case Uint32ArrayMode:
+                case Float32ArrayMode:
+                case Float64ArrayMode:
+                case BigInt64ArrayMode:
+                case BigUint64ArrayMode:
+                    // Even if we hit out-of-bounds, this is fine. TypedArray does not propagate access to its [[Prototype]] when out-of-bounds access happens.
+                    read(TypedArrayProperties);
+                    read(MiscFields);
+                    if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
+                        canUseCSE = false;
+                        write(MiscFields);
+                        write(TypedArrayProperties);
+                    }
+                    break;
+                default:
+                    DFG_CRASH(graph, node, "impossible array mode for MultiGetByVal");
+                    break;
+                }
+            }
+        }
+        if (!mode.isOutOfBounds() && canUseCSE)
+            def(HeapLocation(indexedPropertyLoc, IndexedProperties, graph.child(node, 0).node(), LazyNode(graph.child(node, 1).node()), nullptr, std::bit_cast<void*>(static_cast<uintptr_t>(node->arrayModes()))), LazyNode(node));
+        return;
+    }
+
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds: {
         read(Stack);
@@ -1138,7 +1236,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case PutByValDirect:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic: {
         ArrayMode mode = node->arrayMode();
         Node* base = graph.varArgChild(node, 0).node();
@@ -1265,6 +1363,83 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             return;
         }
         RELEASE_ASSERT_NOT_REACHED();
+        return;
+    }
+
+    case MultiPutByVal: {
+        ArrayMode mode = node->arrayMode();
+        for (unsigned i = 0; i < sizeof(ArrayModes) * CHAR_BIT; ++i) {
+            ArrayModes oneArrayMode = 1ULL << i;
+            if (node->arrayModes() & oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedInt32Properties);
+                    write(IndexedInt32Properties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedDoubleProperties);
+                    write(IndexedDoubleProperties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                    if (mode.isOutOfBounds()) {
+                        clobberTop();
+                        break;
+                    }
+                    read(Butterfly_publicLength);
+                    read(Butterfly_vectorLength);
+                    read(IndexedContiguousProperties);
+                    write(IndexedContiguousProperties);
+                    if (mode.mayStoreToHole())
+                        write(Butterfly_publicLength);
+                    break;
+                }
+                case Int8ArrayMode:
+                case Int16ArrayMode:
+                case Int32ArrayMode:
+                case Uint8ArrayMode:
+                case Uint8ClampedArrayMode:
+                case Float16ArrayMode:
+                case Uint16ArrayMode:
+                case Uint32ArrayMode:
+                case Float32ArrayMode:
+                case Float64ArrayMode:
+                case BigInt64ArrayMode:
+                case BigUint64ArrayMode:
+                    // Even if we hit out-of-bounds, this is fine. TypedArray does not propagate access to its [[Prototype]] when out-of-bounds access happens.
+                    if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
+                        read(TypedArrayProperties);
+                        read(MiscFields);
+                        write(TypedArrayProperties);
+                        write(MiscFields);
+                    } else {
+                        read(MiscFields);
+                        write(TypedArrayProperties);
+                    }
+                    break;
+                default:
+                    DFG_CRASH(graph, node, "impossible array mode for MultiPutByVal");
+                    break;
+                }
+            }
+        }
         return;
     }
 
@@ -1613,10 +1788,23 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         }
     }
 
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52: {
+        read(MiscFields);
+        if (node->mayBeResizableOrGrowableSharedArrayBuffer())
+            write(MiscFields);
+        else {
+            auto location = node->op() == DataViewGetByteLength ? DataViewByteLengthLoc : DataViewByteLengthAsInt52Loc;
+            def(HeapLocation(location, MiscFields, node->child1()), LazyNode(node));
+        }
+        return;
+    }
+
     case GetUndetachedTypeArrayLength: {
         ArrayMode mode = node->arrayMode();
         DFG_ASSERT(graph, node, mode.isSomeTypedArrayView());
         DFG_ASSERT(graph, node, !mode.mayBeResizableOrGrowableSharedTypedArray());
+        mode = mode.withAction(Array::Action::Read); // Force action to Read to prevent incorrect optimizations in equality checks.
         def(PureValue(node, mode.asWord()));
         return;
     }
@@ -1741,15 +1929,29 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         write(HeapObjectCount);
         return;
 
-    case NewArrayWithConstantSize:
-    case PhantomNewArrayWithConstantSize:
-    case MaterializeNewArrayWithConstantSize:
+    case NewButterflyWithSize:
+    case PhantomNewArrayWithButterfly:
+    case PhantomNewButterflyWithSize: {
         read(HeapObjectCount);
         write(HeapObjectCount);
-        def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node), LazyNode(graph.freeze(jsNumber(node->newArraySize()))));
+        // FIXME: In this phase we say the Array is where the length of the array is def'd but this differs from ObjectAllocationSinking.
+        return;
+    }
+
+    case MaterializeNewArrayWithButterfly:
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node), LazyNode(graph.varArgChild(node, 0).node()));
+        return;
+
+    case NewArrayWithButterfly:
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node), LazyNode(node->child1().node()));
         return;
 
     case NewTypedArray:
+    case NewTypedArrayBuffer:
         switch (node->child1().useKind()) {
         case Int32Use:
         case Int52RepUse:
@@ -1851,7 +2053,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         read(HeapObjectCount);
         write(HeapObjectCount);
 
-        auto* array = node->castOperand<JSImmutableButterfly*>();
+        auto* array = node->castOperand<JSCellButterfly*>();
         unsigned numElements = array->length();
         def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node),
             LazyNode(graph.freeze(jsNumber(numElements))));
@@ -1941,11 +2143,21 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             clobberTop();
         return;
 
+    case NewRegExpUntyped:
+        if (node->child1().useKind() == StringUse && node->child2().useKind() == StringUse) {
+            // SyntaxError may happen.
+            read(World);
+            write(SideState);
+            write(HeapObjectCount);
+        } else
+            clobberTop();
+        return;
+
     case NewObject:
     case NewGenerator:
     case NewAsyncGenerator:
     case NewInternalFieldObject:
-    case NewRegexp:
+    case NewRegExp:
     case NewStringObject:
     case NewMap:
     case NewSet:
@@ -1959,7 +2171,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case MaterializeNewInternalFieldObject:
     case PhantomCreateActivation:
     case MaterializeCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
         read(HeapObjectCount);
         write(HeapObjectCount);
         return;
@@ -1979,6 +2191,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         write(HeapObjectCount);
         return;
 
+    case RegExpSearch:
     case RegExpExec:
     case RegExpTest:
     case RegExpTestInline:
@@ -2001,6 +2214,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case StringReplace:
+    case StringReplaceAll:
     case StringReplaceRegExp:
         if (node->child1().useKind() == StringUse
             && node->child2().useKind() == RegExpObjectUse
@@ -2021,6 +2235,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case StringAt:
+        // String.prototype.at returns a string when in bounds and undefined when OOB. This is
+        // unlike charAt, which always returns a string. Include arrayMode to prevent CSE across
+        // modes.
+        def(PureValue(node, node->arrayMode().asWord()));
+        return;
     case StringCharAt:
         def(PureValue(node));
         return;
@@ -2043,6 +2262,13 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
         if (node->isBinaryUseKind(UntypedUse)) {
             clobberTop();
+            return;
+        }
+
+        // CompareEq is realm-dependent when MasqueradesAsUndefined is involved.
+        // Including the globalObject ensures nodes from different realms are not folded by CSE.
+        if (node->op() == CompareEq) {
+            def(PureValue(node, graph.globalObjectFor(node->origin.semantic)));
             return;
         }
 
@@ -2128,7 +2354,9 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case MapIteratorNext: {
         Edge& mapIteratorEdge = node->child1();
+        AbstractHeapKind ownerHeap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapFields : JSSetFields;
         AbstractHeapKind heap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapIteratorFields : JSSetIteratorFields;
+        read(ownerHeap);
         read(heap);
         write(heap);
         def(HeapLocation(MapIteratorNextLoc, heap, mapIteratorEdge), LazyNode(node));
@@ -2149,7 +2377,14 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
     }
 
-    case MapStorage:
+    case MapStorage: {
+        Edge& mapEdge = node->child1();
+        AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
+        read(heap);
+        def(HeapLocation(MapStorageLoc, heap, mapEdge, std::bit_cast<void*>(static_cast<intptr_t>(1))), LazyNode(node));
+        return;
+    }
+
     case MapStorageOrSentinel: {
         Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
@@ -2296,6 +2531,18 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         write(TypedArrayProperties);
         return;
     }
+
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+        clobberTop();
+        return;
+
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
+        clobberTop();
+        return;
 
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();

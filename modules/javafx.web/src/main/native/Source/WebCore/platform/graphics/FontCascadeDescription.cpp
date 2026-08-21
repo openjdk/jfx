@@ -50,6 +50,7 @@ struct SameSizeAsFontCascadeDescription {
     AtomString string2;
     int16_t fontSelectionRequest[3];
     float size;
+    float zoom;
     TextSpacingTrim textSpacingTrim;
     TextAutospace textAutospace;
     unsigned bitfields1;
@@ -65,7 +66,7 @@ FontCascadeDescription::FontCascadeDescription()
     , m_isAbsoluteSize(false)
     , m_kerning(enumToUnderlyingType(Kerning::Auto))
     , m_keywordSize(0)
-    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::AutoSmoothing))
+    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::Auto))
     , m_isSpecifiedFont(false)
 {
 }
@@ -143,7 +144,7 @@ FontSmoothingMode FontCascadeDescription::usedFontSmoothing() const
 {
     auto fontSmoothingMode = fontSmoothing();
 #if USE(CORE_TEXT)
-    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting() && (fontSmoothingMode == FontSmoothingMode::AutoSmoothing || fontSmoothingMode == FontSmoothingMode::SubpixelAntialiased))
+    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting() && (fontSmoothingMode == FontSmoothingMode::Auto || fontSmoothingMode == FontSmoothingMode::SubpixelAntialiased))
         return FontSmoothingMode::Antialiased;
 #endif
     return fontSmoothingMode;
@@ -164,22 +165,22 @@ TextStream& operator<<(TextStream& ts, const FontCascadeDescription& fontCascade
     bool first = true;
     for (auto& family : fontCascadeDescription.families()) {
         if (!first)
-            ts << ", ";
+            ts << ", "_s;
         ts << family;
         first = false;
     }
 
-    ts << ", specified size " << fontCascadeDescription.specifiedSize();
-    ts << ", computed size " << fontCascadeDescription.computedSize();
-    ts << ", is absolute size " << fontCascadeDescription.isAbsoluteSize();
+    ts << ", specified size "_s << fontCascadeDescription.specifiedSize();
+    ts << ", computed size "_s << fontCascadeDescription.computedSize();
+    ts << ", is absolute size "_s << fontCascadeDescription.isAbsoluteSize();
     if (fontCascadeDescription.kerning() != Kerning::Auto)
-        ts << ", kerning " << fontCascadeDescription.kerning();
+        ts << ", kerning "_s << fontCascadeDescription.kerning();
 
-    if (fontCascadeDescription.fontSmoothing() != FontSmoothingMode::AutoSmoothing)
-        ts << ", font smoothing " << fontCascadeDescription.fontSmoothing();
+    if (fontCascadeDescription.fontSmoothing() != FontSmoothingMode::Auto)
+        ts << ", font smoothing "_s << fontCascadeDescription.fontSmoothing();
 
-    ts << ", keyword size " << fontCascadeDescription.keywordSize();
-    ts << ", is specified font " << fontCascadeDescription.isSpecifiedFont();
+    ts << ", keyword size "_s << fontCascadeDescription.keywordSize();
+    ts << ", is specified font "_s << fontCascadeDescription.isSpecifiedFont();
 
     return ts;
 }

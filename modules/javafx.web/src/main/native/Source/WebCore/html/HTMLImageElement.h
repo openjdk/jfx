@@ -23,13 +23,14 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "AttachmentAssociatedElement.h"
-#include "DecodingOptions.h"
-#include "FormAssociatedElement.h"
-#include "GraphicsTypes.h"
-#include "HTMLElement.h"
-#include "MediaQuery.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/AttachmentAssociatedElement.h>
+#include <WebCore/DecodingOptions.h>
+#include <WebCore/FormAssociatedElement.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/MediaQuery.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -41,6 +42,7 @@ class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
 class Image;
+class SecurityOrigin;
 
 struct ImageCandidate;
 
@@ -55,7 +57,7 @@ class HTMLImageElement
 #endif
     , public FormAssociatedElement
     , public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLImageElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLImageElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLImageElement);
 public:
     static Ref<HTMLImageElement> create(Document&);
@@ -67,6 +69,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
 
     void formOwnerRemovedFromTree(const Node& formRoot);
 
@@ -89,24 +92,10 @@ public:
     bool matchesUsemap(const AtomString&) const;
     RefPtr<HTMLMapElement> associatedMapElement() const;
 
-    WEBCORE_EXPORT const AtomString& alt() const;
-
-    WEBCORE_EXPORT void setHeight(unsigned);
-
-    URL src() const;
-    void setSrc(const AtomString&);
-
-    WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
-
-    WEBCORE_EXPORT void setWidth(unsigned);
-
     WEBCORE_EXPORT int x() const;
     WEBCORE_EXPORT int y() const;
-
     WEBCORE_EXPORT bool complete() const;
-
-    void setDecoding(AtomString&&);
     String decoding() const;
 
     DecodingMode decodingMode() const;
@@ -149,12 +138,10 @@ public:
     void loadDeferredImage();
 
     AtomString srcsetForBindings() const;
-    void setSrcsetForBindings(const AtomString&);
 
     bool usesSrcsetOrPicture() const;
 
-    const AtomString& loadingForBindings() const;
-    void setLoadingForBindings(const AtomString&);
+    enum LoadingValues { Lazy, Eager };
 
     bool isLazyLoadable() const;
     static bool hasLazyLoadableAttributeValue(StringView);
@@ -164,9 +151,10 @@ public:
     bool isDroppedImagePlaceholder() const { return m_isDroppedImagePlaceholder; }
     void setIsDroppedImagePlaceholder() { m_isDroppedImagePlaceholder = true; }
 
+    void setIsUserAgentShadowRootResource();
+
     void evaluateDynamicMediaQueryDependencies();
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const;
 
@@ -177,7 +165,6 @@ public:
     WEBCORE_EXPORT void setAllowsAnimation(std::optional<bool>);
 #endif
 
-    void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
     RequestPriority fetchPriority() const;
 
@@ -202,21 +189,21 @@ private:
     void invalidateAttributeMapping();
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const final;
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    bool isReplaced(const RenderStyle&) const final;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
     void setBestFitURLAndDPRFromImageCandidate(const ImageCandidate&);
 
     bool canStartSelection() const override;
 
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
-    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
+    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::YesExcludingURLsForPrivacy) const override;
     Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
@@ -259,9 +246,9 @@ private:
     void setSourceElement(HTMLSourceElement*);
 
     IntersectionObserverData& ensureIntersectionObserverData() final;
-    IntersectionObserverData* intersectionObserverDataIfExists() final;
+    IntersectionObserverData* intersectionObserverDataIfExists() const final;
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     AtomString m_bestFitImageURL;

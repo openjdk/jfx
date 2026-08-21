@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple, Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +25,15 @@
 
 #pragma once
 
-#include <wtf/CheckedRef.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 
 namespace WebCore {
 
 class PendingScript;
 
-class PendingScriptClient {
+class PendingScriptClient : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~PendingScriptClient() = default;
-
-    // CheckedPtr interface
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
 
     virtual void notifyFinished(PendingScript&) = 0;
 };

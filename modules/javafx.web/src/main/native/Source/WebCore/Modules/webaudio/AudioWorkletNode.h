@@ -51,8 +51,9 @@ struct AudioWorkletNodeOptions;
 template<typename> class AudioArray;
 typedef AudioArray<float> AudioFloatArray;
 
-class AudioWorkletNode : public AudioNode, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletNode);
+class AudioWorkletNode final : public AudioNode, public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(AudioWorkletNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioWorkletNode);
 public:
     static ExceptionOr<Ref<AudioWorkletNode>> create(JSC::JSGlobalObject&, BaseAudioContext&, String&& name, AudioWorkletNodeOptions&&);
     ~AudioWorkletNode();
@@ -86,12 +87,12 @@ private:
     bool virtualHasPendingActivity() const final;
 
     String m_name;
-    Ref<AudioParamMap> m_parameters;
-    Ref<MessagePort> m_port;
+    const Ref<AudioParamMap> m_parameters;
+    const Ref<MessagePort> m_port;
     Lock m_processLock;
     RefPtr<AudioWorkletProcessor> m_processor; // Should only be used on the rendering thread.
     MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>> m_paramValuesMap;
-    RefPtr<Thread> m_workletThread { nullptr };
+    RefPtr<Thread> m_workletThread;
 
     // Keeps the reference of AudioBus objects from AudioNodeInput and AudioNodeOutput in order
     // to pass them to AudioWorkletProcessor.
@@ -103,5 +104,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(AudioWorkletNode, NodeTypeWorklet);
 
 #endif // ENABLE(WEB_AUDIO)

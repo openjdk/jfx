@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "DecodingOptions.h"
-#include "ImageOrientation.h"
-#include "ImageTypes.h"
-#include "IntPoint.h"
-#include "IntSize.h"
-#include "PlatformImage.h"
+#include <WebCore/DecodingOptions.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/ImageTypes.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/PlatformImage.h>
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -82,6 +82,7 @@ public:
     virtual EncodedDataStatus encodedDataStatus() const = 0;
     virtual void setEncodedDataStatusChangeCallback(Function<void(EncodedDataStatus)>&&) { }
     virtual bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
+    virtual bool hasHDRGainMap() const { return false; }
     virtual IntSize size() const = 0;
     virtual size_t frameCount() const = 0;
     virtual size_t primaryFrameIndex() const { return 0; }
@@ -99,10 +100,13 @@ public:
     virtual bool isSpatial() const { return false; }
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    virtual bool isMaybePanoramic() const { return false; }
+#endif
+
     virtual IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;
     virtual bool frameIsCompleteAtIndex(size_t) const = 0;
     virtual ImageOrientation frameOrientationAtIndex(size_t) const { return ImageOrientation::Orientation::None; }
-    virtual Headroom frameHeadroomAtIndex(size_t) const { return Headroom::None; }
     virtual std::optional<IntSize> frameDensityCorrectedSizeAtIndex(size_t) const { return std::nullopt; }
 
     virtual Seconds frameDurationAtIndex(size_t) const = 0;

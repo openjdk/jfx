@@ -21,6 +21,7 @@
 #include "JSPluginElementFunctions.h"
 
 #include "BridgeJSC.h"
+#include "DOMTimer.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
 #include "JSHTMLElement.h"
@@ -50,7 +51,7 @@ Instance* pluginInstance(HTMLElement& element)
 
 JSObject* pluginScriptObject(JSGlobalObject* lexicalGlobalObject, JSHTMLElement* jsHTMLElement)
 {
-    auto* element = dynamicDowncast<HTMLPlugInElement>(jsHTMLElement->wrapped());
+    CheckedPtr element = dynamicDowncast<HTMLPlugInElement>(jsHTMLElement->wrapped());
     if (!element)
         return nullptr;
 

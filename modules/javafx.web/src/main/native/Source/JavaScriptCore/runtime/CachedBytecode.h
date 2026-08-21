@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CacheUpdate.h"
-#include "LeafExecutable.h"
-#include "ParserModes.h"
+#include <JavaScriptCore/CacheUpdate.h>
+#include <JavaScriptCore/LeafExecutable.h>
+#include <JavaScriptCore/ParserModes.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
@@ -48,12 +48,12 @@ public:
 
     static Ref<CachedBytecode> create(FileSystem::MappedFileData&& data, LeafExecutableMap&& leafExecutables = { })
     {
-        return adoptRef(*new CachedBytecode(CachePayload::makeMappedPayload(WTFMove(data)), WTFMove(leafExecutables)));
+        return adoptRef(*new CachedBytecode(CachePayload::makeMappedPayload(WTF::move(data)), WTF::move(leafExecutables)));
     }
 
     static Ref<CachedBytecode> create(MallocSpan<uint8_t, VMMalloc>&& data, LeafExecutableMap&& leafExecutables)
     {
-        return adoptRef(*new CachedBytecode(CachePayload::makeMallocPayload(WTFMove(data)), WTFMove(leafExecutables)));
+        return adoptRef(*new CachedBytecode(CachePayload::makeMallocPayload(WTF::move(data)), WTF::move(leafExecutables)));
     }
 
     LeafExecutableMap& leafExecutables() { return m_leafExecutables; }
@@ -64,7 +64,7 @@ public:
     using ForEachUpdateCallback = Function<void(off_t, std::span<const uint8_t>)>;
     JS_EXPORT_PRIVATE void commitUpdates(const ForEachUpdateCallback&) const;
 
-    std::span<const uint8_t> span() const { return m_payload.span(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_payload.span(); }
     size_t size() const { return m_payload.size(); }
     bool hasUpdates() const { return !m_updates.isEmpty(); }
     size_t sizeForUpdate() const { return m_size; }
@@ -72,8 +72,8 @@ public:
 private:
     CachedBytecode(CachePayload&& payload, LeafExecutableMap&& leafExecutables = { })
         : m_size(payload.size())
-        , m_payload(WTFMove(payload))
-        , m_leafExecutables(WTFMove(leafExecutables))
+        , m_payload(WTF::move(payload))
+        , m_leafExecutables(WTF::move(leafExecutables))
     {
     }
 

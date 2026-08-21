@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-namespace Calculation {
+namespace CSS {
 enum class Category : uint8_t;
 }
 
@@ -48,14 +48,12 @@ struct Atan2;
 struct Atan;
 struct CanonicalDimension;
 struct Clamp;
-struct ContainerProgress;
 struct Cos;
 struct Exp;
 struct Hypot;
 struct Invert;
 struct Log;
 struct Max;
-struct MediaProgress;
 struct Min;
 struct Mod;
 struct Negate;
@@ -71,6 +69,8 @@ struct RoundDown;
 struct RoundNearest;
 struct RoundToZero;
 struct RoundUp;
+struct SiblingCount;
+struct SiblingIndex;
 struct Sign;
 struct Sin;
 struct Sqrt;
@@ -82,7 +82,7 @@ struct Tan;
 
 struct SimplificationOptions {
     // `category` represents the context in which the simplification is taking place.
-    Calculation::Category category;
+    CSS::Category category;
 
     // `range` represents the allowed numeric range for the calculated result.
     CSS::Range range;
@@ -114,6 +114,8 @@ std::optional<Child> simplify(Percentage&, const SimplificationOptions&);
 std::optional<Child> simplify(NonCanonicalDimension&, const SimplificationOptions&);
 std::optional<Child> simplify(CanonicalDimension&, const SimplificationOptions&);
 std::optional<Child> simplify(Symbol&, const SimplificationOptions&);
+std::optional<Child> simplify(SiblingCount&, const SimplificationOptions&);
+std::optional<Child> simplify(SiblingIndex&, const SimplificationOptions&);
 std::optional<Child> simplify(Sum&, const SimplificationOptions&);
 std::optional<Child> simplify(Product&, const SimplificationOptions&);
 std::optional<Child> simplify(Negate&, const SimplificationOptions&);
@@ -143,8 +145,6 @@ std::optional<Child> simplify(Abs&, const SimplificationOptions&);
 std::optional<Child> simplify(Sign&, const SimplificationOptions&);
 std::optional<Child> simplify(Random&, const SimplificationOptions&);
 std::optional<Child> simplify(Progress&, const SimplificationOptions&);
-std::optional<Child> simplify(MediaProgress&, const SimplificationOptions&);
-std::optional<Child> simplify(ContainerProgress&, const SimplificationOptions&);
 std::optional<Child> simplify(Anchor&, const SimplificationOptions&);
 std::optional<Child> simplify(AnchorSize&, const SimplificationOptions&);
 

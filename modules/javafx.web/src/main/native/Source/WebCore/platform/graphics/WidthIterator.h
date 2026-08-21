@@ -22,8 +22,8 @@
 #ifndef WidthIterator_h
 #define WidthIterator_h
 
-#include "GlyphBuffer.h"
-#include "WritingMode.h"
+#include <WebCore/GlyphBuffer.h>
+#include <WebCore/WritingMode.h>
 #include <unicode/umachine.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -96,8 +96,8 @@ private:
     bool rtl() const { return m_direction == TextDirection::RTL; }
     bool ltr() const { return m_direction == TextDirection::LTR; }
 
-    CheckedRef<const FontCascade> m_font;
-    CheckedRef<const TextRun> m_run;
+    const CheckedRef<const FontCascade> m_fontCascade;
+    const CheckedRef<const TextRun> m_run;
     SingleThreadWeakHashSet<const Font>* m_fallbackFonts { nullptr };
 
     std::optional<unsigned> m_lastCharacterIndex;

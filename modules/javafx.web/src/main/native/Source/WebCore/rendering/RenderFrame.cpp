@@ -28,14 +28,16 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderFrameSet.h"
+#include "RenderWidgetInlines.h"
+#include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFrame);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderFrame);
 
 RenderFrame::RenderFrame(HTMLFrameElement& frame, RenderStyle&& style)
-    : RenderFrameBase(Type::Frame, frame, WTFMove(style))
+    : RenderFrameBase(Type::Frame, frame, WTF::move(style))
 {
     ASSERT(isRenderFrame());
 }
@@ -49,7 +51,8 @@ HTMLFrameElement& RenderFrame::frameElement() const
 
 FrameEdgeInfo RenderFrame::edgeInfo() const
 {
-    return FrameEdgeInfo(frameElement().noResize(), frameElement().hasFrameBorder());
+    Ref frameElement = this->frameElement();
+    return FrameEdgeInfo(frameElement->noResize(), frameElement->hasFrameBorder());
 }
 
 void RenderFrame::updateFromElement()

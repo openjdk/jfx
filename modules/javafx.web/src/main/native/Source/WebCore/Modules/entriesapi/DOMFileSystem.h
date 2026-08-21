@@ -40,11 +40,11 @@ class FileSystemEntry;
 class ScriptExecutionContext;
 
 class DOMFileSystem final : public ScriptWrappable, public RefCounted<DOMFileSystem> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMFileSystem);
+    WTF_MAKE_TZONE_ALLOCATED(DOMFileSystem);
 public:
     static Ref<FileSystemEntry> createEntryForFile(ScriptExecutionContext& context, Ref<File>&& file)
     {
-        auto fileSystem = adoptRef(*new DOMFileSystem(WTFMove(file)));
+        auto fileSystem = adoptRef(*new DOMFileSystem(WTF::move(file)));
         return fileSystem->fileAsEntry(context);
     }
 
@@ -72,9 +72,9 @@ private:
     Ref<FileSystemEntry> fileAsEntry(ScriptExecutionContext&);
 
     String m_name;
-    Ref<File> m_file;
+    const Ref<File> m_file;
     String m_rootPath;
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
 };
 
 } // namespace WebCore

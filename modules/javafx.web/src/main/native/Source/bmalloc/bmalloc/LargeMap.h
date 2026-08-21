@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "LargeRange.h"
 #include "Vector.h"
 #include <algorithm>
@@ -53,3 +55,5 @@ private:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

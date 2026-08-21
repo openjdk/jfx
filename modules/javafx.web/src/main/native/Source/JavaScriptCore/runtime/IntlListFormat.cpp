@@ -168,14 +168,14 @@ JSValue IntlListFormat::format(JSGlobalObject* globalObject, JSValue list) const
     auto stringList = stringListFromIterable(globalObject, list);
     RETURN_IF_EXCEPTION(scope, { });
 
-    ListFormatInput input(WTFMove(stringList));
+    ListFormatInput input(WTF::move(stringList));
 
-    Vector<UChar, 32> result;
+    Vector<char16_t, 32> result;
     auto status = callBufferProducingFunction(ulistfmt_format, m_listFormat.get(), input.stringPointers(), input.stringLengths(), input.size(), result);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format list of strings"_s);
 
-    return jsString(vm, String(WTFMove(result)));
+    return jsString(vm, String(WTF::move(result)));
 }
 
 // https://tc39.es/proposal-intl-list-format/#sec-Intl.ListFormat.prototype.formatToParts
@@ -187,7 +187,7 @@ JSValue IntlListFormat::formatToParts(JSGlobalObject* globalObject, JSValue list
     auto stringList = stringListFromIterable(globalObject, list);
     RETURN_IF_EXCEPTION(scope, { });
 
-    ListFormatInput input(WTFMove(stringList));
+    ListFormatInput input(WTF::move(stringList));
 
     UErrorCode status = U_ZERO_ERROR;
 
@@ -209,7 +209,7 @@ JSValue IntlListFormat::formatToParts(JSGlobalObject* globalObject, JSValue list
         return throwOutOfMemoryError(globalObject, scope);
 
     int32_t formattedStringLength = 0;
-    const UChar* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
+    const char16_t* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format list of strings"_s);
     StringView resultStringView(std::span(formattedStringPointer, formattedStringLength));

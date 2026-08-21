@@ -29,7 +29,6 @@
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
 #include "PaintRenderingContext2D.h"
@@ -60,16 +59,17 @@ public:
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
     void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect) final { }
+    void setSizeForControllingContext(IntSize) { };
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
 
     void replayDisplayList(GraphicsContext&);
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final { };
     void dispatchEvent(Event&) final { }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -77,12 +77,14 @@ public:
 private:
     CustomPaintCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
-    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final;
 
     std::unique_ptr<PaintRenderingContext2D> m_context;
     mutable RefPtr<Image> m_copiedImage;
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
-}
-SPECIALIZE_TYPE_TRAITS_CANVAS(WebCore::CustomPaintCanvas, isCustomPaintCanvas())
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CustomPaintCanvas)
+    static bool isType(const WebCore::CanvasBase& base) { return base.isCustomPaintCanvas(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -104,7 +104,7 @@ pas_segregated_directory_iterate_iterate_callback(
         if (is_forward)
             index_offset = (size_t)__builtin_ctz(combined_word);
         else
-            index_offset = 31lu - (size_t)__builtin_clz(combined_word);
+            index_offset = 31llu - (size_t)__builtin_clz(combined_word);
         index = base_index + index_offset;
 
         mask = PAS_BITVECTOR_BIT_MASK(index_offset);

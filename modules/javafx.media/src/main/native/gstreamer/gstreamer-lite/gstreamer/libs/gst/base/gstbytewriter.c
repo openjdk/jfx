@@ -111,7 +111,7 @@ gst_byte_writer_new_with_size (guint size, gboolean fixed)
 
 /**
  * gst_byte_writer_new_with_data: (skip)
- * @data: Memory area for writing
+ * @data: (array length=size): Memory area for writing
  * @size: Size of @data in bytes
  * @initialized: If %TRUE the complete data can be read from the beginning
  *
@@ -301,7 +301,7 @@ gst_byte_writer_free (GstByteWriter * writer)
  *
  * Free-function: g_free
  *
- * Returns: (transfer full): the current data. g_free() after usage.
+ * Returns: (transfer full) (array): the current data. g_free() after usage.
  */
 guint8 *
 gst_byte_writer_free_and_get_data (GstByteWriter * writer)

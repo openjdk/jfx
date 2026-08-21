@@ -75,7 +75,11 @@ enum class PaintBehavior : uint32_t {
     EventRegionIncludeBackground        = 1 << 16,
     Snapshotting                        = 1 << 17, // Paint is updating external backing store and visits all content, including composited content and always completes image decoding of painted images. FIXME: Will be removed.
     DontShowVisitedLinks                = 1 << 18,
-    ExcludeReplacedContent              = 1 << 19,
+    ExcludeReplacedContentExceptForIFrames      = 1 << 19,
+    ExcludeText                                 = 1 << 20,
+    FixedAndStickyLayersOnly                    = 1 << 21,
+    DrawsHDRContent                             = 1 << 22,
+    DraggableSnapshot                           = 1 << 23,
 };
 
 } // namespace WebCore

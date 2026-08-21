@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 
@@ -43,6 +44,9 @@ class IDBConnectionToClient;
 
 using IDBConnectionIdentifier = ProcessIdentifier;
 struct IDBResourceIdentifierHashTraits;
+
+enum class IDBResourceObjectIdentifierType { };
+using IDBResourceObjectIdentifier = AtomicObjectIdentifier<IDBResourceObjectIdentifierType>;
 
 class IDBResourceIdentifier {
 public:
@@ -61,32 +65,24 @@ public:
 
     WEBCORE_EXPORT IDBResourceIdentifier isolatedCopy() const;
 
-#if !LOG_DISABLED
     String loggingString() const;
-#endif
 
     WEBCORE_EXPORT IDBResourceIdentifier();
 private:
-    friend struct IPC::ArgumentCoder<IDBResourceIdentifier, void>;
+    friend struct IPC::ArgumentCoder<IDBResourceIdentifier>;
     friend struct IDBResourceIdentifierHashTraits;
     friend void add(Hasher&, const IDBResourceIdentifier&);
 
-    WEBCORE_EXPORT IDBResourceIdentifier(std::optional<IDBConnectionIdentifier>, uint64_t resourceIdentifier);
+    WEBCORE_EXPORT IDBResourceIdentifier(std::optional<IDBConnectionIdentifier>, std::optional<IDBResourceObjectIdentifier>);
 
     Markable<IDBConnectionIdentifier> m_idbConnectionIdentifier;
-    uint64_t m_resourceNumber { 0 };
+    Markable<IDBResourceObjectIdentifier> m_resourceNumber;
 };
 
 inline void add(Hasher& hasher, const IDBResourceIdentifier& identifier)
 {
     add(hasher, identifier.m_idbConnectionIdentifier, identifier.m_resourceNumber);
 }
-
-struct IDBResourceIdentifierHash {
-    static unsigned hash(const IDBResourceIdentifier& a) { return computeHash(a); }
-    static bool equal(const IDBResourceIdentifier& a, const IDBResourceIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdentifier> {
     static constexpr bool hasIsEmptyValueFunction = true;
@@ -105,12 +101,12 @@ struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdenti
 
     static void constructDeletedValue(IDBResourceIdentifier& identifier)
     {
-        identifier.m_resourceNumber = resourceNumberDeletedValue;
+        new (NotNull, &identifier.m_resourceNumber) IDBResourceObjectIdentifier(WTF::HashTableDeletedValue);
     }
 
     static bool isDeletedValue(const IDBResourceIdentifier& identifier)
     {
-        return identifier.m_resourceNumber == resourceNumberDeletedValue;
+        return identifier.m_resourceNumber && identifier.m_resourceNumber->isHashTableDeletedValue();
     }
 };
 
@@ -119,7 +115,6 @@ struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdenti
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHash { };
 
 inline WebCore::IDBConnectionIdentifier crossThreadCopy(WebCore::IDBConnectionIdentifier identifier)
 {

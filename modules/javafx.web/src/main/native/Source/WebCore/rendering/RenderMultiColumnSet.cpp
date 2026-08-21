@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2015 Google Inc.  All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,15 +38,16 @@
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMultiColumnSet);
 
 RenderMultiColumnSet::RenderMultiColumnSet(RenderFragmentedFlow& fragmentedFlow, RenderStyle&& style)
-    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
+    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTF::move(style), fragmentedFlow)
     , m_maxColumnHeight(RenderFragmentedFlow::maxLogicalHeight())
     , m_minSpaceShortage(RenderFragmentedFlow::maxLogicalHeight())
 {
@@ -74,11 +76,11 @@ RenderMultiColumnSet* RenderMultiColumnSet::previousSiblingMultiColumnSet() cons
 
 RenderObject* RenderMultiColumnSet::firstRendererInFragmentedFlow() const
 {
-    if (RenderBox* sibling = RenderMultiColumnFlow::previousColumnSetOrSpannerSiblingOf(this)) {
+    if (auto* sibling = RenderMultiColumnFlow::previousColumnSetOrSpannerSiblingOf(this)) {
         // Adjacent sets should not occur. Currently we would have no way of figuring out what each
         // of them contains then.
         ASSERT(!sibling->isRenderMultiColumnSet());
-        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlow()->findColumnSpannerPlaceholder(sibling))
+        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlow()->findColumnSpannerPlaceholder(*sibling))
             return placeholder->nextInPreOrderAfterChildren();
         ASSERT_NOT_REACHED();
     }
@@ -87,11 +89,11 @@ RenderObject* RenderMultiColumnSet::firstRendererInFragmentedFlow() const
 
 RenderObject* RenderMultiColumnSet::lastRendererInFragmentedFlow() const
 {
-    if (RenderBox* sibling = RenderMultiColumnFlow::nextColumnSetOrSpannerSiblingOf(this)) {
+    if (auto* sibling = RenderMultiColumnFlow::nextColumnSetOrSpannerSiblingOf(this)) {
         // Adjacent sets should not occur. Currently we would have no way of figuring out what each
         // of them contains then.
         ASSERT(!sibling->isRenderMultiColumnSet());
-        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlow()->findColumnSpannerPlaceholder(sibling))
+        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlow()->findColumnSpannerPlaceholder(*sibling))
             return placeholder->previousInPreOrder();
         ASSERT_NOT_REACHED();
     }
@@ -334,10 +336,10 @@ bool RenderMultiColumnSet::requiresBalancing() const
     if (!multiColumnFlow()->progressionIsInline())
         return false;
 
-    if (RenderBox* next = RenderMultiColumnFlow::nextColumnSetOrSpannerSiblingOf(this)) {
+    if (auto* next = RenderMultiColumnFlow::nextColumnSetOrSpannerSiblingOf(this)) {
         if (!next->isRenderMultiColumnSet() && !next->isLegend()) {
             // If we're followed by a spanner, we need to balance.
-            ASSERT(multiColumnFlow()->findColumnSpannerPlaceholder(next));
+            ASSERT(multiColumnFlow()->findColumnSpannerPlaceholder(*next));
             return true;
         }
     }
@@ -431,8 +433,8 @@ LayoutUnit RenderMultiColumnSet::calculateMaxColumnHeight() const
     const RenderStyle& multicolStyle = multicolBlock->style();
     LayoutUnit availableHeight = multiColumnFlow()->columnHeightAvailable();
     LayoutUnit maxColumnHeight = availableHeight ? availableHeight : RenderFragmentedFlow::maxLogicalHeight();
-    if (!multicolStyle.logicalMaxHeight().isUndefined())
-        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(RenderBox::SizeType::MaxSize, multicolStyle.logicalMaxHeight(), std::nullopt).value_or(maxColumnHeight));
+    if (!multicolStyle.logicalMaxHeight().isNone())
+        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(multicolStyle.logicalMaxHeight(), std::nullopt).value_or(maxColumnHeight));
     return heightAdjustedForSetOffset(maxColumnHeight);
 }
 
@@ -440,10 +442,11 @@ LayoutUnit RenderMultiColumnSet::columnGap() const
 {
     // FIXME: Eventually we will cache the column gap when the widths of columns start varying, but for now we just
     // go to the parent block to get the gap.
-    RenderBlockFlow& parentBlock = downcast<RenderBlockFlow>(*parent());
-    if (parentBlock.style().columnGap().isNormal())
+    auto& parentBlock = downcast<RenderBlockFlow>(*parent());
+    auto& parentBlockGap = parentBlock.style().columnGap();
+    if (parentBlockGap.isNormal())
         return LayoutUnit(parentBlock.style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return valueForLength(parentBlock.style().columnGap().length(), parentBlock.contentBoxLogicalWidth());
+    return Style::evaluate<LayoutUnit>(parentBlockGap, parentBlock.contentBoxLogicalWidth(), Style::ZoomNeeded { });
 }
 
 unsigned RenderMultiColumnSet::columnCount() const
@@ -603,7 +606,7 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutR
     // top/bottom unless it's the first/last column.
     LayoutRect overflowRect = overflowRectForFragmentedFlowPortion(portionRect, isFirstColumn && isFirstFragment(), isLastColumn && isLastFragment());
 
-    // For RenderViews only (i.e., iBooks), avoid overflowing into neighboring columns, by clipping in the middle of adjacent column gaps. Also make sure that we avoid rounding errors.
+    // For RenderViews only (i.e., Apple Books), avoid overflowing into neighboring columns, by clipping in the middle of adjacent column gaps. Also make sure that we avoid rounding errors.
     if (&view() == parent()) {
         if (isHorizontalWritingMode()) {
             if (!isLeftmostColumn)
@@ -625,20 +628,20 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     if (paintInfo.context().paintingDisabled())
         return;
 
-    RenderMultiColumnFlow* fragmentedFlow = multiColumnFlow();
-    const RenderStyle& blockStyle = parent()->style();
-    const Color& ruleColor = blockStyle.visitedDependentColorWithColorFilter(CSSPropertyColumnRuleColor);
-    bool ruleTransparent = blockStyle.columnRuleIsTransparent();
-    BorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
-    LayoutUnit ruleThickness { blockStyle.columnRuleWidth() };
-    LayoutUnit colGap = columnGap();
-    bool renderRule = ruleStyle > BorderStyle::Hidden && !ruleTransparent;
-    if (!renderRule)
+    auto* fragmentedFlow = multiColumnFlow();
+    auto& blockStyle = parent()->style();
+
+    auto ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
+    if (!isVisibleBorderStyle(ruleStyle) || blockStyle.columnRuleColor().isKnownTransparent())
         return;
 
-    unsigned colCount = columnCount();
+    auto colCount = columnCount();
     if (colCount <= 1)
         return;
+
+    auto ruleColor = blockStyle.visitedDependentColumnRuleColorApplyingColorFilter();
+    auto ruleThickness = Style::evaluate<LayoutUnit>(blockStyle.usedColumnRuleWidth(), Style::ZoomNeeded { });
+    auto colGap = columnGap();
 
     bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
 
@@ -774,6 +777,18 @@ Vector<LayoutRect> RenderMultiColumnSet::fragmentRectsForFlowContentRect(const L
     return perColumnRects;
 }
 
+bool RenderMultiColumnSet::contentRectSpansFragments(const LayoutRect& rect) const
+{
+    auto fragmentedFlowRect = rect;
+    fragmentedFlow()->flipForWritingMode(fragmentedFlowRect);
+
+    auto logicalTop = isHorizontalWritingMode() ? fragmentedFlowRect.y() : fragmentedFlowRect.x();
+    auto logicalBottom = isHorizontalWritingMode() ? fragmentedFlowRect.maxY() : fragmentedFlowRect.maxX();
+
+    auto startAndEndColumns = firstAndLastColumnsFromOffsets(logicalTop, logicalBottom);
+    return startAndEndColumns.first != startAndEndColumns.second;
+}
+
 LayoutUnit RenderMultiColumnSet::initialBlockOffsetForPainting() const
 {
     bool progressionReversed = multiColumnFlow()->progressionIsReversed();
@@ -787,7 +802,7 @@ LayoutUnit RenderMultiColumnSet::initialBlockOffsetForPainting() const
     return result;
 }
 
-void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect)
+void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) const
 {
     static constexpr size_t maximumNumberOfFragments = 2500000;
     // Let's start by introducing the different coordinate systems involved here. They are different
@@ -945,8 +960,10 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
     return translationOffset;
 }
 
-void RenderMultiColumnSet::addOverflowFromChildren()
+void RenderMultiColumnSet::addOverflowFromInFlowChildren(OptionSet<ComputeOverflowOptions> options)
 {
+    UNUSED_PARAM(options);
+
     // FIXME: Need to do much better here.
     unsigned colCount = columnCount();
     if (!colCount)
@@ -956,9 +973,11 @@ void RenderMultiColumnSet::addOverflowFromChildren()
     addLayoutOverflow(lastRect);
     if (!hasNonVisibleOverflow())
         addVisualOverflow(lastRect);
+    if (hasRenderOverflow())
+        m_overflow->addContentOverflow(lastRect);
 }
 
-VisiblePosition RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, HitTestSource source, const RenderFragmentContainer*)
+PositionWithAffinity RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, HitTestSource source, const RenderFragmentContainer*)
 {
     return multiColumnFlow()->positionForPoint(translateFragmentPointToFragmentedFlow(logicalPoint, ClampHitTestTranslationToColumns), source, this);
 }

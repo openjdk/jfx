@@ -37,13 +37,13 @@ String GPURenderPipeline::label() const
 
 void GPURenderPipeline::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 Ref<GPUBindGroupLayout> GPURenderPipeline::getBindGroupLayout(uint32_t index)
 {
     // "A new GPUBindGroupLayout wrapper is returned each time"
-    return GPUBindGroupLayout::create(m_backing->getBindGroupLayout(index));
+    return GPUBindGroupLayout::create(m_backing->getBindGroupLayout(index), m_uniqueId);
 }
 
 }

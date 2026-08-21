@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BAssert.h"
 #include <algorithm>
 #include <climits>
@@ -153,23 +155,6 @@ template<typename T> constexpr size_t bitCount()
 {
     return sizeof(T) * 8;
 }
-
-#if BOS(WINDOWS)
-template<int depth> __forceinline constexpr unsigned long clzl(unsigned long value)
-{
-    return value & (1UL << (bitCount<unsigned long>() - 1)) ? 0 : 1 + clzl<depth - 1>(value << 1);
-}
-
-template<> __forceinline constexpr unsigned long clzl<1>(unsigned long value)
-{
-    return 0;
-}
-
-__forceinline constexpr unsigned long __builtin_clzl(unsigned long value)
-{
-    return value == 0 ? 32 : clzl<bitCount<unsigned long>()>(value);
-}
-#endif
 
 template <typename T>
 constexpr unsigned clzConstexpr(T value)
@@ -302,3 +287,5 @@ constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 }
 
 } // namespace bmalloc
+
+#endif // __cplusplus

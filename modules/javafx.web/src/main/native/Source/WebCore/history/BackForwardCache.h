@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "BackForwardItemIdentifier.h"
-#include "HistoryItem.h"
+#include <WebCore/BackForwardItemIdentifier.h>
+#include <WebCore/HistoryItem.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
@@ -88,7 +88,7 @@ private:
     void prune(PruningReason);
     void dump() const;
 
-    HashMap<BackForwardItemIdentifier, std::variant<PruningReason, UniqueRef<CachedPage>>> m_cachedPageMap;
+    HashMap<BackForwardItemIdentifier, Variant<PruningReason, UniqueRef<CachedPage>>> m_cachedPageMap;
     ListHashSet<BackForwardItemIdentifier> m_items;
     unsigned m_maxSize {0};
 

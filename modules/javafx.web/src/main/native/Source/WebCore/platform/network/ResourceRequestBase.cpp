@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #include "HTTPHeaderNames.h"
 #include "HTTPStatusCodes.h"
+#include "IPAddressSpace.h"
 #include "Logging.h"
 #include "PublicSuffixStore.h"
 #include "RegistrableDomain.h"
@@ -128,11 +129,11 @@ const URL& ResourceRequestBase::url() const
     return m_requestData.m_url;
 }
 
-void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
+void ResourceRequestBase::setURL(URL&& url, bool didFilterLinkDecoration)
 {
     updateResourceRequest();
 
-    m_requestData.m_url = url;
+    m_requestData.m_url = WTF::move(url);
     m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
 
     m_platformRequestUpdated = false;
@@ -147,17 +148,13 @@ static bool shouldUseGet(const ResourceRequestBase& request, const ResourceRespo
     return redirectResponse.httpStatusCode() == httpStatus303SeeOther;
 }
 
-// https://fetch.spec.whatwg.org/#concept-http-redirect-fetch Step 11
+// https://fetch.spec.whatwg.org/#concept-http-redirect-fetch
 void ResourceRequestBase::redirectAsGETIfNeeded(const ResourceRequestBase &redirectRequest, const ResourceResponse& redirectResponse)
 {
     if (shouldUseGet(redirectRequest, redirectResponse)) {
         setHTTPMethod("GET"_s);
         setHTTPBody(nullptr);
-        m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::ContentLength);
-        m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::ContentLanguage);
-        m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::ContentEncoding);
-        m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::ContentLocation);
-        clearHTTPContentType();
+        m_requestData.m_httpHeaderFields.removeRequestBodyHeaders();
     }
 }
 
@@ -175,7 +172,7 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
     if (shouldSetHash == ShouldSetHash::Yes && url.fragmentIdentifier().isEmpty() && !redirectResponse.url().fragmentIdentifier().isEmpty())
         url.setFragmentIdentifier(redirectResponse.url().fragmentIdentifier());
 
-    request.setURL(WTFMove(url));
+    request.setURL(WTF::move(url));
 
     request.redirectAsGETIfNeeded(*this, redirectResponse);
 
@@ -441,7 +438,7 @@ void ResourceRequestBase::clearPurpose()
 {
     updateResourceRequest();
 
-    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::Purpose);
+    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::SecPurpose);
 
     m_platformRequestUpdated = false;
 }
@@ -582,7 +579,7 @@ void ResourceRequestBase::setHTTPBody(RefPtr<FormData>&& httpBody)
 {
     updateResourceRequest();
 
-    m_httpBody = WTFMove(httpBody);
+    m_httpBody = WTF::move(httpBody);
 
     m_resourceRequestBodyUpdated = true;
 
@@ -664,7 +661,7 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
 {
     updateResourceRequest();
 
-    m_requestData.m_httpHeaderFields = WTFMove(headerFields);
+    m_requestData.m_httpHeaderFields = WTF::move(headerFields);
 
     m_platformRequestUpdated = false;
 }
@@ -786,7 +783,7 @@ bool ResourceRequestBase::equal(const ResourceRequest& a, const ResourceRequest&
     return ResourceRequest::platformCompare(a, b);
 }
 
-static const HTTPHeaderName conditionalHeaderNames[] = {
+static constexpr std::array conditionalHeaderNames {
     HTTPHeaderName::IfMatch,
     HTTPHeaderName::IfModifiedSince,
     HTTPHeaderName::IfNoneMatch,

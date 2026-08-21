@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include "DOMWrapperWorld.h"
-#include "EventListener.h"
-#include "EventNames.h"
-#include "HTMLElement.h"
-#include "LocalDOMWindow.h"
+#include <WebCore/DOMWrapperWorld.h>
+#include <WebCore/EventListener.h>
+#include <WebCore/EventNames.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/NodeDocument.h>
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/Weak.h>
@@ -40,6 +41,9 @@ public:
     WEBCORE_EXPORT static Ref<JSEventListener> create(JSC::JSObject& listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld&);
 
     virtual ~JSEventListener();
+
+    void ref() const final { EventListener::ref(); }
+    void deref() const final { EventListener::deref(); }
 
     bool operator==(const EventListener&) const final;
 
@@ -112,8 +116,8 @@ inline JSC::JSValue windowEventHandlerAttribute(DOMWindow& window, const AtomStr
 
 inline JSC::JSValue windowEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
-    if (RefPtr domWindow = element.document().domWindow())
-        return eventHandlerAttribute(*domWindow, eventType, isolatedWorld);
+    if (RefPtr window = element.document().window())
+        return eventHandlerAttribute(*window, eventType, isolatedWorld);
     return JSC::jsNull();
 }
 
@@ -126,15 +130,15 @@ inline void setWindowEventHandlerAttribute(DOMWindow& window, const AtomString& 
 template<typename JSMaybeErrorEventListener>
 inline void setWindowEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget)
 {
-    if (RefPtr domWindow = element.document().domWindow())
-        domWindow->setAttributeEventListener<JSMaybeErrorEventListener>(eventType, listener, *jsEventTarget.globalObject());
+    if (RefPtr window = element.document().window())
+        window->setAttributeEventListener<JSMaybeErrorEventListener>(eventType, listener, *jsEventTarget.globalObject());
 }
 
 inline JSC::JSObject* JSEventListener::ensureJSFunction(ScriptExecutionContext& scriptExecutionContext) const
 {
     // initializeJSFunction can trigger code that deletes this event listener
     // before we're done. It should always return null in this case.
-    if (UNLIKELY(!m_isolatedWorld))
+    if (!m_isolatedWorld) [[unlikely]]
         return nullptr;
 
     JSC::VM& vm = m_isolatedWorld->vm();

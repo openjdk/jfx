@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "VideoEncoder.h"
 #include "WebCodecsBase.h"
@@ -35,6 +36,7 @@
 
 namespace WebCore {
 
+class Exception;
 class WebCodecsEncodedVideoChunk;
 class WebCodecsErrorCallback;
 class WebCodecsEncodedVideoChunkOutputCallback;
@@ -43,7 +45,7 @@ struct WebCodecsEncodedVideoChunkMetadata;
 struct WebCodecsVideoEncoderEncodeOptions;
 
 class WebCodecsVideoEncoder : public WebCodecsBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebCodecsVideoEncoder);
+    WTF_MAKE_TZONE_ALLOCATED(WebCodecsVideoEncoder);
 public:
     ~WebCodecsVideoEncoder();
 
@@ -85,8 +87,8 @@ private:
     WebCodecsEncodedVideoChunkMetadata createEncodedChunkMetadata(std::optional<unsigned>);
     void updateRates(const WebCodecsVideoEncoderConfig&);
 
-    Ref<WebCodecsEncodedVideoChunkOutputCallback> m_output;
-    Ref<WebCodecsErrorCallback> m_error;
+    const Ref<WebCodecsEncodedVideoChunkOutputCallback> m_output;
+    const Ref<WebCodecsErrorCallback> m_error;
     RefPtr<VideoEncoder> m_internalEncoder;
     Vector<Ref<DeferredPromise>> m_pendingFlushPromises;
     bool m_isKeyChunkRequired { false };
@@ -96,6 +98,8 @@ private:
     size_t m_encoderCount { 0 };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebCodecsVideoEncoder)
 
 #endif

@@ -5,8 +5,8 @@
  * Copyright (C) 2011 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  * Copyright (C) 2012 University of Szeged
  * Copyright (C) 2012 Renata Hodovan <reni@webkit.org>
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2019 Google Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,12 +27,14 @@
 #include "config.h"
 #include "SVGUseElement.h"
 
-#include "CachedResourceLoader.h"
 #include "CachedSVGDocument.h"
+#include "ContainerNodeInlines.h"
+#include "DocumentResourceLoader.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "NodeName.h"
@@ -40,9 +42,11 @@
 #include "SVGDocumentExtensions.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
+#include "SVGParsingError.h"
 #include "SVGSVGElement.h"
 #include "SVGSymbolElement.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "XLinkNames.h"
@@ -51,7 +55,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGUseElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGUseElement);
 
 inline SVGUseElement::SVGUseElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -61,13 +65,14 @@ inline SVGUseElement::SVGUseElement(const QualifiedName& tagName, Document& docu
     ASSERT(hasCustomStyleResolveCallbacks());
     ASSERT(hasTagName(SVGNames::useTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGUseElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGUseElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::widthAttr, &SVGUseElement::m_width>();
         PropertyRegistry::registerProperty<SVGNames::heightAttr, &SVGUseElement::m_height>();
-    });
+    }
 }
 
 Ref<SVGUseElement> SVGUseElement::create(const QualifiedName& tagName, Document& document)
@@ -83,7 +88,7 @@ SVGUseElement::~SVGUseElement()
 
 void SVGUseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -146,6 +151,25 @@ void SVGUseElement::removedFromAncestor(RemovalType removalType, ContainerNode& 
 inline Document* SVGUseElement::externalDocument() const
 {
     return m_externalDocument ? m_externalDocument->document() : nullptr;
+}
+
+FloatRect SVGUseElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
+{
+    auto bbox = SVGGraphicsElement::getBBox(styleUpdateStrategy);
+    if (bbox.isEmpty())
+        return { };
+
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        auto* transformableContainer = dynamicDowncast<RenderSVGTransformableContainer>(renderer());
+        ASSERT(transformableContainer);
+        bbox.move(transformableContainer->additionalContainerTranslation());
+        return bbox;
+    }
+
+    auto* transformableContainer = dynamicDowncast<LegacyRenderSVGTransformableContainer>(renderer());
+    ASSERT(transformableContainer && transformableContainer->isObjectBoundingBoxValid());
+    bbox.move(transformableContainer->additionalTranslation());
+    return bbox;
 }
 
 void SVGUseElement::transferSizeAttributesToTargetClone(SVGElement& shadowElement) const
@@ -302,8 +326,8 @@ RefPtr<SVGElement> SVGUseElement::targetClone() const
 RenderPtr<RenderElement> SVGUseElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
+        return createRenderer<RenderSVGTransformableContainer>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTF::move(style));
 }
 
 static bool isDirectReference(const SVGElement& element)
@@ -318,21 +342,39 @@ static bool isDirectReference(const SVGElement& element)
         || element.hasTagName(textTag);
 }
 
+SVGGraphicsElement* SVGUseElement::visibleTargetGraphicsElement() const
+{
+    RefPtr clone = this->targetClone();
+    auto* targetElement = dynamicDowncast<SVGGraphicsElement>(clone.get());
+    if (!targetElement)
+        return nullptr;
+
+    CheckedPtr renderer = targetElement->renderer();
+    if (!renderer)
+        return nullptr;
+
+    auto& style = renderer->style();
+    if (style.display() == DisplayType::None || style.usedVisibility() != Visibility::Visible)
+        return nullptr;
+
+    // Spec: "If a <use> element is a child of a clipPath element, it must directly
+    // reference <path>, <text> or basic shapes elements. Indirect references are an
+    // error and the clipPath element must be ignored."
+    if (!isDirectReference(*targetElement))
+        return nullptr;
+
+    return targetElement;
+}
+
 Path SVGUseElement::toClipPath()
 {
     RELEASE_ASSERT(!document().settings().layerBasedSVGEngineEnabled());
 
-    RefPtr targetClone = dynamicDowncast<SVGGraphicsElement>(this->targetClone());
-    if (!targetClone)
+    RefPtr element = visibleTargetGraphicsElement();
+    if (!element)
         return { };
 
-    if (!isDirectReference(*targetClone)) {
-        // Spec: Indirect references are an error (14.3.5)
-        protectedDocument()->checkedSVGExtensions()->reportError("Not allowed to use indirect reference in <clip-path>"_s);
-        return { };
-    }
-
-    Path path = targetClone->toClipPath();
+    Path path = element->toClipPath();
     SVGLengthContext lengthContext(this);
     // FIXME: Find a way to do this without manual resolution of x/y here. It's potentially incorrect.
     path.translate(FloatSize(x().value(lengthContext), y().value(lengthContext)));
@@ -451,7 +493,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
 
     auto targetResult = targetElementFromIRIString(original->href(), original->treeScope(), original->externalDocument());
     if (targetID) {
-        *targetID = WTFMove(targetResult.identifier);
+        *targetID = WTF::move(targetResult.identifier);
         // If the reference is external, don't return the target ID to the caller.
         // The caller would use the target ID to wait for a pending resource on the wrong document.
         // If we ever want the change that and let the caller to wait on the external document,
@@ -467,15 +509,15 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
         return nullptr;
 
     if (correspondingElement) {
-        for (auto& ancestor : lineageOfType<SVGElement>(*this)) {
-            if (ancestor.correspondingElement() == target)
+        for (Ref ancestor : lineageOfType<SVGElement>(*this)) {
+            if (ancestor->correspondingElement() == target)
                 return nullptr;
         }
     } else {
         if (target->contains(this))
             return nullptr;
         // Target should only refer to a node in the same tree or a node in another document.
-        ASSERT(!isDescendantOrShadowDescendantOf(target.get()));
+        ASSERT(!isShadowIncludingDescendantOf(target.get()));
     }
 
     return target;
@@ -483,7 +525,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
 
 void SVGUseElement::cloneTarget(ContainerNode& container, SVGElement& target) const
 {
-    Ref targetClone = static_cast<SVGElement&>(target.cloneElementWithChildren(protectedDocument(), nullptr).get());
+    Ref targetClone = downcast<SVGElement>(target.cloneElementWithChildren(protectedDocument(), nullptr));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { targetClone };
     associateClonesWithOriginals(targetClone.get(), target);
     removeDisallowedElementsFromSubtree(targetClone.get());
@@ -641,9 +683,9 @@ void SVGUseElement::updateExternalDocument()
         options.mode = FetchOptions::Mode::SameOrigin;
         options.destination = FetchOptions::Destination::Image;
         options.sniffContent = ContentSniffingPolicy::DoNotSniffContent;
-        CachedResourceRequest request { ResourceRequest { externalDocumentURL }, options };
+        CachedResourceRequest request { ResourceRequest { WTF::move(externalDocumentURL) }, options };
         request.setInitiator(*this);
-        m_externalDocument = document->protectedCachedResourceLoader()->requestSVGDocument(WTFMove(request)).value_or(nullptr);
+        m_externalDocument = document->protectedCachedResourceLoader()->requestSVGDocument(WTF::move(request)).value_or(nullptr);
         if (CachedResourceHandle externalDocument = m_externalDocument)
             externalDocument->addClient(*this);
     }

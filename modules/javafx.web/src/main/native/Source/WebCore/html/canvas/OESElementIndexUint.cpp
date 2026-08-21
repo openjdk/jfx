@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESElementIndexUint);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESElementIndexUint);
 
 OESElementIndexUint::OESElementIndexUint(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::OESElementIndexUint)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_element_index_uint"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_element_index_uint);
 }
 
 OESElementIndexUint::~OESElementIndexUint() = default;
 
 bool OESElementIndexUint::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_element_index_uint"_s);
+    return context.supportsExtension(GCGLExtension::OES_element_index_uint);
 }
 
 } // namespace WebCore

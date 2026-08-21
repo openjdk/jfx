@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "AudioResampler.h"
 #include "AudioUtilities.h"
 #include <algorithm>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -54,11 +56,14 @@ std::span<float> AudioResamplerKernel::getSourceSpan(size_t framesToProcess, siz
     double nextFractionalIndex = m_virtualReadIndex + framesToProcess * rate();
 
     // Because we're linearly interpolating between the previous and next sample we need to round up so we include the next sample.
-    int endIndex = static_cast<int>(nextFractionalIndex + 1.0); // round up to next integer index
+    int endIndex = truncateDoubleToInt32(nextFractionalIndex + 1.0); // round up to next integer index
 
     // Determine how many input frames we'll need.
     // We need to fill the buffer up to and including endIndex (so add 1) but we've already buffered m_fillIndex frames from last time.
-    size_t framesNeeded = 1 + endIndex - m_fillIndex;
+    size_t framesNeeded;
+    if (!WTF::safeSub(1 + endIndex, m_fillIndex, framesNeeded))
+        return { };
+
     if (numberOfSourceFramesNeededP)
         *numberOfSourceFramesNeededP = framesNeeded;
 

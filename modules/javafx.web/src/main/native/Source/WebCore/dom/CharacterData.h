@@ -22,12 +22,16 @@
 
 #pragma once
 
-#include "ContainerNode.h"
+#include <WebCore/ContainerNode.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <span>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CharacterData : public Node {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CharacterData);
+    WTF_MAKE_TZONE_ALLOCATED(CharacterData);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CharacterData);
 public:
     const String& data() const { return m_data; }
@@ -44,13 +48,17 @@ public:
     bool containsOnlyASCIIWhitespace() const;
 
     // Like appendData, but optimized for the parser (e.g., no mutation events).
-    void parserAppendData(StringView);
+    // Using the same StringBuilder across calls avoids O(n^2) behavior.
+    void parserAppendData(StringView, StringBuilder&);
 
 protected:
     CharacterData(Document& document, String&& text, NodeType type, OptionSet<TypeFlag> typeFlags = { })
         : Node(document, type, typeFlags | TypeFlag::IsCharacterData)
-        , m_data(!text.isNull() ? WTFMove(text) : emptyString())
+        , m_data(WTF::move(text))
     {
+        if (m_data.isNull())
+            m_data = emptyString();
+
         ASSERT(isCharacterDataNode());
         ASSERT(!isContainerNode());
     }
@@ -73,13 +81,6 @@ private:
 
     String m_data;
 };
-
-inline unsigned Node::length() const
-{
-    if (auto characterData = dynamicDowncast<CharacterData>(*this))
-        return characterData->length();
-    return countChildNodes();
-}
 
 } // namespace WebCore
 

@@ -27,23 +27,24 @@
 
 #include "GPUBindGroupLayout.h"
 #include "GPUObjectDescriptorBase.h"
+#include "WebGPUDevice.h"
 #include "WebGPUPipelineLayoutDescriptor.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct GPUPipelineLayoutDescriptor : public GPUObjectDescriptorBase {
-    WebGPU::PipelineLayoutDescriptor convertToBacking() const
+    WebGPU::PipelineLayoutDescriptor convertToBacking(WebGPU::Device& device) const
     {
         return {
             { label },
-            bindGroupLayouts.map([](const auto& bindGroupLayout) -> Ref<WebGPU::BindGroupLayout> {
-                return bindGroupLayout->backing();
+            bindGroupLayouts.map([&](const auto& bindGroupLayout) -> Ref<WebGPU::BindGroupLayout> {
+                return bindGroupLayout ? Ref { bindGroupLayout->backing() } : device.emptyBindGroupLayout();
             }),
         };
     }
 
-    Vector<Ref<GPUBindGroupLayout>> bindGroupLayouts;
+    Vector<RefPtr<GPUBindGroupLayout>> bindGroupLayouts;
 };
 
 }

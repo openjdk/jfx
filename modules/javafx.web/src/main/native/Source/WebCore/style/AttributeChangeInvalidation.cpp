@@ -28,6 +28,8 @@
 
 #include "ElementIterator.h"
 #include "ElementRareData.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "StyleInvalidationFunctions.h"
 
 namespace WebCore {
@@ -77,13 +79,10 @@ void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attribute
             if (onlyMatchElement && invalidationRuleSet.matchElement != onlyMatchElement)
                 continue;
 
-        for (auto* selector : invalidationRuleSet.invalidationSelectors) {
-            if (!selector->isAttributeSelector()) {
-                ASSERT_NOT_REACHED();
-                continue;
-            }
-            bool oldMatches = !oldValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, oldValue, *selector);
-            bool newMatches = !newValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, newValue, *selector);
+            for (auto& selector : invalidationRuleSet.invalidationSelectors) {
+                ASSERT(selector.isAttributeSelector());
+                bool oldMatches = !oldValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, oldValue, selector);
+                bool newMatches = !newValue.isNull() && SelectorChecker::attributeSelectorMatches(m_element, attributeName, newValue, selector);
             if (oldMatches != newMatches) {
                 Invalidator::addToMatchElementRuleSets(m_matchElementRuleSets, invalidationRuleSet);
                 break;
@@ -94,7 +93,7 @@ void AttributeChangeInvalidation::invalidateStyle(const QualifiedName& attribute
 
     collect(m_element->styleResolver().ruleSets());
 
-    if (auto* shadowRoot = m_element->shadowRoot())
+    if (RefPtr shadowRoot = m_element->shadowRoot())
         collect(shadowRoot->styleScope().resolver().ruleSets(), MatchElement::Host);
 }
 

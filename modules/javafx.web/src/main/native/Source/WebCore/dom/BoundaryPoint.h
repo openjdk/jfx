@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Node.h"
+#include <WebCore/Node.h>
 
 namespace WebCore {
 
@@ -35,8 +35,10 @@ struct BoundaryPoint {
 
     BoundaryPoint(Ref<Node>&&, unsigned);
 
-    Document& document() const;
-    WEBCORE_EXPORT Ref<Document> protectedDocument() const;
+    inline Document& document() const; // Defined in BoundaryPointInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in BoundaryPointInlines.h
+
+    String debugDescription() const;
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
@@ -54,14 +56,9 @@ BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
 WEBCORE_EXPORT std::partial_ordering treeOrderForTesting(TreeType, const BoundaryPoint&, const BoundaryPoint&);
 
 inline BoundaryPoint::BoundaryPoint(Ref<Node>&& container, unsigned offset)
-    : container(WTFMove(container))
+    : container(WTF::move(container))
     , offset(offset)
 {
-}
-
-inline Document& BoundaryPoint::document() const
-{
-    return container->document();
 }
 
 inline bool operator==(const BoundaryPoint& a, const BoundaryPoint& b)
@@ -74,10 +71,7 @@ inline BoundaryPoint makeBoundaryPointBeforeNodeContents(Node& node)
     return { node, 0 };
 }
 
-inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
-{
-    return { node, node.length() };
-}
+inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
 
 struct WeakBoundaryPoint {
     WeakPtr<Node, Node::WeakPtrImplType> container;
@@ -87,7 +81,7 @@ struct WeakBoundaryPoint {
 };
 
 inline WeakBoundaryPoint::WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&& container, unsigned offset)
-    : container(WTFMove(container))
+    : container(WTF::move(container))
     , offset(offset)
 {
 }

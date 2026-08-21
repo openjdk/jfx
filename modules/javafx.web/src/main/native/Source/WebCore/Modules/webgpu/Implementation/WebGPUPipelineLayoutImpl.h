@@ -41,7 +41,7 @@ class PipelineLayoutImpl final : public PipelineLayout {
 public:
     static Ref<PipelineLayoutImpl> create(WebGPUPtr<WGPUPipelineLayout>&& pipelineLayout, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new PipelineLayoutImpl(WTFMove(pipelineLayout), convertToBackingContext));
+        return adoptRef(*new PipelineLayoutImpl(WTF::move(pipelineLayout), convertToBackingContext));
     }
 
     virtual ~PipelineLayoutImpl();
@@ -57,13 +57,18 @@ private:
     PipelineLayoutImpl& operator=(PipelineLayoutImpl&&) = delete;
 
     WGPUPipelineLayout backing() const { return m_backing.get(); }
+    bool isPipelineLayoutImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUPipelineLayout> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::PipelineLayoutImpl)
+    static bool isType(const WebCore::WebGPU::PipelineLayout& layout) { return layout.isPipelineLayoutImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

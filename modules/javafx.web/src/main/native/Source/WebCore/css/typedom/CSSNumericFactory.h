@@ -39,7 +39,7 @@ class DOMCSSNamespace;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSNumericFactory);
 class CSSNumericFactory final : public Supplement<DOMCSSNamespace> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSNumericFactory);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSNumericFactory, CSSNumericFactory);
 public:
     explicit CSSNumericFactory(DOMCSSNamespace&) { }
 
@@ -128,7 +128,12 @@ public:
 
 private:
     static CSSNumericFactory* from(DOMCSSNamespace&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "CSSNumericFactory"_s; }
+    bool isCSSNumericFactory() const final { return true; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSNumericFactory)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isCSSNumericFactory(); }
+SPECIALIZE_TYPE_TRAITS_END()

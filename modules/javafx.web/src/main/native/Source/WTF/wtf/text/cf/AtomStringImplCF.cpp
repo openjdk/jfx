@@ -39,16 +39,15 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(CFStringRef string)
     if (!string)
         return nullptr;
 
-    if (auto span = byteCast<LChar>(CFStringGetLatin1CStringSpan(string)); span.data())
+    if (auto span = CFStringGetLatin1CStringSpan(string); span.data())
         return add(span);
 
-    size_t length = CFStringGetLength(string);
-    if (const UniChar* ptr = CFStringGetCharactersPtr(string))
-        return add(unsafeMakeSpan(reinterpret_cast<const UChar*>(ptr), length));
+    if (auto span = CFStringGetCharactersSpan(string); span.data())
+        return add(span);
 
-    Vector<UniChar, 1024> ucharBuffer(length);
-    CFStringGetCharacters(string, CFRangeMake(0, length), ucharBuffer.data());
-    return add(spanReinterpretCast<const UChar>(ucharBuffer.span()));
+    Vector<char16_t, 1024> ucharBuffer(CFStringGetLength(string));
+    CFStringCopyCharactersSpan(string, ucharBuffer.mutableSpan());
+    return add(ucharBuffer.span());
 }
 
 } // namespace WTF

@@ -40,9 +40,10 @@ namespace WebGPU {
 class CommandEncoder;
 class Device;
 class Texture;
+class XRProjectionLayer;
 
 class XRSubImage : public RefCountedAndCanMakeWeakPtr<XRSubImage>, public WGPUXRSubImageImpl {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRSubImage);
 public:
     static Ref<XRSubImage> create(Device& device)
     {
@@ -58,7 +59,7 @@ public:
     void setLabel(String&&);
 
     bool isValid() const;
-    void update(id<MTLTexture> colorTexture, id<MTLTexture> depthTexture, size_t currentTextureIndex, const std::pair<id<MTLSharedEvent>, uint64_t>&);
+    void update(const XRProjectionLayer&);
     Texture* colorTexture();
     Texture* depthTexture();
 
@@ -66,8 +67,8 @@ private:
     XRSubImage(bool, Device&);
     XRSubImage(Device&);
 
-    HashMap<uint64_t, RefPtr<Texture>, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_colorTextures;
-    HashMap<uint64_t, RefPtr<Texture>, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_depthTextures;
+    HashMap<uint64_t, Ref<Texture>, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_colorTextures;
+    HashMap<uint64_t, Ref<Texture>, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_depthTextures;
     uint64_t m_currentTextureIndex { 0 };
 
     ThreadSafeWeakPtr<Device> m_device;

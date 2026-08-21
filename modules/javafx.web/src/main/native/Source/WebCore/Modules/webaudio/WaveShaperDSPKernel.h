@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,10 +50,13 @@ public:
     // Oversampling requires more resources, so let's only allocate them if needed.
     void lazyInitializeOversampling();
 
-private:
     // Apply the shaping curve.
-    void processCurve(std::span<const float> source, std::span<float> destination);
+    WEBCORE_EXPORT static void processCurveWithData(std::span<const float> source, std::span<float> destination, std::span<const float> curveData);
 
+private:
+    bool isWaveShaperDSPKernel() const final { return true; }
+
+    void processCurve(std::span<const float> source, std::span<float> destination);
     // Use up-sampling, process at the higher sample-rate, then down-sample.
     void processCurve2x(std::span<const float> source, std::span<float> destination);
     void processCurve4x(std::span<const float> source, std::span<float> destination);
@@ -73,3 +76,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WaveShaperDSPKernel)
+    static bool isType(const WebCore::AudioDSPKernel& kernel) { return kernel.isWaveShaperDSPKernel(); }
+SPECIALIZE_TYPE_TRAITS_END()

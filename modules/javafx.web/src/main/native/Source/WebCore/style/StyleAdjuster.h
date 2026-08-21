@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include "AutosizeStatus.h"
 #include "RenderStyleConstants.h"
-#include "TextSizeAdjustment.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/OptionSet.h>
 
@@ -49,10 +49,13 @@ class Adjuster {
 public:
     Adjuster(const Document&, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle, Element*);
 
-    void adjust(RenderStyle&, const RenderStyle* userAgentAppearanceStyle) const;
+    static void adjustFromBuilder(RenderStyle&);
+    void adjust(RenderStyle&) const;
     void adjustAnimatedStyle(RenderStyle&, OptionSet<AnimationImpact>) const;
 
     static void adjustVisibilityForPseudoElement(RenderStyle&, const Element& host);
+    static void adjustFirstLetterStyle(RenderStyle&);
+    static void adjustFirstLineStyle(RenderStyle&);
     static void adjustSVGElementStyle(RenderStyle&, const SVGElement&);
     static bool adjustEventListenerRegionTypesForRootStyle(RenderStyle&, const Document&);
     static void propagateToDocumentElementAndInitialContainingBlock(Update&, const Document&);
@@ -74,7 +77,7 @@ private:
     void adjustDisplayContentsStyle(RenderStyle&) const;
     void adjustForSiteSpecificQuirks(RenderStyle&) const;
 
-    void adjustThemeStyle(RenderStyle&, const RenderStyle* userAgentAppearanceStyle) const;
+    void adjustThemeStyle(RenderStyle&, const RenderStyle& parentStyle) const;
 
     static OptionSet<EventListenerRegionType> computeEventListenerRegionTypes(const Document&, const RenderStyle&, const EventTarget&, OptionSet<EventListenerRegionType>);
 

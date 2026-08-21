@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,12 +40,17 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioNodeInput);
 
+Ref<AudioNodeInput> AudioNodeInput::create(AudioNode* node)
+{
+    return adoptRef(*new AudioNodeInput(node));
+}
+
 AudioNodeInput::AudioNodeInput(AudioNode* node)
     : AudioSummingJunction(node->context())
     , m_node(node, EnableWeakPtrThreadingAssertions::No) // WebAudio code uses locking when accessing the context.
+    , m_internalSummingBus { AudioBus::create(1, AudioUtilities::renderQuantumSize) }
 {
     // Set to mono by default.
-    m_internalSummingBus = AudioBus::create(1, AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeInput::connect(AudioNodeOutput* output)
@@ -83,6 +88,9 @@ void AudioNodeInput::disconnect(AudioNodeOutput* output)
     }
 
     // Otherwise, try to disconnect from disabled connections.
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     if (m_disabledOutputs.remove(output)) {
         output->removeInput(this); // Note: it's important to return immediately after this since the node may be deleted.
         return;
@@ -110,7 +118,7 @@ void AudioNodeInput::disable(AudioNodeOutput* output)
     }
 
     // Propagate disabled state to outputs.
-    node()->disableOutputsIfNecessary();
+    checkedNode()->disableOutputsIfNecessary();
 }
 
 void AudioNodeInput::enable(AudioNodeOutput* output)
@@ -134,12 +142,12 @@ void AudioNodeInput::enable(AudioNodeOutput* output)
     m_disabledOutputs.remove(output);
 
     // Propagate enabled state to outputs.
-    node()->enableOutputsIfNecessary();
+    checkedNode()->enableOutputsIfNecessary();
 }
 
 void AudioNodeInput::didUpdate()
 {
-    node()->checkNumberOfChannelsForInput(this);
+    checkedNode()->checkNumberOfChannelsForInput(this);
 }
 
 void AudioNodeInput::updateInternalBus()
@@ -173,28 +181,28 @@ unsigned AudioNodeInput::numberOfChannels() const
     return maxChannels;
 }
 
-AudioBus* AudioNodeInput::bus()
+AudioBus& AudioNodeInput::bus() LIFETIME_BOUND
 {
     ASSERT(context());
     ASSERT(context()->isAudioThread());
 
     // Handle single connection specially to allow for in-place processing.
     if (numberOfRenderingConnections() == 1 && node()->channelCountMode() == ChannelCountMode::Max)
-        return renderingOutput(0)->bus();
+        SUPPRESS_UNCHECKED_ARG return renderingOutput(0)->bus();
 
     // Multiple connections case or complex ChannelCountMode (or no connections).
-    return internalSummingBus();
+    return m_internalSummingBus;
 }
 
-AudioBus* AudioNodeInput::internalSummingBus()
+AudioBus& AudioNodeInput::internalSummingBus()
 {
     ASSERT(context());
     ASSERT(context()->isAudioThread());
 
-    return m_internalSummingBus.get();
+    return m_internalSummingBus;
 }
 
-void AudioNodeInput::sumAllConnections(AudioBus* summingBus, size_t framesToProcess)
+void AudioNodeInput::sumAllConnections(AudioBus& summingBus, size_t framesToProcess)
 {
     ASSERT(context());
     ASSERT(context()->isAudioThread());
@@ -202,11 +210,7 @@ void AudioNodeInput::sumAllConnections(AudioBus* summingBus, size_t framesToProc
     // We shouldn't be calling this method if there's only one connection, since it's less efficient.
     ASSERT(numberOfRenderingConnections() > 1 || node()->channelCountMode() != ChannelCountMode::Max);
 
-    ASSERT(summingBus);
-    if (!summingBus)
-        return;
-
-    summingBus->zero();
+    summingBus.zero();
 
     auto interpretation = node()->channelInterpretation();
 
@@ -214,14 +218,14 @@ void AudioNodeInput::sumAllConnections(AudioBus* summingBus, size_t framesToProc
         ASSERT(output);
 
         // Render audio from this output.
-        AudioBus* connectionBus = output->pull(0, framesToProcess);
+        AudioBus& connectionBus = output->pull(nullptr, framesToProcess);
 
         // Sum, with unity-gain.
-        summingBus->sumFrom(*connectionBus, interpretation);
+        summingBus.sumFrom(connectionBus, interpretation);
     }
 }
 
-AudioBus* AudioNodeInput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
+AudioBus& AudioNodeInput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
 {
     ASSERT(context());
     ASSERT(context()->isAudioThread());
@@ -229,23 +233,21 @@ AudioBus* AudioNodeInput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
     // Handle single connection case.
     if (numberOfRenderingConnections() == 1 && node()->channelCountMode() == ChannelCountMode::Max) {
         // The output will optimize processing using inPlaceBus if it's able.
-        AudioNodeOutput* output = this->renderingOutput(0);
+        CheckedPtr output = this->renderingOutput(0);
         return output->pull(inPlaceBus, framesToProcess);
     }
-
-    AudioBus* internalSummingBus = this->internalSummingBus();
 
     if (!numberOfRenderingConnections()) {
         // At least, generate silence if we're not connected to anything.
         // FIXME: if we wanted to get fancy, we could propagate a 'silent hint' here to optimize the downstream graph processing.
-        internalSummingBus->zero();
-        return internalSummingBus;
+        m_internalSummingBus->zero();
+        return m_internalSummingBus;
     }
 
     // Handle multiple connections case.
-    sumAllConnections(internalSummingBus, framesToProcess);
+    sumAllConnections(m_internalSummingBus, framesToProcess);
 
-    return internalSummingBus;
+    return m_internalSummingBus;
 }
 
 } // namespace WebCore

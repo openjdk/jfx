@@ -26,33 +26,44 @@
 #pragma once
 
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/RefCounted.h>
 
 namespace JSC {
 
-class CallFrame;
-class JSGlobalObject;
-
 enum class MicrotaskIdentifierType { };
-using MicrotaskIdentifier = AtomicObjectIdentifier<MicrotaskIdentifierType>;
+using MicrotaskIdentifier = ObjectIdentifier<MicrotaskIdentifierType>;
 
-class Microtask : public RefCounted<Microtask> {
-public:
-    Microtask()
-        : m_identifier(MicrotaskIdentifier::generate())
-    {
-    }
+enum class InternalMicrotask : uint8_t {
+    PromiseResolveThenableJobFast = 0,
+    PromiseResolveThenableJobWithInternalMicrotaskFast,
 
-    virtual ~Microtask()
-    {
-    }
+    PromiseResolveThenableJob,
+    PromiseResolveThenableJobWithInternalMicrotask,
 
-    MicrotaskIdentifier identifier() const { return m_identifier; }
+    PromiseResolveWithoutHandlerJob,
 
-    virtual void run(JSGlobalObject*) = 0;
+    PromiseRaceResolveJob,
+    PromiseAllResolveJob,
+    PromiseAllSettledResolveJob,
+    PromiseAnyResolveJob,
+    PromiseFinallyReactionJob,
+    PromiseFinallyAwaitJob,
 
-protected:
-    MicrotaskIdentifier m_identifier;
+    InternalPromiseAllResolveJob,
+
+    PromiseReactionJob,
+
+    AsyncFunctionResume,
+    AsyncFromSyncIteratorContinue,
+    AsyncFromSyncIteratorDone,
+    AsyncGeneratorYieldAwaited,
+    AsyncGeneratorBodyCallNormal,
+    AsyncGeneratorBodyCallReturn,
+    AsyncGeneratorResumeNext,
+
+    InvokeFunctionJob,
+    Opaque, // Dispatch must handle everything.
 };
+
+constexpr unsigned maxMicrotaskArguments = 3;
 
 } // namespace JSC

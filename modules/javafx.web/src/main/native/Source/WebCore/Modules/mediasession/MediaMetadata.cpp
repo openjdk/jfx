@@ -30,9 +30,8 @@
 
 #include "BitmapImage.h"
 #include "CachedImage.h"
-#include "CachedResourceLoader.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "ExceptionOr.h"
 #include "GraphicsContext.h"
 #include "Image.h"
 #include "ImageBuffer.h"
@@ -40,6 +39,7 @@
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -48,10 +48,15 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ArtworkImageLoader);
 
+Ref<ArtworkImageLoader> ArtworkImageLoader::create(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
+{
+    return adoptRef(*new ArtworkImageLoader(document, src, WTF::move(callback)));
+}
+
 ArtworkImageLoader::ArtworkImageLoader(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
     : m_document(document)
     , m_src(src)
-    , m_callback(WTFMove(callback))
+    , m_callback(WTF::move(callback))
 {
 }
 
@@ -65,12 +70,12 @@ void ArtworkImageLoader::requestImageResource()
 {
     ASSERT(!m_cachedImage, "Can only call requestImageResource once");
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    Ref document = m_document.get();
+    RefPtr document = m_document.get();
     options.contentSecurityPolicyImposition = document->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
 
     CachedResourceRequest request(ResourceRequest(document->completeURL(m_src)), options);
     request.setInitiatorType(AtomString { document->documentURI() });
-    m_cachedImage = document->protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
+    m_cachedImage = document->protectedCachedResourceLoader()->requestImage(WTF::move(request)).value_or(nullptr);
 
     if (m_cachedImage)
         m_cachedImage->addClient(*this);
@@ -83,7 +88,10 @@ void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkL
         m_callback(nullptr);
         return;
     }
-    m_callback(m_cachedImage->image());
+    Ref image = *m_cachedImage->image();
+    image->subresourcesAreFinished(nullptr, [image, callback = std::exchange(m_callback, { })]() mutable {
+        callback(image.ptr());
+    });
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)
@@ -96,7 +104,7 @@ ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& co
 #if ENABLE(MEDIA_SESSION_PLAYLIST)
         metadata->setTrackIdentifier(init->trackIdentifier);
 #endif
-        auto possibleException = metadata->setArtwork(context, WTFMove(init->artwork));
+        auto possibleException = metadata->setArtwork(context, WTF::move(init->artwork));
         if (possibleException.hasException())
             return Exception { possibleException.exception() };
     }
@@ -106,7 +114,7 @@ ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& co
 Ref<MediaMetadata> MediaMetadata::create(MediaSession& session, Vector<URL>&& images)
 {
     auto metadata = adoptRef(*new MediaMetadata);
-    metadata->m_defaultImages = WTFMove(images);
+    metadata->m_defaultImages = WTF::move(images);
     metadata->setMediaSession(session);
     return metadata;
 }
@@ -166,7 +174,7 @@ ExceptionOr<void> MediaMetadata::setArtwork(ScriptExecutionContext& context, Vec
         resolvedArtwork.append(MediaImage { resolvedSrc.string(), image.sizes, image.type });
     }
 
-    m_metadata.artwork = WTFMove(resolvedArtwork);
+    m_metadata.artwork = WTF::move(resolvedArtwork);
     refreshArtworkImage();
 
     metadataUpdated();
@@ -245,11 +253,9 @@ void MediaMetadata::refreshArtworkImage()
         return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
     });
 
-    std::sort(artworks.begin(), artworks.end(), [](const Pair& a1, const Pair& a2) {
-        return a1.score > a2.score;
-    });
+    std::ranges::sort(artworks, std::ranges::greater { }, &Pair::score);
 
-    tryNextArtworkImage(0, WTFMove(artworks));
+    tryNextArtworkImage(0, WTF::move(artworks));
 }
 
 void MediaMetadata::tryNextArtworkImage(uint32_t index, Vector<Pair>&& artworks)
@@ -262,14 +268,17 @@ void MediaMetadata::tryNextArtworkImage(uint32_t index, Vector<Pair>&& artworks)
 
     String artworkImageSrc = artworks[index].src;
 
-    m_artworkLoader = makeUnique<ArtworkImageLoader>(*document, artworkImageSrc, [this, index, artworkImageSrc, artworks = WTFMove(artworks)](Image* image) mutable {
+    m_artworkLoader = ArtworkImageLoader::create(*document, artworkImageSrc, [weakThis = WeakPtr { *this }, index, artworkImageSrc, artworks = WTF::move(artworks)](Image* image) mutable {
+        RefPtr strongThis = weakThis;
+        if (!strongThis)
+            return;
         if (image && image->data() && image->width() && image->height()) {
             IntSize size { int(image->width()), int(image->height()) };
             float imageScore = imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize);
-            if (!index || (m_artworkImage && (imageDimensionsScore(m_artworkImage->width(), m_artworkImage->height(), s_minimumSize, s_idealSize) < imageScore))) {
-                m_artworkImageSrc = artworkImageSrc;
-        setArtworkImage(image);
-        metadataUpdated();
+            if (!index || (strongThis->m_artworkImage && (imageDimensionsScore(strongThis->m_artworkImage->width(), strongThis->m_artworkImage->height(), s_minimumSize, s_idealSize) < imageScore))) {
+                strongThis->m_artworkImageSrc = artworkImageSrc;
+                strongThis->setArtworkImage(image);
+                strongThis->metadataUpdated();
             }
             // If selection from `sizes` attribute yielded a valid image, or we have downloaded an image bigger than the ideal size we stop.
             if (artworks[index].score >= 0 || size.maxDimension() >= s_idealSize)
@@ -277,7 +286,7 @@ void MediaMetadata::tryNextArtworkImage(uint32_t index, Vector<Pair>&& artworks)
         }
 
         if (++index < artworks.size())
-            tryNextArtworkImage(index, WTFMove(artworks));
+            strongThis->tryNextArtworkImage(index, WTF::move(artworks));
     });
     m_artworkLoader->requestImageResource();
 }

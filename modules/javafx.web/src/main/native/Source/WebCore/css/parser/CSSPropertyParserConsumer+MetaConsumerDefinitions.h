@@ -30,29 +30,14 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSPropertyParserOptions.h"
+#include "CSSPropertyParserState.h"
 
 namespace WebCore {
-
-struct CSSParserContext;
-
 namespace CSSPropertyParserHelpers {
 
 // MARK: - Generic Consumer Definition
 
 template<typename> struct ConsumerDefinition;
-
-inline bool shouldAcceptUnitlessValue(double value, CSSPropertyParserOptions options)
-{
-    // FIXME: Presentational HTML attributes shouldn't use the CSS parser for lengths.
-
-    if (!value && options.unitlessZero == UnitlessZeroQuirk::Allow)
-        return true;
-
-    if (isUnitlessValueParsingEnabledForMode(options.parserMode))
-        return true;
-
-    return options.parserMode == HTMLQuirksMode && options.unitless == UnitlessQuirk::Allow;
-}
 
 // Used to check that a specialization of ConsumerDefinition exists.
 struct HasConsumerDefinition {
@@ -138,13 +123,13 @@ template<typename Raw> bool isValidCanonicalValue(Raw raw)
 // Shared clamping utility.
 template<typename Raw> Raw performParseTimeClamp(Raw raw)
 {
-    static_assert(raw.range.options != CSS::RangeOptions::Default);
+    static_assert(raw.range.clampOptions != CSS::RangeClampOptions::Default);
 
-    if constexpr (raw.range.options == CSS::RangeOptions::ClampLower)
+    if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampLower)
         return { std::max<typename Raw::ResolvedValueType>(raw.value, raw.range.min) };
-    else if constexpr (raw.range.options == CSS::RangeOptions::ClampUpper)
+    else if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampUpper)
         return { std::min<typename Raw::ResolvedValueType>(raw.value, raw.range.max) };
-    else if constexpr (raw.range.options == CSS::RangeOptions::ClampBoth)
+    else if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampBoth)
         return { std::clamp<typename Raw::ResolvedValueType>(raw.value, raw.range.min, raw.range.max) };
 }
 
@@ -152,19 +137,19 @@ template<typename Raw> Raw performParseTimeClamp(Raw raw)
 template<typename Primitive, typename Validator> struct DimensionConsumer {
     static constexpr CSSParserTokenType tokenType = DimensionToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == DimensionToken);
 
         auto& token = range.peek();
 
-        auto validatedUnit = Validator::validate(token.unitType(), options);
+        auto validatedUnit = Validator::validate(token.unitType(), state, options);
         if (!validatedUnit)
             return std::nullopt;
 
         auto rawValue = typename Primitive::Raw { *validatedUnit, token.numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -179,13 +164,13 @@ template<typename Primitive, typename Validator> struct DimensionConsumer {
 template<typename Primitive, typename Validator> struct PercentageConsumer {
     static constexpr CSSParserTokenType tokenType = PercentageToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == PercentageToken);
 
         auto rawValue = typename Primitive::Raw { CSS::PercentageUnit::Percentage, range.peek().numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -200,13 +185,13 @@ template<typename Primitive, typename Validator> struct PercentageConsumer {
 template<typename Primitive, typename Validator> struct NumberConsumer {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 
         auto rawValue = typename Primitive::Raw { CSS::NumberUnit::Number, range.peek().numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -221,17 +206,17 @@ template<typename Primitive, typename Validator> struct NumberConsumer {
 template<typename Primitive, typename Validator, auto unit> struct NumberConsumerForUnitlessValues {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 
         auto numericValue = range.peek().numericValue();
-        if (!shouldAcceptUnitlessValue(numericValue, options))
+        if (!Validator::shouldAcceptUnitlessValue(numericValue, state, options))
             return std::nullopt;
 
         auto rawValue = typename Primitive::Raw { unit, numericValue };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -246,12 +231,12 @@ template<typename Primitive, typename Validator, auto unit> struct NumberConsume
 template<typename Primitive> struct FunctionConsumerForCalcValues {
     static constexpr CSSParserTokenType tokenType = FunctionToken;
 
-    static std::optional<typename Primitive::Calc> consume(CSSParserTokenRange& range, const CSSParserContext& context, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Calc> consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (RefPtr value = CSSCalcValue::parse(rangeCopy, context, Primitive::category, Primitive::range, WTFMove(symbolsAllowed), options)) {
+        if (RefPtr value = CSSCalc::Value::parse(rangeCopy, state, Primitive::category, Primitive::range, WTF::move(symbolsAllowed), options)) {
             range = rangeCopy;
             return {{ value.releaseNonNull() }};
         }
@@ -263,7 +248,7 @@ template<typename Primitive> struct FunctionConsumerForCalcValues {
 template<typename T> struct KeywordConsumer {
     static constexpr CSSParserTokenType tokenType = IdentToken;
 
-    static std::optional<T> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions)
+    static std::optional<T> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions)
     {
         ASSERT(range.peek().type() == IdentToken);
 

@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2009 Google, Inc.  All rights reserved.
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2015 Google, Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,7 +29,7 @@ namespace WebCore {
 class SVGElement;
 
 class LegacyRenderSVGContainer : public LegacyRenderSVGModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGContainer);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGContainer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGContainer);
 public:
     virtual ~LegacyRenderSVGContainer();
@@ -37,8 +37,10 @@ public:
     void paint(PaintInfo&, const LayoutPoint&) override;
     void setNeedsBoundariesUpdate() final { m_needsBoundariesUpdate = true; }
     virtual bool didTransformToRootUpdate() { return false; }
-    bool isObjectBoundingBoxValid() const { return m_objectBoundingBoxValid; }
+    bool isObjectBoundingBoxValid() const { return static_cast<bool>(m_objectBoundingBox); }
     bool isRepaintSuspendedForChildren() const { return m_repaintIsSuspendedForChildrenDuringLayout; }
+
+    FloatRect objectBoundingBox() const final { return m_objectBoundingBox.value_or(FloatRect()); }
 
 protected:
     LegacyRenderSVGContainer(Type, SVGElement&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
@@ -51,9 +53,9 @@ protected:
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
 
-    FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
+    FloatRect decoratedBoundingBox() const final;
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
 
@@ -71,12 +73,11 @@ protected:
     void updateCachedBoundaries();
 
 private:
-    FloatRect m_objectBoundingBox;
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
+    Markable<FloatRect> m_objectBoundingBox;
+    mutable Markable<FloatRect> m_strokeBoundingBox;
     FloatRect m_repaintBoundingBox;
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_accurateRepaintBoundingBox;
+    mutable Markable<FloatRect> m_accurateRepaintBoundingBox;
 
-    bool m_objectBoundingBoxValid { false };
     bool m_needsBoundariesUpdate { true };
     bool m_repaintIsSuspendedForChildrenDuringLayout { false };
 };

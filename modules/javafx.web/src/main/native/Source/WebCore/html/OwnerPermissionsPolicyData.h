@@ -25,16 +25,18 @@
 
 #pragma once
 
-#include "PermissionsPolicy.h"
+#include <WebCore/PermissionsPolicy.h>
 
 namespace WebCore {
 
 struct OwnerPermissionsPolicyData {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(OwnerPermissionsPolicyData);
+
     using PolicyDirective = PermissionsPolicy::PolicyDirective;
     OwnerPermissionsPolicyData(SecurityOriginData&& documentOrigin, PermissionsPolicy&& documentPolicy, PolicyDirective&& containerPolicy)
-        : documentOrigin(WTFMove(documentOrigin))
-        , documentPolicy(WTFMove(documentPolicy))
-        , containerPolicy(WTFMove(containerPolicy))
+        : documentOrigin(WTF::move(documentOrigin))
+        , documentPolicy(WTF::move(documentPolicy))
+        , containerPolicy(WTF::move(containerPolicy))
     {
     }
 

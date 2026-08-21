@@ -28,19 +28,22 @@
 #include "ColorChooser.h"
 #include "ContactInfo.h"
 #include "ContactsRequestData.h"
+#include "ContainerNodeInlines.h"
 #include "DataListSuggestionPicker.h"
 #include "DateTimeChooser.h"
 #if HAVE(DIGITAL_CREDENTIALS_UI)
 #include "DigitalCredentialsRequestData.h"
 #include "DigitalCredentialsResponseData.h"
 #endif
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentType.h"
+#include "DocumentView.h"
+#include "DocumentWindow.h"
 #include "ExceptionData.h"
 #include "FaceDetectorInterface.h"
 #include "FileList.h"
 #include "FloatRect.h"
+#include "FocusControllerTypes.h"
+#include "FocusOptions.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "Geolocation.h"
@@ -71,6 +74,7 @@
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
+#include "LocalFrameInlines.h"
 
 namespace WebCore {
 
@@ -80,7 +84,7 @@ using namespace HTMLNames;
 
 Chrome::Chrome(Page& page, UniqueRef<ChromeClient>&& client)
     : m_page(page)
-    , m_client(WTFMove(client))
+    , m_client(WTF::move(client))
 {
 }
 
@@ -141,9 +145,19 @@ IntRect Chrome::rootViewToAccessibilityScreen(const IntRect& rect) const
 }
 
 #if PLATFORM(IOS_FAMILY)
-void Chrome::relayAccessibilityNotification(const String& notificationName, const RetainPtr<NSData>& notificationData) const
+void Chrome::relayAccessibilityNotification(String&& notificationName, RetainPtr<NSData>&& notificationData) const
 {
-    return m_client->relayAccessibilityNotification(notificationName, notificationData);
+    return m_client->relayAccessibilityNotification(WTF::move(notificationName), WTF::move(notificationData));
+}
+
+void Chrome::relayAriaNotifyNotification(AriaNotifyData&& notificationData) const
+{
+    return m_client->relayAriaNotifyNotification(WTF::move(notificationData));
+}
+
+void Chrome::relayLiveRegionNotification(LiveRegionAnnouncementData&& notificationData) const
+{
+    return m_client->relayLiveRegionNotification(WTF::move(notificationData));
 }
 #endif
 
@@ -202,9 +216,9 @@ void Chrome::takeFocus(FocusDirection direction)
     m_client->takeFocus(direction);
 }
 
-void Chrome::focusedElementChanged(Element* element)
+void Chrome::focusedElementChanged(Element* element, LocalFrame* frame, FocusOptions options, BroadcastFocusedElement broadcast)
 {
-    m_client->focusedElementChanged(element);
+    m_client->focusedElementChanged(element, frame, options, broadcast);
 }
 
 void Chrome::focusedFrameChanged(Frame* frame)
@@ -300,13 +314,13 @@ bool Chrome::canRunBeforeUnloadConfirmPanel()
     return m_client->canRunBeforeUnloadConfirmPanel();
 }
 
-bool Chrome::runBeforeUnloadConfirmPanel(const String& message, LocalFrame& frame)
+bool Chrome::runBeforeUnloadConfirmPanel(String&& message, LocalFrame& frame)
 {
     // Defer loads in case the client method runs a new event loop that would
     // otherwise cause the load to continue while we're in the middle of executing JavaScript.
     PageGroupLoadDeferrer deferrer(m_page, true);
 
-    return m_client->runBeforeUnloadConfirmPanel(message, frame);
+    return m_client->runBeforeUnloadConfirmPanel(WTF::move(message), frame);
 }
 
 void Chrome::closeWindow()
@@ -480,25 +494,25 @@ void Chrome::runOpenPanel(LocalFrame& frame, FileChooser& fileChooser)
     m_client->runOpenPanel(frame, fileChooser);
 }
 
-void Chrome::showShareSheet(ShareDataWithParsedURL& shareData, CompletionHandler<void(bool)>&& callback)
+void Chrome::showShareSheet(ShareDataWithParsedURL&& shareData, CompletionHandler<void(bool)>&& callback)
 {
-    m_client->showShareSheet(shareData, WTFMove(callback));
+    m_client->showShareSheet(WTF::move(shareData), WTF::move(callback));
 }
 
-void Chrome::showContactPicker(const ContactsRequestData& requestData, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback)
+void Chrome::showContactPicker(ContactsRequestData&& requestData, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback)
 {
-    m_client->showContactPicker(requestData, WTFMove(callback));
+    m_client->showContactPicker(WTF::move(requestData), WTF::move(callback));
 }
 
 #if HAVE(DIGITAL_CREDENTIALS_UI)
 void Chrome::showDigitalCredentialsPicker(const DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& callback)
 {
-    m_client->showDigitalCredentialsPicker(requestData, WTFMove(callback));
+    m_client->showDigitalCredentialsPicker(requestData, WTF::move(callback));
 }
 
 void Chrome::dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& callback)
 {
-    m_client->dismissDigitalCredentialsPicker(WTFMove(callback));
+    m_client->dismissDigitalCredentialsPicker(WTF::move(callback));
 }
 #endif
 
@@ -551,14 +565,14 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     m_client->setCursorHiddenUntilMouseMoves(hiddenUntilMouseMoves);
 }
 
-RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat) const
+RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferFormat pixelFormat) const
 {
     return m_client->createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat);
 }
 
 RefPtr<ImageBuffer> Chrome::sinkIntoImageBuffer(std::unique_ptr<SerializedImageBuffer> imageBuffer)
 {
-    return m_client->sinkIntoImageBuffer(WTFMove(imageBuffer));
+    return m_client->sinkIntoImageBuffer(WTF::move(imageBuffer));
 }
 
 std::unique_ptr<WorkerClient> Chrome::createWorkerClient(SerialFunctionDispatcher& dispatcher)
@@ -586,7 +600,7 @@ RefPtr<ShapeDetection::BarcodeDetector> Chrome::createBarcodeDetector(const Shap
 
 void Chrome::getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&& completionHandler) const
 {
-    return m_client->getBarcodeDetectorSupportedFormats(WTFMove(completionHandler));
+    return m_client->getBarcodeDetectorSupportedFormats(WTF::move(completionHandler));
 }
 
 RefPtr<ShapeDetection::FaceDetector> Chrome::createFaceDetector(const ShapeDetection::FaceDetectorOptions& faceDetectorOptions) const
@@ -663,8 +677,10 @@ void Chrome::unregisterPopupOpeningObserver(PopupOpeningObserver& observer)
 void Chrome::notifyPopupOpeningObservers() const
 {
     auto observers = m_popupOpeningObservers;
-    for (auto& observer : observers)
+    for (auto& weakObserver : observers) {
+        if (RefPtr observer = weakObserver.get())
         observer->willOpenPopup();
+    }
 }
 
 } // namespace WebCore

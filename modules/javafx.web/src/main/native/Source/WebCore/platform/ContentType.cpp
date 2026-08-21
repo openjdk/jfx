@@ -35,7 +35,7 @@
 namespace WebCore {
 
 ContentType::ContentType(String&& contentType)
-    : m_type(WTFMove(contentType))
+    : m_type(WTF::move(contentType))
 {
 }
 
@@ -60,7 +60,7 @@ ContentType ContentType::fromURL(const URL& url)
         auto extension = lastPathComponent.substring(pos + 1);
         String mediaType = MIMETypeRegistry::mediaMIMETypeForExtension(extension);
         if (!mediaType.isEmpty())
-            return ContentType(WTFMove(mediaType), true);
+            return ContentType(WTF::move(mediaType), true);
     }
     return ContentType();
 }
@@ -109,7 +109,7 @@ String ContentType::parameter(const String& parameterName) const
         start = equalSignPosition + 1;
         end = m_type.find(';', start);
     }
-    return StringView { m_type }.substring(start, end - start).trim(isASCIIWhitespace<UChar>).toString();
+    return StringView { m_type }.substring(start, end - start).trim(isASCIIWhitespace<char16_t>).toString();
 }
 
 String ContentType::containerType() const
@@ -123,7 +123,7 @@ static inline Vector<String> splitParameters(StringView parametersView)
 {
     Vector<String> result;
     for (auto view : parametersView.split(','))
-        result.append(view.trim(isASCIIWhitespace<UChar>).toString());
+        result.append(view.trim(isASCIIWhitespace<char16_t>).toString());
     return result;
 }
 

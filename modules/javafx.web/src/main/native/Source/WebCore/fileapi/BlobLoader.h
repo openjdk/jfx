@@ -25,25 +25,30 @@
 
 #pragma once
 
-#include "Blob.h"
-#include "Document.h"
-#include "ExceptionCode.h"
-#include "FileReaderLoader.h"
-#include "FileReaderLoaderClient.h"
-#include "Logging.h"
-#include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <WebCore/Blob.h>
+#include <WebCore/Document.h>
+#include <WebCore/ExceptionCode.h>
+#include <WebCore/FileReaderLoader.h>
+#include <WebCore/FileReaderLoaderClient.h>
+#include <WebCore/Logging.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
-class BlobLoader final : public FileReaderLoaderClient {
+class BlobLoader final : public FileReaderLoaderClient, public RefCounted<BlobLoader> {
     WTF_MAKE_TZONE_ALLOCATED(BlobLoader);
 public:
     // CompleteCallback is always called except if BlobLoader is cancelled/deallocated.
     using CompleteCallback = Function<void(BlobLoader&)>;
-    explicit BlobLoader(CompleteCallback&&);
+
+    static Ref<BlobLoader> create(CompleteCallback&& callback) { return adoptRef(*new BlobLoader(WTF::move(callback))); }
     ~BlobLoader();
+
+    // FileReaderLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     void start(Blob&, ScriptExecutionContext*, FileReaderLoader::ReadType);
     void start(const URL&, ScriptExecutionContext*, FileReaderLoader::ReadType);
@@ -55,6 +60,8 @@ public:
     std::optional<ExceptionCode> errorCode() const { return m_loader ? m_loader->errorCode() : std::nullopt; }
 
 private:
+    explicit BlobLoader(CompleteCallback&&);
+
     void didStartLoading() final { }
     void didReceiveData() final { }
 
@@ -62,12 +69,12 @@ private:
     void didFail(ExceptionCode errorCode) final;
     void complete();
 
-    std::unique_ptr<FileReaderLoader> m_loader;
+    const RefPtr<FileReaderLoader> m_loader;
     CompleteCallback m_completeCallback;
 };
 
 inline BlobLoader::BlobLoader(CompleteCallback&& completeCallback)
-    : m_completeCallback(WTFMove(completeCallback))
+    : m_completeCallback(WTF::move(completeCallback))
 {
 }
 
@@ -87,14 +94,14 @@ inline void BlobLoader::cancel()
 inline void BlobLoader::start(Blob& blob, ScriptExecutionContext* context, FileReaderLoader::ReadType readType)
 {
     ASSERT(!m_loader);
-    m_loader = makeUnique<FileReaderLoader>(readType, this);
+    lazyInitialize(m_loader, FileReaderLoader::create(readType, this));
     m_loader->start(context, blob);
 }
 
 inline void BlobLoader::start(const URL& blobURL, ScriptExecutionContext* context, FileReaderLoader::ReadType readType)
 {
     ASSERT(!m_loader);
-    m_loader = makeUnique<FileReaderLoader>(readType, this);
+    lazyInitialize(m_loader, FileReaderLoader::create(readType, this));
     m_loader->start(context, blobURL);
 }
 

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2009 Google, Inc. All rights reserved.
  *
@@ -25,21 +25,13 @@
 #include "WebCoreBuiltinNames.h"
 #include "WebCoreJSBuiltins.h"
 #include "WorkerThreadType.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class JSVMClientDataClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::JSVMClientDataClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -50,7 +42,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
 
 class JSHeapData {
     WTF_MAKE_NONCOPYABLE(JSHeapData);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData, JSHeapData);
     friend class JSVMClientData;
 public:
     JSHeapData(JSC::Heap&);
@@ -58,7 +50,7 @@ public:
     static JSHeapData* ensureHeapData(JSC::Heap&);
 
     Lock& lock() { return m_lock; }
-    ExtendedDOMIsoSubspaces& subspaces() { return *m_subspaces.get(); }
+    ExtendedDOMIsoSubspaces& subspaces() { return m_subspaces; }
 
     Vector<JSC::IsoSubspace*>& outputConstraintSpaces() { return m_outputConstraintSpaces; }
 
@@ -108,13 +100,13 @@ private:
     JSC::IsoSubspace m_windowProxySpace;
     JSC::IsoSubspace m_idbSerializationSpace;
 
-    std::unique_ptr<ExtendedDOMIsoSubspaces> m_subspaces;
+    const UniqueRef<ExtendedDOMIsoSubspaces> m_subspaces;
     Vector<JSC::IsoSubspace*> m_outputConstraintSpaces;
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSVMClientData);
 
-class JSVMClientDataClient : public CanMakeWeakPtr<JSVMClientDataClient> {
+class JSVMClientDataClient : public AbstractRefCountedAndCanMakeWeakPtr<JSVMClientDataClient> {
 public:
     virtual ~JSVMClientDataClient() = default;
     virtual void willDestroyVM() = 0;
@@ -122,7 +114,7 @@ public:
 
 class JSVMClientData : public JSC::VM::ClientData {
     WTF_MAKE_NONCOPYABLE(JSVMClientData);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData, JSVMClientData);
     friend class VMWorldIterator;
 
 public:
@@ -169,14 +161,14 @@ public:
     JSC::GCClient::IsoSubspace& windowProxySpace() { return m_windowProxySpace; }
     JSC::GCClient::IsoSubspace& idbSerializationSpace() { return m_idbSerializationSpace; }
 
-    ExtendedDOMClientIsoSubspaces& clientSubspaces() { return *m_clientSubspaces.get(); }
+    ExtendedDOMClientIsoSubspaces& clientSubspaces() { return m_clientSubspaces; }
 
     void addClient(JSVMClientDataClient& client) { m_clients.add(client); }
 
 private:
     bool isWebCoreJSClientData() const final { return true; }
 
-    UncheckedKeyHashSet<DOMWrapperWorld*> m_worldSet;
+    HashSet<DOMWrapperWorld*> m_worldSet;
     RefPtr<DOMWrapperWorld> m_normalWorld;
 
     JSBuiltinFunctions m_builtinFunctions;
@@ -197,7 +189,7 @@ private:
     JSC::GCClient::IsoSubspace m_windowProxySpace;
     JSC::GCClient::IsoSubspace m_idbSerializationSpace;
 
-    std::unique_ptr<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
+    const UniqueRef<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
 
     WeakHashSet<JSVMClientDataClient> m_clients;
 };
@@ -213,7 +205,7 @@ namespace WebCore {
 enum class UseCustomHeapCellType : bool { No, Yes };
 
 template<typename T, UseCustomHeapCellType useCustomHeapCellType, typename GetClient, typename SetClient, typename GetServer, typename SetServer>
-ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)
+ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, ASCIILiteral name, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)
 {
     auto& clientData = *downcast<JSVMClientData>(vm.clientData);
     auto& clientSubspaces = clientData.clientSubspaces();
@@ -230,15 +222,15 @@ ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient
         std::unique_ptr<JSC::IsoSubspace> uniqueSubspace;
         static_assert(useCustomHeapCellType == UseCustomHeapCellType::Yes || std::is_base_of_v<JSC::JSDestructibleObject, T> || T::needsDestruction == JSC::DoesNotNeedDestruction);
         if constexpr (useCustomHeapCellType == UseCustomHeapCellType::Yes)
-            uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, getCustomHeapCellType(heapData), T);
+            uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, getCustomHeapCellType(heapData), T, name);
         else {
             if constexpr (std::is_base_of_v<JSC::JSDestructibleObject, T>)
-                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, heap.destructibleObjectHeapCellType, T);
+                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, heap.destructibleObjectHeapCellType, T, name);
             else
-                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, T);
+                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, heap.cellHeapCellType, T, name);
         }
         space = uniqueSubspace.get();
-        setServer(subspaces, WTFMove(uniqueSubspace));
+        setServer(subspaces, WTF::move(uniqueSubspace));
 
 IGNORE_WARNINGS_BEGIN("unreachable-code")
 IGNORE_WARNINGS_BEGIN("tautological-compare")
@@ -252,7 +244,7 @@ IGNORE_WARNINGS_END
 
     auto uniqueClientSubspace = makeUnique<JSC::GCClient::IsoSubspace>(*space);
     auto* clientSpace = uniqueClientSubspace.get();
-    setClient(clientSubspaces, WTFMove(uniqueClientSubspace));
+    setClient(clientSubspaces, WTF::move(uniqueClientSubspace));
     return clientSpace;
 }
 

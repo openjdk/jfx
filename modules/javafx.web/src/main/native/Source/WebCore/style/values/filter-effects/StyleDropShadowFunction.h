@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,6 @@
 
 namespace WebCore {
 
-class DropShadowFilterOperation;
-class CSSToLengthConversionData;
-class Document;
 class FilterOperation;
 class RenderStyle;
 
@@ -38,8 +35,11 @@ struct DropShadow;
 
 namespace Style {
 
-CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperation>, const RenderStyle&);
-Ref<FilterOperation> createFilterOperation(const CSS::DropShadow&, const Document&, RenderStyle&, const CSSToLengthConversionData&);
+class BuilderState;
+class DropShadowFilterOperationWithStyleColor;
+
+CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperationWithStyleColor>, const RenderStyle&);
+Ref<FilterOperation> createFilterOperation(const CSS::DropShadow&, const BuilderState&);
 
 } // namespace Style
 } // namespace WebCore

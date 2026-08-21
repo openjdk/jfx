@@ -51,6 +51,8 @@ class AudioParam final
     , private LoggerHelper
 #endif
 {
+    WTF_MAKE_TZONE_ALLOCATED(AudioParam);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioParam);
 public:
     static constexpr double SmoothingConstant = 0.05;
     static constexpr double SnapThreshold = 0.001;
@@ -142,7 +144,7 @@ private:
     float m_smoothedValue;
 
     AudioParamTimeline m_timeline;
-    Ref<AudioBus> m_summingBus;
+    const Ref<AudioBus> m_summingBus;
 
 #if !RELEASE_LOG_DISABLED
     mutable Ref<const Logger> m_logger;

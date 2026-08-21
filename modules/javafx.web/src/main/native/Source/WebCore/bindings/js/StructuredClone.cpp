@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,7 @@ JSC_DEFINE_HOST_FUNCTION(structuredCloneForStream, (JSGlobalObject* globalObject
         auto scope = DECLARE_THROW_SCOPE(vm);
         size_t byteLength = buffer.byteLength();
         auto result = ArrayBuffer::tryCreate(byteLength, 1, buffer.maxByteLength());
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -93,7 +93,7 @@ JSC_DEFINE_HOST_FUNCTION(structuredCloneForStream, (JSGlobalObject* globalObject
 
     if (value.inherits<JSArrayBuffer>()) {
         auto* buffer = toUnsharedArrayBuffer(vm, value);
-        if (UNLIKELY(!buffer || buffer->isDetached())) {
+        if (!buffer || buffer->isDetached()) [[unlikely]] {
             throwDataCloneError(*globalObject, scope);
             return { };
         }
@@ -109,7 +109,7 @@ JSC_DEFINE_HOST_FUNCTION(structuredCloneForStream, (JSGlobalObject* globalObject
         ASSERT(bufferView);
 
         auto* buffer = bufferView->unsharedBuffer();
-        if (UNLIKELY(!buffer || buffer->isDetached())) {
+        if (!buffer || buffer->isDetached()) [[unlikely]] {
             throwDataCloneError(*globalObject, scope);
             return { };
         }

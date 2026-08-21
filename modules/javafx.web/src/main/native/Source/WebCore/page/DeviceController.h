@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "Event.h"
-#include "LocalDOMWindow.h"
-#include "Supplementable.h"
-#include "Timer.h"
+#include <WebCore/Event.h>
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/Supplementable.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -43,9 +43,10 @@ class DeviceController : public Supplement<Page>, public CanMakeCheckedPtr<Devic
     WTF_MAKE_TZONE_ALLOCATED(DeviceController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceController);
 public:
-    explicit DeviceController(DeviceClient&);
+    DeviceController();
     virtual ~DeviceController();
 
+    bool hasListeners() { return !m_listeners.isEmpty(); }
     void addDeviceEventListener(LocalDOMWindow&);
     void removeDeviceEventListener(LocalDOMWindow&);
     void removeAllDeviceEventListeners(LocalDOMWindow&);
@@ -53,17 +54,17 @@ public:
 
     void dispatchDeviceEvent(Event&);
     bool isActive() { return !m_listeners.isEmpty(); }
-    DeviceClient& client();
+    virtual DeviceClient& client() = 0;
 
     virtual bool hasLastData() { return false; }
     virtual RefPtr<Event> getLastEvent() { return nullptr; }
 
-protected:
+private:
     void fireDeviceEvent();
+    CheckedRef<DeviceClient> checkedClient();
 
     HashCountedSet<RefPtr<LocalDOMWindow>> m_listeners;
     HashCountedSet<RefPtr<LocalDOMWindow>> m_lastEventListeners;
-    WeakRef<DeviceClient> m_client;
     Timer m_timer;
 };
 

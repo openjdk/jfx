@@ -24,21 +24,21 @@
 
 #pragma once
 
-#include "CSSCircleFunction.h"
-#include "CSSEllipseFunction.h"
-#include "CSSInsetFunction.h"
-#include "CSSPathFunction.h"
-#include "CSSPolygonFunction.h"
-#include "CSSRectFunction.h"
-#include "CSSShapeFunction.h"
-#include "CSSXywhFunction.h"
+#include <WebCore/CSSCircleFunction.h>
+#include <WebCore/CSSEllipseFunction.h>
+#include <WebCore/CSSInsetFunction.h>
+#include <WebCore/CSSPathFunction.h>
+#include <WebCore/CSSPolygonFunction.h>
+#include <WebCore/CSSRectFunction.h>
+#include <WebCore/CSSShapeFunction.h>
+#include <WebCore/CSSXywhFunction.h>
 
 namespace WebCore {
 namespace CSS {
 
 // <basic-shape> = <circle()> | <ellipse() | <inset()> | <path()> | <polygon()> | <rect()> | <shape()> | <xywh()>
 // https://drafts.csswg.org/css-shapes/#typedef-basic-shape
-using BasicShape = std::variant<
+using BasicShape = Variant<
     CircleFunction,
     EllipseFunction,
     InsetFunction,

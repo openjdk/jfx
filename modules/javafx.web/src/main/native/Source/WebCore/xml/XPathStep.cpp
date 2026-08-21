@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,22 +39,21 @@
 #include "XPathUtil.h"
 #include <wtf/TZoneMallocInlines.h>
 
-namespace WebCore {
-namespace XPath {
+namespace WebCore::XPath {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Step);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Step::NodeTest);
 
 Step::Step(Axis axis, NodeTest nodeTest)
     : m_axis(axis)
-    , m_nodeTest(WTFMove(nodeTest))
+    , m_nodeTest(WTF::move(nodeTest))
 {
 }
 
 Step::Step(Axis axis, NodeTest nodeTest, Vector<std::unique_ptr<Expression>> predicates)
     : m_axis(axis)
-    , m_nodeTest(WTFMove(nodeTest))
-    , m_predicates(WTFMove(predicates))
+    , m_nodeTest(WTF::move(nodeTest))
+    , m_predicates(WTF::move(predicates))
 {
 }
 
@@ -68,11 +67,11 @@ void Step::optimize()
     Vector<std::unique_ptr<Expression>> remainingPredicates;
     for (auto& predicate : m_predicates) {
         if ((!predicateIsContextPositionSensitive(*predicate) || m_nodeTest.m_mergedPredicates.isEmpty()) && !predicate->isContextSizeSensitive() && remainingPredicates.isEmpty())
-            m_nodeTest.m_mergedPredicates.append(WTFMove(predicate));
+            m_nodeTest.m_mergedPredicates.append(WTF::move(predicate));
         else
-            remainingPredicates.append(WTFMove(predicate));
+            remainingPredicates.append(WTF::move(predicate));
     }
-    m_predicates = WTFMove(remainingPredicates);
+    m_predicates = WTF::move(remainingPredicates);
 }
 
 void optimizeStepPair(Step& first, Step& second, bool& dropSecondStep)
@@ -102,8 +101,8 @@ void optimizeStepPair(Step& first, Step& second, bool& dropSecondStep)
         return;
 
     first.m_axis = Step::DescendantAxis;
-    first.m_nodeTest = WTFMove(second.m_nodeTest);
-    first.m_predicates = WTFMove(second.m_predicates);
+    first.m_nodeTest = WTF::move(second.m_nodeTest);
+    first.m_predicates = WTF::move(second.m_predicates);
     first.optimize();
     dropSecondStep = true;
 }
@@ -137,16 +136,16 @@ void Step::evaluate(Node& context, NodeSet& nodes) const
             newNodes.markSorted(false);
 
         for (unsigned j = 0; j < nodes.size(); j++) {
-            Node* node = nodes[j];
+            RefPtr node = nodes[j];
 
             evaluationContext.node = node;
             evaluationContext.size = nodes.size();
             evaluationContext.position = j + 1;
             if (evaluatePredicate(*predicate))
-                newNodes.append(node);
+                newNodes.append(node.releaseNonNull());
         }
 
-        nodes = WTFMove(newNodes);
+        nodes = WTF::move(newNodes);
     }
 }
 
@@ -181,7 +180,7 @@ inline bool nodeMatchesBasicTest(Node& node, Step::Axis axis, const Step::NodeTe
             const AtomString& namespaceURI = nodeTest.m_namespaceURI;
 
             if (axis == Step::AttributeAxis) {
-                ASSERT(node.isAttributeNode());
+                ASSERT(is<Attr>(node));
 
                 // In XPath land, namespace nodes are not accessible on the attribute axis.
                 if (node.namespaceURI() == XMLNSNames::xmlnsNamespaceURI)
@@ -204,7 +203,7 @@ inline bool nodeMatchesBasicTest(Node& node, Step::Axis axis, const Step::NodeTe
 
             // For other axes, the principal node type is element.
             ASSERT(primaryNodeType(axis) == Node::ELEMENT_NODE);
-            auto* element = dynamicDowncast<Element>(node);
+            RefPtr element = dynamicDowncast<Element>(node);
             if (!element)
                 return false;
 
@@ -252,99 +251,99 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
     ASSERT(nodes.isEmpty());
     switch (m_axis) {
         case ChildAxis:
-            if (context.isAttributeNode()) // In XPath model, attribute nodes do not have children.
+            if (is<Attr>(context)) // In XPath model, attribute nodes do not have children.
                 return;
-            for (Node* node = context.firstChild(); node; node = node->nextSibling()) {
+            for (RefPtr node = context.firstChild(); node; node = node->nextSibling()) {
                 if (nodeMatches(*node, ChildAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             return;
         case DescendantAxis:
-            if (context.isAttributeNode()) // In XPath model, attribute nodes do not have children.
+            if (is<Attr>(context)) // In XPath model, attribute nodes do not have children.
                 return;
-            for (Node* node = context.firstChild(); node; node = NodeTraversal::next(*node, &context)) {
+            for (RefPtr node = context.firstChild(); node; node = NodeTraversal::next(*node, &context)) {
                 if (nodeMatches(*node, DescendantAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             return;
         case ParentAxis:
-            if (context.isAttributeNode()) {
-                Element* node = static_cast<Attr&>(context).ownerElement();
+            if (RefPtr attr = dynamicDowncast<Attr>(context)) {
+                RefPtr node = attr->ownerElement();
                 if (node && nodeMatches(*node, ParentAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             } else {
-                ContainerNode* node = context.parentNode();
+                RefPtr node = context.parentNode();
                 if (node && nodeMatches(*node, ParentAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             return;
         case AncestorAxis: {
-            Node* node = &context;
-            if (context.isAttributeNode()) {
-                node = static_cast<Attr&>(context).ownerElement();
+            RefPtr node = context;
+            if (RefPtr attr = dynamicDowncast<Attr>(context)) {
+                node = attr->ownerElement();
                 if (!node)
                     return;
                 if (nodeMatches(*node, AncestorAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             for (node = node->parentNode(); node; node = node->parentNode()) {
                 if (nodeMatches(*node, AncestorAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             nodes.markSorted(false);
             return;
         }
         case FollowingSiblingAxis:
-            if (context.isAttributeNode())
+            if (is<Attr>(context))
                 return;
-            for (Node* node = context.nextSibling(); node; node = node->nextSibling()) {
+            for (RefPtr node = context.nextSibling(); node; node = node->nextSibling()) {
                 if (nodeMatches(*node, FollowingSiblingAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             return;
         case PrecedingSiblingAxis:
-            if (context.isAttributeNode())
+            if (is<Attr>(context))
                 return;
-            for (Node* node = context.previousSibling(); node; node = node->previousSibling()) {
+            for (RefPtr node = context.previousSibling(); node; node = node->previousSibling()) {
                 if (nodeMatches(*node, PrecedingSiblingAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             nodes.markSorted(false);
             return;
         case FollowingAxis:
-            if (context.isAttributeNode()) {
-                Node* node = static_cast<Attr&>(context).ownerElement();
+            if (RefPtr attr = dynamicDowncast<Attr>(context)) {
+                RefPtr<Node> node = attr->ownerElement();
                 if (!node)
                     return;
                 while ((node = NodeTraversal::next(*node))) {
                     if (nodeMatches(*node, FollowingAxis, m_nodeTest))
-                        nodes.append(node);
+                        nodes.append(*node);
                 }
             } else {
-                for (Node* parent = &context; !isRootDomNode(parent); parent = parent->parentNode()) {
-                    for (Node* node = parent->nextSibling(); node; node = node->nextSibling()) {
+                for (RefPtr parent = &context; !isRootDomNode(parent.get()); parent = parent->parentNode()) {
+                    for (RefPtr node = parent->nextSibling(); node; node = node->nextSibling()) {
                         if (nodeMatches(*node, FollowingAxis, m_nodeTest))
-                            nodes.append(node);
-                        for (Node* child = node->firstChild(); child; child = NodeTraversal::next(*child, node)) {
+                            nodes.append(*node);
+                        for (RefPtr child = node->firstChild(); child; child = NodeTraversal::next(*child, node.get())) {
                             if (nodeMatches(*child, FollowingAxis, m_nodeTest))
-                                nodes.append(child);
+                                nodes.append(*child);
                         }
                     }
                 }
             }
             return;
         case PrecedingAxis: {
-            Node* node;
-            if (context.isAttributeNode()) {
-                node = static_cast<Attr&>(context).ownerElement();
+            RefPtr<Node> node;
+            if (RefPtr attr = dynamicDowncast<Attr>(context)) {
+                node = attr->ownerElement();
                 if (!node)
                     return;
             } else
                 node = &context;
-            while (ContainerNode* parent = node->parentNode()) {
+            while (RefPtr parent = node->parentNode()) {
                 for (node = NodeTraversal::previous(*node); node != parent; node = NodeTraversal::previous(*node)) {
                     if (nodeMatches(*node, PrecedingAxis, m_nodeTest))
-                        nodes.append(node);
+                        nodes.append(*node);
                 }
                 node = parent;
             }
@@ -367,7 +366,7 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
                     attr = contextElement->getAttributeNodeNS(m_nodeTest.m_namespaceURI, m_nodeTest.m_data);
                 if (attr && attr->namespaceURI() != XMLNSNames::xmlnsNamespaceURI) { // In XPath land, namespace nodes are not accessible on the attribute axis.
                     if (nodeMatches(*attr, AttributeAxis, m_nodeTest)) // Still need to check merged predicates.
-                        nodes.append(WTFMove(attr));
+                        nodes.append(attr.releaseNonNull());
                 }
                 return;
             }
@@ -378,7 +377,7 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             for (auto& attribute : contextElement->attributes()) {
                 auto attr = contextElement->ensureAttr(attribute.name());
                 if (nodeMatches(attr.get(), AttributeAxis, m_nodeTest))
-                    nodes.append(WTFMove(attr));
+                    nodes.append(WTF::move(attr));
             }
             return;
         }
@@ -387,32 +386,32 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             return;
         case SelfAxis:
             if (nodeMatches(context, SelfAxis, m_nodeTest))
-                nodes.append(&context);
+                nodes.append(context);
             return;
         case DescendantOrSelfAxis:
             if (nodeMatches(context, DescendantOrSelfAxis, m_nodeTest))
-                nodes.append(&context);
-            if (context.isAttributeNode()) // In XPath model, attribute nodes do not have children.
+                nodes.append(context);
+            if (is<Attr>(context)) // In XPath model, attribute nodes do not have children.
                 return;
-            for (Node* node = context.firstChild(); node; node = NodeTraversal::next(*node, &context)) {
+            for (RefPtr node = context.firstChild(); node; node = NodeTraversal::next(*node, &context)) {
                 if (nodeMatches(*node, DescendantOrSelfAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             return;
         case AncestorOrSelfAxis: {
             if (nodeMatches(context, AncestorOrSelfAxis, m_nodeTest))
-                nodes.append(&context);
-            Node* node = &context;
-            if (context.isAttributeNode()) {
-                node = static_cast<Attr&>(context).ownerElement();
+                nodes.append(context);
+            RefPtr node = context;
+            if (RefPtr attr = dynamicDowncast<Attr>(context)) {
+                node = attr->ownerElement();
                 if (!node)
                     return;
                 if (nodeMatches(*node, AncestorOrSelfAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             for (node = node->parentNode(); node; node = node->parentNode()) {
                 if (nodeMatches(*node, AncestorOrSelfAxis, m_nodeTest))
-                    nodes.append(node);
+                    nodes.append(*node);
             }
             nodes.markSorted(false);
             return;
@@ -421,5 +420,4 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
     ASSERT_NOT_REACHED();
 }
 
-}
-}
+} // namespace WebCore::XPath

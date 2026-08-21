@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,7 +127,12 @@ gboolean basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id)
             int ret = avcodec_open2(decoder->context, decoder->codec, NULL);
             if (ret < 0) // Can't open codec
             {
+#if USE_FREE_CONTEXT
+                // avcodec_free_context() will set pointer to NULL
+                avcodec_free_context(&decoder->context);
+#else
                 av_free(decoder->context);
+#endif
 
                 decoder->context = NULL;
                 decoder->codec = NULL;
@@ -152,6 +157,13 @@ static void basedecoder_init_context_default(BaseDecoder *decoder)
     {
         decoder->context->extradata = decoder->codec_data;
         decoder->context->extradata_size = decoder->codec_data_size;
+
+#if USE_FREE_CONTEXT
+        // avcodec_free_context() will free extradata for us, so
+        // set codec_data to NULL, so we do not free it or reuse.
+        decoder->codec_data = NULL;
+        decoder->codec_data_size = 0;
+#endif
     }
 }
 
@@ -187,8 +199,13 @@ void basedecoder_close_decoder(BaseDecoder *decoder)
 {
     if (decoder->context)
     {
+#if USE_FREE_CONTEXT
+        // avcodec_free_context() will set pointer to NULL
+        avcodec_free_context(&decoder->context);
+#else
         avcodec_close(decoder->context);
         av_free(decoder->context);
+#endif
     }
     decoder->context = NULL;
 
@@ -196,6 +213,7 @@ void basedecoder_close_decoder(BaseDecoder *decoder)
     {
         g_free(decoder->codec_data);
         decoder->codec_data = NULL;
+        decoder->codec_data_size = 0;
     }
 
     if (decoder->frame)

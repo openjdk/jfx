@@ -44,7 +44,7 @@ public:
 
     static Ref<CSSScrollValue> create(RefPtr<CSSValue>&& scroller, RefPtr<CSSValue>&& axis)
     {
-        return adoptRef(*new CSSScrollValue(WTFMove(scroller), WTFMove(axis)));
+        return adoptRef(*new CSSScrollValue(WTF::move(scroller), WTF::move(axis)));
     }
 
     String customCSSText(const CSS::SerializationContext&) const;
@@ -70,8 +70,8 @@ public:
 private:
     CSSScrollValue(RefPtr<CSSValue>&& scroller, RefPtr<CSSValue>&& axis)
         : CSSValue(ClassType::Scroll)
-        , m_scroller(WTFMove(scroller))
-        , m_axis(WTFMove(axis))
+        , m_scroller(WTF::move(scroller))
+        , m_axis(WTF::move(axis))
     {
     }
 

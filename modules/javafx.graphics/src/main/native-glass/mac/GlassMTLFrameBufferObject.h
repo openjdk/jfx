@@ -30,8 +30,10 @@
     unsigned int _width;
     unsigned int _height;
 
-    id<MTLTexture> _texture;
+    volatile id<MTLTexture> _texture;
     BOOL   _isSwPipe;
+
+    NSLock* lock;
 }
 
 - (void)blitFromFBO:(GlassMTLFrameBufferObject*)other_fbo;
@@ -43,5 +45,7 @@
            andHeight:(unsigned int)height;
 - (void)blitForWidth:(unsigned int)width
            andHeight:(unsigned int)height;
+- (bool)tryLockTexture;
+- (void)unlockTexture;
 
 @end

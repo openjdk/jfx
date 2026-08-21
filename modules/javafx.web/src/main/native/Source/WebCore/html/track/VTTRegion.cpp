@@ -34,6 +34,8 @@
 
 #if ENABLE(VIDEO)
 
+#include "ContainerNodeInlines.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMRect.h"
 #include "DOMTokenList.h"
 #include "ElementChildIteratorInlines.h"
@@ -145,8 +147,8 @@ void VTTRegion::setRegionSettings(const String& inputString)
 
     while (!input.isAtEnd()) {
         // Step 1 - Split input on spaces.
-        input.skipWhile<isASCIIWhitespace<UChar>>();
-        VTTScanner::Run valueRun = input.collectUntil<isASCIIWhitespace<UChar>>();
+        input.skipWhile<isASCIIWhitespace<char16_t>>();
+        VTTScanner::Run valueRun = input.collectUntil<isASCIIWhitespace<char16_t>>();
         auto settingValue = input.extractString(valueRun);
         VTTScanner setting(settingValue);
 
@@ -187,7 +189,7 @@ static inline bool parsedEntireRun(const VTTScanner& input, const VTTScanner::Ru
 
 void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 {
-    VTTScanner::Run valueRun = input.collectUntil<isASCIIWhitespace<UChar>>();
+    VTTScanner::Run valueRun = input.collectUntil<isASCIIWhitespace<char16_t>>();
 
     switch (setting) {
     case Id: {
@@ -269,13 +271,13 @@ void VTTRegion::displayLastTextTrackCueBox()
 
     // If it's a scrolling region, add the scrolling class.
     if (scroll() == ScrollSetting::Up)
-        m_cueContainer->classList().add(textTrackCueContainerScrollingClass());
+        m_cueContainer->protectedClassList()->add(textTrackCueContainerScrollingClass());
 
     float regionBottom = m_regionDisplayTree->boundingClientRect().maxY();
 
     // Find first cue that is not entirely displayed and scroll it upwards.
-    for (auto& child : childrenOfType<Element>(*m_cueContainer)) {
-        auto rect = child.boundingClientRect();
+    for (Ref child : childrenOfType<Element>(*m_cueContainer)) {
+        auto rect = child->boundingClientRect();
         float childTop = rect.y();
         float childBottom = rect.maxY();
 
@@ -299,7 +301,7 @@ void VTTRegion::willRemoveTextTrackCueBox(VTTCueBox* box)
 
     double boxHeight = box->boundingClientRect().height();
 
-    m_cueContainer->classList().remove(textTrackCueContainerScrollingClass());
+    m_cueContainer->protectedClassList()->remove(textTrackCueContainerScrollingClass());
 
     m_currentTop += boxHeight;
     m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSUnitType::CSS_PX);
@@ -308,7 +310,7 @@ void VTTRegion::willRemoveTextTrackCueBox(VTTCueBox* box)
 HTMLDivElement& VTTRegion::getDisplayTree()
 {
     if (!m_regionDisplayTree) {
-        m_regionDisplayTree = HTMLDivElement::create(downcast<Document>(*scriptExecutionContext()));
+        lazyInitialize(m_regionDisplayTree, HTMLDivElement::create(*protectedDocument()));
         m_regionDisplayTree->setUserAgentPart(UserAgentParts::webkitMediaTextTrackRegion());
         m_recalculateStyles = true;
     }
@@ -331,7 +333,7 @@ void VTTRegion::prepareRegionDisplayTree()
     // The cue container is used to wrap the cues and it is the object which is
     // gradually scrolled out as multiple cues are appended to the region.
     if (!m_cueContainer) {
-        m_cueContainer = HTMLDivElement::create(downcast<Document>(*scriptExecutionContext()));
+        lazyInitialize(m_cueContainer, HTMLDivElement::create(*protectedDocument()));
         m_cueContainer->setUserAgentPart(UserAgentParts::webkitMediaTextTrackRegionContainer());
         m_regionDisplayTree->appendChild(*m_cueContainer);
     }
@@ -372,6 +374,8 @@ void VTTRegion::prepareRegionDisplayTree()
     // 7.5 Every WebVTT region object is initialised with the following CSS
 
     m_recalculateStyles = false;
+
+    m_regionDisplayTree->setAttributeWithoutSynchronization(HTMLNames::idAttr, AtomString(id()));
 }
 
 void VTTRegion::startTimer()
@@ -399,6 +403,11 @@ void VTTRegion::scrollTimerFired()
 
     stopTimer();
     displayLastTextTrackCueBox();
+}
+
+RefPtr<Document> VTTRegion::protectedDocument() const
+{
+    return downcast<Document>(protectedScriptExecutionContext());
 }
 
 } // namespace WebCore

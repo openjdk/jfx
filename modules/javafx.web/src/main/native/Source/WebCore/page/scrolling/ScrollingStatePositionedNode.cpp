@@ -39,9 +39,9 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStatePositionedNode);
 
 ScrollingStatePositionedNode::ScrollingStatePositionedNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, Vector<ScrollingNodeID>&& relatedOverflowScrollingNodes, AbsolutePositionConstraints&& constraints)
-    : ScrollingStateNode(ScrollingNodeType::Positioned, nodeID, WTFMove(children), changedProperties, layerID)
-    , m_relatedOverflowScrollingNodes(WTFMove(relatedOverflowScrollingNodes))
-    , m_constraints(WTFMove(constraints))
+    : ScrollingStateNode(ScrollingNodeType::Positioned, nodeID, WTF::move(children), changedProperties, layerID)
+    , m_relatedOverflowScrollingNodes(WTF::move(relatedOverflowScrollingNodes))
+    , m_constraints(WTF::move(constraints))
 {
 }
 
@@ -78,7 +78,7 @@ void ScrollingStatePositionedNode::setRelatedOverflowScrollingNodes(Vector<Scrol
     if (nodes == m_relatedOverflowScrollingNodes)
         return;
 
-    m_relatedOverflowScrollingNodes = WTFMove(nodes);
+    m_relatedOverflowScrollingNodes = WTF::move(nodes);
     setPropertyChanged(Property::RelatedOverflowScrollingNodes);
 }
 
@@ -95,18 +95,18 @@ void ScrollingStatePositionedNode::updateConstraints(const AbsolutePositionConst
 
 void ScrollingStatePositionedNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Positioned node";
+    ts << "Positioned node"_s;
     ScrollingStateNode::dumpProperties(ts, behavior);
 
-    ts.dumpProperty("layout constraints", m_constraints);
-    ts.dumpProperty("related overflow nodes", m_relatedOverflowScrollingNodes.size());
+    ts.dumpProperty("layout constraints"_s, m_constraints);
+    ts.dumpProperty("related overflow nodes"_s, m_relatedOverflowScrollingNodes.size());
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
         if (!m_relatedOverflowScrollingNodes.isEmpty()) {
             TextStream::GroupScope scope(ts);
-            ts << "overflow nodes";
+            ts << "overflow nodes"_s;
             for (auto nodeID : m_relatedOverflowScrollingNodes)
-                ts << "\n" << indent << "nodeID " << nodeID;
+                ts << '\n' << indent << "nodeID "_s << nodeID;
         }
     }
 }

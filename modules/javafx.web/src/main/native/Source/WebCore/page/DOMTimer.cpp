@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,15 @@
 #include "config.h"
 #include "DOMTimer.h"
 
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentEventLoop.h"
 #include "HTMLPlugInElement.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
 #include "ScheduledAction.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
@@ -41,6 +43,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include "DocumentPage.h"
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
@@ -97,7 +100,7 @@ public:
     static DOMTimerFireState* current;
 
 private:
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
@@ -108,7 +111,7 @@ private:
 DOMTimerFireState* DOMTimerFireState::current = nullptr;
 
 struct NestedTimersMap {
-    typedef UncheckedKeyHashMap<int, Ref<DOMTimer>>::const_iterator const_iterator;
+    typedef HashMap<int, Ref<DOMTimer>>::const_iterator const_iterator;
 
     static NestedTimersMap* instanceForContext(ScriptExecutionContext& context)
     {
@@ -121,7 +124,7 @@ struct NestedTimersMap {
 
     void startTracking()
     {
-        // Make sure we start with an empty UncheckedKeyHashMap. In theory, it is possible the UncheckedKeyHashMap is not
+        // Make sure we start with an empty HashMap. In theory, it is possible the HashMap is not
         // empty if a timer fires during the execution of another timer (may happen with the
         // in-process Web Inspector).
         nestedTimers.clear();
@@ -137,7 +140,7 @@ struct NestedTimersMap {
     void add(int timeoutId, Ref<DOMTimer>&& timer)
     {
         if (isTrackingNestedTimers)
-            nestedTimers.add(timeoutId, WTFMove(timer));
+            nestedTimers.add(timeoutId, WTF::move(timer));
     }
 
     void remove(int timeoutId)
@@ -146,8 +149,8 @@ struct NestedTimersMap {
             nestedTimers.remove(timeoutId);
     }
 
-    const_iterator begin() const { return nestedTimers.begin(); }
-    const_iterator end() const { return nestedTimers.end(); }
+    const_iterator begin() const LIFETIME_BOUND { return nestedTimers.begin(); }
+    const_iterator end() const LIFETIME_BOUND { return nestedTimers.end(); }
 
 private:
     static NestedTimersMap& instance()
@@ -157,7 +160,7 @@ private:
     }
 
     static bool isTrackingNestedTimers;
-    UncheckedKeyHashMap<int /* timeoutId */, Ref<DOMTimer>> nestedTimers;
+    HashMap<int /* timeoutId */, Ref<DOMTimer>> nestedTimers;
 };
 
 bool NestedTimersMap::isTrackingNestedTimers = false;
@@ -165,7 +168,7 @@ bool NestedTimersMap::isTrackingNestedTimers = false;
 DOMTimer::DOMTimer(ScriptExecutionContext& context, Function<void(ScriptExecutionContext&)>&& action, Seconds interval, Type type)
     : ActiveDOMObject(&context)
     , m_nestingLevel(context.timerNestingLevel())
-    , m_action(WTFMove(action))
+    , m_action(WTF::move(action))
     , m_originalInterval(interval)
     , m_throttleState(Undetermined)
     , m_oneShot(type == Type::SingleShot)
@@ -191,15 +194,15 @@ DOMTimer::~DOMTimer() = default;
 
 int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, Seconds timeout, Type type)
 {
-    auto actionFunction = [action = WTFMove(action)](ScriptExecutionContext& context) mutable {
+    auto actionFunction = [action = WTF::move(action)](ScriptExecutionContext& context) mutable {
         action->execute(context);
     };
-    return DOMTimer::install(context, WTFMove(actionFunction), timeout, type);
+    return DOMTimer::install(context, WTF::move(actionFunction), timeout, type);
 }
 
 int DOMTimer::install(ScriptExecutionContext& context, Function<void(ScriptExecutionContext&)>&& action, Seconds timeout, Type type)
 {
-    Ref timer = adoptRef(*new DOMTimer(context, WTFMove(action), timeout, type));
+    Ref timer = adoptRef(*new DOMTimer(context, WTF::move(action), timeout, type));
     timer->suspendIfNeeded();
     timer->makeImminentlyScheduledWorkScopeIfPossible(context);
 
@@ -267,7 +270,7 @@ void DOMTimer::updateThrottlingStateIfNecessary(const DOMTimerFireState& fireSta
     if (!contextDocument)
         return;
 
-    if (UNLIKELY(!isDOMTimersThrottlingEnabled(*contextDocument))) {
+    if (!isDOMTimersThrottlingEnabled(*contextDocument)) [[unlikely]] {
         if (m_throttleState == ShouldThrottle) {
             // Unthrottle the timer in case it was throttled before the setting was updated.
             LOG(DOMTimers, "%p - Unthrottling DOM timer because throttling was disabled via settings.", this);
@@ -322,7 +325,7 @@ void DOMTimer::fired()
 
     DOMTimerFireState fireState(context, std::min(m_nestingLevel + 1, maxTimerNestingLevel));
 
-    if (m_userGestureTokenToForward && m_userGestureTokenToForward->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
+    if (RefPtr userGestureTokenToForward = m_userGestureTokenToForward; userGestureTokenToForward && userGestureTokenToForward->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
         m_userGestureTokenToForward = nullptr;
 
     ASSERT(!context->activeDOMObjectsAreSuspended());
@@ -423,17 +426,17 @@ Seconds DOMTimer::intervalClampedToMinimum() const
         return interval;
 
     // Apply two throttles - the global (per Page) minimum, and also a per-timer throttle.
-    interval = std::max(interval, scriptExecutionContext()->minimumDOMTimerInterval());
+    interval = std::max(interval, protectedScriptExecutionContext()->minimumDOMTimerInterval());
     if (m_throttleState == ShouldThrottle)
         interval = std::max(interval, minIntervalForNonUserObservableChangeTimers);
     return interval;
 }
 
-std::optional<MonotonicTime> ScriptExecutionContext::alignedFireTime(bool hasReachedMaxNestingLevel, MonotonicTime fireTime) const
+MonotonicTime ScriptExecutionContext::alignedFireTime(bool hasReachedMaxNestingLevel, MonotonicTime fireTime) const
 {
     Seconds alignmentInterval = domTimerAlignmentInterval(hasReachedMaxNestingLevel);
     if (!alignmentInterval)
-        return std::nullopt;
+        return fireTime;
 
     static const double randomizedProportion = cryptographicallyRandomUnitInterval();
 

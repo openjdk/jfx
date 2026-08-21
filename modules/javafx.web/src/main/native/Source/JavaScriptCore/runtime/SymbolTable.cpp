@@ -111,7 +111,7 @@ DEFINE_VISIT_CHILDREN(SymbolTable);
 
 const SymbolTable::LocalToEntryVec& SymbolTable::localToEntry(const ConcurrentJSLocker&)
 {
-    if (UNLIKELY(!m_localToEntry)) {
+    if (!m_localToEntry) [[unlikely]] {
         unsigned size = 0;
         for (auto& entry : m_map) {
             VarOffset offset = entry.value.varOffset();
@@ -179,7 +179,7 @@ SymbolTable* SymbolTable::cloneScopePart(VM& vm)
                 result->prepareToWatchScopedArgument(entry, findIter->value);
     }
 
-        result->m_map.add(iter->key, WTFMove(entry));
+        result->m_map.add(iter->key, WTF::move(entry));
     }
 
     result->m_maxScopeOffset = m_maxScopeOffset;
@@ -324,7 +324,7 @@ SymbolTable::SymbolTableRareData& SymbolTable::ensureRareDataSlow()
 {
     auto rareData = makeUnique<SymbolTableRareData>();
     WTF::storeStoreFence();
-    m_rareData = WTFMove(rareData);
+    m_rareData = WTF::move(rareData);
     return *m_rareData;
 }
 

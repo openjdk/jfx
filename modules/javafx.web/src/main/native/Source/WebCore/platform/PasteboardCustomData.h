@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/WTFString.h>
@@ -41,7 +41,7 @@ public:
     struct Entry {
         WEBCORE_EXPORT Entry();
         WEBCORE_EXPORT Entry(const Entry&);
-        WEBCORE_EXPORT Entry(const String&, const String&, const std::variant<String, Ref<WebCore::SharedBuffer>>&);
+        WEBCORE_EXPORT Entry(const String&, const String&, const Variant<String, Ref<WebCore::SharedBuffer>>&);
         WEBCORE_EXPORT Entry(Entry&&);
         WEBCORE_EXPORT Entry& operator=(const Entry& otherData);
         WEBCORE_EXPORT Entry& operator=(Entry&& otherData);
@@ -49,7 +49,7 @@ public:
 
         String type;
         String customData;
-        std::variant<String, Ref<SharedBuffer>> platformData;
+        Variant<String, Ref<SharedBuffer>> platformData;
     };
 
     WEBCORE_EXPORT PasteboardCustomData();
@@ -59,6 +59,7 @@ public:
     WEBCORE_EXPORT ~PasteboardCustomData();
 
     const String& origin() const { return m_origin; }
+    void setOrigin(String&& origin) { m_origin = WTF::move(origin); }
     void setOrigin(const String& origin) { m_origin = origin; }
 
     WEBCORE_EXPORT Ref<SharedBuffer> createSharedBuffer() const;
@@ -80,12 +81,14 @@ public:
     WEBCORE_EXPORT static ASCIILiteral cocoaType();
 #elif PLATFORM(GTK)
     static ASCIILiteral gtkType() { return "org.webkitgtk.WebKit.custom-pasteboard-data"_s; }
+#elif PLATFORM(WPE)
+    static ASCIILiteral wpeType() { return "org.wpewebkit.WebKit.custom-pasteboard-data"_s; }
 #endif
 
-    void forEachType(Function<void(const String&)>&&) const;
-    void forEachPlatformString(Function<void(const String& type, const String& data)>&&) const;
-    void forEachPlatformStringOrBuffer(Function<void(const String& type, const std::variant<String, Ref<SharedBuffer>>& data)>&&) const;
-    void forEachCustomString(Function<void(const String& type, const String& data)>&&) const;
+    void forEachType(NOESCAPE const Function<void(const String&)>&) const;
+    void forEachPlatformString(NOESCAPE const Function<void(const String& type, const String& data)>&) const;
+    void forEachPlatformStringOrBuffer(NOESCAPE const Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&) const;
+    void forEachCustomString(NOESCAPE const Function<void(const String& type, const String& data)>&) const;
 
     bool hasData() const;
     bool hasSameOriginCustomData() const;
@@ -96,7 +99,7 @@ public:
     const Vector<Entry>& data() const { return m_data; }
 
 private:
-    UncheckedKeyHashMap<String, String> sameOriginCustomStringData() const;
+    HashMap<String, String> sameOriginCustomStringData() const;
     Entry& addOrMoveEntryToEnd(const String&);
 
     String m_origin;
