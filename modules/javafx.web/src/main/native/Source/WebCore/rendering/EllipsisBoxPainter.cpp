@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,16 @@
 #include "config.h"
 #include "EllipsisBoxPainter.h"
 
+#include "CSSPropertyNames.h"
 #include "InlineIteratorTextBox.h"
 #include "LineSelection.h"
 #include "PaintInfo.h"
+#include "RenderObjectDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
+#include "Settings.h"
+#include "StyleColorResolver.h"
+#include "StyleTextShadow.h"
 
 namespace WebCore {
 
@@ -46,7 +52,7 @@ void EllipsisBoxPainter::paint()
     // FIXME: Transition it to TextPainter.
     auto& context = m_paintInfo.context();
     auto& style = m_lineBox.style();
-    auto textColor = style.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
+    auto textColor = style.visitedDependentTextFillColorApplyingColorFilter();
 
     if (m_paintInfo.forceTextColor())
         textColor = m_paintInfo.forcedTextColor();
@@ -68,14 +74,33 @@ void EllipsisBoxPainter::paint()
             return false;
         },
         [&](const auto& shadows) {
-            context.setDropShadow({ LayoutSize(shadows[0].location.x().value, shadows[0].location.y().value), shadows[0].blur.value, style.colorWithColorFilter(shadows[0].color), ShadowRadiusMode::Default });
+            const auto& zoomFactor = style.usedZoomForLength();
+
+            Style::ColorResolver colorResolver { style };
+
+            context.setDropShadow({
+                LayoutSize {
+                    shadows[0].location.x().resolveZoom(zoomFactor),
+                    shadows[0].location.y().resolveZoom(zoomFactor),
+                },
+                shadows[0].blur.resolveZoom(zoomFactor),
+                colorResolver.colorResolvingCurrentColorApplyingColorFilter(shadows[0].color),
+                ShadowRadiusMode::Default
+            });
             return true;
     }
     );
 
     auto visualRect = m_lineBox.ellipsisVisualRect();
     auto textOrigin = visualRect.location();
-    textOrigin.move(m_paintOffset.x(), m_paintOffset.y() + style.metricsOfPrimaryFont().intAscent());
+    auto ascent = m_lineBox.formattingContextRoot().settings().subpixelInlineLayoutEnabled() ? LayoutUnit(style.metricsOfPrimaryFont().ascent()) : LayoutUnit(style.metricsOfPrimaryFont().intAscent());
+    textOrigin.move(m_paintOffset.x(), m_paintOffset.y() + ascent);
+
+    if (style.writingMode().isHorizontal())
+        textOrigin.setY(roundToDevicePixel(LayoutUnit { textOrigin.y() }, m_lineBox.formattingContextRoot().document().deviceScaleFactor()));
+    else
+        textOrigin.setX(roundToDevicePixel(LayoutUnit { textOrigin.x() }, m_lineBox.formattingContextRoot().document().deviceScaleFactor()));
+
     context.drawBidiText(style.fontCascade(), m_lineBox.ellipsisText(), textOrigin);
 
     if (textColor != context.fillColor())
@@ -90,7 +115,7 @@ void EllipsisBoxPainter::paintSelection()
     auto& context = m_paintInfo.context();
     auto& style = m_lineBox.style();
 
-    auto textColor = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
+    auto textColor = style.visitedDependentColorApplyingColorFilter();
     auto backgroundColor = m_selectionBackgroundColor;
     if (!backgroundColor.isVisible())
         return;

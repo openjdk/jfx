@@ -25,7 +25,9 @@
 
 // https://www.w3.org/TR/push-api/#pushsubscriptionoptionsinit-dictionary
 
-dictionary PushSubscriptionOptionsInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PushSubscriptionOptionsInit {
     boolean userVisibleOnly = false;
     (BufferSource or DOMString)? applicationServerKey = null;
 };

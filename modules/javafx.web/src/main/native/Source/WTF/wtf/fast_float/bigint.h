@@ -5,10 +5,9 @@
 #include <cstdint>
 #include <climits>
 #include <cstring>
+#include <wtf/StdLibExtras.h>
 
 #include "float_common.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace fast_float {
 
@@ -28,7 +27,7 @@ typedef uint32_t limb;
 constexpr size_t limb_bits = 32;
 #endif
 
-typedef span<limb> limb_span;
+using limb_span = std::span<limb>;
 
 // number of bits in a bigint. this needs to be at least the number
 // of bits required to store the largest bigint, which is
@@ -41,9 +40,11 @@ constexpr size_t bigint_limbs = bigint_bits / limb_bits;
 // buffer is pre-allocated, and only the length changes.
 template <uint16_t size>
 struct stackvec {
-  limb data[size];
+  std::array<limb, size> data;
   // we never need more than 150 limbs
-  uint16_t length{0};
+  uint16_t length { 0 };
+
+  std::span<limb> dataSpan() { return std::span { data }.first(length); }
 
   stackvec() = default;
   stackvec(const stackvec &) = delete;
@@ -100,13 +101,12 @@ struct stackvec {
   }
   // add items to the vector, from a span, without bounds checking
   FASTFLOAT_CONSTEXPR20 void extend_unchecked(limb_span s) noexcept {
-    limb* ptr = data + length;
-    std::copy_n(s.ptr, s.len(), ptr);
-    set_len(len() + s.len());
+        memcpySpan(std::span { data }.subspan(length), s);
+    set_len(len() + s.size());
   }
   // try to add items to the vector, returning if items were added
   FASTFLOAT_CONSTEXPR20 bool try_extend(limb_span s) noexcept {
-    if (len() + s.len() <= capacity()) {
+    if (len() + s.size() <= capacity()) {
       extend_unchecked(s);
       return true;
     } else {
@@ -120,9 +120,7 @@ struct stackvec {
   void resize_unchecked(size_t new_len, limb value) noexcept {
     if (new_len > len()) {
       size_t count = new_len - len();
-      limb* first = data + len();
-      limb* last = first + count;
-      ::std::fill(first, last, value);
+      std::ranges::fill(std::span { data }.subspan(len(), count), value);
       set_len(new_len);
     } else {
       set_len(new_len);
@@ -299,12 +297,12 @@ FASTFLOAT_CONSTEXPR20
 bool large_add_from(stackvec<size>& x, limb_span y, size_t start) noexcept {
   // the effective x buffer is from `xstart..x.len()`, so exit early
   // if we can't get that current range.
-  if (x.len() < start || y.len() > x.len() - start) {
-      FASTFLOAT_TRY(x.try_resize(y.len() + start, 0));
+  if (x.len() < start || y.size() > x.len() - start) {
+      FASTFLOAT_TRY(x.try_resize(y.size() + start, 0));
   }
 
   bool carry = false;
-  for (size_t index = 0; index < y.len(); index++) {
+  for (size_t index = 0; index < y.size(); ++index) {
     limb xi = x[index + start];
     limb yi = y[index];
     bool c1 = false;
@@ -319,7 +317,7 @@ bool large_add_from(stackvec<size>& x, limb_span y, size_t start) noexcept {
 
   // handle overflow
   if (carry) {
-    FASTFLOAT_TRY(small_add_from(x, 1, y.len() + start));
+    FASTFLOAT_TRY(small_add_from(x, 1, y.size() + start));
   }
   return true;
 }
@@ -332,17 +330,17 @@ bool large_add_from(stackvec<size>& x, limb_span y) noexcept {
 }
 
 // grade-school multiplication algorithm
-template <uint16_t size>
+template <uint16_t size, std::size_t N = std::dynamic_extent>
 FASTFLOAT_CONSTEXPR20
-bool long_mul(stackvec<size>& x, limb_span y) noexcept {
-  limb_span xs = limb_span(x.data, x.len());
+bool long_mul(stackvec<size>& x, std::span<const limb, N> y) noexcept {
+  limb_span xs = x.dataSpan();
   stackvec<size> z(xs);
-  limb_span zs = limb_span(z.data, z.len());
+  limb_span zs = z.dataSpan();
 
-  if (y.len() != 0) {
+  if (y.size() != 0) {
     limb y0 = y[0];
     FASTFLOAT_TRY(small_mul(x, y0));
-    for (size_t index = 1; index < y.len(); index++) {
+    for (size_t index = 1; index < y.size(); ++index) {
       limb yi = y[index];
       stackvec<size> zi;
       if (yi != 0) {
@@ -350,7 +348,7 @@ bool long_mul(stackvec<size>& x, limb_span y) noexcept {
         zi.set_len(0);
         FASTFLOAT_TRY(zi.try_extend(zs));
         FASTFLOAT_TRY(small_mul(zi, yi));
-        limb_span zis = limb_span(zi.data, zi.len());
+        limb_span zis = zi.dataSpan();
         FASTFLOAT_TRY(large_add_from(x, zis, index));
       }
     }
@@ -361,10 +359,10 @@ bool long_mul(stackvec<size>& x, limb_span y) noexcept {
 }
 
 // grade-school multiplication algorithm
-template <uint16_t size>
+template <uint16_t size, std::size_t N = std::dynamic_extent>
 FASTFLOAT_CONSTEXPR20
-bool large_mul(stackvec<size>& x, limb_span y) noexcept {
-  if (y.len() == 1) {
+bool large_mul(stackvec<size>& x, std::span<const limb, N> y) noexcept {
+  if (y.size() == 1) {
     FASTFLOAT_TRY(small_mul(x, y[0]));
   } else {
     FASTFLOAT_TRY(long_mul(x, y));
@@ -375,7 +373,7 @@ bool large_mul(stackvec<size>& x, limb_span y) noexcept {
 template <typename = void>
 struct pow5_tables {
   static constexpr uint32_t large_step = 135;
-  static constexpr uint64_t small_power_of_5[] = {
+    static constexpr std::array<uint64_t, 28> small_power_of_5 = {
     1UL, 5UL, 25UL, 125UL, 625UL, 3125UL, 15625UL, 78125UL, 390625UL,
     1953125UL, 9765625UL, 48828125UL, 244140625UL, 1220703125UL,
     6103515625UL, 30517578125UL, 152587890625UL, 762939453125UL,
@@ -384,13 +382,15 @@ struct pow5_tables {
     298023223876953125UL, 1490116119384765625UL, 7450580596923828125UL,
   };
 #ifdef FASTFLOAT_64BIT_LIMB
-  constexpr static limb large_power_of_5[] = {
+    static constexpr std::array<limb, 5> large_power_of_5 = {
     1414648277510068013UL, 9180637584431281687UL, 4539964771860779200UL,
-    10482974169319127550UL, 198276706040285095UL};
+        10482974169319127550UL, 198276706040285095UL
+      };
 #else
-  constexpr static limb large_power_of_5[] = {
+    static constexpr std::array<limb, 10> large_power_of_5 = {
     4279965485U, 329373468U, 4020270615U, 2137533757U, 4287402176U,
-    1057042919U, 1071430142U, 2440757623U, 381945767U, 46164893U};
+        1057042919U, 1071430142U, 2440757623U, 381945767U, 46164893U
+      };
 #endif
 };
 
@@ -398,10 +398,15 @@ template <typename T>
 constexpr uint32_t pow5_tables<T>::large_step;
 
 template <typename T>
-constexpr uint64_t pow5_tables<T>::small_power_of_5[];
+constexpr std::array<uint64_t, 28> pow5_tables<T>::small_power_of_5;
 
+#ifdef FASTFLOAT_64BIT_LIMB
 template <typename T>
-constexpr limb pow5_tables<T>::large_power_of_5[];
+constexpr std::array<limb, 5> pow5_tables<T>::large_power_of_5;
+#else
+template <typename T>
+constexpr std::array<limb, 10> pow5_tables<T>::large_power_of_5;
+#endif
 
 // big integer type. implements a small subset of big integer
 // arithmetic, using simple algorithms since asymptotically
@@ -514,13 +519,9 @@ struct bigint : pow5_tables<> {
       return false;
     } else if (!vec.is_empty()) {
       // move limbs
-      limb* dst = vec.data + n;
-      const limb* src = vec.data;
-      std::copy_backward(src, src + vec.len(), dst + vec.len());
+          memmoveSpan(std::span { vec.data }.subspan(n), vec.dataSpan());
       // fill in empty limbs
-      limb* first = vec.data;
-      limb* last = first + n;
-      ::std::fill(first, last, 0);
+          zeroSpan(std::span { vec.data }.first(n));
       vec.set_len(n + vec.len());
       return true;
     } else {
@@ -578,8 +579,7 @@ struct bigint : pow5_tables<> {
   // multiply as if by 5 raised to a power.
   FASTFLOAT_CONSTEXPR20 bool pow5(uint32_t exp) noexcept {
     // multiply by a power of 5
-    size_t large_length = sizeof(large_power_of_5) / sizeof(limb);
-    limb_span large = limb_span(large_power_of_5, large_length);
+    std::span large { large_power_of_5 };
     while (exp >= large_step) {
       FASTFLOAT_TRY(large_mul(vec, large));
       exp -= large_step;
@@ -615,7 +615,5 @@ struct bigint : pow5_tables<> {
 };
 
 } // namespace fast_float
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

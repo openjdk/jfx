@@ -72,6 +72,13 @@ bool StringView::startsWith(StringView prefix) const
     return ::WTF::startsWith(*this, prefix);
 }
 
+bool StringView::hasInfixStartingAt(StringView prefix, unsigned start) const
+{
+    if (start > length())
+        return false;
+    return ::WTF::startsWith(substring(start), prefix);
+}
+
 bool StringView::startsWithIgnoringASCIICase(StringView prefix) const
 {
     return ::WTF::startsWithIgnoringASCIICase(*this, prefix);
@@ -85,6 +92,14 @@ bool StringView::endsWith(char16_t character) const
 bool StringView::endsWith(StringView suffix) const
 {
     return ::WTF::endsWith(*this, suffix);
+}
+
+bool StringView::hasInfixEndingAt(StringView suffix, unsigned end) const
+{
+    if (end < suffix.length())
+        return false;
+    size_t start = end - suffix.length();
+    return hasInfixStartingAt(suffix, start);
 }
 
 bool StringView::endsWithIgnoringASCIICase(StringView suffix) const
@@ -138,7 +153,7 @@ size_t StringView::find(AdaptiveStringSearcherTables& tables, StringView matchSt
     return searchString(tables, span16(), matchString.span16(), start);
 }
 
-size_t StringView::find(std::span<const LChar> match, unsigned start) const
+size_t StringView::find(std::span<const Latin1Character> match, unsigned start) const
 {
     ASSERT(!match.empty());
     auto length = this->length();
@@ -154,7 +169,7 @@ size_t StringView::find(std::span<const LChar> match, unsigned start) const
     return findInner(span16().subspan(start), match, start);
 }
 
-size_t StringView::reverseFind(std::span<const LChar> match, unsigned start) const
+size_t StringView::reverseFind(std::span<const Latin1Character> match, unsigned start) const
 {
     ASSERT(!match.empty());
     if (match.size() > length())
@@ -196,7 +211,7 @@ class StringView::GraphemeClusters::Iterator::Impl {
 public:
     Impl(StringView stringView, std::optional<NonSharedCharacterBreakIterator>&& iterator, unsigned index)
         : m_stringView(stringView)
-        , m_iterator(WTFMove(iterator))
+        , m_iterator(WTF::move(iterator))
         , m_index(index)
         , m_indexEnd(computeIndexEnd())
     {
@@ -239,7 +254,7 @@ private:
     unsigned m_indexEnd;
 };
 
-StringView::GraphemeClusters::Iterator::Iterator(StringView stringView, unsigned index)
+StringView::GraphemeClusters::Iterator::Iterator(StringView stringView LIFETIME_BOUND, unsigned index)
     : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? std::nullopt : std::optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
 {
 }
@@ -247,7 +262,7 @@ StringView::GraphemeClusters::Iterator::Iterator(StringView stringView, unsigned
 StringView::GraphemeClusters::Iterator::~Iterator() = default;
 
 StringView::GraphemeClusters::Iterator::Iterator(Iterator&& other)
-    : m_impl(WTFMove(other.m_impl))
+    : m_impl(WTF::move(other.m_impl))
 {
 }
 
@@ -315,19 +330,29 @@ AtomString StringView::convertToASCIILowercaseAtom() const
     return convertASCIILowercaseAtom(span16());
 }
 
+std::optional<char32_t> StringView::convertToSingleCodePoint() const
+{
+    auto points = codePoints();
+    auto iterator = points.begin();
+    if (iterator == points.end())
+        return std::nullopt;
+    std::optional<char32_t> character { *iterator };
+    ++iterator;
+    return iterator == points.end() ? character : std::nullopt;
+}
 
 template<typename DestinationCharacterType, typename SourceCharacterType>
 void getCharactersWithASCIICaseInternal(StringView::CaseConvertType type, std::span<DestinationCharacterType> destination, std::span<const SourceCharacterType> source)
 {
-    static_assert(std::is_same<SourceCharacterType, LChar>::value || std::is_same<SourceCharacterType, char16_t>::value);
-    static_assert(std::is_same<DestinationCharacterType, LChar>::value || std::is_same<DestinationCharacterType, char16_t>::value);
+    static_assert(std::is_same<SourceCharacterType, Latin1Character>::value || std::is_same<SourceCharacterType, char16_t>::value);
+    static_assert(std::is_same<DestinationCharacterType, Latin1Character>::value || std::is_same<DestinationCharacterType, char16_t>::value);
     static_assert(sizeof(DestinationCharacterType) >= sizeof(SourceCharacterType));
     auto caseConvert = (type == StringView::CaseConvertType::Lower) ? toASCIILower<SourceCharacterType> : toASCIIUpper<SourceCharacterType>;
     for (auto [destinationCharacter, character] : zippedRange(destination, source))
         destinationCharacter = caseConvert(character);
 }
 
-void StringView::getCharactersWithASCIICase(CaseConvertType type, std::span<LChar> destination) const
+void StringView::getCharactersWithASCIICase(CaseConvertType type, std::span<Latin1Character> destination) const
 {
     ASSERT(is8Bit());
     getCharactersWithASCIICaseInternal(type, destination, span8());
@@ -369,7 +394,7 @@ StringViewWithUnderlyingString normalizedNFC(StringView string)
     ASSERT(U_SUCCESS(status));
 
     StringView view { result };
-    return { view, WTFMove(result) };
+    return { view, WTF::move(result) };
 }
 
 String normalizedNFC(const String& string)
@@ -395,10 +420,10 @@ bool equalRespectingNullity(StringView a, StringView b)
 
 size_t StringView::reverseFind(StringView matchString, unsigned start) const
 {
-    if (isNull())
+    if (isNull() || matchString.isNull())
         return notFound;
 
-    if (matchString.length())
+    if (matchString.isEmpty())
         return std::min(start, length());
 
     // Check start & matchLength are in range.
@@ -487,7 +512,7 @@ template<typename CharacterType> static String makeStringBySimplifyingNewLinesSl
 String makeStringBySimplifyingNewLinesSlowCase(const String& string, unsigned firstCarriageReturn)
 {
     if (string.is8Bit())
-        return makeStringBySimplifyingNewLinesSlowCase<LChar>(string, firstCarriageReturn);
+        return makeStringBySimplifyingNewLinesSlowCase<Latin1Character>(string, firstCarriageReturn);
     return makeStringBySimplifyingNewLinesSlowCase<char16_t>(string, firstCarriageReturn);
 }
 

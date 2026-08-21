@@ -42,6 +42,7 @@
 #include "ElementTargetingTypes.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSnapshotting.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLBodyElement.h"
@@ -51,7 +52,7 @@
 #include "HTMLNames.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "NamedNodeMap.h"
 #include "NodeInlines.h"
@@ -143,7 +144,7 @@ public:
     }
 
     ClearVisibilityAdjustmentForScope(ClearVisibilityAdjustmentForScope&& other)
-        : m_element(WTFMove(other.m_element))
+        : m_element(WTF::move(other.m_element))
         , m_adjustmentToRestore(std::exchange(other.m_adjustmentToRestore, { }))
     {
     }
@@ -197,9 +198,9 @@ static inline bool elementAndAncestorsAreOnlyRenderedChildren(const Element& ele
 
 static inline bool querySelectorMatchesOneElement(const Element& element, const String& selector)
 {
-    Ref container = [&]() -> ContainerNode& {
+    Ref container = [&]() -> Ref<ContainerNode> {
         if (RefPtr shadowRoot = element.containingShadowRoot())
-            return *shadowRoot;
+            return shadowRoot.releaseNonNull();
         return element.document();
     }();
 
@@ -287,7 +288,7 @@ static inline String computeTagAndAttributeSelector(const Element& element, cons
         if (value.length() > maximumValueLength)
             continue;
 
-        attributesToCheck.append({ WTFMove(name), value.string() });
+        attributesToCheck.append({ WTF::move(name), value.string() });
     }
 
     if (attributesToCheck.isEmpty())
@@ -354,15 +355,15 @@ static String selectorForElementRecursive(Element& element, ElementSelectorCache
     Vector<String> selectors;
     selectors.reserveInitialCapacity(5);
     if (auto selector = computeIDSelector(element); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     if (querySelectorMatchesOneElement(element, element.tagName()))
         selectors.append(element.tagName());
     else if (auto selector = computeTagAndClassSelector(element); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     if (auto selector = computeTagAndAttributeSelector(element); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     if (auto selector = shortestSelector(selectors); !selector.isEmpty()) {
         cache.add(element, selector);
@@ -370,10 +371,10 @@ static String selectorForElementRecursive(Element& element, ElementSelectorCache
     }
 
     if (auto selector = parentRelativeSelectorRecursive(element, cache); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     if (auto selector = siblingRelativeSelectorRecursive(element, cache); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     auto selector = shortestSelector(selectors);
     cache.add(element, selector);
@@ -393,7 +394,7 @@ static String siblingRelativeSelectorRecursive(Element& element, ElementSelector
         return emptyString();
 
     if (auto selector = selectorForElementRecursive(*siblingElement, cache); !selector.isEmpty())
-        return makeString(WTFMove(selector), " + "_s, element.tagName());
+        return makeString(WTF::move(selector), " + "_s, element.tagName());
 
     return emptyString();
 }
@@ -405,7 +406,7 @@ static String parentRelativeSelectorRecursive(Element& element, ElementSelectorC
         return emptyString();
 
     if (auto selector = selectorForElementRecursive(*parent, cache); !selector.isEmpty()) {
-        auto selectorPrefix = makeString(WTFMove(selector), " > "_s, element.tagName());
+        auto selectorPrefix = makeString(WTF::move(selector), " > "_s, element.tagName());
         auto [childIndex, firstOfType, lastOfType] = findChild(element, *parent);
         if (childIndex == notFound)
             return emptyString();
@@ -414,12 +415,12 @@ static String parentRelativeSelectorRecursive(Element& element, ElementSelectorC
             return selectorPrefix;
 
         if (firstOfType)
-            return makeString(WTFMove(selectorPrefix), ":first-of-type"_s);
+            return makeString(WTF::move(selectorPrefix), ":first-of-type"_s);
 
         if (lastOfType)
-            return makeString(WTFMove(selectorPrefix), ":last-of-type"_s);
+            return makeString(WTF::move(selectorPrefix), ":last-of-type"_s);
 
-        return makeString(WTFMove(selectorPrefix), ":nth-child("_s, childIndex + 1, ')');
+        return makeString(WTF::move(selectorPrefix), ":nth-child("_s, childIndex + 1, ')');
     }
 
     return emptyString();
@@ -453,7 +454,7 @@ static String computeHasChildSelector(Element& element)
         if (selector.isEmpty())
             continue;
 
-        selectorSuffix = makeString(":has("_s, WTFMove(selector), ')');
+        selectorSuffix = makeString(":has("_s, WTF::move(selector), ')');
         break;
     }
 
@@ -468,7 +469,7 @@ static String computeHasChildSelector(Element& element)
         if (auto selector = computeTagAndAttributeSelector(ancestor, selectorSuffix); !selector.isEmpty())
             return selector;
 
-        selectorSuffix = makeString(" > "_s, WTFMove(selectorWithTag));
+        selectorSuffix = makeString(" > "_s, WTF::move(selectorWithTag));
     }
 
     return emptyString();
@@ -517,31 +518,31 @@ static Vector<Vector<String>> selectorsForTarget(Element& element, ElementSelect
 
     // First, try to compute a selector using only the target element and its attributes.
     if (auto selector = computeIDSelector(element); !selector.isEmpty())
-        selectors.append(WTFMove(selector));
+        selectors.append(WTF::move(selector));
 
     if (querySelectorMatchesOneElement(element, element.tagName()))
         selectors.append(element.tagName());
     else {
         if (auto selector = computeTagAndClassSelector(element); !selector.isEmpty())
-            selectors.append(WTFMove(selector));
+            selectors.append(WTF::move(selector));
 
         if (auto selector = computeTagAndAttributeSelector(element); !selector.isEmpty())
-            selectors.append(WTFMove(selector));
+            selectors.append(WTF::move(selector));
     }
 
     if (selectors.isEmpty()) {
         // Next, fall back to using :has(), with a child that can be uniquely identified.
         if (auto selector = computeHasChildSelector(element); !selector.isEmpty())
-            selectors.append(WTFMove(selector));
+            selectors.append(WTF::move(selector));
     }
 
     if (selectors.isEmpty()) {
         // Finally, fall back on nth-child or sibling selectors.
         if (auto selector = parentRelativeSelectorRecursive(element, cache); !selector.isEmpty())
-            selectors.append(WTFMove(selector));
+            selectors.append(WTF::move(selector));
 
         if (auto selector = siblingRelativeSelectorRecursive(element, cache); !selector.isEmpty())
-            selectors.append(WTFMove(selector));
+            selectors.append(WTF::move(selector));
     }
 
     std::ranges::sort(selectors, { }, &String::length);
@@ -549,8 +550,21 @@ static Vector<Vector<String>> selectorsForTarget(Element& element, ElementSelect
     if (!selectors.isEmpty())
         cache.add(element, selectors.first());
 
-    selectorsIncludingShadowHost.append(WTFMove(selectors));
+    selectorsIncludingShadowHost.append(WTF::move(selectors));
     return selectorsIncludingShadowHost;
+}
+
+RefPtr<Element> ElementTargetingController::elementFromSelectors(Document& document, const TargetedElementSelectors& selectors)
+{
+    return findElementFromSelectors(document, selectors).element;
+}
+
+TargetedElementSelectors ElementTargetingController::selectorsForElement(Element& element)
+{
+    ElementSelectorCache cache;
+    return WTF::map(selectorsForTarget(element, cache), [](auto&& selectors) {
+        return HashSet<String> { WTF::move(selectors) };
+    });
 }
 
 static inline RectEdges<bool> computeOffsetEdges(const RenderStyle& style)
@@ -610,14 +624,14 @@ static String searchableTextForTarget(Element& target)
             continue;
 
         longestLength = text.length();
-        longestText = WTFMove(text);
+        longestText = WTF::move(text);
     }
 
     auto documentElements = collectDocumentElementsFromChildFrames(target);
     for (auto& documentElement : documentElements) {
         if (auto text = searchableTextForTarget(documentElement); text.length() > longestLength) {
             longestLength = text.length();
-            longestText = WTFMove(text);
+            longestText = WTF::move(text);
         }
     }
 
@@ -664,7 +678,7 @@ static URL urlForElement(const Element& element)
 
     if (CheckedPtr renderer = element.renderer()) {
         if (auto& style = renderer->style(); style.hasBackgroundImage()) {
-            if (RefPtr image = style.backgroundLayers().image())
+            if (RefPtr image = style.backgroundLayers().usedFirst().image().tryStyleImage())
                 return image->url().resolved;
         }
     }
@@ -676,7 +690,7 @@ static void collectMediaAndLinkURLsRecursive(const Element& element, HashSet<URL
 {
     auto addURLForElement = [&urls](const Element& element) {
         if (auto url = urlForElement(element); !url.isEmpty() && !url.protocolIsData() && !url.protocolIsBlob())
-            urls.add(WTFMove(url));
+            urls.add(WTF::move(url));
     };
 
     addURLForElement(element);
@@ -738,12 +752,12 @@ static std::optional<TargetedElementInfo> targetedElementInfo(Element& element, 
         .nodeIdentifier = element.nodeIdentifier(),
         .documentIdentifier = element.document().identifier(),
         .offsetEdges = offsetEdges,
-        .renderedText = WTFMove(renderedText),
+        .renderedText = WTF::move(renderedText),
         .searchableText = searchableTextForTarget(element),
-        .screenReaderText = WTFMove(screenReaderText),
+        .screenReaderText = WTF::move(screenReaderText),
         .selectors = selectorsForTarget(element, cache),
         .boundsInRootView = element.boundingBoxInRootViewCoordinates(),
-        .boundsInClientCoordinates = WTFMove(boundsInClientCoordinates),
+        .boundsInClientCoordinates = WTF::move(boundsInClientCoordinates),
         .positionType = positionType,
         .childFrameIdentifiers = collectChildFrameIdentifiers(element),
         .mediaAndLinkURLs = collectMediaAndLinkURLs(element),
@@ -756,7 +770,7 @@ static std::optional<TargetedElementInfo> targetedElementInfo(Element& element, 
     } };
 }
 
-static const HTMLElement* findOnlyMainElement(const HTMLBodyElement& bodyElement)
+static RefPtr<const HTMLElement> findOnlyMainElement(const HTMLBodyElement& bodyElement)
 {
     RefPtr<const HTMLElement> onlyMainElement;
     for (auto& descendant : descendantsOfType<HTMLElement>(bodyElement)) {
@@ -770,7 +784,7 @@ static const HTMLElement* findOnlyMainElement(const HTMLBodyElement& bodyElement
 
         onlyMainElement = descendant;
     }
-    return onlyMainElement.get();
+    return onlyMainElement;
 }
 
 static bool isNavigationalElement(const Element& element)
@@ -876,7 +890,7 @@ Vector<TargetedElementInfo> ElementTargetingController::findTargets(TargetedElem
         return { };
 
     auto includeNearbyElements = request.canIncludeNearbyElements ? IncludeNearbyElements::Yes : IncludeNearbyElements::No;
-    return extractTargets(WTFMove(nodes), WTFMove(innerElement), checkViewportAreaRatio, includeNearbyElements);
+    return extractTargets(WTF::move(nodes), WTF::move(innerElement), checkViewportAreaRatio, includeNearbyElements);
 }
 
 void ElementTargetingController::topologicallySortElementsHelper(NodeIdentifier currentElementID, Vector<NodeIdentifier>& depthSortedIDs, HashSet<NodeIdentifier>& processingIDs, HashSet<NodeIdentifier>& unprocessedIDs, const HashMap<NodeIdentifier, HashSet<NodeIdentifier>>& nodeIDToOccludedElementIDs)
@@ -950,7 +964,7 @@ Vector<Vector<TargetedElementInfo>> ElementTargetingController::findAllTargets(f
             if (nodes.isEmpty())
                 continue;
 
-            targetsList.append(extractTargets(WTFMove(nodes), WTFMove(innerElement), CheckViewportAreaRatio::Yes, IncludeNearbyElements::No));
+            targetsList.append(extractTargets(WTF::move(nodes), WTF::move(innerElement), CheckViewportAreaRatio::Yes, IncludeNearbyElements::No));
         }
     }
 
@@ -1021,7 +1035,7 @@ std::pair<Vector<Ref<Node>>, RefPtr<Element>> ElementTargetingController::findNo
     return { copyToVector(result.listBasedTestResult()), result.innerNonSharedElement() };
 }
 
-static Element* searchForElementContainingText(ContainerNode& container, const String& searchText)
+static RefPtr<Element> searchForElementContainingText(ContainerNode& container, const String& searchText)
 {
     auto remainingRange = makeRangeSelectingNodeContents(container);
     while (is_lt(treeOrder(remainingRange.start, remainingRange.end))) {
@@ -1051,7 +1065,7 @@ static Element* searchForElementContainingText(ContainerNode& container, const S
     auto documentElements = collectDocumentElementsFromChildFrames(container);
     for (auto& documentElement : documentElements) {
         if (RefPtr target = searchForElementContainingText(documentElement, searchText))
-            return target.get();
+            return target;
     }
 
     return nullptr;
@@ -1083,7 +1097,7 @@ std::pair<Vector<Ref<Node>>, RefPtr<Element>> ElementTargetingController::findNo
     potentialCandidates.append(*foundElement);
     for (auto& ancestor : ancestorsOfType<Element>(*foundElement))
         potentialCandidates.append(ancestor);
-    return { WTFMove(potentialCandidates), WTFMove(foundElement) };
+    return { WTF::move(potentialCandidates), WTF::move(foundElement) };
 }
 
 std::pair<Vector<Ref<Node>>, RefPtr<Element>> ElementTargetingController::findNodes(const TargetedElementSelectors& selectors)
@@ -1262,7 +1276,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
                 return false;
 
             auto& style = targetRenderer->style();
-            if (style.specifiedZIndex() < 0)
+            if (auto specifiedZIndexValue = style.specifiedZIndex().tryValue(); specifiedZIndexValue && *specifiedZIndexValue < 0)
                 return true;
 
             return targetRenderer->isOutOfFlowPositioned()
@@ -1326,7 +1340,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
             return true;
         });
 
-        targets.append(WTFMove(target));
+        targets.append(WTF::move(target));
     }
 
     if (targets.isEmpty())
@@ -1339,7 +1353,7 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
     results.reserveInitialCapacity(targets.size());
     for (auto iterator = targets.rbegin(); iterator != targets.rend(); ++iterator) {
         if (auto info = targetedElementInfo(*iterator, IsNearbyTarget::No, cache, m_adjustedElements)) {
-            results.append(WTFMove(*info));
+            results.append(WTF::move(*info));
             addOutOfFlowTargetClientRectIfNeeded(*iterator);
         }
     }
@@ -1393,12 +1407,12 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
             results.add(element.releaseNonNull());
         }
 
-        return filterRedundantNearbyTargets(WTFMove(results));
+        return filterRedundantNearbyTargets(WTF::move(results));
     }();
 
     for (auto& element : nearbyTargets) {
         if (auto info = targetedElementInfo(element, IsNearbyTarget::Yes, cache, m_adjustedElements)) {
-            results.append(WTFMove(*info));
+            results.append(WTF::move(*info));
             addOutOfFlowTargetClientRectIfNeeded(element);
         }
     }
@@ -1406,11 +1420,11 @@ Vector<TargetedElementInfo> ElementTargetingController::extractTargets(Vector<Re
     return results;
 }
 
-static inline Element& elementToAdjust(Element& element)
+static inline Ref<Element> elementToAdjust(Element& element)
 {
     if (RefPtr pseudoElement = dynamicDowncast<PseudoElement>(element)) {
         if (RefPtr host = pseudoElement->hostElement())
-            return *host;
+            return host.releaseNonNull();
     }
     return element;
 }
@@ -1493,7 +1507,7 @@ bool ElementTargetingController::adjustVisibility(Vector<TargetedElementAdjustme
 
         elements.append(element.releaseNonNull());
         if (m_additionalAdjustmentCount < maximumNumberOfAdditionalAdjustments) {
-            m_visibilityAdjustmentSelectors.append({ nodeID, WTFMove(selectors) });
+            m_visibilityAdjustmentSelectors.append({ nodeID, WTF::move(selectors) });
             m_additionalAdjustmentCount++;
         }
     }
@@ -1713,7 +1727,7 @@ void ElementTargetingController::applyVisibilityAdjustmentFromSelectors()
         if (auto clientRect = inflatedClientRectForAdjustmentRegionTracking(*element, viewportArea))
             adjustmentRegion.unite(*clientRect);
 
-        matchingSelectors.append(WTFMove(selectorIncludingPseudo));
+        matchingSelectors.append(WTF::move(selectorIncludingPseudo));
     }
 
     if (!adjustmentRegion.isEmpty())
@@ -1723,7 +1737,7 @@ void ElementTargetingController::applyVisibilityAdjustmentFromSelectors()
         return;
 
     dispatchVisibilityAdjustmentStateDidChange();
-    page->chrome().client().didAdjustVisibilityWithSelectors(WTFMove(matchingSelectors));
+    page->chrome().client().didAdjustVisibilityWithSelectors(WTF::move(matchingSelectors));
 }
 
 ElementTargetingController::FindElementFromSelectorsResult ElementTargetingController::findElementFromSelectors(const TargetedElementSelectors& selectorsForElementIncludingShadowHosts)
@@ -1735,7 +1749,12 @@ ElementTargetingController::FindElementFromSelectorsResult ElementTargetingContr
     if (!document)
         return { };
 
-    Ref<ContainerNode> containerToQuery = *document;
+    return findElementFromSelectors(*document, selectorsForElementIncludingShadowHosts);
+}
+
+ElementTargetingController::FindElementFromSelectorsResult ElementTargetingController::findElementFromSelectors(Document& document, const TargetedElementSelectors& selectorsForElementIncludingShadowHosts)
+{
+    Ref<ContainerNode> containerToQuery = document;
     size_t indexOfSelectorToQuery = 0;
     for (auto& selectorsToQuery : selectorsForElementIncludingShadowHosts) {
         bool isLastTarget = ++indexOfSelectorToQuery == selectorsForElementIncludingShadowHosts.size();
@@ -1769,10 +1788,10 @@ ElementTargetingController::FindElementFromSelectorsResult ElementTargetingContr
                 if (computeClientRect(*renderer).isEmpty())
                     return { };
 
-                return { WTFMove(element), selectorIncludingPseudo };
+                return { WTF::move(element), selectorIncludingPseudo };
             }
 
-            currentTarget = WTFMove(element);
+            currentTarget = WTF::move(element);
             break;
         }
 
@@ -2081,7 +2100,7 @@ RefPtr<Image> ElementTargetingController::snapshotIgnoringVisibilityAdjustment(N
     frameView->setBaseBackgroundColor(Color::transparentBlack);
     frameView->setNodeToDraw(element.get());
     auto resetPaintingState = makeScopeExit([frameView, backgroundColor]() mutable {
-        frameView->setBaseBackgroundColor(WTFMove(backgroundColor));
+        frameView->setBaseBackgroundColor(WTF::move(backgroundColor));
         frameView->setNodeToDraw(nullptr);
     });
 
@@ -2089,8 +2108,8 @@ RefPtr<Image> ElementTargetingController::snapshotIgnoringVisibilityAdjustment(N
     if (snapshotRect.isEmpty())
         return { };
 
-    auto buffer = snapshotFrameRect(*mainFrame, snapshotRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
-    return BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(buffer)));
+    auto buffer = snapshotFrameRect(*mainFrame, snapshotRect, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
+    return BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTF::move(buffer)));
 }
 
 } // namespace WebCore

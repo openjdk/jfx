@@ -24,21 +24,23 @@
  */
 
 #include "config.h"
-
 #include "RenderModel.h"
 
 #if ENABLE(MODEL_ELEMENT)
 
+#include "GraphicsLayer.h"
 #include "HTMLModelElement.h"
+#include "RenderLayer.h"
+#include "RenderLayerBacking.h"
 #include "RenderStyle.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderModel);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderModel);
 
 RenderModel::RenderModel(HTMLModelElement& element, RenderStyle&& style)
-    : RenderReplaced { Type::Model, element, WTFMove(style) }
+    : RenderReplaced { Type::Model, element, WTF::move(style) }
 {
     ASSERT(isRenderModel());
 }
@@ -68,6 +70,19 @@ void RenderModel::update()
         return;
 
     contentChanged(ContentChangeType::Model);
+#if ENABLE(GPU_PROCESS_MODEL)
+    auto renderLayer = layer();
+    if (!renderLayer)
+        return;
+
+    auto backing = renderLayer->backing();
+    if (!backing)
+        return;
+
+    auto graphicsLayer = backing->graphicsLayer();
+    if (graphicsLayer)
+        graphicsLayer->setNeedsDisplay();
+#endif
 }
 
 }

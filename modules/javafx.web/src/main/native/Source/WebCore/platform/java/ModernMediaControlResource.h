@@ -33,15 +33,18 @@
 class MediaControlResource {
 public:
     virtual String getValue(const String &key) = 0;
+    virtual const HashMap<String, String>& getImageMap() const = 0;
     virtual ~MediaControlResource() { }
 };
 
 class ModernMediaControlResource : public MediaControlResource {
 private:
+    HashMap<String, String> imageMapBase64;
     HashMap<String, String> imageMap;
 public:
     ModernMediaControlResource();
     String getValue(const String &resource_key) override;
+    const HashMap<String, String>& getImageMap() const override;
 };
 
 // Factory for creating MediaControlResource objects

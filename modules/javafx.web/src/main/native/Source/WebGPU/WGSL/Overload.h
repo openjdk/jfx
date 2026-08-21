@@ -153,7 +153,7 @@ static AbstractType allocateAbstractType(const T& type)
 template<typename T>
 static AbstractType allocateAbstractType(T&& type)
 {
-    return std::unique_ptr<AbstractTypeImpl>(new AbstractTypeImpl(WTFMove(type)));
+    return std::unique_ptr<AbstractTypeImpl>(new AbstractTypeImpl(WTF::move(type)));
 }
 
 } // namespace WGSL

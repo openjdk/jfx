@@ -29,6 +29,7 @@
 
 #include "DeviceClient.h"
 #include "Document.h"
+#include "NodeInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -96,7 +97,7 @@ void DeviceController::fireDeviceEvent()
     auto listenerVector = copyToVector(m_lastEventListeners.values());
     m_lastEventListeners.clear();
     for (auto& listener : listenerVector) {
-        auto document = listener->document();
+        RefPtr document = listener->document();
         if (document && !document->activeDOMObjectsAreSuspended() && !document->activeDOMObjectsAreStopped()) {
             if (RefPtr lastEvent = getLastEvent())
                 listener->dispatchEvent(*lastEvent);

@@ -72,7 +72,7 @@ private:
     JSWindowProxy& createJSWindowProxyWithInitializedScript(DOMWrapperWorld&);
 
     WeakPtr<Frame> m_frame;
-    HashMap<RefPtr<DOMWrapperWorld>, JSC::Strong<JSWindowProxy>> m_jsWindowProxies;
+    HashMap<Ref<DOMWrapperWorld>, JSC::Strong<JSWindowProxy>> m_jsWindowProxies;
 };
 
 } // namespace WebCore

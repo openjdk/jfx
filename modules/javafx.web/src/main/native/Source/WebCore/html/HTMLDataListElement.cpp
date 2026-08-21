@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDataListElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDataListElement);
 
 inline HTMLDataListElement::HTMLDataListElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)

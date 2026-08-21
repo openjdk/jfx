@@ -53,7 +53,7 @@ public:
 
     enum class Before : bool { No, Yes };
     double transformProgress(double progress, double duration, Before = Before::No) const;
-    String cssText() const;
+    WEBCORE_EXPORT String cssText() const;
 };
 
 class LinearTimingFunction final : public TimingFunction {

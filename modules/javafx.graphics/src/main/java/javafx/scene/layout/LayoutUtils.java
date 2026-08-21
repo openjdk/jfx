@@ -450,8 +450,12 @@ final class LayoutUtils {
 
     /**
      * Returns the size of a Node that should be placed in an area of the specified size,
-     * bounded in it's min/max size, respecting bias.
+     * bounded in it's min/max size, respecting bias. The width and height are snapped
+     * using the given {@code snapper}, with the width snapped before the height is
+     * computed for horizontally biased children (and the height snapped before the
+     * width is computed for vertically biased children).
      *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
      * @param child the child, cannot be {@code null}
      * @param areaWidth the width of the bounding area where the child is going to be placed
      * @param areaHeight the height of the bounding area where the child is going to be placed
@@ -459,39 +463,39 @@ final class LayoutUtils {
      * @param fillHeight whether the child should try to fill the area height
      * @return the bounded size the child should be resized to, never {@code null}
      */
-    static Size boundedSizeWithBias(Layoutable child, double areaWidth, double areaHeight, boolean fillWidth, boolean fillHeight) {
+    static Size boundedSizeWithBias(Snapper snapper, Layoutable child, double areaWidth, double areaHeight, boolean fillWidth, boolean fillHeight) {
         Orientation bias = child.getContentBias();
 
         double childWidth = 0;
         double childHeight = 0;
 
         if (bias == null) {
-            childWidth = boundedSize(
+            childWidth = snapper.snapSizeX(boundedSize(
                     child.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, child.prefWidth(-1)),
-                    child.maxWidth(-1));
-            childHeight = boundedSize(
+                    child.maxWidth(-1)));
+            childHeight = snapper.snapSizeY(boundedSize(
                     child.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, child.prefHeight(-1)),
-                    child.maxHeight(-1));
+                    child.maxHeight(-1)));
         } else if (bias == Orientation.HORIZONTAL) {
-            childWidth = boundedSize(
+            childWidth = snapper.snapSizeX(boundedSize(
                     child.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, child.prefWidth(-1)),
-                    child.maxWidth(-1));
-            childHeight = boundedSize(
+                    child.maxWidth(-1)));
+            childHeight = snapper.snapSizeY(boundedSize(
                     child.minHeight(childWidth), fillHeight ? areaHeight
                     : Math.min(areaHeight, child.prefHeight(childWidth)),
-                    child.maxHeight(childWidth));
+                    child.maxHeight(childWidth)));
         } else { // bias == VERTICAL
-            childHeight = boundedSize(
+            childHeight = snapper.snapSizeY(boundedSize(
                     child.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, child.prefHeight(-1)),
-                    child.maxHeight(-1));
-            childWidth = boundedSize(
+                    child.maxHeight(-1)));
+            childWidth = snapper.snapSizeX(boundedSize(
                     child.minWidth(childHeight), fillWidth ? areaWidth
                     : Math.min(areaWidth, child.prefWidth(childHeight)),
-                    child.maxWidth(childHeight));
+                    child.maxWidth(childHeight)));
         }
 
         return new Size(childWidth, childHeight);
@@ -639,9 +643,9 @@ final class LayoutUtils {
         }
 
         if (child.isResizable()) {
-            Size size = boundedSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom, fillWidth, fillHeight);
+            Size size = boundedSizeWithBias(snapper, child, areaWidth - left - right, areaHeight - top - bottom, fillWidth, fillHeight);
 
-            child.resize(snapper.snapSizeX(size.width()), snapper.snapSizeY(size.height()));
+            child.resize(size.width(), size.height());
         }
         position(snapper, child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment);

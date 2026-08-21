@@ -364,9 +364,7 @@ class BorderPaneLayout implements Layoutable {
             double adjustedWidth = adjustWidthByMargin(insideWidth, topMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight, topMargin);
 
-            topHeight = snapper.snapSizeY(t.prefHeight(adjustedWidth));
-            topHeight = Math.min(topHeight, adjustedHeight);
-            topHeight = snapper.snapSizeY(LayoutUtils.boundedSizeWithBias(t, adjustedWidth, topHeight, true, true).height());
+            topHeight = LayoutUtils.boundedSizeWithBias(snapper, t, adjustedWidth, adjustedHeight, true, false).height();
             topHeight = snapper.snapSpaceY(topMargin.getBottom()) + topHeight + snapper.snapSpaceY(topMargin.getTop());
 
             Pos alignment = alignmentLookup.call(t);
@@ -385,9 +383,7 @@ class BorderPaneLayout implements Layoutable {
             double adjustedWidth = adjustWidthByMargin(insideWidth, bottomMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight, bottomMargin);
 
-            bottomHeight = snapper.snapSizeY(b.prefHeight(adjustedWidth));
-            bottomHeight = Math.min(bottomHeight, adjustedHeight);
-            bottomHeight = snapper.snapSizeY(LayoutUtils.boundedSizeWithBias(b, adjustedWidth, bottomHeight, true, true).height());
+            bottomHeight = LayoutUtils.boundedSizeWithBias(snapper, b, adjustedWidth, adjustedHeight, true, false).height();
             bottomHeight = snapper.snapSpaceY(bottomMargin.getBottom()) + bottomHeight + snapper.snapSpaceY(bottomMargin.getTop());
 
             Pos alignment = alignmentLookup.call(b);
@@ -407,9 +403,7 @@ class BorderPaneLayout implements Layoutable {
             double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin); // ????
 
-            leftWidth = snapper.snapSizeX(l.prefWidth(adjustedHeight));
-            leftWidth = Math.min(leftWidth, adjustedWidth);
-            leftWidth = snapper.snapSizeX(LayoutUtils.boundedSizeWithBias(l, leftWidth, adjustedHeight, true, true).width());
+            leftWidth = LayoutUtils.boundedSizeWithBias(snapper, l, adjustedWidth, adjustedHeight, false, true).width();
             leftWidth = snapper.snapSpaceX(leftMargin.getLeft()) + leftWidth + snapper.snapSpaceX(leftMargin.getRight());
 
             Pos alignment = alignmentLookup.call(l);
@@ -429,9 +423,7 @@ class BorderPaneLayout implements Layoutable {
             double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, rightMargin);
 
-            rightWidth = snapper.snapSizeX(r.prefWidth(adjustedHeight));
-            rightWidth = Math.min(rightWidth, adjustedWidth);
-            rightWidth = snapper.snapSizeX(LayoutUtils.boundedSizeWithBias(r, rightWidth, adjustedHeight, true, true).width());
+            rightWidth = LayoutUtils.boundedSizeWithBias(snapper, r, adjustedWidth, adjustedHeight, false, true).width();
             rightWidth = snapper.snapSpaceX(rightMargin.getLeft()) + rightWidth + snapper.snapSpaceX(rightMargin.getRight());
 
             Pos alignment = alignmentLookup.call(r);

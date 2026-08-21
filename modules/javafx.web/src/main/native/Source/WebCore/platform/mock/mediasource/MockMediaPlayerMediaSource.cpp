@@ -44,10 +44,11 @@ namespace WebCore {
 
 class MediaPlayerFactoryMediaSourceMock final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerFactoryMediaSourceMock);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlayerFactoryMediaSourceMock);
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MockMSE; };
 
-    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final { return adoptRef(*new MockMediaPlayerMediaSource(player)); }
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer& player) const final { return adoptRef(*new MockMediaPlayerMediaSource(player)); }
 
     void getSupportedTypes(HashSet<String>& types) const final
     {
@@ -100,7 +101,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     return MediaPlayer::SupportsType::MayBeSupported;
 }
 
-MockMediaPlayerMediaSource::MockMediaPlayerMediaSource(MediaPlayer* player)
+MockMediaPlayerMediaSource::MockMediaPlayerMediaSource(MediaPlayer& player)
     : m_player(player)
 {
 }
@@ -116,7 +117,7 @@ void MockMediaPlayerMediaSource::load(const URL&, const LoadOptions&, MediaSourc
 {
     if (RefPtr mediaSourcePrivate = downcast<MockMediaSourcePrivate>(source.mediaSourcePrivate())) {
         mediaSourcePrivate->setPlayer(this);
-        m_mediaSourcePrivate = WTFMove(mediaSourcePrivate);
+        m_mediaSourcePrivate = WTF::move(mediaSourcePrivate);
         source.reOpen();
     } else
     m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, source);
@@ -156,6 +157,13 @@ bool MockMediaPlayerMediaSource::hasAudio() const
     return mediaSourcePrivate ? mediaSourcePrivate->hasAudio() : false;
 }
 
+void MockMediaPlayerMediaSource::characteristicsFromMediaSourceChanged()
+{
+    assertIsMainThread();
+    if (RefPtr player = m_player.get())
+        player->characteristicChanged();
+}
+
 void MockMediaPlayerMediaSource::setPageIsVisible(bool)
 {
 }
@@ -177,7 +185,20 @@ MediaPlayer::NetworkState MockMediaPlayerMediaSource::networkState() const
 
 MediaPlayer::ReadyState MockMediaPlayerMediaSource::readyState() const
 {
-    return m_readyState;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->mediaPlayerReadyState() : MediaPlayer::ReadyState::HaveNothing;
+}
+
+void MockMediaPlayerMediaSource::readyStateFromMediaSourceChanged()
+{
+    assertIsMainThread();
+    if (RefPtr player = m_player.get())
+        player->readyStateChanged();
+}
+
+void MockMediaPlayerMediaSource::mediaSourceHasRetrievedAllData()
+{
+    setNetworkState(MediaPlayer::NetworkState::Loaded);
 }
 
 MediaTime MockMediaPlayerMediaSource::maxTimeSeekable() const
@@ -242,10 +263,8 @@ void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
         if (!protectedThis || !result)
             return;
 
-        protectedThis->protectedMediaSourcePrivate()->seekToTime(*result)->whenSettled(RunLoop::currentSingleton(), [weakThis, seekTime = *result] {
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
+        const auto seekTime = *result;
+        protectedThis->protectedMediaSourcePrivate()->seekToTime(seekTime);
             protectedThis->m_lastSeekTarget.reset();
             protectedThis->m_currentTime = seekTime;
 
@@ -255,12 +274,11 @@ void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
             }
 
             if (protectedThis->m_playing) {
-                callOnMainThread([protectedThis = WTFMove(protectedThis)] {
+            callOnMainThread([protectedThis = WTF::move(protectedThis)] {
                     protectedThis->advanceCurrentTime();
             });
     }
         });
-    });
 }
 
 void MockMediaPlayerMediaSource::advanceCurrentTime()
@@ -288,16 +306,6 @@ void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
     m_duration = duration;
     if (auto player = m_player.get())
         player->durationChanged();
-}
-
-void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyState)
-{
-    if (readyState == m_readyState)
-        return;
-
-    m_readyState = readyState;
-    if (auto player = m_player.get())
-        player->readyStateChanged();
 }
 
 void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState networkState)

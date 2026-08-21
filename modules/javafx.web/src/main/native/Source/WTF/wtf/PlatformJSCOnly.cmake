@@ -113,6 +113,7 @@ endif ()
 if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
     list(APPEND WTF_PUBLIC_HEADERS
         glib/GRefPtr.h
+        glib/GSpanExtras.h
         glib/GTypedefs.h
         glib/RunLoopSourcePriority.h
     )
@@ -123,7 +124,6 @@ if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
     if (ENABLE_REMOTE_INSPECTOR)
         list(APPEND WTF_PUBLIC_HEADERS
             glib/GSocketMonitor.h
-            glib/GSpanExtras.h
             glib/GUniquePtr.h
             glib/SocketConnection.h
         )
@@ -133,16 +133,15 @@ if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
             glib/SocketConnection.cpp
         )
     endif ()
-
-    list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
-        ${GIO_UNIX_INCLUDE_DIRS}
-        ${GLIB_INCLUDE_DIRS}
+    if (ENABLE_JSC_GLIB_API)
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GUniquePtr.h
+            glib/GWeakPtr.h
+            glib/WTFGType.h
     )
+    endif ()
     list(APPEND WTF_LIBRARIES
-        ${GIO_UNIX_LIBRARIES}
-        ${GLIB_GIO_LIBRARIES}
-        ${GLIB_GOBJECT_LIBRARIES}
-        ${GLIB_LIBRARIES}
+        GLib::GioUnix
     )
 else ()
     list(APPEND WTF_SOURCES

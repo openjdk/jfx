@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpufragmentstate
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUFragmentState : GPUProgrammableStage {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUFragmentState : GPUProgrammableStage {
     required sequence<GPUColorTargetState?> targets;
 };

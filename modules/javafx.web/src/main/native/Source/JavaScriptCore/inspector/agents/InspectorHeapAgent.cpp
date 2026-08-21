@@ -59,7 +59,7 @@ void InspectorHeapAgent::didCreateFrontendAndBackend()
 
 void InspectorHeapAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
-    disable();
+    std::ignore = disable();
 }
 
 Protocol::ErrorStringOr<void> InspectorHeapAgent::enable()
@@ -69,7 +69,7 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::enable()
 
     m_enabled = true;
 
-    m_environment.vm().heap.addObserver(this);
+    checkedEnvironment()->vm().heap.addObserver(this);
 
     return { };
 }
@@ -82,7 +82,7 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::disable()
     m_enabled = false;
     m_tracking = false;
 
-    m_environment.vm().heap.removeObserver(this);
+    checkedEnvironment()->vm().heap.removeObserver(this);
 
     clearHeapSnapshots();
 
@@ -91,7 +91,7 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::disable()
 
 Protocol::ErrorStringOr<void> InspectorHeapAgent::gc()
 {
-    VM& vm = m_environment.vm();
+    VM& vm = checkedEnvironment()->vm();
     JSLockHolder lock(vm);
     sanitizeStackForVM(vm);
     vm.heap.collectNow(Sync, CollectionScope::Full);
@@ -101,7 +101,7 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::gc()
 
 Protocol::ErrorStringOr<std::tuple<double, Protocol::Heap::HeapSnapshotData>> InspectorHeapAgent::snapshot()
 {
-    VM& vm = m_environment.vm();
+    VM& vm = checkedEnvironment()->vm();
     JSLockHolder lock(vm);
 
     HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler());
@@ -109,7 +109,7 @@ Protocol::ErrorStringOr<std::tuple<double, Protocol::Heap::HeapSnapshotData>> In
 
     snapshotBuilder.buildSnapshot();
 
-    auto timestamp = m_environment.executionStopwatch().elapsedTime().seconds();
+    auto timestamp = checkedEnvironment()->executionStopwatch().elapsedTime().seconds();
     auto snapshotData = snapshotBuilder.json();
     return { { timestamp, snapshotData } };
 }
@@ -123,9 +123,9 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::startTracking()
 
     auto result = snapshot();
     if (!result)
-        return makeUnexpected(WTFMove(result.error()));
+        return makeUnexpected(WTF::move(result.error()));
 
-    auto [timestamp, snapshotData] = WTFMove(result.value());
+    auto [timestamp, snapshotData] = WTF::move(result.value());
     m_frontendDispatcher->trackingStart(timestamp, snapshotData);
 
     return { };
@@ -140,9 +140,9 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::stopTracking()
 
     auto result = snapshot();
     if (!result)
-        return makeUnexpected(WTFMove(result.error()));
+        return makeUnexpected(WTF::move(result.error()));
 
-    auto [timestamp, snapshotData] = WTFMove(result.value());
+    auto [timestamp, snapshotData] = WTF::move(result.value());
     m_frontendDispatcher->trackingComplete(timestamp, snapshotData);
 
     return { };
@@ -150,7 +150,7 @@ Protocol::ErrorStringOr<void> InspectorHeapAgent::stopTracking()
 
 std::optional<HeapSnapshotNode> InspectorHeapAgent::nodeForHeapObjectIdentifier(Protocol::ErrorString& errorString, unsigned heapObjectIdentifier)
 {
-    HeapProfiler* heapProfiler = m_environment.vm().heapProfiler();
+    HeapProfiler* heapProfiler = checkedEnvironment()->vm().heapProfiler();
     if (!heapProfiler) {
         errorString = "No heap snapshot"_s;
         return std::nullopt;
@@ -176,7 +176,7 @@ Protocol::ErrorStringOr<std::tuple<String, RefPtr<Protocol::Debugger::FunctionDe
     Protocol::ErrorString errorString;
 
     // Prevent the cell from getting collected as we look it up.
-    VM& vm = m_environment.vm();
+    VM& vm = checkedEnvironment()->vm();
     JSLockHolder lock(vm);
     DeferGC deferGC(vm);
 
@@ -226,7 +226,7 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorHeapAgent
     Protocol::ErrorString errorString;
 
     // Prevent the cell from getting collected as we look it up.
-    VM& vm = m_environment.vm();
+    VM& vm = checkedEnvironment()->vm();
     JSLockHolder lock(vm);
     DeferGC deferGC(vm);
 
@@ -272,7 +272,7 @@ void InspectorHeapAgent::willGarbageCollect()
     if (!m_enabled)
         return;
 
-    m_gcStartTime = m_environment.executionStopwatch().elapsedTime();
+    m_gcStartTime = checkedEnvironment()->executionStopwatch().elapsedTime();
 }
 
 void InspectorHeapAgent::didGarbageCollect(CollectionScope scope)
@@ -289,17 +289,17 @@ void InspectorHeapAgent::didGarbageCollect(CollectionScope scope)
 
     // FIXME: Include number of bytes freed by collection.
 
-    Seconds endTime = m_environment.executionStopwatch().elapsedTime();
+    Seconds endTime = checkedEnvironment()->executionStopwatch().elapsedTime();
     dispatchGarbageCollectedEvent(protocolTypeForHeapOperation(scope), m_gcStartTime, endTime);
 
     m_gcStartTime = Seconds::nan();
 }
 
-bool InspectorHeapAgent::heapSnapshotBuilderIgnoreNode(HeapSnapshotBuilder&, JSC::JSCell* cell)
+bool InspectorHeapAgent::heapSnapshotBuilderIgnoreNode(const HeapSnapshotBuilder&, JSC::JSCell* cell)
 {
     if (const Structure* structure = cell->structure()) {
         if (JSGlobalObject* globalObject = structure->globalObject()) {
-            if (!m_environment.canAccessInspectedScriptState(globalObject))
+            if (!checkedEnvironment()->canAccessInspectedScriptState(globalObject))
                 return true;
         }
     }
@@ -308,7 +308,7 @@ bool InspectorHeapAgent::heapSnapshotBuilderIgnoreNode(HeapSnapshotBuilder&, JSC
 
 void InspectorHeapAgent::clearHeapSnapshots()
 {
-    VM& vm = m_environment.vm();
+    VM& vm = checkedEnvironment()->vm();
     JSLockHolder lock(vm);
 
     if (HeapProfiler* heapProfiler = vm.heapProfiler()) {
@@ -325,7 +325,7 @@ void InspectorHeapAgent::dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCo
         .setEndTime(endTime.seconds())
         .release();
 
-    m_frontendDispatcher->garbageCollected(WTFMove(protocolObject));
+    m_frontendDispatcher->garbageCollected(WTF::move(protocolObject));
 }
 
 } // namespace Inspector

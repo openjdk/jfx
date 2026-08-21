@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "ExtendableEvent.h"
-#include "FetchIdentifier.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "ResourceError.h"
+#include <WebCore/ExtendableEvent.h>
+#include <WebCore/FetchIdentifier.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/ResourceError.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
+#include <wtf/Markable.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -44,7 +45,7 @@ class FetchResponse;
 class ResourceResponse;
 
 class FetchEvent final : public ExtendableEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FetchEvent);
+    WTF_MAKE_TZONE_ALLOCATED(FetchEvent);
 public:
     struct Init : ExtendableEventInit {
         RefPtr<FetchRequest> request;
@@ -57,7 +58,7 @@ public:
 
     static Ref<FetchEvent> create(JSC::JSGlobalObject& globalObject, const AtomString& type, Init&& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
-        return adoptRef(*new FetchEvent(globalObject, type, WTFMove(initializer), isTrusted));
+        return adoptRef(*new FetchEvent(globalObject, type, WTF::move(initializer), isTrusted));
     }
     ~FetchEvent();
 
@@ -112,3 +113,5 @@ inline void FetchEvent::setNavigationPreloadIdentifier(FetchIdentifier identifie
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(FetchEvent)

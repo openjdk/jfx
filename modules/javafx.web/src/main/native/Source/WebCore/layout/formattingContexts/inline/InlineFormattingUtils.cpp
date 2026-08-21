@@ -34,10 +34,13 @@
 #include "InlineLineBoxVerticalAligner.h"
 #include "InlineLineTypes.h"
 #include "InlineQuirks.h"
+#include "LayoutBoxInlines.h"
 #include "LayoutElementBox.h"
-#include "LengthFunctions.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RubyFormattingContext.h"
+#include "Settings.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Layout {
@@ -47,27 +50,30 @@ InlineFormattingUtils::InlineFormattingUtils(const InlineFormattingContext& inli
 {
 }
 
-InlineLayoutUnit InlineFormattingUtils::logicalTopForNextLine(const LineLayoutResult& lineLayoutResult, const InlineRect& lineLogicalRect, const FloatingContext& floatingContext) const
+InlineLayoutUnit InlineFormattingUtils::logicalTopForNextLine(const LineLayoutResult& lineLayoutResult, const InlineRect& lineLogicalRect, const FloatingContext& floatingContext, const BlockLayoutState::MarginState& marginState) const
 {
     auto didManageToPlaceInlineContentOrFloat = !lineLayoutResult.inlineItemRange.isEmpty();
     if (didManageToPlaceInlineContentOrFloat) {
+        auto logicalTopCandidateByContent = [&] {
         // Normally the next line's logical top is the previous line's logical bottom, but when the line ends
         // with the clear property set, the next line needs to clear the existing floats.
-        if (lineLayoutResult.inlineContent.isEmpty())
+            if (!lineLayoutResult.hasContentfulInlineContent())
             return lineLogicalRect.bottom();
-        auto& lastRunLayoutBox = lineLayoutResult.inlineContent.last().layoutBox();
+            auto& lastRunLayoutBox = lineLayoutResult.runs.last().layoutBox();
         if (!lastRunLayoutBox.hasFloatClear() || lastRunLayoutBox.isOutOfFlowPositioned())
             return lineLogicalRect.bottom();
         auto blockAxisPositionWithClearance = floatingContext.blockAxisPositionWithClearance(lastRunLayoutBox, formattingContext().geometryForBox(lastRunLayoutBox));
         if (!blockAxisPositionWithClearance)
             return lineLogicalRect.bottom();
         return std::max(lineLogicalRect.bottom(), InlineLayoutUnit(blockAxisPositionWithClearance->position));
+        };
+        return logicalTopCandidateByContent() + marginState.contentOffsetAfterSelfCollapsingBlock;
     }
 
     auto intrusiveFloatBottom = [&]() -> std::optional<InlineLayoutUnit> {
         // Floats must have prevented us placing any content on the line.
         // Move next line below the intrusive float(s).
-        ASSERT(lineLayoutResult.inlineContent.isEmpty() || lineLayoutResult.inlineContent[0].isLineSpanningInlineBoxStart());
+        ASSERT(!lineLayoutResult.hasContentfulInlineContent() || lineLayoutResult.runs[0].isLineSpanningInlineBoxStart());
         auto nextLineLogicalTop = [&]() -> LayoutUnit {
             if (auto nextLineLogicalTopCandidate = lineLayoutResult.hintForNextLineTopToAvoidIntrusiveFloat)
                 return LayoutUnit { *nextLineLogicalTopCandidate };
@@ -146,7 +152,7 @@ InlineRect InlineFormattingUtils::flipVisualRectToLogicalForWritingMode(const In
     return visualRect;
 }
 
-InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, PreviousLineState previousLineState, InlineLayoutUnit availableWidth) const
+InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, IsFirstFormattedLine isFirstFormattedLine, std::optional<LineEndsWithLineBreak> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const
 {
     auto& root = formattingContext().root();
 
@@ -156,24 +162,13 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
     // is only affected if it is the first child of its parent element.
     // If 'each-line' is specified, indentation also applies to all lines where the previous line ends with a hard break.
     // [Integration] root()->parent() would normally produce a valid layout box.
-    bool shouldIndent = false;
-    switch (previousLineState) {
-    case PreviousLineState::NoPreviousLine:
-        shouldIndent = !root.isAnonymous();
-        if (root.isAnonymous()) {
-            if (!root.isInlineIntegrationRoot())
-                shouldIndent = root.parent().firstInFlowChild() == &root;
-            else
-                shouldIndent = root.isFirstChildForIntegration();
-        }
-        break;
-    case PreviousLineState::EndsWithLineBreak:
-        shouldIndent = root.style().textIndent().eachLine.has_value();
-        break;
-    case PreviousLineState::DoesNotEndWithLineBreak:
-        shouldIndent = false;
-        break;
-    }
+    auto shouldIndent = false;
+    if (root.style().textIndent().eachLine.has_value())
+        shouldIndent = isFirstFormattedLine == IsFirstFormattedLine::Yes || (previousLineEndsWithLineBreak && *previousLineEndsWithLineBreak == LineEndsWithLineBreak::Yes);
+    else if (root.isAnonymousTextIndentCandidateForIntegration()
+        || !root.isAnonymous()
+        || (!root.isInlineIntegrationRoot() && root.parent().firstInFlowChild() == &root))
+            shouldIndent = isFirstFormattedLine == IsFirstFormattedLine::Yes;
 
     // Specifying 'hanging' inverts whether the line should be indented or not.
     if (root.style().textIndent().hanging.has_value())
@@ -190,7 +185,7 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
         // https://drafts.csswg.org/css-text/#text-indent-property
         return { };
     }
-    return Style::evaluate(textIndentLength, availableWidth);
+    return Style::evaluate<InlineLayoutUnit>(textIndentLength, availableWidth, root.style().usedZoomForLength());
 }
 
 InlineLayoutUnit InlineFormattingUtils::initialLineHeight(bool isFirstLine) const
@@ -210,14 +205,14 @@ FloatingContext::Constraints InlineFormattingUtils::floatConstraintsForLine(Inli
     return floatingContext.constraints(logicalTopCandidate, logicalBottomCandidate, FloatingContext::MayBeAboveLastFloat::Yes);
 }
 
-InlineLayoutUnit InlineFormattingUtils::horizontalAlignmentOffset(const RenderStyle& rootStyle, InlineLayoutUnit contentLogicalRight, InlineLayoutUnit lineLogicalWidth, InlineLayoutUnit hangingTrailingWidth, const Line::RunList& runs, bool isLastLine, std::optional<TextDirection> inlineBaseDirectionOverride)
+InlineLayoutUnit InlineFormattingUtils::horizontalAlignmentOffset(const RenderStyle& rootStyle, InlineLayoutUnit contentLogicalRight, InlineLayoutUnit lineLogicalWidth, InlineLayoutUnit hangingTrailingWidth, bool isLastLineOrLineEndsWithForcedLineBreak, std::optional<TextDirection> inlineBaseDirectionOverride)
 {
     // Depending on the line's alignment/justification, the hanging glyph can be placed outside the line box.
     if (hangingTrailingWidth) {
         // If white-space is set to pre-wrap, the UA must (unconditionally) hang this sequence, unless the sequence is followed
         // by a forced line break, in which case it must conditionally hang the sequence is instead.
         // Note that end of last line in a paragraph is considered a forced break.
-        auto isConditionalHanging = runs.last().isLineBreak() || isLastLine;
+        auto isConditionalHanging = isLastLineOrLineEndsWithForcedLineBreak;
         // In some cases, a glyph at the end of a line can conditionally hang: it hangs only if it does not otherwise fit in the line prior to justification.
         if (isConditionalHanging) {
             // FIXME: Conditional hanging needs partial overflow trimming at glyph boundary, one by one until they fit.
@@ -226,7 +221,6 @@ InlineLayoutUnit InlineFormattingUtils::horizontalAlignmentOffset(const RenderSt
             contentLogicalRight -= hangingTrailingWidth;
     }
 
-    auto isLastLineOrAfterLineBreak = isLastLine || (!runs.isEmpty() && runs.last().isLineBreak());
     auto horizontalAvailableSpace = lineLogicalWidth - contentLogicalRight;
 
     if (horizontalAvailableSpace <= 0)
@@ -236,52 +230,52 @@ InlineLayoutUnit InlineFormattingUtils::horizontalAlignmentOffset(const RenderSt
 
     auto computedHorizontalAlignment = [&] {
         auto textAlign = rootStyle.textAlign();
-        if (!isLastLineOrAfterLineBreak)
+        if (!isLastLineOrLineEndsWithForcedLineBreak)
             return textAlign;
         // The last line before a forced break or the end of the block is aligned according to text-align-last.
         switch (rootStyle.textAlignLast()) {
-        case TextAlignLast::Auto:
-            if (textAlign == TextAlignMode::Justify)
-                return TextAlignMode::Start;
+        case Style::TextAlignLast::Auto:
+            if (textAlign == Style::TextAlign::Justify)
+                return Style::TextAlign::Start;
             return textAlign;
-        case TextAlignLast::Start:
-            return TextAlignMode::Start;
-        case TextAlignLast::End:
-            return TextAlignMode::End;
-        case TextAlignLast::Left:
-            return TextAlignMode::Left;
-        case TextAlignLast::Right:
-            return TextAlignMode::Right;
-        case TextAlignLast::Center:
-            return TextAlignMode::Center;
-        case TextAlignLast::Justify:
-            return TextAlignMode::Justify;
+        case Style::TextAlignLast::Start:
+            return Style::TextAlign::Start;
+        case Style::TextAlignLast::End:
+            return Style::TextAlign::End;
+        case Style::TextAlignLast::Left:
+            return Style::TextAlign::Left;
+        case Style::TextAlignLast::Right:
+            return Style::TextAlign::Right;
+        case Style::TextAlignLast::Center:
+            return Style::TextAlign::Center;
+        case Style::TextAlignLast::Justify:
+            return Style::TextAlign::Justify;
         default:
             ASSERT_NOT_REACHED();
-            return TextAlignMode::Start;
+            return Style::TextAlign::Start;
         }
     };
 
     switch (computedHorizontalAlignment()) {
-    case TextAlignMode::Left:
-    case TextAlignMode::WebKitLeft:
+    case Style::TextAlign::Left:
+    case Style::TextAlign::WebKitLeft:
         if (!isLeftToRightDirection)
             return horizontalAvailableSpace;
         [[fallthrough]];
-    case TextAlignMode::Start:
+    case Style::TextAlign::Start:
         return { };
-    case TextAlignMode::Right:
-    case TextAlignMode::WebKitRight:
+    case Style::TextAlign::Right:
+    case Style::TextAlign::WebKitRight:
         if (!isLeftToRightDirection)
             return { };
         [[fallthrough]];
-    case TextAlignMode::End:
+    case Style::TextAlign::End:
         return horizontalAvailableSpace;
-    case TextAlignMode::Center:
-    case TextAlignMode::WebKitCenter:
+    case Style::TextAlign::Center:
+    case Style::TextAlign::WebKitCenter:
         return horizontalAvailableSpace / 2;
-    case TextAlignMode::Justify:
-        // TextAlignMode::Justify is a run alignment (and we only do inline box alignment here)
+    case Style::TextAlign::Justify:
+        // Style::TextAlign::Justify is a run alignment (and we only do inline box alignment here)
         return { };
     default:
         ASSERT_NOT_IMPLEMENTED_YET();
@@ -315,7 +309,7 @@ InlineItemPosition InlineFormattingUtils::leadingInlineItemPositionForNextLine(I
 
 InlineLayoutUnit InlineFormattingUtils::inlineItemWidth(const InlineItem& inlineItem, InlineLayoutUnit contentLogicalLeft, bool useFirstLineStyle) const
 {
-    ASSERT(inlineItem.layoutBox().isInlineLevelBox());
+    ASSERT(inlineItem.layoutBox().isInlineLevelBox() || inlineItem.isBlock());
     if (auto* inlineTextItem = dynamicDowncast<InlineTextItem>(inlineItem)) {
         if (auto contentWidth = inlineTextItem->width())
             return *contentWidth;
@@ -343,6 +337,9 @@ InlineLayoutUnit InlineFormattingUtils::inlineItemWidth(const InlineItem& inline
     if (inlineItem.isOpaque())
         return { };
 
+    if (inlineItem.isBlock())
+        return boxGeometry.marginBoxWidth();
+
     // Non-replaced inline box (e.g. inline-block)
     return boxGeometry.marginBoxWidth();
 }
@@ -361,7 +358,7 @@ static inline bool endsWithSoftWrapOpportunity(const InlineTextItem& previousInl
         // The bidi boundary may or may not be the reason for splitting the inline text box content.
         // FIXME: We could add a "reason flag" to InlineTextItem to tell why the split happened.
         auto& style = previousInlineTextItem.style();
-        auto lineBreakIteratorFactory = CachedLineBreakIteratorFactory { previousInlineTextItem.inlineTextBox().content(), style.computedLocale(), TextUtil::lineBreakIteratorMode(style.lineBreak()), TextUtil::contentAnalysis(style.wordBreak()) };
+        auto lineBreakIteratorFactory = CachedLineBreakIteratorFactory { previousInlineTextItem.inlineTextBox().content(), Style::toPlatform(style.computedLocale()), TextUtil::lineBreakIteratorMode(style.lineBreak()), TextUtil::contentAnalysis(style.wordBreak()) };
         auto softWrapOpportunityCandidate = nextInlineTextItem.start();
         return TextUtil::findNextBreakablePosition(lineBreakIteratorFactory, softWrapOpportunityCandidate, style) == softWrapOpportunityCandidate;
     }
@@ -386,11 +383,11 @@ static inline const ElementBox& nearestCommonAncestor(const Box& first, const Bo
     if (&firstParent != &rootBox && &secondParent != &rootBox && &firstParent.parent() == &secondParent.parent())
         return firstParent.parent();
 
-    HashSet<const ElementBox*> descendantsSet;
+    HashSet<CheckedRef<const ElementBox>> descendantsSet;
     for (auto* descendant = &firstParent; descendant != &rootBox; descendant = &descendant->parent())
-        descendantsSet.add(descendant);
+        descendantsSet.add(*descendant);
     for (auto* descendant = &secondParent; descendant != &rootBox; descendant = &descendant->parent()) {
-        if (!descendantsSet.add(descendant).isNewEntry)
+        if (!descendantsSet.add(*descendant).isNewEntry)
             return *descendant;
     }
     return rootBox;
@@ -496,6 +493,11 @@ size_t InlineFormattingUtils::nextWrapOpportunity(size_t startIndex, const Inlin
             // This item is invisible to line breaking. Need to pretend it's not here.
             continue;
         }
+        if (currentItem.isBlock()) {
+            // Let's break before and after a block level box.
+            auto wrappingPosition = index == startIndex ? std::min(index + 1, layoutRange.endIndex()) : index;
+            return wrappingPosition;
+        }
         ASSERT(currentItem.isText() || currentItem.isAtomicInlineBox() || currentItem.isFloat() || currentItem.layoutBox().isRubyInlineBox());
         if (currentItem.isFloat()) {
             // While floats are not part of the inline content and they are not supposed to introduce soft wrap opportunities,
@@ -566,10 +568,10 @@ std::pair<InlineLayoutUnit, InlineLayoutUnit> InlineFormattingUtils::textEmphasi
     auto hasAboveTextEmphasis = false;
     auto hasUnderTextEmphasis = false;
     if (style.writingMode().isVerticalTypographic()) {
-        hasAboveTextEmphasis = !emphasisPosition.contains(TextEmphasisPosition::Left);
+        hasAboveTextEmphasis = !emphasisPosition.contains(Style::TextEmphasisPositionValue::Left);
         hasUnderTextEmphasis = !hasAboveTextEmphasis;
     } else {
-        hasAboveTextEmphasis = !emphasisPosition.contains(TextEmphasisPosition::Under);
+        hasAboveTextEmphasis = !emphasisPosition.contains(Style::TextEmphasisPositionValue::Under);
         hasUnderTextEmphasis = !hasAboveTextEmphasis;
     }
 
@@ -613,13 +615,79 @@ LineEndingTruncationPolicy InlineFormattingUtils::lineEndingTruncationPolicy(con
     return LineEndingTruncationPolicy::NoTruncation;
 }
 
-bool InlineFormattingUtils::shouldDiscardRemainingContentInBlockDirection(size_t numberOfLinesWithInlineContent) const
+std::optional<LineLayoutResult::InlineContentEnding> InlineFormattingUtils::inlineContentEnding(const Line::Result& lineContent)
 {
-    auto lineClamp = formattingContext().layoutState().parentBlockLayoutState().lineClamp();
+    if (!lineContent.runs.isEmpty() && lineContent.runs.last().isBlock()) {
+#if ASSERT_ENABLED
+    for (auto& run : lineContent.runs)
+        ASSERT(run.isLineSpanningInlineBoxStart() || run.isBlock());
+#endif
+        return { };
+    }
+
+    for (auto& run : lineContent.runs | std::views::reverse) {
+        ASSERT(!run.isBlock());
+        if (run.isOpaque())
+            continue;
+        if (run.isLineBreak())
+            return { LineLayoutResult::InlineContentEnding::LineBreak };
+        if (run.isText() && run.textContent().needsHyphen)
+            return { LineLayoutResult::InlineContentEnding::Hyphen };
+        return { LineLayoutResult::InlineContentEnding::Generic };
+    }
+    return { };
+}
+
+bool InlineFormattingUtils::shouldDiscardRemainingContentInBlockDirection() const
+{
+    auto& inlineLayoutState = formattingContext().layoutState();
+    auto lineClamp = inlineLayoutState.parentBlockLayoutState().lineClamp();
     if (!lineClamp || !lineClamp->shouldDiscardOverflow)
         return false;
     ASSERT(!lineClamp->isLegacy);
-    return lineClamp->maximumLines == numberOfLinesWithInlineContent;
+    return lineClamp->maximumLines == inlineLayoutState.lineCountWithInlineContentIncludingNestedBlocks();
+}
+
+InlineLayoutUnit InlineFormattingUtils::ascent(const FontMetrics& fontMetrics, FontBaseline fontBaseline, const InlineLevelBox& inlineLevelBox)
+{
+    return ascent(fontMetrics, fontBaseline, inlineLevelBox.layoutBox());
+}
+
+InlineLayoutUnit InlineFormattingUtils::descent(const FontMetrics& fontMetrics, FontBaseline fontBaseline, const InlineLevelBox& inlineLevelBox)
+{
+    return descent(fontMetrics, fontBaseline, inlineLevelBox.layoutBox());
+}
+
+InlineLayoutUnit InlineFormattingUtils::ascent(const FontMetrics& fontMetrics, FontBaseline fontBaseline, const Box& layoutBox)
+{
+    return layoutBox.rendererForIntegration()->settings().subpixelInlineLayoutEnabled() ? fontMetrics.ascent(fontBaseline) : fontMetrics.intAscent(fontBaseline);
+}
+
+InlineLayoutUnit InlineFormattingUtils::descent(const FontMetrics& fontMetrics, FontBaseline fontBaseline, const Box& layoutBox)
+{
+    return layoutBox.rendererForIntegration()->settings().subpixelInlineLayoutEnabled() ? fontMetrics.descent(fontBaseline) : fontMetrics.intDescent(fontBaseline);
+}
+
+InlineLayoutUnit InlineFormattingUtils::snapToInt(InlineLayoutUnit value, const InlineLevelBox& inlineLevelBox, SnapDirection direction)
+{
+    return snapToInt(value, inlineLevelBox.layoutBox(), direction);
+}
+
+InlineLayoutUnit InlineFormattingUtils::snapToInt(InlineLayoutUnit value, const Box& layoutBox, SnapDirection direction)
+{
+    if (layoutBox.rendererForIntegration()->settings().subpixelInlineLayoutEnabled())
+        return value;
+
+    switch (direction) {
+    case SnapDirection::Floor:
+        return floorf(value);
+    case SnapDirection::Ceil:
+        return ceilf(value);
+    case SnapDirection::Round:
+        return roundf(value);
+    }
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 }

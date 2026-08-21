@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Alex Milowski (alex@milowski.com). All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 François Sausset (sausset@gmail.com). All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
  *
@@ -31,6 +32,7 @@
 #if ENABLE(MATHML)
 
 #include "FontCache.h"
+#include "FontCascadeInlines.h"
 #include "GraphicsContext.h"
 #include "MathMLNames.h"
 #include "MathMLRootElement.h"
@@ -45,10 +47,10 @@ static const char16_t gRadicalCharacter = 0x221A;
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLRoot);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLRoot);
 
 RenderMathMLRoot::RenderMathMLRoot(MathMLRootElement& element, RenderStyle&& style)
-    : RenderMathMLRow(Type::MathMLRoot, element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLRoot, element, WTF::move(style))
 {
     m_radicalOperator.setOperator(RenderMathMLRoot::style(), gRadicalCharacter, MathOperator::Type::VerticalOperator);
     ASSERT(isRenderMathMLRoot());
@@ -96,10 +98,10 @@ RenderBox& RenderMathMLRoot::getIndex() const
     return *firstInFlowChildBox()->nextInFlowSiblingBox();
 }
 
-void RenderMathMLRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderMathMLRoot::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderMathMLRow::styleDidChange(diff, oldStyle);
-    m_radicalOperator.reset(style());
+    resetRadicalOperator();
 }
 
 RenderMathMLRoot::HorizontalParameters RenderMathMLRoot::horizontalParameters(LayoutUnit indexWidth)
@@ -282,17 +284,13 @@ void RenderMathMLRoot::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit
     adjustLayoutForBorderAndPadding();
 
     layoutOutOfFlowBoxes(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
 }
 
 void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (!firstChild() || info.context().paintingDisabled() || style().usedVisibility() != Visibility::Visible || !isValid())
+    if (info.context().paintingDisabled() || style().usedVisibility() != Visibility::Visible || !isValid())
         return;
 
     // We draw the radical operator.
@@ -304,7 +302,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
         horizontalOffset += horizontal.kernBeforeDegree + indexWidth + horizontal.kernAfterDegree;
     }
     radicalOperatorTopLeft.move(mirrorIfNeeded(horizontalOffset, m_radicalOperator.width()), m_radicalOperatorTop);
-    m_radicalOperator.paint(style(), info, radicalOperatorTopLeft);
+    m_radicalOperator.paint(style(), info, radicalOperatorTopLeft, protectedDocument()->deviceScaleFactor());
 
     // We draw the radical line.
     LayoutUnit ruleThickness = verticalParameters().ruleThickness;
@@ -314,7 +312,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 
     info.context().setStrokeThickness(ruleThickness);
     info.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    info.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
+    info.context().setStrokeColor(style().visitedDependentColorApplyingColorFilter());
     LayoutPoint ruleOffsetFrom = paintOffset + location() + LayoutPoint(0_lu, m_radicalOperatorTop + ruleThickness / 2);
     LayoutPoint ruleOffsetTo = ruleOffsetFrom;
     horizontalOffset += m_radicalOperator.width();

@@ -217,7 +217,7 @@ bool ClonedArguments::getOwnPropertySlot(JSObject* object, JSGlobalObject* globa
     return Base::getOwnPropertySlot(thisObject, globalObject, ident, slot);
 }
 
-void ClonedArguments::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray&, DontEnumPropertiesMode mode)
+void ClonedArguments::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder&, DontEnumPropertiesMode mode)
 {
     ClonedArguments* thisObject = jsCast<ClonedArguments*>(object);
     if (mode == DontEnumPropertiesMode::Include)
@@ -317,7 +317,7 @@ void ClonedArguments::copyToArguments(JSGlobalObject* globalObject, JSValue* fir
             }
             firstElementDest[i - offset] = value;
         }
-        for (; i < length; ++i) {
+        for (; i < length + offset; ++i) {
             firstElementDest[i - offset] = get(globalObject, i);
             RETURN_IF_EXCEPTION(scope, void());
         }

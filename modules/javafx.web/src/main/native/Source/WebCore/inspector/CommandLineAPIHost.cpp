@@ -34,6 +34,7 @@
 #include "Database.h"
 #include "Document.h"
 #include "EventTarget.h"
+#include "FrameInspectorController.h"
 #include "InspectorDOMStorageAgent.h"
 #include "JSCommandLineAPIHost.h"
 #include "JSDOMGlobalObject.h"
@@ -42,15 +43,20 @@
 #include "Pasteboard.h"
 #include "Storage.h"
 #include "WebConsoleAgent.h"
+#include "WorkerGlobalScope.h"
+#include "WorkerInspectorController.h"
 #include <JavaScriptCore/InjectedScriptBase.h>
 #include <JavaScriptCore/InspectorAgent.h>
 #include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/ObjectConstructor.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include "FrameDestructionObserverInlines.h"
 
 #if ENABLE(WEB_RTC)
 #include "JSRTCPeerConnection.h"
@@ -74,20 +80,32 @@ CommandLineAPIHost::CommandLineAPIHost()
 {
 }
 
-CommandLineAPIHost::~CommandLineAPIHost() = default;
-
-void CommandLineAPIHost::disconnect()
+static InstrumentingAgents* instrumentingAgentsForGlobalObject(JSC::JSGlobalObject& globalObject)
 {
+    auto* domGlobalObject = jsDynamicCast<JSDOMGlobalObject*>(&globalObject);
+    if (!domGlobalObject)
+        return nullptr;
 
-    m_instrumentingAgents = nullptr;
+    RefPtr executionContext = domGlobalObject->scriptExecutionContext();
+    if (!executionContext)
+        return nullptr;
+
+    if (executionContext->isDocument()) {
+        if (RefPtr frame = downcast<Document>(executionContext)->frame())
+            return &frame->protectedInspectorController()->instrumentingAgents();
+    } else if (executionContext->isWorkerGlobalScope())
+        return &downcast<WorkerGlobalScope>(executionContext)->inspectorController().instrumentingAgents();
+
+    return nullptr;
 }
 
 void CommandLineAPIHost::inspect(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue object, JSC::JSValue hints)
 {
-    if (!m_instrumentingAgents)
+    RefPtr agents = instrumentingAgentsForGlobalObject(lexicalGlobalObject);
+    if (!agents)
         return;
 
-    auto* inspectorAgent = m_instrumentingAgents->persistentInspectorAgent();
+    CheckedPtr inspectorAgent = agents->persistentInspectorAgent();
     if (!inspectorAgent)
         return;
 
@@ -104,12 +122,12 @@ void CommandLineAPIHost::inspect(JSC::JSGlobalObject& lexicalGlobalObject, JSC::
         return;
 
     auto remoteObject = Inspector::Protocol::BindingTraits<Inspector::Protocol::Runtime::RemoteObject>::runtimeCast(objectValue.releaseNonNull());
-    inspectorAgent->inspect(WTFMove(remoteObject), hintsObject.releaseNonNull());
+    inspectorAgent->inspect(WTF::move(remoteObject), hintsObject.releaseNonNull());
 }
 
 CommandLineAPIHost::EventListenersRecord CommandLineAPIHost::getEventListeners(JSGlobalObject& lexicalGlobalObject, EventTarget& target)
 {
-    auto* scriptExecutionContext = target.scriptExecutionContext();
+    RefPtr scriptExecutionContext = target.scriptExecutionContext();
     if (!scriptExecutionContext)
         return { };
 
@@ -138,7 +156,7 @@ CommandLineAPIHost::EventListenersRecord CommandLineAPIHost::getEventListeners(J
         }
 
         if (!entries.isEmpty())
-            result.append({ eventType, WTFMove(entries) });
+            result.append({ eventType, WTF::move(entries) });
     }
 
     return result;
@@ -160,7 +178,7 @@ void CommandLineAPIHost::gatherRTCLogs(JSGlobalObject& globalObject, RefPtr<RTCL
         ASSERT(!logType.isNull());
         ASSERT(!logMessage.isNull());
 
-        callback->invoke({ WTFMove(logType), WTFMove(logMessage), WTFMove(logLevel), WTFMove(connection) });
+        callback->invoke({ WTF::move(logType), WTF::move(logMessage), WTF::move(logLevel), WTF::move(connection) });
     });
 }
 #endif
@@ -177,7 +195,7 @@ JSC::JSValue CommandLineAPIHost::InspectableObject::get(JSC::JSGlobalObject&)
 
 void CommandLineAPIHost::addInspectedObject(std::unique_ptr<CommandLineAPIHost::InspectableObject> object)
 {
-    m_inspectedObject = WTFMove(object);
+    m_inspectedObject = WTF::move(object);
 }
 
 JSC::JSValue CommandLineAPIHost::inspectedObject(JSC::JSGlobalObject& lexicalGlobalObject)

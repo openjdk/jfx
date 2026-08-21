@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ElementInlines.h"
-#include "ElementIterator.h"
-#include "ElementTraversal.h"
+#include <WebCore/ElementInlines.h>
+#include <WebCore/ElementIterator.h>
+#include <WebCore/ElementTraversal.h>
 
 namespace WebCore {
 
@@ -104,7 +104,7 @@ inline ElementIterator<ElementType>& ElementIterator<ElementType>::traverseNextS
 template <typename ElementType>
 inline ElementType* findElementAncestorOfType(const Node& current)
 {
-    for (Element* ancestor = current.parentElement(); ancestor; ancestor = ancestor->parentElement()) {
+    for (RefPtr ancestor = current.parentElement(); ancestor; ancestor = ancestor->parentElement()) {
         if (auto* element = dynamicDowncast<ElementType>(*ancestor))
             return element;
     }

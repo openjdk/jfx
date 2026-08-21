@@ -28,20 +28,25 @@
 
 #include "BackForwardController.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentView.h"
+#include "DocumentWindow.h"
 #include "FrameLoader.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "Navigation.h"
 #include "NavigationScheduler.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "ScriptController.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
@@ -54,7 +59,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(History);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(History);
 
 History::History(LocalDOMWindow& window)
     : LocalDOMWindowProperty(&window)
@@ -308,8 +313,10 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
             return { };
     }
 
-    frame->loader().updateURLAndHistory(fullURL, WTFMove(data), historyBehavior);
+    frame->loader().updateURLAndHistory(fullURL, WTF::move(data), historyBehavior);
     return { };
 }
+
+History::~History() = default;
 
 } // namespace WebCore

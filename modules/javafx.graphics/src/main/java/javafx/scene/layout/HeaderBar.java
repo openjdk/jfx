@@ -919,10 +919,9 @@ public class HeaderBar extends Region {
 
     private double resizeChild(Node child, double adjustedWidth, boolean fillWidth, double insideHeight, Insets margin) {
         double adjustedHeight = adjustHeightByMargin(insideHeight, margin);
-        double childWidth = fillWidth ? adjustedWidth : Math.min(snapSizeX(child.prefWidth(adjustedHeight)), adjustedWidth);
-        Vec2d size = boundedNodeSizeWithBias(child, childWidth, adjustedHeight, true, true, TEMP_VEC2D);
-        size.x = snapSizeX(size.x);
-        size.y = snapSizeX(size.y);
+        Vec2d size = boundedNodeSizeWithBias(
+            child, adjustedWidth, adjustedHeight, fillWidth, true, isSnapToPixel(),
+            getSnapScaleX(this), getSnapScaleY(this), TEMP_VEC2D);
         child.resize(size.x, size.y);
         return size.x;
     }

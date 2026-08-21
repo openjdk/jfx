@@ -27,7 +27,7 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionActions.h"
+#include <WebCore/ContentExtensionActions.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -59,7 +59,7 @@ struct ContentRuleListResults {
         bool madeHTTPS { false };
         bool blockedCookies { false };
         bool hasNotifications { false };
-        bool redirectedPriorToBlock { false };
+        bool redirected { false };
         // Remaining fields currently aren't serialized as they aren't required by _WKContentRuleListAction
         Vector<ContentExtensions::ModifyHeadersAction> modifyHeadersActions { };
         Vector<std::pair<ContentExtensions::RedirectAction, URL>> redirectActions { };
@@ -70,7 +70,7 @@ struct ContentRuleListResults {
     Summary summary;
     Vector<std::pair<ContentRuleListIdentifier, Result>> results;
 
-    bool shouldBlock() const { return summary.blockedLoad && !summary.redirectedPriorToBlock; }
+    bool shouldBlock() const { return summary.blockedLoad; }
 
     bool shouldNotifyApplication() const
     {

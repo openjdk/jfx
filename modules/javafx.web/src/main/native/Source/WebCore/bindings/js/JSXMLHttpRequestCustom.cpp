@@ -45,11 +45,7 @@ using namespace JSC;
 template<typename Visitor>
 void JSXMLHttpRequest::visitAdditionalChildren(Visitor& visitor)
 {
-    if (auto* upload = wrapped().optionalUpload())
-        addWebCoreOpaqueRoot(visitor, *upload);
-
-    if (auto* responseDocument = wrapped().optionalResponseXML())
-        addWebCoreOpaqueRoot(visitor, *responseDocument);
+    wrapped().visitAdditionalChildren(visitor);
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSXMLHttpRequest);
@@ -96,7 +92,7 @@ JSValue JSXMLHttpRequest::response(JSGlobalObject& lexicalGlobalObject) const
     case XMLHttpRequest::ResponseType::Document: {
         auto document = wrapped().responseXML();
         ASSERT(!document.hasException());
-        value = toJS<IDLInterface<Document>>(lexicalGlobalObject, *globalObject(), document.releaseReturnValue());
+        value = toJS<IDLNullable<IDLInterface<Document>>>(lexicalGlobalObject, *globalObject(), document.releaseReturnValue());
         break;
     }
 
@@ -105,7 +101,7 @@ JSValue JSXMLHttpRequest::response(JSGlobalObject& lexicalGlobalObject) const
         break;
 
     case XMLHttpRequest::ResponseType::Arraybuffer:
-        value = toJS<IDLInterface<ArrayBuffer>>(lexicalGlobalObject, *globalObject(), wrapped().createResponseArrayBuffer());
+        value = toJS<IDLNullable<IDLInterface<ArrayBuffer>>>(lexicalGlobalObject, *globalObject(), wrapped().createResponseArrayBuffer());
         break;
     }
 

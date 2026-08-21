@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "GraphicsLayer.h"
-#include "GraphicsLayerClient.h"
-#include "PageOverlay.h"
+#include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/PageOverlay.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -35,6 +34,7 @@
 
 namespace WebCore {
 
+class GraphicsLayer;
 class LocalFrame;
 class Page;
 class PlatformMouseEvent;
@@ -53,7 +53,7 @@ public:
     GraphicsLayer& layerWithViewOverlays();
     Ref<GraphicsLayer> protectedLayerWithViewOverlays();
 
-    const Vector<RefPtr<PageOverlay>>& pageOverlays() const { return m_pageOverlays; }
+    const Vector<Ref<PageOverlay>>& pageOverlays() const { return m_pageOverlays; }
 
     WEBCORE_EXPORT void installPageOverlay(PageOverlay&, PageOverlay::FadeMode);
     WEBCORE_EXPORT void uninstallPageOverlay(PageOverlay&, PageOverlay::FadeMode);
@@ -73,7 +73,7 @@ public:
     void didChangeOverlayFrame(PageOverlay&);
     void didChangeOverlayBackgroundColor(PageOverlay&);
 
-    int overlayCount() const { return m_overlayGraphicsLayers.computeSize(); }
+    int overlayCount() const;
 
     bool handleMouseEvent(const PlatformMouseEvent&);
 
@@ -85,7 +85,10 @@ private:
     void createRootLayersIfNeeded();
 
     WEBCORE_EXPORT GraphicsLayer* documentOverlayRootLayer() const;
+    RefPtr<GraphicsLayer> protectedDocumentOverlayRootLayer() const;
+
     WEBCORE_EXPORT GraphicsLayer* viewOverlayRootLayer() const;
+    RefPtr<GraphicsLayer> protectedViewOverlayRootLayer() const;
 
     void installedPageOverlaysChanged();
     void attachViewOverlayLayers();
@@ -96,7 +99,7 @@ private:
 
     // GraphicsLayerClient
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>) override;
+    void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>) override;
     float deviceScaleFactor() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
@@ -109,7 +112,7 @@ private:
     RefPtr<GraphicsLayer> m_viewOverlayRootLayer;
 
     WeakHashMap<PageOverlay, Ref<GraphicsLayer>> m_overlayGraphicsLayers;
-    Vector<RefPtr<PageOverlay>> m_pageOverlays;
+    Vector<Ref<PageOverlay>> m_pageOverlays;
     bool m_initialized { false };
 };
 

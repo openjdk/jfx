@@ -26,10 +26,10 @@
 #ifndef JSClassRef_h
 #define JSClassRef_h
 
-#include "OpaqueJSString.h"
-#include "Protect.h"
-#include "Weak.h"
 #include <JavaScriptCore/JSObjectRef.h>
+#include <JavaScriptCore/OpaqueJSString.h>
+#include <JavaScriptCore/Protect.h>
+#include <JavaScriptCore/Weak.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 

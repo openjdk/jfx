@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "WebGPUColor.h"
-#include "WebGPUIndexFormat.h"
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUColor.h>
+#include <WebCore/WebGPUIndexFormat.h>
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -53,7 +53,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -99,6 +99,9 @@ public:
 
     virtual void executeBundles(Vector<Ref<RenderBundle>>&&) = 0;
     virtual void end() = 0;
+
+    virtual bool isRemoteRenderPassEncoderProxy() const { return false; }
+    virtual bool isRenderPassEncoderImpl() const { return false; }
 
 protected:
     RenderPassEncoder() = default;

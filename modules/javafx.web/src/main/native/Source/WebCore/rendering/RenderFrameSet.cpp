@@ -3,6 +3,7 @@
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
  * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -53,10 +54,10 @@ static constexpr auto borderStartEdgeColor = SRGBA<uint8_t> { 170, 170, 170 };
 static constexpr auto borderEndEdgeColor = Color::black;
 static constexpr auto borderFillColor = SRGBA<uint8_t> { 208, 208, 208 };
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFrameSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderFrameSet);
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& style)
-    : RenderBox(Type::FrameSet, frameSet, WTFMove(style))
+    : RenderBox(Type::FrameSet, frameSet, WTF::move(style))
     , m_isResizing(false)
 {
     ASSERT(isRenderFrameSet());
@@ -84,7 +85,7 @@ void RenderFrameSet::paintColumnBorder(const PaintInfo& paintInfo, const IntRect
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor);
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentBorderLeftColorApplyingColorFilter() : borderFillColor);
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
@@ -103,7 +104,7 @@ void RenderFrameSet::paintRowBorder(const PaintInfo& paintInfo, const IntRect& b
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor);
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentBorderLeftColorApplyingColorFilter() : borderFillColor);
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
@@ -162,7 +163,7 @@ void RenderFrameSet::GridAxis::resize(int size)
     m_allowBorder.resize(size + 1);
 }
 
-void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, int availableLen)
+void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const HTMLDimensionsListValue> grid, int availableLen)
 {
     availableLen = std::max(availableLen, 0);
 
@@ -188,24 +189,24 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
     for (int i = 0; i < gridLen; ++i) {
         // Count the total length of all of the fixed columns/rows -> totalFixed
         // Count the number of columns/rows which are fixed -> countFixed
-        if (grid[i].isFixed()) {
-            gridLayout[i] = std::max(grid[i].intValue(), 0);
+        if (grid[i].unit == HTMLDimensionsListValue::Unit::Absolute) {
+            gridLayout[i] = std::max<int>(grid[i].number, 0);
             totalFixed += gridLayout[i];
             countFixed++;
         }
 
         // Count the total percentage of all of the percentage columns/rows -> totalPercent
         // Count the number of columns/rows which are percentages -> countPercent
-        if (grid[i].isPercentOrCalculated()) {
-            gridLayout[i] = std::max(intValueForLength(grid[i], availableLen), 0);
+        if (grid[i].unit == HTMLDimensionsListValue::Unit::Percentage) {
+            gridLayout[i] = std::max<int>(availableLen * grid[i].number / 100.0, 0);
             totalPercent += gridLayout[i];
             countPercent++;
         }
 
         // Count the total relative of all the relative columns/rows -> totalRelative
         // Count the number of columns/rows which are relative -> countRelative
-        if (grid[i].isRelative()) {
-            totalRelative += std::max(grid[i].intValue(), 1);
+        if (grid[i].unit == HTMLDimensionsListValue::Unit::Relative) {
+            totalRelative += std::max<int>(grid[i].number, 1);
             countRelative++;
         }
     }
@@ -218,7 +219,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
         int remainingFixed = remainingLen;
 
         for (int i = 0; i < gridLen; ++i) {
-            if (grid[i].isFixed()) {
+            if (grid[i].unit == HTMLDimensionsListValue::Unit::Absolute) {
                 gridLayout[i] = (gridLayout[i] * remainingFixed) / totalFixed;
                 remainingLen -= gridLayout[i];
             }
@@ -234,7 +235,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
         int remainingPercent = remainingLen;
 
         for (int i = 0; i < gridLen; ++i) {
-            if (grid[i].isPercentOrCalculated()) {
+            if (grid[i].unit == HTMLDimensionsListValue::Unit::Percentage) {
                 gridLayout[i] = (gridLayout[i] * remainingPercent) / totalPercent;
                 remainingLen -= gridLayout[i];
             }
@@ -249,8 +250,8 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
         int remainingRelative = remainingLen;
 
         for (int i = 0; i < gridLen; ++i) {
-            if (grid[i].isRelative()) {
-                gridLayout[i] = (std::max(grid[i].intValue(), 1) * remainingRelative) / totalRelative;
+            if (grid[i].unit == HTMLDimensionsListValue::Unit::Relative) {
+                gridLayout[i] = (std::max<int>(grid[i].number, 1) * remainingRelative) / totalRelative;
                 remainingLen -= gridLayout[i];
                 lastRelative = i;
             }
@@ -278,7 +279,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
             int changePercent = 0;
 
             for (int i = 0; i < gridLen; ++i) {
-                if (grid[i].isPercentOrCalculated()) {
+                if (grid[i].unit == HTMLDimensionsListValue::Unit::Percentage) {
                     changePercent = (remainingPercent * gridLayout[i]) / totalPercent;
                     gridLayout[i] += changePercent;
                     remainingLen -= changePercent;
@@ -292,7 +293,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
             int changeFixed = 0;
 
             for (int i = 0; i < gridLen; ++i) {
-                if (grid[i].isFixed()) {
+                if (grid[i].unit == HTMLDimensionsListValue::Unit::Absolute) {
                     changeFixed = (remainingFixed * gridLayout[i]) / totalFixed;
                     gridLayout[i] += changeFixed;
                     remainingLen -= changeFixed;
@@ -310,7 +311,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
         int changePercent = 0;
 
         for (int i = 0; i < gridLen; ++i) {
-            if (grid[i].isPercentOrCalculated()) {
+            if (grid[i].unit == HTMLDimensionsListValue::Unit::Percentage) {
                 changePercent = remainingPercent / countPercent;
                 gridLayout[i] += changePercent;
                 remainingLen -= changePercent;
@@ -324,7 +325,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, in
         int changeFixed = 0;
 
         for (int i = 0; i < gridLen; ++i) {
-            if (grid[i].isFixed()) {
+            if (grid[i].unit == HTMLDimensionsListValue::Unit::Absolute) {
                 changeFixed = remainingFixed / countFixed;
                 gridLayout[i] += changeFixed;
                 remainingLen -= changeFixed;
@@ -458,8 +459,8 @@ void RenderFrameSet::layout()
     }
 
     LayoutUnit borderThickness = frameSetElement().border();
-    layOutAxis(m_rows, frameSetElement().rowLengths(), height() - (rows - 1) * borderThickness);
-    layOutAxis(m_cols, frameSetElement().colLengths(), width() - (cols - 1) * borderThickness);
+    layOutAxis(m_rows, frameSetElement().rowDimensions(), height() - (rows - 1) * borderThickness);
+    layOutAxis(m_cols, frameSetElement().colDimensions(), width() - (cols - 1) * borderThickness);
 
         positionFrames();
 

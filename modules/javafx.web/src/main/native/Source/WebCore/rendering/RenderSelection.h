@@ -29,10 +29,10 @@
 
 #pragma once
 
-#include "RenderHighlight.h"
-#include "RenderSelectionGeometry.h"
+#include <WebCore/RenderHighlight.h>
+#include <WebCore/RenderSelectionGeometry.h>
 #if ENABLE(SERVICE_CONTROLS)
-#include "SelectionGeometryGatherer.h"
+#include <WebCore/SelectionGeometryGatherer.h>
 #endif
 
 namespace WebCore {
@@ -50,7 +50,7 @@ public:
     IntRect boundsClippedToVisibleContent() const { return collectBounds(ClipToVisibleContent::Yes); }
 
 private:
-    const RenderView& m_renderView;
+    const CheckedRef<const RenderView> m_renderView;
 #if ENABLE(SERVICE_CONTROLS)
     SelectionGeometryGatherer m_selectionGeometryGatherer;
 #endif

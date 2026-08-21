@@ -28,6 +28,7 @@
 #include "Color.h"
 #include "GraphicsTypes.h"
 #include "RenderStyleConstants.h"
+#include "StyleSVGPaintOrder.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -56,7 +57,7 @@ struct TextPaintStyle {
     float strokeWidth { 0 };
     // This is not set for -webkit-text-fill-color.
     bool hasExplicitlySetFillColor { false };
-    PaintOrder paintOrder { PaintOrder::Normal };
+    Style::SVGPaintOrder paintOrder { CSS::Keyword::Normal { } };
     LineJoin lineJoin { LineJoin::Miter };
     LineCap lineCap { LineCap::Butt };
     float miterLimit { defaultMiterLimit };

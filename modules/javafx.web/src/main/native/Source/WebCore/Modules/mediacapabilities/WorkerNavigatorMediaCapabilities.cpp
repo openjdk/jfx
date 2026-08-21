@@ -41,18 +41,13 @@ WorkerNavigatorMediaCapabilities::WorkerNavigatorMediaCapabilities()
 
 WorkerNavigatorMediaCapabilities::~WorkerNavigatorMediaCapabilities() = default;
 
-ASCIILiteral WorkerNavigatorMediaCapabilities::supplementName()
-{
-    return "WorkerNavigatorMediaCapabilities"_s;
-}
-
 WorkerNavigatorMediaCapabilities& WorkerNavigatorMediaCapabilities::from(WorkerNavigator& navigator)
 {
-    auto* supplement = static_cast<WorkerNavigatorMediaCapabilities*>(Supplement<WorkerNavigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<WorkerNavigatorMediaCapabilities>(Supplement<WorkerNavigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<WorkerNavigatorMediaCapabilities>();
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return *supplement;
 }

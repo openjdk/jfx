@@ -31,6 +31,7 @@
 #include <WebCore/EventListener.h>
 #include <WebCore/EventTarget.h>
 #include "EventTargetInlines.h"
+#include "AddEventListenerOptionsInlines.h"
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>

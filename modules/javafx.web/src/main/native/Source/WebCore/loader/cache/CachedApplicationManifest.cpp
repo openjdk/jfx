@@ -35,7 +35,7 @@
 namespace WebCore {
 
 CachedApplicationManifest::CachedApplicationManifest(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
-    : CachedResource(WTFMove(request), Type::ApplicationManifest, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), Type::ApplicationManifest, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("application/manifest+json"_s, PAL::UTF8Encoding()))
 {
 }
@@ -46,7 +46,7 @@ void CachedApplicationManifest::finishLoading(const FragmentedSharedBuffer* data
         Ref contiguousData = data->makeContiguous();
         setEncodedSize(data->size());
         m_text = protectedDecoder()->decodeAndFlush(contiguousData->span());
-        m_data = WTFMove(contiguousData);
+        m_data = WTF::move(contiguousData);
     } else {
         m_data = nullptr;
         setEncodedSize(0);

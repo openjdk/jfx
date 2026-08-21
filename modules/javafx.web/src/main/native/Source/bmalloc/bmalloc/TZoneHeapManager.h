@@ -25,7 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BExport.h"
+#include "BPlatform.h"
 
 #if BUSE(TZONE)
 
@@ -44,9 +47,6 @@ namespace bmalloc { namespace api {
 #define TZONE_VERBOSE_DEBUG 0
 
 extern BEXPORT class TZoneHeapManager* tzoneHeapManager;
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-BEXPORT extern bool g_tzoneDynamicCompactModeEnabled;
-#endif
 
 class TZoneHeapManager {
     enum class State {
@@ -135,10 +135,6 @@ public:
 
     BEXPORT static void requirePerBootSeed();
     BEXPORT static void setBucketParams(unsigned smallSizeCount, unsigned largeSizeCount = 0, unsigned smallSizeLimit = 0);
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-    BINLINE uint64_t dynamicCompactionSalt() { return m_tzoneDynamicCompactModeSalt; }
-    BINLINE static bool tzoneDynamicCompactModeEnabled() { return g_tzoneDynamicCompactModeEnabled; }
-#endif
 
     BEXPORT static bool isReady();
 
@@ -172,8 +168,6 @@ private:
 
     inline static unsigned bucketCountForSizeClass(SizeAndAlignment::Value);
 
-    void initializeTZoneDynamicCompactMode();
-
     inline unsigned tzoneBucketForKey(const TZoneSpecification&, unsigned bucketCountForSize, LockHolder&);
     TZoneTypeBuckets* populateBucketsForSizeClass(LockHolder&, SizeAndAlignment::Value);
 
@@ -185,10 +179,6 @@ private:
     unsigned largestBucketCount { 0 };
     Vector<SizeAndAlignment::Value> m_typeSizes;
 #endif
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-    uint64_t m_tzoneDynamicCompactModeSeed;
-    uint64_t m_tzoneDynamicCompactModeSalt;
-#endif
     Map<SizeAndAlignment::Value, TZoneTypeBuckets*, SizeAndAlignment> m_heapRefsBySizeAndAlignment;
     Map<TZoneTypeKey, pas_heap_ref*, TZoneTypeKey> m_differentSizedHeapRefs;
 };
@@ -198,3 +188,5 @@ private:
 #endif // BUSE(LIBPAS)
 
 #endif // BUSE(TZONE)
+
+#endif // __cplusplus

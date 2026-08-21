@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "WebGPUBindGroupLayout.h"
+#include <WebCore/WebGPUBindGroupLayout.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -44,11 +44,13 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
     virtual void compilationInfo(CompletionHandler<void(Ref<CompilationInfo>&&)>&&) = 0;
+    virtual bool isRemoteShaderModuleProxy() const { return false; }
+    virtual bool isShaderModuleImpl() const { return false; }
 
 protected:
     ShaderModule() = default;

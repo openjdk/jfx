@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "GapRects.h"
-#include "RenderBlock.h"
-#include "RenderObject.h"
+#include <WebCore/GapRects.h>
+#include <WebCore/RenderBlock.h>
+#include <WebCore/RenderObject.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -39,6 +39,7 @@ class RenderSelectionGeometryBase {
 public:
     explicit RenderSelectionGeometryBase(RenderObject& renderer);
     const RenderLayerModelObject* repaintContainer() const { return m_repaintContainer; }
+    CheckedPtr<const RenderLayerModelObject> checkedRepaintContainer() const { return m_repaintContainer; }
     RenderObject::HighlightState state() const { return m_state; }
 
 protected:

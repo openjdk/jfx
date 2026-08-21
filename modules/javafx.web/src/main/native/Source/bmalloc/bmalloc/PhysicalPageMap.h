@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #if ENABLE_PHYSICAL_PAGE_MAP
 
 #include "VMAllocate.h"
@@ -76,3 +78,5 @@ private:
 
 #endif
 #endif // ENABLE_PHYSICAL_PAGE_MAP
+
+#endif // __cplusplus

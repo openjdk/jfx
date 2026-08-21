@@ -130,7 +130,7 @@ import java.util.Map;
  * description of how to write custom Cells.
  *
  * <h3>Warning: Nodes should not be inserted directly into the TreeView cells</h3>
- * {@code TreeView} allows for it's cells to contain elements of any type, including
+ * {@code TreeView} allows for its cells to contain elements of any type, including
  * {@code Node} instances. Putting nodes into
  * the TreeView cells is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results.

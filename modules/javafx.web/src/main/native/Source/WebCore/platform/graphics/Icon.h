@@ -24,14 +24,15 @@
 #define Icon_h
 
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
 
 #if PLATFORM(COCOA)
-#include "NativeImage.h"
-#include "PlatformImage.h"
 #include <CoreGraphics/CoreGraphics.h>
+#include <WebCore/NativeImage.h>
+#include <WebCore/PlatformImage.h>
 
 #if USE(APPKIT)
 OBJC_CLASS NSImage;
@@ -66,8 +67,8 @@ public:
     static Ref<Icon> create(HICON hIcon) { return adoptRef(*new Icon(hIcon)); }
 #endif
 
-#if PLATFORM(GTK)
-    WEBCORE_EXPORT static RefPtr<Icon> create(GIcon*);
+#if USE(GLIB)
+    WEBCORE_EXPORT static RefPtr<Icon> create(GRefPtr<GIcon>&&);
 
     GIcon* icon() const { return m_icon.get(); };
 #endif
@@ -76,7 +77,7 @@ public:
     WEBCORE_EXPORT static RefPtr<Icon> create(CocoaImage *);
     WEBCORE_EXPORT static RefPtr<Icon> create(PlatformImagePtr&&);
 
-    RetainPtr<CocoaImage> image() const { return m_image; };
+    CocoaImage* image() const { return m_image.get(); };
 #endif
 
 #if PLATFORM(MAC)

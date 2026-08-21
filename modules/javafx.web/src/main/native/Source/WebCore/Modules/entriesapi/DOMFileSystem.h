@@ -40,11 +40,11 @@ class FileSystemEntry;
 class ScriptExecutionContext;
 
 class DOMFileSystem final : public ScriptWrappable, public RefCounted<DOMFileSystem> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMFileSystem);
+    WTF_MAKE_TZONE_ALLOCATED(DOMFileSystem);
 public:
     static Ref<FileSystemEntry> createEntryForFile(ScriptExecutionContext& context, Ref<File>&& file)
     {
-        auto fileSystem = adoptRef(*new DOMFileSystem(WTFMove(file)));
+        auto fileSystem = adoptRef(*new DOMFileSystem(WTF::move(file)));
         return fileSystem->fileAsEntry(context);
     }
 

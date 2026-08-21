@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "WebGPU.h"
-#include "WebGPUExt.h"
 #include <Metal/Metal.h>
+#include <WebGPU/WebGPU.h>
+#include <WebGPU/WebGPUExt.h>
 #include <optional>
 #include <wtf/Vector.h>
 
@@ -54,5 +54,6 @@ WGPULimits defaultLimits();
 bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference);
 bool includesUnsupportedFeatures(const Vector<WGPUFeatureName>& target, const Vector<WGPUFeatureName>& reference);
 bool isShaderValidationEnabled(id<MTLDevice>);
+bool isWebGPUSwiftEnabled();
 
 } // namespace WebGPU

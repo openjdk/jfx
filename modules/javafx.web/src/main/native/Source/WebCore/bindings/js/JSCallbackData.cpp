@@ -50,7 +50,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
     JSGlobalObject* lexicalGlobalObject = &globalObject;
     VM& vm = lexicalGlobalObject->vm();
 
-    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue function;
     CallData callData;
@@ -69,7 +69,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
         function = callback->get(lexicalGlobalObject, functionName);
         if (scope.exception()) [[unlikely]] {
             returnedException = scope.exception();
-            scope.clearException();
+            TRY_CLEAR_EXCEPTION(scope, JSValue());
             return JSValue();
         }
 
@@ -85,17 +85,17 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
     ASSERT(!function.isEmpty());
     ASSERT(callData.type != CallData::Type::None);
 
-    ScriptExecutionContext* context = globalObject.scriptExecutionContext();
+    RefPtr context = globalObject.scriptExecutionContext();
     // We will fail to get the context if the frame has been detached.
     if (!context)
         return JSValue();
 
-    JSExecState::instrumentFunction(context, callData);
+    JSExecState::instrumentFunction(context.get(), callData);
 
     returnedException = nullptr;
     JSValue result = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, function, callData, thisValue, args, returnedException);
 
-    InspectorInstrumentation::didCallFunction(context);
+    InspectorInstrumentation::didCallFunction(context.get());
 
     return result;
 }

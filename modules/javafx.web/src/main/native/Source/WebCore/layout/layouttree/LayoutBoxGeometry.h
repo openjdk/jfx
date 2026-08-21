@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "LayoutGeometryRect.h"
-#include "LayoutUnits.h"
+#include <WebCore/LayoutGeometryRect.h>
+#include <WebCore/LayoutUnits.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 class BoxGeometry {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BoxGeometry);
+    WTF_MAKE_TZONE_ALLOCATED(BoxGeometry);
 public:
     BoxGeometry(const BoxGeometry&);
     BoxGeometry() = default;

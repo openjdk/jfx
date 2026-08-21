@@ -24,10 +24,8 @@
 
 #pragma once
 
-#include "ScaleTransformOperation.h"
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleTransformOperationWrapper.h"
-#include <wtf/PointerComparison.h>
+#include <WebCore/StyleScaleTransformFunction.h>
+#include <WebCore/StyleTransformFunctionWrapper.h>
 
 namespace WebCore {
 namespace Style {
@@ -35,24 +33,24 @@ namespace Style {
 // <'scale'> = none | [ <number> | <percentage> ]{1,3}
 // https://drafts.csswg.org/css-transforms-2/#propdef-scale
 struct Scale {
-    using Platform = ScaleTransformOperation;
-    struct Operation : TransformOperationWrapper<Platform> {
-        using TransformOperationWrapper<Platform>::TransformOperationWrapper;
+    struct Function : TransformFunctionWrapper<ScaleTransformFunction> {
+        using TransformFunctionWrapper<ScaleTransformFunction>::TransformFunctionWrapper;
 
         template<typename... F> decltype(auto) switchOn(F&&...) const;
     };
 
     Scale(CSS::Keyword::None) : value { nullptr } { }
-    Scale(Operation&& value) : value { WTFMove(value.value) } { }
+    Scale(Function&& value) : value { WTF::move(value.value) } { }
+    Scale(Ref<const ScaleTransformFunction>&& value) : value { WTF::move(value) } { }
 
     bool affectedByTransformOrigin() const { return value && !value->isIdentity(); }
     bool isRepresentableIn2D() const { return !value || value->isRepresentableIn2D(); }
     bool is3DOperation() const { return value && value->is3DOperation(); }
 
-    bool apply(TransformationMatrix&, const FloatSize&) const;
+    void apply(TransformationMatrix&, const FloatSize&) const;
 
     bool isNone() const { return !value; }
-    bool isOperation() const { return !!value; }
+    bool isFunction() const { return !!value; }
 
     template<typename> bool holdsAlternative() const;
     template<typename... F> decltype(auto) switchOn(F&&...) const;
@@ -66,21 +64,21 @@ private:
     friend struct Blending<Scale>;
     friend struct ToPlatform<Scale>;
 
-    RefPtr<Platform> value;
+    RefPtr<const ScaleTransformFunction> value;
 };
 
-// MARK: Scale Operation
+// MARK: Scale Function
 
-template<typename... F> decltype(auto) Scale::Operation::switchOn(F&&... f) const
+template<typename... F> decltype(auto) Scale::Function::switchOn(F&&... f) const
 {
     auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
 
     Ref protectedValue = value;
     if (protectedValue->z() != 1)
-        return visitor(SpaceSeparatedTuple { Number<> { protectedValue->x() }, Number<> { protectedValue->y() }, Number<> { protectedValue->z() } });
+        return visitor(SpaceSeparatedTuple { protectedValue->x(), protectedValue->y(), protectedValue->z() });
     if (protectedValue->x() != protectedValue->y())
-        return visitor(SpaceSeparatedTuple { Number<> { protectedValue->x() }, Number<> { protectedValue->y() } });
-    return visitor(Number<> { protectedValue->x() });
+        return visitor(SpaceSeparatedTuple { protectedValue->x(), protectedValue->y() });
+    return visitor(protectedValue->x());
 }
 
 // MARK: Scale
@@ -88,7 +86,7 @@ template<typename... F> decltype(auto) Scale::Operation::switchOn(F&&... f) cons
 template<typename T> bool Scale::holdsAlternative() const
 {
          if constexpr (std::same_as<T, CSS::Keyword::None>) return isNone();
-    else if constexpr (std::same_as<T, Operation>)          return isOperation();
+    else if constexpr (std::same_as<T, Function>)           return isFunction();
 }
 
 template<typename... F> decltype(auto) Scale::switchOn(F&&... f) const
@@ -97,7 +95,7 @@ template<typename... F> decltype(auto) Scale::switchOn(F&&... f) const
 
     if (!value)
         return visitor(CSS::Keyword::None { });
-    return visitor(Operation { *value });
+    return visitor(Function { *value });
 }
 
 // MARK: - Conversion
@@ -112,10 +110,10 @@ template<> struct Blending<Scale> {
 
 // MARK: - Platform
 
-template<> struct ToPlatform<Scale> { auto operator()(const Scale&) -> RefPtr<Scale::Platform>; };
+template<> struct ToPlatform<Scale> { auto operator()(const Scale&, const FloatSize&) -> RefPtr<TransformOperation>; };
 
 } // namespace Style
 } // namespace WebCore
 
-DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Scale::Operation)
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Scale::Function)
 DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Scale)

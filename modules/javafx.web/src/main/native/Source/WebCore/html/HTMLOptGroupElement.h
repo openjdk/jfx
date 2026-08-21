@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,14 +23,14 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLSelectElement;
 
 class HTMLOptGroupElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLOptGroupElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLOptGroupElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLOptGroupElement);
 public:
     static Ref<HTMLOptGroupElement> create(const QualifiedName&, Document&);
@@ -42,6 +42,9 @@ public:
 
 private:
     HTMLOptGroupElement(const QualifiedName&, Document&);
+
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
 
     const AtomString& formControlType() const;
     bool isFocusable() const final;
@@ -55,6 +58,7 @@ private:
     void recalcSelectOptions();
 
     bool m_isDisabled { false };
+    WeakPtr<HTMLSelectElement, WeakPtrImplWithEventTargetData> m_ownerSelect;
 };
 
 } // namespace WebCore

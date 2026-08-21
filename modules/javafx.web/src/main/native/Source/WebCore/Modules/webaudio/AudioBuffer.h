@@ -44,13 +44,15 @@ class WebCoreOpaqueRoot;
 template<typename> class ExceptionOr;
 
 class AudioBuffer : public ScriptWrappable, public RefCounted<AudioBuffer> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioBuffer);
+    WTF_MAKE_TZONE_ALLOCATED(AudioBuffer);
 public:
     enum class LegacyPreventDetaching : bool { No, Yes };
     static RefPtr<AudioBuffer> create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
     static ExceptionOr<Ref<AudioBuffer>> create(const AudioBufferOptions&);
     // Returns nullptr if data is not a valid audio file.
     static RefPtr<AudioBuffer> createFromAudioFileData(std::span<const uint8_t> data, bool mixToMono, float sampleRate);
+
+    ~AudioBuffer();
 
     // Format
     size_t originalLength() const { return m_originalLength; }
@@ -71,7 +73,7 @@ public:
 
     // Native channel data access.
     RefPtr<Float32Array> channelData(unsigned channelIndex);
-    std::span<float> rawChannelData(unsigned channelIndex);
+    std::span<float> rawChannelData(unsigned channelIndex) LIFETIME_BOUND;
     void zero();
 
     // Because an AudioBuffer has a JavaScript wrapper, which will be garbage collected, it may take a while for this object to be deleted.
@@ -110,7 +112,7 @@ private:
 
     float m_sampleRate;
     size_t m_originalLength;
-    FixedVector<RefPtr<Float32Array>> m_channels;
+    FixedVector<Ref<Float32Array>> m_channels;
     FixedVector<JSValueInWrappedObject> m_channelWrappers;
     bool m_isDetachable { true };
     mutable Lock m_channelsLock;

@@ -148,7 +148,7 @@ public:
 
     void didUpdateState(GraphicsContextState&) override;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
-    void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) override;
+    void drawNativeImage(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) override;
     /*void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
                             const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing,
                             const ImagePaintingOptions& = { }) override;

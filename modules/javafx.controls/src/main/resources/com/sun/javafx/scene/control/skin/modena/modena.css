@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3471,6 +3471,11 @@ is being used to size a border should also be in pixels.
     -fx-prompt-text-fill: transparent;
 }
 
+.rich-text-area .drop-target {
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
+}
+
 .rich-text-area .caret {
     -fx-stroke: black;
 }
@@ -3511,4 +3516,41 @@ is being used to size a border should also be in pixels.
 
 .code-area .content {
     -fx-cursor: text;
+}
+
+.rich-text-area .text-highlight-1 {
+    -fx-fill: #e7ff0055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-2 {
+    -fx-fill: #64ff0055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-3 {
+    -fx-fill: #5fe8ff55;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-4 {
+    -fx-fill: #ff10f055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-5 {
+    -fx-fill: #ff730055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .wavy-underline-1 {
+    -fx-stroke: red;
+}
+
+.rich-text-area .wavy-underline-2 {
+    -fx-stroke: green;
+}
+
+.rich-text-area .wavy-underline-3 {
+    -fx-stroke: blue;
 }

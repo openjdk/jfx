@@ -26,36 +26,57 @@
 #include "config.h"
 #include "PerformanceEventTiming.h"
 
+#include "Document.h"
+#include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "NodeDocument.h"
+#include "PerformanceEventTimingCandidate.h"
+#include <cmath>
+
 namespace WebCore {
+
+Ref<PerformanceEventTiming> PerformanceEventTiming::create(const PerformanceEventTimingCandidate& candidate, bool isFirst)
+{
+    return adoptRef(*new PerformanceEventTiming(candidate, isFirst));
+}
+
+PerformanceEventTiming::PerformanceEventTiming(const PerformanceEventTimingCandidate& candidate, bool isFirst)
+    : PerformanceEntry(eventNames().eventNameFromEventType(candidate.type), candidate.startTime.milliseconds(), candidate.startTime.milliseconds() + durationResolutionInMilliseconds*std::round(candidate.duration.milliseconds() / durationResolutionInMilliseconds))
+    , m_isFirst(isFirst)
+    , m_cancelable(candidate.cancelable)
+    , m_processingStart(candidate.processingStart)
+    , m_processingEnd(candidate.processingEnd)
+    , m_interactionID(candidate.interactionID)
+    , m_target(candidate.target)
+{ }
+
+PerformanceEventTiming::~PerformanceEventTiming() = default;
+
+RefPtr<Node> PerformanceEventTiming::target() const
+{
+    RefPtr node = dynamicDowncast<Node>(m_target.get());
+    if (!node || !node->isConnected())
+        return nullptr;
+
+    if (!node->protectedDocument()->isFullyActive())
+        return nullptr;
+
+    return node;
+}
 
 PerformanceEntry::Type PerformanceEventTiming::performanceEntryType() const
 {
-    return Type::Event;
+    return m_isFirst ? Type::FirstInput : Type::Event;
 }
 
-double PerformanceEventTiming::processingStart() const
+ASCIILiteral PerformanceEventTiming::entryType() const
 {
-    return 0;
+    return m_isFirst ? "first-input"_s : "event"_s;
 }
 
-double PerformanceEventTiming::processingEnd() const
+uint64_t PerformanceEventTiming::interactionId() const
 {
-    return 0;
-}
-
-bool PerformanceEventTiming::cancelable() const
-{
-    return false;
-}
-
-Node* PerformanceEventTiming::target() const
-{
-    return nullptr;
-}
-
-unsigned PerformanceEventTiming::interactionId() const
-{
-    return 0;
+    return m_interactionID.value;
 }
 
 } // namespace WebCore

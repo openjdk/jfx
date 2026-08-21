@@ -36,14 +36,13 @@
 
 namespace WebCore {
 
-class ScrollbarsControllerGeneric final : public ScrollbarsController, public CanMakeCheckedPtr<ScrollbarsControllerGeneric> {
+class ScrollbarsControllerGeneric : public ScrollbarsController, public CanMakeCheckedPtr<ScrollbarsControllerGeneric> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ScrollbarsControllerGeneric);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScrollbarsControllerGeneric);
 public:
     explicit ScrollbarsControllerGeneric(ScrollableArea&);
     virtual ~ScrollbarsControllerGeneric();
 
-private:
     void didAddVerticalScrollbar(Scrollbar*) override;
     void didAddHorizontalScrollbar(Scrollbar*) override;
     void willRemoveVerticalScrollbar(Scrollbar*) override;
@@ -56,7 +55,9 @@ private:
     void contentAreaDidHide() override;
     void notifyContentAreaScrolled(const FloatSize& delta) override;
     void lockOverlayScrollbarStateToHidden(bool) override;
+    void scrollbarWidthChanged(ScrollbarWidth) override;
 
+private:
     void overlayScrollbarAnimationTimerFired();
     void showOverlayScrollbars();
     void hideOverlayScrollbars();

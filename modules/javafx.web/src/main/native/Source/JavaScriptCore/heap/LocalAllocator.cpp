@@ -31,6 +31,7 @@
 #include "GCDeferralContext.h"
 #include "LocalAllocatorInlines.h"
 #include "Options.h"
+#include "ResourceExhaustion.h"
 #include "SuperSampler.h"
 
 namespace JSC {
@@ -145,10 +146,8 @@ void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDefer
     ASSERT(!subspace->isPreciseOnly());
     ASSERT_WITH_MESSAGE(cellSize == m_directory->cellSize(), "non-preciseOnly allocations should match allocator's the size class");
     MarkedBlock::Handle* block = m_directory->tryAllocateBlock(heap);
-    if (!block) {
-        if (failureMode == AllocationFailureMode::Assert)
-            RELEASE_ASSERT_NOT_REACHED();
-        else
+    if (!block) [[unlikely]] {
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(failureMode != AllocationFailureMode::Assert, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
             return nullptr;
     }
     m_directory->addBlock(block);
@@ -203,9 +202,6 @@ void* LocalAllocator::tryAllocateWithoutCollecting(size_t cellSize)
 
             block->sweep(nullptr);
 
-            // It's good that this clears canAllocateButNotEmpty as well as all other bits,
-            // because there is a remote chance that a block may have both canAllocateButNotEmpty
-            // and empty set at the same time.
             block->removeFromDirectory();
             m_directory->addBlock(block);
             return allocateIn(block, cellSize);
@@ -238,7 +234,7 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
         block->unsweepWithNoNewlyAllocated();
         ASSERT(!block->isFreeListed());
         ASSERT(!m_directory->isEmpty(block));
-        ASSERT(!m_directory->isCanAllocateButNotEmpty(block));
+        ASSERT(!m_directory->isCanAllocate(block));
         return nullptr;
     }
 

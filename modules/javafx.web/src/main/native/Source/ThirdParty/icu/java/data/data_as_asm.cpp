@@ -31,16 +31,33 @@
 // on pkgdata.cpp.
 int main(int argc, char* argv[]) {
     if (argc < 5) {
-        fprintf(stderr, "%s: <assembler_type> <data_file> <out_dir> <entry_point>\n", argv[0]);
+        fprintf(stderr, "%s: <assembler_type> <data_file> <out_dir> <entry_point> [cpu_arch]\n", argv[0]);
         return 1;
     }
 
 #ifdef CAN_GENERATE_OBJECTS
+    const char* cpuArch = argc > 5 ? argv[5] : NULL;
+#if defined(__clang__) && defined(_WIN32)
+    if (!cpuArch) {
+#if defined(_M_AMD64) || defined(_M_X64)
+        cpuArch = "x64";
+#elif defined(_M_IX86)
+        cpuArch = "x86";
+#elif defined(_M_ARM64)
+        cpuArch = "arm64";
+#endif
+    }
+#endif
+    if (cpuArch && !checkCpuArchitecture(cpuArch)) {
+        fprintf(stderr, "%s: Unable to recognize CPU architecture: %s\n", argv[0], cpuArch);
+        return 3;
+    }
+
     // For Windows, icu tools can generate object code directly without going to
     // assembly route.
     // Generate icudt*l_dat.obj file into the <out_dir>.
     // UNUSED(argv[1])
-    writeObjectCode(argv[2], argv[3], argv[4], NULL, NULL, NULL, NULL, 0, true);
+    writeObjectCode(argv[2], argv[3], argv[4], NULL, cpuArch, NULL, NULL, 0, true);
 #else
     if (!checkAssemblyHeaderName(argv[1])) {
         fprintf(stderr, "%s: Unable to recogonize assembler type:%s\n", argv[0], argv[1]);

@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class CSSOKLCH final : public CSSOMColorValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSOKLCH);
+    WTF_MAKE_TZONE_ALLOCATED(CSSOKLCH);
 public:
     static ExceptionOr<Ref<CSSOKLCH>> create(CSSColorPercent&& lightness, CSSColorPercent&& chroma, CSSColorAngle&& hue, CSSColorPercent&& alpha);
 
@@ -46,6 +46,8 @@ public:
 private:
     CSSOKLCH(RectifiedCSSColorPercent&& lightness, RectifiedCSSColorPercent&& chroma, RectifiedCSSColorAngle&& hue, RectifiedCSSColorPercent&& alpha);
 
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSColorOKLCH; }
+
     RectifiedCSSColorPercent m_lightness;
     RectifiedCSSColorPercent m_chroma;
     RectifiedCSSColorAngle m_hue;
@@ -53,3 +55,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSOKLCH)
+    static bool isType(const WebCore::CSSStyleValue& value) { return value.styleValueType() == WebCore::CSSStyleValueType::CSSColorOKLCH; }
+SPECIALIZE_TYPE_TRAITS_END()

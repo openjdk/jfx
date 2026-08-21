@@ -45,7 +45,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleCachedImage);
 
 Ref<StyleCachedImage> StyleCachedImage::create(Style::URL&& url, Ref<CSSImageValue>&& cssValue, float scaleFactor)
 {
-    return adoptRef(*new StyleCachedImage(WTFMove(url), WTFMove(cssValue), scaleFactor));
+    return adoptRef(*new StyleCachedImage(WTF::move(url), WTF::move(cssValue), scaleFactor));
 }
 
 Ref<StyleCachedImage> StyleCachedImage::create(const Style::URL& url, const Ref<CSSImageValue>& cssValue, float scaleFactor)
@@ -62,8 +62,8 @@ Ref<StyleCachedImage> StyleCachedImage::copyOverridingScaleFactor(StyleCachedIma
 
 StyleCachedImage::StyleCachedImage(Style::URL&& url, Ref<CSSImageValue>&& cssValue, float scaleFactor)
     : StyleImage { Type::CachedImage }
-    , m_url { WTFMove(url) }
-    , m_cssValue { WTFMove(cssValue) }
+    , m_url { WTF::move(url) }
+    , m_cssValue { WTF::move(cssValue) }
     , m_scaleFactor { scaleFactor }
 {
     m_cachedImage = m_cssValue->cachedImage();
@@ -257,13 +257,13 @@ bool StyleCachedImage::imageHasRelativeHeight() const
     return m_cachedImage->imageHasRelativeHeight();
 }
 
-void StyleCachedImage::computeIntrinsicDimensions(const RenderElement* renderer, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
+void StyleCachedImage::computeIntrinsicDimensions(const RenderElement* renderer, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     // In case of an SVG resource, we should return the container size.
     if (isRenderSVGResource(renderer)) {
         FloatSize size = floorSizeToDevicePixels(LayoutSize(m_containerSize), renderer ? renderer->document().deviceScaleFactor() : 1);
-        intrinsicWidth = Length(size.width(), LengthType::Fixed);
-        intrinsicHeight = Length(size.height(), LengthType::Fixed);
+        intrinsicWidth = size.width();
+        intrinsicHeight = size.height();
         intrinsicRatio = size;
         return;
     }
@@ -286,7 +286,7 @@ void StyleCachedImage::setContainerContextForRenderer(const RenderElement& rende
     m_containerSize = containerSize;
     if (!m_cachedImage)
         return;
-    m_cachedImage->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, m_url.resolved);
+    m_cachedImage->setContainerContextForClient(renderer.cachedImageClient(), LayoutSize(containerSize), containerZoom, m_url.resolved);
 }
 
 void StyleCachedImage::addClient(RenderElement& renderer)
@@ -294,7 +294,7 @@ void StyleCachedImage::addClient(RenderElement& renderer)
     ASSERT(!m_isPending);
     if (!m_cachedImage)
         return;
-    m_cachedImage->addClient(renderer);
+    m_cachedImage->addClient(renderer.cachedImageClient());
 }
 
 void StyleCachedImage::removeClient(RenderElement& renderer)
@@ -302,7 +302,7 @@ void StyleCachedImage::removeClient(RenderElement& renderer)
     ASSERT(!m_isPending);
     if (!m_cachedImage)
         return;
-    m_cachedImage->removeClient(renderer);
+    m_cachedImage->removeClient(renderer.cachedImageClient());
 }
 
 bool StyleCachedImage::hasClient(RenderElement& renderer) const
@@ -310,7 +310,7 @@ bool StyleCachedImage::hasClient(RenderElement& renderer) const
     ASSERT(!m_isPending);
     if (!m_cachedImage)
         return false;
-    return m_cachedImage->hasClient(renderer);
+    return m_cachedImage->hasClient(renderer.cachedImageClient());
 }
 
 bool StyleCachedImage::hasImage() const
@@ -320,7 +320,7 @@ bool StyleCachedImage::hasImage() const
     return m_cachedImage->hasImage();
 }
 
-RefPtr<Image> StyleCachedImage::image(const RenderElement* renderer, const FloatSize&, bool) const
+RefPtr<Image> StyleCachedImage::image(const RenderElement* renderer, const FloatSize&, const GraphicsContext&, bool) const
 {
     ASSERT(!m_isPending);
 

@@ -27,8 +27,8 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGL.h"
-#include "PlatformImage.h"
+#include <WebCore/GraphicsContextGL.h>
+#include <WebCore/PlatformImage.h>
 #include <wtf/MallocSpan.h>
 
 namespace WebCore {

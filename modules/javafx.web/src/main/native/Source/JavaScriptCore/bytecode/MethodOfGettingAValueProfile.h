@@ -25,17 +25,19 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 // This is guarded by ENABLE_DFG_JIT only because it uses some value profiles
 // that are currently only used if the DFG is enabled (i.e. they are not
 // available in the profile-only configuration). Hopefully someday all of
 // these #if's will disappear...
 #if ENABLE(DFG_JIT)
 
-#include "BytecodeIndex.h"
-#include "CodeOrigin.h"
-#include "GPRInfo.h"
-#include "Operands.h"
-#include "TagRegistersMode.h"
+#include <JavaScriptCore/BytecodeIndex.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Operands.h>
+#include <JavaScriptCore/TagRegistersMode.h>
 
 namespace JSC {
 
