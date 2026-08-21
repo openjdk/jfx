@@ -102,8 +102,6 @@ class HideIconifiedTest {
     @ParameterizedTest
     @EnumSource(names = { "DECORATED", "UNDECORATED", "TRANSPARENT", "EXTENDED" })
     void hideWhileIconifiedThenShow(StageStyle stageStyle) {
-        // Disable on Linux until JDK-8354943 is fixed
-        assumeFalse(PlatformUtil.isLinux());
         createAndShowStage(stageStyle);
 
         Util.runAndWait(() -> {

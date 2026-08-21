@@ -119,7 +119,7 @@ jboolean gtk_verbose = JNI_FALSE;
  * Signature: (IZ)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
-  (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
+  (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale, jstring logCategories)
 {
     (void) clazz;
     (void) version;
@@ -132,6 +132,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
 
     gdk_threads_enter();
     gtk_init(NULL, NULL);
+
+    const char* categories = env->GetStringUTFChars(logCategories, nullptr);
+    glass_gtk_log_init(categories);
+    env->ReleaseStringUTFChars(logCategories, categories);
 
     checkGtkVersion(env, version);
 }
@@ -459,7 +463,7 @@ bool is_window_enabled_for_event(GdkWindow * window, WindowContext *ctx, gint ev
             break;
     }//switch
 
-    if (ctx != NULL ) {
+    if (ctx != NULL) {
         return ctx->isEnabled();
     }
     return TRUE;
@@ -484,17 +488,16 @@ static void process_events(GdkEvent* event, gpointer data)
 
     glass_evloop_call_hooks(event);
 
-    if (ctx != NULL) {
+    if (ctx != nullptr) {
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
-                    // let gtk handle it first to prevent a glitch
-                    gtk_main_do_event(event);
                     ctx->process_property_notify(&event->property);
+                    gtk_main_do_event(event);
                     break;
                 case GDK_CONFIGURE:
-                    ctx->process_configure(&event->configure);
                     gtk_main_do_event(event);
+                    ctx->process_configure(&event->configure);
                     break;
                 case GDK_FOCUS_CHANGE:
                     ctx->process_focus(&event->focus_change);
@@ -512,8 +515,8 @@ static void process_events(GdkEvent* event, gpointer data)
                     ctx->process_expose(&event->expose);
                     break;
                 case GDK_WINDOW_STATE:
-                    ctx->process_state(&event->window_state);
                     gtk_main_do_event(event);
+                    ctx->process_state(&event->window_state);
                     break;
                 case GDK_BUTTON_PRESS:
                 case GDK_2BUTTON_PRESS:
@@ -542,7 +545,8 @@ static void process_events(GdkEvent* event, gpointer data)
                     process_dnd_target(ctx, &event->dnd);
                     break;
                 case GDK_MAP:
-                    // fall-through
+                    ctx->process_map();
+                    break;
                 case GDK_UNMAP:
                 case GDK_CLIENT_EVENT:
                 case GDK_VISIBILITY_NOTIFY:
