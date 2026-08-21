@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -458,31 +458,34 @@ public abstract class PopupWindow extends Window {
     }
 
     private void showImpl(final Window owner) {
+        Window rootWindow = getRootWindow(owner);
+        if (rootWindow == null) {
+            return;
+        }
+
         // Update the owner field
         this.ownerWindow.set(owner);
         if (owner instanceof PopupWindow) {
             ((PopupWindow)owner).children.add(this);
         }
+
         // PopupWindow should disappear when owner node is not visible
-        if (owner != null) {
-            owner.showingProperty().addListener(weakOwnerNodeListener);
-        }
+        owner.showingProperty().addListener(weakOwnerNodeListener);
 
         final Scene sceneValue = getScene();
         SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
 
-        // JDK-8116444
-        applyStylesheetFromOwner(owner);
-
-        final Scene ownerScene = getRootWindow(owner).getScene();
+        final Scene ownerScene = rootWindow.getScene();
         if (ownerScene != null) {
+            copyStylesheetFromOwnerScene(ownerScene);
+
             if (sceneValue.getCursor() == null) {
                 sceneValue.setCursor(ownerScene.getCursor());
             }
         }
 
         // It is required that the root window exist and be visible to show the popup.
-        if (getRootWindow(owner).isShowing()) {
+        if (rootWindow.isShowing()) {
             // We do show() first so that the width and height of the
             // popup window are initialized. This way the x,y location of the
             // popup calculated below uses the right width and height values for
@@ -498,14 +501,34 @@ public abstract class PopupWindow extends Window {
      * @param owner the owner {@link Window}
      */
     void applyStylesheetFromOwner(Window owner) {
-        Scene scene = getScene();
-        final Scene ownerScene = getRootWindow(owner).getScene();
-        if (ownerScene != null) {
-            if (ownerScene.getUserAgentStylesheet() != null) {
-                scene.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
-            }
-            scene.getStylesheets().setAll(ownerScene.getStylesheets());
+        // JDK-8116444
+        Window rootWindow = getRootWindow(owner);
+        if (rootWindow == null) {
+            return;
         }
+
+        final Scene ownerScene = rootWindow.getScene();
+        if (ownerScene == null) {
+            return;
+        }
+
+        copyStylesheetFromOwnerScene(ownerScene);
+    }
+
+    private void copyStylesheetFromOwnerScene(Scene ownerScene) {
+        Scene scene = getScene();
+        if (scene.getUserAgentStylesheet() == null && ownerScene.getUserAgentStylesheet() != null) {
+            scene.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
+        }
+
+        List<String> newStylesheets = new ArrayList<>();
+        for (String stylesheet : ownerScene.getStylesheets()) {
+            if (!scene.getStylesheets().contains(stylesheet)) {
+                newStylesheets.add(stylesheet);
+            }
+        }
+
+        scene.getStylesheets().addAll(newStylesheets);
     }
 
     /**
