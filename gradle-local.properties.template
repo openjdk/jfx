@@ -26,8 +26,11 @@
 #####################################################################################
 #                                                                                   #
 # This properties file allows for a developer to override various properties used   #
-# when building JavaFX. Any settings you configure in the gradle.properties file    #
-# will have precedence over any values specified in the build script itself.        #
+# when building JavaFX. Any settings you configure in the gradle-local.properties   #
+# file will have precedence over any values specified in the build script itself.   #
+# Don't place Gradle properties (org.gradle.*) or system properties (systemProp.*)  #
+# here as they will be read too late. Either pass them with -D, set GRADLE_OPTS,    #
+# or put them in <GRADLE_USER_HOME>/gradle.properties.                              #
 #                                                                                   #
 #####################################################################################
 

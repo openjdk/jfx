@@ -166,6 +166,29 @@ void loadProperties(String sourceFileName) {
 }
 
 /**
+ * Reads the JavaFX local user properties file (gradle-local.properties).
+ */
+void loadLocalProperties(String sourceFileName) {
+    def propFile = new File(sourceFileName)
+    if (!propFile.canRead()) {
+        return
+    }
+
+    def localProps = new Properties()
+    propFile.withInputStream { localProps.load(it) }
+
+    def cliProps = gradle.startParameter.projectProperties
+    localProps.forEach((name, value) -> {
+        if (cliProps.containsKey(name)) {
+            logger.info("gradle-local.properties: $name overriden by CLI arg")
+            return
+        }
+        ext[name] = value
+        logger.info("gradle-local.properties: defined $name=$value")
+    })
+}
+
+/**
  * Struct used to contain some information passed to the closure
  * passed to compileTargets.
  */
@@ -308,6 +331,7 @@ void setFileTimestamps(Provider<RegularFile> archive, Instant instant) {
  *****************************************************************************/
 
 loadProperties("$projectDir/build.properties")
+loadLocalProperties("$projectDir/gradle-local.properties")
 
 // If the ../rt-closed directory exists, then we are doing a closed build.
 // In this case, build and property files will be read from
