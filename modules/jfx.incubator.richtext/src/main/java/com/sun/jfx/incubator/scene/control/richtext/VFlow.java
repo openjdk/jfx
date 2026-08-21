@@ -48,6 +48,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
@@ -89,6 +90,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *        ├─ horizontal ScrollBar
  *        └─ view port (ClippedPane) .vport
  *            └─ content (StackPane) .content
+ *                ├─ prompt (Node) .prompt
  *                ├─ dropTarget (Path) .drop-target
  *                ├─ caret (Path) .caret
  *                ├─ cells[]
@@ -127,6 +129,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     private double contentPaddingRight;
     private double leftSide;
     private double rightSide;
+    private Node promptNode;
     private boolean inReflow;
     private double unwrappedContentWidth;
     private double availableWidth;
@@ -1711,7 +1714,45 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
         }
 
+        // prompt node
+        if (promptNode == this) {
+            // sentient value: no prompt
+        } else if (promptNode == null) {
+            // check prompt if null, and whether it needs to be created
+            Object v = control.getPrompt();
+            if (v instanceof Supplier<?> sup) {
+                v = sup.get();
+            }
+            if (v == null) {
+                // sentient value means no prompt
+                promptNode = this;
+            } else {
+                promptNode = (v instanceof Node n) ? n : createPromptNode(v.toString());
+                promptNode.setManaged(false);
+                content.getChildren().add(0, promptNode);
+                promptNode.applyCss();
+            }
+        }
+        if (promptNode != this) {
+            if (RichUtils.isEmpty(control)) {
+                // show
+                promptNode.setVisible(true);
+                RichUtils.layoutInArea(promptNode, 0.0, 0.0, content.getWidth(), content.getHeight());
+            } else {
+                // hide
+                if (promptNode != null) {
+                    promptNode.setVisible(false);
+                }
+            }
+        }
+
         RichTextAreaHelper.setDocumentArea(control, leftSide + padLeft, padTop, viewPortWidth, vportH);
+    }
+
+    private Node createPromptNode(String text) {
+        Label p = new Label(text);
+        p.getStyleClass().add("prompt");
+        return p;
     }
 
     public Bounds documentArea() {
@@ -1802,5 +1843,18 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public boolean isWrapText() {
         return control.isWrapText();
+    }
+
+    public void handlePromptChange() {
+        if (promptNode != null) {
+            content.getChildren().remove(promptNode);
+            promptNode = null;
+        }
+        requestLayout();
+    }
+
+    /// Returns the prompt node (for testing).
+    public Node promptNode() {
+        return promptNode;
     }
 }
