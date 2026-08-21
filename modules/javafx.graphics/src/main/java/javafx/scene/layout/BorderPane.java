@@ -375,7 +375,7 @@ public class BorderPane extends Pane {
         return borderPaneLayout.prefHeight(width);
     }
 
-    @Override 
+    @Override
     public void requestLayout() {
         borderPaneLayout.invalidate();
 
