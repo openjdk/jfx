@@ -2354,9 +2354,10 @@ project(":graphics") {
         stub
     }
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         antlr group: "org.antlr", name: "antlr4", version: "${antlr4Version}", classifier: "complete"
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
         implementation project(':base')
     }
 
@@ -2490,20 +2491,21 @@ project(":graphics") {
 
     if (IS_WINDOWS) {
         addNative(project, "prismD3D")
-        // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
+        def prismD3DSource = "src/main/native-prism-d3d"
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl"
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl"
-            inputs.file "src/main/native-prism-d3d/PassThroughVS.hlsl"
+            inputs.files(fileTree("$prismD3DSource/hlsl") {
+                      include "*.hlsl"
+                      include "*.h"
+                  })
+            inputs.file("$prismD3DSource/PassThroughVS.hlsl")
             outputs.dir "$buildDir/headers/PrismD3D/"
-            outputs.dir "$buildDir/headers/PrismD3D/hlsl/"
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
-                def PS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl")
-                def VS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl")
-                def PASSTHROUGH_VS_SRC = file("src/main/native-prism-d3d/PassThroughVS.hlsl")
+                def PS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1PS.hlsl")
+                def VS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1VS.hlsl")
+                def PASSTHROUGH_VS_SRC = file("$prismD3DSource/PassThroughVS.hlsl")
                 def jobs = [
                         ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$PASSTHROUGH_VS_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS.h", "/DSpec=0", "/DSType=0", "$PS_3D_SRC"],
@@ -2895,9 +2897,11 @@ project(":controls") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(':base')
         implementation project(':graphics')
     }
@@ -2993,10 +2997,13 @@ project(":incubator.input") {
         'incubator.input'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
@@ -3051,11 +3058,15 @@ project(":incubator.richtext") {
         'incubator.richtext'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def inputTestOutput = project(":incubator.input").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":incubator.input").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
+        testImplementation inputTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
@@ -3237,9 +3248,11 @@ project(":fxml") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'fxml' ])
 
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(":base")
         implementation project(":graphics")
     }
@@ -3924,6 +3937,7 @@ project(":web") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         if (IS_COMPILE_WEBKIT) {
             def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
@@ -3933,7 +3947,7 @@ project(":web") {
         implementation project(":graphics")
         implementation project(":controls")
         implementation project(":media")
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -4251,11 +4265,15 @@ project(":systemTests") {
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def swingTestOutput = project(":swing").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":swing").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
+        testImplementation controlsTestOutput
+        testImplementation swingTestOutput
     }
 
     def dependentProjects = [
