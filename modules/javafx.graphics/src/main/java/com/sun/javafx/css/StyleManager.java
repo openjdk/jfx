@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -533,7 +533,7 @@ final public class StyleManager {
                 removedContainer.clearCache();
             }
 
-            final List<String> stylesheets = parent.getStylesheets();
+            final List<String> stylesheets = ParentHelper.getStylesheetsOrNull(parent);
             if (stylesheets != null && !stylesheets.isEmpty()) {
                 for (String fname : stylesheets) {
                     stylesheetRemoved(parent, fname);
@@ -1621,7 +1621,7 @@ final public class StyleManager {
 
             final String cname = node.getTypeSelector();
             final String id = node.getId();
-            final List<String> styleClasses = node.getStyleClass();
+            final List<String> styleClasses = NodeHelper.getStyleClassOrNull(node);
 
             if (key == null) {
                 key = new Key();
@@ -1629,13 +1629,18 @@ final public class StyleManager {
 
             key.className = cname;
             key.id = id;
-            key.styleClasses = FixedCapacitySet.of(styleClasses.size());
-            for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
 
-                final String styleClass = styleClasses.get(n);
-                if (styleClass == null || styleClass.isEmpty()) continue;
+            if (styleClasses != null) {
+                key.styleClasses = FixedCapacitySet.of(styleClasses.size());
+                for (int n=0, nMax=styleClasses.size(); n<nMax; n++) {
 
-                key.styleClasses.add(styleClass);
+                    final String styleClass = styleClasses.get(n);
+                    if (styleClass == null || styleClass.isEmpty()) continue;
+
+                    key.styleClasses.add(styleClass);
+                }
+            } else {
+                key.styleClasses = FixedCapacitySet.of(0);
             }
 
             Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);

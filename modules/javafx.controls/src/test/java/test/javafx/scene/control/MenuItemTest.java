@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,6 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -57,6 +51,13 @@ import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *
@@ -138,6 +139,23 @@ public class MenuItemTest {
         Rectangle rect = new Rectangle();
         MenuItem mi2 = new MenuItem("Hello", rect);
         assertEquals("Hello", mi2.getText());
+    }
+
+    @Test
+    public void testMenuItemToString() {
+        MenuItem mi = new MenuItem();
+        String noIdPrefix = "MenuItem@" + Integer.toHexString(mi.hashCode());
+
+        assertEquals(noIdPrefix + "[styleClass=menu-item]", mi.toString());
+
+        mi.getStyleClass().add("myStyleClass");
+        assertEquals(noIdPrefix + "[styleClass=menu-item myStyleClass]", mi.toString());
+
+        mi.setId("myId");
+        assertEquals("MenuItem[id=myId, styleClass=menu-item myStyleClass]", mi.toString());
+
+        mi.getStyleClass().clear();
+        assertEquals("MenuItem[id=myId]", mi.toString());
     }
 
     @Test public void getUninitializedId() {

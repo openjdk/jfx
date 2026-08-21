@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,7 +273,14 @@ final public class SimpleSelector extends Selector {
         }
 
         if (matchOnStyleClass) {
-            if (!matchesStyleClasses(styleable.getStyleClass())) {
+            List<String> styleClass;
+            if (styleable instanceof Node node) {
+                styleClass = NodeHelper.getStyleClassOrNull(node);
+            } else {
+                styleClass = styleable.getStyleClass();
+            }
+
+            if (!matchesStyleClasses(styleClass)) {
                 return false;
             }
         }
@@ -340,7 +347,7 @@ final public class SimpleSelector extends Selector {
          * of this selector:
          */
 
-        if (styleClassNames.size() < selectorStyleClassNames.size()) {
+        if (styleClassNames == null || styleClassNames.size() < selectorStyleClassNames.size()) {
             return false;
         }
 
