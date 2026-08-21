@@ -376,6 +376,9 @@ public class BorderPane extends Pane {
     }
 
     @Override protected double computeMinWidth(double height) {
+        final double leftInset = snappedLeftInset();
+        final double rightInset = snappedRightInset();
+        final double insideHeight = height < 0 ? -1 : snapSpaceY(height - snappedTopInset() - snappedBottomInset());
         double topMinWidth = getAreaWidth(getTop(), -1, true);
         double bottomMinWidth = getAreaWidth(getBottom(), -1, true);
 
@@ -383,13 +386,12 @@ public class BorderPane extends Pane {
         double rightPrefWidth;
         double centerMinWidth;
 
-        if (height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
-                childHasContentBias(getRight(), Orientation.VERTICAL) ||
-            childHasContentBias(getCenter(), Orientation.VERTICAL))) {
+        if (insideHeight != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL)
+                || childHasContentBias(getRight(), Orientation.VERTICAL)
+                || childHasContentBias(getCenter(), Orientation.VERTICAL))) {
             double topPrefHeight = getAreaHeight(getTop(), -1, false);
             double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
-
-            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+            double middleAreaHeight = snapSpaceY(Math.max(0, insideHeight - topPrefHeight - bottomPrefHeight));
 
             leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
             rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
@@ -400,38 +402,42 @@ public class BorderPane extends Pane {
             centerMinWidth = getAreaWidth(getCenter(), -1, true);
         }
 
-        final Insets insets = getInsets();
-        return insets.getLeft() +
-                Math.max(leftPrefWidth + centerMinWidth + rightPrefWidth, Math.max(topMinWidth,bottomMinWidth)) +
-                insets.getRight();
+        double middleAreaWidth = snapSpaceX(leftPrefWidth + centerMinWidth + rightPrefWidth);
+        double contentWidth = Math.max(middleAreaWidth, Math.max(topMinWidth, bottomMinWidth));
+        return snapSpaceX(leftInset + contentWidth + rightInset);
     }
 
     @Override protected double computeMinHeight(double width) {
-        final Insets insets = getInsets();
+        final double topInset = snappedTopInset();
+        final double bottomInset = snappedBottomInset();
+        final double insideWidth = width < 0 ? -1 : snapSpaceX(width - snappedLeftInset() - snappedRightInset());
 
         // Bottom and top are always at their pref height
-        double topPrefHeight = getAreaHeight(getTop(), width, false);
-        double bottomPrefHeight = getAreaHeight(getBottom(), width, false);
+        double topPrefHeight = getAreaHeight(getTop(), insideWidth, false);
+        double bottomPrefHeight = getAreaHeight(getBottom(), insideWidth, false);
 
         double leftMinHeight = getAreaHeight(getLeft(), -1, true);
         double rightMinHeight = getAreaHeight(getRight(), -1, true);
-
         double centerMinHeight;
-        if (width != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
+
+        if (insideWidth != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
             double leftPrefWidth = getAreaWidth(getLeft(), -1, false);
             double rightPrefWidth = getAreaWidth(getRight(), -1, false);
-            centerMinHeight = getAreaHeight(getCenter(),
-                    Math.max(0, width - leftPrefWidth - rightPrefWidth) , true);
+            double centerWidth = snapSpaceX(Math.max(0, insideWidth - leftPrefWidth - rightPrefWidth));
+            centerMinHeight = getAreaHeight(getCenter(), centerWidth, true);
         } else {
             centerMinHeight = getAreaHeight(getCenter(), -1, true);
         }
 
-        double middleAreaMinHeigh = Math.max(centerMinHeight, Math.max(rightMinHeight, leftMinHeight));
+        double middleAreaMinHeight = Math.max(centerMinHeight, Math.max(rightMinHeight, leftMinHeight));
 
-        return insets.getTop() + topPrefHeight + middleAreaMinHeigh + bottomPrefHeight + insets.getBottom();
+        return snapSpaceY(topInset + topPrefHeight + middleAreaMinHeight + bottomPrefHeight + bottomInset);
     }
 
     @Override protected double computePrefWidth(double height) {
+        final double leftInset = snappedLeftInset();
+        final double rightInset = snappedRightInset();
+        final double insideHeight = height < 0 ? -1 : snapSpaceY(height - snappedTopInset() - snappedBottomInset());
         double topPrefWidth = getAreaWidth(getTop(), -1, false);
         double bottomPrefWidth = getAreaWidth(getBottom(), -1, false);
 
@@ -439,13 +445,12 @@ public class BorderPane extends Pane {
         double rightPrefWidth;
         double centerPrefWidth;
 
-        if ( height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
-                childHasContentBias(getRight(), Orientation.VERTICAL) ||
-            childHasContentBias(getCenter(), Orientation.VERTICAL))) {
+        if (insideHeight != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL)
+                || childHasContentBias(getRight(), Orientation.VERTICAL)
+                || childHasContentBias(getCenter(), Orientation.VERTICAL))) {
             double topPrefHeight = getAreaHeight(getTop(), -1, false);
             double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
-
-            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+            double middleAreaHeight = snapSpaceY(Math.max(0, insideHeight - topPrefHeight - bottomPrefHeight));
 
             leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
             rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
@@ -456,37 +461,37 @@ public class BorderPane extends Pane {
             centerPrefWidth = getAreaWidth(getCenter(), -1, false);
         }
 
-        final Insets insets = getInsets();
-        return insets.getLeft() +
-                Math.max(leftPrefWidth + centerPrefWidth + rightPrefWidth, Math.max(topPrefWidth,bottomPrefWidth)) +
-                insets.getRight();
+        double middleAreaWidth = snapSpaceX(leftPrefWidth + centerPrefWidth + rightPrefWidth);
+        double contentWidth = Math.max(middleAreaWidth, Math.max(topPrefWidth, bottomPrefWidth));
+        return snapSpaceX(leftInset + contentWidth + rightInset);
     }
 
     @Override protected double computePrefHeight(double width) {
-        final Insets insets = getInsets();
+        final double topInset = snappedTopInset();
+        final double bottomInset = snappedBottomInset();
+        final double insideWidth = width < 0 ? -1 : snapSpaceX(width - snappedLeftInset() - snappedRightInset());
 
-        double topPrefHeight = getAreaHeight(getTop(), width, false);
-        double bottomPrefHeight = getAreaHeight(getBottom(), width, false);
+        double topPrefHeight = getAreaHeight(getTop(), insideWidth, false);
+        double bottomPrefHeight = getAreaHeight(getBottom(), insideWidth, false);
         double leftPrefHeight = getAreaHeight(getLeft(), -1, false);
         double rightPrefHeight = getAreaHeight(getRight(), -1, false);
-
         double centerPrefHeight;
-        if (width != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
+
+        if (insideWidth != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
             double leftPrefWidth = getAreaWidth(getLeft(), -1, false);
             double rightPrefWidth = getAreaWidth(getRight(), -1, false);
-            centerPrefHeight = getAreaHeight(getCenter(),
-                    Math.max(0, width - leftPrefWidth - rightPrefWidth) , false);
+            double centerWidth = snapSpaceX(Math.max(0, insideWidth - leftPrefWidth - rightPrefWidth));
+            centerPrefHeight = getAreaHeight(getCenter(), centerWidth, false);
         } else {
             centerPrefHeight = getAreaHeight(getCenter(), -1, false);
         }
 
-        double middleAreaPrefHeigh = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
+        double middleAreaPrefHeight = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
 
-        return insets.getTop() + topPrefHeight + middleAreaPrefHeigh + bottomPrefHeight + insets.getBottom();
+        return snapSpaceY(topInset + topPrefHeight + middleAreaPrefHeight + bottomPrefHeight + bottomInset);
     }
 
     @Override protected void layoutChildren() {
-        final Insets insets = getInsets();
         double width = getWidth();
         double height = getHeight();
         final Orientation bias = getContentBias();
@@ -494,27 +499,27 @@ public class BorderPane extends Pane {
         if (bias == null) {
             final double minWidth = minWidth(-1);
             final double minHeight = minHeight(-1);
-            width = width < minWidth ? minWidth : width;
-            height = height < minHeight ? minHeight : height;
+            width = snapSpaceX(Math.max(width, minWidth));
+            height = snapSpaceY(Math.max(height, minHeight));
         } else if (bias == Orientation.HORIZONTAL) {
             final double minWidth = minWidth(-1);
-            width = width < minWidth ? minWidth : width;
+            width = snapSpaceX(Math.max(width, minWidth));
             final double minHeight = minHeight(width);
-            height = height < minHeight ? minHeight : height;
+            height = snapSpaceY(Math.max(height, minHeight));
         } else {
             final double minHeight = minHeight(-1);
-            height = height < minHeight ? minHeight : height;
+            height = snapSpaceY(Math.max(height, minHeight));
             final double minWidth = minWidth(height);
-            width = width < minWidth ? minWidth : width;
+            width = snapSpaceX(Math.max(width, minWidth));
         }
 
         final boolean snapToPixel = isSnapToPixel();
         final double snapScaleX = getSnapScaleX(this);
         final double snapScaleY = getSnapScaleY(this);
-        final double insideX = insets.getLeft();
-        final double insideY = insets.getTop();
-        final double insideWidth = width - insideX - insets.getRight();
-        final double insideHeight = height - insideY - insets.getBottom();
+        final double insideX = snappedLeftInset();
+        final double insideY = snappedTopInset();
+        final double insideWidth = snapSpaceX(width - insideX - snappedRightInset());
+        final double insideHeight = snapSpaceY(height - insideY - snappedBottomInset());
         final Node c = getCenter();
         final Node r = getRight();
         final Node b = getBottom();
@@ -524,14 +529,13 @@ public class BorderPane extends Pane {
         double topHeight = 0;
         if (t != null && t.isManaged()) {
             Insets topMargin = getNodeMargin(t);
-            double adjustedWidth = adjustWidthByMargin(insideWidth, topMargin);
-            double adjustedHeight = adjustHeightByMargin(insideHeight, topMargin);
-            Vec2d result = boundedNodeSizeWithBias(t, adjustedWidth,
-                    adjustedHeight, true, false, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            double adjustedWidth = snapSpaceX(adjustWidthByMargin(insideWidth, topMargin));
+            double adjustedHeight = snapSpaceY(adjustHeightByMargin(insideHeight, topMargin));
+            Vec2d result = boundedNodeSizeWithBias(t, adjustedWidth, adjustedHeight, true, false, snapToPixel,
+                                                   snapScaleX, snapScaleY, TEMP_VEC2D);
             topHeight = result.y;
             t.resize(result.x, topHeight);
-
-            topHeight = snapSpaceY(topMargin.getBottom()) + topHeight + snapSpaceY(topMargin.getTop());
+            topHeight = snapSpaceY(snapSpaceY(topMargin.getBottom()) + topHeight + snapSpaceY(topMargin.getTop()));
             Pos alignment = getAlignment(t);
             positionInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
                     topMargin,
@@ -542,36 +546,38 @@ public class BorderPane extends Pane {
         double bottomHeight = 0;
         if (b != null && b.isManaged()) {
             Insets bottomMargin = getNodeMargin(b);
-            double adjustedWidth = adjustWidthByMargin(insideWidth, bottomMargin);
-            double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight, bottomMargin);
-            Vec2d result = boundedNodeSizeWithBias(b, adjustedWidth,
-                    adjustedHeight, true, false, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            double adjustedWidth = snapSpaceX(adjustWidthByMargin(insideWidth, bottomMargin));
+            double remainingHeight = snapSpaceY(insideHeight - topHeight);
+            double adjustedHeight = snapSpaceY(adjustHeightByMargin(remainingHeight, bottomMargin));
+            Vec2d result = boundedNodeSizeWithBias(b, adjustedWidth, adjustedHeight, true, false, snapToPixel,
+                                                   snapScaleX, snapScaleY, TEMP_VEC2D);
             bottomHeight = result.y;
             b.resize(result.x, bottomHeight);
-
-            bottomHeight = snapSpaceY(bottomMargin.getBottom()) + bottomHeight + snapSpaceY(bottomMargin.getTop());
+            bottomHeight = snapSpaceY(snapSpaceY(bottomMargin.getBottom()) + bottomHeight + snapSpaceY(bottomMargin.getTop()));
             Pos alignment = getAlignment(b);
-            positionInArea(b, insideX, insideY + insideHeight - bottomHeight,
+            positionInArea(b, insideX, snapPositionY(insideY + insideHeight - bottomHeight),
                     insideWidth, bottomHeight, 0/*ignore baseline*/,
                     bottomMargin,
                     alignment != null? alignment.getHpos() : HPos.LEFT,
                     alignment != null? alignment.getVpos() : VPos.BOTTOM, snapToPixel);
         }
 
+        final double middleY = snapPositionY(insideY + topHeight);
+        final double middleHeight = snapSpaceY(insideHeight - topHeight - bottomHeight);
+
         double leftWidth = 0;
         if (l != null && l.isManaged()) {
             Insets leftMargin = getNodeMargin(l);
-            double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
-            double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin); // ????
-            Vec2d result = boundedNodeSizeWithBias(l, adjustedWidth, adjustedHeight,
-                    false, true, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            double adjustedWidth = snapSpaceX(adjustWidthByMargin(insideWidth, leftMargin));
+            double adjustedHeight = snapSpaceY(adjustHeightByMargin(middleHeight, leftMargin));
+            Vec2d result = boundedNodeSizeWithBias(l, adjustedWidth, adjustedHeight, false, true, snapToPixel,
+                                                   snapScaleX, snapScaleY, TEMP_VEC2D);
             leftWidth = result.x;
             l.resize(leftWidth, result.y);
-
-            leftWidth = snapSpaceX(leftMargin.getLeft()) + leftWidth + snapSpaceX(leftMargin.getRight());
+            leftWidth = snapSpaceX(snapSpaceX(leftMargin.getLeft()) + leftWidth + snapSpaceX(leftMargin.getRight()));
             Pos alignment = getAlignment(l);
-            positionInArea(l, insideX, insideY + topHeight,
-                    leftWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
+            positionInArea(l, insideX, middleY,
+                    leftWidth, middleHeight, 0/*ignore baseline*/,
                     leftMargin,
                     alignment != null? alignment.getHpos() : HPos.LEFT,
                     alignment != null? alignment.getVpos() : VPos.TOP, snapToPixel);
@@ -580,18 +586,17 @@ public class BorderPane extends Pane {
         double rightWidth = 0;
         if (r != null && r.isManaged()) {
             Insets rightMargin = getNodeMargin(r);
-            double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
-            double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, rightMargin);
-
-            Vec2d result = boundedNodeSizeWithBias(r, adjustedWidth, adjustedHeight,
-                    false, true, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            double remainingWidth = snapSpaceX(insideWidth - leftWidth);
+            double adjustedWidth = snapSpaceX(adjustWidthByMargin(remainingWidth, rightMargin));
+            double adjustedHeight = snapSpaceY(adjustHeightByMargin(middleHeight, rightMargin));
+            Vec2d result = boundedNodeSizeWithBias(r, adjustedWidth, adjustedHeight, false, true, snapToPixel,
+                                                   snapScaleX, snapScaleY, TEMP_VEC2D);
             rightWidth = result.x;
             r.resize(rightWidth, result.y);
-
-            rightWidth = snapSpaceX(rightMargin.getLeft()) + rightWidth + snapSpaceX(rightMargin.getRight());
+            rightWidth = snapSpaceX(snapSpaceX(rightMargin.getLeft()) + rightWidth + snapSpaceX(rightMargin.getRight()));
             Pos alignment = getAlignment(r);
-            positionInArea(r, insideX + insideWidth - rightWidth, insideY + topHeight,
-                    rightWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
+            positionInArea(r, snapPositionX(insideX + insideWidth - rightWidth), middleY,
+                    rightWidth, middleHeight, 0/*ignore baseline*/,
                     rightMargin,
                     alignment != null? alignment.getHpos() : HPos.RIGHT,
                     alignment != null? alignment.getVpos() : VPos.TOP, snapToPixel);
@@ -599,10 +604,9 @@ public class BorderPane extends Pane {
 
         if (c != null && c.isManaged()) {
             Pos alignment = getAlignment(c);
-
-            layoutInArea(c, insideX + leftWidth, insideY + topHeight,
-                    insideWidth - leftWidth - rightWidth,
-                    insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
+            layoutInArea(c, snapPositionX(insideX + leftWidth), middleY,
+                    snapSpaceX(insideWidth - leftWidth - rightWidth),
+                    middleHeight, 0/*ignore baseline*/,
                     getNodeMargin(c),
                     alignment != null? alignment.getHpos() : HPos.CENTER,
                     alignment != null? alignment.getVpos() : VPos.CENTER);
@@ -612,8 +616,9 @@ public class BorderPane extends Pane {
     private double getAreaWidth(Node child, double height, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaWidth(child, -1, margin, height, false):
-                                   computeChildPrefAreaWidth(child, -1, margin, height, false);
+            double areaWidth = minimum ? computeChildMinAreaWidth(child, -1, margin, height, true):
+                                         computeChildPrefAreaWidth(child, -1, margin, height, true);
+            return snapSpaceX(areaWidth);
         }
         return 0;
     }
@@ -621,8 +626,9 @@ public class BorderPane extends Pane {
     private double getAreaHeight(Node child, double width, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaHeight(child, -1, margin, width, true):
-                                   computeChildPrefAreaHeight(child, -1, margin, width, true);
+            double areaHeight = minimum ? computeChildMinAreaHeight(child, -1, margin, width, true):
+                                          computeChildPrefAreaHeight(child, -1, margin, width, true);
+            return snapSpaceY(areaHeight);
         }
         return 0;
     }
