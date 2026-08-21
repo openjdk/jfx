@@ -57,11 +57,11 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
     dalvikJavaVMPtr = vm;
     __android_log_print(3,"JVM", "JNI_OnLoad calling GetEnv()");
     JNIEnv* env = NULL;
-    (*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_4);
+    (*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_8);
     __android_log_print(3,"JVM", "JNI_OnLoad calling initDalvikProxySelectorData()");
     initDalvikProxySelectorData(env);
     __android_log_print(3,"JVM", "JNI_OnLoad returning()");
-    return JNI_VERSION_1_4;
+    return JNI_VERSION_1_8;
 }
 
 static void logArgs(int argc, char** argv) {
@@ -152,5 +152,3 @@ JNIEXPORT jint JNICALL Java_com_oracle_dalvik_VMLauncher_launchJVM
 
    return res;
 }
-
-

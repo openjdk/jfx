@@ -117,7 +117,7 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad_jfxwebkit(JavaVM* vm, void*)
 #else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
-#endif
+#endif // STATIC_BUILD
 {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
     _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_FILE );
@@ -148,7 +148,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
     static JGClass fileSystemRef(fileSystemClass);
     WTF::comSunWebkitFileSystem = fileSystemRef;
 
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_1_8;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* , void*)

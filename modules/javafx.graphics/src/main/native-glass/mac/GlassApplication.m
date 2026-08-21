@@ -86,13 +86,13 @@ static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
-#endif
+#endif // STATIC_BUILD
 {
     pthread_key_create(&GlassThreadDataKey, NULL);
 
     memset(&javaIDs, 0, sizeof(javaIDs));
     MAIN_JVM = vm;
-    return JNI_VERSION_1_4;
+    return JNI_VERSION_1_8;
 }
 
 #pragma mark --- GlassRunnable
