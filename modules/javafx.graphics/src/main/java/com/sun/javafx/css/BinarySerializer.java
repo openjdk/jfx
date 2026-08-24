@@ -45,7 +45,9 @@ import javafx.geometry.NodeOrientation;
 public class BinarySerializer {
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;
-    private static final Comparator<PseudoClass> PSEUDO_CLASS_COMPARATOR = initPseudoClassComparator();
+    private static final Comparator<PseudoClass> PSEUDO_CLASS_COMPARATOR = (a, b) -> {
+        return a.getPseudoClassName().compareTo(b.getPseudoClassName());
+    };
 
     public static Selector read(DataInputStream is, String[] strings) throws IOException {
         int type = is.readByte();
@@ -191,14 +193,5 @@ public class BinarySerializer {
         else if (nodeOrientation == LEFT_TO_RIGHT) {
             os.writeShort(stringStore.addString("dir(ltr)"));
         }
-    }
-
-    private static Comparator<PseudoClass> initPseudoClassComparator() {
-        return new Comparator<PseudoClass>() {
-            @Override
-            public int compare(PseudoClass a, PseudoClass b) {
-                return a.getPseudoClassName().compareTo(b.getPseudoClassName());
-            }
-        };
     }
 }
