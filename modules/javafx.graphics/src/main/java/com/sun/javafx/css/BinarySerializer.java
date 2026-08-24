@@ -31,10 +31,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
 import javafx.css.StyleConverter;
@@ -169,10 +168,10 @@ public class BinarySerializer {
 
         os.writeShort(stringStore.addString(selector.getId()));
 
-        Set<PseudoClass> pseudoClassStates = selector.getPseudoClassStates();
+        Collection<PseudoClass> pseudoClassStates = selector.getPseudoClassStates();
         if (pseudoClassStates.size() > 1) {
-            Set<PseudoClass> sorted = new TreeSet<>(PSEUDO_CLASS_COMPARATOR);
-            sorted.addAll(pseudoClassStates);
+            ArrayList<PseudoClass> sorted = new ArrayList<>(pseudoClassStates);
+            sorted.sort(PSEUDO_CLASS_COMPARATOR);
             pseudoClassStates = sorted;
         }
         NodeOrientation nodeOrientation = selector.getNodeOrientation();
