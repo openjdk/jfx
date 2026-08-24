@@ -891,7 +891,7 @@ public class StylesheetTest {
         DataOutputStream out = new DataOutputStream(new ByteArrayOutputStream());
         BinarySerializer.write(selector, out, store);
 
-        ArrayList<String> expected = new ArrayList();
+        ArrayList<String> expected = new ArrayList<>();
         expected.add(name);
         expected.addAll(styleClasses);
         expected.add(id);
