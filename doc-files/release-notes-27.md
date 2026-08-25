@@ -111,6 +111,7 @@ Issue Key | Summary | Subcomponent
 [JDK-8381447](https://bugs.openjdk.org/browse/JDK-8381447) | Remove G_DISABLE_CHECKS compiler flag on Windows to align GLib/GStreamer compilation with macOS/Linux | media
 [JDK-8384809](https://bugs.openjdk.org/browse/JDK-8384809) | Update GStreamer to 1.28.3 | media
 [JDK-8375016](https://bugs.openjdk.org/browse/JDK-8375016) | Several catch blocks for NullPointerExceptions exist in the codebase | other
+[JDK-8376836](https://bugs.openjdk.org/browse/JDK-8376836) | Fix mistakes in FX API docs | other
 [JDK-8388526](https://bugs.openjdk.org/browse/JDK-8388526) | [Windows] Crash in Platform.Preferences refresh on OS theme change when using FXCanvas | other
 [JDK-8384814](https://bugs.openjdk.org/browse/JDK-8384814) | [macOS] Trackpad scroll gestures suddenly stop | scenegraph
 [JDK-8389093](https://bugs.openjdk.org/browse/JDK-8389093) | Typos in the JavaFX CSS Reference Guide | scenegraph
@@ -131,6 +132,7 @@ Issue Key | Summary | Subcomponent
 [JDK-8381517](https://bugs.openjdk.org/browse/JDK-8381517) | GlassViewDelegate::convertNSStringToJString can return uninitialized value | window-toolkit
 [JDK-8382165](https://bugs.openjdk.org/browse/JDK-8382165) | Emojis used in Stage.setTitle are not rendered and break application switching on Linux platform | window-toolkit
 [JDK-8387626](https://bugs.openjdk.org/browse/JDK-8387626) | java.lang.NullPointerException: Cannot invoke "com.sun.glass.ui.Window.isMinimized()" because "this.platformWindow" is null | window-toolkit
+[JDK-8388508](https://bugs.openjdk.org/browse/JDK-8388508) | [macOS] MenuItem graphics in the system menu bar is corrupted or disappears, or JVM crashes in CoreGraphics, under memory pressure | window-toolkit
 
 ## List of Security fixes
 
