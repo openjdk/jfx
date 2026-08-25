@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,24 +24,19 @@
  */
 
 #include "config.h"
-#include "NavigationRequester.h"
+#include "JSHTMLMediaElement.h"
 
-#include "Document.h"
+#include "TrackOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 
 namespace WebCore {
 
-NavigationRequester NavigationRequester::from(Document& document)
+template<typename Visitor>
+void JSHTMLMediaElement::visitAdditionalChildren(Visitor& visitor)
 {
-    return {
-        document.url().isEmpty() ? aboutBlankURL() : document.url(),
-        document.securityOrigin(),
-        document.topOrigin(),
-        document.policyContainer(),
-        document.frameID(),
-        document.pageID(),
-        document.identifier(),
-        document.sandboxFlags()
-    };
+    addWebCoreOpaqueRoot(visitor, wrapped().trackOpaqueRoot().opaqueRoot());
 }
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSHTMLMediaElement);
 
 } // namespace WebCore

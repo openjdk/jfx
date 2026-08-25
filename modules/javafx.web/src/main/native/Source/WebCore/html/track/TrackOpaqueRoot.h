@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,47 +23,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "PlatformSpeechSynthesizer.h"
-#include <wtf/TZoneMallocInlines.h>
+#pragma once
 
-#if ENABLE(SPEECH_SYNTHESIS)
+#include "WebCoreOpaqueRoot.h"
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformSpeechSynthesizer);
-
-const Vector<Ref<PlatformSpeechSynthesisVoice>>& PlatformSpeechSynthesizer::voiceList() const
-{
-    if (!m_voiceListIsInitialized) {
-        ASSERT(m_voiceList.isEmpty());
-        const_cast<PlatformSpeechSynthesizer*>(this)->initializeVoiceList();
-        const_cast<PlatformSpeechSynthesizer*>(this)->m_voiceListIsInitialized = true;
+class TrackOpaqueRoot : public ThreadSafeRefCounted<TrackOpaqueRoot> {
+public:
+    static Ref<TrackOpaqueRoot> create(const WebCoreOpaqueRoot& root)
+    {
+        return adoptRef(*new TrackOpaqueRoot(root));
     }
-    return m_voiceList;
+
+    WebCoreOpaqueRoot opaqueRoot() const { return m_opaqueRoot; }
+    void clear() { m_opaqueRoot = nullptr; }
+
+private:
+    TrackOpaqueRoot(const WebCoreOpaqueRoot& root)
+        : m_opaqueRoot(root)
+    { }
+
+    WebCoreOpaqueRoot m_opaqueRoot;
+};
+
 }
-
-void PlatformSpeechSynthesizer::resetVoiceList()
-{
-    if (!m_voiceListIsInitialized)
-        return;
-
-    m_voiceListIsInitialized = false;
-    m_voiceList.clear();
-}
-
-RefPtr<PlatformSpeechSynthesizerClient> PlatformSpeechSynthesizer::client() const
-{
-    return m_speechSynthesizerClient.get();
-}
-
-void PlatformSpeechSynthesizer::voicesDidChange()
-{
-    resetVoiceList();
-    if (RefPtr client = m_speechSynthesizerClient.get())
-        client->voicesDidChange();
-}
-
-} // namespace WebCore
-
-#endif // ENABLE(SPEECH_SYNTHESIS)
