@@ -12,6 +12,8 @@ for the purposes of demonstration of capabilities as well as testing.
   provides a demo application primarily for testing of the CodeArea behavior.
 - [NotebookMockupApp.java](src/com/oracle/demo/richtext/notebook/NotebookMockupApp.java)
   provides an example of a GUI for an interactive notebook application.
+- [HeadingsDemoApp.java](src/com/oracle/demo/richtext/headings/HeadingsDemoApp.java)
+  provides an example of a GUI for testing collapsing and expanding headings of a structured document.
   
 
 ## Building
@@ -39,4 +41,6 @@ Notebook Demo: `ant run-notebook-demo`
 Rich Editor Demo: `ant run-richeditor-demo`
 
 RichTextArea Tester: `ant run-richtextarea-demo`
+
+Headings Demo: `ant run-headings-demo`
 
