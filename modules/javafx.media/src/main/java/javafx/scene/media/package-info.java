@@ -115,7 +115,7 @@
  * <h3>Supported Schemes / Protocols</h3>
  *
  * <table border="1">
- * <caption>Supported Schemes / Protocols Table</caption>
+ * <caption>Supported URL Protocols</caption>
  * <tr><th scope="col">Protocol</th><th scope="col">Description</th><th scope="col">Reference</th></tr>
  * <tr>
  *     <th scope="row"><code>file</code></th>

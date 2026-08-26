@@ -69,9 +69,9 @@ public final class AudioClip {
     /**
      * Create an <code>AudioClip</code> loaded from the supplied source URL.
      *
-     * @param source URL string from which to load the audio clip. This can be an
-     * <code>http</code>, <code>https</code>, <code>file</code>, <code>jar</code>,
-     * <code>jrt</code>, and <code>resource</code> source.
+     * @param source the URL from which to load the audio clip. Supported URL schemes
+     * are {@code http}, {@code https}, {@code file}, {@code jar}, {@code jrt}, and
+     * {@code resource}.
      * @throws NullPointerException if the parameter is <code>null</code>.
      * @throws IllegalArgumentException if the parameter violates
      * <a href="http://www.ietf.org/rfc/rfc2396.txt">RFC 2396</a>.
