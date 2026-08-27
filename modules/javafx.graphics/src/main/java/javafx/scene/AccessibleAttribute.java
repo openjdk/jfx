@@ -808,7 +808,7 @@ public enum AccessibleAttribute {
      * <li>Needs notify: no </li>
      * <li>Return Type: {@code int[]} containing the first item index and the
      *     number of visible items. If no items are fully visible the return
-           value should be {0, 0} </li>
+     *     value should be {0, 0} </li>
      * <li>Parameters: </li>
      * </ul>
      *
