@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -463,7 +463,7 @@ class GlassViewEventHandler extends View.EventHandler {
                         spx = spy = sx = sy = 0.0;
                     }
                     scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
-                        deltaX / pScaleX, deltaY / pScaleY, 0, 0,
+                        deltaX, deltaY, 0, 0,
                         xMultiplier, yMultiplier,
                         0, // touchCount
                         chars, lines, defaultChars, defaultLines,
