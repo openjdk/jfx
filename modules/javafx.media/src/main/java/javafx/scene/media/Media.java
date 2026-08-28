@@ -362,8 +362,8 @@ public final class Media {
      * <p>See {@link java.net.URI}
      * for more information about URI formatting in general.
      * The <code>jar</code> URL syntax is specified in {@link java.net.JarURLConnection}.
-     * <code>jrt</code> URL syntax is specified in <a href="https://openjdk.org/jeps/220">JEP 220: Modular Run-Time Images</A>.
-     * The <code>resource</code> URL syntax is specified in <a href="https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/URLProtocols/">URL Protocols in Native Image</a>.
+     * <code>jrt</code> URL syntax is described in <a href="https://openjdk.org/jeps/220">JEP 220: Modular Run-Time Images</a>.
+     * The <code>resource</code> URL syntax is described in <a href="https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/URLProtocols/">URL Protocols in Native Image</a>.
      *
      * @param source The URI of the source media.
      * @throws NullPointerException if the URI string is <code>null</code>.
