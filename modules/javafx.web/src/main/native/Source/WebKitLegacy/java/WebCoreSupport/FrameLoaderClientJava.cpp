@@ -74,7 +74,6 @@ static jmethodID permitNavigateActionMID;
 static jmethodID permitRedirectActionMID;
 static jmethodID permitAcceptResourceActionMID;
 static jmethodID permitSubmitDataActionMID;
-static jmethodID permitEnableScriptsActionMID;
 static jmethodID permitNewWindowActionMID;
 
 static jmethodID didClearWindowObjectMID;
@@ -116,10 +115,6 @@ static void initRefs(JNIEnv* env)
         permitSubmitDataActionMID = env->GetMethodID(webPageClass, "fwkPermitSubmitDataAction",
                                                      "(JLjava/lang/String;Ljava/lang/String;Z)Z");
         ASSERT(permitSubmitDataActionMID);
-
-        permitEnableScriptsActionMID = env->GetMethodID(webPageClass, "fwkPermitEnableScriptsAction",
-                                                        "(JLjava/lang/String;)Z");
-        ASSERT(permitEnableScriptsActionMID);
 
         permitNewWindowActionMID = env->GetMethodID(webPageClass, "fwkPermitNewWindowAction",
                                                     "(JLjava/lang/String;)Z");

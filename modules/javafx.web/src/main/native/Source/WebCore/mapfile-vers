@@ -1,5 +1,9 @@
 SUNWprivate_1.0 {
         global:
+               /* FFM C ABI (modules/javafx.web/FFM-ABI-CONTRACT.md). GNU ld version
+                  scripts accept glob patterns, so this single entry exports every
+                  WKJ_EXPORT wkj_* function without per-symbol maintenance. */
+               wkj_*;
                JNI_OnLoad;
                JNI_OnUnload;
                WTFCrash;
@@ -1844,7 +1848,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_BackForwardList_bflIsEnabled;
                Java_com_sun_webkit_BackForwardList_bflItemGetChildren;
                Java_com_sun_webkit_BackForwardList_bflItemGetIcon;
-               Java_com_sun_webkit_BackForwardList_bflItemGetLastVisitedDate;
                Java_com_sun_webkit_BackForwardList_bflItemGetTarget;
                Java_com_sun_webkit_BackForwardList_bflItemGetTitle;
                Java_com_sun_webkit_BackForwardList_bflItemGetURL;
@@ -1874,7 +1877,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused;
                Java_com_sun_webkit_WCWidget_initIDs;
                Java_com_sun_webkit_WatchdogTimer_twkFire;
-               Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding;
                Java_com_sun_webkit_WebPage_twkAdjustFrameHeight;
                Java_com_sun_webkit_WebPage_twkBeginPrinting;
                Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend;
@@ -1901,7 +1903,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkGetIconURL;
                Java_com_sun_webkit_WebPage_twkGetInnerText;
                Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset;
-               Java_com_sun_webkit_WebPage_twkGetLocationOffset;
                Java_com_sun_webkit_WebPage_twkGetMainFrame;
                Java_com_sun_webkit_WebPage_twkGetName;
                Java_com_sun_webkit_WebPage_twkGetOwnerElement;

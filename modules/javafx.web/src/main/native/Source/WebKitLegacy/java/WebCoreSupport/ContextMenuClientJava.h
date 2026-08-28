@@ -26,7 +26,6 @@
 #pragma once
 
 #include <WebCore/ContextMenuClient.h>
-#include <WebCore/PlatformJavaClasses.h>
 
 namespace WebCore {
 
@@ -35,7 +34,7 @@ class ContextMenu;
 class ContextMenuClientJava : public ContextMenuClient {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ContextMenuClientJava);
 public:
-    ContextMenuClientJava(const JLObject &webPage);
+    ContextMenuClientJava();
 
     void downloadURL(const URL& url) override;
     void searchWithGoogle(const LocalFrame*) override;
@@ -43,8 +42,5 @@ public:
     bool isSpeaking() const override;
     void speak(const String&) override;
     void stopSpeaking() override;
-
-private:
-    JGObject m_webPage;
 };
 }

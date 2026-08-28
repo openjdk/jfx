@@ -112,15 +112,6 @@ static JLObject createEntry(HistoryItem* item, jlong jpage)
     return jEntry;
 }
 
-void historyItemChangedImpl(HistoryItem& item) {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID notifyItemChangedMID = initMethod(env, getJEntryClass(), "notifyItemChanged", "()V");
-    if (item.hostObject()) {
-        env->CallVoidMethod(item.hostObject(), notifyItemChangedMID);
-        WTF::CheckAndClearException(env);
-    }
-}
-
 // BACKFORWARDLIST METHODS
 int getSize(BackForwardList* bfl)
 {
@@ -200,15 +191,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNI
     }
 */
     return nullptr;
-}
-
-// entry.getLastVisited()
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetLastVisitedDate(JNIEnv*, jclass, jlong)
-{
-//    HistoryItem* item = getItem(jitem);
-//    double lastVisitedDate = item->lastVisitedTime();
-//    return (jlong) (lastVisitedDate * 1000);
-    return 0; // todo tav where is lastVisitedDate field?
 }
 
 // entry.isTargetItem()
@@ -341,8 +323,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetHostObject(JNIE
 {
     BackForwardList* bfl = getBfl(jpage);
     bfl->setHostObject(JLObject(host, true));
-
-    //notifyHistoryItemChanged = historyItemChangedImpl;//Check 4ef4b65d33f45734ad3c6cbc7f2fe0dda17051bc for more details
 }
 
 }

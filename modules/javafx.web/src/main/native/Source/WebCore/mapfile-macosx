@@ -1,3 +1,7 @@
+# FFM C ABI (modules/javafx.web/FFM-ABI-CONTRACT.md). ld64 -exported_symbols_list
+# accepts glob patterns, so this single entry exports every WKJ_EXPORT wkj_*
+# function without per-symbol maintenance.
+               _wkj_*
                _JNI_OnLoad
                _JNI_OnUnload
                _WTFReportBacktrace
@@ -1589,7 +1593,6 @@
                _Java_com_sun_webkit_BackForwardList_bflIsEnabled
                _Java_com_sun_webkit_BackForwardList_bflItemGetChildren
                _Java_com_sun_webkit_BackForwardList_bflItemGetIcon
-               _Java_com_sun_webkit_BackForwardList_bflItemGetLastVisitedDate
                _Java_com_sun_webkit_BackForwardList_bflItemGetTarget
                _Java_com_sun_webkit_BackForwardList_bflItemGetTitle
                _Java_com_sun_webkit_BackForwardList_bflItemGetURL
@@ -1618,7 +1621,6 @@
                _Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect
                _Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused
                _Java_com_sun_webkit_WCWidget_initIDs
-               _Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
                _Java_com_sun_webkit_WebPage_twkAdjustFrameHeight
                _Java_com_sun_webkit_WebPage_twkBeginPrinting
                _Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
@@ -1645,7 +1647,6 @@
                _Java_com_sun_webkit_WebPage_twkGetIconURL
                _Java_com_sun_webkit_WebPage_twkGetInnerText
                _Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset
-               _Java_com_sun_webkit_WebPage_twkGetLocationOffset
                _Java_com_sun_webkit_WebPage_twkGetMainFrame
                _Java_com_sun_webkit_WebPage_twkGetName
                _Java_com_sun_webkit_WebPage_twkGetOwnerElement

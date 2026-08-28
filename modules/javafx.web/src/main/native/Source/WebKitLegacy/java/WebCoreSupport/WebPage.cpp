@@ -932,7 +932,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = makeUniqueRef<ChromeClientJava>(jlself);
-    pc.contextMenuClient = makeUniqueRef<ContextMenuClientJava>(jlself);
+    pc.contextMenuClient = makeUniqueRef<ContextMenuClientJava>();
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
     pc.dragClient = makeUnique<DragClientJava>(jlself);
     pc.inspectorBackendClient = makeUnique<InspectorClientJava>(jlself);
@@ -1573,35 +1573,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkExecuteScript
         script);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
-    (JNIEnv* env, jobject self, jlong pFrame, jstring name, jobject value, jobject accessControlContext)
-{
-    Frame* mainFrame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-        auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
-    if (!frame) {
-        return;
-    }
-    JSGlobalContextRef globalContext = getGlobalContext(&frame->script());
-    JSObjectRef window = JSContextGetGlobalObject(globalContext);
-    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script().createRootObject(frame));
-
-    JSValueRef jsval = WebCore::Java_Object_to_JSValue(
-        env,
-        globalContext,
-        rootObject.get(),
-        value, accessControlContext);
-
-    JSStringRef jsname = asJSStringRef(env, name);
-    JSValueRef exception;
-    if (JSValueIsUndefined(globalContext, jsval)) {
-        JSObjectDeleteProperty(globalContext, window, jsname, &exception);
-    } else {
-        JSPropertyAttributes attributes = 0;
-        JSObjectSetProperty(globalContext, window, jsname, jsval, attributes, &exception);
-    }
-    JSStringRelease(jsname);
-}
-
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkReset
     (JNIEnv* env, jobject self, jlong pFrame)
 {
@@ -1961,26 +1932,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
     return bool_to_jbool(consumeEvent);
 }
 
-#if ENABLE(TOUCH_EVENTS)
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessTouchEvent
-    (JNIEnv* env, jobject self, jlong pPage, jint id, jobject touchData,
-     jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp)
-{
-    Page* page = WebPage::pageFromJLong(pPage);
-        Frame* mainFrame = (Frame*)&page->mainFrame();
-        auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
-
-    ASSERT(frame->eventHandler());
-    if (!frame->eventHandler()) {
-        return JNI_FALSE;
-    }
-
-    PlatformTouchEvent ev(env, id, touchData, shift, ctrl, alt, meta, timestamp);
-    bool consumeEvent = frame->eventHandler().handleTouchEvent(ev);
-    return bool_to_jbool(consumeEvent);
-}
-#endif
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
     (JNIEnv* env, jobject self, jlong pPage,
      jstring jcommitted, jstring jcomposed, jintArray jattributes, jint caretPosition)
@@ -2071,43 +2022,6 @@ JNIEXPORT jintArray JNICALL Java_com_sun_webkit_WebPage_twkGetTextLocation
     }
 
     return result;
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
-    (JNIEnv* env, jobject self, jlong pPage, jint x, jint y)
-{
-    // Returns -1 if there's no composition text or the given
-    // coordinate is out of the composition text range.
-
-    Page* page = WebPage::pageFromJLong(pPage);
-        Frame* mainFrame = (Frame*)&page->mainFrame();
-        auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
-
-    LocalFrameView* frameView = frame->view();
-    if (!frameView) {
-        return 0;
-    }
-
-    jint offset = -1;
-    IntPoint point {x, y};
-    point = frameView->windowToContents(point);
-
-    Editor &editor = frame->editor();
-    if (editor.hasComposition()) {
-        auto range = editor.compositionRange();
-        for (Node* node = &range->startContainer(); node; node = NodeTraversal::next(*node)) {
-            RenderObject* renderer = node->renderer();
-            IntRect content = renderer->absoluteBoundingBoxRect();
-            VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
-                                                                            point.y() - content.y()), HitTestSource::User)); // TODO-java: recheck nullptr
-            offset = targetPosition.deepEquivalent().offsetInContainerNode();
-            if (offset >= (jint)editor.compositionStart() && offset < (jint)editor.compositionEnd()) {
-                offset -= editor.compositionStart();
-                break;
-            }
-        }
-    }
-    return offset;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset
