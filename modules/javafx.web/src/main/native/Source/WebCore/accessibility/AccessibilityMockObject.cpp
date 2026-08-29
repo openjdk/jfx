@@ -26,6 +26,8 @@
 #include "config.h"
 #include "AccessibilityMockObject.h"
 
+#include "AccessibilityObjectInlines.h"
+
 namespace WebCore {
 
 AccessibilityMockObject::AccessibilityMockObject(AXID axID, AXObjectCache& cache)
@@ -40,4 +42,4 @@ bool AccessibilityMockObject::computeIsIgnored() const
     return isIgnoredByDefault();
 }
 
-}
+} // namespace WebCore

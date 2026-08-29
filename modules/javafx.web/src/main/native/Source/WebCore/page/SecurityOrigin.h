@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -210,7 +210,7 @@ public:
     bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
 
 private:
-    friend struct IPC::ArgumentCoder<SecurityOrigin, void>;
+    friend struct IPC::ArgumentCoder<SecurityOrigin>;
     WEBCORE_EXPORT SecurityOrigin();
     explicit SecurityOrigin(const URL&);
     explicit SecurityOrigin(const SecurityOrigin*);

@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "IDBDatabaseInfo.h"
-#include "IDBKeyData.h"
-#include "IDBTransactionInfo.h"
-#include "IndexValueStore.h"
-#include "ThreadSafeDataBuffer.h"
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBKeyData.h>
+#include <WebCore/IDBTransactionInfo.h>
+#include <WebCore/IndexValueStore.h>
+#include <WebCore/ThreadSafeDataBuffer.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 namespace IDBServer {
@@ -44,7 +45,7 @@ class MemoryIDBBackingStore;
 class MemoryIndex;
 class MemoryObjectStore;
 
-typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, IDBKeyDataHash, IDBKeyDataHashTraits> KeyValueMap;
+typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, DefaultHash<IDBKeyData>, IDBKeyDataHashTraits> KeyValueMap;
 
 class MemoryBackingStoreTransaction final : public RefCountedAndCanMakeWeakPtr<MemoryBackingStoreTransaction> {
 public:
@@ -83,7 +84,7 @@ private:
     MemoryBackingStoreTransaction(MemoryIDBBackingStore&, const IDBTransactionInfo&);
     void finish();
 
-    CheckedRef<MemoryIDBBackingStore> m_backingStore;
+    const CheckedRef<MemoryIDBBackingStore> m_backingStore;
     IDBTransactionInfo m_info;
 
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
@@ -91,15 +92,15 @@ private:
     bool m_inProgress { true };
     bool m_isAborting { false };
 
-    HashSet<RefPtr<MemoryObjectStore>> m_objectStores;
-    HashSet<RefPtr<MemoryObjectStore>> m_versionChangeAddedObjectStores;
-    HashSet<RefPtr<MemoryIndex>> m_indexes;
-    HashSet<RefPtr<MemoryIndex>> m_versionChangeAddedIndexes;
+    HashSet<Ref<MemoryObjectStore>> m_objectStores;
+    HashSet<Ref<MemoryObjectStore>> m_versionChangeAddedObjectStores;
+    HashSet<Ref<MemoryIndex>> m_indexes;
+    HashSet<Ref<MemoryIndex>> m_versionChangeAddedIndexes;
 
     HashMap<String, RefPtr<MemoryObjectStore>> m_deletedObjectStores;
-    HashSet<RefPtr<MemoryIndex>> m_deletedIndexes;
+    HashSet<Ref<MemoryIndex>> m_deletedIndexes;
     HashMap<MemoryObjectStore*, String> m_originalObjectStoreNames;
-    HashMap<RefPtr<MemoryIndex>, String> m_originalIndexNames;
+    HashMap<Ref<MemoryIndex>, String> m_originalIndexNames;
 
     HashMap<IDBResourceIdentifier, WeakPtr<MemoryCursor>> m_cursors;
 };

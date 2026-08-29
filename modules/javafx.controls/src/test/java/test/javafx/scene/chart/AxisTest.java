@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,7 @@
 
 package test.javafx.scene.chart;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -41,11 +35,18 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Side;
+import javafx.scene.Scene;
 import javafx.scene.chart.Axis;
+import javafx.scene.chart.AxisShim;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import java.util.List;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 /**
  * All public members of Axis are tested here .
@@ -620,6 +621,37 @@ public class AxisTest {
     public void setAnimatedAndSeeValue() {
         axis.setAnimated(true);
         assertTrue(axis.getAnimated());
+    }
+
+    @Test
+    public void shouldAnimateRespectsReducedMotionPreference() {
+        Axis<String> testAxis = new Axis<>() {
+            @Override protected Object autoRange(double length) { return List.of();}
+            @Override protected void setRange(Object range, boolean animate) {}
+            @Override protected Object getRange() { return List.of(); }
+            @Override protected List<String> calculateTickValues(double length, Object range) { return List.of(); }
+            @Override protected String getTickMarkLabel(String value) { return value; }
+            @Override public double getZeroPosition() { return 0; }
+            @Override public double getDisplayPosition(String value) { return 0; }
+            @Override public String getValueForDisplay(double displayPosition) { return null; }
+            @Override public boolean isValueOnAxis(String value) { return false; }
+            @Override public double toNumericValue(String value) { return 0; }
+            @Override public String toRealValue(double value) { return null; }
+        };
+
+        StageLoader stageLoader = new StageLoader(testAxis);
+
+        try {
+            Scene scene = stageLoader.getStage().getScene();
+            assertTrue(AxisShim.shouldAnimate(testAxis));
+
+            scene.getPreferences().setReducedMotion(true);
+            Toolkit.getToolkit().firePulse();
+
+            assertFalse(AxisShim.shouldAnimate(testAxis));
+        } finally {
+            stageLoader.dispose();
+        }
     }
 
     @Test

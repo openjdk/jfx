@@ -38,6 +38,9 @@
 #include <gst/gstdeviceproviderfactory.h>
 #endif // GSTREAMER_LITE
 #include <gst/gstdynamictypefactory.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstmetafactory.h>
+#endif // GSTREAMER_LITE
 #include <gst/gsturi.h>
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
@@ -371,6 +374,13 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
         gst_registry_chunks_make_data (tmp,
         sizeof (GstRegistryChunkDynamicTypeFactory));
     pf = (GstRegistryChunkPluginFeature *) tmp;
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_META_FACTORY (feature)) {
+    pf = g_new0 (GstRegistryChunkPluginFeature, 1);
+    chk =
+        gst_registry_chunks_make_data (pf,
+        sizeof (GstRegistryChunkPluginFeature));
+#endif // GSTREAMER_LITE
   } else {
     GST_WARNING_OBJECT (feature, "unhandled feature type '%s'", type_name);
   }
@@ -736,6 +746,11 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
     unpack_element (*in, tmp, GstRegistryChunkDynamicTypeFactory, end, fail);
 
     pf = (GstRegistryChunkPluginFeature *) tmp;
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_META_FACTORY (feature)) {
+    align (*in);
+    unpack_element (*in, pf, GstRegistryChunkPluginFeature, end, fail);
+#endif // GSTREAMER_LITE
   } else {
     GST_WARNING ("unhandled factory type : %s", G_OBJECT_TYPE_NAME (feature));
     goto fail;

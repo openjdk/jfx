@@ -45,14 +45,16 @@ public:
     WTF_EXPORT_PRIVATE void encodeChecksum();
     WTF_EXPORT_PRIVATE void encodeFixedLengthData(std::span<const uint8_t>);
 
-    template<typename T, std::enable_if_t<std::is_enum<T>::value>* = nullptr>
+    template<typename T>
+        requires (std::is_enum_v<T>)
     Encoder& operator<<(const T& t)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Enum type must not be larger than 64 bits.");
         return *this << static_cast<uint64_t>(t);
     }
 
-    template<typename T, std::enable_if_t<!std::is_enum<T>::value && !std::is_arithmetic<typename std::remove_const<T>>::value>* = nullptr>
+    template<typename T>
+        requires (!std::is_arithmetic_v<typename std::remove_const<T>> && !std::is_enum_v<T>)
     Encoder& operator<<(const T& t)
     {
         Coder<T>::encodeForPersistence(*this, t);

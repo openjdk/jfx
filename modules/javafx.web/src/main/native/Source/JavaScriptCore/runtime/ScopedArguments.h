@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CommonIdentifiers.h"
-#include "GenericArgumentsImpl.h"
-#include "JSLexicalEnvironment.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/GenericArgumentsImpl.h>
+#include <JavaScriptCore/JSLexicalEnvironment.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -154,6 +154,8 @@ public:
     }
 
     void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
+
+    static JSArray* fastSlice(JSGlobalObject*, ScopedArguments*, uint64_t startIndex, uint64_t count);
 
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
 

@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "IDBError.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBTransactionInfo.h"
-#include "IndexKey.h"
+#include <WebCore/IDBError.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBTransactionInfo.h>
+#include <WebCore/IndexKey.h>
 #include <wtf/Deque.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -61,8 +62,9 @@ public:
 
     WEBCORE_EXPORT ~UniqueIDBDatabaseTransaction();
 
-    UniqueIDBDatabaseConnection* databaseConnection() const;
+    WEBCORE_EXPORT UniqueIDBDatabaseConnection* databaseConnection() const;
     UniqueIDBDatabase* database() const;
+    CheckedPtr<UniqueIDBDatabase> checkedDatabase() const;
     const IDBTransactionInfo& info() const { return m_transactionInfo; }
     WEBCORE_EXPORT bool isVersionChange() const;
     bool isReadOnly() const;
@@ -88,6 +90,7 @@ public:
     WEBCORE_EXPORT void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&);
     WEBCORE_EXPORT void openCursor(const IDBRequestData&, const IDBCursorInfo&);
     WEBCORE_EXPORT void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&);
+    void addOpenRequestResult(const IDBError&);
 
     void didActivateInBackingStore(const IDBError&);
 
@@ -101,8 +104,11 @@ public:
     bool generateIndexKeyForRecord(const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
     WEBCORE_EXPORT void didGenerateIndexKeyForRecord(IDBResourceIdentifier createIndexRequestIdentifier, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID);
 
+    bool isFinishingOrFinished() const { return m_isFinishingOrFinished; }
+
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
+    void setIsFinishingOrFinished() { m_isFinishingOrFinished = true; }
 
     WeakPtr<UniqueIDBDatabaseConnection> m_databaseConnection;
     IDBTransactionInfo m_transactionInfo;
@@ -116,6 +122,7 @@ private:
 
     uint64_t m_pendingGenerateIndexKeyRequests { 0 };
     IDBResourceIdentifier m_createIndexRequestIdentifier;
+    bool m_isFinishingOrFinished { false };
 };
 
 } // namespace IDBServer

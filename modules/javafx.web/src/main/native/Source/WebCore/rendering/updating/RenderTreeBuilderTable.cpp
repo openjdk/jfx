@@ -27,6 +27,8 @@
 #include "RenderTreeBuilderTable.h"
 
 #include "RenderElementInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
 #include "RenderTableCol.h"
@@ -59,7 +61,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableR
     auto createAnonymousTableCell = [&] (auto& parent) -> RenderTableCell& {
         auto newCell = createAnonymousTableCellWithStyle(parent.protectedDocument(), parent.style());
         auto& cell = *newCell;
-        m_builder.attach(parent, WTFMove(newCell), beforeChild);
+        m_builder.attach(parent, WTF::move(newCell), beforeChild);
         beforeChild = nullptr;
         return cell;
     };
@@ -120,7 +122,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableS
 
     auto newRow = createAnonymousTableRowWithStyle(parent.protectedDocument(), parent.style());
     auto& row = *newRow;
-    m_builder.attach(parent, WTFMove(newRow), beforeChild);
+    m_builder.attach(parent, WTF::move(newRow), beforeChild);
     beforeChild = nullptr;
     return row;
 }
@@ -138,7 +140,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
         auto newColGroup = createRenderer<RenderTableCol>(parent.document(), RenderStyle::createAnonymousStyleWithDisplay(parent.style(), DisplayType::TableColumnGroup));
         newColGroup->initializeStyle();
         auto& colGroup = *newColGroup;
-        m_builder.attach(parent, WTFMove(newColGroup), beforeChild);
+        m_builder.attach(parent, WTF::move(newColGroup), beforeChild);
         beforeChild = nullptr;
         return colGroup;
     }
@@ -185,7 +187,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
 
     auto newSection = createAnonymousTableSectionWithStyle(parent.protectedDocument(), parent.style());
     auto& section = *newSection;
-    m_builder.attach(parent, WTFMove(newSection), beforeChild);
+    m_builder.attach(parent, WTF::move(newSection), beforeChild);
     beforeChild = nullptr;
     return section;
 }
@@ -197,7 +199,7 @@ void RenderTreeBuilder::Table::attach(RenderTableRow& parent, RenderPtr<RenderOb
 
     auto& newChild = *child.get();
     ASSERT(!beforeChild || is<RenderTableCell>(*beforeChild));
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
     // FIXME: child should always be a RenderTableCell at this point.
     if (auto* renderTableCell = dynamicDowncast<RenderTableCell>(newChild))
         parent.didInsertTableCell(*renderTableCell, beforeChild);
@@ -212,7 +214,7 @@ void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<Rend
     if (auto* renderTableRow = dynamicDowncast<RenderTableRow>(child.get()))
         parent.willInsertTableRow(*renderTableRow, beforeChild);
     ASSERT(!beforeChild || is<RenderTableRow>(*beforeChild));
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
 }
 
 void RenderTreeBuilder::Table::attach(RenderTable& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
@@ -226,7 +228,7 @@ void RenderTreeBuilder::Table::attach(RenderTable& parent, RenderPtr<RenderObjec
     else if (auto* renderTableCol = dynamicDowncast<RenderTableCol>(newChild))
         parent.willInsertTableColumn(*renderTableCol, beforeChild);
 
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
 }
 
 bool RenderTreeBuilder::Table::childRequiresTable(const RenderElement& parent, const RenderObject& child)
@@ -275,7 +277,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Table::collapseAndDetachAnonymousNext
 void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingCells(const RenderTableCell& willBeDestroyed)
 {
     if (auto nextCellToDestroy = collapseAndDetachAnonymousNextSibling(willBeDestroyed.row(), willBeDestroyed.previousCell(), willBeDestroyed.nextCell()))
-        downcast<RenderTableCell>(*nextCellToDestroy).deleteLines();
+        downcast<RenderTableCell>(*nextCellToDestroy).invalidateLineLayout(RenderBlockFlow::InvalidationReason::InternalMove);
 }
 
 void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingRows(const RenderTableRow& willBeDestroyed)

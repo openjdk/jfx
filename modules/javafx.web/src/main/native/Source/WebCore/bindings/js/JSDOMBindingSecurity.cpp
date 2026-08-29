@@ -22,13 +22,16 @@
 #include "config.h"
 #include "JSDOMBindingSecurity.h"
 
-#include "DocumentInlines.h"
+#include "DocumentSecurityOrigin.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTTPParsers.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMWindowBase.h"
+#include "JSDOMWindowCustom.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
+#include "NodeDocument.h"
+#include "RemoteDOMWindow.h"
 #include "SecurityOrigin.h"
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
@@ -46,8 +49,8 @@ void printErrorMessageForFrame(LocalFrame* frame, const String& message)
 // FIXME: Refactor to share code with LocalDOMWindow::crossDomainAccessErrorMessage.
 static String remoteFrameAccessError(JSC::JSGlobalObject* lexicalGlobalObject)
 {
-    auto& active = activeDOMWindow(*lexicalGlobalObject);
-    Ref activeOrigin = active.document()->securityOrigin();
+    RefPtr remoteWindow = dynamicDowncast<RemoteDOMWindow>(asJSDOMWindow(lexicalGlobalObject)->wrapped());
+    Ref activeOrigin = remoteWindow ? remoteWindow->frame()->frameDocumentSecurityOriginOrOpaque() : activeDOMWindow(*lexicalGlobalObject).document()->securityOrigin();
     return makeString("Blocked a frame with origin \""_s, activeOrigin->toString(), "\" from accessing a cross-origin frame. Protocols, domains, and ports must match."_s);
 }
 

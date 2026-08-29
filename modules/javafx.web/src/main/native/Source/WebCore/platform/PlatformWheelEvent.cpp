@@ -49,7 +49,7 @@ PlatformWheelEvent PlatformWheelEvent::createFromGesture(const PlatformGestureEv
     bool ctrlKey = true;
     bool altKey = platformGestureEvent.modifiers().contains(PlatformEvent::Modifier::AltKey);
     bool metaKey = platformGestureEvent.modifiers().contains(PlatformEvent::Modifier::MetaKey);
-    PlatformWheelEvent platformWheelEvent(platformGestureEvent.pos(), platformGestureEvent.globalPosition(), deltaX, deltaY, wheelTicksX, wheelTicksY, ScrollByPixelWheelEvent, shiftKey, ctrlKey, altKey, metaKey);
+    PlatformWheelEvent platformWheelEvent(platformGestureEvent.pos(), platformGestureEvent.globalPosition(), deltaX, deltaY, wheelTicksX, wheelTicksY, PlatformWheelEventGranularity::ScrollByPixelWheelEvent, shiftKey, ctrlKey, altKey, metaKey);
 
     // PlatformEvent
     platformWheelEvent.m_timestamp = platformGestureEvent.timestamp();

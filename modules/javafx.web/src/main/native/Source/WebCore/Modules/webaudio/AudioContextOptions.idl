@@ -24,6 +24,7 @@
  */
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioContextOptions {
     (AudioContextLatencyCategory or double) latencyHint = "interactive";
     float sampleRate;

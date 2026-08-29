@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "GetPutInfo.h"
-#include "JSObject.h"
-#include "VariableEnvironment.h"
+#include <JavaScriptCore/GetPutInfo.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/VariableEnvironment.h>
 
 namespace JSC {
 

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "NodeIdentifier.h"
-#include "Path.h"
-#include "Region.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/NodeIdentifier.h>
+#include <WebCore/Path.h>
+#include <WebCore/Region.h>
 
 namespace IPC {
 class Decoder;
@@ -87,7 +87,7 @@ inline bool operator==(const InteractionRegion& a, const InteractionRegion& b)
         && (!a.clipPath || &a.clipPath.value() == &b.clipPath.value());
 }
 
-WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const FloatRect&, const FloatSize&, const std::optional<AffineTransform>&);
+WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(const RenderObject&, const FloatRect&, const FloatSize&, const std::optional<AffineTransform>&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const InteractionRegion&);
 

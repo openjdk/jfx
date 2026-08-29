@@ -26,6 +26,7 @@
 #include "config.h"
 #include "AccessibilitySpinButtonPart.h"
 
+#include "AccessibilityObjectInlines.h"
 #include "AccessibilitySpinButton.h"
 
 namespace WebCore {

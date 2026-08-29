@@ -416,6 +416,8 @@ gst_volume_class_init (GstVolumeClass * klass)
   trans_class->transform_ip_on_passthrough = FALSE;
 
   filter_class->setup = GST_DEBUG_FUNCPTR (volume_setup);
+
+  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "volume", 0, "Volume gain");
 }
 
 static void
@@ -1047,8 +1049,6 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "volume", 0, "Volume gain");
-
   return GST_ELEMENT_REGISTER (volume, plugin);
 }
 

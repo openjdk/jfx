@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1149,10 +1149,14 @@ static jstring convertNSStringToJString(id aString, int length)
 {
     GET_MAIN_JENV;
 
-    jstring jStr;
+    jstring jStr = NULL;
     if ([aString isKindOfClass:[NSAttributedString class]]) {
+        if (length <= 0 || length > SIZE_MAX / sizeof(jchar)) {
+            return NULL;
+        }
+
         NSData *data = [[aString string] dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
-        jchar *dataBytes = (jchar *)malloc(sizeof(jchar) * length);
+        jchar *dataBytes = (jchar *)malloc(sizeof(jchar) * (size_t)length);
         if (dataBytes != NULL) {
             [data getBytes:dataBytes length:length * 2];
             jStr = (*env)->NewString(env, dataBytes, length);

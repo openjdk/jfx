@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BExport.h"
 #include "BInline.h"
 #include "Mutex.h"
@@ -96,7 +98,9 @@ private:
 // instantiated does not have export symbol visibility.
 #define DECLARE_STATIC_PER_PROCESS_STORAGE_WITH_LINKAGE(Type, Linkage) \
 template<> struct StaticPerProcessStorageTraits<Type> { \
-    using Memory = typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type; \
+    struct alignas(Type) Memory { \
+        std::byte data[sizeof(Type)]; \
+    }; \
     struct Linkage Storage { \
         static std::atomic<Type*> s_object; \
         static Mutex s_mutex; \
@@ -110,3 +114,5 @@ template<> struct StaticPerProcessStorageTraits<Type> { \
     StaticPerProcessStorageTraits<Type>::Memory StaticPerProcessStorageTraits<Type>::Storage::s_memory { };
 
 } // namespace bmalloc
+
+#endif // __cplusplus

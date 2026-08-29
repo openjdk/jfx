@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "IDBCursorRecord.h"
-#include "IDBKey.h"
-#include "IDBKeyData.h"
-#include "IDBKeyPath.h"
-#include "IDBValue.h"
-#include "SharedBuffer.h"
+#include <WebCore/IDBCursorRecord.h>
+#include <WebCore/IDBKey.h>
+#include <WebCore/IDBKeyData.h>
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/IDBValue.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class IDBGetResult {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBGetResult, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBGetResult, WEBCORE_EXPORT);
 public:
     IDBGetResult()
         : m_isDefined(false)
@@ -62,18 +62,18 @@ public:
     }
 
     IDBGetResult(const IDBKeyData& keyData, IDBValue&& value, const std::optional<IDBKeyPath>& keyPath)
-        : m_value(WTFMove(value))
+        : m_value(WTF::move(value))
         , m_keyData(keyData)
         , m_keyPath(keyPath)
     {
     }
 
     IDBGetResult(const IDBKeyData& keyData, const IDBKeyData& primaryKeyData, IDBValue&& value, const std::optional<IDBKeyPath>& keyPath, Vector<IDBCursorRecord>&& prefetechedRecords = { }, bool isDefined = true)
-        : m_value(WTFMove(value))
+        : m_value(WTF::move(value))
         , m_keyData(keyData)
         , m_primaryKeyData(primaryKeyData)
         , m_keyPath(keyPath)
-        , m_prefetchedRecords(WTFMove(prefetechedRecords))
+        , m_prefetchedRecords(WTF::move(prefetechedRecords))
         , m_isDefined(isDefined)
     {
     }

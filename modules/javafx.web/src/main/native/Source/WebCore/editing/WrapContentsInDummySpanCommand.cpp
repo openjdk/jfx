@@ -27,6 +27,7 @@
 #include "WrapContentsInDummySpanCommand.h"
 
 #include "ApplyStyleCommand.h"
+#include "NodeDocument.h"
 
 namespace WebCore {
 

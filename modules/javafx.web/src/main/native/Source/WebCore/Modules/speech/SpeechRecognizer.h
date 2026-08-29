@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "SpeechRecognitionCaptureSource.h"
-#include "SpeechRecognitionConnectionClientIdentifier.h"
-#include "SpeechRecognitionError.h"
+#include <WebCore/SpeechRecognitionCaptureSource.h>
+#include <WebCore/SpeechRecognitionConnectionClientIdentifier.h>
+#include <WebCore/SpeechRecognitionError.h>
+#include <wtf/CanMakeWeakPtr.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
@@ -38,24 +40,17 @@ OBJC_CLASS WebSpeechRecognizerTask;
 #endif
 
 namespace WebCore {
-class SpeechRecognizer;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SpeechRecognizer> : std::true_type { };
-}
-
-namespace WebCore {
 
 class SpeechRecognitionRequest;
 class SpeechRecognitionUpdate;
 
-class SpeechRecognizer : public CanMakeWeakPtr<SpeechRecognizer> {
+class SpeechRecognizer final : public CanMakeWeakPtr<SpeechRecognizer>, public CanMakeCheckedPtr<SpeechRecognizer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(SpeechRecognizer, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SpeechRecognizer);
 public:
     using DelegateCallback = Function<void(const SpeechRecognitionUpdate&)>;
-    WEBCORE_EXPORT explicit SpeechRecognizer(DelegateCallback&&, UniqueRef<SpeechRecognitionRequest>&&);
+    WEBCORE_EXPORT explicit SpeechRecognizer(DelegateCallback&&, Ref<SpeechRecognitionRequest>&&);
+    WEBCORE_EXPORT ~SpeechRecognizer();
 
 #if ENABLE(MEDIA_STREAM)
     WEBCORE_EXPORT void start(Ref<RealtimeMediaSource>&&, bool mockSpeechRecognitionEnabled);
@@ -87,7 +82,7 @@ private:
     void stopRecognition();
 
     DelegateCallback m_delegateCallback;
-    const UniqueRef<SpeechRecognitionRequest> m_request;
+    const Ref<SpeechRecognitionRequest> m_request;
     std::unique_ptr<SpeechRecognitionCaptureSource> m_source;
     State m_state { State::Inactive };
 

@@ -56,7 +56,7 @@ public:
     virtual void handleCommitFailedAfterPostflight(SQLTransaction&) = 0;
 };
 
-class SQLTransaction : public ThreadSafeRefCounted<SQLTransaction>, public SQLTransactionStateMachine<SQLTransaction> {
+class SQLTransaction : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SQLTransaction>, public SQLTransactionStateMachine<SQLTransaction> {
 public:
     static Ref<SQLTransaction> create(Ref<Database>&&, RefPtr<SQLTransactionCallback>&&, RefPtr<VoidCallback>&& successCallback, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<SQLTransactionWrapper>&&, bool readOnly);
     ~SQLTransaction();

@@ -287,7 +287,7 @@ GstClockTimeDiff gst_base_sink_get_ts_offset    (GstBaseSink *sink);
 /* last sample */
 
 GST_BASE_API
-GstSample *     gst_base_sink_get_last_sample   (GstBaseSink *sink);
+GstSample *     gst_base_sink_get_last_sample   (GstBaseSink *sink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void            gst_base_sink_set_last_sample_enabled (GstBaseSink *sink, gboolean enabled);
@@ -350,7 +350,7 @@ GstFlowReturn   gst_base_sink_wait              (GstBaseSink *sink, GstClockTime
                                                  GstClockTimeDiff *jitter);
 
 GST_BASE_API
-GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink);
+GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSink, gst_object_unref)
 

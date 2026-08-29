@@ -33,10 +33,10 @@ using namespace JSC;
 void printInternal(PrintStream& out, ConstantMode mode)
 {
     switch (mode) {
-    case IsConstant:
+    case ConstantMode::IsConstant:
         out.print("Constant");
         return;
-    case IsVariable:
+    case ConstantMode::IsVariable:
         out.print("Variable");
         return;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1017,8 +1017,6 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     else
     {
         gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, pVideoSink, NULL);
-        if (!gst_element_link_many(pVideoSink, NULL))
-            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
     }
 #endif
     GstPad* sink_pad = gst_element_get_static_pad(videoqueue, "sink");

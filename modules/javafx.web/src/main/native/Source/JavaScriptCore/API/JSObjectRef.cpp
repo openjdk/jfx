@@ -814,10 +814,10 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
 
     JSObject* jsObject = toJS(object);
     JSPropertyNameArrayRef propertyNames = new OpaqueJSPropertyNameArray(&vm);
-    PropertyNameArray array(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-    jsObject->getPropertyNames(globalObject, array, DontEnumPropertiesMode::Exclude);
+    PropertyNameArrayBuilder arrayBuilder(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    jsObject->getPropertyNames(globalObject, arrayBuilder, DontEnumPropertiesMode::Exclude);
 
-    propertyNames->array = WTF::map(array, [](auto& item) {
+    propertyNames->array = WTF::map(arrayBuilder, [](auto& item) {
         return OpaqueJSString::tryCreate(item.string()).releaseNonNull();
     });
 
@@ -850,7 +850,7 @@ JSStringRef JSPropertyNameArrayGetNameAtIndex(JSPropertyNameArrayRef array, size
 
 void JSPropertyNameAccumulatorAddName(JSPropertyNameAccumulatorRef array, JSStringRef propertyName)
 {
-    PropertyNameArray* propertyNames = toJS(array);
+    PropertyNameArrayBuilder* propertyNames = toJS(array);
     VM& vm = propertyNames->vm();
     JSLockHolder locker(vm);
     propertyNames->add(propertyName->identifier(&vm));

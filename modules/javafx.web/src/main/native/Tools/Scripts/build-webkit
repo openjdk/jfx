@@ -48,6 +48,8 @@ use Text::ParseWords;
 
 sub writeCongrats();
 
+maybeEnterWebKitContainerSDK();
+
 checkRequiredSystemConfig();
 setConfiguration();
 
@@ -60,6 +62,7 @@ if (shouldBuildForCrossTarget()) {
     my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "build-webkit"));
     runInFlatpak(@command);
 }
+maybeUseContainerSDKRootDir();
 
 my $originalWorkingDirectory = getcwd();
 chdirWebKit();
@@ -217,11 +220,6 @@ if (isAppleCocoaWebKit()) {
         die "--only-webkit cannot be combined with --only\n" if defined $xcodeScheme;
         $xcodeScheme = "WebKit";
     }
-    if (xcodeVersion() ge "14.0" && xcodeVersion() lt "15.0" && !defined($ENV{UseSRCROOTSupportForTAPI})) {
-        # The call to XcodeOptions below checks this environment variable and
-        # sets TAPI_USE_SRCROOT for xcconfigs.
-        $ENV{UseSRCROOTSupportForTAPI} = "YES";
-    }
 
     push @options, XcodeOptions();
 
@@ -240,7 +238,26 @@ if (isAppleCocoaWebKit()) {
 
 my $result = 0;
 
-if (isCMakeBuild()) {
+if ((isCMakeBuild() && !isAnyWindows()) || webkitdirs::isJava()) {
+    if (defined $ENV{'BUILD_WEBKIT_PRE_SCRIPT'}) {
+        my $preScript = $ENV{'BUILD_WEBKIT_PRE_SCRIPT'};
+
+        if (! -e $preScript) {
+            die "Error: BUILD_WEBKIT_PRE_SCRIPT is set to '$preScript' but the file does not exist.\n";
+        }
+
+        if (! -x $preScript) {
+            die "Error: BUILD_WEBKIT_PRE_SCRIPT is set to '$preScript' but the file is not executable.\n";
+        }
+
+        print "Running pre-build script: $preScript\n";
+        my $exitCode = system($preScript);
+
+        if ($exitCode != 0) {
+            die "Error: Pre-build script '$preScript' failed with exit code " . ($exitCode >> 8) . ".\n";
+        }
+    }
+
     if ((!canUseNinja() || defined($ENV{NUMBER_OF_PROCESSORS})) && !(webkitdirs::isJava() && isAnyWindows())) {
         # If the user environment is not setting a specific number of process,
         # then don't pass the number of jobs to Ninja. Because Ninja will
@@ -255,6 +272,22 @@ if (isCMakeBuild()) {
     # we enable new features. This forces a reconfiguration.
     my @featureArgs = cmakeArgsFromFeatures(@features, !$noExperimentalFeatures);
     removeCMakeCache(@featureArgs);
+
+    # Allow ccache to hit when building on different directories
+    $ENV{"CCACHE_BASEDIR"} //= sourceDir();
+
+    if (isGtk() || isWPE()) {
+        use constant VIDEO_DECODING_LIMIT => "-DVIDEO_DECODING_LIMIT=7680x4320\@60";
+        my $videoDecodingLimitFound = 0;
+        foreach my $cmakeArg (@cmakeArgs) {
+            if (!rindex $cmakeArg, "-DVIDEO_DECODING_LIMIT", 0) {
+                $videoDecodingLimitFound = 1;
+            }
+        }
+        if (!$videoDecodingLimitFound) {
+            push @cmakeArgs, VIDEO_DECODING_LIMIT;
+        }
+    }
 
     buildCMakeProjectOrExit($clean, $prefixPath, $makeArgs, @featureArgs, @cmakeArgs);
 }

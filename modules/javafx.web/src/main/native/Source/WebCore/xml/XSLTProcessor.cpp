@@ -26,12 +26,17 @@
 #if ENABLE(XSLT)
 
 #include "DOMImplementation.h"
+#include "CachedResourceLoader.h"
 #include "CommonAtomStrings.h"
 #include "ContentSecurityPolicy.h"
 #include "DocumentFragment.h"
-#include "DocumentInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
+#include "LocalFrameView.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
+#include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include "Text.h"
 #include "TextResourceDecoder.h"
@@ -90,7 +95,6 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
             result->setCookieURL(oldDocument->cookieURL());
             result->setFirstPartyForCookies(oldDocument->firstPartyForCookies());
             result->setSiteForCookies(oldDocument->siteForCookies());
-            result->setStrictMixedContentMode(oldDocument->isStrictMixedContentMode());
             CheckedRef resultCSP = *result->contentSecurityPolicy();
             CheckedRef oldDocumentCSP = *oldDocument->contentSecurityPolicy();
             resultCSP->copyStateFrom(oldDocumentCSP.ptr());
@@ -102,7 +106,7 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
 
     auto decoder = TextResourceDecoder::create(sourceMIMEType);
     decoder->setEncoding(sourceEncoding.isEmpty() ? PAL::UTF8Encoding() : PAL::TextEncoding(sourceEncoding), TextResourceDecoder::EncodingFromXMLHeader);
-    result->setDecoder(WTFMove(decoder));
+    result->setDecoder(WTF::move(decoder));
 
     result->setMarkupUnsafe(documentSource, { ParserContentPolicy::AllowDeclarativeShadowRoots });
 
@@ -131,7 +135,7 @@ RefPtr<DocumentFragment> XSLTProcessor::transformToFragment(Node& sourceNode, Do
 
     if (!transformToString(sourceNode, resultMIMEType, resultString, resultEncoding))
         return nullptr;
-    return createFragmentForTransformToFragment(outputDocument, WTFMove(resultString), WTFMove(resultMIMEType));
+    return createFragmentForTransformToFragment(outputDocument, WTF::move(resultString), WTF::move(resultMIMEType));
 }
 
 void XSLTProcessor::setParameter(const String& /*namespaceURI*/, const String& localName, const String& value)

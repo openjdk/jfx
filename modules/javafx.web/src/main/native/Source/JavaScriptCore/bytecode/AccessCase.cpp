@@ -56,7 +56,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 AccessCase::AccessCase(VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain)
     : m_type(type)
     , m_offset(offset)
-    , m_polyProtoAccessChain(WTFMove(prototypeAccessChain))
+    , m_polyProtoAccessChain(WTF::move(prototypeAccessChain))
     , m_identifier(identifier)
 {
     m_structureID.setMayBeNull(vm, owner, structure);
@@ -192,7 +192,7 @@ Ref<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, Cache
         RELEASE_ASSERT_NOT_REACHED();
     };
 
-    return adoptRef(*new AccessCase(vm, owner, type, identifier, offset, structure, conditionSet, WTFMove(prototypeAccessChain)));
+    return adoptRef(*new AccessCase(vm, owner, type, identifier, offset, structure, conditionSet, WTF::move(prototypeAccessChain)));
 }
 
 RefPtr<AccessCase> AccessCase::createTransition(
@@ -243,7 +243,7 @@ RefPtr<AccessCase> AccessCase::createTransition(
             return nullptr;
     }
 
-    return adoptRef(*new AccessCase(vm, owner, Transition, identifier, offset, newStructure, conditionSet, WTFMove(prototypeAccessChain)));
+    return adoptRef(*new AccessCase(vm, owner, Transition, identifier, offset, newStructure, conditionSet, WTF::move(prototypeAccessChain)));
 }
 
 Ref<AccessCase> AccessCase::createDelete(
@@ -730,7 +730,9 @@ void AccessCase::forEachDependentCell(VM&, const Functor& functor) const
         break;
     }
     case CustomValueGetter:
-    case CustomValueSetter: {
+    case CustomValueSetter:
+    case CustomAccessorGetter:
+    case CustomAccessorSetter: {
         auto& accessor = this->as<GetterSetterAccessCase>();
         if (accessor.customSlotBase())
             functor(accessor.customSlotBase());
@@ -755,8 +757,6 @@ void AccessCase::forEachDependentCell(VM&, const Functor& functor) const
         if (as<InstanceOfAccessCase>().prototype())
             functor(as<InstanceOfAccessCase>().prototype());
         break;
-    case CustomAccessorGetter:
-    case CustomAccessorSetter:
     case Load:
     case LoadMegamorphic:
     case StoreMegamorphic:

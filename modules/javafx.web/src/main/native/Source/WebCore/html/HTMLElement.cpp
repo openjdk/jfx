@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLElement.h"
 
+#include "AXObjectCache.h"
 #include "CSSMarkup.h"
 #include "CSSParserFastPaths.h"
 #include "CSSPropertyNames.h"
@@ -38,9 +39,10 @@
 #include "CommonAtomStrings.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMTokenList.h"
-#include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
@@ -62,7 +64,6 @@
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMaybeFormAssociatedCustomElement.h"
-#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
@@ -82,10 +83,10 @@
 #include "NodeTraversal.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
-#include "Quirks.h"
 #include "RenderElement.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
 #include "SimulatedClick.h"
 #include "StyleProperties.h"
@@ -108,7 +109,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElement);
 
 using namespace HTMLNames;
 
@@ -487,26 +488,26 @@ ExceptionOr<void> HTMLElement::setInnerText(String&& text)
     // FIXME: This doesn't take whitespace collapsing into account at all.
 
     if (!text.contains([](char16_t c) { return c == '\n' || c == '\r'; })) {
-        stringReplaceAll(WTFMove(text));
+        stringReplaceAll(WTF::move(text));
         return { };
     }
 
     if (isConnected() && isTextControlInnerTextElement()) {
         if (!text.contains('\r')) {
-            stringReplaceAll(WTFMove(text));
+            stringReplaceAll(WTF::move(text));
             return { };
         }
         String textWithConsistentLineBreaks = makeStringBySimplifyingNewLines(text);
-        stringReplaceAll(WTFMove(textWithConsistentLineBreaks));
+        stringReplaceAll(WTF::move(textWithConsistentLineBreaks));
         return { };
     }
 
     // FIXME: This should use replaceAll(), after we fix that to work properly for DocumentFragment.
     // Add text nodes and <br> elements.
-    Ref fragment = textToFragment(protectedDocument(), WTFMove(text));
+    Ref fragment = textToFragment(protectedDocument(), WTF::move(text));
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
-    return replaceChildrenWithFragment(*this, WTFMove(fragment));
+    return replaceChildrenWithFragment(*this, WTF::move(fragment));
 }
 
 ExceptionOr<void> HTMLElement::setOuterText(String&& text)
@@ -521,9 +522,9 @@ ExceptionOr<void> HTMLElement::setOuterText(String&& text)
 
     // Convert text to fragment with <br> tags instead of linebreaks if needed.
     if (text.contains([](char16_t c) { return c == '\n' || c == '\r'; }))
-        newChild = textToFragment(protectedDocument(), WTFMove(text));
+        newChild = textToFragment(protectedDocument(), WTF::move(text));
     else
-        newChild = Text::create(protectedDocument(), WTFMove(text));
+        newChild = Text::create(protectedDocument(), WTF::move(text));
 
     if (!parentNode())
         return Exception { ExceptionCode::HierarchyRequestError };
@@ -537,7 +538,7 @@ ExceptionOr<void> HTMLElement::setOuterText(String&& text)
         if (result.hasException())
             return result.releaseException();
     }
-    if (RefPtr previousText = dynamicDowncast<Text>(WTFMove(prev))) {
+    if (RefPtr previousText = dynamicDowncast<Text>(WTF::move(prev))) {
         auto result = mergeWithNextTextNode(*previousText);
         if (result.hasException())
             return result.releaseException();
@@ -966,12 +967,15 @@ void HTMLElement::setAutocorrect(bool autocorrect)
 
 InputMode HTMLElement::canonicalInputMode() const
 {
-    return inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr));
+    auto mode = inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr));
+    if (mode == InputMode::None && protectedDocument()->quirks().shouldIgnoreInputModeNone())
+        return InputMode::Unspecified;
+    return mode;
 }
 
 const AtomString& HTMLElement::inputMode() const
 {
-    return stringForInputMode(canonicalInputMode());
+    return stringForInputMode(inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr)));
 }
 
 EnterKeyHint HTMLElement::canonicalEnterKeyHint() const

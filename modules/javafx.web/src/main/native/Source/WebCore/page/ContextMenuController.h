@@ -25,11 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(CONTEXT_MENUS)
 
-#include "ContextMenuContext.h"
-#include "ContextMenuItem.h"
-#include "HitTestRequest.h"
+#include <WebCore/ContextMenuContext.h>
+#include <WebCore/ContextMenuItem.h>
+#include <WebCore/HitTestRequest.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
@@ -84,17 +85,21 @@ private:
     void appendItem(ContextMenuItem&, ContextMenu* parentMenu);
 
     void createAndAppendFontSubMenu(ContextMenuItem&);
+#if !PLATFORM(GTK) && !PLATFORM(WPE)
     void createAndAppendSpellingAndGrammarSubMenu(ContextMenuItem&);
-    void createAndAppendSpellingSubMenu(ContextMenuItem&);
-    void createAndAppendSpeechSubMenu(ContextMenuItem&);
     void createAndAppendWritingDirectionSubMenu(ContextMenuItem&);
     void createAndAppendTextDirectionSubMenu(ContextMenuItem&);
+#endif
+#if PLATFORM(COCOA)
+    void createAndAppendSpeechSubMenu(ContextMenuItem&);
     void createAndAppendSubstitutionsSubMenu(ContextMenuItem&);
     void createAndAppendTransformationsSubMenu(ContextMenuItem&);
-    bool shouldEnableCopyLinkWithHighlight() const;
+#endif
 #if PLATFORM(GTK)
     void createAndAppendUnicodeSubMenu(ContextMenuItem&);
 #endif
+
+    bool shouldEnableCopyLinkWithHighlight() const;
 
 #if ENABLE(PDFJS)
     void performPDFJSAction(LocalFrame&, const String& action);

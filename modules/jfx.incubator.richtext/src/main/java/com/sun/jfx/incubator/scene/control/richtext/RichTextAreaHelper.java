@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,8 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import com.sun.javafx.util.Utils;
-import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
-import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
  * Manages RichTextArea Accessor.
@@ -38,6 +36,7 @@ public class RichTextAreaHelper {
 
     public interface Accessor {
         public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit);
+        public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height);
     }
 
     static {
@@ -57,5 +56,9 @@ public class RichTextAreaHelper {
 
     public static boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
         return accessor.getText(t, start, end, sb, limit);
+    }
+
+    public static void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+        accessor.setDocumentArea(t, minX, minY, width, height);
     }
 }

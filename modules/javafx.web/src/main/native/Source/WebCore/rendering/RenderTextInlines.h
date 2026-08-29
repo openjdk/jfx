@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,14 +21,14 @@
 
 #pragma once
 
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "WordTrailingSpace.h"
 
 namespace WebCore {
 
-inline LayoutUnit RenderText::marginLeft() const { return Style::evaluateMinimum(style().marginLeft(), 0_lu); }
-inline LayoutUnit RenderText::marginRight() const { return Style::evaluateMinimum(style().marginRight(), 0_lu); }
+inline LayoutUnit RenderText::marginLeft() const { return Style::evaluateMinimum<LayoutUnit>(style().marginLeft(), 0_lu, style().usedZoomForLength()); }
+inline LayoutUnit RenderText::marginRight() const { return Style::evaluateMinimum<LayoutUnit>(style().marginRight(), 0_lu, style().usedZoomForLength()); }
 
 template <typename MeasureTextCallback>
 float RenderText::measureTextConsideringPossibleTrailingSpace(bool currentCharacterIsSpace, unsigned startIndex, unsigned wordLength, WordTrailingSpace& wordTrailingSpace, SingleThreadWeakHashSet<const Font>& fallbackFonts, MeasureTextCallback&& callback)

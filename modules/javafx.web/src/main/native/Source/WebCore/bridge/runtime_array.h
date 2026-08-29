@@ -59,7 +59,7 @@ public:
     ~RuntimeArray();
     static void destroy(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);

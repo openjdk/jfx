@@ -56,7 +56,7 @@ bool JSSymbolTableObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObj
     return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
-void JSSymbolTableObject::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSSymbolTableObject::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(object);

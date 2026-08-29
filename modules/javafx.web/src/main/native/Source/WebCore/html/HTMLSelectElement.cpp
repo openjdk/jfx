@@ -3,7 +3,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2010-2022 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -32,14 +32,20 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ContainerNodeInlines.h"
+#include "CSSFontSelector.h"
 #include "DOMFormData.h"
 #include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementTraversal.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FormController.h"
 #include "GenericCachedHTMLCollection.h"
+#include "HTMLDataListElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLHRElement.h"
 #include "HTMLNames.h"
@@ -48,23 +54,29 @@
 #include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "NodeRareData.h"
-#include "Page.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
+#include "RenderScrollbar.h"
+#include "RenderText.h"
 #include "RenderTheme.h"
 #include "Settings.h"
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
+#if !PLATFORM(IOS_FAMILY)
+#include <WebCore/PopupMenu.h>
+#endif
+
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLSelectElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLSelectElement);
 
 using namespace WTF::Unicode;
 
@@ -98,6 +110,35 @@ Ref<HTMLSelectElement> HTMLSelectElement::create(const QualifiedName& tagName, D
 Ref<HTMLSelectElement> HTMLSelectElement::create(Document& document)
 {
     return adoptRef(*new HTMLSelectElement(selectTag, document, nullptr));
+}
+
+HTMLSelectElement::~HTMLSelectElement() = default;
+
+void HTMLSelectElement::didDetachRenderers()
+{
+#if !PLATFORM(IOS_FAMILY)
+    if (RefPtr popup = m_popup)
+        popup->hide();
+    m_popup = nullptr;
+    setPopupIsVisible(false);
+#endif
+    HTMLFormControlElement::didDetachRenderers();
+}
+
+HTMLSelectElement* HTMLSelectElement::findOwnerSelect(ContainerNode* startNode, ExcludeOptGroup excludeOptGroup)
+{
+    if (!startNode)
+        return nullptr;
+    if (auto* select = dynamicDowncast<HTMLSelectElement>(*startNode))
+        return select;
+    if (is<HTMLOptGroupElement>(*startNode)) {
+        if (excludeOptGroup == ExcludeOptGroup::Yes)
+            return nullptr;
+        return findOwnerSelect(startNode->parentNode(), ExcludeOptGroup::Yes);
+    }
+    if (is<HTMLDataListElement>(*startNode) || is<HTMLHRElement>(*startNode) || is<HTMLOptionElement>(*startNode))
+        return nullptr;
+    return findOwnerSelect(startNode->parentNode(), excludeOptGroup);
 }
 
 void HTMLSelectElement::didRecalcStyle(OptionSet<Style::Change> styleChange)
@@ -185,18 +226,6 @@ bool HTMLSelectElement::valueMissing() const
     return firstSelectionIndex < 0 || (!firstSelectionIndex && hasPlaceholderLabelOption());
 }
 
-void HTMLSelectElement::listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow)
-{
-    if (!multiple())
-        optionSelectedByUser(listToOptionIndex(listIndex), fireOnChangeNow, false);
-    else {
-        updateSelectedState(listIndex, allowMultiplySelections, shift);
-        updateValidity();
-        if (fireOnChangeNow)
-            listBoxOnChange();
-    }
-}
-
 bool HTMLSelectElement::usesMenuList() const
 {
 #if !PLATFORM(IOS_FAMILY)
@@ -239,7 +268,7 @@ ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element,
         [](const auto& htmlElement) -> HTMLElement& { return *htmlElement; }
     );
 
-    return parent->insertBefore(toInsert, WTFMove(beforeElement));
+    return parent->insertBefore(toInsert, WTF::move(beforeElement));
 }
 
 void HTMLSelectElement::remove(int optionIndex)
@@ -349,10 +378,10 @@ RenderPtr<RenderElement> HTMLSelectElement::createElementRenderer(RenderStyle&& 
 {
 #if !PLATFORM(IOS_FAMILY)
     if (usesMenuList())
-        return createRenderer<RenderMenuList>(*this, WTFMove(style));
-    return createRenderer<RenderListBox>(*this, WTFMove(style));
+        return createRenderer<RenderMenuList>(*this, WTF::move(style));
+    return createRenderer<RenderListBox>(*this, WTF::move(style));
 #else
-    return createRenderer<RenderMenuList>(*this, WTFMove(style));
+    return createRenderer<RenderMenuList>(*this, WTF::move(style));
 #endif
 }
 
@@ -406,7 +435,7 @@ CompletionHandlerCallingScope HTMLSelectElement::optionToSelectFromChildChangeSc
     } else if (parentOptGroup && change.type == ContainerNode::ChildChange::Type::AllChildrenReplaced)
         optionToSelect = getLastSelectedOption(*parentOptGroup);
 
-    return CompletionHandlerCallingScope { [optionToSelect = WTFMove(optionToSelect), isInsertion = change.isInsertion(), select = Ref { *this }] {
+    return CompletionHandlerCallingScope { [optionToSelect = WTF::move(optionToSelect), isInsertion = change.isInsertion(), select = Ref { *this }] {
         if (optionToSelect)
             select->optionSelectionStateChanged(*optionToSelect, true);
         else if (isInsertion)
@@ -414,6 +443,10 @@ CompletionHandlerCallingScope HTMLSelectElement::optionToSelectFromChildChangeSc
     } };
 }
 
+// FIXME: we should really make this disappear when
+// document().settings().htmlEnhancedSelectParsingEnabled() is true, but
+// https://github.com/whatwg/html/issues/11825 needs to be resolved. It might not be possible
+// without a risky behavioral change.
 void HTMLSelectElement::childrenChanged(const ChildChange& change)
 {
     ASSERT(change.affectsElements != ChildChange::AffectsElements::Unknown);
@@ -782,6 +815,15 @@ void HTMLSelectElement::setOptionsChangedOnRenderer()
         downcast<RenderMenuList>(*renderer).setOptionsChanged(true);
 #endif
     }
+
+
+#if !PLATFORM(IOS_FAMILY)
+    if (!m_popupIsVisible)
+        return;
+
+    if (RefPtr popup = m_popup)
+        popup->updateFromElement();
+#endif
 }
 
 const Vector<WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>>& HTMLSelectElement::listItems() const
@@ -850,15 +892,57 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates, AllowStyleInv
         }
     };
 
+    if (document().settings().htmlEnhancedSelectParsingEnabled()) {
+        for (auto it = descendantsOfType<HTMLElement>(*const_cast<HTMLSelectElement*>(this)).begin(); it;) {
+            Ref descendant = *it;
+            if (RefPtr option = dynamicDowncast<HTMLOptionElement>(descendant)) {
+                handleOptionElement(*option);
+                it.traverseNextSkippingChildren();
+                continue;
+            }
+            if (is<HTMLOptGroupElement>(descendant)) {
+                m_listItems.append(descendant.ptr());
+                for (auto optGroupIt = descendantsOfType<HTMLElement>(descendant).begin(); optGroupIt;) {
+                    Ref optGroupDescendant = *optGroupIt;
+                    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(optGroupDescendant)) {
+                        handleOptionElement(*option);
+                        optGroupIt.traverseNextSkippingChildren();
+                        continue;
+                    }
+                    if (is<HTMLOptGroupElement>(optGroupDescendant)
+                        || is<HTMLDataListElement>(optGroupDescendant)
+                        || is<HTMLSelectElement>(optGroupDescendant)
+                        || is<HTMLHRElement>(optGroupDescendant)) {
+                        optGroupIt.traverseNextSkippingChildren();
+                        continue;
+                    }
+                    optGroupIt.traverseNext();
+                }
+                it.traverseNextSkippingChildren();
+                continue;
+            }
+            if (is<HTMLHRElement>(descendant)) {
+                m_listItems.append(descendant.ptr());
+                it.traverseNextSkippingChildren();
+                continue;
+            }
+            if (is<HTMLDataListElement>(descendant) || is<HTMLSelectElement>(descendant)) {
+                it.traverseNextSkippingChildren();
+                continue;
+            }
+            it.traverseNext();
+        }
+    } else {
     for (Ref child : childrenOfType<HTMLElement>(*const_cast<HTMLSelectElement*>(this))) {
-        if (is<HTMLOptGroupElement>(child.get())) {
-            m_listItems.append(&child.get());
-            for (Ref option : childrenOfType<HTMLOptionElement>(child.get()))
+            if (is<HTMLOptGroupElement>(child)) {
+                m_listItems.append(child.ptr());
+                for (Ref option : childrenOfType<HTMLOptionElement>(child))
                 handleOptionElement(option);
-        } else if (RefPtr option = dynamicDowncast<HTMLOptionElement>(child.get()))
+            } else if (RefPtr option = dynamicDowncast<HTMLOptionElement>(child))
             handleOptionElement(*option);
-        else if (is<HTMLHRElement>(child.get()))
-            m_listItems.append(&child.get());
+            else if (is<HTMLHRElement>(child))
+                m_listItems.append(child.ptr());
+        }
     }
 
     if (!foundSelected && m_size <= 1 && firstOption && !firstOption->selected())
@@ -982,7 +1066,7 @@ void HTMLSelectElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, 
     // dispatching change events during blur event dispatch.
     if (usesMenuList())
         saveLastSelection();
-    HTMLFormControlElement::dispatchFocusEvent(WTFMove(oldFocusedElement), options);
+    HTMLFormControlElement::dispatchFocusEvent(WTF::move(oldFocusedElement), options);
 }
 
 void HTMLSelectElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -992,7 +1076,7 @@ void HTMLSelectElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
     // This matches other browsers' behavior.
     if (usesMenuList())
         dispatchChangeEventForMenuList();
-    HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
+    HTMLFormControlElement::dispatchBlurEvent(WTF::move(newFocusedElement));
 }
 
 void HTMLSelectElement::deselectItemsWithoutValidation(HTMLElement* excludeElement)
@@ -1129,7 +1213,7 @@ void HTMLSelectElement::reset()
             option->setSelectedState(false);
 
         if (!firstOption && !option->isDisabledFormControl())
-            firstOption = WTFMove(option);
+            firstOption = WTF::move(option);
     }
 
     if (!selectedOption && firstOption && !m_multiple && m_size <= 1)
@@ -1156,8 +1240,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
             // Calling focus() may cause us to lose our renderer. Return true so
             // that our caller doesn't process the event further, but don't set
             // the event as handled.
-            WeakPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
-            if (!renderer)
+            if (!is<RenderMenuList>(renderer()))
                 return true;
 
             // Save the selection so it can be compared to the new selection
@@ -1165,7 +1248,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
             // gets called from RenderMenuList::valueChanged, which gets called
             // after the user makes a selection from the menu.
             saveLastSelection();
-            renderer->showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
+            showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
             event->setDefaultHandled();
         }
         return true;
@@ -1255,8 +1338,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
                 protectedDocument()->updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
-                WeakPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
-                if (!renderer)
+                if (!is<RenderMenuList>(renderer()))
                     return;
 
                 // Save the selection so it can be compared to the new selection
@@ -1264,7 +1346,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
                 // gets called from RenderMenuList::valueChanged, which gets called
                 // after the user makes a selection from the menu.
                 saveLastSelection();
-                renderer->showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
+                showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
                 handled = true;
             }
         } else if (RenderTheme::singleton().popsMenuByArrowKeys()) {
@@ -1273,8 +1355,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
                 protectedDocument()->updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
-                WeakPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
-                if (!renderer)
+                if (!is<RenderMenuList>(renderer()))
                     return;
 
                 // Save the selection so it can be compared to the new selection
@@ -1282,7 +1363,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
                 // gets called from RenderMenuList::valueChanged, which gets called
                 // after the user makes a selection from the menu.
                 saveLastSelection();
-                renderer->showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
+                showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
                 handled = true;
             } else if (keyCode == '\r') {
                 if (RefPtr form = this->form())
@@ -1301,15 +1382,15 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
 #if !PLATFORM(IOS_FAMILY)
         protectedDocument()->updateStyleIfNeeded();
 
-        if (WeakPtr menuList = dynamicDowncast<RenderMenuList>(renderer())) {
-            ASSERT(!menuList->popupIsVisible());
+        if (is<RenderMenuList>(renderer())) {
+            ASSERT(!m_popupIsVisible);
             // Save the selection so it can be compared to the new
             // selection when we call onChange during selectOption,
             // which gets called from RenderMenuList::valueChanged,
             // which gets called after the user makes a selection from
             // the menu.
             saveLastSelection();
-            menuList->showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
+            showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
         }
 #endif
         event.setDefaultHandled();
@@ -1318,8 +1399,8 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
 #if !PLATFORM(IOS_FAMILY)
     if (event.type() == eventNames.blurEvent && !focused()) {
         CheckedRef menuList = downcast<RenderMenuList>(*renderer());
-        if (menuList->popupIsVisible())
-            menuList->hidePopup();
+        if (m_popupIsVisible)
+            hidePopup();
     }
 #endif
 }
@@ -1412,11 +1493,14 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
             mouseEvent->setDefaultHandled();
         }
-    } else if (event.type() == eventNames.mousemoveEvent && mouseEvent && !downcast<RenderListBox>(*renderer()).canBeScrolledAndHasScrollableArea()) {
+    } else if (event.type() == eventNames.mousemoveEvent && mouseEvent) {
+        CheckedRef renderListBox = downcast<RenderListBox>(*renderer());
+        if (renderListBox->canBeScrolledAndHasScrollableArea())
+            return;
+
         if (mouseEvent->button() != MouseButton::Left || !mouseEvent->buttonDown())
             return;
 
-        CheckedRef renderListBox = downcast<RenderListBox>(*renderer());
         IntPoint localOffset = roundedIntPoint(renderListBox->absoluteToLocal(mouseEvent->absoluteLocation(), UseTransforms));
         int listIndex = renderListBox->listIndexAtOffset(toIntSize(localOffset));
         if (listIndex >= 0) {
@@ -1689,6 +1773,61 @@ unsigned HTMLSelectElement::length() const
     return options;
 }
 
+#if PLATFORM(IOS_FAMILY)
+NO_RETURN_DUE_TO_ASSERT
+void HTMLSelectElement::showPopup()
+{
+    ASSERT_NOT_REACHED();
+}
+#else
+void HTMLSelectElement::showPopup()
+{
+    if (m_popupIsVisible)
+        return;
+
+    CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
+    if (!renderer)
+        return;
+
+    RefPtr frame = document().frame();
+    if (!frame)
+        return;
+
+    RefPtr frameView = frame->view();
+    if (!frameView)
+        return;
+
+    if (!m_popup)
+        m_popup = document().page()->chrome().createPopupMenu(*this);
+    setPopupIsVisible(true);
+
+    // Compute the top left taking transforms into account, but use
+    // the actual width of the element to size the popup.
+    FloatPoint absTopLeft = renderer->localToAbsolute(FloatPoint(), UseTransforms);
+    IntRect absBounds = renderer->absoluteBoundingBoxRectIgnoringTransforms();
+    absBounds.setLocation(roundedIntPoint(absTopLeft));
+
+    RefPtr { m_popup }->show(absBounds, *frameView, optionToListIndex(selectedIndex())); // May run JS.
+}
+
+void HTMLSelectElement::hidePopup()
+{
+    if (RefPtr popup = m_popup)
+        popup->hide();
+}
+#endif
+
+void HTMLSelectElement::setPopupIsVisible(bool visible)
+{
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::Open, visible);
+    m_popupIsVisible = visible;
+}
+
+bool HTMLSelectElement::isOpen() const
+{
+    return m_popupIsVisible;
+}
+
 ExceptionOr<void> HTMLSelectElement::showPicker()
 {
     RefPtr frame = document().frame();
@@ -1708,11 +1847,241 @@ ExceptionOr<void> HTMLSelectElement::showPicker()
         return Exception { ExceptionCode::NotAllowedError, "Select showPicker() requires a user gesture."_s };
 
 #if !PLATFORM(IOS_FAMILY)
-    if (WeakPtr renderMenuList = dynamicDowncast<RenderMenuList>(renderer()))
-        renderMenuList->showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
+    showPopup(); // showPopup() may run JS and cause the renderer to get destroyed.
 #endif
 
     return { };
+}
+
+// PopupMenuClient methods
+void HTMLSelectElement::valueChanged(unsigned listIndex, bool fireOnChange)
+{
+    // Check to ensure a page navigation has not occurred while
+    // the popup was up.
+    RefPtr frame = document().frame();
+    if (!frame || &document() != frame->document())
+        return;
+
+    optionSelectedByUser(listToOptionIndex(listIndex), fireOnChange);
+}
+
+String HTMLSelectElement::itemText(unsigned listIndex) const
+{
+    auto& listItems = this->listItems();
+    if (listIndex >= listItems.size())
+        return String();
+
+    String itemString;
+    if (RefPtr optGroupElement = dynamicDowncast<HTMLOptGroupElement>(listItems[listIndex].get()))
+        itemString = optGroupElement->groupLabelText();
+    if (RefPtr optionElement = dynamicDowncast<HTMLOptionElement>(listItems[listIndex].get()))
+        itemString = optionElement->textIndentedToRespectGroupLabel();
+
+    if (CheckedPtr renderer = this->renderer())
+        return applyTextTransform(renderer->checkedStyle().get(), itemString);
+    return itemString;
+}
+
+String HTMLSelectElement::itemLabel(unsigned) const
+{
+    return String();
+}
+
+String HTMLSelectElement::itemIcon(unsigned) const
+{
+    return String();
+}
+
+String HTMLSelectElement::itemToolTip(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    if (listIndex >= listItems.size())
+        return String();
+
+    RefPtr element = listItems[listIndex].get();
+    return element ? element->title() : String();
+}
+
+String HTMLSelectElement::itemAccessibilityText(unsigned listIndex) const
+{
+    // Allow the accessible name be changed if necessary.
+    const auto& listItems = this->listItems();
+    if (listIndex >= listItems.size())
+        return String();
+    RefPtr element = listItems[listIndex].get();
+    return element->attributeWithoutSynchronization(aria_labelAttr);
+}
+
+bool HTMLSelectElement::itemIsEnabled(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    if (listIndex >= listItems.size())
+        return false;
+
+    RefPtr element = listItems[listIndex].get();
+    if (!is<HTMLOptionElement>(*element))
+        return false;
+
+    if (RefPtr parentElement = element->parentElement()) {
+        if (is<HTMLOptGroupElement>(*parentElement) && parentElement->isDisabledFormControl())
+            return false;
+    }
+
+    return !element->isDisabledFormControl();
+}
+
+PopupMenuStyle HTMLSelectElement::itemStyle(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    if (!listItems.size())
+        return menuStyle();
+    if (listIndex >= listItems.size())
+        listIndex = 0;
+    RefPtr element = listItems[listIndex].get();
+
+    Color itemBackgroundColor;
+    bool itemHasCustomBackgroundColor = false;
+    if (CheckedPtr menuList = dynamicDowncast<RenderMenuList>(renderer()))
+        menuList->getItemBackgroundColor(listIndex, itemBackgroundColor, itemHasCustomBackgroundColor);
+
+    CheckedPtr style = element->computedStyleForEditability();
+    if (!style)
+        return menuStyle();
+
+    return PopupMenuStyle(
+        style->visitedDependentColorApplyingColorFilter(),
+        itemBackgroundColor,
+        style->fontCascade(),
+        element->getAttribute(langAttr),
+        style->visibility() == Visibility::Visible,
+        style->display() == DisplayType::None,
+        true,
+        style->writingMode().bidiDirection(),
+        isOverride(style->unicodeBidi()),
+        itemHasCustomBackgroundColor ? PopupMenuStyle::CustomBackgroundColor : PopupMenuStyle::DefaultBackgroundColor
+    );
+}
+
+PopupMenuStyle HTMLSelectElement::menuStyle() const
+{
+    auto defaultStyle = RenderStyle::create();
+    CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
+    CheckedRef outerStyle = renderer ? renderer->style() : defaultStyle;
+    CheckedRef<const RenderStyle> innerStyle = (renderer && renderer->innerRenderer()) ? renderer->innerRenderer()->style() : outerStyle.get();
+    auto bounds = renderer->absoluteBoundingBoxRectIgnoringTransforms();
+    auto popupSize = RenderTheme::singleton().popupMenuSize(outerStyle, bounds);
+    return PopupMenuStyle(
+        innerStyle->visitedDependentColorApplyingColorFilter(),
+        innerStyle->visitedDependentBackgroundColorApplyingColorFilter(),
+        innerStyle->fontCascade(),
+        nullString(),
+        innerStyle->usedVisibility() == Visibility::Visible,
+        innerStyle->display() == DisplayType::None,
+        outerStyle->hasUsedAppearance() && outerStyle->usedAppearance() == StyleAppearance::Menulist,
+        outerStyle->writingMode().bidiDirection(),
+        isOverride(outerStyle->unicodeBidi()),
+        PopupMenuStyle::DefaultBackgroundColor,
+        PopupMenuStyle::SelectPopup,
+        popupSize
+    );
+}
+
+int HTMLSelectElement::clientInsetLeft() const
+{
+    return 0;
+}
+
+int HTMLSelectElement::clientInsetRight() const
+{
+    return 0;
+}
+
+LayoutUnit HTMLSelectElement::clientPaddingLeft() const
+{
+    CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
+    return renderer ? renderer->clientPaddingLeft() : 0_lu;
+}
+
+LayoutUnit HTMLSelectElement::clientPaddingRight() const
+{
+    CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
+    return renderer ? renderer->clientPaddingRight() : 0_lu;
+}
+
+int HTMLSelectElement::listSize() const
+{
+    return listItems().size();
+}
+
+int HTMLSelectElement::popupSelectedIndex() const
+{
+    return optionToListIndex(selectedIndex());
+}
+
+void HTMLSelectElement::popupDidHide()
+{
+#if !PLATFORM(IOS_FAMILY)
+    setPopupIsVisible(false);
+#endif
+}
+
+bool HTMLSelectElement::itemIsSeparator(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    return listIndex < listItems.size() && listItems[listIndex]->hasTagName(hrTag);
+}
+
+bool HTMLSelectElement::itemIsLabel(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    return listIndex < listItems.size() && is<HTMLOptGroupElement>(*listItems[listIndex]);
+}
+
+bool HTMLSelectElement::itemIsSelected(unsigned listIndex) const
+{
+    const auto& listItems = this->listItems();
+    if (listIndex >= listItems.size())
+        return false;
+    RefPtr option = dynamicDowncast<HTMLOptionElement>(listItems[listIndex].get());
+    return option && option->selected();
+}
+
+void HTMLSelectElement::setTextFromItem(unsigned listIndex)
+{
+    if (CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer()))
+        renderer->setTextFromOption(listToOptionIndex(listIndex));
+}
+
+void HTMLSelectElement::listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow)
+{
+    if (!popupMultiple())
+        optionSelectedByUser(listToOptionIndex(listIndex), fireOnChangeNow, false);
+    else {
+        updateSelectedState(listIndex, allowMultiplySelections, shift);
+        updateValidity();
+        if (fireOnChangeNow)
+            listBoxOnChange();
+    }
+}
+
+FontSelector* HTMLSelectElement::fontSelector() const
+{
+    return &protectedDocument()->fontSelector();
+}
+
+HostWindow* HTMLSelectElement::hostWindow() const
+{
+    if (CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer()))
+        return renderer->hostWindow();
+    return nullptr;
+}
+
+Ref<Scrollbar> HTMLSelectElement::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth widthStyle)
+{
+    CheckedPtr renderer = dynamicDowncast<RenderMenuList>(this->renderer());
+    if (renderer && renderer->style().usesLegacyScrollbarStyle())
+        return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, this);
+    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, widthStyle);
 }
 
 } // namespace

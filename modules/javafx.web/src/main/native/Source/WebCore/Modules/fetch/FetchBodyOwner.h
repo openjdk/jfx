@@ -46,7 +46,7 @@ template<typename> class ExceptionOr;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
 
-class FetchBodyOwner : public RefCountedAndCanMakeWeakPtr<FetchBodyOwner>, public ActiveDOMObject {
+class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchBodyOwner, FetchBodyOwner);
 public:
     void ref() const final { RefCounted::ref(); }
@@ -90,12 +90,12 @@ protected:
     const FetchBody& body() const { return *m_body; }
     bool isBodyNull() const { return !m_body; }
     bool isBodyNullOrOpaque() const { return !m_body || m_isBodyOpaque; }
-    void cloneBody(FetchBodyOwner&);
+    void cloneBody(JSDOMGlobalObject&, FetchBodyOwner&);
 
     ExceptionOr<void> extractBody(FetchBody::Init&&);
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
 
-    void setBody(FetchBody&& body) { m_body = WTFMove(body); }
+    void setBody(FetchBody&& body) { m_body = WTF::move(body); }
     ExceptionOr<void> createReadableStream(JSC::JSGlobalObject&);
 
     // ActiveDOMObject.

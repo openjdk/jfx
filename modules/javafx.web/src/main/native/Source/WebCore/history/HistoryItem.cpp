@@ -223,13 +223,13 @@ void HistoryItem::setOriginalURLString(const String& urlString)
 
 void HistoryItem::setReferrer(String&& referrer)
 {
-    m_referrer = WTFMove(referrer);
+    m_referrer = WTF::move(referrer);
     notifyChanged();
 }
 
 void HistoryItem::setTitle(String&& title)
 {
-    m_title = WTFMove(title);
+    m_title = WTF::move(title);
     notifyChanged();
 }
 
@@ -309,20 +309,20 @@ ShouldOpenExternalURLsPolicy HistoryItem::shouldOpenExternalURLsPolicy() const
 
 void HistoryItem::setStateObject(RefPtr<SerializedScriptValue>&& object)
 {
-    m_stateObject = WTFMove(object);
+    m_stateObject = WTF::move(object);
     notifyChanged();
 }
 
 // https://html.spec.whatwg.org/multipage/browsing-the-web.html#she-navigation-api-state
 void HistoryItem::setNavigationAPIStateObject(RefPtr<SerializedScriptValue>&& object)
 {
-    m_navigationAPIStateObject = WTFMove(object);
+    m_navigationAPIStateObject = WTF::move(object);
 }
 
 void HistoryItem::addChildItem(Ref<HistoryItem>&& child)
 {
     ASSERT(!child->frameID() || !childItemWithFrameID(*child->frameID()));
-    m_children.append(WTFMove(child));
+    m_children.append(WTF::move(child));
 }
 
 void HistoryItem::setChildItem(Ref<HistoryItem>&& child)
@@ -332,11 +332,11 @@ void HistoryItem::setChildItem(Ref<HistoryItem>&& child)
     for (unsigned i = 0; i < size; ++i)  {
         if (m_children[i]->target() == child->target()) {
             child->setIsTargetItem(m_children[i]->isTargetItem());
-            m_children[i] = WTFMove(child);
+            m_children[i] = WTF::move(child);
             return;
         }
     }
-    m_children.append(WTFMove(child));
+    m_children.append(WTF::move(child));
 }
 
 HistoryItem* HistoryItem::childItemWithTarget(const AtomString& target)
@@ -379,42 +379,15 @@ void HistoryItem::clearChildren()
     m_client->clearChildren(*this);
 }
 
-// We do same-document navigation if going to a different item and if either of the following is true:
+// We do same-document navigation if going to a different item and the following is true:
 // - The other item corresponds to the same document (for history entries created via pushState or fragment changes).
-// - The other item corresponds to the same set of documents, including frames (for history entries created via regular navigation)
 bool HistoryItem::shouldDoSameDocumentNavigationTo(HistoryItem& otherItem) const
 {
-    // The following logic must be kept in sync with WebKit::WebBackForwardListItem::itemIsInSameDocument().
     if (m_itemID == otherItem.itemID())
         return false;
 
-    if (stateObject() || otherItem.stateObject())
+    // The following logic must be kept in sync with WebKit::WebBackForwardListItem::itemIsInSameDocument().
         return documentSequenceNumber() == otherItem.documentSequenceNumber();
-
-    if ((url().hasFragmentIdentifier() || otherItem.url().hasFragmentIdentifier()) && equalIgnoringFragmentIdentifier(url(), otherItem.url()))
-        return documentSequenceNumber() == otherItem.documentSequenceNumber();
-
-    return hasSameDocumentTree(otherItem);
-}
-
-// Does a recursive check that this item and its descendants have the same
-// document sequence numbers as the other item.
-bool HistoryItem::hasSameDocumentTree(HistoryItem& otherItem) const
-{
-    if (documentSequenceNumber() != otherItem.documentSequenceNumber())
-        return false;
-
-    if (children().size() != otherItem.children().size())
-        return false;
-
-    for (size_t i = 0; i < children().size(); i++) {
-        Ref child = children()[i].get();
-        RefPtr otherChild = otherItem.childItemWithDocumentSequenceNumber(child->documentSequenceNumber());
-        if (!otherChild || !child->hasSameDocumentTree(*otherChild))
-            return false;
-    }
-
-    return true;
 }
 
 String HistoryItem::formContentType() const
@@ -439,7 +412,7 @@ void HistoryItem::setFormInfoFromRequest(const ResourceRequest& request)
 
 void HistoryItem::setFormData(RefPtr<FormData>&& formData)
 {
-    m_formData = WTFMove(formData);
+    m_formData = WTF::move(formData);
 }
 
 void HistoryItem::setFormContentType(const String& formContentType)

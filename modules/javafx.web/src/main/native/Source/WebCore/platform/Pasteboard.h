@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "DragImage.h"
-#include "PasteboardContext.h"
-#include "PasteboardCustomData.h"
-#include "PasteboardItemInfo.h"
-#include "SharedBuffer.h"
+#include <WebCore/DragImage.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/PasteboardContext.h>
+#include <WebCore/PasteboardCustomData.h>
+#include <WebCore/PasteboardItemInfo.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
@@ -43,6 +45,8 @@ OBJC_CLASS NSString;
 #endif
 
 #if PLATFORM(COCOA)
+#include <WebCore/AttributedString.h>
+#include <WebCore/LegacyWebArchive.h>
 OBJC_CLASS NSArray;
 #endif
 
@@ -89,12 +93,18 @@ struct PasteboardWebContent {
     String contentOrigin;
     bool canSmartCopyOrDelete;
     RefPtr<SharedBuffer> dataInWebArchiveFormat;
+    RefPtr<LegacyWebArchive> webArchive;
     RefPtr<SharedBuffer> dataInRTFDFormat;
     RefPtr<SharedBuffer> dataInRTFFormat;
-    RefPtr<SharedBuffer> dataInAttributedStringFormat;
+    std::optional<WebCore::AttributedString> dataInAttributedStringFormat;
     String dataInHTMLFormat;
     String dataInStringFormat;
     Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>> clientTypesAndData;
+#endif
+#if PLATFORM(IOS_FAMILY)
+    // WebArchive-only parameters.
+    HashMap<WebCore::FrameIdentifier, Ref<WebCore::LegacyWebArchive>> localFrameArchives;
+    Vector<WebCore::FrameIdentifier> remoteFrameIdentifiers;
 #endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
     String contentOrigin;
@@ -283,8 +293,9 @@ public:
 #endif
 
 #if PLATFORM(MAC)
-    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& pasteboardName, const Vector<String>& promisedFilePaths = { });
+    explicit Pasteboard(std::unique_ptr<PasteboardContext>&&, const String& pasteboardName, const Vector<String>& promisedFilePaths = { }, const Vector<String>& promisedFileMIMETypes = { });
 #endif
+    const Vector<String>& promisedFileMIMETypes() const { return m_promisedFileMIMETypes; }
 
 #if PLATFORM(COCOA)
 #if ENABLE(DRAG_SUPPORT)
@@ -388,6 +399,7 @@ private:
 #if PLATFORM(MAC)
     Vector<String> m_promisedFilePaths;
 #endif
+    Vector<String> m_promisedFileMIMETypes;
 
 #if PLATFORM(WIN)
     HWND m_owner;
@@ -403,13 +415,13 @@ private:
 };
 
 #if PLATFORM(IOS_FAMILY)
-extern NSString *WebArchivePboardType;
+WEBCORE_EXPORT extern NSString *WebArchivePboardType;
 extern NSString *UIColorPboardType;
 extern NSString *UIImagePboardType;
 #endif
 
 #if PLATFORM(MAC)
-extern const ASCIILiteral WebArchivePboardType;
+WEBCORE_EXPORT extern const ASCIILiteral WebArchivePboardType;
 extern const ASCIILiteral WebURLNamePboardType;
 extern const ASCIILiteral WebURLsWithTitlesPboardType;
 #endif

@@ -120,6 +120,7 @@ my %svgAttributesInHTMLHash = (
 
 # Cache of IDL file pathnames.
 my $idlFiles;
+my %childrenMap;
 my $cachedInterfaces = {};
 my $cachedExtendedAttributes = {};
 my $cachedExternalDictionaries = {};
@@ -580,6 +581,39 @@ sub IDLFileForInterface
     }
 
     return $idlFiles->{$interfaceName};
+}
+
+sub BuildInheritanceMap
+{
+    my ($object, $currentInterface) = @_;
+    return if %childrenMap;
+
+    $object->IDLFileForInterface($currentInterface) unless $idlFiles;
+    foreach my $interfaceName (keys %{$idlFiles}) {
+        my $filename = $object->IDLFileForInterface($interfaceName);
+        my $fileContents = slurp($filename);
+
+        # Extract parent interface name.
+        if ($fileContents =~ /interface\s+\Q$interfaceName\E\s*:\s*(\w+)\s*\{/) {
+            my $parent = $1;
+            push @{$childrenMap{$parent}}, $interfaceName;
+        }
+    }
+}
+
+sub ForEachChildInterface
+{
+    my ($object, $currentInterface, $apply) = @_;
+
+    $object->BuildInheritanceMap($currentInterface);
+
+    my $parentInterfaceName = $currentInterface->type->name;
+    my $children = $childrenMap{$parentInterfaceName};
+    return unless $children;
+    foreach my $childInterfaceName (sort @$children) {
+        my $childInterface = $object->ParseInterface($currentInterface, $childInterfaceName);
+        &$apply($childInterface);
+    }
 }
 
 sub GetInterfaceForType
@@ -1126,7 +1160,7 @@ sub ContentAttributeName
     die "Do not use both [ReflectURL] and [ReflectSetter] on the same attribute" if $reflectURL && $reflectSetter;
     die "Do not use both [Reflect] and [ReflectSetter] on the same attribute" if $reflect && $reflectSetter;
 
-    my $contentAttributeName = UnquoteStringLiteral($getterOrSetter eq "setter" ? $reflect || $reflectURL || $reflectSetter : $reflect || $reflectURL);
+    my $contentAttributeName = UnquoteStringLiteral($generator, $getterOrSetter eq "setter" ? $reflect || $reflectURL || $reflectSetter : $reflect || $reflectURL);
     return undef if !$contentAttributeName;
 
     $contentAttributeName =~ s/-/_/g;
@@ -1141,7 +1175,7 @@ sub ContentAttributeName
 
 sub UnquoteStringLiteral
 {
-    my ($s) = @_;
+    my ($generator, $s) = @_;
     return $s if !$s;
     return $s if length($s) < 2;
     if (substr($s, 0, 1) ne '"' && substr($s, 0, 1) ne "'") {
@@ -1460,30 +1494,33 @@ sub GenerateConditionalString
     }
 }
 
+sub ConditionalComparator
+{
+    # Compare by feature name, with non-negated forms before negated ones,
+    # by moving any leading "!" to the end of the string (e.g. "!FOO" → "FOO!").
+    ($a =~ s/^(!?)(.+)/$2$1/r) cmp ($b =~ s/^(!?)(.+)/$2$1/r)
+}
+
 sub GenerateConditionalStringFromAttributeValue
 {
     my ($generator, $conditional) = @_;
 
-    my %disjunction;
-    map {
-        my $expression = $_;
-        my %conjunction;
-        map { $conjunction{$_} = 1; } split(/&/, $expression);
-        $expression = "ENABLE(" . join(") && ENABLE(", sort keys %conjunction) . ")";
-        $disjunction{$expression} = 1
+    # Unquote string literals if needed.
+    $conditional = UnquoteStringLiteral($generator, $conditional) if $conditional =~ /^['"]/;
+
+    my %disjunction = map {
+        my %conjunction = map {
+            assert("Conditional macros should not include the leading 'ENABLE_'") if $_ =~ /^ENABLE_/;
+
+            s/^(!?)(.+)$/$1ENABLE($2)/r => 1
+        } split(/&/);
+
+        join(" && ", sort ConditionalComparator keys %conjunction) => 1
     } split(/\|/, $conditional);
 
-    return "1" if keys %disjunction == 0;
-    return (%disjunction)[0] if keys %disjunction == 1;
-
-    my @parenthesized;
-    map {
-        my $expression = $_;
-        $expression = "($expression)" if $expression =~ / /;
-        push @parenthesized, $expression;
-    } sort keys %disjunction;
-
-    return join(" || ", @parenthesized);
+    return "1" if %disjunction == 0;
+    return (keys %disjunction)[0] if %disjunction == 1;
+    return join(" || ", map { / / ? "($_)" : $_ } sort ConditionalComparator keys %disjunction);
 }
 
 sub GenerateCompileTimeCheckForEnumsIfNeeded

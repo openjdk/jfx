@@ -33,12 +33,11 @@
 #include "BoxLayoutShape.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "LengthFunctions.h"
 #include "PixelBuffer.h"
 #include "PolygonLayoutShape.h"
 #include "RasterLayoutShape.h"
 #include "RectangleLayoutShape.h"
-#include "StylePosition.h"
+#include "StyleBasicShape.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "WindRule.h"
 
@@ -64,7 +63,7 @@ static Ref<LayoutShape> createEllipseShape(const FloatPoint& center, const Float
 
 static Ref<LayoutShape> createPolygonShape(Vector<FloatPoint>&& vertices, float boxLogicalWidth)
 {
-    return adoptRef(*new PolygonLayoutShape(WTFMove(vertices), boxLogicalWidth));
+    return adoptRef(*new PolygonLayoutShape(WTF::move(vertices), boxLogicalWidth));
 }
 
 static inline FloatRect physicalRectToLogical(const FloatRect& rect, float logicalBoxHeight, WritingMode writingMode)
@@ -122,14 +121,14 @@ Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicSh
             return createEllipseShape(logicalCenter, radii, logicalBoxSize.width());
         },
         [&](const Style::InsetFunction& inset) -> Ref<LayoutShape> {
-            float left = Style::evaluate(inset->insets.left(), boxWidth);
-            float top = Style::evaluate(inset->insets.top(), boxHeight);
+            auto left = Style::evaluate<float>(inset->insets.left(), boxWidth, Style::ZoomNeeded { });
+            auto top = Style::evaluate<float>(inset->insets.top(), boxHeight, Style::ZoomNeeded { });
 
             FloatRect rect {
                 left,
                 top,
-                std::max<float>(boxWidth - left - Style::evaluate(inset->insets.right(), boxWidth), 0),
-                std::max<float>(boxHeight - top - Style::evaluate(inset->insets.bottom(), boxHeight), 0)
+                std::max<float>(boxWidth - left - Style::evaluate<float>(inset->insets.right(), boxWidth, Style::ZoomNeeded { }), 0),
+                std::max<float>(boxHeight - top - Style::evaluate<float>(inset->insets.bottom(), boxHeight, Style::ZoomNeeded { }), 0)
             };
 
             auto logicalRect = physicalRectToLogical(rect, logicalBoxSize.height(), writingMode);
@@ -137,11 +136,11 @@ Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicSh
 
             auto boxSize = FloatSize(boxWidth, boxHeight);
             auto isBlockLeftToRight = writingMode.isBlockLeftToRight();
-            auto topLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode || isBlockLeftToRight ? inset->radii.topLeft() : inset->radii.topRight(), boxSize), writingMode);
-            auto topRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.topRight() : isBlockLeftToRight ? inset->radii.bottomLeft() : inset->radii.bottomRight(), boxSize), writingMode);
-            auto bottomLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomLeft() : isBlockLeftToRight ? inset->radii.topRight() : inset->radii.topLeft(), boxSize), writingMode);
-            auto bottomRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomRight() : isBlockLeftToRight ? inset->radii.bottomRight() : inset->radii.bottomLeft(), boxSize), writingMode);
-            auto cornerRadii = FloatRoundedRect::Radii(topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
+            auto topLeftRadius = physicalSizeToLogical(Style::evaluate<FloatSize>(horizontalWritingMode || isBlockLeftToRight ? inset->radii.topLeft() : inset->radii.topRight(), boxSize, Style::ZoomNeeded { }), writingMode);
+            auto topRightRadius = physicalSizeToLogical(Style::evaluate<FloatSize>(horizontalWritingMode ? inset->radii.topRight() : isBlockLeftToRight ? inset->radii.bottomLeft() : inset->radii.bottomRight(), boxSize, Style::ZoomNeeded { }), writingMode);
+            auto bottomLeftRadius = physicalSizeToLogical(Style::evaluate<FloatSize>(horizontalWritingMode ? inset->radii.bottomLeft() : isBlockLeftToRight ? inset->radii.topRight() : inset->radii.topLeft(), boxSize, Style::ZoomNeeded { }), writingMode);
+            auto bottomRightRadius = physicalSizeToLogical(Style::evaluate<FloatSize>(horizontalWritingMode ? inset->radii.bottomRight() : isBlockLeftToRight ? inset->radii.bottomRight() : inset->radii.bottomLeft(), boxSize, Style::ZoomNeeded { }), writingMode);
+            auto cornerRadii = CornerRadii(topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
             if (shouldFlipStartAndEndPoints(writingMode))
                 cornerRadii = { cornerRadii.topRight(), cornerRadii.topLeft(), cornerRadii.bottomRight(), cornerRadii.bottomLeft() };
 
@@ -152,10 +151,10 @@ Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicSh
             auto boxSize = FloatSize { boxWidth, boxHeight };
 
             auto vertices = polygon->vertices.value.map([&](const auto& vertex) {
-                return physicalPointToLogical(Style::evaluate(vertex, boxSize) + borderBoxOffset, logicalBoxSize.height(), writingMode);
+                return physicalPointToLogical(Style::evaluate<FloatPoint>(vertex, boxSize, Style::ZoomNeeded { }) + borderBoxOffset, logicalBoxSize.height(), writingMode);
             });
 
-            return createPolygonShape(WTFMove(vertices), logicalBoxSize.width());
+            return createPolygonShape(WTF::move(vertices), logicalBoxSize.width());
         },
         [&](const Style::PathFunction&) -> Ref<LayoutShape> {
             RELEASE_ASSERT_NOT_REACHED();
@@ -180,10 +179,10 @@ Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float thresh
     auto snappedLogicalMarginRect = snappedIntRect(logicalMarginRect);
     auto intervals = makeUnique<RasterShapeIntervals>(snappedLogicalMarginRect.height(), -snappedLogicalMarginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    auto imageBuffer = ImageBuffer::create(snappedPhysicalImageSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(snappedPhysicalImageSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
 
     auto createShape = [&]() {
-        auto rasterShape = adoptRef(*new RasterLayoutShape(WTFMove(intervals), snappedLogicalMarginRect.size()));
+        auto rasterShape = adoptRef(*new RasterLayoutShape(WTF::move(intervals), snappedLogicalMarginRect.size()));
         rasterShape->m_writingMode = writingMode;
         rasterShape->m_margin = logicalMargin;
         return rasterShape;

@@ -35,6 +35,7 @@
 #include "JSTrustedScriptURL.h"
 #include "SVGNames.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "TrustedType.h"
 #include "TrustedTypePolicyOptions.h"
 #include "XLinkNames.h"
@@ -43,7 +44,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrustedTypePolicyFactory);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TrustedTypePolicyFactory);
 
 Ref<TrustedTypePolicyFactory> TrustedTypePolicyFactory::create(ScriptExecutionContext& context)
 {
@@ -131,5 +132,7 @@ String TrustedTypePolicyFactory::getPropertyType(const String& tagName, const St
 
     return nullString();
 }
+
+TrustedTypePolicyFactory::~TrustedTypePolicyFactory() = default;
 
 }

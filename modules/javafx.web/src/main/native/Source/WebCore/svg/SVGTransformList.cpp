@@ -53,7 +53,7 @@ ExceptionOr<RefPtr<SVGTransform>> SVGTransformList::consolidate()
     auto newItem = SVGTransform::create(concatenate());
     clearItems();
 
-    auto item = append(WTFMove(newItem));
+    auto item = append(WTF::move(newItem));
     commitChange();
     return RefPtr { item.ptr() };
 }
@@ -126,7 +126,7 @@ void SVGTransformList::parse(StringView value)
         clearItems();
 }
 
-bool SVGTransformList::parse(StringParsingBuffer<LChar>& buffer)
+bool SVGTransformList::parse(StringParsingBuffer<Latin1Character>& buffer)
 {
     return parseGeneric(buffer, ListReplacement::Append);
 }
@@ -149,3 +149,4 @@ String SVGTransformList::valueAsString() const
 }
 
 }
+

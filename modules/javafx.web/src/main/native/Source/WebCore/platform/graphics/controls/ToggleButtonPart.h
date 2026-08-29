@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ControlFactory.h"
-#include "ControlPart.h"
+#include <WebCore/ControlFactory.h>
+#include <WebCore/ControlPart.h>
 
 namespace WebCore {
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +26,8 @@
 
 #pragma once
 
-#include "BoxSides.h"
-#include "WritingMode.h"
+#include <WebCore/BoxSides.h>
+#include <WebCore/WritingMode.h>
 #include <array>
 #include <concepts>
 #include <wtf/OptionSet.h>
@@ -41,15 +42,29 @@ public:
     {
     }
 
+    RectEdges(const RectEdges&) = default;
+    RectEdges& operator=(const RectEdges&) = default;
+    RectEdges(RectEdges&&) = default;
+    RectEdges& operator=(RectEdges&&) = default;
+
     RectEdges(const T& value)
         : m_sides { value, value, value, value }
     {
     }
 
-    RectEdges(const RectEdges&) = default;
-    RectEdges& operator=(const RectEdges&) = default;
+    RectEdges(T&& top, T&& right, T&& bottom, T&& left)
+        : m_sides({ { WTF::move(top), WTF::move(right), WTF::move(bottom), WTF::move(left) } })
+    {
+    }
+
+    RectEdges(const T& top, const T& right, const T& bottom, const T& left)
+        : m_sides({ { top, right, bottom, left } })
+    {
+    }
+
 
     template<typename U>
+        requires (!std::same_as<T, U>)
     RectEdges(U&& top, U&& right, U&& bottom, U&& left)
         : m_sides({ { std::forward<U>(top), std::forward<U>(right), std::forward<U>(bottom), std::forward<U>(left) } })
     {
@@ -62,7 +77,7 @@ public:
     }
 
     template<typename U, typename Mapper>
-    static RectEdges<T> map(RectEdges<U>&& other, NOESCAPE Mapper&& mapper)
+    static RectEdges<T> map(U&& other, NOESCAPE Mapper&& mapper)
     {
         return RectEdges<T> {
             mapper(other.top()),

@@ -33,11 +33,12 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include <JavaScriptCore/JSGlobalObject.h>
-#include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class EmptyScriptExecutionContext final : public RefCounted<EmptyScriptExecutionContext>, public ScriptExecutionContext {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyScriptExecutionContext);
 public:
     static Ref<EmptyScriptExecutionContext> create(JSC::VM& vm)
     {

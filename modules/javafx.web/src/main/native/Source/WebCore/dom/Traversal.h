@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "Node.h"
-#include "NodeFilter.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/Node.h>
+#include <WebCore/NodeFilter.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -532,7 +532,7 @@ public class TreeTableViewMouseInputTest {
         }
         tableView.setRoot(root);
 
-        StageLoader sl = new StageLoader(tableView);
+        stageLoader = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -557,9 +557,6 @@ public class TreeTableViewMouseInputTest {
         mouse.fireMousePressAndRelease();
         assertTrue(root.isExpanded());
         assertEquals(9, tableView.getExpandedItemCount());
-
-        mouse.dispose();
-        sl.dispose();
     }
 
     private int rt_30626_count = 0;
@@ -686,7 +683,6 @@ public class TreeTableViewMouseInputTest {
 
         MouseEventFirer mouse = new MouseEventFirer(row);
         mouse.fireMousePressAndRelease(1, 100, 10);
-        mouse.dispose();
     }
 
     @Test public void test_rt_36509() {

@@ -526,7 +526,7 @@ gst_message_writable_details (GstMessage * message)
  * gst_message_new_error_with_details:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  * @details: (transfer full) (nullable): A GstStructure with details
  *
  * Create a new error message. The message will copy @error and
@@ -565,7 +565,7 @@ gst_message_new_error_with_details (GstObject * src, GError * error,
  * gst_message_new_error:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  *
  * Create a new error message. The message will copy @error and
  * @debug. This message is posted by element when a fatal event
@@ -629,7 +629,7 @@ gst_message_parse_error_writable_details (GstMessage * message,
  * gst_message_new_warning_with_details:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  * @details: (transfer full) (nullable): A GstStructure with details
  *
  * Create a new warning message. The message will make copies of @error and
@@ -666,7 +666,7 @@ gst_message_new_warning_with_details (GstObject * src, GError * error,
  * gst_message_new_warning:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  *
  * Create a new warning message. The message will make copies of @error and
  * @debug.
@@ -728,7 +728,7 @@ gst_message_parse_warning_writable_details (GstMessage * message,
  * gst_message_new_info_with_details:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  * @details: (transfer full) (nullable): A GstStructure with details
  *
  * Create a new info message. The message will make copies of @error and
@@ -765,7 +765,7 @@ gst_message_new_info_with_details (GstObject * src, GError * error,
  * gst_message_new_info:
  * @src: (transfer none) (nullable): The object originating the message.
  * @error: (transfer none): The GError for this message.
- * @debug: A debugging string.
+ * @debug: (nullable): A debugging string.
  *
  * Create a new info message. The message will make copies of @error and
  * @debug.
@@ -1514,8 +1514,8 @@ gst_message_parse_buffering_stats (GstMessage * message,
  *       gst_message_parse_state_changed (msg, &old_state, &new_state, NULL);
  *       g_print ("Element %s changed state from %s to %s.\n",
  *           GST_OBJECT_NAME (msg->src),
- *           gst_element_state_get_name (old_state),
- *           gst_element_state_get_name (new_state));
+ *           gst_state_get_name (old_state),
+ *           gst_state_get_name (new_state));
  *       break;
  *     }
  *     ...
@@ -2885,6 +2885,54 @@ gst_message_parse_device_changed (GstMessage * message, GstDevice ** device,
     gst_structure_get (GST_MESSAGE_STRUCTURE (message),
         "device-changed", GST_TYPE_DEVICE, changed_device, NULL);
 }
+
+/**
+ * gst_message_new_device_monitor_started:
+ * @src: (transfer none) (nullable): The #GstObject that created the message
+ * @success: Whether the monitor was started successfully
+ *
+ * Creates a new device-monitor-started message. The device-monitor-started
+ * message is produced by a #GstDeviceMonitor once it has started probing
+ * devices. It does not indicate whether any #GstDeviceProvider instances
+ * support monitoring at all, only whether at least one was able to start
+ * probing.
+ *
+ * Returns: (transfer full): a newly allocated #GstMessage
+ *
+ * Since: 1.28
+ */
+GstMessage *
+gst_message_new_device_monitor_started (GstObject * src, gboolean success)
+{
+  GstStructure *s =
+      gst_structure_new_static_str ("GstMessageDeviceMonitorStarted", "success",
+      G_TYPE_BOOLEAN, success, NULL);
+  return gst_message_new_custom (GST_MESSAGE_DEVICE_MONITOR_STARTED, src, s);
+}
+
+/**
+ * gst_message_parse_device_monitor_started:
+ * @message: a #GstMessage of type %GST_MESSAGE_DEVICE_MONITOR_STARTED
+ * @success: (out): Result location for whether the #GstDeviceMonitor was
+ *  successfully started
+ *
+ * Parses a device-monitor-started message. The device-monitor-started message
+ * is produced by a #GstDeviceMonitor once at least one #GstDeviceProvider
+ * successfully starts probing.
+ *
+ * Since: 1.28
+ */
+void
+gst_message_parse_device_monitor_started (GstMessage * message,
+    gboolean * success)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) ==
+      GST_MESSAGE_DEVICE_MONITOR_STARTED);
+
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "success", G_TYPE_BOOLEAN, success, NULL);
+}
 #endif // GSTREAMER_LITE
 
 /**
@@ -3195,7 +3243,7 @@ gst_message_parse_streams_selected (GstMessage * message,
  */
 GstMessage *
 gst_message_new_redirect (GstObject * src, const gchar * location,
-    GstTagList * tag_list, const GstStructure * entry_struct)
+    GstTagList * tag_list, GstStructure * entry_struct)
 {
   GstStructure *structure;
   GstMessage *message;
@@ -3241,7 +3289,7 @@ gst_message_new_redirect (GstObject * src, const gchar * location,
  */
 void
 gst_message_add_redirect_entry (GstMessage * message, const gchar * location,
-    GstTagList * tag_list, const GstStructure * entry_struct)
+    GstTagList * tag_list, GstStructure * entry_struct)
 {
   GValue val = G_VALUE_INIT;
   GstStructure *structure;
@@ -3361,8 +3409,8 @@ gst_message_get_num_redirect_entries (GstMessage * message)
 {
   GstStructure *structure;
   const GValue *entry_locations_gvalue;
-  const GValue *entry_taglists_gvalue;
-  const GValue *entry_structures_gvalue;
+  const GValue *entry_taglists_gvalue GST_UNUSED_CHECKS;
+  const GValue *entry_structures_gvalue GST_UNUSED_CHECKS;
   gsize size;
 
   g_return_val_if_fail (GST_IS_MESSAGE (message), 0);
@@ -3373,12 +3421,14 @@ gst_message_get_num_redirect_entries (GstMessage * message)
   entry_locations_gvalue =
       gst_structure_get_value (structure, "redirect-entry-locations");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_locations_gvalue), 0);
+#ifndef G_DISABLE_CHECKS
   entry_taglists_gvalue =
       gst_structure_get_value (structure, "redirect-entry-taglists");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_taglists_gvalue), 0);
   entry_structures_gvalue =
       gst_structure_get_value (structure, "redirect-entry-structures");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_structures_gvalue), 0);
+#endif
 
   size = gst_value_list_get_size (entry_locations_gvalue);
 
@@ -3551,4 +3601,60 @@ gst_message_take (GstMessage ** old_message, GstMessage * new_message)
 {
   return gst_mini_object_take ((GstMiniObject **) old_message,
       (GstMiniObject *) new_message);
+}
+
+/**
+ * gst_message_is_writable:
+ * @message: a #GstMessage
+ *
+ * Tests if you can safely modify @message. It is only safe to modify message when
+ * there is only one owner of the message - ie, the object is writable.
+ */
+gboolean
+gst_message_is_writable (const GstMessage * message)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (message));
+}
+
+/**
+ * gst_message_make_writable:
+ * @message: (transfer full): a #GstMessage
+ *
+ * Returns a writable copy of @message.
+ *
+ * If there is only one reference count on @message, the caller must be the owner,
+ * and so this function will return the message object unchanged. If on the other
+ * hand there is more than one reference on the object, a new message object will
+ * be returned. The caller's reference on @message will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the message in the argument and refs the message
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_message_ref().
+ *
+ * Returns: (transfer full): a writable message which may or may not be the
+ *     same as @message
+ */
+GstMessage *
+gst_message_make_writable (GstMessage * message)
+{
+  return
+      GST_MESSAGE_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (message)));
+}
+
+/**
+ * gst_message_steal: (skip)
+ * @old_message: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstMessage to be stolen.
+ *
+ * Atomically replace the #GstMessage pointed to by @old_message with %NULL and
+ * return the original message.
+ * Since: 1.28
+ */
+GstMessage *
+gst_message_steal (GstMessage ** old_message)
+{
+  return GST_MESSAGE_CAST (gst_mini_object_steal ((GstMiniObject **)
+          old_message));
 }

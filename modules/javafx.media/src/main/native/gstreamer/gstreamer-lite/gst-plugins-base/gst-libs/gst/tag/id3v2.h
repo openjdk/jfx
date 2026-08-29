@@ -26,6 +26,7 @@ G_BEGIN_DECLS
 
 #define ID3V2_MARK_SIZE 3
 #define ID3V2_HDR_SIZE GST_TAG_ID3V2_HEADER_SIZE
+#define ID3V2_FOOTER_SIZE GST_TAG_ID3V2_HEADER_SIZE
 
 /* From id3v2.c */
 guint id3v2_read_synch_uint (const guint8 * data, guint size);

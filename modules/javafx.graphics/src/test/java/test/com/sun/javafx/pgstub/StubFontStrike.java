@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,16 +36,7 @@ import com.sun.javafx.scene.text.GlyphList;
 /**
  *
  */
-public class StubFontStrike implements FontStrike {
-    private final FontResource fontResource;
-    private final float size;
-    private final BaseTransform transform;
-
-    public StubFontStrike(FontResource r, float size, BaseTransform t) {
-        this.fontResource = r;
-        this.size = size;
-        this.transform = t;
-    }
+public record StubFontStrike(FontResource fontResource, float size, BaseTransform transform) implements FontStrike {
 
     @Override
     public FontResource getFontResource() {

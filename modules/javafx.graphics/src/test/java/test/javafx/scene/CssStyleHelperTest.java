@@ -28,16 +28,27 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
 import javafx.css.CssParser.ParseError.PropertySetError;
 import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
 import javafx.css.Stylesheet;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.Background;
@@ -677,6 +688,278 @@ public class CssStyleHelperTest {
     }
 
     @Test
+    public void boundPropertyShouldNotAdverselyAffectUnrelatedNode() throws IOException {
+
+        /*
+         * Create a stylesheet that applies padding unconditionally, and a test pseudo-class
+         * that can be used to trigger a CSS state transition:
+         */
+
+        Stylesheet stylesheet = new CssParser().parse(
+            "boundPropertyShouldNotAdverselyAffectUnrelatedNode",
+            """
+                .pane {
+                    -fx-padding: 4;
+                }
+                .pane:test-marker {
+                    -fx-opacity: 0.5;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane bound = new Pane();
+        Pane other = new Pane();
+
+        bound.getStyleClass().add("pane");
+        other.getStyleClass().add("pane");
+
+        root.getChildren().addAll(bound, other);
+        stage.show();
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(new Insets(4), bound.getPadding());
+        assertEquals(new Insets(4), other.getPadding());
+
+        /*
+         * Bind the padding property, so CSS can no longer apply a value to it directly:
+         */
+
+        bound.paddingProperty().bind(new SimpleObjectProperty<>(new Insets(99)));
+
+        /*
+         * Transition to a state that has not yet been seen before, so a new shared style
+         * cache entry is created. "bound" is the first node to reach it: it cannot apply
+         * -fx-padding to itself, but it should still resolve and cache the correct value for
+         * whoever else shares this entry:
+         */
+
+        bound.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        /*
+         * "other" now transitions into that same state and takes the fast path, reusing the
+         * value "bound" already resolved, and keeps its correctly styled padding:
+         */
+
+        other.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(new Insets(4), other.getPadding());
+    }
+
+    @Test
+    public void lateCssMetaDataShouldNotAdverselyAffectUnrelatedNode() throws IOException {
+
+        /*
+         * Create a stylesheet that applies -fx-extra unconditionally, and a test pseudo-class
+         * that can be used to trigger a CSS state transition:
+         */
+
+        Stylesheet stylesheet = new CssParser().parse(
+            "lateCssMetaDataShouldNotAdverselyAffectUnrelatedNode",
+            """
+                .pane {
+                    -fx-extra: 40;
+                }
+                .pane:test-marker {
+                    -fx-opacity: 0.5;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
+        DummyControl late = new DummyControl();
+        DummyControl other = new DummyControl();
+
+        other.attachExtraProperty();
+
+        /*
+         * The "other" dummy control has the extra property attached to it immediately
+         * so CSS will see it from the start. The "late" variant never attaches the
+         * extra property, and so its CSS metadata list lacks it. This is similar to
+         * what happens when a control is added to a scene during layout; it won't have
+         * its skin applied yet, and so its CSS metadata may be incomplete.
+         */
+
+        late.getStyleClass().add("pane");
+        other.getStyleClass().add("pane");
+
+        root.getChildren().addAll(late, other);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(40.0, other.getExtra());
+
+        /*
+         * The "late" control is the first node that gets the test-marker state, which
+         * has not been seen before. Because its CSS metadata does not include
+         * -fx-extra, it can't compute a value for it to be stored in the cache.
+         * This is okay, as the CSS engine should always recompute values not explicitly
+         * part of the cache, instead of assuming the absence of a value has any meaning:
+         */
+
+        late.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        /*
+         * Transition the "other" control now to the same state, and check if it did
+         * not revert or otherwise corrupt the -fx-extra property:
+         */
+
+        other.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(40.0, other.getExtra());
+    }
+
+    @Test
+    public void exceptionDuringApplyShouldNotPreventResetOfUnrelatedNode() throws IOException {
+
+        /*
+         * Create a stylesheet that uses a style that can throw an exception when
+         * evaluated, and a test pseudo-class that can be used to trigger a CSS state transition:
+         */
+
+        Stylesheet stylesheet = new CssParser().parse(
+            "exceptionDuringApplyShouldNotPreventResetOfUnrelatedNode",
+            """
+                .pane {
+                    -fx-boom: 40;
+                }
+                .pane:test-marker {
+                    -fx-boom: 41;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
+        ExceptionalPropertyControl throwing = new ExceptionalPropertyControl();
+        ExceptionalPropertyControl other = new ExceptionalPropertyControl();
+
+        throwing.getStyleClass().add("pane");
+        other.getStyleClass().add("pane");
+
+        root.getChildren().addAll(throwing, other);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(40.0, other.getBoom());
+
+        /*
+         * Make the throwing control throw an exception whenever CSS next tries to apply -fx-boom to it:
+         */
+
+        throwing.explodeOnApply = true;
+
+        /*
+         * The throwing node is the first to transition to the test-marker state, that hasn't
+         * been seen before. Even though evaluating -fx-boom will throw an exception, it should
+         * cache the result as SKIP:
+         */
+
+        throwing.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        /*
+         * Normally, on an exception, the CSS engine will reset the value back to its initial
+         * value as well, but as the test class will reject that as well with an exception,
+         * it will remain as is:
+         */
+
+        assertEquals(40.0, throwing.getBoom());
+
+        /*
+         * The other node is now transitioned to the same state. Since the value of -fx-boom
+         * could not be evaluated, the value is reset to its default value (1.0).
+         */
+
+        other.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1.0, other.getBoom());
+
+        // disable the exception as other tests still use the same stage:
+        throwing.explodeOnApply = false;
+    }
+
+    @Test
+    public void boundPropertyIsStillComputedAndCachedForUnrelatedNode() throws IOException {
+
+        /*
+         * Create a stylesheet that uses a style that can be counted, and a
+         * test pseudo-class that can be used to trigger a CSS state transition:
+         */
+
+        Stylesheet stylesheet = new CssParser().parse(
+            "boundPropertyIsStillComputedAndCachedForUnrelatedNode",
+            """
+                .pane {
+                    -fx-extra-value: 40;
+                }
+                .pane:test-marker {
+                    -fx-opacity: 0.5;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
+        DummyControl bound = new DummyControl();
+        DummyControl other = new DummyControl();
+
+        bound.attachExtraProperty();
+        other.attachExtraProperty();
+
+        bound.getStyleClass().add("pane");
+        other.getStyleClass().add("pane");
+
+        root.getChildren().addAll(bound, other);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(40.0, bound.getExtra());
+        assertEquals(40.0, other.getExtra());
+
+        /*
+         * Make sure that the bound control can't apply a value for -fx-extra to itself:
+         */
+
+        bound.extra.bind(new SimpleDoubleProperty(99));
+
+        int countBeforeTransition = DummyControl.conversionCount;
+
+        /*
+         * The bound control is now transitioned to the test-marker pseudo-class, which
+         * has not yet been seen before and so a new cache entry must be created. Even
+         * though it is bound, it can still compute a useful value for the cache immediately:
+         */
+
+        bound.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(countBeforeTransition + 1, DummyControl.conversionCount);
+
+        /*
+         * The other control is now transitioned into that same state and should use
+         * the cache. No additional computation is expected, and so further conversion
+         * call should happen:
+         */
+
+        other.pseudoClassStateChanged(PseudoClass.getPseudoClass("test-marker"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(countBeforeTransition + 1, DummyControl.conversionCount);
+        assertEquals(40.0, other.getExtra());
+    }
+
+    @Test
     public void shouldDetectSimpleInfiniteLoop() throws IOException {
         Stylesheet stylesheet = new CssParser().parse(
             "userAgentStyleSheet",
@@ -967,5 +1250,139 @@ public class CssStyleHelperTest {
 
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * A Pane subclass with an optional extra styleable property, "-fx-extra".
+     * <p>
+     * This class is used to simulate what happens when a skin is set on a {@code Control}:
+     * Its {@code getCssMetaData()} will change values, exposing new not seen before
+     * CSS properties that were supplied by the skin.
+     * <p>
+     * It can also be used to count how many times the converter is called for this property,
+     * from which we can infer if the value was actually evaluated (despite being bound for
+     * example). This is done with a sub-property trick.
+     */
+    private static final class DummyControl extends Pane {
+
+        private static int conversionCount;
+
+        private static final CssMetaData<DummyControl, Number> EXTRA_VALUE =
+            new CssMetaData<>("-fx-extra-value", SizeConverter.getInstance(), 1.0) {
+                @Override public boolean isSettable(DummyControl node) { return false; }
+                @Override public StyleableProperty<Number> getStyleableProperty(DummyControl node) { return null; }
+            };
+
+        private static final StyleConverter<Void, Number> COUNTING_CONVERTER = new StyleConverter<>() {
+            @Override
+            public Number convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
+                conversionCount++;
+
+                return (Number)convertedValues.get(EXTRA_VALUE);
+            }
+        };
+
+        private static final CssMetaData<DummyControl, Number> EXTRA =
+            new CssMetaData<>("-fx-extra", COUNTING_CONVERTER, 1.0, false, List.of(EXTRA_VALUE)) {
+                @Override
+                public boolean isSettable(DummyControl node) {
+                    return !node.extra.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Number> getStyleableProperty(DummyControl node) {
+                    return node.extra;
+                }
+            };
+
+        private final StyleableDoubleProperty extra = new StyleableDoubleProperty(1.0) {
+            @Override public Object getBean() { return DummyControl.this; }
+            @Override public String getName() { return "extra"; }
+            @Override public CssMetaData<DummyControl, Number> getCssMetaData() { return EXTRA; }
+        };
+
+        private boolean extraAttached;
+        private List<CssMetaData<? extends Styleable, ?>> cachedMetaData;
+
+        void attachExtraProperty() {
+            extraAttached = true;
+            cachedMetaData = null;
+        }
+
+        double getExtra() {
+            return extra.get();
+        }
+
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            if (cachedMetaData == null) {
+                List<CssMetaData<? extends Styleable, ?>> list = new ArrayList<>(Pane.getClassCssMetaData());
+
+                if (extraAttached) {
+                    list.add(EXTRA);
+                }
+
+                cachedMetaData = Collections.unmodifiableList(list);
+            }
+
+            return cachedMetaData;
+        }
+    }
+
+    /**
+     * A Pane subclass with one extra styleable property, "-fx-boom". Its applyStyle()
+     * can throw an exception on demand. This can be used to check if the CSS engine
+     * always correctly stores a SKIP entry in the cache for properties it couldn't
+     * evaluate.
+     */
+    private static final class ExceptionalPropertyControl extends Pane {
+
+        private static final CssMetaData<ExceptionalPropertyControl, Number> BOOM =
+            new CssMetaData<>("-fx-boom", SizeConverter.getInstance(), 1.0) {
+                @Override
+                public boolean isSettable(ExceptionalPropertyControl node) {
+                    return !node.boom.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Number> getStyleableProperty(ExceptionalPropertyControl node) {
+                    return node.boom;
+                }
+            };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Pane.getClassCssMetaData());
+
+            styleables.add(BOOM);
+
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+
+        private boolean explodeOnApply;
+
+        private final StyleableDoubleProperty boom = new StyleableDoubleProperty(1.0) {
+            @Override public Object getBean() { return ExceptionalPropertyControl.this; }
+            @Override public String getName() { return "boom"; }
+            @Override public CssMetaData<ExceptionalPropertyControl, Number> getCssMetaData() { return BOOM; }
+
+            @Override public void applyStyle(StyleOrigin origin, Number value) {
+                if (explodeOnApply) {
+                    throw new RuntimeException("boom!");
+                }
+
+                super.applyStyle(origin, value);
+            }
+        };
+
+        double getBoom() {
+            return boom.get();
+        }
+
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return STYLEABLES;
+        }
     }
 }

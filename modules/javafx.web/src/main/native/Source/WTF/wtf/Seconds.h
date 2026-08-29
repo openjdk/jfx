@@ -36,7 +36,6 @@ class ContinuousApproximateTime;
 class ContinuousTime;
 class MonotonicTime;
 class PrintStream;
-class TextStream;
 class TimeWithDynamicClockType;
 class WallTime;
 
@@ -301,17 +300,15 @@ constexpr Seconds operator""_ns(unsigned long long nanoseconds)
 
 } // inline seconds_literals
 
-inline Seconds operator*(double scalar, Seconds seconds)
+inline constexpr Seconds operator*(double scalar, Seconds seconds)
 {
     return Seconds(scalar * seconds.value());
 }
 
-inline Seconds operator/(double scalar, Seconds seconds)
+inline constexpr Seconds operator/(double scalar, Seconds seconds)
 {
     return Seconds(scalar / seconds.value());
 }
-
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, Seconds);
 
 } // namespace WTF
 

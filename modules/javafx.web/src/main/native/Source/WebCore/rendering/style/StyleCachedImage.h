@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "CachedResourceHandle.h"
-#include "StyleImage.h"
+#include <WebCore/CachedImage.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/StyleImage.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -63,14 +64,14 @@ public:
     FloatSize imageSize(const RenderElement*, float multiplier) const final;
     bool imageHasRelativeWidth() const final;
     bool imageHasRelativeHeight() const final;
-    void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
+    void computeIntrinsicDimensions(const RenderElement*, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
     bool usesImageContainerSize() const final;
     void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float) final;
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
     bool hasImage() const final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     bool usesDataProtocol() const final;

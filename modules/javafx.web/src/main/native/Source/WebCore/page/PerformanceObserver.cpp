@@ -26,20 +26,23 @@
 #include "config.h"
 #include "PerformanceObserver.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "InspectorInstrumentation.h"
 #include "LocalDOMWindow.h"
 #include "Performance.h"
+#include "PerformanceEventTiming.h"
 #include "PerformanceObserverEntryList.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
 
 PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecutionContext, Ref<PerformanceObserverCallback>&& callback)
-    : m_callback(WTFMove(callback))
+    : m_callback(WTF::move(callback))
+    , m_durationThreshold(PerformanceEventTiming::defaultDurationThreshold)
 {
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-        if (auto* window = document->window())
+        if (RefPtr window = document->window())
             m_performance = window->performance();
     } else if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
         m_performance = workerGlobalScope->performance();
@@ -98,6 +101,9 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
             std::stable_sort(oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
             std::inplace_merge(begin, oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
         }
+        if (init.durationThreshold)
+            m_durationThreshold = std::max(PerformanceEventTiming::minimumDurationThreshold, Seconds::fromMilliseconds(*init.durationThreshold));
+
         m_typeFilter.add(filter);
     }
 
@@ -105,8 +111,9 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
         protectedPerformance()->registerPerformanceObserver(*this);
         m_registered = true;
     }
-    if (isBuffered)
-        deliver();
+
+    if (isBuffered && m_entriesToDeliver.size())
+        protectedPerformance()->scheduleTaskIfNeeded();
 
     return { };
 }
@@ -136,12 +143,12 @@ void PerformanceObserver::deliver()
     if (m_entriesToDeliver.isEmpty())
         return;
 
-    auto* context = m_callback->scriptExecutionContext();
+    RefPtr context = m_callback->scriptExecutionContext();
     if (!context)
         return;
 
     Vector<Ref<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
-    auto list = PerformanceObserverEntryList::create(WTFMove(entries));
+    auto list = PerformanceObserverEntryList::create(WTF::move(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
     m_callback->invoke(*this, list, *this);
@@ -150,17 +157,25 @@ void PerformanceObserver::deliver()
 
 Vector<String> PerformanceObserver::supportedEntryTypes(ScriptExecutionContext& context)
 {
-    Vector<String> entryTypes = {
-        "mark"_s,
-        "measure"_s,
-        "navigation"_s,
-    };
+    RefPtr document = dynamicDowncast<Document>(context);
+    Vector<String> entryTypes;
 
-    if (RefPtr document = dynamicDowncast<Document>(context); document && document->supportsPaintTiming())
+    if (document && document->settings().eventTimingEnabled()) {
+        entryTypes.append("event"_s);
+        entryTypes.append("first-input"_s);
+    }
+
+    if (document && document->supportsLargestContentfulPaint())
+        entryTypes.append("largest-contentful-paint"_s);
+
+    entryTypes.append("mark"_s);
+    entryTypes.append("measure"_s);
+    entryTypes.append("navigation"_s);
+
+    if (document && document->supportsPaintTiming())
         entryTypes.append("paint"_s);
 
     entryTypes.append("resource"_s);
-
     return entryTypes;
 }
 

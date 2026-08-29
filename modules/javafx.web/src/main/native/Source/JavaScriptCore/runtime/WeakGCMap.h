@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "DeferGC.h"
-#include "Weak.h"
-#include "WeakGCHashTable.h"
+#include <JavaScriptCore/DeferGC.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakGCHashTable.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -56,7 +56,7 @@ public:
 
     AddResult set(const KeyType& key, ValueType value)
     {
-        return m_map.set(key, WTFMove(value));
+        return m_map.set(key, WTF::move(value));
     }
 
     template<typename Functor>
@@ -69,7 +69,7 @@ public:
         ValueArg* value = result.iterator->value.get();
         if (!result.isNewEntry && !value) {
             value = functor();
-            result.iterator->value = WTFMove(value);
+            result.iterator->value = WTF::move(value);
         }
         return value;
     }

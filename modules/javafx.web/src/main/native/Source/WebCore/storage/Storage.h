@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "LocalDOMWindowProperty.h"
-#include "ScriptWrappable.h"
+#include <WebCore/LocalDOMWindowProperty.h>
+#include <WebCore/ScriptWrappable.h>
 
 namespace WebCore {
 
@@ -34,7 +34,7 @@ class StorageArea;
 template<typename> class ExceptionOr;
 
 class Storage final : public ScriptWrappable, public RefCounted<Storage>, public LocalDOMWindowProperty {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Storage);
+    WTF_MAKE_TZONE_ALLOCATED(Storage);
 public:
     static Ref<Storage> create(LocalDOMWindow&, Ref<StorageArea>&&);
     ~Storage();

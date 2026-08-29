@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ImageBufferBackend.h"
-#include "NullGraphicsContext.h"
-#include <memory.h>
+#include <WebCore/ImageBufferBackend.h>
+#include <WebCore/NullGraphicsContext.h>
+#include <memory>
 
 namespace WebCore {
 

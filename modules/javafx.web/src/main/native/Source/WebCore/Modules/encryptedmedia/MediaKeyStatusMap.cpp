@@ -103,7 +103,7 @@ std::optional<KeyValuePair<BufferSource::VariantType, MediaKeyStatus>> MediaKeyS
 
     auto& pair = statuses[m_index++];
     RefPtr buffer = ArrayBuffer::create(Ref { pair.first }->makeContiguous()->span());
-    return KeyValuePair<BufferSource::VariantType, MediaKeyStatus> { WTFMove(buffer), pair.second };
+    return KeyValuePair<BufferSource::VariantType, MediaKeyStatus> { WTF::move(buffer), pair.second };
 }
 
 } // namespace WebCore

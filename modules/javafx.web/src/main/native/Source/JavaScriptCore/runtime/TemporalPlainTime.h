@@ -54,7 +54,7 @@ public:
     static ISO8601::PlainTime regulateTime(JSGlobalObject*, ISO8601::Duration&&, TemporalOverflow);
     static ISO8601::Duration addTime(const ISO8601::PlainTime&, const ISO8601::Duration&);
 
-    static TemporalPlainTime* from(JSGlobalObject*, JSValue, std::optional<TemporalOverflow>);
+    static TemporalPlainTime* from(JSGlobalObject*, JSValue, JSObject*);
     static int32_t compare(const ISO8601::PlainTime&, const ISO8601::PlainTime&);
 
     TemporalCalendar* calendar() { return m_calendar.get(this); }
@@ -85,6 +85,8 @@ private:
     template<typename CharacterType>
     static std::optional<ISO8601::PlainTime> parse(StringParsingBuffer<CharacterType>&);
     static ISO8601::PlainTime fromObject(JSGlobalObject*, JSObject*);
+
+    ISO8601::Duration differenceTemporalPlainTime(DifferenceOperation, JSGlobalObject*, TemporalPlainTime*, JSValue) const;
 
     ISO8601::PlainTime m_plainTime;
     LazyProperty<TemporalPlainTime, TemporalCalendar> m_calendar;

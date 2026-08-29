@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EventTargetConcrete);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EventTargetConcrete);
 
 Ref<EventTargetConcrete> EventTargetConcrete::create(ScriptExecutionContext& context)
 {
@@ -41,6 +41,11 @@ Ref<EventTargetConcrete> EventTargetConcrete::create(ScriptExecutionContext& con
 EventTargetConcrete::EventTargetConcrete(ScriptExecutionContext& context)
     : ContextDestructionObserver(&context)
 {
+}
+
+ScriptExecutionContext* EventTargetConcrete::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 } // namespace WebCore

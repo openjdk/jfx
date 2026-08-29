@@ -42,7 +42,7 @@ class ContentSecurityPolicyResponseHeaders {
 public:
     ContentSecurityPolicyResponseHeaders() = default;
     ContentSecurityPolicyResponseHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers, int httpStatusCode)
-        : m_headers(WTFMove(headers))
+        : m_headers(WTF::move(headers))
         , m_httpStatusCode(httpStatusCode)
     { }
 
@@ -56,7 +56,7 @@ public:
     void addPolicyHeadersTo(ResourceResponse&) const;
 
     const Vector<std::pair<String, ContentSecurityPolicyHeaderType>>& headers() const { return m_headers; }
-    void setHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers) { m_headers = WTFMove(headers); }
+    void setHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers) { m_headers = WTF::move(headers); }
     int httpStatusCode() const { return m_httpStatusCode; }
     void setHTTPStatusCode(int httpStatusCode) { m_httpStatusCode = httpStatusCode; }
 

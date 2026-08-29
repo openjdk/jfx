@@ -30,7 +30,7 @@ namespace WTF {
 // Paul Hsieh's SuperFastHash
 // http://www.azillionmonkeys.com/qed/hash.html
 
-// LChar data is interpreted as Latin-1-encoded (zero-extended to 16 bits).
+// Latin1Character data is interpreted as Latin-1-encoded (zero-extended to 16 bits).
 
 // NOTE: The hash computation here must stay in sync with the create_hash_table script in
 // JavaScriptCore and the CodeGeneratorJS.pm script in WebCore.

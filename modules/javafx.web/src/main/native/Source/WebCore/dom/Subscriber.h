@@ -31,14 +31,14 @@
 #include "ScriptWrappable.h"
 #include "SubscribeOptions.h"
 #include "VoidCallback.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
 
 class Subscriber final : public ActiveDOMObject, public ScriptWrappable, public RefCounted<Subscriber> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Subscriber);
+    WTF_MAKE_TZONE_ALLOCATED(Subscriber);
 
 public:
     void ref() const final { RefCounted::ref(); }
@@ -54,12 +54,11 @@ public:
 
     static Ref<Subscriber> create(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);
 
+    ~Subscriber();
+
     void reportErrorObject(JSC::JSValue);
 
-    // JSCustomMarkFunction; for JSSubscriberCustom
-    Vector<VoidCallback*> teardownCallbacksConcurrently();
-    InternalObserver* observerConcurrently();
-    void visitAdditionalChildren(JSC::AbstractSlotVisitor&);
+    template<typename Visitor> void visitAdditionalChildren(Visitor&);
 
 private:
     explicit Subscriber(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);

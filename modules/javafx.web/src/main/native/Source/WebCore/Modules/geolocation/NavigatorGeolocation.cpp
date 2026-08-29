@@ -44,18 +44,13 @@ NavigatorGeolocation::NavigatorGeolocation(Navigator& navigator)
 
 NavigatorGeolocation::~NavigatorGeolocation() = default;
 
-ASCIILiteral NavigatorGeolocation::supplementName()
-{
-    return "NavigatorGeolocation"_s;
-}
-
 NavigatorGeolocation* NavigatorGeolocation::from(Navigator& navigator)
 {
-    NavigatorGeolocation* supplement = static_cast<NavigatorGeolocation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorGeolocation>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorGeolocation>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -68,24 +63,24 @@ void NavigatorGeolocation::resetAllGeolocationPermission()
 }
 #endif // PLATFORM(IOS_FAMILY)
 
-Geolocation* NavigatorGeolocation::geolocation(Navigator& navigator)
+Geolocation& NavigatorGeolocation::geolocation(Navigator& navigator)
 {
     return NavigatorGeolocation::from(navigator)->geolocation();
 }
 
 Geolocation* NavigatorGeolocation::optionalGeolocation(Navigator& navigator)
 {
-    NavigatorGeolocation* supplement = static_cast<NavigatorGeolocation*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorGeolocation>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement)
         return nullptr;
     return supplement->m_geolocation.get();
 }
 
-Geolocation* NavigatorGeolocation::geolocation() const
+Geolocation& NavigatorGeolocation::geolocation() const
 {
     if (!m_geolocation)
-        lazyInitialize(m_geolocation, Geolocation::create(Ref { m_navigator.get() }));
-    return m_geolocation.get();
+        lazyInitialize(m_geolocation, Geolocation::create(m_navigator.get()));
+    return *m_geolocation;
 }
 
 } // namespace WebCore

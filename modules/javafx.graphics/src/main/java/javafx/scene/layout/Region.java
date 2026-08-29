@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1591,41 +1591,61 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the minimum width of this region.
-     * Returns the sum of the left and right insets by default.
-     * region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the minimum width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #minWidth(double)} when the {@link #minWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses should override this method when their content or layout policy requires a different
+     * minimum width. If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation should
+     * use {@code height}; otherwise {@code height} can be ignored. An overriding implementation should be
+     * consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed minimum width of this region
+     * @implNote The default implementation returns the sum of the left and right {@linkplain #getInsets() insets}.
+     * @param height the height on which to base the minimum width, or {@code -1} if no height is specified
+     * @return the computed minimum width
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computeMinWidth(double height) {
         return getInsets().getLeft() + getInsets().getRight();
     }
 
     /**
-     * Computes the minimum height of this region.
-     * Returns the sum of the top and bottom insets by default.
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the minimum height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #minHeight(double)} when the {@link #minHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses should override this method when their content or layout policy requires a different
+     * minimum height. If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation should
+     * use {@code width}; otherwise {@code width} can be ignored. An overriding implementation should be
+     * consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed minimum height for this region
+     * @implNote The default implementation returns the sum of the top and bottom {@linkplain #getInsets() insets}.
+     * @param width the width on which to base the minimum height, or {@code -1} if no width is specified
+     * @return the computed minimum height
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computeMinHeight(double width) {
         return getInsets().getTop() + getInsets().getBottom();
     }
 
     /**
-     * Computes the preferred width of this region for the given height.
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the preferred width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #prefWidth(double)} when the {@link #prefWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses that implement a custom layout policy should override this method to compute the width
+     * needed by that policy. If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation
+     * should use {@code height}; otherwise {@code height} can be ignored. An overriding implementation should
+     * be consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed preferred width for this region
+     * @implNote The default implementation adds the left and right {@linkplain #getInsets() insets} to the preferred
+     *           width computed by the {@link Parent#computePrefWidth(double) superclass implementation}.
+     * @param height the height on which to base the preferred width, or {@code -1} if no height is specified
+     * @return the computed preferred width
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computePrefWidth(double height) {
         final double w = super.computePrefWidth(height);
@@ -1633,13 +1653,21 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the preferred height of this region for the given width;
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the preferred height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #prefHeight(double)} when the {@link #prefHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses that implement a custom layout policy should override this method to compute the height
+     * needed by that policy. If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation
+     * should use {@code width}; otherwise {@code width} can be ignored. An overriding implementation should
+     * be consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed preferred height for this region
+     * @implNote The default implementation adds the top and bottom {@linkplain #getInsets() insets} to the preferred
+     *           height computed by the {@link Parent#computePrefHeight(double) superclass implementation}.
+     * @param width the width on which to base the preferred height, or {@code -1} if no width is specified
+     * @return the computed preferred height
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computePrefHeight(double width) {
         final double h = super.computePrefHeight(width);
@@ -1647,32 +1675,42 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the maximum width for this region.
-     * Returns Double.MAX_VALUE by default.
-     * Region subclasses may override this method to return an different
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the maximum width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #maxWidth(double)} when the {@link #maxWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses may override this method to impose an upper bound based on their content or layout policy.
+     * If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation should use {@code height};
+     * otherwise {@code height} can be ignored. A finite maximum derived from layout geometry should be consistent
+     * with the calculations and pixel-snapping decisions used by {@link #layoutChildren()}.
      *
-     * @param height The height of the Region, in case this value might dictate
-     * the maximum width
-     * @return the computed maximum width for this region
+     * @implNote The default implementation returns {@link Double#MAX_VALUE}, indicating that
+     *           the region has no finite maximum width.
+     * @param height the height on which to base the maximum width, or {@code -1} if no height is specified
+     * @return the computed maximum width; {@link Double#MAX_VALUE} indicates no finite maximum
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computeMaxWidth(double height) {
         return Double.MAX_VALUE;
     }
 
     /**
-     * Computes the maximum height of this region.
-     * Returns Double.MAX_VALUE by default.
-     * Region subclasses may override this method to return a different
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the maximum height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #maxHeight(double)} when the {@link #maxHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses may override this method to impose an upper bound based on their content or layout policy.
+     * If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation should use {@code width};
+     * otherwise {@code width} can be ignored. A finite maximum derived from layout geometry should be consistent
+     * with the calculations and pixel-snapping decisions used by {@link #layoutChildren()}.
      *
-     * @param width The width of the Region, in case this value might dictate
-     * the maximum height
-     * @return the computed maximum height for this region
+     * @implNote The default implementation returns {@link Double#MAX_VALUE}, indicating that
+     *           the region has no finite maximum height.
+     * @param width the width on which to base the maximum height, or {@code -1} if no width is specified
+     * @return the computed maximum height; {@link Double#MAX_VALUE} indicates no finite maximum
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computeMaxHeight(double width) {
         return Double.MAX_VALUE;
@@ -1688,7 +1726,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapSpace(double value) {
         return snapSpaceX(value, isSnapToPixel());
     }
@@ -1727,7 +1765,7 @@ public class Region extends Parent {
      * @return value ceiled to nearest pixel
      * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapSize(double value) {
         return snapSizeX(value, isSnapToPixel());
     }
@@ -1766,7 +1804,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapPosition(double value) {
         return snapPositionX(value, isSnapToPixel());
     }
@@ -2168,11 +2206,16 @@ public class Region extends Parent {
      * @param areaHeight the height of the bounding area where the node is going to be placed
      * @param fillWidth if Node should try to fill the area width
      * @param fillHeight if Node should try to fill the area height
+     * @param isSnapToPixel whether to snap size to pixels
+     * @param snapScaleX the horizontal scale to use when snapping
+     * @param snapScaleY the vertical scale to use when snapping
      * @param result Vec2d object for the result or null if new one should be created
-     * @return Vec2d object with width(x parameter) and height (y parameter)
+     * @return Vec2d object with width(x parameter) and height (y parameter), both snapped if
+     *               {@code isSnapToPixel} is {@code true}
      */
     static Vec2d boundedNodeSizeWithBias(Node node, double areaWidth, double areaHeight,
-            boolean fillWidth, boolean fillHeight, Vec2d result) {
+            boolean fillWidth, boolean fillHeight, boolean isSnapToPixel,
+            double snapScaleX, double snapScaleY, Vec2d result) {
         if (result == null) {
             result = new Vec2d();
         }
@@ -2183,34 +2226,34 @@ public class Region extends Parent {
         double childHeight = 0;
 
         if (bias == null) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
 
         } else if (bias == Orientation.HORIZONTAL) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(childWidth), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(childWidth)),
-                    node.maxHeight(childWidth));
+                    node.maxHeight(childWidth)), isSnapToPixel, snapScaleY);
 
         } else { // bias == VERTICAL
-            childHeight = boundedSize(
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
-            childWidth = boundedSize(
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
+            childWidth = snapSize(boundedSize(
                     node.minWidth(childHeight), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(childHeight)),
-                    node.maxWidth(childHeight));
+                    node.maxWidth(childHeight)), isSnapToPixel, snapScaleX);
         }
 
         result.set(childWidth, childHeight);
@@ -2602,9 +2645,8 @@ public class Region extends Parent {
 
         if (child.isResizable()) {
             Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
-                    fillWidth, fillHeight, TEMP_VEC2D);
-            child.resize(snapSize(size.x, isSnapToPixel, snapScaleX),
-                         snapSize(size.y, isSnapToPixel, snapScaleY));
+                    fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            child.resize(size.x, size.y);
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment, isSnapToPixel);

@@ -28,7 +28,7 @@
 
 #include "AnimationUtilities.h"
 #include "ColorBlending.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Style {

@@ -81,6 +81,8 @@ private:
 
     void buildTreeForInlineContent();
     void buildTreeForFlexContent();
+    void buildTreeForGridContent();
+
     void insertChild(UniqueRef<Layout::Box>, RenderObject&, const RenderObject* beforeChild = nullptr);
 
     RenderBlock& m_rootRenderer;
@@ -92,3 +94,4 @@ void showInlineContent(TextStream&, const InlineContent&, size_t depth, bool isD
 #endif
 }
 }
+

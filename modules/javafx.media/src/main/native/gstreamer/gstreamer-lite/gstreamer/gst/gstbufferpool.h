@@ -278,7 +278,7 @@ GType       gst_buffer_pool_get_type (void);
 /* allocation */
 
 GST_API
-GstBufferPool *  gst_buffer_pool_new  (void);
+GstBufferPool *  gst_buffer_pool_new  (void) G_GNUC_WARN_UNUSED_RESULT;
 
 /* state management */
 
@@ -292,7 +292,7 @@ GST_API
 gboolean         gst_buffer_pool_set_config      (GstBufferPool *pool, GstStructure *config);
 
 GST_API
-GstStructure *   gst_buffer_pool_get_config      (GstBufferPool *pool);
+GstStructure *   gst_buffer_pool_get_config      (GstBufferPool *pool) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 const gchar **   gst_buffer_pool_get_options     (GstBufferPool *pool);

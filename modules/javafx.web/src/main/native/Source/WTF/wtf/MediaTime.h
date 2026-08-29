@@ -78,7 +78,7 @@ public:
     bool operator!() const;
     explicit operator bool() const;
 
-    WTF_EXPORT_PRIVATE friend std::weak_ordering operator<=>(const MediaTime&, const MediaTime&);
+    WTF_EXPORT_PRIVATE friend std::partial_ordering operator<=>(const MediaTime&, const MediaTime&);
     friend bool operator==(const MediaTime& a, const MediaTime& b) { return is_eq(a <=> b); }
     bool isBetween(const MediaTime&, const MediaTime&) const;
 
@@ -188,8 +188,6 @@ template<> struct LogArgument<MediaTime> {
 template<> struct LogArgument<MediaTimeRange> {
     static String toString(const MediaTimeRange& range) { return range.toJSONString(); }
 };
-
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const MediaTime&);
 
 }
 

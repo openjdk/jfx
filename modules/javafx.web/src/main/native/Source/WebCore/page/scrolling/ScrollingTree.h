@@ -25,21 +25,22 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "BoxExtents.h"
-#include "EventTrackingRegions.h"
-#include "FrameIdentifier.h"
-#include "LayerHostingContextIdentifier.h"
-#include "PageIdentifier.h"
-#include "PlatformWheelEvent.h"
-#include "RectEdges.h"
-#include "Region.h"
-#include "ScrollTypes.h"
-#include "ScrollingCoordinatorTypes.h"
-#include "ScrollingTreeGestureState.h"
-#include "ScrollingTreeLatchingController.h"
-#include "WheelEventTestMonitor.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/EventTrackingRegions.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/Region.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollingCoordinatorTypes.h>
+#include <WebCore/ScrollingTreeGestureState.h>
+#include <WebCore/ScrollingTreeLatchingController.h>
+#include <WebCore/WheelEventTestMonitor.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/MonotonicTime.h>
@@ -58,7 +59,7 @@ class ScrollingTreeOverflowScrollProxyNode;
 class ScrollingTreePositionedNode;
 class ScrollingTreeScrollingNode;
 class ScrollingTreeFrameHostingNode;
-enum class EventListenerRegionType : uint32_t;
+enum class EventListenerRegionType : uint64_t;
 
 using FramesPerSecond = unsigned;
 using PlatformDisplayID = uint32_t;
@@ -191,7 +192,7 @@ public:
     std::optional<ScrollingNodeID> latchedNodeID() const;
     WEBCORE_EXPORT void clearLatchedNode();
 
-    bool hasFixedOrSticky() const;
+    WEBCORE_EXPORT bool hasFixedOrSticky() const;
     void fixedOrStickyNodeAdded(ScrollingTreeNode&);
 
     // A map of overflow scrolling nodes to positioned nodes which need to be updated
@@ -236,6 +237,7 @@ public:
     WEBCORE_EXPORT FloatPoint mainFrameScrollPosition() const;
 
     WEBCORE_EXPORT ScrollbarWidth mainFrameScrollbarWidth() const;
+    WEBCORE_EXPORT std::optional<ScrollbarColor> mainFrameScrollbarColor() const;
 
     WEBCORE_EXPORT OverscrollBehavior mainFrameHorizontalOverscrollBehavior() const;
     WEBCORE_EXPORT OverscrollBehavior mainFrameVerticalOverscrollBehavior() const;
@@ -306,7 +308,7 @@ private:
 
     RefPtr<ScrollingTreeFrameScrollingNode> m_rootNode;
 
-    using ScrollingTreeNodeMap = HashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
+    using ScrollingTreeNodeMap = HashMap<ScrollingNodeID, Ref<ScrollingTreeNode>>;
     ScrollingTreeNodeMap m_nodeMap;
 
     Lock m_frameIDMapLock;

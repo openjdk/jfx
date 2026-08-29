@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "PlatformMediaSessionInterface.h"
+#include <WebCore/PlatformMediaSessionInterface.h>
 
 namespace WebCore {
 
-class PlatformMediaSession : public PlatformMediaSessionInterface {
+class WEBCORE_EXPORT PlatformMediaSession : public PlatformMediaSessionInterface {
     WTF_MAKE_TZONE_ALLOCATED(PlatformMediaSession);
 public:
     static Ref<PlatformMediaSession> create(PlatformMediaSessionClient& client)
@@ -41,8 +41,8 @@ public:
 
     void setActive(bool) final;
 
-    State state() const  final { return m_state; }
-    void setState(State) final;
+    State state() const override;
+    void setState(State) override;
 
     State stateToRestore() const final { return m_stateToRestore; }
 
@@ -54,7 +54,7 @@ public:
     void endInterruption(OptionSet<EndInterruptionFlags>) final;
 
     void clientWillBeginAutoplaying() override;
-    bool clientWillBeginPlayback() override;
+    void clientWillBeginPlayback(CompletionHandler<void(bool)>&&) override;
     bool clientWillPausePlayback() override;
 
     void clientWillBeDOMSuspended() final;
@@ -82,7 +82,7 @@ public:
 
     bool canPlayConcurrently(const PlatformMediaSessionInterface&) const final;
 
-    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlaybackControlsPurpose) final;
+    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlaybackControlsPurpose) override;
 
     bool isActiveNowPlayingSession() const final { return m_isActiveNowPlayingSession; }
     void setActiveNowPlayingSession(bool) final;
@@ -114,6 +114,8 @@ private:
     bool m_preparingToPlay { false };
     bool m_isActiveNowPlayingSession { false };
 };
+
+inline PlatformMediaSession::State PlatformMediaSession::state() const { return m_state; }
 
 String convertEnumerationToString(PlatformMediaSession::State);
 String convertEnumerationToString(PlatformMediaSession::InterruptionType);

@@ -33,7 +33,7 @@ namespace WTR {
 
 class JSWrappable : public ThreadSafeRefCounted<JSWrappable> {
 public:
-    virtual ~JSWrappable() { }
+    virtual ~JSWrappable() = default;
     virtual JSClassRef wrapperClass() = 0;
 };
 

@@ -25,22 +25,29 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(WEBGL)
 
-#include "DestinationColorSpace.h"
-#include "GraphicsContextGLActiveInfo.h"
-#include "GraphicsContextGLAttributes.h"
-#include "GraphicsContextGLEnums.h"
-#include "GraphicsLayerContentsDisplayDelegate.h"
-#include "GraphicsTypesGL.h"
-#include "Image.h"
-#include "IntRect.h"
-#include "IntSize.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/GCGLExtension.h>
+#include <WebCore/GraphicsContextGLActiveInfo.h>
+#include <WebCore/GraphicsContextGLAttributes.h>
+#include <WebCore/GraphicsContextGLEnums.h>
+#include <WebCore/GraphicsLayerContentsDisplayDelegate.h>
+#include <WebCore/GraphicsTypesGL.h>
+#include <WebCore/Image.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/IntSize.h>
 #include <span>
+#include <wtf/EnumSet.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
+
+#if OS(ANDROID)
+#include <wtf/android/RefPtrAndroid.h>
+#endif
 
 #if PLATFORM(COCOA)
 #include <wtf/MachSendRight.h>
@@ -90,11 +97,15 @@ using GraphicsContextGLExternalSyncSource = std::tuple<MachSendRight, uint64_t>;
 #elif PLATFORM(GTK) || PLATFORM(WPE)
 
 struct GraphicsContextGLExternalImageSource {
+#if OS(ANDROID)
+    RefPtr<AHardwareBuffer> hardwareBuffer;
+#else
     Vector<WTF::UnixFileDescriptor> fds;
     Vector<uint32_t> strides;
     Vector<uint32_t> offsets;
     uint32_t fourcc;
     uint64_t modifier;
+#endif // OS(ANDROID)
     WebCore::IntSize size;
 };
 using GraphicsContextGLExternalSyncSource = int;
@@ -1226,7 +1237,7 @@ public:
         WEBCORE_EXPORT Client();
         WEBCORE_EXPORT virtual ~Client();
         virtual void forceContextLost() = 0;
-        virtual void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const String&) = 0;
+        virtual void addDebugMessage(GCGLenum, GCGLenum, GCGLenum, const CString&) = 0;
     };
 
     WEBCORE_EXPORT GraphicsContextGL(GraphicsContextGLAttributes);
@@ -1237,7 +1248,7 @@ public:
     // ========== WebGL 1 entry points.
     virtual void activeTexture(GCGLenum texture) = 0;
     virtual void attachShader(PlatformGLObject program, PlatformGLObject shader) = 0;
-    virtual void bindAttribLocation(PlatformGLObject, GCGLuint index, const String& name) = 0;
+    virtual void bindAttribLocation(PlatformGLObject, GCGLuint index, const CString& name) = 0;
     virtual void bindBuffer(GCGLenum target, PlatformGLObject) = 0;
     virtual void bindFramebuffer(GCGLenum target, PlatformGLObject) = 0;
     virtual void bindRenderbuffer(GCGLenum target, PlatformGLObject) = 0;
@@ -1294,15 +1305,15 @@ public:
 
     virtual void generateMipmap(GCGLenum target) = 0;
 
-    virtual bool getActiveAttrib(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
-    virtual bool getActiveUniform(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
+    virtual std::optional<GraphicsContextGLActiveInfo> getActiveAttrib(PlatformGLObject program, GCGLuint index) = 0;
+    virtual std::optional<GraphicsContextGLActiveInfo> getActiveUniform(PlatformGLObject program, GCGLuint index) = 0;
 
-    virtual GCGLint getAttribLocation(PlatformGLObject, const String& name) = 0;
+    virtual GCGLint getAttribLocation(PlatformGLObject, const CString& name) = 0;
 
     virtual GCGLint getBufferParameteri(GCGLenum target, GCGLenum pname) = 0;
 
     // getParameter
-    virtual String getString(GCGLenum name) = 0;
+    virtual CString getString(GCGLenum name) = 0;
     virtual void getFloatv(GCGLenum pname, std::span<GCGLfloat> value) = 0;
     virtual void getIntegerv(GCGLenum pname, std::span<GCGLint> value) = 0;
     virtual void getIntegeri_v(GCGLenum pname, GCGLuint index, std::span<GCGLint, 4> value) = 0; // NOLINT
@@ -1317,7 +1328,7 @@ public:
     virtual GCGLint getFramebufferAttachmentParameteri(GCGLenum target, GCGLenum attachment, GCGLenum pname) = 0;
 
     // getProgramParameter
-    virtual String getProgramInfoLog(PlatformGLObject) = 0;
+    virtual CString getProgramInfoLog(PlatformGLObject) = 0;
 
     // getRenderbufferParameter
     virtual GCGLint getRenderbufferParameteri(GCGLenum target, GCGLenum pname) = 0;
@@ -1325,10 +1336,8 @@ public:
     // getShaderParameter
     virtual GCGLint getShaderi(PlatformGLObject, GCGLenum pname) = 0;
 
-    virtual String getShaderInfoLog(PlatformGLObject) = 0;
+    virtual CString getShaderInfoLog(PlatformGLObject) = 0;
     virtual void getShaderPrecisionFormat(GCGLenum shaderType, GCGLenum precisionType, std::span<GCGLint, 2> range, GCGLint* precision) = 0;
-
-    virtual String getShaderSource(PlatformGLObject) = 0;
 
     // getTexParameter
     virtual GCGLfloat getTexParameterf(GCGLenum target, GCGLenum pname) = 0;
@@ -1339,7 +1348,7 @@ public:
     virtual void getUniformiv(PlatformGLObject program, GCGLint location, std::span<GCGLint> value) = 0;
     virtual void getUniformuiv(PlatformGLObject program, GCGLint location, std::span<GCGLuint> value) = 0;
 
-    virtual GCGLint getUniformLocation(PlatformGLObject, const String& name) = 0;
+    virtual GCGLint getUniformLocation(PlatformGLObject, const CString& name) = 0;
 
     virtual GCGLsizeiptr getVertexAttribOffset(GCGLuint index, GCGLenum pname) = 0;
 
@@ -1360,7 +1369,7 @@ public:
     virtual void sampleCoverage(GCGLclampf value, GCGLboolean invert) = 0;
     virtual void scissor(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) = 0;
 
-    virtual void shaderSource(PlatformGLObject, const String& string) = 0;
+    virtual void shaderSource(PlatformGLObject shader, const CString& source) = 0;
 
     virtual void stencilFunc(GCGLenum func, GCGLint ref, GCGLuint mask) = 0;
     virtual void stencilFuncSeparate(GCGLenum face, GCGLenum func, GCGLint ref, GCGLuint mask) = 0;
@@ -1462,7 +1471,7 @@ public:
     virtual void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, std::span<const uint8_t> data) = 0;
     virtual void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, GCGLintptr offset) = 0;
 
-    virtual GCGLint getFragDataLocation(PlatformGLObject program, const String& name) = 0;
+    virtual GCGLint getFragDataLocation(PlatformGLObject program, const CString& name) = 0;
 
     virtual void uniform1ui(GCGLint location, GCGLuint v0) = 0;
     virtual void uniform2ui(GCGLint location, GCGLuint v0, GCGLuint v1) = 0;
@@ -1525,20 +1534,20 @@ public:
     virtual void bindTransformFeedback(GCGLenum target, PlatformGLObject id) = 0;
     virtual void beginTransformFeedback(GCGLenum primitiveMode) = 0;
     virtual void endTransformFeedback() = 0;
-    virtual void transformFeedbackVaryings(PlatformGLObject program, const Vector<String>& varyings, GCGLenum bufferMode) = 0;
-    virtual void getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) = 0;
+    virtual void transformFeedbackVaryings(PlatformGLObject program, const Vector<CString>& varyings, GCGLenum bufferMode) = 0;
+    virtual std::optional<GraphicsContextGLActiveInfo> getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index) = 0;
     virtual void pauseTransformFeedback() = 0;
     virtual void resumeTransformFeedback() = 0;
 
     virtual void bindBufferBase(GCGLenum target, GCGLuint index, PlatformGLObject buffer) = 0;
     virtual void bindBufferRange(GCGLenum target, GCGLuint index, PlatformGLObject buffer, GCGLintptr offset, GCGLsizeiptr size) = 0;
     // getIndexedParameter -> use getParameter calls above.
-    virtual Vector<GCGLuint> getUniformIndices(PlatformGLObject program, const Vector<String>& uniformNames) = 0;
+    virtual Vector<GCGLuint> getUniformIndices(PlatformGLObject program, const Vector<CString>& uniformNames) = 0;
     virtual Vector<GCGLint> getActiveUniforms(PlatformGLObject program, const Vector<GCGLuint>& uniformIndices, GCGLenum pname) = 0;
 
-    virtual GCGLuint getUniformBlockIndex(PlatformGLObject program, const String& uniformBlockName) = 0;
+    virtual GCGLuint getUniformBlockIndex(PlatformGLObject program, const CString& uniformBlockName) = 0;
     // getActiveUniformBlockParameter
-    virtual String getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) = 0;
+    virtual CString getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) = 0;
     virtual void uniformBlockBinding(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLuint uniformBlockBinding) = 0;
 
     virtual void getActiveUniformBlockiv(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname, std::span<GCGLint> params) = 0;
@@ -1579,22 +1588,16 @@ public:
     virtual void multiDrawElementsANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei> countsAndOffsets, GCGLenum type) = 0;
     virtual void multiDrawElementsInstancedANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei> countsOffsetsAndInstanceCounts, GCGLenum type) = 0;
 
-    virtual bool supportsExtension(const String&) = 0;
-
-    // This method may only be called with extension names for which supports returns true.
-    virtual void ensureExtensionEnabled(const String&) = 0;
-
-    // Takes full name of extension: for example, "GL_EXT_texture_format_BGRA8888".
-    // Checks to see whether the given extension is actually enabled (see ensureExtensionEnabled).
-    // Has no other side-effects.
-    virtual bool isExtensionEnabled(const String&) = 0;
+    WEBCORE_EXPORT virtual bool supportsExtension(GCGLExtension);
+    // Returns true if extension was supported and thus enabled.
+    virtual bool enableExtension(GCGLExtension) = 0;
 
 #if ENABLE(WEBXR)
     virtual bool enableRequiredWebXRExtensions() { return false; }
 #endif
 
     // GL_ANGLE_translated_shader_source
-    virtual String getTranslatedShaderSourceANGLE(PlatformGLObject) = 0;
+    virtual CString getTranslatedShaderSourceANGLE(PlatformGLObject) = 0;
 
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     virtual void drawBuffersEXT(std::span<const GCGLenum> bufs) = 0;
@@ -1666,11 +1669,8 @@ public:
 
     virtual void prepareForDisplay() = 0;
 
-    // FIXME: these should be removed, they're part of drawing buffer and
-    // display buffer abstractions that the caller should hold separate to
-    // the context.
     using SurfaceBuffer = GraphicsContextGLSurfaceBuffer;
-    virtual void drawSurfaceBufferToImageBuffer(SurfaceBuffer, ImageBuffer&) = 0;
+    virtual RefPtr<NativeImage> copyNativeImageYFlipped(SurfaceBuffer) = 0;
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     virtual RefPtr<VideoFrame> surfaceBufferToVideoFrame(SurfaceBuffer) = 0;
 #endif
@@ -1739,6 +1739,8 @@ protected:
     int m_currentHeight { 0 };
     Client* m_client { nullptr };
     bool m_contextLost { false };
+    EnumSet<GCGLExtension> m_knownActiveExtensions; // Not a full list since some extensions are implicitly enabled once another extension is enabled.
+    EnumSet<GCGLExtension> m_requestableExtensions;
 
 private:
     GraphicsContextGLAttributes m_attrs;

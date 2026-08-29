@@ -30,11 +30,11 @@
 
 #include "FetchBodySource.h"
 #include "FormDataConsumer.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "ReadableStreamSink.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "SharedBuffer.h"
-#include "UserGestureIndicator.h"
+#include "ReadableStreamToSharedBufferSink.h"
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/SharedBuffer.h>
+#include <WebCore/UserGestureIndicator.h>
 
 namespace WebCore {
 
@@ -56,12 +56,13 @@ public:
     ~FetchBodyConsumer();
     FetchBodyConsumer& operator=(FetchBodyConsumer&&);
 
-    FetchBodyConsumer clone();
+    UniqueRef<FetchBodyConsumer> clone();
 
     void append(const SharedBuffer&);
 
     bool hasData() const { return !!m_buffer; }
-    const FragmentedSharedBuffer* data() const LIFETIME_BOUND { return m_buffer.get().get(); }
+    const FragmentedSharedBuffer* data() const LIFETIME_BOUND { return m_buffer.buffer(); }
+    RefPtr<JSC::ArrayBuffer> asArrayBuffer();
     void setData(Ref<FragmentedSharedBuffer>&&);
 
     RefPtr<FragmentedSharedBuffer> takeData();

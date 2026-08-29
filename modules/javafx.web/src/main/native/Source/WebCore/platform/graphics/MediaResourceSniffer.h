@@ -27,9 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContentType.h"
-#include "MediaPromiseTypes.h"
-#include "PlatformMediaResourceLoader.h"
+#include <WebCore/ContentType.h>
+#include <WebCore/MediaPromiseTypes.h>
+#include <WebCore/PlatformMediaResourceLoader.h>
 #include <wtf/NativePromise.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -42,7 +42,7 @@ public:
     ~MediaResourceSniffer();
 
     using Promise = NativePromise<ContentType, PlatformMediaError>;
-    Promise& promise() const;
+    Ref<Promise> promise() const;
     void cancel();
 
 private:

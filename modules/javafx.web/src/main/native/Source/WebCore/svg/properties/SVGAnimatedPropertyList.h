@@ -52,10 +52,10 @@ public:
     Ref<ListType>& baseVal() { return m_baseVal; }
 
     // Used by the DOM.
-    const RefPtr<ListType>& animVal() const { return const_cast<SVGAnimatedPropertyList*>(this)->ensureAnimVal(); }
+    const ListType& animVal() const { return const_cast<SVGAnimatedPropertyList*>(this)->ensureAnimVal(); }
 
     // Called by SVGAnimatedPropertyAnimator to pass the animVal to the SVGAnimationFunction::progress.
-    RefPtr<ListType>& animVal() { return ensureAnimVal(); }
+    ListType& animVal() { return ensureAnimVal(); }
 
     // Used when committing a change from the SVGAnimatedProperty to the attribute.
     String baseValAsString() const override { return m_baseVal->valueAsString(); }
@@ -119,11 +119,11 @@ protected:
     {
     }
 
-    RefPtr<ListType>& ensureAnimVal()
+    ListType& ensureAnimVal()
     {
         if (!m_animVal)
             m_animVal = ListType::create(m_baseVal, SVGPropertyAccess::ReadOnly);
-        return m_animVal;
+        return *m_animVal;
     }
 
     // Called when m_baseVal changes or an item in m_baseVal changes.

@@ -24,6 +24,7 @@
 #ifndef __GSTINFO_H__
 #define __GSTINFO_H__
 
+#include "gstclock.h"
 #include <glib.h>
 #include <glib-object.h>
 #include <gst/gstconfig.h>
@@ -249,11 +250,11 @@ struct _GstDebugCategory {
  * statements.
  */
 #define GST_DEBUG_PAD_NAME(pad) \
-  (pad != NULL) ?  \
+  ((pad) != NULL) ?  \
   ((GST_OBJECT_PARENT(pad) != NULL) ? \
   GST_STR_NULL (GST_OBJECT_NAME (GST_OBJECT_PARENT(pad))) : \
   "''" ) : "''", \
-  (pad != NULL) ? GST_STR_NULL (GST_OBJECT_NAME (pad)) : "''"
+  ((pad) != NULL) ? GST_STR_NULL (GST_OBJECT_NAME (pad)) : "''"
 
 /**
  * GST_FUNCTION:
@@ -592,18 +593,18 @@ void    gst_printerrln                  (const gchar * format, ...) G_GNUC_PRINT
 
 /* cast to void * avoids a warning with gcc 6
  * see https://bugzilla.gnome.org/show_bug.cgi?id=764526 */
-#define gst_debug_add_log_function(func,data,notify) \
-G_STMT_START{                                        \
-  if ((func) == (void *) gst_debug_log_default) {    \
-    gst_debug_add_log_function(NULL,data,notify);    \
-  } else {                                           \
-    gst_debug_add_log_function(func,data,notify);    \
-  }                                                  \
+#define gst_debug_add_log_function(func,data,notify)       \
+G_STMT_START{                                              \
+  if ((void *) (func) == (void *) gst_debug_log_default) { \
+    gst_debug_add_log_function(NULL,data,notify);          \
+  } else {                                                 \
+    gst_debug_add_log_function(func,data,notify);          \
+  }                                                        \
 }G_STMT_END
 
-#define gst_debug_remove_log_function(func)          \
-    ((func) == (void *) gst_debug_log_default) ?     \
-        gst_debug_remove_log_function(NULL) :        \
+#define gst_debug_remove_log_function(func)                \
+    ((void *) (func) == (void *) gst_debug_log_default) ?  \
+        gst_debug_remove_log_function(NULL) :              \
         gst_debug_remove_log_function(func)
 
 /**
@@ -642,6 +643,14 @@ G_STMT_START{                                        \
  * Initializes a new #GstDebugCategory with the given properties and set to
  * the default threshold.
  *
+ * If your element uses static features, this should be called in
+ * `class_init()` for the feature, and not in `plugin_init()` since that will
+ * not be called if a static feature is registered manually.
+ *
+ * If you need to share the same category across multiple features, you can
+ * move the call to a shared function and use #GOnce to make it re-entrant so
+ * that the category is initialized exactly once.
+ *
  * > This macro expands to nothing if debugging is disabled.
  * >
  * > When naming your category, please follow the following conventions to ensure
@@ -662,8 +671,9 @@ G_STMT_START{                                        \
  *
  */
 #define GST_DEBUG_CATEGORY_INIT(cat,name,color,description) G_STMT_START{\
-  if (cat == NULL)                                                      \
-    cat = _gst_debug_category_new (name,color,description);             \
+  if (cat == NULL) {                                                     \
+    cat = _gst_debug_category_new (name,color,description);              \
+  }                                                                      \
 }G_STMT_END
 
 /**
@@ -733,51 +743,19 @@ GST_EXPORT GstDebugLevel            _gst_debug_min;
  * @object: (allow-none): the #GObject the message belongs to or %NULL if none
  * @...: A printf-style message to output
  *
- * Outputs a debugging message. This is the most general macro for outputting
- * debugging messages. You will probably want to use one of the ones described
- * below.
+ * Outputs a debugging message with a specific category and level. This is the
+ * most general macro for this purpose. You will probably want to use one of
+ * the simpler ones described below.
  *
  * There is no need to finish the end of the debug message with a newline
  * character, a newline character will be added automatically.
  */
-#ifdef G_HAVE_ISO_VARARGS
-#define GST_CAT_LEVEL_LOG(cat,level,object,...) G_STMT_START{           \
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {                                             \
-    gst_debug_log ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,    \
-        (GObject *) (object), __VA_ARGS__);                             \
-  }                                                                     \
+#define GST_CAT_LEVEL_LOG(cat,level,object,...) G_STMT_START{                    \
+  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) {  \
+    gst_debug_log ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,             \
+        (GObject *) (object), __VA_ARGS__);                                      \
+  }                                                                              \
 }G_STMT_END
-#else /* G_HAVE_GNUC_VARARGS */
-#ifdef G_HAVE_GNUC_VARARGS
-#define GST_CAT_LEVEL_LOG(cat,level,object,args...) G_STMT_START{       \
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {                                             \
-    gst_debug_log ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,    \
-        (GObject *) (object), ##args );                                 \
-  }                                                                     \
-}G_STMT_END
-#else /* no variadic macros, use inline */
-static inline void
-GST_CAT_LEVEL_LOG_valist (GstDebugCategory * cat,
-    GstDebugLevel level, gpointer object, const char *format, va_list varargs)
-{
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {
-    gst_debug_log_valist (cat, level, "", "", 0, (GObject *) object, format,
-        varargs);
-  }
-}
-
-static inline void
-GST_CAT_LEVEL_LOG (GstDebugCategory * cat, GstDebugLevel level,
-    gpointer object, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, level, object, format, varargs);
-  va_end (varargs);
-}
-#endif
-#endif /* G_HAVE_ISO_VARARGS */
 
 /**
  * GST_CAT_LEVEL_LOG_ID:
@@ -787,60 +765,28 @@ GST_CAT_LEVEL_LOG (GstDebugCategory * cat, GstDebugLevel level,
  *     relates to, or %NULL if none
  * @...: A printf-style message to output
  *
- * Outputs a debugging message. This is the most general macro for outputting
- * debugging messages. You will probably want to use one of the ones described
- * below.
+ * Outputs a debugging message with an identifier. This is the most general
+ * macro for this purpose. You will probably want to use one of the simpler
+ * ones described below.
  *
  * There is no need to finish the end of the debug message with a newline
  * character, a newline character will be added automatically.
  *
  * Since: 1.22
  */
-#ifdef G_HAVE_ISO_VARARGS
 #define GST_CAT_LEVEL_LOG_ID(cat,level,id,...) G_STMT_START{    \
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {            \
+  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) {            \
     gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
           (id), __VA_ARGS__);        \
   }                  \
 }G_STMT_END
-#else /* G_HAVE_GNUC_VARARGS */
-#ifdef G_HAVE_GNUC_VARARGS
-#define GST_CAT_LEVEL_LOG_ID(cat,level,id,args...) G_STMT_START{  \
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {            \
-    gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
-          (id), ##args );          \
-  }                  \
-}G_STMT_END
-#else /* no variadic macros, use inline */
-static inline void
-GST_CAT_LEVEL_LOG_ID_valist (GstDebugCategory * cat,
-    GstDebugLevel level, const gchar *id, const char *format, va_list varargs)
-{
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {
-    gst_debug_log_id_valist (cat, level, "", "", 0, id, format,
-        varargs);
-  }
-}
-
-static inline void
-GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
-    const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (cat, level, id, format, varargs);
-  va_end (varargs);
-}
-#endif
-#endif /* G_HAVE_ISO_VARARGS */
 
 /* This one doesn't have varargs in the macro, so it's different than all the
  * other macros and hence in a separate block right here. Docs chunks are
  * with the other doc chunks below though. */
 #define __GST_CAT_MEMDUMP_LOG(cat,object,msg,data,length) G_STMT_START{       \
-    if (G_UNLIKELY (GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&                     \
-                    GST_LEVEL_MEMDUMP <= _gst_debug_min)) {                   \
+    if (G_UNLIKELY ((GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&                     \
+                    GST_LEVEL_MEMDUMP <= _gst_debug_min))) {                   \
     _gst_debug_dump_mem ((cat), __FILE__, GST_FUNCTION, __LINE__,             \
         (GObject *) (object), (msg), (data), (length));                       \
   }                                                                           \
@@ -858,8 +804,8 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * Since: 1.22
  */
 #define __GST_CAT_MEMDUMP_LOG_ID(cat,id,msg,data,length) G_STMT_START{  \
-    if (G_UNLIKELY (GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&    \
-        GST_LEVEL_MEMDUMP <= _gst_debug_min)) {    \
+    if (G_UNLIKELY ((GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&    \
+        GST_LEVEL_MEMDUMP <= _gst_debug_min))) {    \
       _gst_debug_dump_mem_id ((cat), __FILE__, GST_FUNCTION, __LINE__,  \
             (id), (msg), (data), (length));    \
     }                  \
@@ -918,7 +864,7 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @obj: the #GObject the message belongs to
  * @...: printf-style message to output
  *
- * Output an debugging message belonging to the given object in the given category.
+ * Output a debugging message belonging to the given object in the given category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -929,7 +875,8 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @obj: the #GObject the message belongs to
  * @...: printf-style message to output
  *
- * Output an logging message belonging to the given object in the given category.
+ * Output a logging message belonging to the given object in the given
+ * category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -1024,7 +971,7 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @cat: category to use
  * @...: printf-style message to output
  *
- * Output an debugging message in the given category.
+ * Output a debugging message in the given category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -1034,7 +981,7 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @cat: category to use
  * @...: printf-style message to output
  *
- * Output an logging message in the given category.
+ * Output a logging message in the given category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -1078,7 +1025,8 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @obj: the #GObject the message belongs to
  * @...: printf-style message to output
  *
- * Output an error message belonging to the given object in the default category.
+ * Output an error message belonging to the given object in the default
+ * category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -1236,7 +1184,7 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * @id: An identifier of the message provider
  * @...: printf-style message to output
  *
- * Output a tracing message for the given identifier  in the default category.
+ * Output a tracing message for the given identifier in the default category.
  *
  * There is no need to finish the end of the message string with a newline
  * character, a newline character will be added automatically.
@@ -1335,8 +1283,6 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  * character, a newline character will be added automatically.
  */
 
-#ifdef G_HAVE_ISO_VARARGS
-
 #define GST_CAT_ERROR_OBJECT(cat,obj,...)       GST_CAT_LEVEL_LOG (cat, GST_LEVEL_ERROR,   obj,  __VA_ARGS__)
 #define GST_CAT_WARNING_OBJECT(cat,obj,...)     GST_CAT_LEVEL_LOG (cat, GST_LEVEL_WARNING, obj,  __VA_ARGS__)
 #define GST_CAT_INFO_OBJECT(cat,obj,...)        GST_CAT_LEVEL_LOG (cat, GST_LEVEL_INFO,    obj,  __VA_ARGS__)
@@ -1377,431 +1323,174 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
 #define GST_FIXME(...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_FIXME,   NULL, __VA_ARGS__)
 #define GST_TRACE(...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_TRACE,   NULL, __VA_ARGS__)
 
-#else
-#ifdef G_HAVE_GNUC_VARARGS
-
-#define GST_CAT_ERROR_OBJECT(cat,obj,args...)   GST_CAT_LEVEL_LOG (cat, GST_LEVEL_ERROR,   obj,  ##args )
-#define GST_CAT_WARNING_OBJECT(cat,obj,args...) GST_CAT_LEVEL_LOG (cat, GST_LEVEL_WARNING, obj,  ##args )
-#define GST_CAT_INFO_OBJECT(cat,obj,args...)    GST_CAT_LEVEL_LOG (cat, GST_LEVEL_INFO,    obj,  ##args )
-#define GST_CAT_DEBUG_OBJECT(cat,obj,args...)   GST_CAT_LEVEL_LOG (cat, GST_LEVEL_DEBUG,   obj,  ##args )
-#define GST_CAT_LOG_OBJECT(cat,obj,args...)     GST_CAT_LEVEL_LOG (cat, GST_LEVEL_LOG,     obj,  ##args )
-#define GST_CAT_FIXME_OBJECT(cat,obj,args...)   GST_CAT_LEVEL_LOG (cat, GST_LEVEL_FIXME,   obj,  ##args )
-#define GST_CAT_TRACE_OBJECT(cat,obj,args...)   GST_CAT_LEVEL_LOG (cat, GST_LEVEL_TRACE,   obj,  ##args )
-
-#define GST_CAT_ERROR(cat,args...)              GST_CAT_LEVEL_LOG (cat, GST_LEVEL_ERROR,   NULL, ##args )
-#define GST_CAT_WARNING(cat,args...)            GST_CAT_LEVEL_LOG (cat, GST_LEVEL_WARNING, NULL, ##args )
-#define GST_CAT_INFO(cat,args...)               GST_CAT_LEVEL_LOG (cat, GST_LEVEL_INFO,    NULL, ##args )
-#define GST_CAT_DEBUG(cat,args...)              GST_CAT_LEVEL_LOG (cat, GST_LEVEL_DEBUG,   NULL, ##args )
-#define GST_CAT_LOG(cat,args...)                GST_CAT_LEVEL_LOG (cat, GST_LEVEL_LOG,     NULL, ##args )
-#define GST_CAT_FIXME(cat,args...)              GST_CAT_LEVEL_LOG (cat, GST_LEVEL_FIXME,   NULL, ##args )
-#define GST_CAT_TRACE(cat,args...)              GST_CAT_LEVEL_LOG (cat, GST_LEVEL_TRACE,   NULL, ##args )
-
-#define GST_ERROR_OBJECT(obj,args...)   GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_ERROR,   obj,  ##args )
-#define GST_WARNING_OBJECT(obj,args...) GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_WARNING, obj,  ##args )
-#define GST_INFO_OBJECT(obj,args...)    GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_INFO,    obj,  ##args )
-#define GST_DEBUG_OBJECT(obj,args...)   GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_DEBUG,   obj,  ##args )
-#define GST_LOG_OBJECT(obj,args...)     GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_LOG,     obj,  ##args )
-#define GST_FIXME_OBJECT(obj,args...)   GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_FIXME,   obj,  ##args )
-#define GST_TRACE_OBJECT(obj,args...)   GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_TRACE,   obj,  ##args )
-
-#define GST_ERROR_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_ERROR,   id,  ##args )
-#define GST_WARNING_ID(id,args...)   GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_WARNING, id,  ##args )
-#define GST_INFO_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_INFO,    id,  ##args )
-#define GST_DEBUG_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_DEBUG,   id,  ##args )
-#define GST_LOG_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_LOG,     id,  ##args )
-#define GST_FIXME_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_FIXME,   id,  ##args )
-#define GST_TRACE_ID(id,args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_TRACE,   id,  ##args )
-
-#define GST_ERROR(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_ERROR,   NULL, ##args )
-#define GST_WARNING(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_WARNING, NULL, ##args )
-#define GST_INFO(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_INFO,    NULL, ##args )
-#define GST_DEBUG(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_DEBUG,   NULL, ##args )
-#define GST_LOG(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_LOG,     NULL, ##args )
-#define GST_FIXME(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_FIXME,   NULL, ##args )
-#define GST_TRACE(args...)  GST_CAT_LEVEL_LOG (GST_CAT_DEFAULT, GST_LEVEL_TRACE,   NULL, ##args )
-
-#else
-/* no variadic macros, use inline */
-static inline void
-GST_CAT_ERROR_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_ERROR, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_WARNING_OBJECT (GstDebugCategory * cat, gpointer obj,
-    const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_WARNING, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_INFO_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_INFO, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_DEBUG_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_DEBUG, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_LOG_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_LOG, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_FIXME_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_FIXME, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_TRACE_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_TRACE, obj, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_ERROR (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_ERROR, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_WARNING (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_WARNING, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_INFO (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_INFO, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_DEBUG (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_DEBUG, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_LOG (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_LOG, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_FIXME (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_FIXME, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_CAT_TRACE (GstDebugCategory * cat, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (cat, GST_LEVEL_TRACE, NULL, format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_ERROR_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_ERROR, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_WARNING_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_WARNING, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_INFO_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_INFO, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_DEBUG_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_DEBUG, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_LOG_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_LOG, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_FIXME_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_FIXME, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_TRACE_OBJECT (gpointer obj, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_TRACE, obj, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_ERROR_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_ERROR, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_WARNING_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_WARNING, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_INFO_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_INFO, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_DEBUG_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_DEBUG, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_LOG_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_LOG, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_FIXME_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_FIXME, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_TRACE_ID (const gchar *id, const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_ID_valist (GST_CAT_DEFAULT, GST_LEVEL_TRACE, id, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_ERROR (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_ERROR, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_WARNING (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_WARNING, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_INFO (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_INFO, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_DEBUG (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_DEBUG, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_LOG (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_LOG, NULL,
-      format, varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_FIXME (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_FIXME, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-
-static inline void
-GST_TRACE (const char *format, ...)
-{
-  va_list varargs;
-
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (GST_CAT_DEFAULT, GST_LEVEL_TRACE, NULL, format,
-      varargs);
-  va_end (varargs);
-}
-#endif
-#endif
-
+/* Context-based debug macros */
+#define GST_CTX_LEVEL_LOG(ctx,level,object,...) \
+    G_STMT_START{ \
+      if (G_UNLIKELY (gst_debug_category_get_threshold (gst_log_context_get_category (ctx)) >= (level))) { \
+        gst_debug_log_with_context (ctx, level, __FILE__, \
+            GST_FUNCTION, __LINE__, (GObject*) object, __VA_ARGS__); \
+      } \
+    }G_STMT_END
+
+/* With default category and objects */
+#define GST_CTX_ERROR_OBJECT(ctx,object,...)            GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_ERROR,object,__VA_ARGS__)
+#define GST_CTX_WARNING_OBJECT(ctx,object,...)          GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_WARNING,object,__VA_ARGS__)
+#define GST_CTX_INFO_OBJECT(ctx,object,...)             GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_INFO,object,__VA_ARGS__)
+#define GST_CTX_DEBUG_OBJECT(ctx,object,...)            GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_DEBUG,object,__VA_ARGS__)
+#define GST_CTX_LOG_OBJECT(ctx,object,...)              GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_LOG,object,__VA_ARGS__)
+#define GST_CTX_FIXME_OBJECT(ctx,object,...)            GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_FIXME,object,__VA_ARGS__)
+#define GST_CTX_TRACE_OBJECT(ctx,object,...)            GST_CTX_LEVEL_LOG(ctx,GST_LEVEL_TRACE,object,__VA_ARGS__)
+
+/* Context-based debug macros for IDs */
+#define GST_CTX_LEVEL_LOG_ID(ctx,level,id,...) \
+    G_STMT_START{ \
+      if (G_UNLIKELY (gst_debug_category_get_threshold (gst_log_context_get_category (ctx)) >= (level))) { \
+        gst_debug_log_id_with_context (ctx, level, __FILE__, \
+            GST_FUNCTION, __LINE__, id, __VA_ARGS__); \
+      } \
+    }G_STMT_END
+
+/* With ids */
+#define GST_CTX_ERROR_ID(ctx,id,...)            GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_ERROR,id,__VA_ARGS__)
+#define GST_CTX_WARNING_ID(ctx,id,...)          GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_WARNING,id,__VA_ARGS__)
+#define GST_CTX_INFO_ID(ctx,id,...)             GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_INFO,id,__VA_ARGS__)
+#define GST_CTX_DEBUG_ID(ctx,id,...)            GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_DEBUG,id,__VA_ARGS__)
+#define GST_CTX_LOG_ID(ctx,id,...)              GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_LOG,id,__VA_ARGS__)
+#define GST_CTX_FIXME_ID(ctx,id,...)            GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_FIXME,id,__VA_ARGS__)
+#define GST_CTX_TRACE_ID(ctx,id,...)            GST_CTX_LEVEL_LOG_ID(ctx,GST_LEVEL_TRACE,id,__VA_ARGS__)
+
+/* No object, no id */
+#define GST_CTX_ERROR(ctx,...)                          GST_CTX_ERROR_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_WARNING(ctx,...)                        GST_CTX_WARNING_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_INFO(ctx,...)                           GST_CTX_INFO_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_DEBUG(ctx,...)                          GST_CTX_DEBUG_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_LOG(ctx,...)                            GST_CTX_LOG_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_FIXME(ctx,...)                          GST_CTX_FIXME_OBJECT(ctx,NULL,__VA_ARGS__)
+#define GST_CTX_TRACE(ctx,...)                          GST_CTX_TRACE_OBJECT(ctx,NULL,__VA_ARGS__)
+
+#define GST_LOG_CONTEXT_STATIC_DEFINE(name, flags, ...) \
+  static GstLogContext *name = NULL; \
+  static void _init_##name (void) { \
+    GstLogContextBuilder *builder = GST_LOG_CONTEXT_BUILDER_NEW(flags); \
+    GST_LOG_CONTEXT_BUILDER_SET_CATEGORY(GST_CAT_DEFAULT); \
+    GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS(GST_LOG_CONTEXT_DEFAULT); \
+    __VA_ARGS__ \
+    name = gst_log_context_builder_build(builder); \
+  } \
+  G_GNUC_UNUSED static GstLogContext * _ensure_##name (void) { \
+    static gsize _init_##name##_guard = 0; \
+    if (g_once_init_enter (&_init_##name##_guard)) { \
+      _init_##name (); \
+      g_once_init_leave (&_init_##name##_guard, 1); \
+    } \
+    return name; \
+  }
+
+#define GST_LOG_CONTEXT_INIT(var, flags, ...) G_STMT_START { \
+      GstLogContextBuilder *builder = GST_LOG_CONTEXT_BUILDER_NEW(flags); \
+      GST_LOG_CONTEXT_BUILDER_SET_CATEGORY(GST_CAT_DEFAULT); \
+      GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS(GST_LOG_CONTEXT_DEFAULT); \
+      __VA_ARGS__ \
+      var = gst_log_context_builder_build(builder); \
+    } G_STMT_END;
+
+/* Automatic context-based once debug macros */
+
+/**
+ * GST_CAT_LEVEL_LOG_ONCE:
+ * @cat: category to use
+ * @level: the severity of the message
+ * @object: (allow-none): the #GObject the message belongs to or %NULL if none
+ * @...: A printf-style message to output
+ *
+ * Outputs a debugging message with a specific category and level exactly once
+ * per statement.
+ *
+ * This is the most general macro for this purpose. You will probably
+ * want to use one of the simpler ones described below.
+ *
+ * There is no need to finish the end of the debug message with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+#define GST_CAT_LEVEL_LOG_ONCE(cat,level,object,...) G_STMT_START{      \
+  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) {  \
+    _gst_debug_log_once ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
+        (GObject *) (object), __VA_ARGS__);            \
+  }                      \
+}G_STMT_END
+
+/* With specified category and object */
+#define GST_CAT_ERROR_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_ERROR,   obj,__VA_ARGS__)
+#define GST_CAT_WARNING_ONCE_OBJECT(cat,obj,...)  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_WARNING, obj,__VA_ARGS__)
+#define GST_CAT_INFO_ONCE_OBJECT(cat,obj,...)     GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_INFO,    obj,__VA_ARGS__)
+#define GST_CAT_DEBUG_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_DEBUG,   obj,__VA_ARGS__)
+#define GST_CAT_LOG_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_LOG,     obj,__VA_ARGS__)
+#define GST_CAT_FIXME_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_FIXME,   obj,__VA_ARGS__)
+#define GST_CAT_TRACE_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_TRACE,   obj,__VA_ARGS__)
+
+/* With specified category and no object */
+#define GST_CAT_ERROR_ONCE(cat,...)   GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_ERROR,   NULL,__VA_ARGS__)
+#define GST_CAT_WARNING_ONCE(cat,...) GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_WARNING, NULL,__VA_ARGS__)
+#define GST_CAT_INFO_ONCE(cat,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_INFO,    NULL,__VA_ARGS__)
+#define GST_CAT_DEBUG_ONCE(cat,...)   GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_DEBUG,   NULL,__VA_ARGS__)
+#define GST_CAT_LOG_ONCE(cat,...)     GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_LOG,     NULL,__VA_ARGS__)
+#define GST_CAT_FIXME_ONCE(cat,...)   GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_FIXME,   NULL,__VA_ARGS__)
+#define GST_CAT_TRACE_ONCE(cat,...)   GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_TRACE,   NULL,__VA_ARGS__)
+
+/* With default category and specified object */
+#define GST_ERROR_ONCE_OBJECT(object,...)   GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_ERROR,object,__VA_ARGS__)
+#define GST_WARNING_ONCE_OBJECT(object,...) GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_WARNING,object,__VA_ARGS__)
+#define GST_INFO_ONCE_OBJECT(object,...)    GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_INFO,object,__VA_ARGS__)
+#define GST_DEBUG_ONCE_OBJECT(object,...)   GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_DEBUG,object,__VA_ARGS__)
+#define GST_LOG_ONCE_OBJECT(object,...)     GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_LOG,object,__VA_ARGS__)
+#define GST_FIXME_ONCE_OBJECT(object,...)   GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_FIXME,object,__VA_ARGS__)
+#define GST_TRACE_ONCE_OBJECT(object,...)   GST_CAT_LEVEL_LOG_ONCE(GST_CAT_DEFAULT,GST_LEVEL_TRACE,object,__VA_ARGS__)
+
+/**
+ * GST_CAT_LEVEL_LOG_ONCE_ID:
+ * @cat: category to use
+ * @level: the severity of the message
+ * @id: (transfer none) (allow-none): the identifier of the object this message
+ *     relates to, or %NULL if none
+ * @...: A printf-style message to output
+ *
+ * Outputs a debugging message with a specific category, level, and identifier
+ * exactly once per statement.
+ *
+ * This is the most general macro for this purpose. You will probably want to
+ * use one of the simpler ones described below.
+ *
+ * There is no need to finish the end of the debug message with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,id,...) G_STMT_START{        \
+  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) { \
+    _gst_debug_log_once_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__, \
+  (id), __VA_ARGS__);                              \
+  }                        \
+}G_STMT_END
+
+/* With ids */
+#define GST_ERROR_ONCE_ID(id,...)     GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_ERROR,id,__VA_ARGS__)
+#define GST_WARNING_ONCE_ID(id,...)   GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_WARNING,id,__VA_ARGS__)
+#define GST_INFO_ONCE_ID(id,...)      GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_INFO,id,__VA_ARGS__)
+#define GST_DEBUG_ONCE_ID(id,...)     GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_DEBUG,id,__VA_ARGS__)
+#define GST_LOG_ONCE_ID(id,...)       GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_LOG,id,__VA_ARGS__)
+#define GST_FIXME_ONCE_ID(id,...)     GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_FIXME,id,__VA_ARGS__)
+#define GST_TRACE_ONCE_ID(id,...)     GST_CTX_LEVEL_LOG_ONCE_ID(GST_CAT_DEFAULT,GST_LEVEL_TRACE,id,__VA_ARGS__)
+
+/* No object, no id */
+#define GST_ERROR_ONCE(...)                 GST_ERROR_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_WARNING_ONCE(...)               GST_WARNING_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_INFO_ONCE(...)                  GST_INFO_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_DEBUG_ONCE(...)                 GST_DEBUG_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_LOG_ONCE(...)                   GST_LOG_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_FIXME_ONCE(...)                 GST_FIXME_ONCE_OBJECT(NULL,__VA_ARGS__)
+#define GST_TRACE_ONCE(...)                 GST_TRACE_ONCE_OBJECT(NULL,__VA_ARGS__)
 
 /********** function pointer stuff **********/
 
@@ -1826,7 +1515,7 @@ GST_TRACE (const char *format, ...)
  * Returns: the value passed to @ptr.
  */
 #define GST_DEBUG_FUNCPTR(ptr) \
-  (_gst_debug_register_funcptr((GstDebugFuncPtr)(ptr), #ptr) , ptr)
+  (_gst_debug_register_funcptr((GstDebugFuncPtr)(ptr), #ptr) , (ptr))
 
 /**
  * GST_DEBUG_FUNCPTR_NAME:
@@ -1839,7 +1528,7 @@ GST_TRACE (const char *format, ...)
  * freed by the caller.
  */
 #define GST_DEBUG_FUNCPTR_NAME(ptr) \
-  _gst_debug_nameof_funcptr((GstDebugFuncPtr)ptr)
+  _gst_debug_nameof_funcptr((GstDebugFuncPtr)(ptr))
 
 
 #else /* GST_DISABLE_GST_DEBUG */
@@ -1901,8 +1590,6 @@ GST_TRACE (const char *format, ...)
 
 #endif /* !GST_INFO_C */
 
-#ifdef G_HAVE_ISO_VARARGS
-
 #define GST_CAT_LEVEL_LOG(cat,level,...)                G_STMT_START{ }G_STMT_END
 
 #define GST_CAT_ERROR_OBJECT(...)                       G_STMT_START{ }G_STMT_END
@@ -1945,245 +1632,14 @@ GST_TRACE (const char *format, ...)
 #define GST_FIXME(...)    G_STMT_START{ }G_STMT_END
 #define GST_TRACE(...)    G_STMT_START{ }G_STMT_END
 
-#else /* !G_HAVE_ISO_VARARGS */
-#ifdef G_HAVE_GNUC_VARARGS
-
-#define GST_CAT_LEVEL_LOG(cat,level,args...)            G_STMT_START{ }G_STMT_END
-
-#define GST_CAT_ERROR_OBJECT(args...)                   G_STMT_START{ }G_STMT_END
-#define GST_CAT_WARNING_OBJECT(args...)                 G_STMT_START{ }G_STMT_END
-#define GST_CAT_INFO_OBJECT(args...)                    G_STMT_START{ }G_STMT_END
-#define GST_CAT_DEBUG_OBJECT(args...)                   G_STMT_START{ }G_STMT_END
-#define GST_CAT_LOG_OBJECT(args...)                     G_STMT_START{ }G_STMT_END
-#define GST_CAT_FIXME_OBJECT(args...)                   G_STMT_START{ }G_STMT_END
-#define GST_CAT_TRACE_OBJECT(args...)                   G_STMT_START{ }G_STMT_END
-
-#define GST_CAT_ERROR(args...)                          G_STMT_START{ }G_STMT_END
-#define GST_CAT_WARNING(args...)                        G_STMT_START{ }G_STMT_END
-#define GST_CAT_INFO(args...)                           G_STMT_START{ }G_STMT_END
-#define GST_CAT_DEBUG(args...)                          G_STMT_START{ }G_STMT_END
-#define GST_CAT_LOG(args...)                            G_STMT_START{ }G_STMT_END
-#define GST_CAT_FIXME(args...)                          G_STMT_START{ }G_STMT_END
-#define GST_CAT_TRACE(args...)                          G_STMT_START{ }G_STMT_END
-
-#define GST_ERROR_OBJECT(args...)                       G_STMT_START{ }G_STMT_END
-#define GST_WARNING_OBJECT(args...)                     G_STMT_START{ }G_STMT_END
-#define GST_INFO_OBJECT(args...)                        G_STMT_START{ }G_STMT_END
-#define GST_DEBUG_OBJECT(args...)                       G_STMT_START{ }G_STMT_END
-#define GST_LOG_OBJECT(args...)                         G_STMT_START{ }G_STMT_END
-#define GST_FIXME_OBJECT(args...)                       G_STMT_START{ }G_STMT_END
-#define GST_TRACE_OBJECT(args...)                       G_STMT_START{ }G_STMT_END
-
-#define GST_ERROR_ID(args...)   G_STMT_START{ }G_STMT_END
-#define GST_WARNING_ID(args...)   G_STMT_START{ }G_STMT_END
-#define GST_INFO_ID(args...)    G_STMT_START{ }G_STMT_END
-#define GST_DEBUG_ID(args...)   G_STMT_START{ }G_STMT_END
-#define GST_LOG_ID(args...)   G_STMT_START{ }G_STMT_END
-#define GST_FIXME_ID(args...)   G_STMT_START{ }G_STMT_END
-#define GST_TRACE_ID(args...)   G_STMT_START{ }G_STMT_END
-
-#define GST_ERROR(args...)    G_STMT_START{ }G_STMT_END
-#define GST_WARNING(args...)    G_STMT_START{ }G_STMT_END
-#define GST_INFO(args...)   G_STMT_START{ }G_STMT_END
-#define GST_DEBUG(args...)    G_STMT_START{ }G_STMT_END
-#define GST_LOG(args...)    G_STMT_START{ }G_STMT_END
-#define GST_FIXME(args...)    G_STMT_START{ }G_STMT_END
-#define GST_TRACE(args...)    G_STMT_START{ }G_STMT_END
-
-#else /* !G_HAVE_GNUC_VARARGS */
-
-#if !defined(GSTREAMER_LITE) && !defined(G_OS_WIN32)
-
-static inline void
-GST_CAT_LEVEL_LOG_valist (GstDebugCategory * cat,
-    GstDebugLevel level, gpointer object, const char *format, va_list varargs)
-{
-}
-
-static inline void
-GST_CAT_ERROR_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_WARNING_OBJECT (GstDebugCategory * cat, gpointer obj,
-    const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_INFO_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_DEBUG_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_LOG_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_FIXME_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_TRACE_OBJECT (GstDebugCategory * cat, gpointer obj, const char *format,
-    ...)
-{
-}
-
-static inline void
-GST_CAT_ERROR (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_WARNING (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_INFO (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_DEBUG (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_LOG (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_FIXME (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_CAT_TRACE (GstDebugCategory * cat, const char *format, ...)
-{
-}
-
-static inline void
-GST_ERROR_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_WARNING_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_INFO_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_DEBUG_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_LOG_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_FIXME_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_TRACE_OBJECT (gpointer obj, const char *format, ...)
-{
-}
-
-static inline void
-GST_ERROR (const char *format, ...)
-{
-}
-
-static inline void
-GST_WARNING (const char *format, ...)
-{
-}
-
-static inline void
-GST_INFO (const char *format, ...)
-{
-}
-
-static inline void
-GST_DEBUG (const char *format, ...)
-{
-}
-
-static inline void
-GST_LOG (const char *format, ...)
-{
-}
-
-static inline void
-GST_FIXME (const char *format, ...)
-{
-}
-
-static inline void
-GST_TRACE (const char *format, ...)
-{
-}
-
-#else // GSTREAMER_LITE
-
-#define GST_CAT_LEVEL_LOG_valist
-#define GST_CAT_ERROR_OBJECT
-#define GST_CAT_WARNING_OBJECT
-#define GST_CAT_INFO_OBJECT
-#define GST_CAT_DEBUG_OBJECT
-#define GST_CAT_LOG_OBJECT
-#define GST_CAT_FIXME_OBJECT
-#define GST_CAT_ERROR
-#define GST_CAT_WARNING
-#define GST_CAT_INFO
-#define GST_CAT_DEBUG
-#define GST_CAT_LOG
-#define GST_CAT_FIXME
-#define GST_ERROR_OBJECT
-#define GST_WARNING_OBJECT
-#define GST_INFO_OBJECT
-#define GST_DEBUG_OBJECT
-#define GST_LOG_OBJECT
-#define GST_FIXME_OBJECT
-#define GST_ERROR
-#define GST_WARNING
-#define GST_INFO
-#define GST_DEBUG
-#define GST_LOG
-#define GST_FIXME
-
-#endif // GSTREAMER_LITE
-
-#endif /* G_HAVE_GNUC_VARARGS */
-#endif /* G_HAVE_ISO_VARARGS */
+/* we are using dummy function prototypes here to eat ';' as these macros are used outside of functions */
+#define GST_LOG_CONTEXT_STATIC_DEFINE(name, flags, ...) void _gst_log_context_dummy_static_##name (void)
+#define GST_LOG_CONTEXT_INIT(var, flags, ...)
 
 #define GST_DEBUG_REGISTER_FUNCPTR(ptr) G_STMT_START{ }G_STMT_END
 #ifndef GSTREAMER_LITE
 #define GST_DEBUG_FUNCPTR(ptr) (ptr)
-#define GST_DEBUG_FUNCPTR_NAME(ptr) (g_strdup_printf ("%p", ptr))
+#define GST_DEBUG_FUNCPTR_NAME(ptr) (g_strdup_printf ("%p", (ptr)))
 #else // GSTREAMER_LITE
 #define GST_DEBUG_FUNCPTR(ptr) (ptr)
 #define GST_DEBUG_FUNCPTR_NAME
@@ -2195,6 +1651,81 @@ GST_TRACE (const char *format, ...)
 #define GST_MEMDUMP_OBJECT(obj,msg,data,length)         G_STMT_START{ }G_STMT_END
 #define GST_MEMDUMP_ID(id,msg,data,length)              G_STMT_START{ }G_STMT_END
 #define GST_MEMDUMP(msg,data,length)                    G_STMT_START{ }G_STMT_END
+
+/* Stubs for context-based debug macros when debugging is disabled */
+#define GST_CTX_LEVEL_LOG(ctx,level,object,...) G_STMT_START{ }G_STMT_END
+
+/* With objects */
+#define GST_CTX_ERROR_OBJECT(ctx,object,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_WARNING_OBJECT(ctx,object,...)          G_STMT_START{ }G_STMT_END
+#define GST_CTX_INFO_OBJECT(ctx,object,...)             G_STMT_START{ }G_STMT_END
+#define GST_CTX_DEBUG_OBJECT(ctx,object,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_LOG_OBJECT(ctx,object,...)              G_STMT_START{ }G_STMT_END
+#define GST_CTX_FIXME_OBJECT(ctx,object,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_TRACE_OBJECT(ctx,object,...)            G_STMT_START{ }G_STMT_END
+
+/* With IDs */
+#define GST_CTX_ERROR_ID(ctx,id,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_WARNING_ID(ctx,id,...)          G_STMT_START{ }G_STMT_END
+#define GST_CTX_INFO_ID(ctx,id,...)             G_STMT_START{ }G_STMT_END
+#define GST_CTX_DEBUG_ID(ctx,id,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_LOG_ID(ctx,id,...)              G_STMT_START{ }G_STMT_END
+#define GST_CTX_FIXME_ID(ctx,id,...)            G_STMT_START{ }G_STMT_END
+#define GST_CTX_TRACE_ID(ctx,id,...)            G_STMT_START{ }G_STMT_END
+
+/* Without objects */
+#define GST_CTX_ERROR(ctx,...)                          G_STMT_START{ }G_STMT_END
+#define GST_CTX_WARNING(ctx,...)                        G_STMT_START{ }G_STMT_END
+#define GST_CTX_INFO(ctx,...)                           G_STMT_START{ }G_STMT_END
+#define GST_CTX_DEBUG(ctx,...)                          G_STMT_START{ }G_STMT_END
+#define GST_CTX_LOG(ctx,...)                            G_STMT_START{ }G_STMT_END
+#define GST_CTX_FIXME(ctx,...)                          G_STMT_START{ }G_STMT_END
+#define GST_CTX_TRACE(ctx,...)                          G_STMT_START{ }G_STMT_END
+
+/* Log context macros are no-ops when debugging is disabled */
+
+#define GST_CAT_LEVEL_LOG_ONCE(cat,level,...)    G_STMT_START{ }G_STMT_END
+#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,...)  G_STMT_START{ }G_STMT_END
+
+#define GST_CAT_ERROR_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_WARNING_ONCE_OBJECT(...)    G_STMT_START{ }G_STMT_END
+#define GST_CAT_INFO_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_DEBUG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_LOG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_FIXME_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_TRACE_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+
+#define GST_CAT_ERROR_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_WARNING_ONCE(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_INFO_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_DEBUG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_LOG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_FIXME_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_TRACE_ONCE(...)        G_STMT_START{ }G_STMT_END
+
+#define GST_ERROR_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+
+#define GST_ERROR_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE_ID(...)      G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+
+#define GST_ERROR_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE(...)        G_STMT_START{ }G_STMT_END
 
 #endif /* GST_DISABLE_GST_DEBUG */
 
@@ -2211,6 +1742,1158 @@ GST_API
 void                  gst_debug_remove_ring_buffer_logger   (void);
 GST_API
 gchar **              gst_debug_ring_buffer_logger_get_logs (void);
+
+/**
+ * GstLogContextHashFlags:
+ * @GST_LOG_CONTEXT_DEFAULT: Default behavior for logging context
+ *                          (uses object, format, file but not line number or string args)
+ * @GST_LOG_CONTEXT_IGNORE_OBJECT: Ignore object pointer or object ID when calculating message hash
+ * @GST_LOG_CONTEXT_IGNORE_FORMAT: Ignore the "format" part of the debug
+ * log message
+ * @GST_LOG_CONTEXT_IGNORE_FILE: Ignore file name when calculating message hash
+ * @GST_LOG_CONTEXT_USE_LINE_NUMBER: Use line number when calculating message hash (not used by default)
+ * @GST_LOG_CONTEXT_USE_STRING_ARGS: Use the arguments part of the string message (not used by default)
+ *
+ * Flags to control how the message hash is calculated in a #GstLogContext.
+ * The message hash is used to determine if a message is a duplicate of a previously
+ * logged message.
+ *
+ * Since: 1.28
+ */
+typedef enum {
+  GST_LOG_CONTEXT_DEFAULT            = 0,
+  GST_LOG_CONTEXT_IGNORE_OBJECT      = (1 << 0),
+  GST_LOG_CONTEXT_IGNORE_FORMAT      = (1 << 1),
+  GST_LOG_CONTEXT_IGNORE_FILE        = (1 << 2),
+  GST_LOG_CONTEXT_USE_LINE_NUMBER    = (1 << 3),
+  GST_LOG_CONTEXT_USE_STRING_ARGS    = (1 << 4),
+} GstLogContextHashFlags;
+
+/**
+ * GstLogContextFlags:
+ * @GST_LOG_CONTEXT_FLAG_NONE: No special behavior (empty flags)
+ * @GST_LOG_CONTEXT_FLAG_THROTTLE: Enable message throttling/deduplication. This
+ *  makes the context track which messages have been logged already based on
+ *  their message hash, and only log them once (or periodically if an
+ *  interval is set). Without this flag, all messages will be logged regardless
+ *  of whether they've been logged before.
+ *
+ * Flags to control the behavior of a #GstLogContext.
+ *
+ * Since: 1.28
+ */
+typedef enum {
+  GST_LOG_CONTEXT_FLAG_NONE          = 0,
+  GST_LOG_CONTEXT_FLAG_THROTTLE      = (1 << 0),
+} GstLogContextFlags;
+
+/**
+ * GstLogContext:
+ *
+ * A context for controlling logging behavior, for example to handle
+ * logging once or periodic logging, avoiding to
+ * spam the terminal with the same log message multiple times.
+ *
+ * ## Simple log context using static macros
+ *
+ * ``` c
+ * // At global/file scope:
+ * GST_LOG_CONTEXT_STATIC_DEFINE(my_context, GST_LOG_CONTEXT_FLAG_THROTTLE, );
+ * #define MY_CONTEXT GST_LOG_CONTEXT_LAZY_INIT(my_context)
+ *
+ * // Then in code:
+ * GST_CTX_INFO(MY_CONTEXT, "This will only appear once per file/line");
+ * ```
+ *
+ * ## Periodic logging
+ *
+ * For messages that should be logged periodically (e.g., maximum once per minute):
+ *
+ * ``` c
+ * // At global/file scope:
+ * GST_LOG_CONTEXT_STATIC_DEFINE(my_periodic_context, GST_LOG_CONTEXT_FLAG_THROTTLE,
+ *   GST_LOG_CONTEXT_BUILDER_SET_INTERVAL(60 * GST_SECOND);
+ * );
+ * #define MY_PERIODIC_CONTEXT GST_LOG_CONTEXT_LAZY_INIT(my_periodic_context)
+ *
+ * // Then in code:
+ * GST_CTX_INFO(MY_PERIODIC_CONTEXT, "This appears once per minute");
+ * ```
+ *
+ * ## Customizing Message hash with custom flags and category
+ *
+ * By default, a message's hash is determined by the file name, object pointer,
+ * and format string. You can customize this with builder operations:
+ *
+ * ``` c
+ * // Ignore the object pointer when determining message hash (with throttling)
+ * GST_LOG_CONTEXT_STATIC_DEFINE(obj_independent_ctx, GST_LOG_CONTEXT_FLAG_THROTTLE,
+ *   GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS(GST_LOG_CONTEXT_IGNORE_OBJECT);
+ * );
+ *
+ * // Use a custom category (without throttling)
+ * GST_LOG_CONTEXT_STATIC_DEFINE(custom_cat_ctx, GST_LOG_CONTEXT_FLAG_NONE,
+ *   GST_LOG_CONTEXT_BUILDER_SET_CATEGORY(my_category);
+ * );
+ * ```
+ *
+ * Since: 1.28
+ */
+typedef struct _GstLogContext GstLogContext;
+
+/**
+ * GstLogContextBuilder:
+ *
+ * A builder for creating a #GstLogContext. This provides a flexible way to
+ * configure a log context with various options while maintaining immutability
+ * of the resulting context.
+ *
+ * Since: 1.28
+ */
+typedef struct _GstLogContextBuilder GstLogContextBuilder;
+
+GST_API
+GstDebugCategory *gst_log_context_get_category  (GstLogContext *context);
+GST_API
+void gst_log_context_reset                      (GstLogContext *ctx);
+GST_API
+void gst_log_context_free                       (GstLogContext *ctx);
+
+GST_API
+void gst_debug_log_with_context                 (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 GObject *object,
+                                                 const gchar *format,
+                                                 ...) G_GNUC_PRINTF(7, 8);
+
+GST_API
+void gst_debug_log_with_context_valist          (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 GObject *object,
+                                                 const gchar *format,
+                                                 va_list args)  G_GNUC_PRINTF (7, 0) G_GNUC_NO_INSTRUMENT;
+
+GST_API
+void gst_debug_log_literal_with_context         (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 GObject *object,
+                                                 const gchar *message);
+
+GST_API
+void gst_debug_log_id_with_context              (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 const gchar *id,
+                                                 const gchar *format,
+                                                 ...) G_GNUC_PRINTF(7, 8);
+
+GST_API
+void gst_debug_log_id_with_context_valist       (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 const gchar *id,
+                                                 const gchar *format,
+                                                 va_list args) G_GNUC_PRINTF(7, 0);
+
+GST_API
+void gst_debug_log_id_literal_with_context      (GstLogContext *ctx,
+                                                 GstDebugLevel level,
+                                                 const gchar *file,
+                                                 const gchar *function,
+                                                 gint line,
+                                                 const gchar *id,
+                                                 const gchar *message);
+
+GST_API
+void _gst_debug_log_once                        (GstDebugCategory * category,
+                                                 GstDebugLevel level,
+                                                 const gchar * file,
+                                                 const gchar * function,
+                                                 gint line,
+                                                 GObject * object,
+                                                 const gchar * format, ...) G_GNUC_PRINTF(7, 8);
+
+GST_API
+void _gst_debug_log_once_id                     (GstDebugCategory * category,
+                                                 GstDebugLevel level,
+                                                 const gchar * file,
+                                                 const gchar * function,
+                                                 gint line,
+                                                 const gchar * id,
+                                                 const gchar * format, ...) G_GNUC_PRINTF(7, 8);
+
+/* Builder pattern API */
+GST_API
+GstLogContextBuilder* gst_log_context_builder_new           (GstDebugCategory *category,
+                                                             GstLogContextFlags flags) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstLogContextBuilder* gst_log_context_builder_set_hash_flags (GstLogContextBuilder* builder,
+                                                             GstLogContextHashFlags flags) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstLogContextBuilder* gst_log_context_builder_set_category  (GstLogContextBuilder* builder,
+                                                             GstDebugCategory* category) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstLogContextBuilder* gst_log_context_builder_set_interval  (GstLogContextBuilder* builder,
+                                                             GstClockTime interval) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstLogContext*        gst_log_context_builder_build         (GstLogContextBuilder* builder) G_GNUC_WARN_UNUSED_RESULT;
+
+/**
+ * GST_LOG_CONTEXT_BUILDER_NEW:
+ *
+ * Creates a new log context builder with default settings.
+ *
+ * Returns: a new #GstLogContextBuilder
+ *
+ * Since: 1.28
+ */
+#define GST_LOG_CONTEXT_BUILDER_NEW(flags) \
+  gst_log_context_builder_new(GST_CAT_DEFAULT, flags)
+
+/**
+ * GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS:
+ * @flags: #GstLogContextHashFlags to control message hash calculation
+ *
+ * Sets the hash flags for the log context being built, which control how
+ * the message hash is calculated.
+ *
+ * Returns: the same #GstLogContextBuilder for chaining
+ *
+ * Since: 1.28
+ */
+#define GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS(flags) \
+  builder = gst_log_context_builder_set_hash_flags(builder, (flags))
+
+/**
+ * GST_LOG_CONTEXT_BUILDER_SET_CATEGORY:
+ * @category: a #GstDebugCategory to associate with the context
+ *
+ * Sets the debug category for the log context being built.
+ *
+ * Returns: the same #GstLogContextBuilder for chaining
+ *
+ * Since: 1.28
+ */
+#define GST_LOG_CONTEXT_BUILDER_SET_CATEGORY(category) \
+  builder = gst_log_context_builder_set_category(builder, (category))
+
+/**
+ * GST_LOG_CONTEXT_BUILDER_SET_INTERVAL:
+ * @interval: interval in nanoseconds for automatic reset (e.g., 1 * GST_SECOND)
+ *
+ * Sets the automatic reset interval for the log context being built.
+ * After this interval has elapsed, the context will allow previously logged
+ * messages to be logged again. This is useful for allowing periodic log
+ * messages.
+ *
+ * Example:
+ *
+ * ``` c
+ * // Create a context that allows messages to repeat every minute
+ * GST_LOG_CONTEXT_STATIC_DEFINE(minute_ctx,
+ *   GST_LOG_CONTEXT_BUILDER_SET_INTERVAL(60 * GST_SECOND);
+ * );
+ * ```
+ *
+ * Returns: the same #GstLogContextBuilder for chaining
+ *
+ * Since: 1.28
+ */
+
+#define GST_LOG_CONTEXT_BUILDER_SET_INTERVAL(interval) \
+  builder = gst_log_context_builder_set_interval(builder, (interval))
+
+
+/**
+ * GST_LOG_CONTEXT_STATIC_DEFINE:
+ * @name: variable name for the context
+ * @_init_code: optional initialization code to customize the context
+ *
+ * Creates a static logging context that will be automatically initialized on
+ * first use and cleaned up during GStreamer deinitialization. It requires the
+ * behavior flags as a parameter to explicitly control whether throttling is enabled.
+ * By default, it uses GST_CAT_DEFAULT and GST_LOG_CONTEXT_DEFAULT hash flags,
+ * but can be further customized with optional initialization code.
+ *
+ * Example usage:
+ * ```
+ * // Simple case with throttling enabled (logs messages only once)
+ * GST_LOG_CONTEXT_STATIC_DEFINE(simple_ctx, GST_LOG_CONTEXT_FLAG_THROTTLE, );
+ *
+ * // With interval for periodic logging (allow message to repeat after 60 seconds)
+ * GST_LOG_CONTEXT_STATIC_DEFINE(periodic_ctx,
+ *   GST_LOG_CONTEXT_BUILDER_SET_INTERVAL(60 * GST_SECOND);
+ * );
+ *
+ * // With custom category and flags (ignore object pointers when calculating message hash)
+ * GST_LOG_CONTEXT_STATIC_DEFINE(custom_ctx,
+ *   GST_LOG_CONTEXT_BUILDER_SET_CATEGORY(my_category);
+ *   GST_LOG_CONTEXT_BUILDER_SET_FLAGS(GST_LOG_CONTEXT_IGNORE_OBJECT);
+ * );
+ * ```
+ *
+ * Use with GST_LOG_CONTEXT_LAZY_INIT() to get a reference to the context:
+ * ```
+ * #define MY_CONTEXT GST_LOG_CONTEXT_LAZY_INIT(simple_ctx)
+ *
+ * // Then in code:
+ * GST_CTX_INFO(MY_CONTEXT, "This will only appear once");
+ * GST_CTX_INFO(MY_CONTEXT, "This will only appear once"); // Not logged again
+ * ```
+ *
+ * When using this macro, gst_init() must be called in the application.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_LOG_CONTEXT_LAZY_INIT:
+ * @name: variable name for the context
+ *
+ * This macro is used to ensure a static logging context is initialized on
+ * first use. It should be used with a context defined using
+ * GST_LOG_CONTEXT_STATIC_DEFINE().
+ *
+ * Returns: the initialized #GstLogContext
+ *
+ * Since: 1.28
+ */
+#define GST_LOG_CONTEXT_LAZY_INIT(name) _ensure_##name()
+
+/**
+ * GST_LOG_CONTEXT_INIT:
+ * @var: name for the context variable to initialize
+ * @flags: #GstLogContextFlags to control throttling behavior
+ * @_init_code: optional initialization code to customize the context
+ *
+ * Initializes a new log context for immediate use within a function. It requires
+ * flags to explicitly control whether throttling is enabled.
+ * By default, the context uses GST_CAT_DEFAULT and GST_LOG_CONTEXT_DEFAULT hash flags,
+ * but can be further customized with optional initialization code.
+ *
+ * Typical usage:
+ *
+ * ``` c
+ * // Simple case with throttling
+ * GstLogContext *ctx = NULL, *periodic_ctx = NULL;
+ *
+ * GST_LOG_CONTEXT_INIT(ctx, GST_LOG_CONTEXT_FLAG_THROTTLE);
+ *
+ * // With interval for periodic reset and throttling
+ * GST_LOG_CONTEXT_INIT(periodic_ctx, GST_LOG_CONTEXT_FLAG_THROTTLE,
+ *   GST_LOG_CONTEXT_BUILDER_SET_INTERVAL(60 * GST_SECOND);
+ * );
+ * ```
+ *
+ * The returned context should be freed with gst_log_context_free() when no longer needed.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_LEVEL_LOG:
+ * @ctx: #GstLogContext to use
+ * @level: level of the message
+ * @object: (nullable): an object or %NULL
+ * @...: format string and optional arguments
+ *
+ * Outputs a debugging message in the specified context with the specified
+ * level. This is the most general macro for this purpose. You will probably
+ * want to use one of the simpler ones described below.
+ *
+ * There is no need to finish the end of the debug message with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_LEVEL_LOG_ID:
+ * @ctx: #GstLogContext to use
+ * @level: level of the message
+ * @id: (nullable): an object or %NULL
+ * @...: format string and optional arguments
+ *
+ * Outputs a debugging message with an identifier in the specified context
+ * with the specified level. This is the most general macro for this purpose.
+ * You will probably want to use one of the simpler ones described below.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_ERROR_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output an error message belonging to the given object in the specified
+ * context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_WARNING_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a warning message belonging to the given object in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_DEBUG_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a debugging message belonging to the given object in the specified
+ * context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_INFO_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output an informational message belonging to the given object in the
+ * specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_LOG_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a logging message belonging to the given object in the specified
+ * context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_FIXME_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a fixme message belonging to the given object in the specified
+ * context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_TRACE_OBJECT:
+ * @ctx: #GstLogContext to use
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a tracing message belonging to the given object in the specified
+ * context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/* Similar macros for non-object logging */
+
+/**
+ * GST_CTX_ERROR:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output an error message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_WARNING:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output a warning message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_INFO:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output an info message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_DEBUG:
+ * @ctx: #GstLogContext to use for determining if message should be logged
+ * @...: format string and optional arguments
+ *
+ * Output a debug message in the specified context.
+ * If this exact message was already logged from the same location with this
+ * context, it will not be logged again unless the context has been reset.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Example:
+ * ``` c
+ * // Define a static context
+ * GST_LOG_CONTEXT_STATIC_DEFINE(debug_ctx, );
+ * #define DEBUG_CTX GST_LOG_CONTEXT_LAZY_INIT(debug_ctx)
+ *
+ * // Use in code - this message will only be logged once
+ * for (i = 0; i < 1000; i++) {
+ *   GST_CTX_DEBUG(DEBUG_CTX, "Processing iteration %d", i);
+ * }
+ * ```
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_LOG:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output a log message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_FIXME:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output a fixme message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_TRACE:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ *
+ * Output a trace message in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/* Similar macros for object ID logging */
+
+/**
+ * GST_CTX_ERROR_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output an error message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_WARNING_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output a warning message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_INFO_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output an info message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_DEBUG_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output a debug message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_LOG_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output a log message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_FIXME_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output a fixme message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_CTX_TRACE_ID:
+ * @ctx: #GstLogContext to use
+ * @...: format string and optional arguments
+ * @id: (nullable): an object ID or %NULL
+ *
+ * Output a trace message for the given identifier in the specified context.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+
+/* `ONCE` convenience macros around GstLogContext */
+
+/**
+ * GST_CAT_ERROR_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output an error message belonging to the given object in the given category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_WARNING_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output a warning message belonging to the given object in the given
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_INFO_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output an informational message belonging to the given object in the given
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_DEBUG_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output a debugging message belonging to the given object in the given
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_LOG_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output a logging message belonging to the given object in the given
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_FIXME_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output a fixme message belonging to the given object in the given category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_TRACE_ONCE_OBJECT:
+ * @cat: category to use
+ * @obj: the #GObject the message belongs to
+ * @...: printf-style message to output
+ *
+ * Output a tracing message belonging to the given object in the given
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_ERROR_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output an error message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_WARNING_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output a warning message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_INFO_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output an informational message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_DEBUG_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output a debugging message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_LOG_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output a logging message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_FIXME_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output a fixme message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_CAT_TRACE_ONCE:
+ * @cat: category to use
+ * @...: printf-style message to output
+ *
+ * Output a tracing message in the given category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_ERROR_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output an error message belonging to the given object in the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_WARNING_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a warning message belonging to the given object in the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_INFO_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Logs an info message in the specified context.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_DEBUG_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a debugging message belonging to the given object in the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_LOG_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Logs a log message in the specified context.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_FIXME_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a fixme message belonging to the given object in the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_TRACE_ONCE_OBJECT:
+ * @object: (nullable): a #GObject or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a tracing message belonging to the given object in the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/* Similar macros for non-object logging */
+/**
+ * GST_ERROR_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output an error message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_WARNING_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output a warning message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_INFO_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output an informational message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_DEBUG_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output a debugging message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Example:
+ * ``` c
+ * // Use in code - this message will only be logged once
+ * for (i = 0; i < 1000; i++) {
+ *   GST_DEBUG_ONCE ("Processing iteration %d", i);
+ * }
+ * ```
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_LOG_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output a logging message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_FIXME_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output a fixme message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_TRACE_ONCE:
+ * @...: format string and optional arguments
+ *
+ * Output a tracing message in the default category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/* Similar macros for object ID logging */
+/**
+ * GST_ERROR_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output an error message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_WARNING_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a warning message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_INFO_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output an informational message for the given identifier the default
+ * category exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_DEBUG_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a debugging message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_LOG_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a logging message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_FIXME_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a fixme message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
+/**
+ * GST_TRACE_ONCE_ID:
+ * @id: (nullable): an object ID or %NULL
+ * @...: format string and optional arguments
+ *
+ * Output a tracing message for the given identifier in the default category
+ * exactly once per statement.
+ *
+ * There is no need to finish the end of the message string with a newline
+ * character, a newline character will be added automatically.
+ *
+ * Since: 1.28
+ */
 
 G_END_DECLS
 

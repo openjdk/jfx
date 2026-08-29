@@ -66,7 +66,7 @@ JSValue JSElementInternals::setFormValue(JSGlobalObject& lexicalGlobalObject, Ca
         state = stateConversionResult.releaseReturnValue();
     }
 
-    auto result = wrapped().setFormValue(value.releaseReturnValue(), WTFMove(state));
+    auto result = wrapped().setFormValue(value.releaseReturnValue(), WTF::move(state));
     if (result.hasException()) [[unlikely]] {
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
         return { };

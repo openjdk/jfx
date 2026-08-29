@@ -30,7 +30,7 @@
 
 namespace WTF {
 
-double parseDouble(std::span<const LChar> string, size_t& parsedLength)
+double parseDouble(std::span<const Latin1Character> string, size_t& parsedLength)
 {
     double doubleValue = 0;
     auto stringData = byteCast<char>(string);
@@ -48,7 +48,7 @@ double parseDouble(std::span<const char16_t> string, size_t& parsedLength)
     return doubleValue;
 }
 
-double parseHexDouble(std::span<const LChar> string, size_t& parsedLength)
+double parseHexDouble(std::span<const Latin1Character> string, size_t& parsedLength)
 {
     double doubleValue = 0;
     auto stringData = byteCast<char>(string);

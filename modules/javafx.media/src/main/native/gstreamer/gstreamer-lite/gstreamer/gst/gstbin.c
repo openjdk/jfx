@@ -1284,7 +1284,7 @@ gst_bin_add_func (GstBin * bin, GstElement * element)
    * NO_PREROLL element */
   ret = GST_STATE_RETURN (element);
   GST_DEBUG_OBJECT (bin, "added %s element",
-      gst_element_state_change_return_get_name (ret));
+      gst_state_change_return_get_name (ret));
 
   switch (ret) {
     case GST_STATE_CHANGE_ASYNC:
@@ -1891,7 +1891,7 @@ no_function:
  *
  * Gets an iterator for the elements in this bin.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_elements (GstBin * bin)
@@ -1929,7 +1929,7 @@ iterate_child_recurse (GstIterator * it, const GValue * item)
  * Gets an iterator for the elements in this bin.
  * This iterator recurses into GstBin children.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_recurse (GstBin * bin)
@@ -1989,7 +1989,7 @@ sink_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SINK flag set.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sinks (GstBin * bin)
@@ -2047,7 +2047,7 @@ src_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SOURCE flag set.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sources (GstBin * bin)
@@ -2437,7 +2437,7 @@ gst_bin_sort_iterator_new (GstBin * bin)
  * This function is used internally to perform the state changes
  * of the bin elements and for clock selection.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sorted (GstBin * bin)
@@ -2491,9 +2491,8 @@ gst_bin_element_set_state (GstBin * bin, GstElement * element,
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
       "current %s pending %s, desired next %s",
-      gst_element_state_get_name (child_current),
-      gst_element_state_get_name (child_pending),
-      gst_element_state_get_name (next));
+      gst_state_get_name (child_current),
+      gst_state_get_name (child_pending), gst_state_get_name (next));
 
   /* always recurse into bins so that we can set the base time */
   if (GST_IS_BIN (element))
@@ -2587,7 +2586,7 @@ do_state:
 no_preroll:
   GST_DEBUG_OBJECT (bin,
       "setting element %s to %s, base_time %" GST_TIME_FORMAT,
-      GST_ELEMENT_NAME (element), gst_element_state_get_name (next),
+      GST_ELEMENT_NAME (element), gst_state_get_name (next),
       GST_TIME_ARGS (base_time));
 
   /* change state */
@@ -2602,12 +2601,12 @@ locked:
     if (ret == GST_STATE_CHANGE_FAILURE) {
       GST_DEBUG_OBJECT (element,
           "element is locked, and previous state change failed, return %s",
-          gst_element_state_change_return_get_name (GST_STATE_CHANGE_SUCCESS));
+          gst_state_change_return_get_name (GST_STATE_CHANGE_SUCCESS));
       ret = GST_STATE_CHANGE_SUCCESS;
     } else {
       GST_DEBUG_OBJECT (element,
           "element is locked, return previous return %s",
-          gst_element_state_change_return_get_name (ret));
+          gst_state_change_return_get_name (ret));
     }
     GST_STATE_UNLOCK (element);
     return ret;
@@ -2616,8 +2615,7 @@ unneeded:
   {
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
         "skipping transition from %s to  %s",
-        gst_element_state_get_name (child_current),
-        gst_element_state_get_name (next));
+        gst_state_get_name (child_current), gst_state_get_name (next));
     GST_STATE_UNLOCK (element);
     return ret;
   }
@@ -2826,7 +2824,7 @@ reset_state (const GValue * data, gpointer user_data)
 
   if (gst_element_set_state (e, state) == GST_STATE_CHANGE_FAILURE)
     GST_WARNING_OBJECT (e, "Failed to switch back down to %s",
-        gst_element_state_get_name (state));
+        gst_state_get_name (state));
 }
 
 static GstStateChangeReturn
@@ -2848,7 +2846,7 @@ gst_bin_change_state_func (GstElement * element, GstStateChange transition)
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
       "changing state of children from %s to %s",
-      gst_element_state_get_name (current), gst_element_state_get_name (next));
+      gst_state_get_name (current), gst_state_get_name (next));
 
   bin = GST_BIN_CAST (element);
 
@@ -2950,14 +2948,13 @@ restart:
           case GST_STATE_CHANGE_SUCCESS:
             GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
                 "child '%s' changed state to %d(%s) successfully",
-                GST_ELEMENT_NAME (child), next,
-                gst_element_state_get_name (next));
+                GST_ELEMENT_NAME (child), next, gst_state_get_name (next));
             break;
           case GST_STATE_CHANGE_ASYNC:
           {
             GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
                 "child '%s' is changing state asynchronously to %s",
-                GST_ELEMENT_NAME (child), gst_element_state_get_name (next));
+                GST_ELEMENT_NAME (child), gst_state_get_name (next));
             have_async = TRUE;
             break;
           }
@@ -2966,8 +2963,7 @@ restart:
 
             GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
                 "child '%s' failed to go to state %d(%s)",
-                GST_ELEMENT_NAME (child),
-                next, gst_element_state_get_name (next));
+                GST_ELEMENT_NAME (child), next, gst_state_get_name (next));
 
             /* Only fail if the child is still inside
              * this bin. It might've been removed already
@@ -2993,8 +2989,7 @@ restart:
           case GST_STATE_CHANGE_NO_PREROLL:
             GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
                 "child '%s' changed state to %d(%s) successfully without preroll",
-                GST_ELEMENT_NAME (child), next,
-                gst_element_state_get_name (next));
+                GST_ELEMENT_NAME (child), next, gst_state_get_name (next));
             have_no_preroll = TRUE;
             break;
           default:
@@ -3023,12 +3018,12 @@ restart:
   if (have_no_preroll) {
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, bin,
         "we have NO_PREROLL elements %s -> NO_PREROLL",
-        gst_element_state_change_return_get_name (ret));
+        gst_state_change_return_get_name (ret));
     ret = GST_STATE_CHANGE_NO_PREROLL;
   } else if (have_async) {
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, bin,
         "we have ASYNC elements %s -> ASYNC",
-        gst_element_state_change_return_get_name (ret));
+        gst_state_change_return_get_name (ret));
     ret = GST_STATE_CHANGE_ASYNC;
   }
 
@@ -3052,7 +3047,7 @@ done:
   if (GST_STATE_TARGET (bin) <= GST_STATE_READY) {
     /* we ignore ASYNC state changes when we go to READY or NULL */
     GST_DEBUG_OBJECT (bin, "target state %s <= READY",
-        gst_element_state_get_name (GST_STATE_TARGET (bin)));
+        gst_state_get_name (GST_STATE_TARGET (bin)));
     goto state_end;
   }
 
@@ -3076,10 +3071,10 @@ state_end:
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
       "done changing bin's state from %s to %s, now in %s, ret %s",
-      gst_element_state_get_name (current),
-      gst_element_state_get_name (next),
-      gst_element_state_get_name (GST_STATE (element)),
-      gst_element_state_change_return_get_name (ret));
+      gst_state_get_name (current),
+      gst_state_get_name (next),
+      gst_state_get_name (GST_STATE (element)),
+      gst_state_change_return_get_name (ret));
 
   return ret;
 
@@ -3099,7 +3094,7 @@ undo:
 
       GST_DEBUG_OBJECT (element,
           "Bin failed to change state, switching children back to %s",
-          gst_element_state_get_name (current));
+          gst_state_get_name (current));
       while (TRUE) {
         ret =
             gst_iterator_foreach (it, &reset_state, GINT_TO_POINTER (current));
@@ -3246,13 +3241,14 @@ gst_bin_continue_func (GstBin * bin, BinContinueData * data)
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, bin,
       "continue state change %s to %s, final %s",
-      gst_element_state_get_name (current),
-      gst_element_state_get_name (next), gst_element_state_get_name (pending));
+      gst_state_get_name (current),
+      gst_state_get_name (next), gst_state_get_name (pending));
 
   gst_element_change_state (GST_ELEMENT_CAST (bin), transition);
 
   GST_STATE_UNLOCK (bin);
   GST_DEBUG_OBJECT (bin, "state continue done");
+  g_free (data);
 
   return;
 
@@ -3261,6 +3257,8 @@ interrupted:
     GST_OBJECT_UNLOCK (bin);
     GST_STATE_UNLOCK (bin);
     GST_DEBUG_OBJECT (bin, "state continue aborted due to intervening change");
+    g_free (data);
+
     return;
   }
 }
@@ -3280,18 +3278,11 @@ bin_bus_handler (GstBus * bus, GstMessage * message, GstBin * bin)
 }
 
 static void
-free_bin_continue_data (BinContinueData * data)
-{
-  g_free (data);
-}
-
-static void
 bin_push_state_continue (GstBin * bin, BinContinueData * data)
 {
   GST_DEBUG_OBJECT (bin, "pushing continue on thread pool");
-  gst_element_call_async (GST_ELEMENT_CAST (bin),
-      (GstElementCallAsyncFunc) gst_bin_continue_func, data,
-      (GDestroyNotify) free_bin_continue_data);
+  gst_object_call_async (GST_OBJECT_CAST (bin),
+      (GstObjectCallAsyncFunc) gst_bin_continue_func, data);
 }
 
 /* an element started an async state change, if we were not busy with a state
@@ -3334,8 +3325,8 @@ bin_handle_async_start (GstBin * bin)
     new_state = old_state;
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, bin,
-      "lost state of %s, new %s", gst_element_state_get_name (old_state),
-      gst_element_state_get_name (new_state));
+      "lost state of %s, new %s", gst_state_get_name (old_state),
+      gst_state_get_name (new_state));
 
   GST_STATE (bin) = new_state;
   GST_STATE_NEXT (bin) = new_state;
@@ -3419,18 +3410,16 @@ bin_handle_async_done (GstBin * bin, GstStateChangeReturn ret,
   if (old_next != GST_STATE_PLAYING) {
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, bin,
         "committing state from %s to %s, old pending %s",
-        gst_element_state_get_name (old_state),
-        gst_element_state_get_name (old_next),
-        gst_element_state_get_name (pending));
+        gst_state_get_name (old_state),
+        gst_state_get_name (old_next), gst_state_get_name (pending));
 
     /* update current state */
     current = GST_STATE (bin) = old_next;
   } else {
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, bin,
         "setting state from %s to %s, pending %s",
-        gst_element_state_get_name (old_state),
-        gst_element_state_get_name (old_state),
-        gst_element_state_get_name (pending));
+        gst_state_get_name (old_state),
+        gst_state_get_name (old_state), gst_state_get_name (pending));
     current = old_state;
   }
 
@@ -3449,8 +3438,7 @@ bin_handle_async_done (GstBin * bin, GstStateChangeReturn ret,
     GST_STATE_NEXT (bin) = GST_STATE_VOID_PENDING;
   } else {
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, bin,
-        "continue state change, pending %s",
-        gst_element_state_get_name (pending));
+        "continue state change, pending %s", gst_state_get_name (pending));
 
     cont = g_new (BinContinueData, 1);
 
@@ -3913,7 +3901,7 @@ gst_bin_handle_message_func (GstBin * bin, GstMessage * message)
     ignore_start_message:
       {
         GST_DEBUG_OBJECT (bin, "ignoring message, target %s",
-            gst_element_state_get_name (target));
+            gst_state_get_name (target));
         GST_OBJECT_UNLOCK (bin);
         gst_message_unref (message);
         break;
@@ -3960,7 +3948,7 @@ gst_bin_handle_message_func (GstBin * bin, GstMessage * message)
     ignore_done_message:
       {
         GST_DEBUG_OBJECT (bin, "ignoring message, target %s",
-            gst_element_state_get_name (target));
+            gst_state_get_name (target));
         GST_OBJECT_UNLOCK (bin);
         gst_message_unref (message);
         break;
@@ -4533,7 +4521,7 @@ gst_bin_get_by_interface (GstBin * bin, GType iface)
  * The function recurses inside child bins. The iterator will yield a series
  * of #GstElement.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  *     for all elements in the bin implementing the given interface
  */
 GstIterator *
@@ -4580,7 +4568,7 @@ compare_factory_names (const GValue * velement, GValue * factory_name_val)
  * The function recurses inside child bins. The iterator will yield a series of
  * #GstElement.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  *     for all elements in the bin with the given element factory name
  *
  * Since: 1.18

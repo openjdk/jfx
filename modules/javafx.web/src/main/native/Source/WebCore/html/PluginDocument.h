@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "HTMLDocument.h"
+#include <WebCore/HTMLDocument.h>
 
 namespace WebCore {
 
@@ -32,7 +32,8 @@ class HTMLPlugInElement;
 class PluginViewBase;
 
 class PluginDocument final : public HTMLDocument {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PluginDocument);
+    WTF_MAKE_TZONE_ALLOCATED(PluginDocument);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PluginDocument);
 public:
     static Ref<PluginDocument> create(LocalFrame& frame, const URL& url)
     {

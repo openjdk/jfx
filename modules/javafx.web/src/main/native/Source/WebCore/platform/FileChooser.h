@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -45,7 +46,7 @@ enum class MediaCaptureType : uint8_t {
 
 struct FileChooserFileInfo {
     FileChooserFileInfo isolatedCopy() const & { return { path.isolatedCopy(), replacementPath.isolatedCopy(), displayName.isolatedCopy() }; }
-    FileChooserFileInfo isolatedCopy() && { return { WTFMove(path).isolatedCopy(), WTFMove(replacementPath).isolatedCopy(), WTFMove(displayName).isolatedCopy() }; }
+    FileChooserFileInfo isolatedCopy() && { return { WTF::move(path).isolatedCopy(), WTF::move(replacementPath).isolatedCopy(), WTF::move(displayName).isolatedCopy() }; }
 
     String path;
     String replacementPath;

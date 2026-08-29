@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -285,6 +285,34 @@ public class FxSettingsSchema {
         }
     }
 
+    private static void storeWithSettings(Node n) {
+        String name = computeName(n);
+        if (name == null) {
+            return;
+        }
+
+        SStream s = ((HasSettings)n).storeSettings();
+        if (s != null) {
+            FxSettings.setStream(PREFIX + name, s);
+        }
+    }
+
+    private static void restoreWithSettings(Node n) {
+        if (checkNoScene(n)) {
+            return;
+        }
+
+        String name = computeName(n);
+        if (name == null) {
+            return;
+        }
+
+        SStream s = FxSettings.getStream(PREFIX + name);
+        if (s != null) {
+            ((HasSettings)n).restoreSettings(s);
+        }
+    }
+
     private static void storeComboBox(ComboBox n) {
         if (n.getSelectionModel() == null) {
             return;
@@ -393,6 +421,10 @@ public class FxSettingsSchema {
     }
 
     private static void storeCheckBox(CheckBox n) {
+        if (n.selectedProperty().isBound()) {
+            return;
+        }
+
         String name = computeName(n);
         if (name == null) {
             return;
@@ -403,6 +435,10 @@ public class FxSettingsSchema {
     }
 
     private static void restoreCheckBox(CheckBox n) {
+        if (n.selectedProperty().isBound()) {
+            return;
+        }
+
         if (checkNoScene(n)) {
             return;
         }
@@ -461,6 +497,10 @@ public class FxSettingsSchema {
     }
 
     public static void storeNode(Node n) {
+        if (n instanceof HasSettings) {
+            storeWithSettings(n);
+        }
+
         if (n instanceof ListView lv) {
             storeListView(lv);
             return;
@@ -491,6 +531,10 @@ public class FxSettingsSchema {
     public static void restoreNode(Node n) {
         if (checkNoScene(n)) {
             return;
+        }
+
+        if (n instanceof HasSettings) {
+            restoreWithSettings(n);
         }
 
         if (n instanceof ListView lv) {

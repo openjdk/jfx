@@ -31,6 +31,7 @@
 
 namespace WebCore {
 
+class AXLocalFrame;
 class AXRemoteFrame;
 class AccessibilityScrollbar;
 class Scrollbar;
@@ -39,7 +40,7 @@ class ScrollView;
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
     static Ref<AccessibilityScrollView> create(AXID, ScrollView&, AXObjectCache&);
-    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
+    AccessibilityRole determineAccessibilityRole() final;
     ScrollView* scrollView() const final { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
@@ -50,7 +51,12 @@ public:
     RefPtr<AXRemoteFrame> remoteFrame() const { return m_remoteFrame; }
 
     String ownerDebugDescription() const;
-    String extraDebugInfo() const final { return ownerDebugDescription(); }
+    String extraDebugInfo() const final;
+
+#if ENABLE_ACCESSIBILITY_LOCAL_FRAME
+    AccessibilityObject* crossFrameParentObject() const final;
+    AccessibilityObject* crossFrameChildObject() const final;
+#endif
 
 private:
     explicit AccessibilityScrollView(AXID, ScrollView&, AXObjectCache&);
@@ -78,6 +84,7 @@ private:
     void setFocused(bool) final;
     bool canSetFocusAttribute() const final;
     bool isFocused() const final;
+    void addLocalFrameChild();
     void addRemoteFrameChild();
 
     Document* document() const final;
@@ -85,6 +92,9 @@ private:
     LayoutRect elementRect() const final;
     LayoutRect boundingBoxRect() const final { return elementRect(); }
     AccessibilityObject* parentObject() const final;
+    RefPtr<AccessibilityObject> protectedHorizontalScrollbar() const { return m_horizontalScrollbar; }
+    RefPtr<AccessibilityObject> protectedVerticalScrollbar() const { return m_verticalScrollbar; }
+    RefPtr<HTMLFrameOwnerElement> protectedFrameOwnerElement() const { return m_frameOwnerElement.get(); }
 
     AccessibilityObject* firstChild() const final { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
@@ -95,6 +105,9 @@ private:
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_frameOwnerElement;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
+#if ENABLE_ACCESSIBILITY_LOCAL_FRAME
+    RefPtr<AXLocalFrame> m_localFrame;
+#endif
     RefPtr<AXRemoteFrame> m_remoteFrame;
 };
 

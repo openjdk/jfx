@@ -26,7 +26,8 @@
 
 #pragma once
 
-#include "JSExportMacros.h"
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -41,7 +42,7 @@ public:
     JS_EXPORT_PRIVATE AgentRegistry();
     JS_EXPORT_PRIVATE ~AgentRegistry();
 
-    JS_EXPORT_PRIVATE void append(std::unique_ptr<InspectorAgentBase>);
+    JS_EXPORT_PRIVATE void append(UniqueRef<InspectorAgentBase>&&);
 
     JS_EXPORT_PRIVATE void didCreateFrontendAndBackend();
     JS_EXPORT_PRIVATE void willDestroyFrontendAndBackend(DisconnectReason);
@@ -53,7 +54,7 @@ private:
     AgentRegistry(const AgentRegistry&) = delete;
     AgentRegistry& operator=(const AgentRegistry&) = delete;
 
-    Vector<std::unique_ptr<InspectorAgentBase>> m_agents;
+    Vector<UniqueRef<InspectorAgentBase>> m_agents;
 };
 
 } // namespace Inspector

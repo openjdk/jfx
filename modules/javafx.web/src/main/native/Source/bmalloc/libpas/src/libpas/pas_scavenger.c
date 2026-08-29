@@ -30,16 +30,15 @@
 #include "pas_scavenger.h"
 
 #include <math.h>
-#include "pas_all_heaps.h"
 #include "pas_baseline_allocator_table.h"
 #include "pas_compact_expendable_memory.h"
-#include "pas_deferred_decommit_log.h"
 #include "pas_dyld_state.h"
 #include "pas_epoch.h"
 #include "pas_heap_lock.h"
 #include "pas_immortal_heap.h"
 #include "pas_large_expendable_memory.h"
 #include "pas_lock.h"
+#include "pas_mte.h"
 #include "pas_page_sharing_pool.h"
 #include "pas_status_reporter.h"
 #include "pas_thread_local_cache.h"
@@ -70,7 +69,11 @@ double pas_scavenger_period_in_milliseconds = 125.;
 #else
 double pas_scavenger_period_in_milliseconds = 100.;
 #endif
+#if PAS_PLATFORM(MAC)
+uint64_t pas_scavenger_max_epoch_delta = 600ll * 1000ll * 1000ll;
+#else
 uint64_t pas_scavenger_max_epoch_delta = 300ll * 1000ll * 1000ll;
+#endif
 #endif
 
 static uint32_t pas_scavenger_tick_count = 0;
@@ -212,6 +215,7 @@ static void* scavenger_thread_main(void* arg)
 #endif
 
     PAS_PROFILE(SCAVENGER_THREAD_MAIN, data);
+    PAS_MTE_HANDLE(SCAVENGER_THREAD_MAIN, data);
 
     for (;;) {
         pas_page_sharing_pool_scavenge_result scavenge_result;

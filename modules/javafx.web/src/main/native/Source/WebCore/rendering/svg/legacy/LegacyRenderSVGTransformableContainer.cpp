@@ -22,8 +22,7 @@
 #include "config.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 
-#include "RenderElementInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGGraphicsElement.h"
@@ -32,10 +31,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGTransformableContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGTransformableContainer);
 
 LegacyRenderSVGTransformableContainer::LegacyRenderSVGTransformableContainer(SVGGraphicsElement& element, RenderStyle&& style)
-    : LegacyRenderSVGContainer(Type::LegacySVGTransformableContainer, element, WTFMove(style))
+    : LegacyRenderSVGContainer(Type::LegacySVGTransformableContainer, element, WTF::move(style))
     , m_needsTransformUpdate(true)
     , m_didTransformToRootUpdate(false)
 {
@@ -60,9 +59,9 @@ bool LegacyRenderSVGTransformableContainer::calculateLocalTransform()
     if (useElement) {
         SVGLengthContext lengthContext(element.ptr());
         FloatSize translation(useElement->x().value(lengthContext), useElement->y().value(lengthContext));
-        if (translation != m_lastTranslation)
+        if (translation != m_additionalTranslation)
             m_needsTransformUpdate = true;
-        m_lastTranslation = translation;
+        m_additionalTranslation = translation;
     }
 
     auto referenceBoxRect = transformReferenceBoxRect();
@@ -76,7 +75,7 @@ bool LegacyRenderSVGTransformableContainer::calculateLocalTransform()
         return false;
 
     m_localTransform = element->animatedLocalTransform();
-    m_localTransform.translate(m_lastTranslation);
+    m_localTransform.translate(m_additionalTranslation);
     m_needsTransformUpdate = false;
     return true;
 }

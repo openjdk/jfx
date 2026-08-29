@@ -48,7 +48,7 @@ JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, WebAssemblyGCStructure* structure
     , m_size(size)
 {
         if (elementsAreRefTypes())
-        std::fill(span<uint64_t>().begin(), span<uint64_t>().end(), JSValue::encode(jsNull()));
+        std::ranges::fill(span<uint64_t>(), JSValue::encode(jsNull()));
         else
         zeroSpan(bytes());
 }
@@ -76,16 +76,14 @@ void JSWebAssemblyArray::fill(VM& vm, uint32_t offset, uint64_t value, uint32_t 
     }
 
     visitSpanNonVector([&](auto span) ALWAYS_INLINE_LAMBDA {
-        span = span.subspan(offset, size);
-        std::fill(span.begin(), span.end(), value);
+        std::ranges::fill(span.subspan(offset, size), value);
     });
 }
 
 void JSWebAssemblyArray::fill(VM&, uint32_t offset, v128_t value, uint32_t size)
 {
     ASSERT(elementType().type.unpacked().isV128());
-    auto payload = span<v128_t>().subspan(offset, size);
-    std::fill(payload.begin(), payload.end(), value);
+    std::ranges::fill(span<v128_t>().subspan(offset, size), value);
 }
 
 void JSWebAssemblyArray::copy(VM& vm, JSWebAssemblyArray& dst, uint32_t dstOffset, uint32_t srcOffset, uint32_t size)
@@ -115,8 +113,10 @@ void JSWebAssemblyArray::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     if (thisObject->elementsAreRefTypes()) {
         auto span = thisObject->refTypeSpan();
 #if ASSERT_ENABLED
+        if (!thisObject->m_isUnpopulated) {
         for (uint64_t value : span)
             validateWasmValue(value, thisObject->elementType().type.unpacked());
+        }
 #endif
         visitor.appendValues(std::bit_cast<WriteBarrier<Unknown>*>(span.data()), span.size());
     }

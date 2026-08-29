@@ -1783,7 +1783,7 @@ nothing_pending:
      * update the need_preroll var since it was %TRUE when we got here and might
      * become %FALSE if we got to PLAYING. */
     GST_DEBUG_OBJECT (basesink, "nothing to commit, now in %s",
-        gst_element_state_get_name (current));
+        gst_state_get_name (current));
     switch (current) {
       case GST_STATE_PLAYING:
         basesink->need_preroll = FALSE;

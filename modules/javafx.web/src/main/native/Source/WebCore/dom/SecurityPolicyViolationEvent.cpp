@@ -30,18 +30,18 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SecurityPolicyViolationEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SecurityPolicyViolationEvent);
 
 SecurityPolicyViolationEventInit::SecurityPolicyViolationEventInit(EventInit&& eventInit, String&& documentURI, String&& referrer, String&& blockedURI, String&& violatedDirective, String&& effectiveDirective, String&& originalPolicy, String&& sourceFile, String&& sample, SecurityPolicyViolationEventDisposition disposition, unsigned short statusCode, unsigned lineNumber, unsigned columnNumber)
-    : EventInit(WTFMove(eventInit))
-    , documentURI(WTFMove(documentURI))
-    , referrer(WTFMove(referrer))
-    , blockedURI(WTFMove(blockedURI))
-    , violatedDirective(WTFMove(violatedDirective))
-    , effectiveDirective(WTFMove(effectiveDirective))
-    , originalPolicy(WTFMove(originalPolicy))
-    , sourceFile(WTFMove(sourceFile))
-    , sample(WTFMove(sample))
+    : EventInit(WTF::move(eventInit))
+    , documentURI(WTF::move(documentURI))
+    , referrer(WTF::move(referrer))
+    , blockedURI(WTF::move(blockedURI))
+    , violatedDirective(WTF::move(violatedDirective))
+    , effectiveDirective(WTF::move(effectiveDirective))
+    , originalPolicy(WTF::move(originalPolicy))
+    , sourceFile(WTF::move(sourceFile))
+    , sample(WTF::move(sample))
     , disposition(disposition)
     , statusCode(statusCode)
     , lineNumber(lineNumber)

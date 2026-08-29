@@ -110,6 +110,7 @@ public:
                 m_result = false;
             return;
 
+        case KnownStorageUse:
         case KnownCellUse:
             if (m_state.forNode(edge).m_type & ~SpecCell)
                 m_result = false;
@@ -436,7 +437,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
 
     case PutByValDirect:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic:
         return node->arrayMode().modeForPut().alreadyChecked(
             graph, node, state.forNode(graph.varArgChild(node, 0)));
@@ -640,6 +641,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case TailCallForwardVarargsInlinedCaller:
     case ConstructVarargs:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
     case CallCustomAccessorGetter:
     case CallCustomAccessorSetter:
     case VarargsLength:
@@ -778,6 +780,12 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetInternalField:
     case PutInternalField:
     case DataViewSet:
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
     case SetAdd:
     case MapSet:
     case MapOrSetDelete:

@@ -27,16 +27,21 @@
 
 #pragma once
 
-#include "FormData.h"
-#include "FrameLoaderTypes.h"
-#include "HTTPHeaderMap.h"
-#include "IntRect.h"
-#include "ResourceLoadPriority.h"
+#include <WebCore/FormData.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/HTTPHeaderMap.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/ResourceLoadPriority.h>
+#include <optional>
 #include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
+#include <wtf/WallTime.h>
 
 namespace WebCore {
+
+enum class IPAddressSpace : bool;
 
 enum class ResourceRequestCachePolicy : uint8_t {
     UseProtocolCachePolicy, // normal load, equivalent to fetch "default" cache mode.
@@ -68,13 +73,13 @@ public:
     struct RequestData {
         RequestData() { }
 
-        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, ResourceRequestCachePolicy cachePolicy, SameSiteDisposition sameSiteDisposition, ResourceLoadPriority priority, ResourceRequestRequester requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
-            : m_url(WTFMove(url))
-            , m_firstPartyForCookies(WTFMove(firstPartyForCookies))
+        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, ResourceRequestCachePolicy cachePolicy, SameSiteDisposition sameSiteDisposition, ResourceLoadPriority priority, ResourceRequestRequester requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false, IPAddressSpace targetAddressSpace = IPAddressSpace::Public)
+            : m_url(WTF::move(url))
+            , m_firstPartyForCookies(WTF::move(firstPartyForCookies))
             , m_timeoutInterval(timeoutInterval)
-            , m_httpMethod(WTFMove(httpMethod))
-            , m_httpHeaderFields(WTFMove(httpHeaderFields))
-            , m_responseContentDispositionEncodingFallbackArray(WTFMove(responseContentDispositionEncodingFallbackArray))
+            , m_httpMethod(WTF::move(httpMethod))
+            , m_httpHeaderFields(WTF::move(httpHeaderFields))
+            , m_responseContentDispositionEncodingFallbackArray(WTF::move(responseContentDispositionEncodingFallbackArray))
             , m_cachePolicy(cachePolicy)
             , m_sameSiteDisposition(sameSiteDisposition)
             , m_priority(priority)
@@ -87,11 +92,12 @@ public:
             , m_didFilterLinkDecoration(didFilterLinkDecoration)
             , m_isPrivateTokenUsageByThirdPartyAllowed(isPrivateTokenUsageByThirdPartyAllowed)
             , m_wasSchemeOptimisticallyUpgraded(wasSchemeOptimisticallyUpgraded)
+            , m_targetAddressSpace(targetAddressSpace)
         {
         }
 
         RequestData(URL&& url, ResourceRequestCachePolicy cachePolicy)
-            : m_url(WTFMove(url))
+            : m_url(WTF::move(url))
             , m_cachePolicy(cachePolicy)
         {
         }
@@ -114,10 +120,11 @@ public:
         bool m_didFilterLinkDecoration : 1 { false };
         bool m_isPrivateTokenUsageByThirdPartyAllowed : 1 { false };
         bool m_wasSchemeOptimisticallyUpgraded : 1 { false };
+        IPAddressSpace m_targetAddressSpace { IPAddressSpace::Public };
     };
 
     ResourceRequestBase(RequestData&& requestData)
-        : m_requestData(WTFMove(requestData))
+        : m_requestData(WTF::move(requestData))
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)
@@ -247,6 +254,9 @@ public:
     ResourceRequestRequester requester() const { return m_requestData.m_requester; }
     void setRequester(ResourceRequestRequester requester) { m_requestData.m_requester = requester; }
 
+    IPAddressSpace targetAddressSpace() const { return m_requestData.m_targetAddressSpace; }
+    void setTargetAddressSpace(IPAddressSpace targetAddressSpace) { m_requestData.m_targetAddressSpace = targetAddressSpace; }
+
     // Who initiated the request so the Inspector can associate it with a context. E.g. a Web Worker.
     String initiatorIdentifier() const { return m_initiatorIdentifier; }
     void setInitiatorIdentifier(const String& identifier) { m_initiatorIdentifier = identifier; }
@@ -300,7 +310,7 @@ protected:
     }
 
     ResourceRequestBase(URL&& url, ResourceRequestCachePolicy policy)
-        : m_requestData({ WTFMove(url), policy })
+        : m_requestData({ WTF::move(url), policy })
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)

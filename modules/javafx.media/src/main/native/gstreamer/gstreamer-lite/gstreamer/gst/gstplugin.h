@@ -375,7 +375,7 @@ GST_API
 GstPlugin *   gst_plugin_load_file    (const gchar *filename, GError** error);
 
 GST_API
-GstPlugin *             gst_plugin_load                 (GstPlugin *plugin);
+GstPlugin *             gst_plugin_load                 (GstPlugin *plugin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstPlugin *             gst_plugin_load_by_name         (const gchar *name);
@@ -402,13 +402,13 @@ GST_API
 void                    gst_plugin_add_status_info       (GstPlugin   * plugin,
                                                           const gchar * message);
 GST_API
-gchar **                gst_plugin_get_status_errors     (GstPlugin   * plugin);
+gchar **                gst_plugin_get_status_errors     (GstPlugin   * plugin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar **                gst_plugin_get_status_warnings   (GstPlugin   * plugin);
+gchar **                gst_plugin_get_status_warnings   (GstPlugin   * plugin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar **                gst_plugin_get_status_infos      (GstPlugin   * plugin);
+gchar **                gst_plugin_get_status_infos      (GstPlugin   * plugin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_plugin_list_free (GList *list);

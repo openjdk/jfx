@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "Bits.h"
@@ -35,14 +39,15 @@
 
 #if !BUSE(LIBPAS)
 
+#include "DeferredDecommit.h"
+
 namespace bmalloc {
 
 template<typename Config> class IsoHeapImpl;
 
 class IsoDirectoryBaseBase {
 public:
-    IsoDirectoryBaseBase() { }
-    virtual ~IsoDirectoryBaseBase() { }
+    virtual ~IsoDirectoryBaseBase() = default;
 
     virtual void didDecommit(unsigned index) = 0;
 };
@@ -100,3 +105,5 @@ private:
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

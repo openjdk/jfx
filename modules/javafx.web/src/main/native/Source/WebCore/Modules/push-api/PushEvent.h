@@ -25,17 +25,17 @@
 
 #pragma once
 
-#include "ExtendableEvent.h"
-#include "Notification.h"
-#include "NotificationData.h"
-#include "PushEventInit.h"
+#include <WebCore/ExtendableEvent.h>
+#include <WebCore/Notification.h>
+#include <WebCore/NotificationData.h>
+#include <WebCore/PushEventInit.h>
 
 namespace WebCore {
 
 class PushMessageData;
 
 class PushEvent final : public ExtendableEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PushEvent);
 public:
     static Ref<PushEvent> create(const AtomString&, PushEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
@@ -55,7 +55,7 @@ public:
     void setUpdatedNotification(Notification* notification) { m_updatedNotification = notification; }
     std::optional<NotificationData> updatedNotificationData() const;
 
-    void setUpdatedAppBadge(std::optional<uint64_t>&& updatedAppBadge) { m_updatedAppBadge = WTFMove(updatedAppBadge); }
+    void setUpdatedAppBadge(std::optional<uint64_t>&& updatedAppBadge) { m_updatedAppBadge = WTF::move(updatedAppBadge); }
     const std::optional<std::optional<uint64_t>>& updatedAppBadge() const { return m_updatedAppBadge; }
 #endif // ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
 
@@ -76,3 +76,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(PushEvent)

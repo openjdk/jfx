@@ -249,6 +249,13 @@ FloatPoint ScrollingTreeScrollingNode::maximumScrollPosition() const
     return ScrollableArea::scrollPositionFromOffset(maximumScrollOffset, toFloatSize(scrollOrigin()));
 }
 
+FloatPoint ScrollingTreeScrollingNode::clampedCurrentScrollOffset() const
+{
+    auto unconstrainedScrollPosition = currentScrollPosition();
+    auto clampedScrollPosition = clampScrollPosition(unconstrainedScrollPosition);
+    return ScrollableArea::scrollOffsetFromPosition(clampedScrollPosition, toFloatSize(scrollOrigin()));
+}
+
 bool ScrollingTreeScrollingNode::eventCanScrollContents(const PlatformWheelEvent& wheelEvent) const
 {
 #if PLATFORM(WPE) || PLATFORM(GTK)

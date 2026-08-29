@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,10 +157,8 @@ public enum ConditionalFeature {
      * <p>
      * This feature is currently supported on Windows, Linux, and macOS.
      *
-     * @since 25
-     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     * @since 27
      */
-    @Deprecated(since = "25")
     EXTENDED_WINDOW,
 
     /**

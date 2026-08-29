@@ -29,9 +29,9 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "LayoutShape.h"
-#include "ShapeInterval.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/LayoutShape.h>
+#include <WebCore/ShapeInterval.h>
 #include <wtf/Assertions.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -81,7 +81,7 @@ class RasterLayoutShape final : public LayoutShape {
     WTF_MAKE_NONCOPYABLE(RasterLayoutShape);
 public:
     RasterLayoutShape(std::unique_ptr<RasterShapeIntervals> intervals, const IntSize& marginRectSize)
-        : m_intervals(WTFMove(intervals))
+        : m_intervals(WTF::move(intervals))
         , m_marginRectSize(marginRectSize)
     {
         m_intervals->initializeBounds();

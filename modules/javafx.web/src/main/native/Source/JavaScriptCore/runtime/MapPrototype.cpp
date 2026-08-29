@@ -27,7 +27,7 @@
 #include "MapPrototype.h"
 
 #include "BuiltinNames.h"
-#include "CachedCall.h"
+#include "CachedCallInlines.h"
 #include "GetterSetter.h"
 #include "InterpreterInlines.h"
 #include "JSCInlines.h"
@@ -219,7 +219,7 @@ JSC_DEFINE_HOST_FUNCTION(mapProtoFuncGetOrInsertComputed, (JSGlobalObject* globa
 
     key = normalizeMapKey(key);
     RELEASE_AND_RETURN(scope, JSValue::encode(map->getOrInsert(globalObject, key, [&] {
-        auto callData = JSC::getCallData(valueCallback);
+        auto callData = JSC::getCallDataInline(valueCallback);
         ASSERT(callData.type != CallData::Type::None);
 
         if (callData.type == CallData::Type::JS) [[likely]] {
@@ -246,7 +246,7 @@ inline JSValue createMapIteratorObject(JSGlobalObject* globalObject, CallFrame* 
     JSMap* map = getMap(globalObject, thisValue);
     RETURN_IF_EXCEPTION(scope, jsUndefined());
 
-    RELEASE_AND_RETURN(scope, JSMapIterator::create(globalObject, globalObject->mapIteratorStructure(), map, kind));
+    RELEASE_AND_RETURN(scope, JSMapIterator::create(vm, globalObject->mapIteratorStructure(), map, kind));
 }
 
 JSC_DEFINE_HOST_FUNCTION(mapProtoFuncValues, (JSGlobalObject* globalObject, CallFrame* callFrame))

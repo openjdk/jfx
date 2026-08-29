@@ -27,9 +27,9 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
 #include "WebCodecsCodecState.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
 #include <wtf/Deque.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -46,7 +46,7 @@ class WebCodecsBase
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebCodecsBase>
     , public ActiveDOMObject
     , public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebCodecsBase);
+    WTF_MAKE_TZONE_ALLOCATED(WebCodecsBase);
 public:
     virtual ~WebCodecsBase();
 
@@ -56,10 +56,12 @@ public:
     void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
     bool virtualHasPendingActivity() const final;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
 protected:
     WebCodecsBase(ScriptExecutionContext&);
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void setState(WebCodecsCodecState state) { m_state = state; }
 

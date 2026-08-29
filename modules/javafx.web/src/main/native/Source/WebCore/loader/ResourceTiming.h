@@ -48,6 +48,7 @@ public:
 
     const URL& url() const { return m_url; }
     const String& initiatorType() const { return m_initiatorType; }
+    String deliveryType() const;
     const ResourceLoadTiming& resourceLoadTiming() const { return m_resourceLoadTiming; }
     const NetworkLoadMetrics& networkLoadMetrics() const { return m_networkLoadMetrics; }
     NetworkLoadMetrics& networkLoadMetrics() { return m_networkLoadMetrics; }
@@ -63,11 +64,11 @@ public:
 private:
     ResourceTiming(const URL&, const String& initiator, const ResourceLoadTiming&, const NetworkLoadMetrics&, const ResourceResponse&, const SecurityOrigin&);
     ResourceTiming(URL&& url, String&& initiatorType, const ResourceLoadTiming& resourceLoadTiming, NetworkLoadMetrics&& networkLoadMetrics, Vector<ServerTiming>&& serverTiming)
-        : m_url(WTFMove(url))
-        , m_initiatorType(WTFMove(initiatorType))
+        : m_url(WTF::move(url))
+        , m_initiatorType(WTF::move(initiatorType))
         , m_resourceLoadTiming(resourceLoadTiming)
-        , m_networkLoadMetrics(WTFMove(networkLoadMetrics))
-        , m_serverTiming(WTFMove(serverTiming))
+        , m_networkLoadMetrics(WTF::move(networkLoadMetrics))
+        , m_serverTiming(WTF::move(serverTiming))
     {
     }
 

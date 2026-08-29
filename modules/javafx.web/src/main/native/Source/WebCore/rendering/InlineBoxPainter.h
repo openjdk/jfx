@@ -32,11 +32,11 @@
 namespace WebCore {
 
 class Color;
-class FillLayer;
 class LegacyInlineFlowBox;
 class RenderBoxModelObject;
 class RenderStyle;
 struct PaintInfo;
+template<typename> struct FillLayerToPaint;
 
 namespace Style {
 enum class ShadowStyle : bool;
@@ -55,8 +55,8 @@ private:
 
     void paintMask();
     void paintDecorations();
-    void paintFillLayers(const Color&, const FillLayer&, const LayoutRect& paintRect, CompositeOperator);
-    void paintFillLayer(const Color&, const FillLayer&, const LayoutRect& paintRect, CompositeOperator);
+    template<typename Layers> void paintFillLayers(const Color&, const Layers&, const LayoutRect& paintRect, CompositeOperator);
+    template<typename Layer> void paintFillLayer(const Color&, const FillLayerToPaint<Layer>&, const LayoutRect& paintRect, CompositeOperator);
     void paintBoxShadow(Style::ShadowStyle, const LayoutRect& paintRect);
 
     const RenderStyle& style() const;

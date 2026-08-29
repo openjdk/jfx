@@ -36,7 +36,7 @@ class Document;
 template<typename> class ExceptionOr;
 
 class CSSTranslate : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSTranslate);
+    WTF_MAKE_TZONE_ALLOCATED(CSSTranslate);
 public:
     static ExceptionOr<Ref<CSSTranslate>> create(Ref<CSSNumericValue> x, Ref<CSSNumericValue> y, RefPtr<CSSNumericValue> z);
     static ExceptionOr<Ref<CSSTranslate>> create(Ref<const CSSFunctionValue>, Document&);
@@ -45,8 +45,8 @@ public:
     const CSSNumericValue& y() const { return m_y.get(); }
     const CSSNumericValue& z() const { return m_z.get(); }
 
-    void setX(Ref<CSSNumericValue> x) { m_x = WTFMove(x); }
-    void setY(Ref<CSSNumericValue> y) { m_y = WTFMove(y); }
+    void setX(Ref<CSSNumericValue> x) { m_x = WTF::move(x); }
+    void setY(Ref<CSSNumericValue> y) { m_y = WTF::move(y); }
     ExceptionOr<void> setZ(Ref<CSSNumericValue>);
 
     void serialize(StringBuilder&) const final;
@@ -57,7 +57,7 @@ public:
 private:
     CSSTranslate(CSSTransformComponent::Is2D, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>);
 
-    CSSTransformType getType() const final { return CSSTransformType::Translate; }
+    CSSTransformType transformType() const final { return CSSTransformType::Translate; }
 
     Ref<CSSNumericValue> m_x;
     Ref<CSSNumericValue> m_y;
@@ -67,5 +67,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSTranslate)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Translate; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::Translate; }
 SPECIALIZE_TYPE_TRAITS_END()

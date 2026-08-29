@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PureNaN.h"
+#include <JavaScriptCore/PureNaN.h>
 #include <array>
 #include <wtf/GregorianDateTime.h>
 #include <wtf/HashFunctions.h>

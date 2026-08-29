@@ -30,7 +30,6 @@
 namespace WebCore {
 
 class AccessibilityMockObject : public AccessibilityObject {
-
 public:
     virtual ~AccessibilityMockObject();
 

@@ -26,7 +26,7 @@
 
 #include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "CSSSerializationContext.h"
-#include "CalculationValue.h"
+#include "StyleCalculationValue.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <wtf/text/TextStream.h>
 
@@ -36,6 +36,11 @@ namespace Style {
 WTF::TextStream& operator<<(WTF::TextStream& ts, Calc auto const& value)
 {
     return ts << value.protectedCalculation().get();
+}
+
+template<auto R, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const Length<R, V>& value)
+{
+    return ts << CSS::serializationForCSS(CSS::defaultSerializationContext(), CSS::SerializableNumber { static_cast<double>(value.unresolvedValue()), CSS::unitString(value.unit) });
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, Numeric auto const& value)
@@ -58,21 +63,6 @@ template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStre
 template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentageResolvedToNumber<nR, pR, V>& value)
 {
     return ts << value.value;
-}
-
-template<typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, const SpaceSeparatedPoint<T>& value)
-{
-    return ts << value.x() << ' ' << value.y();
-}
-
-template<typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, const SpaceSeparatedSize<T>& value)
-{
-    return ts << value.width() << ' ' << value.height();
-}
-
-template<typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, const MinimallySerializingSpaceSeparatedSize<T>& value)
-{
-    return ts << value.width() << ' ' << value.height();
 }
 
 } // namespace Style

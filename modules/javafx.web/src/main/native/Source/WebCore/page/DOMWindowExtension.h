@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LocalDOMWindow.h"
+#include <WebCore/LocalDOMWindow.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -45,6 +45,9 @@ public:
 
     WEBCORE_EXPORT ~DOMWindowExtension();
 
+    // LocalDOMWindowObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
     void suspendForBackForwardCache() final;
     void resumeFromBackForwardCache() final;
     void willDestroyGlobalObjectInCachedFrame() final;

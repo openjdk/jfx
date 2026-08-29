@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumericRange.h"
-#include "CSSValueConcepts.h"
+#include <WebCore/CSSPrimitiveNumericRange.h>
+#include <WebCore/CSSValueConcepts.h>
 #include <concepts>
 #include <optional>
 #include <wtf/Brigand.h>
@@ -37,11 +37,9 @@ enum class CSSUnitType : uint8_t;
 
 template<CSSValueID> struct Constant;
 
-namespace Calculation {
-enum class Category : uint8_t;
-}
-
 namespace CSS {
+
+enum class Category : uint8_t;
 
 template<typename> struct UnitTraits;
 
@@ -49,7 +47,7 @@ template<typename> struct UnitTraits;
 template<typename T> concept UnitEnum = std::is_enum_v<T> && requires {
     requires std::integral<decltype(UnitTraits<T>::count)>;
     requires std::same_as<decltype(UnitTraits<T>::canonical), const T>;
-    requires std::same_as<decltype(UnitTraits<T>::category), const Calculation::Category>;
+    requires std::same_as<decltype(UnitTraits<T>::category), const CSS::Category>;
     { UnitTraits<T>::validate(std::declval<CSSUnitType>()) } -> std::same_as<std::optional<T>>;
 };
 

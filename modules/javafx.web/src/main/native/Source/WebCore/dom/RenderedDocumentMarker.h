@@ -26,7 +26,8 @@
 
 #pragma once
 
-#include "DocumentMarker.h"
+#include <WebCore/DocumentMarker.h>
+#include <WebCore/FloatRect.h>
 #include <wtf/Markable.h>
 #include <wtf/Vector.h>
 #include <wtf/WallTime.h>
@@ -46,7 +47,7 @@ namespace WebCore {
 class RenderedDocumentMarker : public DocumentMarker {
 public:
     explicit RenderedDocumentMarker(DocumentMarker&& marker)
-        : DocumentMarker(WTFMove(marker))
+        : DocumentMarker(WTF::move(marker))
     {
     }
 
@@ -63,7 +64,7 @@ public:
     void setUnclippedAbsoluteRects(Vector<FloatRect>&& rects)
     {
         m_isValid = true;
-        m_rects = WTFMove(rects);
+        m_rects = WTF::move(rects);
     }
 
     const Vector<FloatRect, 1>& unclippedAbsoluteRects() const

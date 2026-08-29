@@ -81,7 +81,7 @@ public:
     void unapply(AddToUndoStack);
     void reapply() override;
     EditAction editingAction() const override { return m_editAction; }
-    void append(SimpleEditCommand*);
+    void append(SimpleEditCommand&);
     bool wasCreateLinkCommand() const { return m_editAction == EditAction::CreateLink; }
 
     const VisibleSelection& startingSelection() const { return m_startingSelection; }
@@ -106,7 +106,7 @@ private:
     const Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
-    Vector<RefPtr<SimpleEditCommand>> m_commands;
+    Vector<Ref<SimpleEditCommand>> m_commands;
     RefPtr<Element> m_startingRootEditableElement;
     RefPtr<Element> m_endingRootEditableElement;
     AccessibilityUndoReplacedText m_replacedText;
@@ -121,7 +121,7 @@ public:
     bool isFirstCommand(EditCommand* command) { return !m_commands.isEmpty() && m_commands.first() == command; }
     EditCommandComposition* composition() const;
     RefPtr<EditCommandComposition> protectedComposition() const { return composition(); }
-    EditCommandComposition& ensureComposition();
+    Ref<EditCommandComposition> ensureComposition();
 
     virtual bool isTypingCommand() const;
     virtual bool isDictationCommand() const { return false; }
@@ -134,7 +134,7 @@ public:
     virtual String inputEventData() const { return { }; }
     virtual bool isBeforeInputEventCancelable() const { return true; }
     virtual bool shouldDispatchInputEvents() const { return true; }
-    Vector<RefPtr<StaticRange>> targetRangesForBindings() const;
+    Vector<Ref<StaticRange>> targetRangesForBindings() const;
     virtual RefPtr<DataTransfer> inputEventDataTransfer() const;
 
 protected:
@@ -144,7 +144,7 @@ protected:
     virtual bool willApplyCommand();
     virtual void didApplyCommand();
 
-    virtual Vector<RefPtr<StaticRange>> targetRanges() const;
+    virtual Vector<Ref<StaticRange>> targetRanges() const;
 
     //
     // sugary-sweet convenience functions to help create and apply edit commands in composite commands

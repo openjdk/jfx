@@ -88,6 +88,7 @@ G_BEGIN_DECLS
 #define FOURCC__wrt     GST_MAKE_FOURCC(0xa9,'w','r','t')
 #define FOURCC_aART     GST_MAKE_FOURCC('a','A','R','T')
 #define FOURCC_ac_3     GST_MAKE_FOURCC('a','c','-','3')
+#define FOURCC_ec_3     GST_MAKE_FOURCC('e','c','-','3')
 #define FOURCC_agsm     GST_MAKE_FOURCC('a','g','s','m')
 #define FOURCC_ai12     GST_MAKE_FOURCC('a','i','1','2')
 #define FOURCC_ai13     GST_MAKE_FOURCC('a','i','1','3')
@@ -131,6 +132,7 @@ G_BEGIN_DECLS
 #define FOURCC_cslg     GST_MAKE_FOURCC('c','s','l','g')
 #define FOURCC_d263     GST_MAKE_FOURCC('d','2','6','3')
 #define FOURCC_dac3     GST_MAKE_FOURCC('d','a','c','3')
+#define FOURCC_dec3     GST_MAKE_FOURCC('d','e','c','3')
 #define FOURCC_damr     GST_MAKE_FOURCC('d','a','m','r')
 #define FOURCC_data     GST_MAKE_FOURCC('d','a','t','a')
 #define FOURCC_dcom     GST_MAKE_FOURCC('d','c','o','m')
@@ -156,6 +158,7 @@ G_BEGIN_DECLS
 #define FOURCC_elst     GST_MAKE_FOURCC('e','l','s','t')
 #define FOURCC_enda     GST_MAKE_FOURCC('e','n','d','a')
 #define FOURCC_esds     GST_MAKE_FOURCC('e','s','d','s')
+#define FOURCC_fdsc     GST_MAKE_FOURCC('f','d','s','c')
 #define FOURCC_fmp4     GST_MAKE_FOURCC('f','m','p','4')
 #define FOURCC_free     GST_MAKE_FOURCC('f','r','e','e')
 #define FOURCC_frma     GST_MAKE_FOURCC('f','r','m','a')
@@ -349,6 +352,7 @@ G_BEGIN_DECLS
 #define FOURCC_3gp6     GST_MAKE_FOURCC('3','g','p','6')
 #define FOURCC_3gr6     GST_MAKE_FOURCC('3','g','r','6')
 #define FOURCC_3g__     GST_MAKE_FOURCC('3','g',0,0)
+#define FOURCC_dby1     GST_MAKE_FOURCC('d','b','y','1')
 #define FOURCC_isml     GST_MAKE_FOURCC('i','s','m','l')
 #define FOURCC_iso2     GST_MAKE_FOURCC('i','s','o','2')
 #define FOURCC_isom     GST_MAKE_FOURCC('i','s','o','m')
@@ -472,6 +476,11 @@ G_BEGIN_DECLS
 #define FOURCC_HapA     GST_MAKE_FOURCC('H','a','p','A')
 #define FOURCC_Hap7     GST_MAKE_FOURCC('H','a','p','7')
 #define FOURCC_HapH     GST_MAKE_FOURCC('H','a','p','H')
+
+/* MPEG-H 3D audio */
+#define FOURCC_mhaC     GST_MAKE_FOURCC('m','h','a','C')
+#define FOURCC_mha1     GST_MAKE_FOURCC('m','h','a','1')
+#define FOURCC_mhm1     GST_MAKE_FOURCC('m','h','m','1')
 
 G_END_DECLS
 

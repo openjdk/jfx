@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "DocumentFragment.h"
-#include "LocalFrame.h"
-#include "Pasteboard.h"
-#include "SimpleRange.h"
-#include "markup.h"
+#include <WebCore/DocumentFragment.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/Pasteboard.h>
+#include <WebCore/SimpleRange.h>
+#include <WebCore/markup.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {

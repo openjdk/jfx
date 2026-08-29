@@ -27,18 +27,18 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ActiveDOMObject.h"
-#include "DetachedRTCDataChannel.h"
-#include "Event.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "NetworkSendQueue.h"
-#include "RTCDataChannelHandler.h"
-#include "RTCDataChannelHandlerClient.h"
-#include "RTCDataChannelIdentifier.h"
-#include "ScriptExecutionContext.h"
-#include "ScriptWrappable.h"
-#include "Timer.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/DetachedRTCDataChannel.h>
+#include <WebCore/Event.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/NetworkSendQueue.h>
+#include <WebCore/RTCDataChannelHandler.h>
+#include <WebCore/RTCDataChannelHandlerClient.h>
+#include <WebCore/RTCDataChannelIdentifier.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/ScriptWrappable.h>
+#include <WebCore/Timer.h>
 
 namespace JSC {
     class ArrayBuffer;
@@ -52,14 +52,16 @@ class RTCPeerConnectionHandler;
 template<typename> class ExceptionOr;
 
 class RTCDataChannel final : public RefCounted<RTCDataChannel>, public ActiveDOMObject, public RTCDataChannelHandlerClient, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDataChannel);
+    WTF_MAKE_TZONE_ALLOCATED(RTCDataChannel);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
-    static Ref<RTCDataChannel> create(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&, RTCDataChannelState);
+    static Ref<RTCDataChannel> create(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&, RTCDataChannelState, std::optional<RTCDataChannelIdentifier> identifier = { });
     static Ref<RTCDataChannel> create(ScriptExecutionContext&, RTCDataChannelIdentifier, String&&, RTCDataChannelInit&&, RTCDataChannelState);
     WEBCORE_EXPORT virtual ~RTCDataChannel();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     bool ordered() const { return *m_options.ordered; }
     std::optional<unsigned short> maxPacketLifeTime() const { return m_options.maxPacketLifeTime; }
@@ -87,23 +89,24 @@ public:
 
     void close();
 
-    RTCDataChannelIdentifier identifier() const { return m_identifier; }
     bool canDetach() const;
     std::unique_ptr<DetachedRTCDataChannel> detach();
 
+    static void removeDetachedRTCDataChannel(RTCDataChannelIdentifier identifer) { handlerFromIdentifier(identifer.object()); }
     WEBCORE_EXPORT static std::unique_ptr<RTCDataChannelHandler> handlerFromIdentifier(RTCDataChannelLocalIdentifier);
     void fireOpenEventIfNeeded();
 
 private:
-    RTCDataChannel(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&, RTCDataChannelState);
+    RTCDataChannel(ScriptExecutionContext&, RTCDataChannelIdentifier, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&, RTCDataChannelState);
 
-    static NetworkSendQueue createMessageQueue(ScriptExecutionContext&, RTCDataChannel&);
+    static Ref<NetworkSendQueue> createMessageQueue(ScriptExecutionContext&, RTCDataChannel&);
 
     void scheduleDispatchEvent(Ref<Event>&&);
     void removeFromDataChannelLocalMapIfNeeded();
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCDataChannel; }
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -118,9 +121,9 @@ private:
     void didReceiveRawData(std::span<const uint8_t>) final;
     void didDetectError(Ref<RTCError>&&) final;
     void bufferedAmountIsDecreasing(size_t) final;
+    void peerConnectionIsClosing() final { didChangeReadyState(RTCDataChannelState::Closed); }
 
     std::unique_ptr<RTCDataChannelHandler> m_handler;
-    RTCDataChannelIdentifier m_identifier;
     Markable<ScriptExecutionContextIdentifier> m_contextIdentifier;
     // FIXME: m_stopped is probably redundant with m_readyState.
     bool m_stopped { false };
@@ -134,9 +137,11 @@ private:
     size_t m_bufferedAmountLowThreshold { 0 };
     bool m_isDetachable { true };
     bool m_isDetached { false };
-    NetworkSendQueue m_messageQueue;
+    const Ref<NetworkSendQueue> m_messageQueue;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(RTCDataChannel)
 
 #endif // ENABLE(WEB_RTC)

@@ -150,8 +150,12 @@ G_GNUC_INTERNAL  void  _priv_gst_caps_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_debug_cleanup (void);
 G_GNUC_INTERNAL  void  _priv_gst_meta_cleanup (void);
 
+G_GNUC_INTERNAL  void  _priv_gst_object_call_async (GstObject * object,
+                                                    GFunc func,
+                                                    gpointer user_data,
+                                                    GDestroyNotify notify);
 /* called from gst_task_cleanup_all(). */
-G_GNUC_INTERNAL  void  _priv_gst_element_cleanup (void);
+G_GNUC_INTERNAL  void  _priv_gst_thread_pool_cleanup (void);
 
 /* Private registry functions */
 G_GNUC_INTERNAL
@@ -171,7 +175,7 @@ G_GNUC_INTERNAL  GstPlugin * _priv_gst_plugin_load_file_for_registry (const gcha
 G_GNUC_INTERNAL const char * _priv_gst_value_gtype_to_abbr (GType type);
 
 G_GNUC_INTERNAL gboolean _priv_gst_value_parse_string (gchar * s, gchar ** end, gchar ** next, gboolean unescape);
-G_GNUC_INTERNAL gboolean _priv_gst_value_parse_simple_string (gchar * str, gchar ** end);
+G_GNUC_INTERNAL gboolean _priv_gst_value_parse_simple_string (gchar * str, gchar ** end, char delim);
 G_GNUC_INTERNAL gboolean _priv_gst_value_parse_value (gchar * str, gchar ** after, GValue * value, GType default_type, GParamSpec *pspec);
 G_GNUC_INTERNAL gchar * _priv_gst_value_serialize_any_list (const GValue * value, const gchar * begin, const gchar * end, gboolean print_type, GstSerializeFlags flags);
 
@@ -555,6 +559,9 @@ gint   priv_gst_count_directories (const char *filepath);
 void priv_gst_clock_init (void);
 GstClockTime priv_gst_get_monotonic_time (void);
 GstClockTime priv_gst_get_real_time (void);
+
+/* Needed for hashing in gstvalue.c */
+G_GNUC_INTERNAL const GstStructure * _gst_tag_list_structure (const GstTagList * list);
 
 G_END_DECLS
 #endif /* __GST_PRIVATE_H__ */

@@ -19,9 +19,9 @@
  */
 
 #import "config.h"
-#import "StringImpl.h"
+#import <wtf/text/StringImpl.h>
 
-#import "RetainPtr.h"
+#import <wtf/RetainPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {

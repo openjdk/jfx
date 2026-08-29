@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,52 +25,93 @@
 
 #pragma once
 
-#include "ClipRect.h"
+#include <WebCore/ClipRect.h>
 
 namespace WebCore {
 
 class LayerFragment {
 public:
-    LayerFragment() = default;
+    class Rects {
+    public:
+        Rects() = default;
 
-    void setRects(const LayoutRect& bounds, const ClipRect& background, const ClipRect& foreground, const std::optional<LayoutRect>& bbox)
+        Rects(const LayoutRect& layerBounds, const LayoutRect& paintDirtyRect, const ClipRect& backgroundRect, const ClipRect& foregroundRect, const std::optional<LayoutRect>& boundingBox = std::nullopt)
+            : m_layerBounds(layerBounds)
+            , m_paintDirtyRect(paintDirtyRect)
+            , m_backgroundRect(backgroundRect)
+            , m_foregroundRect(foregroundRect)
+            , m_boundingBox(boundingBox)
+        {
+        }
+
+        Rects(const Rects& other, const LayoutRect& boundingBox)
+            : Rects(other.m_layerBounds, other.m_paintDirtyRect, other. m_backgroundRect, other.m_foregroundRect, boundingBox)
     {
-        layerBounds = bounds;
-        backgroundRect = background;
-        foregroundRect = foreground;
-        boundingBox = bbox;
     }
+
+        LayoutRect layerBounds() const { return m_layerBounds; }
+
+        ClipRect backgroundRect() const { return m_backgroundRect; }
+        ClipRect dirtyBackgroundRect() const { return intersection(m_paintDirtyRect, m_backgroundRect); }
+        ClipRect dirtyForegroundRect() const { return intersection(m_paintDirtyRect, m_foregroundRect); }
+
+        std::optional<LayoutRect> boundingBox() const { return m_boundingBox; }
 
     void moveBy(const LayoutPoint& offset)
     {
-        layerBounds.moveBy(offset);
-        backgroundRect.moveBy(offset);
-        foregroundRect.moveBy(offset);
-        paginationClip.moveBy(offset);
-        if (boundingBox)
-            boundingBox->moveBy(offset);
+            m_layerBounds.moveBy(offset);
+            m_paintDirtyRect.moveBy(offset);
+            m_backgroundRect.moveBy(offset);
+            m_foregroundRect.moveBy(offset);
+            if (m_boundingBox)
+                m_boundingBox->moveBy(offset);
     }
 
     void intersect(const LayoutRect& rect)
     {
-        backgroundRect.intersect(rect);
-        foregroundRect.intersect(rect);
-        if (boundingBox)
-            boundingBox->intersect(rect);
+            m_backgroundRect.intersect(rect);
+            m_foregroundRect.intersect(rect);
+            if (m_boundingBox)
+                m_boundingBox->intersect(rect);
     }
 
     void intersect(const ClipRect& clipRect)
     {
-        backgroundRect.intersect(clipRect);
-        foregroundRect.intersect(clipRect);
+            m_backgroundRect.intersect(clipRect);
+            m_foregroundRect.intersect(clipRect);
+        }
+
+        LayoutRect m_layerBounds;
+        LayoutRect m_paintDirtyRect;
+        ClipRect m_backgroundRect;
+        ClipRect m_foregroundRect;
+        std::optional<LayoutRect> m_boundingBox;
+    };
+
+    LayerFragment() = default;
+
+    LayerFragment(Rects&& rects) { this->rects = WTF::move(rects); }
+
+    LayoutRect layerBounds() const { return rects.layerBounds(); }
+
+    ClipRect backgroundRect() const { return rects.backgroundRect(); }
+    ClipRect dirtyBackgroundRect() const { return rects.dirtyBackgroundRect(); }
+    ClipRect dirtyForegroundRect() const { return rects.dirtyForegroundRect(); }
+
+    std::optional<LayoutRect> boundingBox() const { return rects.boundingBox(); }
+
+    void moveBy(const LayoutPoint& offset)
+    {
+        rects.moveBy(offset);
+        paginationClip.moveBy(offset);
     }
 
-    bool shouldPaintContent = false;
-    std::optional<LayoutRect> boundingBox;
+    void intersect(const LayoutRect& rect) { rects.intersect(rect); }
+    void intersect(const ClipRect& clipRect) { rects.intersect(clipRect); }
 
-    LayoutRect layerBounds;
-    ClipRect backgroundRect;
-    ClipRect foregroundRect;
+    bool shouldPaintContent = false;
+
+    Rects rects;
 
     // Unique to paginated fragments. The physical translation to apply to shift the layer when painting/hit-testing.
     LayoutSize paginationOffset;

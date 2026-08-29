@@ -305,13 +305,13 @@ void DatePrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     const bool asUTCVariant = false;
-    return formateDateInstance(globalObject, callFrame, DateTimeFormatDateAndTime, asUTCVariant);
+    return formateDateInstance(globalObject, callFrame, DateTimeFormat::DateAndTime, asUTCVariant);
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToUTCString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     const bool asUTCVariant = true;
-    return formateDateInstance(globalObject, callFrame, DateTimeFormatDateAndTime, asUTCVariant);
+    return formateDateInstance(globalObject, callFrame, DateTimeFormat::DateAndTime, asUTCVariant);
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToISOString, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -359,13 +359,13 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToISOString, (JSGlobalObject* globalObject
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToDateString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     const bool asUTCVariant = false;
-    return formateDateInstance(globalObject, callFrame, DateTimeFormatDate, asUTCVariant);
+    return formateDateInstance(globalObject, callFrame, DateTimeFormat::Date, asUTCVariant);
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToTimeString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     const bool asUTCVariant = false;
-    return formateDateInstance(globalObject, callFrame, DateTimeFormatTime, asUTCVariant);
+    return formateDateInstance(globalObject, callFrame, DateTimeFormat::Time, asUTCVariant);
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToPrimitiveSymbol, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -928,7 +928,7 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToJSON, (JSGlobalObject* globalObject, Cal
     JSValue toISOValue = object->get(globalObject, vm.propertyNames->toISOString);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    auto callData = JSC::getCallData(toISOValue);
+    auto callData = JSC::getCallDataInline(toISOValue);
     if (callData.type == CallData::Type::None)
         return throwVMTypeError(globalObject, scope, "toISOString is not a function"_s);
 

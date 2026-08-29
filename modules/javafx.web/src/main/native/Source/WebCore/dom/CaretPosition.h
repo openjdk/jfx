@@ -27,15 +27,18 @@
 
 #include "ScriptWrappable.h"
 
+#include <wtf/RefCounted.h>
+
 namespace WebCore {
 
 class DOMRect;
 class Node;
 
 class CaretPosition : public ScriptWrappable, public RefCounted<CaretPosition> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(CaretPosition, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CaretPosition, WEBCORE_EXPORT);
 public:
-    static Ref<CaretPosition> create(RefPtr<Node>&& offsetNode, unsigned offset) { return adoptRef(*new CaretPosition(WTFMove(offsetNode), offset)); }
+    static Ref<CaretPosition> create(RefPtr<Node>&& offsetNode, unsigned offset) { return adoptRef(*new CaretPosition(WTF::move(offsetNode), offset)); }
+    ~CaretPosition();
 
     RefPtr<Node> offsetNode() const { return m_offsetNode; }
     unsigned offset() const { return m_offset; }
@@ -45,7 +48,7 @@ public:
 private:
     CaretPosition(RefPtr<Node>&& offsetNode, unsigned offset);
 
-    RefPtr<Node> m_offsetNode;
+    const RefPtr<Node> m_offsetNode;
     unsigned m_offset;
 };
 

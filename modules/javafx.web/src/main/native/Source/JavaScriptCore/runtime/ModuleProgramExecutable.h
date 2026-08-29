@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "GlobalExecutable.h"
+#include <JavaScriptCore/GlobalExecutable.h>
 
 namespace JSC {
 
+class SymbolTable;
 class UnlinkedModuleProgramCodeBlock;
 
 class ModuleProgramExecutable final : public GlobalExecutable {

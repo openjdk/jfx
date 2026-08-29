@@ -27,6 +27,7 @@
     EnabledBySetting=MediaCapabilitiesEnabled,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaEncodingConfiguration : MediaConfiguration {
   required MediaEncodingType type;
 };

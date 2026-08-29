@@ -51,12 +51,12 @@ static inline String argumentAsString(JSC::JSGlobalObject* globalObject, JSC::JS
 
 Ref<ScriptArguments> ScriptArguments::create(JSC::JSGlobalObject* globalObject, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    return adoptRef(*new ScriptArguments(globalObject, WTFMove(arguments)));
+    return adoptRef(*new ScriptArguments(globalObject, WTF::move(arguments)));
 }
 
 ScriptArguments::ScriptArguments(JSC::JSGlobalObject* globalObject, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
     : m_globalObject(globalObject->vm(), globalObject)
-    , m_arguments(WTFMove(arguments))
+    , m_arguments(WTF::move(arguments))
 {
 }
 

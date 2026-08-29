@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-2011. All rights reserved.
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,6 +24,7 @@
 
 #include "RenderChildIterator.h"
 #include "RenderSVGInline.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
 #include "SVGTextPositioningElement.h"
@@ -141,40 +142,24 @@ void SVGTextLayoutAttributesBuilder::buildCharacterDataMap(RenderSVGText& textRo
     TextPosition wholeTextPosition(outermostTextElement.get(), 0, m_textLength);
     fillCharacterDataMap(wholeTextPosition);
 
-    // Handle x/y default attributes.
-    SVGCharacterDataMap::iterator it = m_characterDataMap.find(1);
-    if (it == m_characterDataMap.end()) {
-        SVGCharacterData data;
-        data.x = 0;
-        data.y = 0;
-        m_characterDataMap.set(1, data);
-    } else {
-        SVGCharacterData& data = it->value;
-        if (SVGTextLayoutAttributes::isEmptyValue(data.x))
-            data.x = 0;
-        if (SVGTextLayoutAttributes::isEmptyValue(data.y))
-            data.y = 0;
-    }
-
     // Fill character data map using child text positioning elements in top-down order.
     unsigned size = m_textPositions.size();
     for (unsigned i = 0; i < size; ++i)
         fillCharacterDataMap(m_textPositions[i]);
-}
 
-static inline void updateCharacterData(unsigned i, float& lastRotation, SVGCharacterData& data, const SVGLengthContext& lengthContext, const SVGLengthList* xList, const SVGLengthList* yList, const SVGLengthList* dxList, const SVGLengthList* dyList, const SVGNumberList* rotateList)
-{
-    if (xList)
-        data.x = xList->items()[i]->value().value(lengthContext);
-    if (yList)
-        data.y = yList->items()[i]->value().value(lengthContext);
-    if (dxList)
-        data.dx = dxList->items()[i]->value().value(lengthContext);
-    if (dyList)
-        data.dy = dyList->items()[i]->value().value(lengthContext);
-    if (rotateList) {
-        data.rotate = rotateList->items()[i]->value();
-        lastRotation = data.rotate;
+    // Handle x/y default attributes.
+    auto addDataResult = m_characterDataMap.ensure((1), [] {
+        SVGCharacterData data;
+        data.x = 0;
+        data.y = 0;
+        return data;
+    });
+    if (!addDataResult.isNewEntry) {
+        SVGCharacterData& data = addDataResult.iterator->value;
+        if (SVGTextLayoutAttributes::isEmptyValue(data.x))
+            data.x = 0;
+        if (SVGTextLayoutAttributes::isEmptyValue(data.y))
+            data.y = 0;
     }
 }
 
@@ -195,42 +180,33 @@ void SVGTextLayoutAttributesBuilder::fillCharacterDataMap(const TextPosition& po
     if (!xListSize && !yListSize && !dxListSize && !dyListSize && !rotateListSize)
         return;
 
-    float lastRotation = SVGTextLayoutAttributes::emptyValue();
     SVGLengthContext lengthContext(element.get());
     for (unsigned i = 0; i < position.length; ++i) {
         const SVGLengthList* xListPtr = i < xListSize ? &xList : nullptr;
         const SVGLengthList* yListPtr = i < yListSize ? &yList : nullptr;
         const SVGLengthList* dxListPtr = i < dxListSize ? &dxList : nullptr;
         const SVGLengthList* dyListPtr = i < dyListSize ? &dyList : nullptr;
-        const SVGNumberList* rotateListPtr = i < rotateListSize ? &rotateList : nullptr;
+        const SVGNumberList* rotateListPtr = rotateListSize ? &rotateList : nullptr;
         if (!xListPtr && !yListPtr && !dxListPtr && !dyListPtr && !rotateListPtr)
             break;
 
-        SVGCharacterDataMap::iterator it = m_characterDataMap.find(position.start + i + 1);
-        if (it == m_characterDataMap.end()) {
-            SVGCharacterData data;
-            updateCharacterData(i, lastRotation, data, lengthContext, xListPtr, yListPtr, dxListPtr, dyListPtr, rotateListPtr);
-            m_characterDataMap.set(position.start + i + 1, data);
-            continue;
+        auto& data = m_characterDataMap.ensure((position.start + i + 1), [] {
+            return SVGCharacterData();
+        }).iterator->value;
+
+        if (xListPtr)
+            data.x = xList.items()[i]->value().value(lengthContext);
+        if (yListPtr)
+            data.y = yList.items()[i]->value().value(lengthContext);
+        if (dxListPtr)
+            data.dx = dxList.items()[i]->value().value(lengthContext);
+        if (dyListPtr)
+            data.dy = dyList.items()[i]->value().value(lengthContext);
+
+        if (rotateListPtr) {
+            unsigned rotateIndex = std::min(i, rotateListSize - 1);
+            data.rotate = rotateList.items()[rotateIndex]->value();
         }
-
-        updateCharacterData(i, lastRotation, it->value, lengthContext, xListPtr, yListPtr, dxListPtr, dyListPtr, rotateListPtr);
-    }
-
-    // The last rotation value always spans the whole scope.
-    if (SVGTextLayoutAttributes::isEmptyValue(lastRotation))
-        return;
-
-    for (unsigned i = rotateList.items().size(); i < position.length; ++i) {
-        SVGCharacterDataMap::iterator it = m_characterDataMap.find(position.start + i + 1);
-        if (it == m_characterDataMap.end()) {
-            SVGCharacterData data;
-            data.rotate = lastRotation;
-            m_characterDataMap.set(position.start + i + 1, data);
-            continue;
-        }
-
-        it->value.rotate = lastRotation;
     }
 }
 

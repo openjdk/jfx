@@ -25,7 +25,9 @@
 
 typedef (double or CSSNumericValue) CSSNumberish;
 
-dictionary AnimationPlaybackEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary AnimationPlaybackEventInit : EventInit {
     CSSNumberish? currentTime = null;
     CSSNumberish? timelineTime = null;
 };

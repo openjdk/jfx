@@ -1,11 +1,11 @@
-## GStreamer v1.26.5
+## GStreamer v1.28.3
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.26.5 in either source or
+You are receiving a copy of GStreamer, Version: 1.28.3 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.26.5; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.28.3; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -617,48 +617,17 @@ necessary.  Here is a sample; alter the names:
 
 That's all there is to it!
 
-Authors
-
-Erik Walthinsen <omega@temple-baptist.com>
-Matt Howell <mhowell@users.sourceforge.net>
-Brent Bradburn <bbradburn@users.sourceforge.net>
-Wim Taymans <wim.taymans@chello.be>
-Richard Boulton <richard@tartarus.org>
-Zaheer Abbas Merali <zaheerabbas at merali dot org>
-  - thread synchronization rework
-David I. Lehn <dlehn@users.sourceforge.net>
-  - debian packaging
-  - various fixes
-Chris Emerson <chris@tartarus.org>
-  - PPC port
-  - small libxml patches
-Jens Thiele <karme@unforgettable.com>
-  - color conversion patches
-Thomas Nyberg <thomas@codefactory.se>
-  - gstreamer.m4 macros
-  - ALSA plugins
-Bastien Nocera <hadess@hadess.net>
-  - gnomevfs sink and source
-Christian Fredrik Kalager Schaller <Uraeus@linuxrising.org>
-  - Red Hat packaging and website work
-Thomas Vander Stichele <thomas@apestaart.org>
-  - build system cleaning
-  - some audio plugins
-  - release pushing
-David Schleef <ds@schleef.org>
-Benjamin Otte <in7y118@public.uni-hamburg.de>
-Ronald Bultje <rbultje@ronald.bitfreak.net>
-Andy Wingo <wingo@pobox.com>
-Julien Moutte <julien@moutte.net>
-Jan Schmidt <thaytan@noraisin.net>
-
 Maintainers
 
-Jan Schmidt <thaytan@noraisin.net>
-Wim Taymans <wim.taymans@gmail.com>
-David Schleef <ds@schleef.org>
-Tim-Philipp Müller <tim centricular net>
-Sebastian Dröge <slomo@coaxion.net>
+GStreamer is currently maintained by the consensus of a number
+of people. The current list of maintainers is the developers, maintainers
+and owners in the GitLab GStreamer project at:
+
+https://gitlab.freedesktop.org/groups/gstreamer/-/group_members
+
+Maintainer-related issues should be addressed to:
+
+  gstreamer-devel@lists.freedesktop.org
 
 ```
 

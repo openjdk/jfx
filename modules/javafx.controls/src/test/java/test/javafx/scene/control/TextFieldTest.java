@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -623,11 +623,11 @@ public class TextFieldTest {
         stage.show();
 
         assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(TextInputSkinShim.getTextTranslateX(txtField), 0, 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -646,7 +646,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -665,7 +665,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test public void stripInvalidCharacters() {

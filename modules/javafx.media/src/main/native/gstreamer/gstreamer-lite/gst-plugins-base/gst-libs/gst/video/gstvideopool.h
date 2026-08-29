@@ -79,7 +79,7 @@ GST_VIDEO_API
 GType             gst_video_buffer_pool_get_type      (void);
 
 GST_VIDEO_API
-GstBufferPool *   gst_video_buffer_pool_new           (void);
+GstBufferPool *   gst_video_buffer_pool_new           (void) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoBufferPool, gst_object_unref)
 

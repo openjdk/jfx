@@ -26,36 +26,39 @@
 #include "config.h"
 #include "RemoteFrame.h"
 
+#include "AXObjectCache.h"
 #include "AutoplayPolicy.h"
 #include "Document.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "FrameInlines.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "RemoteDOMWindow.h"
 #include "RemoteFrameClient.h"
 #include "RemoteFrameView.h"
+#include "SecurityOrigin.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
 Ref<RemoteFrame> RemoteFrame::createMainFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, nullptr, std::nullopt, opener, WTFMove(frameTreeSyncData)));
+    return adoptRef(*new RemoteFrame(page, WTF::move(clientCreator), identifier, nullptr, nullptr, std::nullopt, opener, WTF::move(frameTreeSyncData)));
 }
 
 Ref<RemoteFrame> RemoteFrame::createSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame& parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, &parent, std::nullopt, opener, WTFMove(frameTreeSyncData), addToFrameTree));
+    return adoptRef(*new RemoteFrame(page, WTF::move(clientCreator), identifier, nullptr, &parent, std::nullopt, opener, WTF::move(frameTreeSyncData), addToFrameTree));
 }
 
 Ref<RemoteFrame> RemoteFrame::createSubframeWithContentsInAnotherProcess(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement, std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier, Ref<FrameTreeSyncData>&& frameTreeSyncData)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, &ownerElement, ownerElement.document().frame(), layerHostingContextIdentifier, nullptr, WTFMove(frameTreeSyncData), AddToFrameTree::No));
+    return adoptRef(*new RemoteFrame(page, WTF::move(clientCreator), identifier, &ownerElement, ownerElement.document().frame(), layerHostingContextIdentifier, nullptr, WTF::move(frameTreeSyncData), AddToFrameTree::No));
 }
 
 RemoteFrame::RemoteFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement, Frame* parent, Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
-    : Frame(page, frameID, FrameType::Remote, ownerElement, parent, opener, WTFMove(frameTreeSyncData), addToFrameTree)
+    : Frame(page, frameID, FrameType::Remote, ownerElement, parent, opener, WTF::move(frameTreeSyncData), addToFrameTree)
     , m_window(RemoteDOMWindow::create(*this, GlobalWindowIdentifier { Process::identifier(), WindowIdentifier::generate() }))
     , m_client(clientCreator(*this))
     , m_layerHostingContextIdentifier(layerHostingContextIdentifier)
@@ -96,7 +99,12 @@ bool RemoteFrame::preventsParentFromBeingComplete() const
 
 void RemoteFrame::changeLocation(FrameLoadRequest&& request)
 {
-    m_client->changeLocation(WTFMove(request));
+    m_client->changeLocation(WTF::move(request));
+}
+
+void RemoteFrame::loadFrameRequest(FrameLoadRequest&& request, Event*)
+{
+    m_client->changeLocation(WTF::move(request));
 }
 
 void RemoteFrame::updateRemoteFrameAccessibilityOffset(IntPoint offset)
@@ -109,9 +117,9 @@ void RemoteFrame::unbindRemoteAccessibilityFrames(int processIdentifier)
     m_client->unbindRemoteAccessibilityFrames(processIdentifier);
 }
 
-void RemoteFrame::bindRemoteAccessibilityFrames(int processIdentifier, Vector<uint8_t>&& dataToken, CompletionHandler<void(Vector<uint8_t>, int)>&& completionHandler)
+void RemoteFrame::bindRemoteAccessibilityFrames(int processIdentifier, AccessibilityRemoteToken dataToken, CompletionHandler<void(AccessibilityRemoteToken, int)>&& completionHandler)
 {
-    return m_client->bindRemoteAccessibilityFrames(processIdentifier, frameID(), WTFMove(dataToken), WTFMove(completionHandler));
+    return m_client->bindRemoteAccessibilityFrames(processIdentifier, frameID(), dataToken, WTF::move(completionHandler));
 }
 
 FrameView* RemoteFrame::virtualView() const
@@ -126,7 +134,7 @@ FrameLoaderClient& RemoteFrame::loaderClient()
 
 void RemoteFrame::setView(RefPtr<RemoteFrameView>&& view)
 {
-    m_view = WTFMove(view);
+    m_view = WTF::move(view);
 }
 
 void RemoteFrame::frameDetached()
@@ -157,7 +165,7 @@ String RemoteFrame::customNavigatorPlatform() const
 
 void RemoteFrame::documentURLForConsoleLog(CompletionHandler<void(const URL&)>&& completionHandler)
 {
-    m_client->documentURLForConsoleLog(WTFMove(completionHandler));
+    m_client->documentURLForConsoleLog(WTF::move(completionHandler));
 }
 
 OptionSet<AdvancedPrivacyProtections> RemoteFrame::advancedPrivacyProtections() const
@@ -171,9 +179,26 @@ void RemoteFrame::updateScrollingMode()
         m_client->updateScrollingMode(ownerElement->scrollingMode());
 }
 
-RefPtr<SecurityOrigin> RemoteFrame::frameDocumentSecurityOrigin() const
+void RemoteFrame::reportMixedContentViolation(bool blocked, const URL& target) const
 {
-    return frameTreeSyncData().frameDocumentSecurityOrigin;
+    m_client->reportMixedContentViolation(blocked, target);
+}
+
+SecurityOrigin* RemoteFrame::frameDocumentSecurityOrigin() const
+{
+    return frameTreeSyncData().frameDocumentSecurityOrigin.get();
+}
+
+String RemoteFrame::frameURLProtocol() const
+{
+    return frameTreeSyncData().frameURLProtocol;
+}
+
+const SecurityOrigin& RemoteFrame::frameDocumentSecurityOriginOrOpaque() const
+{
+    if (auto* securityOrigin = frameDocumentSecurityOrigin())
+        return *securityOrigin;
+    return SecurityOrigin::opaqueOrigin();
 }
 
 AutoplayPolicy RemoteFrame::autoplayPolicy() const

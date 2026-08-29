@@ -28,6 +28,9 @@
 
 #include <gst/glib-compat.h>
 
+#ifndef GSTREAMER_LITE
+#include <gst/gstcpuid.h>
+#endif // GSTREAMER_LITE
 #include <gst/gstenumtypes.h>
 #include <gst/gstversion.h>
 
@@ -61,6 +64,9 @@
 #include <gst/gstmessage.h>
 #include <gst/gstmemory.h>
 #include <gst/gstmeta.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstmetafactory.h>
+#endif // GSTREAMER_LITE
 #include <gst/gstminiobject.h>
 #include <gst/gstobject.h>
 #include <gst/gststreamcollection.h>
@@ -135,6 +141,9 @@ void            gst_version                     (guint *major, guint *minor,
                                                  guint *micro, guint *nano);
 GST_API
 gchar *         gst_version_string              (void);
+
+GST_API
+gboolean        gst_check_version               (guint major, guint minor, guint micro);
 
 GST_API
 gboolean        gst_segtrap_is_enabled          (void);

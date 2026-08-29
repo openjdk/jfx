@@ -26,9 +26,9 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCDataChannelIdentifier.h"
-#include "RTCDataChannelState.h"
-#include "RTCErrorDetailType.h"
+#include <WebCore/RTCDataChannelIdentifier.h>
+#include <WebCore/RTCDataChannelState.h>
+#include <WebCore/RTCErrorDetailType.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 

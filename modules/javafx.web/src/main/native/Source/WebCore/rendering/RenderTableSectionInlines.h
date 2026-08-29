@@ -19,8 +19,7 @@
 
 #pragma once
 
-#include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableSection.h"
 
 namespace WebCore {

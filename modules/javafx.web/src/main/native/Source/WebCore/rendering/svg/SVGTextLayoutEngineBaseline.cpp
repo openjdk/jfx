@@ -22,12 +22,13 @@
 #include "config.h"
 #include "SVGTextLayoutEngineBaseline.h"
 
-#include "LengthFunctions.h"
+#include "NodeInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderSVGInlineText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGLengthContext.h"
-#include "SVGRenderStyle.h"
 #include "SVGTextMetrics.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 
 namespace WebCore {
 
@@ -36,7 +37,7 @@ SVGTextLayoutEngineBaseline::SVGTextLayoutEngineBaseline(const FontCascade& font
 {
 }
 
-float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& style) const
+float SVGTextLayoutEngineBaseline::calculateBaselineShift(const RenderStyle& style) const
 {
     return WTF::switchOn(style.baselineShift(),
         [](const CSS::Keyword::Baseline&) -> float {
@@ -49,7 +50,7 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
             return m_font->metricsOfPrimaryFont().height() / 2;
         },
         [&](const Style::SVGBaselineShift::Length& length) -> float {
-            return Style::evaluate(length, m_font->size());
+            return Style::evaluate<float>(length, m_font->size(), Style::ZoomNeeded { });
     }
     );
 }
@@ -58,7 +59,7 @@ AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseli
 {
     ASSERT(textRenderer.parent());
 
-    DominantBaseline baseline = textRenderer.style().svgStyle().dominantBaseline();
+    DominantBaseline baseline = textRenderer.style().dominantBaseline();
     if (baseline == DominantBaseline::Auto) {
         if (isVerticalText)
             baseline = DominantBaseline::Central;
@@ -101,7 +102,7 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
     auto* textRendererParent = textRenderer.parent();
     ASSERT(textRendererParent);
 
-    AlignmentBaseline baseline = textRenderer.style().svgStyle().alignmentBaseline();
+    AlignmentBaseline baseline = textRenderer.style().alignmentBaseline();
     if (baseline == AlignmentBaseline::Baseline) {
         baseline = dominantBaselineToAlignmentBaseline(isVerticalText, *textRendererParent);
         ASSERT(baseline != AlignmentBaseline::Baseline);
@@ -138,10 +139,11 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
     return 0;
 }
 
-float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVerticalText, const SVGRenderStyle& style, const char16_t& character) const
+float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVerticalText, const RenderStyle& style, const char16_t& character) const
 {
-    switch (isVerticalText ? style.glyphOrientationVertical() : style.glyphOrientationHorizontal()) {
-    case GlyphOrientation::Auto:
+    if (isVerticalText) {
+        return Style::valueRepresentation(style.glyphOrientationVertical(),
+            [&](const CSS::Keyword::Auto&) {
         // Spec: Fullwidth ideographic and fullwidth Latin text will be set with a glyph-orientation of 0-degrees.
         // Text which is not fullwidth will be set with a glyph-orientation of 90-degrees.
         // FIXME: There's not an accurate way to tell if text is fullwidth by looking at a single character.
@@ -149,25 +151,26 @@ float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVertica
         case U_EA_NEUTRAL:
         case U_EA_HALFWIDTH:
         case U_EA_NARROW:
-            return 90;
+                    return 90.0f;
         case U_EA_AMBIGUOUS:
         case U_EA_FULLWIDTH:
         case U_EA_WIDE:
-            return 0;
+                    return 0.0f;
         }
         ASSERT_NOT_REACHED();
-        break;
-    case GlyphOrientation::Degrees90:
-        return 90;
-    case GlyphOrientation::Degrees180:
-        return 180;
-    case GlyphOrientation::Degrees270:
-        return 270;
-    case GlyphOrientation::Degrees0:
-        return 0;
+                return 0.0f;
+            },
+            [](const Style::Angle<>& angle) {
+                return Style::evaluate<float>(angle);
+            }
+        );
+    } else {
+        return Style::valueRepresentation(style.glyphOrientationHorizontal(),
+            [](const Style::Angle<>& angle) {
+                return Style::evaluate<float>(angle);
+            }
+        );
     }
-    ASSERT_NOT_REACHED();
-    return 0;
 }
 
 static inline bool glyphOrientationIsMultiplyOf180Degrees(float orientationAngle)

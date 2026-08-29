@@ -53,19 +53,21 @@
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGClipPathElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGeometryElement.h"
-#include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
+#include "Settings.h"
 #include "TransformOperationData.h"
 #include "TransformState.h"
+#include "VisibleRectContext.h"
 #include <numbers>
 
 namespace WebCore {
 
-LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& renderer, const RenderLayerModelObject* repaintContainer, RenderObject::VisibleRectContext context)
+LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& renderer, const RenderLayerModelObject* repaintContainer, VisibleRectContext context)
 {
     // Return early for any cases where we don't actually paint
     if (renderer.isInsideEntirelyHiddenLayer())
@@ -76,7 +78,7 @@ LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& 
     return enclosingLayoutRect(renderer.computeFloatRectForRepaint(renderer.repaintRectInLocalCoordinates(context.repaintRectCalculation()), repaintContainer));
 }
 
-std::optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(const RenderElement& renderer, const FloatRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context)
+std::optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(const RenderElement& renderer, const FloatRect& rect, const RenderLayerModelObject* container, VisibleRectContext context)
 {
     // Ensure our parent is an SVG object.
     ASSERT(renderer.parent());
@@ -85,7 +87,7 @@ std::optional<FloatRect> SVGRenderSupport::computeFloatVisibleRectInContainer(co
         return FloatRect();
 
     FloatRect adjustedRect = rect;
-    adjustedRect.inflate(Style::evaluate(renderer.style().outlineWidth()));
+    adjustedRect.inflate(Style::evaluate<float>(renderer.style().usedOutlineWidth(), Style::ZoomNeeded { }));
 
     // Translate to coords in our parent renderer, and then call computeFloatVisibleRectInContainer() on our parent.
     adjustedRect = renderer.localToParentTransform().mapRect(adjustedRect);
@@ -110,6 +112,9 @@ const RenderElement& SVGRenderSupport::localToParentTransform(const RenderElemen
 
 void SVGRenderSupport::mapLocalToContainer(const RenderElement& renderer, const RenderLayerModelObject* ancestorContainer, TransformState& transformState, bool* wasFixed)
 {
+    if (ancestorContainer == &renderer)
+        return;
+
     AffineTransform transform;
     auto& parent = localToParentTransform(renderer, transform);
 
@@ -359,6 +364,11 @@ bool SVGRenderSupport::isOverflowHidden(const RenderElement& renderer)
     return isNonVisibleOverflow(renderer.style().overflowX());
 }
 
+void SVGRenderSupport::applyResourceEffectsToRect(const RenderElement& renderer, FloatRect& rect)
+{
+    intersectRepaintRectWithResources(renderer, rect, RepaintRectCalculation::Accurate);
+}
+
 void SVGRenderSupport::intersectRepaintRectWithResources(const RenderElement& renderer, FloatRect& repaintRect, RepaintRectCalculation repaintRectCalculation)
 {
     auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer);
@@ -373,6 +383,29 @@ void SVGRenderSupport::intersectRepaintRectWithResources(const RenderElement& re
 
     if (auto* masker = resources->masker())
         repaintRect.intersect(masker->resourceBoundingBox(renderer, repaintRectCalculation));
+}
+
+FloatRect SVGRenderSupport::computeContainerDecoratedBoundingBox(const RenderElement& container)
+{
+    FloatRect decoratedBoundingBox;
+
+    for (auto& current : childrenOfType<RenderObject>(container)) {
+        if (current.isLegacyRenderSVGHiddenContainer())
+            continue;
+        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(current); shape && shape->isRenderingDisabled())
+            continue;
+
+        FloatRect childDecoratedBox = current.decoratedBoundingBox();
+
+        const AffineTransform& transform = current.localToParentTransform();
+        if (!transform.isIdentity())
+            childDecoratedBox = transform.mapRect(childDecoratedBox);
+
+        if (!childDecoratedBox.isNaN())
+            decoratedBoundingBox.unite(childDecoratedBox);
+    }
+
+    return decoratedBoundingBox;
 }
 
 bool SVGRenderSupport::filtersForceContainerLayout(const RenderElement& renderer)
@@ -487,16 +520,14 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
         return;
     }
 
-    const SVGRenderStyle& svgStyle = style.svgStyle();
-
     SVGLengthContext lengthContext(element.get());
-    context.setStrokeThickness(lengthContext.valueForLength(style.strokeWidth()));
+    context.setStrokeThickness(lengthContext.valueForLength(style.strokeWidth(), Style::ZoomNeeded { }));
     context.setLineCap(style.capStyle());
     context.setLineJoin(style.joinStyle());
     if (style.joinStyle() == LineJoin::Miter)
         context.setMiterLimit(style.strokeMiterLimit().value.value);
 
-    auto& dashes = svgStyle.strokeDashArray();
+    auto& dashes = style.strokeDashArray();
     if (dashes.isNone())
         context.setStrokeStyle(StrokeStyle::SolidStroke);
     else {
@@ -515,14 +546,14 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
 
         bool canSetLineDash = false;
         auto dashArray = DashArray::map(dashes, [&](auto& dash) -> DashArrayElement {
-            auto value = lengthContext.valueForLength(dash) * scaleFactor;
+            auto value = lengthContext.valueForLength(dash, Style::ZoomNeeded { }) * scaleFactor;
             if (value > 0)
                 canSetLineDash = true;
             return value;
         });
 
         if (canSetLineDash)
-            context.setLineDash(dashArray, lengthContext.valueForLength(svgStyle.strokeDashOffset()) * scaleFactor);
+            context.setLineDash(dashArray, lengthContext.valueForLength(style.strokeDashOffset(), Style::ZoomNeeded { }) * scaleFactor);
         else
             context.setStrokeStyle(StrokeStyle::SolidStroke);
     }
@@ -561,7 +592,7 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
         // https://drafts.fxtf.org/css-masking/#compute-stroke-bounding-box
         // except that we ignore whether the stroke is none.
 
-        ASSERT(renderer.style().svgStyle().hasStroke());
+        ASSERT(renderer.style().hasStroke());
 
         auto strokeBoundingBox = fillBoundingBox;
         const float strokeWidth = renderer.strokeWidth();
@@ -581,7 +612,7 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
         case Renderer::ShapeType::RoundedRectangle: {
 #if USE(CG)
             // CoreGraphics can inflate the stroke by 1px when drawing a rectangle with antialiasing disabled at non-integer coordinates, we need to compensate.
-            if (renderer.style().svgStyle().shapeRendering() == ShapeRendering::CrispEdges)
+            if (renderer.style().shapeRendering() == ShapeRendering::CrispEdges)
                 delta += 1;
 #endif
             break;
@@ -607,7 +638,7 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
 
     auto calculateApproximateNonScalingStrokeBoundingBox = [&](const auto& renderer, FloatRect fillBoundingBox) -> FloatRect {
         ASSERT(renderer.hasPath());
-        ASSERT(renderer.style().svgStyle().hasStroke());
+        ASSERT(renderer.style().hasStroke());
         ASSERT(renderer.hasNonScalingStroke());
 
         auto strokeBoundingBox = fillBoundingBox;
@@ -623,7 +654,7 @@ FloatRect SVGRenderSupport::calculateApproximateStrokeBoundingBox(const RenderEl
     };
 
     auto calculate = [&](const auto& renderer) {
-        if (!renderer.style().svgStyle().hasStroke())
+        if (!renderer.style().hasStroke())
             return renderer.objectBoundingBox();
         if (renderer.hasNonScalingStroke())
             return calculateApproximateNonScalingStrokeBoundingBox(renderer, renderer.objectBoundingBox());

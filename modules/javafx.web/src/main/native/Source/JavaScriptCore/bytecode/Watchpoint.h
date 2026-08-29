@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/Atomics.h>
 #include <wtf/DebugHeap.h>
 #include <wtf/FastMalloc.h>
@@ -47,7 +48,6 @@ class FireDetail {
     void* operator new(size_t) = delete;
 
 public:
-    FireDetail() = default;
     virtual ~FireDetail() = default;
     // This can't be pure virtual as it breaks our Dumpable concept.
     // FIXME: Make this virtual after we stop suppporting the Montery Clang.
@@ -341,7 +341,7 @@ public:
     void startWatching()
     {
         if (isFat()) {
-            fat()->startWatching();
+            protectedFat()->startWatching();
             return;
         }
         ASSERT(decodeState(m_data) != IsInvalidated);
@@ -352,7 +352,7 @@ public:
     void fireAll(VM& vm, T fireDetails)
     {
         if (isFat()) {
-            fat()->fireAll(vm, fireDetails);
+            protectedFat()->fireAll(vm, fireDetails);
             return;
         }
         if (decodeState(m_data) == ClearWatchpoint)
@@ -364,7 +364,7 @@ public:
     void invalidate(VM& vm, const FireDetail& detail)
     {
         if (isFat())
-            fat()->invalidate(vm, detail);
+            protectedFat()->invalidate(vm, detail);
         else
             m_data = encodeState(IsInvalidated);
     }
@@ -374,7 +374,7 @@ public:
     void touch(VM& vm, const FireDetail& detail)
     {
         if (isFat()) {
-            fat()->touch(vm, detail);
+            protectedFat()->touch(vm, detail);
             return;
         }
         uintptr_t data = m_data;
@@ -481,6 +481,9 @@ private:
         ASSERT(isFat());
         return fat(m_data);
     }
+
+    RefPtr<WatchpointSet> protectedFat() { return fat(); }
+    RefPtr<const WatchpointSet> protectedFat() const { return fat(); }
 
     JS_EXPORT_PRIVATE WatchpointSet* inflateSlow();
     JS_EXPORT_PRIVATE void freeFat();

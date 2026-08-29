@@ -25,7 +25,8 @@
 
 #include "AXObjectCache.h"
 #include "BackgroundPainter.h"
-#include "DocumentInlines.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "FloatRoundedRect.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HitTestResult.h"
@@ -34,6 +35,7 @@
 #include "RemoteFrameView.h"
 #include "RenderBox.h"
 #include "RenderBoxInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderLayer.h"
@@ -49,7 +51,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderWidget);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderWidget);
 
 static HashMap<SingleThreadWeakRef<const Widget>, SingleThreadWeakRef<RenderWidget>>& widgetRendererMap()
 {
@@ -72,8 +74,8 @@ void WidgetHierarchyUpdatesSuspensionScope::moveWidgets()
     while (!widgetNewParentMap().isEmpty()) {
         auto map = std::exchange(widgetNewParentMap(), { });
         for (auto& entry : map) {
-            auto& child = *entry.key;
-            auto* currentParent = child.parent();
+            Ref child = entry.key;
+            auto* currentParent = child->parent();
             CheckedPtr newParent = entry.value.get();
             if (newParent != currentParent) {
                 if (currentParent)
@@ -99,7 +101,7 @@ static void moveWidgetToParentSoon(Widget& child, LocalFrameView* parent)
 }
 
 RenderWidget::RenderWidget(Type type, HTMLFrameOwnerElement& element, RenderStyle&& style)
-    : RenderReplaced(type, element, WTFMove(style), ReplacedFlag::IsWidget)
+    : RenderReplaced(type, element, WTF::move(style), ReplacedFlag::IsWidget)
 {
     relaxAdoptionRequirement();
     setInline(false);
@@ -115,6 +117,7 @@ void RenderWidget::willBeDestroyed()
 
     if (renderTreeBeingDestroyed() && document().backForwardCacheState() == Document::NotInBackForwardCache && m_widget)
         m_widget->willBeDestroyed();
+
     setWidget(nullptr);
 
     RenderReplaced::willBeDestroyed();
@@ -226,7 +229,7 @@ void RenderWidget::layout()
     clearNeedsLayout();
 }
 
-void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderWidget::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderReplaced::styleDidChange(diff, oldStyle);
     if (m_widget) {
@@ -237,6 +240,15 @@ void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
         if (CheckedPtr cache = document().existingAXObjectCache())
             cache->onWidgetVisibilityChanged(*this);
+    }
+
+    // If this is an iframe and the zoom property changed, notify the iframe's content frame
+    // to trigger a resize event since devicePixelRatio will have changed.
+    if (oldStyle && oldStyle->zoom() != style().zoom()) {
+        if (auto* frameView = dynamicDowncast<LocalFrameView>(m_widget.get())) {
+            frameView->frame().deviceOrPageScaleFactorChanged();
+            frameView->scheduleResizeEventIfNeeded();
+        }
     }
 }
 
@@ -359,7 +371,8 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
     if (hasLayer() && layer()->canResize()) {
         ASSERT(layer()->scrollableArea());
-        layer()->scrollableArea()->paintResizer(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), paintInfo.rect);
+        auto controlsRects = layer()->scrollableArea()->overflowControlsRects();
+        layer()->scrollableArea()->paintResizer(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), controlsRects.resizer, paintInfo.rect);
     }
 }
 

@@ -110,10 +110,29 @@ typedef enum /*< skip >*/
    * Since: 1.26
    */
   GST_TRACER_QUARK_HOOK_MEMORY_FREE_POST,
+
+  /**
+   * GST_TRACER_QUARK_HOOK_POOL_BUFFER_QUEUED:
+   *
+   * Hook for buffers queued into a buffer pool.
+   *
+   * Since: 1.28
+   */
+  GST_TRACER_QUARK_HOOK_POOL_BUFFER_QUEUED,
+
+  /**
+   * GST_TRACER_QUARK_HOOK_POOL_BUFFER_DEQUEUED:
+   *
+   * Hook for buffers dequeued from a buffer pool.
+   *
+   * Since: 1.28
+   */
+  GST_TRACER_QUARK_HOOK_POOL_BUFFER_DEQUEUED,
+
   GST_TRACER_QUARK_MAX
 } GstTracerQuarkId;
 
-extern GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX];
+extern GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX + 1];
 
 #define GST_TRACER_QUARK(q) _priv_gst_tracer_quark_table[GST_TRACER_QUARK_##q]
 
@@ -980,6 +999,59 @@ typedef void (*GstTracerHookMemoryFreePost) (GObject *self, GstClockTime ts, Gst
     GstTracerHookMemoryFreePost, (GST_TRACER_ARGS, mem)); \
 }G_STMT_END
 
+
+/**
+ * GstTracerHookPoolBufferQueued:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pool: a #GstBufferPool
+ * @buffer: pointer to the #GstBuffer that has been queued into @pool
+ *
+ * Hook for pool buffer queued named "pool-buffer-queued".
+ *
+ * Since: 1.28
+ */
+typedef void (*GstTracerHookPoolBufferQueued) (GObject *self, GstClockTime ts, GstBufferPool *pool, GstBuffer *buffer);
+/**
+ * GST_TRACER_POOL_BUFFER_QUEUED:
+ * @pool: a #GstBufferPool
+ * @buffer: pointer to the #GstBuffer that has been queued into @pool
+ *
+ * Dispatches the "pool-buffer-queued" hook.
+ *
+ * Since: 1.28
+ */
+#define GST_TRACER_POOL_BUFFER_QUEUED(pool, buf) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_POOL_BUFFER_QUEUED), \
+    GstTracerHookPoolBufferQueued, (GST_TRACER_ARGS, pool, buf)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPoolBufferDequeued:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pool: a #GstBufferPool
+ * @buffer: pointer to the #GstBuffer that has been dequeued from @pool
+ *
+ * Hook for pool buffer dequeued named "pool-buffer-dequeued".
+ *
+ * Since: 1.28
+ */
+typedef void (*GstTracerHookPoolBufferDequeued) (GObject *self, GstClockTime ts, GstBufferPool *pool, GstBuffer *buffer);
+/**
+ * GST_TRACER_POOL_BUFFER_DEQUEUED:
+ * @pool: a #GstBufferPool
+ * @buffer: pointer to the #GstBuffer that has been dequeued from @pool
+ *
+ * Dispatches the "pool-buffer-dequeued" hook.
+ *
+ * Since: 1.28
+ */
+#define GST_TRACER_POOL_BUFFER_DEQUEUED(pool, buffer) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_POOL_BUFFER_DEQUEUED), \
+    GstTracerHookPoolBufferDequeued, (GST_TRACER_ARGS, pool, buffer)); \
+}G_STMT_END
+
 #else /* !GST_DISABLE_GST_TRACER_HOOKS */
 
 static inline void
@@ -1038,6 +1110,8 @@ _priv_gst_tracing_deinit (void)
 #define GST_TRACER_MEMORY_INIT(mem)
 #define GST_TRACER_MEMORY_FREE_PRE(mem)
 #define GST_TRACER_MEMORY_FREE_POST(mem)
+#define GST_TRACER_POOL_BUFFER_QUEUED(pool, buffer)
+#define GST_TRACER_POOL_BUFFER_DEQUEUED(pool, buffer)
 
 
 #endif /* GST_DISABLE_GST_TRACER_HOOKS */

@@ -33,8 +33,8 @@ function next()
 
     var generator = @getIteratorHelperInternalField(this, @iteratorHelperFieldGenerator);
     var state = @getGeneratorInternalField(generator, @generatorFieldState);
-    if (state === @GeneratorStateCompleted)
-        return { value: @undefined, done: true };
+    if (state === @GeneratorStateExecuting)
+        @throwTypeError("Generator is executing");
 
     return @generatorResume(generator, state, @undefined, @GeneratorResumeModeNormal);
 }
@@ -59,8 +59,8 @@ function return()
         return { value: @undefined, done: true };
     }
 
-    if (state === @GeneratorStateCompleted)
-        return { value: @undefined, done: true };
+    if (state === @GeneratorStateExecuting)
+        @throwTypeError("Generator is executing");
 
     return @generatorResume(generator, state, @undefined, @GeneratorResumeModeReturn);
 }

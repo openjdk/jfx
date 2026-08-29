@@ -152,6 +152,7 @@ static const FormatInfo formats[] = {
   {"audio/x-private1-lpcm", "DVD LPCM", FLAG_AUDIO, ""},
   {"audio/x-m4a", "MPEG-4 AAC", FLAG_CONTAINER, "m4a"},
   {"audio/x-mod", "Module Music Format (MOD)", FLAG_AUDIO, "mod"},
+  {"audio/x-mpeg-h", "MPEG-H 3D Audio", FLAG_AUDIO, ""},
   {"audio/x-mulaw", "Mu-Law", FLAG_AUDIO, ""},
   {"audio/x-musepack", "Musepack (MPC)", FLAG_AUDIO, "mpc"},
   {"audio/x-ffmpeg-parsed-musepack", "Musepack (MPC)", FLAG_AUDIO, "mpc"},
@@ -340,6 +341,8 @@ static const FormatInfo formats[] = {
   /* metadata */
   {"application/x-onvif-metadata", "ONVIF Timed Metadata", FLAG_METADATA, ""},
   {"meta/x-klv", "KLV Metadata", FLAG_METADATA, ""},
+  {"meta/x-st-2038", "ST-2038 Ancillary Data", FLAG_METADATA, ""},
+  {"meta/x-id3", N_("Timed ID3 tag Metadata"), FLAG_METADATA, ""},
 };
 #else // GSTREAMER_LITE
 static const FormatInfo formats[] = {
@@ -1282,6 +1285,10 @@ gst_pb_utils_add_codec_description_to_tag_list (GstTagList * taglist,
   return TRUE;
 }
 
+GST_LOG_CONTEXT_STATIC_DEFINE (unexisting_media_type_log_context,
+    GST_LOG_CONTEXT_FLAG_THROTTLE);
+#define UNEXISTING_MEDIA_TYPE_LOG_CONTEXT GST_LOG_CONTEXT_LAZY_INIT(unexisting_media_type_log_context)
+
 /**
  * gst_pb_utils_get_codec_description:
  * @caps: the (fixed) #GstCaps for which an format description is needed
@@ -1323,7 +1330,8 @@ gst_pb_utils_get_codec_description (const GstCaps * caps)
        * audio/, video/, image/ and application/ prefixes etc. */
     }
 
-    GST_WARNING ("No description available for media type: %s", str);
+    GST_CTX_WARNING (UNEXISTING_MEDIA_TYPE_LOG_CONTEXT,
+        "No description available for media type: %s", str);
   }
   gst_caps_unref (tmp);
 

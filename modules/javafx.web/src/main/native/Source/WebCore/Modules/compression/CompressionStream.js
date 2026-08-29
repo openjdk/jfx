@@ -45,11 +45,11 @@ function initializeCompressionStream(format)
 
     // Setup Transform and Flush Algorithms
     const startAlgorithm = () => {
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const transformAlgorithm = (chunk) => {
         if (!@isObject(chunk) || (!(chunk instanceof @ArrayBuffer) && !(chunk.buffer instanceof @ArrayBuffer)))
-            return @Promise.@reject(@makeTypeError("Invalid type should be ArrayBuffer"));
+            return @promiseReject(@Promise, @makeTypeError("Invalid type should be ArrayBuffer"));
 
         try {
             const encoder = @getByIdDirectPrivate(this, "CompressionStreamEncoder");
@@ -61,10 +61,10 @@ function initializeCompressionStream(format)
                 @transformStreamDefaultControllerEnqueue(controller, buffer);
             }
         } catch (e) {
-            return @Promise.@reject(@makeTypeError(e.message));
+            return @promiseReject(@Promise, @makeTypeError(e.message));
         }
 
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const flushAlgorithm = () => {
         const encoder = @getByIdDirectPrivate(this, "CompressionStreamEncoder");
@@ -73,7 +73,7 @@ function initializeCompressionStream(format)
         try {
             buffer = encoder.@flush();
         } catch (e) {
-            return @Promise.@reject(@makeTypeError(e.message));
+            return @promiseReject(@Promise, @makeTypeError(e.message));
         }
         if (buffer) {
             const transformStream = @getByIdDirectPrivate(this, "CompressionStreamTransform");
@@ -81,7 +81,7 @@ function initializeCompressionStream(format)
             @transformStreamDefaultControllerEnqueue(controller, buffer);
         }
 
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
 
     const [transform, readable, writable] = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);

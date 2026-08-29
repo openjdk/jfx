@@ -101,6 +101,8 @@ public:
         return *this == NodeFlowProjection(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // Phi shadow projections can become invalid because the Phi might be folded to something else.
     bool isStillValid() const
     {
@@ -123,18 +125,9 @@ public:
     uintptr_t m_word { 0 };
 };
 
-struct NodeFlowProjectionHash {
-    static unsigned hash(NodeFlowProjection key) { return key.hash(); }
-    static bool equal(NodeFlowProjection a, NodeFlowProjection b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::NodeFlowProjection> : JSC::DFG::NodeFlowProjectionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::NodeFlowProjection> : SimpleClassHashTraits<JSC::DFG::NodeFlowProjection> { };

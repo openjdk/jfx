@@ -31,15 +31,6 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
-class ContentFilterClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ContentFilterClient> : std::true_type { };
-}
-
-namespace WebCore {
 
 class ContentFilterUnblockHandler;
 class ResourceError;
@@ -51,13 +42,10 @@ public:
     virtual ~ContentFilterClient() = default;
 
     virtual void dataReceivedThroughContentFilter(const SharedBuffer&) = 0;
-    virtual ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) = 0;
+    virtual ResourceError contentFilterDidBlock(ContentFilterUnblockHandler&&, String&& unblockRequestDeniedScript) = 0;
     virtual void cancelMainResourceLoadForContentFilter(const ResourceError&) = 0;
     virtual void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&&) = 0;
 
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    virtual bool usesWebContentRestrictions() = 0;
-#endif
 #if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
     virtual String webContentRestrictionsConfigurationPath() const = 0;
 #endif

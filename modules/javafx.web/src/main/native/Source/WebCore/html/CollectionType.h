@@ -59,7 +59,7 @@ enum class CollectionType : uint8_t {
     AllDescendants
 };
 
-enum class CollectionTraversalType : uint8_t { Descendants, ChildrenOnly, CustomForwardOnly };
+enum class CollectionTraversalType : uint8_t { Descendants, WeakPtrDescendants, ChildrenOnly, CustomForwardOnly };
 template<CollectionType collectionType>
 struct CollectionTypeTraits {
     static const CollectionTraversalType traversalType = CollectionTraversalType::Descendants;

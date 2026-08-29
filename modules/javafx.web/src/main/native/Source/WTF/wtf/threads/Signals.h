@@ -124,7 +124,7 @@ struct SignalHandlers {
     std::array<std::array<SignalHandlerMemory, maxNumberOfHandlers>, numberOfSignals> handlers;
 
 #if OS(UNIX)
-    struct sigaction oldActions[numberOfSignals];
+    std::array<struct sigaction, numberOfSignals> oldActions;
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.oracle.tools.fx.monkey.sheets;
 
-import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.TextField;
 import com.oracle.tools.fx.monkey.options.EnumOption;

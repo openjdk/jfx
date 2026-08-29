@@ -1147,12 +1147,14 @@ gst_navigation_event_new_touch_cancel (GstNavigationModifierType state)
 gboolean
 gst_navigation_event_parse_key_event (GstEvent * event, const gchar ** key)
 {
-  GstNavigationEventType e_type;
+  GstNavigationEventType e_type GST_UNUSED_CHECKS;
   const GstStructure *s;
 
+#ifndef G_DISABLE_CHECKS
   e_type = gst_navigation_event_get_type (event);
   g_return_val_if_fail (e_type == GST_NAVIGATION_EVENT_KEY_PRESS ||
       e_type == GST_NAVIGATION_EVENT_KEY_RELEASE, FALSE);
+#endif
 
   if (key) {
     s = gst_event_get_structure (event);
@@ -1185,14 +1187,16 @@ gboolean
 gst_navigation_event_parse_mouse_button_event (GstEvent * event, gint * button,
     gdouble * x, gdouble * y)
 {
-  GstNavigationEventType e_type;
+  GstNavigationEventType e_type GST_UNUSED_CHECKS;
   const GstStructure *s;
   gboolean ret = TRUE;
 
+#ifndef G_DISABLE_CHECKS
   e_type = gst_navigation_event_get_type (event);
   g_return_val_if_fail (e_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_PRESS ||
       e_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE ||
       e_type == GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK, FALSE);
+#endif
 
   s = gst_event_get_structure (event);
   if (x)
@@ -1339,13 +1343,15 @@ gboolean
 gst_navigation_event_parse_touch_event (GstEvent * event, guint * identifier,
     gdouble * x, gdouble * y, gdouble * pressure)
 {
-  GstNavigationEventType e_type;
+  GstNavigationEventType e_type GST_UNUSED_CHECKS;
   const GstStructure *s;
   gboolean ret = TRUE;
 
+#ifndef G_DISABLE_CHECKS
   e_type = gst_navigation_event_get_type (event);
   g_return_val_if_fail (e_type == GST_NAVIGATION_EVENT_TOUCH_DOWN ||
       e_type == GST_NAVIGATION_EVENT_TOUCH_MOTION, FALSE);
+#endif
 
   s = gst_event_get_structure (event);
   if (identifier)
@@ -1485,7 +1491,7 @@ gst_navigation_event_set_coordinates (GstEvent * event, gdouble x, gdouble y)
 /**
  * gst_navigation_event_parse_modifier_state:
  * @event: The #GstEvent to modify.
- * @state: a bit-mask representing the state of the modifier keys (e.g. Control,
+ * @state: (out): a bit-mask representing the state of the modifier keys (e.g. Control,
  * Shift and Alt).
  *
  * Returns: TRUE if the event is a #GstNavigation event with associated

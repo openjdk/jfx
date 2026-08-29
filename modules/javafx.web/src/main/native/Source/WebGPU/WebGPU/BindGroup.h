@@ -71,7 +71,7 @@ public:
     static constexpr MTLRenderStages MTLRenderStageUndefined = static_cast<MTLRenderStages>(MTLRenderStageFragment + 1);
     static Ref<BindGroup> create(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentArgumentBuffer, id<MTLBuffer> computeArgumentBuffer, Vector<BindableResources>&& resources, const BindGroupLayout& bindGroupLayout, DynamicBuffersContainer&& dynamicBuffers, SamplersContainer&& samplers, ShaderStageArray<ExternalTextureIndices>&& externalTextureIndices, uint32_t uniqueIdentifier, Device& device)
     {
-        return adoptRef(*new BindGroup(vertexArgumentBuffer, fragmentArgumentBuffer, computeArgumentBuffer, WTFMove(resources), bindGroupLayout, WTFMove(dynamicBuffers), WTFMove(samplers), WTFMove(externalTextureIndices), uniqueIdentifier, device));
+        return adoptRef(*new BindGroup(vertexArgumentBuffer, fragmentArgumentBuffer, computeArgumentBuffer, WTF::move(resources), bindGroupLayout, WTF::move(dynamicBuffers), WTF::move(samplers), WTF::move(externalTextureIndices), uniqueIdentifier, device));
     }
     static Ref<BindGroup> createInvalid(Device& device)
     {

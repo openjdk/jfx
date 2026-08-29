@@ -41,20 +41,13 @@ JSMapIterator* JSMapIterator::createWithInitialValues(VM& vm, Structure* structu
     return iterator;
 }
 
-void JSMapIterator::finishCreation(JSGlobalObject* globalObject, JSMap* iteratedObject, IterationKind kind)
+void JSMapIterator::finishCreation(VM& vm, JSMap* iteratedObject, IterationKind kind)
 {
-    VM& vm = getVM(globalObject);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
     Base::finishCreation(vm);
     setEntry(vm, 0);
     setIteratedObject(vm, iteratedObject);
-
-    JSCell* storage = iteratedObject->storage(globalObject);
-    RETURN_IF_EXCEPTION(scope, void());
-    setStorage(vm, storage);
-
-    internalField(Field::Kind).set(vm, this, jsNumber(static_cast<int32_t>(kind)));
+    internalField(Field::Storage).set(vm, this, iteratedObject->storage());
+    internalField(Field::Kind).setWithoutWriteBarrier(jsNumber(static_cast<int32_t>(kind)));
 }
 
 void JSMapIterator::finishCreation(VM& vm)
@@ -95,7 +88,7 @@ JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorKey, (JSGlobalObject *
     JSCell* cell = callFrame->uncheckedArgument(0).asCell();
     if (cell == vm.orderedHashTableSentinel())
         return JSValue::encode(cell);
-    return JSValue::encode(jsCast<JSMapIterator*>(cell)->nextKey(vm));
+    return JSValue::encode(jsCast<JSMapIterator*>(cell)->peekKey(vm));
 }
 
 JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorValue, (JSGlobalObject * globalObject, CallFrame* callFrame))
@@ -106,7 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorValue, (JSGlobalObject
     JSCell* cell = callFrame->uncheckedArgument(0).asCell();
     if (cell == vm.orderedHashTableSentinel())
         return JSValue::encode(cell);
-    return JSValue::encode(jsCast<JSMapIterator*>(cell)->nextValue(vm));
+    return JSValue::encode(jsCast<JSMapIterator*>(cell)->peekValue(vm));
 }
 
 }

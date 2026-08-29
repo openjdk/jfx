@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/ObjectIdentifier.h>
@@ -41,6 +41,7 @@ struct GlobalWindowIdentifier {
     WindowIdentifier windowIdentifier;
 
     friend bool operator==(const GlobalWindowIdentifier&, const GlobalWindowIdentifier&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 };
 
 inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
@@ -51,12 +52,6 @@ inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
 } // namespace WebCore
 
 namespace WTF {
-
-struct GlobalWindowIdentifierHash {
-    static unsigned hash(const WebCore::GlobalWindowIdentifier& key) { return computeHash(key); }
-    static bool equal(const WebCore::GlobalWindowIdentifier& a, const WebCore::GlobalWindowIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
 
 template<> struct HashTraits<WebCore::GlobalWindowIdentifier> : GenericHashTraits<WebCore::GlobalWindowIdentifier> {
     static WebCore::GlobalWindowIdentifier emptyValue() { return { HashTraits<WebCore::ProcessIdentifier>::emptyValue(), HashTraits<WebCore::WindowIdentifier>::emptyValue() }; }
@@ -69,7 +64,5 @@ template<> struct HashTraits<WebCore::GlobalWindowIdentifier> : GenericHashTrait
     }
     static bool isDeletedValue(const WebCore::GlobalWindowIdentifier& slot) { return slot.windowIdentifier.isHashTableDeletedValue(); }
 };
-
-template<> struct DefaultHash<WebCore::GlobalWindowIdentifier> : GlobalWindowIdentifierHash { };
 
 } // namespace WTF

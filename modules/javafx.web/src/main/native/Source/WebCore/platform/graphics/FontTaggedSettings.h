@@ -53,9 +53,7 @@ inline void add(Hasher& hasher, std::array<char, 4> array)
     add(hasher, integer);
 }
 
-struct FourCharacterTagHash {
-    static unsigned hash(FontTag characters) { return computeHash(characters); }
-    static bool equal(FontTag a, FontTag b) { return a == b; }
+struct FourCharacterTagHash : WTF::HasherBasedHash<FontTag> {
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
 
@@ -68,15 +66,15 @@ private:
     static constexpr char ff = static_cast<char>(0xFF);
 };
 
-template <typename T>
+template<typename T>
 class FontTaggedSetting {
 private:
-    friend struct IPC::ArgumentCoder<FontTaggedSetting, void>;
+    friend struct IPC::ArgumentCoder<FontTaggedSetting>;
 public:
     FontTaggedSetting() = delete;
     FontTaggedSetting(FontTag, T value);
 
-    friend bool operator==(const FontTaggedSetting&, const FontTaggedSetting&) = default;
+    bool operator==(const FontTaggedSetting&) const = default;
     bool operator<(const FontTaggedSetting<T>& other) const;
 
     FontTag tag() const { return m_tag; }
@@ -88,7 +86,7 @@ private:
     T m_value;
 };
 
-template <typename T>
+template<typename T>
 FontTaggedSetting<T>::FontTaggedSetting(FontTag tag, T value)
     : m_tag(tag)
     , m_value(value)
@@ -100,15 +98,16 @@ template<typename T> void add(Hasher& hasher, const FontTaggedSetting<T>& settin
     add(hasher, setting.tag(), setting.value());
 }
 
-template <typename T>
+template<typename T>
 class FontTaggedSettings {
 private:
-    friend struct IPC::ArgumentCoder<FontTaggedSettings, void>;
+    friend struct IPC::ArgumentCoder<FontTaggedSettings>;
 public:
     using Setting = FontTaggedSetting<T>;
 
     void insert(FontTaggedSetting<T>&&);
-    friend bool operator==(const FontTaggedSettings&, const FontTaggedSettings&) = default;
+
+    bool operator==(const FontTaggedSettings&) const = default;
 
     bool isEmpty() const { return !size(); }
     size_t size() const { return m_list.size(); }
@@ -124,7 +123,7 @@ private:
     Vector<FontTaggedSetting<T>> m_list;
 };
 
-template <typename T>
+template<typename T>
 void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
 {
     // This vector will almost always have 0 or 1 items in it. Don't bother with the overhead of a binary search or a hash set.
@@ -137,7 +136,7 @@ void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
             m_list.removeAt(i);
             break;
     }
-    m_list.insert(i, WTFMove(feature));
+    m_list.insert(i, WTF::move(feature));
 }
 
 using FontFeature = FontTaggedSetting<int>;
@@ -147,4 +146,4 @@ using FontVariationSettings = FontTaggedSettings<float>;
 TextStream& operator<<(TextStream&, const FontTaggedSettings<int>&);
 TextStream& operator<<(TextStream&, const FontTaggedSettings<float>&);
 
-}
+} // namespace WebCore

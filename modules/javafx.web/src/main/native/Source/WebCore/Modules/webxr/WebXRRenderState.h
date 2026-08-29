@@ -37,7 +37,7 @@ namespace WebCore {
 struct XRRenderStateInit;
 
 class WebXRRenderState : public RefCounted<WebXRRenderState> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRRenderState);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRRenderState);
 public:
     static Ref<WebXRRenderState> create(XRSessionMode);
     ~WebXRRenderState();
@@ -49,6 +49,9 @@ public:
 
     double depthFar() const { return m_depth.far; }
     void setDepthFar(double far) { m_depth.far = far; };
+
+    std::optional<bool> passthroughFullyObscured() const { return m_passthroughFullyObscured; }
+    void setPassthroughFullyObscured(bool passthroughFullyObscured) { m_passthroughFullyObscured = passthroughFullyObscured; }
 
     std::optional<double> inlineVerticalFieldOfView() const { return m_inlineVerticalFieldOfView; }
     void setInlineVerticalFieldOfView(double fieldOfView) { m_inlineVerticalFieldOfView = fieldOfView; }
@@ -76,6 +79,7 @@ private:
         double near { 0.1 }; // in meters
         double far { 1000 }; // in meters
     } m_depth;
+    std::optional<bool> m_passthroughFullyObscured { false };
     std::optional<double> m_inlineVerticalFieldOfView; // in radians
     RefPtr<WebXRWebGLLayer> m_baseLayer;
 #if ENABLE(WEBXR_LAYERS)

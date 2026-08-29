@@ -426,14 +426,21 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
 
     if ((add == NULL) || (len == 0))
         return(cur);
-    if (len < 0)
+
+    if (len < 0) {
+        if (cur != NULL)
+            xmlFree(cur);
         return(NULL);
+    }
+
     if (cur == NULL)
         return(xmlStrndup(add, len));
 
     size = xmlStrlen(cur);
-    if ((size < 0) || (size > INT_MAX - len))
+    if ((size < 0) || (size > INT_MAX - len)) {
+        xmlFree(cur);
         return(NULL);
+    }
     ret = (xmlChar *) xmlRealloc(cur, (size_t) size + len + 1);
     if (ret == NULL) {
         xmlFree(cur);

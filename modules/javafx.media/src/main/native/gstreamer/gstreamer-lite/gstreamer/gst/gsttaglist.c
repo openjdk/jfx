@@ -264,11 +264,15 @@ _priv_gst_tag_initialize (void)
   gst_tag_register_static (GST_TAG_SERIAL, GST_TAG_FLAG_ENCODED,
       G_TYPE_UINT, _("serial"), _("serial number of track"), NULL);
   gst_tag_register_static (GST_TAG_TRACK_GAIN, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("replaygain track gain"), _("track gain in db"), NULL);
+      G_TYPE_DOUBLE, _("replaygain track gain"), _("track gain in dB"), NULL);
+  gst_tag_register_static (GST_TAG_TRACK_GAIN_R128, GST_TAG_FLAG_META,
+      G_TYPE_DOUBLE, _("r128 track gain"), _("track gain in dB (r128)"), NULL);
   gst_tag_register_static (GST_TAG_TRACK_PEAK, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("replaygain track peak"), _("peak of the track"), NULL);
   gst_tag_register_static (GST_TAG_ALBUM_GAIN, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("replaygain album gain"), _("album gain in db"), NULL);
+      G_TYPE_DOUBLE, _("replaygain album gain"), _("album gain in dB"), NULL);
+  gst_tag_register_static (GST_TAG_ALBUM_GAIN_R128, GST_TAG_FLAG_META,
+      G_TYPE_DOUBLE, _("r128 album gain"), _("album gain in dB (r128)"), NULL);
   gst_tag_register_static (GST_TAG_ALBUM_PEAK, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("replaygain album peak"), _("peak of the album"), NULL);
   gst_tag_register_static (GST_TAG_REFERENCE_LEVEL, GST_TAG_FLAG_META,
@@ -1297,6 +1301,7 @@ gst_tag_list_add_valist (GstTagList * list, GstTagMergeMode mode,
       g_warning ("unknown tag '%s'", tag);
       return;
     }
+    memset (&value, 0, sizeof (value));
     G_VALUE_COLLECT_INIT (&value, info->type, var_args, 0, &error);
     if (error) {
       g_warning ("%s: %s", G_STRLOC, error);
@@ -2082,9 +2087,10 @@ gst_tag_list_get_sample_index (const GstTagList * list,
  *
  * Returns: (transfer full): the new #GstTagList
  */
-GstTagList *(gst_tag_list_copy) (const GstTagList * taglist)
+GstTagList *
+gst_tag_list_copy (const GstTagList * taglist)
 {
-  return GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
+  return (GstTagList *) (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
 }
 
 /**
@@ -2184,4 +2190,49 @@ gst_tag_list_take (GstTagList ** old_taglist, GstTagList * new_taglist)
 {
   return gst_mini_object_take ((GstMiniObject **) old_taglist,
       (GstMiniObject *) new_taglist);
+}
+
+const GstStructure *
+_gst_tag_list_structure (const GstTagList * list)
+{
+  return GST_TAG_LIST_STRUCTURE (list);
+}
+
+/**
+ * gst_tag_list_is_writable:
+ * @taglist: a #GstTagList
+ *
+ * Tests if you can safely modify @taglist. It is only safe to modify taglist when
+ * there is only one owner of the taglist - ie, the object is writable.
+ */
+gboolean
+gst_tag_list_is_writable (const GstTagList * taglist)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (taglist));
+}
+
+/**
+ * gst_tag_list_make_writable:
+ * @taglist: (transfer full): a #GstTagList
+ *
+ * Returns a writable copy of @taglist.
+ *
+ * If there is only one reference count on @taglist, the caller must be the owner,
+ * and so this function will return the taglist object unchanged. If on the other
+ * hand there is more than one reference on the object, a new taglist object will
+ * be returned. The caller's reference on @taglist will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the taglist in the argument and refs the taglist
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_tag_list_ref().
+ *
+ * Returns: (transfer full): a writable taglist which may or may not be the
+ *     same as @taglist
+ */
+GstTagList *
+gst_tag_list_make_writable (GstTagList * taglist)
+{
+  return (GstTagList
+      *) (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (taglist)));
 }

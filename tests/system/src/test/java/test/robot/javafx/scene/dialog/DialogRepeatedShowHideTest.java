@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 //see JDK8193502
 @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class DialogRepeatedShowHideTest {
@@ -62,6 +64,7 @@ public class DialogRepeatedShowHideTest {
 
     @Test
     public void dialogSizeOnReShownTest() throws Exception {
+        assumeTrue(!Util.isOnWayland()); // JDK-8375347
         Thread.sleep(400);
         clickButton();
         hide();

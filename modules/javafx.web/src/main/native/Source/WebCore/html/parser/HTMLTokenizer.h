@@ -200,12 +200,12 @@ private:
     Vector<char16_t, 32> m_appropriateEndTagName;
 
     // https://html.spec.whatwg.org/#temporary-buffer
-    Vector<LChar, 32> m_temporaryBuffer;
+    Vector<Latin1Character, 32> m_temporaryBuffer;
 
     // We occasionally want to emit both a character token and an end tag
     // token (e.g., when lexing script). We buffer the name of the end tag
     // token here so we remember it next time we re-enter the tokenizer.
-    Vector<LChar, 32> m_bufferedEndTagName;
+    Vector<Latin1Character, 32> m_bufferedEndTagName;
 
     const HTMLParserOptions m_options;
 };

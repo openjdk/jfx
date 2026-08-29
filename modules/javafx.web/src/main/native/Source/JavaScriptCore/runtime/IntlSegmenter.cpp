@@ -137,7 +137,7 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
         return { };
     }
 
-    return IntlSegments::create(vm, globalObject->segmentsStructure(), WTFMove(segmenter), WTFMove(upconvertedCharacters), jsString, m_granularity);
+    return IntlSegments::create(vm, globalObject->segmentsStructure(), WTF::move(segmenter), WTF::move(upconvertedCharacters), jsString, m_granularity);
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-intl.segmenter.prototype.resolvedoptions
@@ -167,8 +167,11 @@ ASCIILiteral IntlSegmenter::granularityString(Granularity granularity)
 JSObject* IntlSegmenter::createSegmentDataObject(JSGlobalObject* globalObject, JSString* string, int32_t startIndex, int32_t endIndex, UBreakIterator& segmenter, Granularity granularity)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* result = constructEmptyObject(globalObject);
-    result->putDirect(vm, vm.propertyNames->segment, jsSubstring(globalObject, string, startIndex, endIndex - startIndex));
+    JSString* substring = jsSubstring(globalObject, string, startIndex, endIndex - startIndex);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    result->putDirect(vm, vm.propertyNames->segment, substring);
     result->putDirect(vm, vm.propertyNames->index, jsNumber(startIndex));
     result->putDirect(vm, vm.propertyNames->input, string);
     if (granularity == IntlSegmenter::Granularity::Word) {

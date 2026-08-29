@@ -159,7 +159,7 @@ GST_API
 GType                   gst_bus_get_type                (void);
 
 GST_API
-GstBus*                 gst_bus_new                     (void);
+GstBus*                 gst_bus_new                     (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean                gst_bus_post                    (GstBus * bus, GstMessage * message);
@@ -168,19 +168,19 @@ GST_API
 gboolean                gst_bus_have_pending            (GstBus * bus);
 
 GST_API
-GstMessage *            gst_bus_peek                    (GstBus * bus);
+GstMessage *            gst_bus_peek                    (GstBus * bus) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *            gst_bus_pop                     (GstBus * bus);
+GstMessage *            gst_bus_pop                     (GstBus * bus) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *            gst_bus_pop_filtered            (GstBus * bus, GstMessageType types);
+GstMessage *            gst_bus_pop_filtered            (GstBus * bus, GstMessageType types) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *            gst_bus_timed_pop               (GstBus * bus, GstClockTime timeout);
+GstMessage *            gst_bus_timed_pop               (GstBus * bus, GstClockTime timeout) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *            gst_bus_timed_pop_filtered      (GstBus * bus, GstClockTime timeout, GstMessageType types);
+GstMessage *            gst_bus_timed_pop_filtered      (GstBus * bus, GstClockTime timeout, GstMessageType types) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_bus_set_flushing            (GstBus * bus, gboolean flushing);
@@ -199,7 +199,7 @@ void                    gst_bus_get_pollfd              (GstBus * bus, GPollFD *
 /* GSource based dispatching */
 
 GST_API
-GSource *               gst_bus_create_watch            (GstBus * bus);
+GSource *               gst_bus_create_watch            (GstBus * bus) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 guint                   gst_bus_add_watch_full          (GstBus * bus,
@@ -218,7 +218,7 @@ gboolean                gst_bus_remove_watch            (GstBus * bus);
 
 GST_API
 GstMessage*             gst_bus_poll                    (GstBus *bus, GstMessageType events,
-                                                         GstClockTime timeout);
+                                                         GstClockTime timeout) G_GNUC_WARN_UNUSED_RESULT;
 
 /* signal based dispatching helper functions. */
 

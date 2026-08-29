@@ -40,10 +40,10 @@ void HighlightRegistry::initializeMapLike(DOMMapAdapter& map)
 
 void HighlightRegistry::setFromMapLike(AtomString&& key, Ref<Highlight>&& value)
 {
-    auto addResult = m_map.set(key, WTFMove(value));
+    auto addResult = m_map.set(key, WTF::move(value));
     if (addResult.isNewEntry) {
         ASSERT(!m_highlightNames.contains(key));
-        m_highlightNames.append(WTFMove(key));
+        m_highlightNames.append(WTF::move(key));
     }
 }
 

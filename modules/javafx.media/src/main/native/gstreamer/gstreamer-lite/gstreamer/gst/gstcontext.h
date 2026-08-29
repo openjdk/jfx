@@ -70,10 +70,28 @@ gst_clear_context (GstContext ** context_ptr)
 }
 
 /* copy context */
-static inline GstContext *
+G_GNUC_WARN_UNUSED_RESULT static inline GstContext *
 gst_context_copy (const GstContext * context)
 {
   return GST_CONTEXT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (context)));
+}
+
+static inline gboolean
+gst_context_is_writable (const GstContext * context)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (context));
+}
+
+G_GNUC_WARN_UNUSED_RESULT static inline GstContext *
+gst_context_make_writable (GstContext * context)
+{
+  return GST_CONTEXT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (context)));
+}
+
+static inline gboolean
+gst_context_replace (GstContext **old_context, GstContext *new_context)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_context, (GstMiniObject *) new_context);
 }
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
@@ -86,45 +104,21 @@ GST_API
 void         gst_clear_context  (GstContext ** context_ptr);
 
 GST_API
-GstContext * gst_context_copy   (const GstContext * context);
-#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GstContext * gst_context_copy   (const GstContext * context) G_GNUC_WARN_UNUSED_RESULT;
 
-/**
- * gst_context_is_writable:
- * @context: a #GstContext
- *
- * Tests if you can safely write into a context's structure or validly
- * modify the seqnum and timestamp fields.
- */
-#define         gst_context_is_writable(context)     gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (context))
-/**
- * gst_context_make_writable:
- * @context: (transfer full): the context to make writable
- *
- * Checks if a context is writable. If not, a writable copy is made and
- * returned.
- *
- * Returns: (transfer full): a context (possibly a duplicate) that is writable.
- *
- * MT safe
- */
-#define         gst_context_make_writable(context)  GST_CONTEXT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (context)))
-
-#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
-static inline gboolean
-gst_context_replace (GstContext **old_context, GstContext *new_context)
-{
-  return gst_mini_object_replace ((GstMiniObject **) old_context, (GstMiniObject *) new_context);
-}
-#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
-gboolean              gst_context_replace                  (GstContext ** old_context,
-                                                            GstContext * new_context);
+GstContext * gst_context_make_writable (GstContext * context) G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean     gst_context_is_writable   (const GstContext * context);
+
+GST_API
+gboolean     gst_context_replace                  (GstContext ** old_context,
+                                                   GstContext * new_context);
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 GST_API
 GstContext *          gst_context_new                      (const gchar * context_type,
-                                                            gboolean persistent) G_GNUC_MALLOC;
+                                                            gboolean persistent) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 const gchar *         gst_context_get_context_type         (const GstContext * context);
 

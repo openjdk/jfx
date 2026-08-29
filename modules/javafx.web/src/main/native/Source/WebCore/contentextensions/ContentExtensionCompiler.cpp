@@ -53,7 +53,7 @@ struct PendingDisplayNoneActions {
     Vector<uint32_t> clientLocations;
 };
 
-using PendingDisplayNoneActionsMap = HashMap<Trigger, PendingDisplayNoneActions, TriggerHash, TriggerHashTraits>;
+using PendingDisplayNoneActionsMap = HashMap<Trigger, PendingDisplayNoneActions, DefaultHash<Trigger>, TriggerHashTraits>;
 
 static void resolvePendingDisplayNoneActions(Vector<SerializedActionByte>& actions, Vector<uint32_t>& actionLocations, PendingDisplayNoneActionsMap& map)
 {
@@ -105,16 +105,19 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
         // Anything with condition is just pushed.
         // We could try to merge conditions but that case is not common in practice.
         //
-        // Also, if the rule is an ignore-following-rules rule, we shouldn't try to
-        // combine them so that we maintain the position of the rule when we process
-        // them later.
-        if (!rule.trigger().conditions.isEmpty() || std::holds_alternative<IgnoreFollowingRulesAction>(actionData)) {
+        // FIXME: <rdar://157880650> We can actually combine ignore-following-rules actions, order would still be maintained.
+        // If the rule is an ignore-following-rules rule, we shouldn't try to combine them so that we maintain the position
+        // of the rule when we process them later.
+        //
+        // If we're tracking rule identifiers, we also cannot combine actions since the identifiers are unique.
+        if (!rule.trigger().conditions.isEmpty() || std::holds_alternative<IgnoreFollowingRulesAction>(actionData) || std::holds_alternative<ReportIdentifierAction>(actionData)) {
             actionLocations.append(actions.size());
 
             actions.append(actionData.index());
             WTF::visit(WTF::makeVisitor([&](const auto& member) {
                 member.serialize(actions);
             }), actionData);
+
             continue;
         }
 
@@ -173,6 +176,9 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             return findOrMakeOtherActionLocation(modifyHeadersActionMap, action);
         }, [&] (const RedirectAction& action) {
             return findOrMakeOtherActionLocation(redirectActionMap, action);
+        }, [&] (const ReportIdentifierAction&) {
+            ASSERT_NOT_REACHED();
+            return static_cast<ActionLocation>(0);
         }), actionData);
         actionLocations.append(actionLocation);
     }
@@ -218,14 +224,14 @@ static bool compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
 
         if (!firstNFASeen) {
             // Put all the universal actions on the first DFA.
-            addUniversalActionsToDFA(dfa, WTFMove(universalActions));
+            addUniversalActionsToDFA(dfa, WTF::move(universalActions));
         }
 
         Vector<DFABytecode> bytecode;
         DFABytecodeCompiler compiler(dfa, bytecode);
         compiler.compile();
         LOG_LARGE_STRUCTURES(bytecode, bytecode.capacity() * sizeof(uint8_t));
-        writeBytecodeToClient(WTFMove(bytecode));
+        writeBytecodeToClient(WTF::move(bytecode));
         firstNFASeen = true;
     };
 
@@ -237,16 +243,16 @@ static bool compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
         nfa.debugPrintDot();
 #endif
         LOG_LARGE_STRUCTURES(nfa, nfa.memoryUsed());
-        auto dfa = NFAToDFA::convert(WTFMove(nfa));
+        auto dfa = NFAToDFA::convert(WTF::move(nfa));
         if (!dfa)
             return false;
         LOG_LARGE_STRUCTURES(*dfa, dfa->memoryUsed());
 
         if (dfa->graphSize() < smallDFASize)
-            smallDFACombiner.addDFA(WTFMove(*dfa));
+            smallDFACombiner.addDFA(WTF::move(*dfa));
         else {
             dfa->minimize();
-            lowerDFAToBytecode(WTFMove(*dfa));
+            lowerDFAToBytecode(WTF::move(*dfa));
         }
         return true;
     });
@@ -255,7 +261,7 @@ static bool compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
 
     smallDFACombiner.combineDFAs(smallDFASize, [&](DFA&& dfa) {
         LOG_LARGE_STRUCTURES(dfa, dfa.memoryUsed());
-        lowerDFAToBytecode(WTFMove(dfa));
+        lowerDFAToBytecode(WTF::move(dfa));
     });
 
     ASSERT(filters.isEmpty());
@@ -265,13 +271,13 @@ static bool compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
         // create a dummy one and add any universal actions.
 
         DFA dummyDFA = DFA::empty();
-        addUniversalActionsToDFA(dummyDFA, WTFMove(universalActions));
+        addUniversalActionsToDFA(dummyDFA, WTF::move(universalActions));
 
         Vector<DFABytecode> bytecode;
         DFABytecodeCompiler compiler(dummyDFA, bytecode);
         compiler.compile();
         LOG_LARGE_STRUCTURES(bytecode, bytecode.capacity() * sizeof(uint8_t));
-        writeBytecodeToClient(WTFMove(bytecode));
+        writeBytecodeToClient(WTF::move(bytecode));
     }
     LOG_LARGE_STRUCTURES(universalActions, universalActions.capacity() * sizeof(unsigned));
     return true;
@@ -294,7 +300,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
     Vector<SerializedActionByte> actions;
     Vector<unsigned> actionLocations = serializeActions(parsedRuleList, actions);
     LOG_LARGE_STRUCTURES(actions, actions.capacity() * sizeof(SerializedActionByte));
-    client.writeActions(WTFMove(actions));
+    client.writeActions(WTF::move(actions));
 
     // FIXME: These don't all need to be in memory at the same time.
     CombinedURLFilters urlFilters;
@@ -380,18 +386,18 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
     MonotonicTime totalNFAToByteCodeBuildTimeStart = MonotonicTime::now();
 #endif
 
-    bool success = compileToBytecode(WTFMove(urlFilters), WTFMove(universalActions), [&](Vector<DFABytecode>&& bytecode) {
-        client.writeURLFiltersBytecode(WTFMove(bytecode));
+    bool success = compileToBytecode(WTF::move(urlFilters), WTF::move(universalActions), [&](Vector<DFABytecode>&& bytecode) {
+        client.writeURLFiltersBytecode(WTF::move(bytecode));
     });
     if (!success)
         return ContentExtensionError::ErrorWritingSerializedNFA;
-    success = compileToBytecode(WTFMove(topURLFilters), WTFMove(topURLUniversalActions), [&](Vector<DFABytecode>&& bytecode) {
-        client.writeTopURLFiltersBytecode(WTFMove(bytecode));
+    success = compileToBytecode(WTF::move(topURLFilters), WTF::move(topURLUniversalActions), [&](Vector<DFABytecode>&& bytecode) {
+        client.writeTopURLFiltersBytecode(WTF::move(bytecode));
     });
     if (!success)
         return ContentExtensionError::ErrorWritingSerializedNFA;
-    success = compileToBytecode(WTFMove(frameURLFilters), WTFMove(frameURLUniversalActions), [&](Vector<DFABytecode>&& bytecode) {
-        client.writeFrameURLFiltersBytecode(WTFMove(bytecode));
+    success = compileToBytecode(WTF::move(frameURLFilters), WTF::move(frameURLUniversalActions), [&](Vector<DFABytecode>&& bytecode) {
+        client.writeFrameURLFiltersBytecode(WTF::move(bytecode));
     });
     if (!success)
         return ContentExtensionError::ErrorWritingSerializedNFA;

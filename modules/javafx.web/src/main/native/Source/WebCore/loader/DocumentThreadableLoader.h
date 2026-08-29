@@ -69,12 +69,9 @@ class CachedRawResource;
         friend class InspectorInstrumentation;
         friend class InspectorNetworkAgent;
 
-        using RefCounted<DocumentThreadableLoader>::ref;
-        using RefCounted<DocumentThreadableLoader>::deref;
-
-    protected:
-        void refThreadableLoader() override { ref(); }
-        void derefThreadableLoader() override { deref(); }
+        // CachedResourceClient, ThreadableLoader.
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
 
     private:
         enum BlockingBehavior {
@@ -119,6 +116,7 @@ class CachedRawResource;
 
         Document& document() { return *m_document; }
         Ref<Document> protectedDocument();
+        Ref<const Document> protectedDocument() const;
 
         const ThreadableLoaderOptions& options() const { return m_options; }
         const String& referrer() const { return m_referrer; }
@@ -136,7 +134,7 @@ class CachedRawResource;
         CachedResourceHandle<CachedRawResource> protectedResource() const;
 
         CachedResourceHandle<CachedRawResource> m_resource;
-        ThreadableLoaderClient* m_client; // FIXME: Use a smart pointer.
+        WeakPtr<ThreadableLoaderClient> m_client;
         WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
         ThreadableLoaderOptions m_options;
         bool m_responsesCanBeOpaque { true };
@@ -148,7 +146,7 @@ class CachedRawResource;
         bool m_delayCallbacksForIntegrityCheck;
         std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
         std::optional<CrossOriginEmbedderPolicy> m_crossOriginEmbedderPolicy;
-        std::optional<CrossOriginPreflightChecker> m_preflightChecker;
+        RefPtr<CrossOriginPreflightChecker> m_preflightChecker;
         std::optional<HTTPHeaderMap> m_originalHeaders;
         URL m_responseURL;
 

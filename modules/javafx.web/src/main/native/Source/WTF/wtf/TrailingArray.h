@@ -88,6 +88,14 @@ protected:
         std::uninitialized_copy(first, last, begin());
     }
 
+    struct FillWith { };
+    TrailingArray(FillWith, unsigned size, const T& value)
+        : m_size(size)
+    {
+        static_assert(std::is_final_v<Derived>);
+        VectorTypeOperations<T>::uninitializedFill(begin(), end(), value);
+    }
+
     template<typename... Args>
     TrailingArray(unsigned size, Args&&... args) // create with given size and constructor arguments for all elements
         : m_size(size)
@@ -125,7 +133,7 @@ protected:
 
         for (auto[i, item] : indexedRange(span())) {
             if (auto value = generator(i))
-                new (NotNull, std::addressof(item)) T(WTFMove(*value));
+                new (NotNull, std::addressof(item)) T(WTF::move(*value));
             else {
                 m_size = i;
                 return;
@@ -191,7 +199,7 @@ public:
 
     void fill(const T& val)
     {
-        std::fill(begin(), end(), val);
+        std::ranges::fill(*this, val);
     }
 
     static constexpr ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(Derived, m_size); }

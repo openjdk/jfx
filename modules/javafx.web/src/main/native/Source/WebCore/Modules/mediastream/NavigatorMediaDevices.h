@@ -52,11 +52,16 @@ public:
     MediaDevices* mediaDevices() const;
 
 private:
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorMediaDevices"_s; }
+    bool isNavigatorMediaDevices() const final { return true; }
 
     mutable RefPtr<MediaDevices> m_mediaDevices;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorMediaDevices)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorMediaDevices(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_STREAM)

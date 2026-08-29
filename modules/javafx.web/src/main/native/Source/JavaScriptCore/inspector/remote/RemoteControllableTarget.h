@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "JSExportMacros.h"
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
@@ -60,8 +62,14 @@ public:
         Automation,
         ITML,
         JavaScript,
-        Page,
+        // This gets surfaced also as a "web-page"-typed target in the frontend. The "Legacy" prefix is only there
+        // to support static typing, the SPECIALIZE_TYPE_TRAITS_CONTROLLABLE_TARGET in LegacyWebPageDebuggable.
+        LegacyWebPage,
         ServiceWorker,
+        // This is specifically for the JSC Wasm Debugger server, which is a standalone
+        // debugging target for WebAssembly execution. This is NOT used by regular Web Inspector
+        // when debugging WebAssembly inside web pages - that will use the normal Page/Frame targets.
+        WasmDebugger,
         WebPage,
     };
     virtual Type type() const = 0;

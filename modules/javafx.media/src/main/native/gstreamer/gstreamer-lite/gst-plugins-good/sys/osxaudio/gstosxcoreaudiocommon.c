@@ -50,40 +50,9 @@ gst_core_audio_remove_render_callback (GstCoreAudio * core_audio)
         "Failed to remove render callback %d", (int) status);
   }
 
-  /* Remove the RenderNotify too */
-  status = AudioUnitRemoveRenderNotify (core_audio->audiounit,
-      (AURenderCallback) gst_core_audio_render_notify, core_audio);
-
-  if (status) {
-    GST_WARNING_OBJECT (core_audio->osxbuf,
-        "Failed to remove render notify callback %d", (int) status);
-  }
-
   /* We're deactivated.. */
-  core_audio->io_proc_needs_deactivation = FALSE;
+  g_atomic_int_set (&core_audio->io_proc_dropping, FALSE);
   core_audio->io_proc_active = FALSE;
-}
-
-OSStatus
-gst_core_audio_render_notify (GstCoreAudio * core_audio,
-    AudioUnitRenderActionFlags * ioActionFlags,
-    const AudioTimeStamp * inTimeStamp,
-    unsigned int inBusNumber,
-    unsigned int inNumberFrames, AudioBufferList * ioData)
-{
-  /* Before rendering a frame, we get the PreRender notification.
-   * Here, we detach the RenderCallback if we've been paused.
-   *
-   * This is necessary (rather than just directly detaching it) to
-   * work around some thread-safety issues in CoreAudio
-   */
-  if ((*ioActionFlags) & kAudioUnitRenderAction_PreRender) {
-    if (core_audio->io_proc_needs_deactivation) {
-      gst_core_audio_remove_render_callback (core_audio);
-    }
-  }
-
-  return noErr;
 }
 
 gboolean
@@ -112,19 +81,11 @@ gst_core_audio_io_proc_start (GstCoreAudio * core_audio)
           "AudioUnitSetProperty failed: %d", (int) status);
       return FALSE;
     }
-    // ### does it make sense to do this notify stuff for input mode?
-    status = AudioUnitAddRenderNotify (core_audio->audiounit,
-        (AURenderCallback) gst_core_audio_render_notify, core_audio);
 
-    if (status) {
-      GST_ERROR_OBJECT (core_audio->osxbuf,
-          "AudioUnitAddRenderNotify failed %d", (int) status);
-      return FALSE;
-    }
     core_audio->io_proc_active = TRUE;
   }
 
-  core_audio->io_proc_needs_deactivation = FALSE;
+  g_atomic_int_set (&core_audio->io_proc_dropping, FALSE);
 
   // AudioOutputUnitStart on iOS can wait for the render callback to finish,
   // where in our case we set the ringbuffer timestamp, which also needs the ringbuf lock.
@@ -153,7 +114,7 @@ gst_core_audio_io_proc_stop (GstCoreAudio * core_audio)
     GST_WARNING_OBJECT (core_audio->osxbuf,
         "AudioOutputUnitStop failed: %d", (int) status);
   }
-  // ###: why is it okay to directly remove from here but not from pause() ?
+  // Ok to remove directly here because we stopped the AudioUnit already
   if (core_audio->io_proc_active) {
     gst_core_audio_remove_render_callback (core_audio);
   }
@@ -205,8 +166,8 @@ gst_core_audio_bind_device (GstCoreAudio * core_audio)
   OSStatus status;
 
   /* Specify which device we're using. */
-  GST_DEBUG_OBJECT (core_audio->osxbuf, "Bind AudioUnit to device %d",
-      (int) core_audio->device_id);
+  GST_DEBUG_OBJECT (core_audio->osxbuf, "Bind AudioUnit to device %s",
+      core_audio->unique_id);
   status = AudioUnitSetProperty (core_audio->audiounit,
       kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
       &core_audio->device_id, sizeof (AudioDeviceID));
@@ -457,7 +418,7 @@ gst_audio_channel_position_to_core_audio (GstAudioChannelPosition
 /* Performs a best-effort conversion. 'channel' is used for warnings only. */
 GstAudioChannelPosition
 gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
-    int channel, gboolean warn)
+    int channel, gboolean warn, AudioDeviceID device_id)
 {
   switch (label) {
     case kAudioChannelLabel_Left:
@@ -531,14 +492,14 @@ gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
         /* no way to store discrete channel order */
         if (warn)
           GST_WARNING
-              ("Core Audio channel %u labeled kAudioChannelLabel_Discrete_%u -- discrete order will be lost",
-              channel, ((unsigned int) label) & 0xFFFF);
+              ("Device %d has kAudioChannelLabel_Discrete_N channels, order will be lost",
+              device_id);
         return GST_AUDIO_CHANNEL_POSITION_NONE;
       } else {
         if (warn)
           GST_WARNING
-              ("Core Audio channel %u has unsupported label %d and will be skipped",
-              channel, (int) label);
+              ("Device %d channel %u has unsupported label %d, skipping",
+              device_id, channel, (int) label);
         return GST_AUDIO_CHANNEL_POSITION_INVALID;
       }
   }
@@ -568,9 +529,9 @@ gst_core_audio_dump_channel_layout (AudioChannelLayout * channel_layout)
   }
 }
 
-#ifndef HAVE_IOS
+#if TARGET_OS_OSX
 char *
-gst_core_audio_device_get_prop (AudioDeviceID device_id,
+gst_core_audio_device_get_prop_str (AudioDeviceID device_id,
     AudioObjectPropertyElement prop_id)
 {
   OSStatus status = noErr;
@@ -614,6 +575,32 @@ gst_core_audio_device_get_prop (AudioDeviceID device_id,
   CFRelease (prop_val);
 
 beach:
+  return result;
+}
+
+UInt32
+gst_core_audio_device_get_prop_uint32 (AudioDeviceID device_id,
+    AudioObjectPropertyElement prop_id)
+{
+  OSStatus status = noErr;
+  UInt32 propertySize = sizeof (UInt32);
+  UInt32 result = UINT32_MAX;
+
+  AudioObjectPropertyAddress propAddress = {
+    .mSelector = prop_id,
+    .mScope = kAudioObjectPropertyScopeGlobal,
+    .mElement = kAudioObjectPropertyElementMain,
+  };
+
+  /* Get the requested property */
+  status = AudioObjectGetPropertyData (device_id,
+      &propAddress, 0, NULL, &propertySize, &result);
+  if (status != noErr) {
+    GST_WARNING ("Device %i, error code %i while fetching property %"
+        GST_FOURCC_FORMAT, device_id, status,
+        GST_FOURCC_ARGS (GUINT32_FROM_BE (prop_id)));
+  }
+
   return result;
 }
 #endif

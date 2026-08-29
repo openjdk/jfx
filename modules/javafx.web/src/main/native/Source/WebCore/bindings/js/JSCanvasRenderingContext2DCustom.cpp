@@ -18,7 +18,6 @@
  */
 
 #include "config.h"
-
 #include "JSCanvasRenderingContext2D.h"
 
 #include "JSNodeCustom.h"

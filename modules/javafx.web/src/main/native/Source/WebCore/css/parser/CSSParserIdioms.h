@@ -31,9 +31,9 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
-#include "CSSValueKeywords.h"
-#include "CSSWideKeyword.h"
+#include <WebCore/CSSParserContext.h>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/CSSWideKeyword.h>
 #include <wtf/ASCIICType.h>
 
 namespace WebCore {

@@ -50,8 +50,13 @@ class WebGLShader;
 
 class WebGLProgram final : public WebGLObject, public ContextDestructionObserver {
 public:
-    static RefPtr<WebGLProgram> create(WebGLRenderingContextBase&);
+    static Ref<WebGLProgram> createLost(WebGLRenderingContextBase&);
+    static Ref<WebGLProgram> create(WebGLRenderingContextBase&);
     virtual ~WebGLProgram();
+
+    // ContextDestructionObserver.
+    void ref() const final { WebGLObject::ref(); }
+    void deref() const final { WebGLObject::deref(); }
 
     static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances() WTF_REQUIRES_LOCK(instancesLock());
     static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
@@ -68,9 +73,11 @@ public:
     // Also, we invalidate the cached program info.
     void increaseLinkCount();
 
-    WebGLShader* getAttachedShader(GCGLenum);
-    bool attachShader(const AbstractLocker&, WebGLShader*);
-    bool detachShader(const AbstractLocker&, WebGLShader*);
+    RefPtr<WebGLShader> fragmentShader() const;
+    RefPtr<WebGLShader> vertexShader() const;
+
+    bool attachShader(const AbstractLocker&, WebGLShader&);
+    bool detachShader(const AbstractLocker&, WebGLShader&);
 
     void setRequiredTransformFeedbackBufferCount(int count)
     {
@@ -89,6 +96,7 @@ public:
 
 private:
     WebGLProgram(WebGLRenderingContextBase&, PlatformGLObject);
+    WebGLProgram(WebGLRenderingContextBase&);
 
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 

@@ -37,13 +37,15 @@ namespace WebCore {
 class RTCDtlsTransport;
 
 class RTCSctpTransport final : public RefCounted<RTCSctpTransport>, public ActiveDOMObject, public EventTarget, public RTCSctpTransportBackendClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCSctpTransport);
+    WTF_MAKE_TZONE_ALLOCATED(RTCSctpTransport);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<RTCSctpTransport> create(ScriptExecutionContext&, UniqueRef<RTCSctpTransportBackend>&&, Ref<RTCDtlsTransport>&&);
     ~RTCSctpTransport();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     RTCDtlsTransport& transport() { return m_transport.get(); }
     RTCSctpTransportState state() const { return m_state; }
@@ -59,7 +61,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCSctpTransport; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -78,5 +80,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(RTCSctpTransport)
 
 #endif // ENABLE(WEB_RTC)

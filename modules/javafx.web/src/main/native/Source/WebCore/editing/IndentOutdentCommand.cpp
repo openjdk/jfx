@@ -53,7 +53,7 @@ static bool isListOrIndentBlockquote(const Node& node)
 }
 
 IndentOutdentCommand::IndentOutdentCommand(Ref<Document>&& document, EIndentType typeOfAction)
-    : ApplyBlockElementCommand(WTFMove(document), blockquoteTag, "margin: 0 0 0 40px; border: none; padding: 0px;"_s)
+    : ApplyBlockElementCommand(WTF::move(document), blockquoteTag, "margin: 0 0 0 40px; border: none; padding: 0px;"_s)
     , m_typeOfAction(typeOfAction)
 {
 }
@@ -67,7 +67,7 @@ bool IndentOutdentCommand::tryIndentingAsListItem(const Position& start, const P
         return false;
 
     // Find the block that we want to indent.  If it's not a list item (e.g., a div inside a list item), we bail out.
-    RefPtr<Element> selectedListItem = enclosingBlock(WTFMove(lastNodeInSelectedParagraph));
+    RefPtr<Element> selectedListItem = enclosingBlock(WTF::move(lastNodeInSelectedParagraph));
 
     if (!selectedListItem || !selectedListItem->hasTagName(liTag))
         return false;
@@ -107,7 +107,7 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
     if (!nodeToSplitTo)
         return;
 
-    RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? start.containerNode() : splitTreeToNode(*start.containerNode(), *nodeToSplitTo);
+    RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? RefPtr { start.containerNode() } : splitTreeToNode(*start.containerNode(), *nodeToSplitTo);
     if (!outerBlock)
         return;
 
@@ -167,12 +167,12 @@ void IndentOutdentCommand::outdentParagraph()
         // outdentRegion() assumes it is operating on the first paragraph of an enclosing blockquote, but if there are multiply nested blockquotes and we've
         // just removed one, then this assumption isn't true. By splitting the next containing blockquote after this node, we keep this assumption true
         if (splitPoint) {
-            if (ContainerNode* splitPointParent = splitPoint->parentNode()) {
+            if (RefPtr splitPointParent = dynamicDowncast<Element>(splitPoint->parentNode())) {
                 if (splitPointParent->hasTagName(blockquoteTag)
                     && !splitPoint->hasTagName(blockquoteTag)
                     && splitPointParent->parentNode()
                     && splitPointParent->parentNode()->hasEditableStyle()) // We can't outdent if there is no place to go!
-                    splitElement(downcast<Element>(*splitPointParent), *splitPoint);
+                    splitElement(*splitPointParent, *splitPoint);
             }
         }
 

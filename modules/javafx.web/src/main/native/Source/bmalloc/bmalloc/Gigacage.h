@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,8 @@
  */
 
 #pragma once
+
+#ifdef __cplusplus
 
 #include "Algorithm.h"
 #include "BAssert.h"
@@ -62,7 +64,11 @@ BINLINE const char* name(Kind kind)
     return nullptr;
 }
 
-constexpr bool hasCapacityToUseLargeGigacage = BOS_EFFECTIVE_ADDRESS_WIDTH > 36;
+#if BPLATFORM(IOS_FAMILY) || BCPU(ADDRESS32)
+constexpr bool hasCapacityToUseLargeGigacage = false;
+#else
+constexpr bool hasCapacityToUseLargeGigacage = true;
+#endif
 
 #if GIGACAGE_ENABLED
 
@@ -90,6 +96,8 @@ constexpr size_t primitiveGigacageMask = gigacageSizeToMask(primitiveGigacageSiz
 constexpr ptrdiff_t offsetOfPrimitiveGigacageBasePtr = static_cast<ptrdiff_t>(Primitive) * sizeof(void*);
 
 extern "C" BEXPORT bool disablePrimitiveGigacageRequested;
+
+BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 BINLINE bool isEnabled() { return g_gigacageConfig.isEnabled; }
 
@@ -196,6 +204,8 @@ BINLINE bool contains(const void* ptr)
     return static_cast<size_t>(p - start) < g_gigacageConfig.totalSize;
 }
 
+BALLOW_UNSAFE_BUFFER_USAGE_END
+
 BEXPORT bool shouldBeEnabled();
 
 #else // GIGACAGE_ENABLED
@@ -225,3 +235,5 @@ BINLINE void removePrimitiveDisableCallback(void (*)(void*), void*) { }
 #endif // GIGACAGE_ENABLED
 
 } // namespace Gigacage
+
+#endif

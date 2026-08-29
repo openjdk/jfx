@@ -29,7 +29,7 @@
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/Vector.h>
-#include <wtf/text/LChar.h>
+#include <wtf/text/Latin1Character.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -52,6 +52,7 @@ struct ResourceCryptographicDigest {
     Vector<uint8_t> value;
 
     friend bool operator==(const ResourceCryptographicDigest&, const ResourceCryptographicDigest&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 };
 
 inline void add(Hasher& hasher, const ResourceCryptographicDigest& digest)
@@ -67,10 +68,10 @@ struct EncodedResourceCryptographicDigest {
 };
 
 std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<char16_t>&);
-std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<LChar>&);
+std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<Latin1Character>&);
 
 std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<char16_t>&);
-std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<LChar>&);
+std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<Latin1Character>&);
 
 std::optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest&);
 
@@ -80,18 +81,6 @@ ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDig
 }
 
 namespace WTF {
-
-template<> struct DefaultHash<WebCore::ResourceCryptographicDigest> {
-    static unsigned hash(const WebCore::ResourceCryptographicDigest& digest)
-    {
-        return computeHash(digest);
-    }
-    static bool equal(const WebCore::ResourceCryptographicDigest& a, const WebCore::ResourceCryptographicDigest& b)
-    {
-        return a == b;
-    }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
 
 template<> struct HashTraits<WebCore::ResourceCryptographicDigest> : GenericHashTraits<WebCore::ResourceCryptographicDigest> {
     using Algorithm = WebCore::ResourceCryptographicDigest::Algorithm;

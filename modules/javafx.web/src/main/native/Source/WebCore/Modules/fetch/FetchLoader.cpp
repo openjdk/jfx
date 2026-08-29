@@ -49,6 +49,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FetchLoaderClient);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchLoader);
 
 void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 {
@@ -80,7 +81,7 @@ void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL
     options.mode = FetchOptions::Mode::SameOrigin;
     options.contentSecurityPolicyEnforcement = ContentSecurityPolicyEnforcement::DoNotEnforce;
 
-    m_loader = ThreadableLoader::create(context, *this, WTFMove(request), options);
+    m_loader = ThreadableLoader::create(context, *this, WTF::move(request), options);
     m_isStarted = m_loader;
 }
 
@@ -124,7 +125,7 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     if (options.referrerPolicy == ReferrerPolicy::EmptyString)
         options.referrerPolicy = context.referrerPolicy();
 
-    m_loader = ThreadableLoader::create(context, *this, WTFMove(fetchRequest), options, WTFMove(referrer));
+    m_loader = ThreadableLoader::create(context, *this, WTF::move(fetchRequest), options, WTF::move(referrer));
     m_isStarted = m_loader;
 }
 

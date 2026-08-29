@@ -33,12 +33,14 @@
 #include "ElementInlines.h"
 #include "NodeName.h"
 #include "RenderMathMLOperator.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLOperatorElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLOperatorElement);
 
 using namespace MathMLNames;
 using namespace MathMLOperatorDictionary;
@@ -46,6 +48,7 @@ using namespace MathMLOperatorDictionary;
 MathMLOperatorElement::MathMLOperatorElement(const QualifiedName& tagName, Document& document)
     : MathMLTokenElement(tagName, document)
 {
+    ASSERT(hasTagName(MathMLNames::moTag));
 }
 
 Ref<MathMLOperatorElement> MathMLOperatorElement::create(const QualifiedName& tagName, Document& document)
@@ -56,8 +59,9 @@ Ref<MathMLOperatorElement> MathMLOperatorElement::create(const QualifiedName& ta
 MathMLOperatorElement::OperatorChar MathMLOperatorElement::parseOperatorChar(const String& string)
 {
     OperatorChar operatorChar;
+    StringView view = string;
     // FIXME: This operator dictionary does not accept multiple characters (https://webkit.org/b/124828).
-    if (auto codePoint = convertToSingleCodePoint(string)) {
+    if (auto codePoint = view.trim(isASCIIWhitespaceWithoutFF<char16_t>).convertToSingleCodePoint()) {
         auto character = codePoint.value();
         // The minus sign renders better than the hyphen sign used in some MathML formulas.
         if (character == hyphenMinus)
@@ -269,10 +273,9 @@ void MathMLOperatorElement::attributeChanged(const QualifiedName& name, const At
 
 RenderPtr<RenderElement> MathMLOperatorElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    ASSERT(hasTagName(MathMLNames::moTag));
-    return createRenderer<RenderMathMLOperator>(RenderObject::Type::MathMLOperator, *this, WTFMove(style));
+    return createRenderer<RenderMathMLOperator>(RenderObject::Type::MathMLOperator, *this, WTF::move(style));
 }
 
-}
+} // namespace WebCore
 
 #endif // ENABLE(MATHML)

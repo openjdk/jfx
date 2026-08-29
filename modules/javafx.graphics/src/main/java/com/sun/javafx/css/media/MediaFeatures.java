@@ -25,13 +25,18 @@
 
 package com.sun.javafx.css.media;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
 import com.sun.javafx.css.parser.Token;
 import javafx.application.ColorScheme;
+import javafx.application.ConditionalFeature;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
@@ -42,9 +47,18 @@ public final class MediaFeatures {
     private MediaFeatures() {}
 
     // Extension point for unit tests to add media features
-    public static BiFunction<String, Token, MediaQuery> DEFAULT = (featureName, _) -> {
+    static BiFunction<String, Token, MediaQuery> DEFAULT = (featureName, _) -> {
         throw new IllegalArgumentException(String.format("Unknown media feature <%s>", featureName));
     };
+
+    // Supported values for the -fx-platform media query.
+    static Map<String, BooleanSupplier> PLATFORMS = Map.of(
+        "android", PlatformUtil::isAndroid,
+        "ios", PlatformUtil::isIOS,
+        "linux", PlatformUtil::isUnix, // for our purposes, "linux" means "unix but not macOS"
+        "macos", PlatformUtil::isMac,
+        "windows", PlatformUtil::isWindows
+    );
 
     /**
      * Returns a {@code MediaQuery} that evaluates the specified feature in a discrete context.
@@ -138,6 +152,28 @@ public final class MediaFeatures {
             case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
                 lowerCaseFeatureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
+            case "-fx-supports-conditional-feature" -> {
+                String lowerCaseFeatureValue = checkNotNullValue(lowerCaseFeatureName, lowerCaseTextValue(featureValue));
+                var feature = enumValue(ConditionalFeature::valueOf, lowerCaseFeatureName, lowerCaseFeatureValue);
+                boolean supported = PlatformImpl.isSupported(feature);
+
+                yield FunctionExpression.of(
+                    lowerCaseFeatureName, lowerCaseFeatureValue,
+                    () -> supported ? TriState.TRUE : TriState.FALSE,
+                    _ -> supported, true);
+            }
+
+            case "-fx-platform" -> {
+                String platformName = checkNotNullValue(lowerCaseFeatureName, lowerCaseTextValue(featureValue));
+                BooleanSupplier invalidValue = () -> { throw unknownValue(lowerCaseFeatureName, featureValue.getText()); };
+                boolean value = PLATFORMS.getOrDefault(platformName, invalidValue).getAsBoolean();
+
+                yield FunctionExpression.of(
+                    lowerCaseFeatureName, platformName,
+                    () -> value ? TriState.TRUE : TriState.FALSE,
+                    _ -> value, true);
+            }
+
             default -> DEFAULT.apply(featureName, featureValue);
         };
     }
@@ -217,7 +253,7 @@ public final class MediaFeatures {
 
     private static <T extends Enum<T>> T enumValue(Function<String, T> func, String featureName, String featureValue) {
         try {
-            return func.apply(featureValue.toUpperCase(Locale.ROOT));
+            return func.apply(featureValue.toUpperCase(Locale.ROOT).replace('-', '_'));
         } catch (IllegalArgumentException e) {
             throw unknownValue(featureName, featureValue);
         }

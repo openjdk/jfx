@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AXObjectCache.h"
 #include "AccessibilityMockObject.h"
 
 namespace WebCore {
@@ -36,8 +37,8 @@ public:
     static Ref<AXRemoteFrame> create(AXID, AXObjectCache&);
 
 #if PLATFORM(COCOA)
-    void initializePlatformElementWithRemoteToken(std::span<const uint8_t>, int);
-    Vector<uint8_t> generateRemoteToken() const;
+    void initializePlatformElementWithRemoteToken(AccessibilityRemoteToken, int);
+    AccessibilityRemoteToken generateRemoteToken() const;
     RetainPtr<id> remoteFramePlatformElement() const { return m_remoteFramePlatformElement; }
     pid_t processIdentifier() const { return m_processIdentifier; }
     std::optional<FrameIdentifier> frameID() const { return m_frameID; }

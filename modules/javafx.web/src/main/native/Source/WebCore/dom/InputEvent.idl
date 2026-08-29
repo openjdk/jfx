@@ -40,7 +40,9 @@
 
 // https://w3c.github.io/uievents/#idl-inputeventinit
 
-dictionary InputEventInit : UIEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary InputEventInit : UIEventInit {
     DOMString? data = null;
     boolean isComposing = false;
     DOMString inputType = "";

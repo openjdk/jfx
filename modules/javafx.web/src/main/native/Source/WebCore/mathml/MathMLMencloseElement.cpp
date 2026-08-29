@@ -32,11 +32,12 @@
 #include "ElementInlines.h"
 #include "MathMLNames.h"
 #include "RenderMathMLMenclose.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLMencloseElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLMencloseElement);
 
 using namespace MathMLNames;
 
@@ -55,7 +56,7 @@ Ref<MathMLMencloseElement> MathMLMencloseElement::create(const QualifiedName& ta
 
 RenderPtr<RenderElement> MathMLMencloseElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMathMLMenclose>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLMenclose>(*this, WTF::move(style));
 }
 
 void MathMLMencloseElement::addNotationFlags(StringView notation)

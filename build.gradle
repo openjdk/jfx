@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,8 @@
  *    - See TEST_ONLY flag, isTestTask() method, the tasks: shims and sdk for more clarity.
  */
 defaultTasks = ["sdk"]
+
+import com.sun.javafx.gradle.CompileTarget
 
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -163,16 +165,6 @@ void loadProperties(String sourceFileName) {
             ext[key] = property.value;
         }
     }
-}
-
-/**
- * Struct used to contain some information passed to the closure
- * passed to compileTargets.
- */
-class CompileTarget {
-    String name;
-    String upper;
-    String capital;
 }
 
 /**
@@ -342,8 +334,6 @@ ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
 
-ext.MAVEN_GROUP_ID = "org.openjfx"
-
 // Enable native access from modules with native code
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
 ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
@@ -485,7 +475,8 @@ ext.SWT_FILE_NAME =
 defineProperty("FULL_TEST", "false")
 ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 
-defineProperty("FORCE_TESTS", "false")
+// Specifies whether tests should be forced to rerun even when up-to-date
+defineProperty("FORCE_TESTS", "true")
 ext.IS_FORCE_TESTS = Boolean.parseBoolean(FORCE_TESTS);
 
 // Specifies whether to run robot-based visual tests (only used when FULL_TEST is also enabled)
@@ -525,10 +516,6 @@ defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
-
-// Specifies whether to enable the Maven publishing tasks
-defineProperty("MAVEN_PUBLISH", "false")
-ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
 
 // Define the compiler lint warnings to enable.
 //
@@ -702,7 +689,6 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}") : "")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -1562,8 +1548,6 @@ logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
-logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
-logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
 
 /******************************************************************************
@@ -1782,113 +1766,6 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 
     project.processShimsShaders.dependsOn(processShimsShaders)
 
-}
-
-void addMavenPublication(Project project, List<String> projectDependencies) {
-    if (!IS_MAVEN_PUBLISH) {
-        return
-    }
-
-    if (!project.hasProperty("moduleName")) {
-        fail("Project ${project} has no module name")
-    }
-    projectDependencies.each { projName ->
-        def dep = project.project(":$projName")
-        if (!dep.hasProperty("moduleName")) {
-            fail("${project} dependency ${dep} has no module name")
-        }
-    }
-
-    project.apply plugin: 'maven-publish'
-
-    project.group = MAVEN_GROUP_ID
-    project.version = MAVEN_VERSION
-
-    if (project.name == 'base') {
-        project.publishing {
-            publications {
-                javafx(MavenPublication) {
-                    artifactId = 'javafx'
-                    artifacts = []
-                }
-            }
-        }
-    }
-
-    gradle.taskGraph.whenReady { g ->
-        project.tasks.findAll { it.name == 'generatePomFileForJavafxPublication'}.each { it ->
-            it.doLast {
-                copy {
-                    into project.file("${project.buildDir}/publications/javafx")
-                    from file("${rootProject.projectDir}/javafx.pom")
-                    rename "javafx.pom", "pom-default.xml"
-                    filter { line ->
-                        line.replaceAll("@VERSION@", MAVEN_VERSION)
-                    }
-                }
-            }
-        }
-    }
-
-    project.publishing {
-        repositories {
-            maven {
-                def repositoryUrl = project.hasProperty('repositoryUrl') ? project.getProperty('repositoryUrl') : ""
-                def repositoryUsername = project.hasProperty('repositoryUsername') ? project.getProperty('repositoryUsername') : ""
-                def repositoryPassword = project.hasProperty('repositoryPassword') ? project.getProperty('repositoryPassword') : ""
-                url repositoryUrl
-                credentials {
-                   username repositoryUsername
-                   password repositoryPassword
-                }
-            }
-        }
-    }
-
-    compileTargets { t ->
-        project.publishing {
-            publications {
-                maven(MavenPublication) {
-                    def artifactName = project.moduleName.replace('.', '-')
-                    artifactId = artifactName
-
-                    afterEvaluate {
-                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
-                        artifact project.tasks."modularPublicationJar$t.capital" {
-                            archiveClassifier.set("$t.name")
-                        }
-                    }
-
-                    pom.withXml {
-                        Node parent = asNode().appendNode("parent")
-                        parent.appendNode("groupId", MAVEN_GROUP_ID)
-                        parent.appendNode("artifactId", "javafx")
-                        parent.appendNode("version", MAVEN_VERSION)
-
-                        Node dependencies = asNode().appendNode("dependencies")
-
-                        Node projectDependencyPlatform = dependencies.appendNode("dependency")
-                        projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", artifactName)
-                        projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
-                        projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
-
-                        if (!projectDependencies.empty) {
-                            projectDependencies.each { projName ->
-                                def dep = project.project(":$projName")
-                                def depName = dep.moduleName.replace('.', '-')
-                                Node projectDependency = dependencies.appendNode("dependency")
-                                projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", depName)
-                                projectDependency.appendNode("version", MAVEN_VERSION)
-                           }
-                        }
-                    }
-                }
-            }
-
-        }
-    }
 }
 
 /**
@@ -2187,8 +2064,8 @@ allprojects {
     test {
         useJUnitPlatform();
 
-        // Always run tests
-        outputs.upToDateWhen { false }
+        // Tests are forced to rerun when they are *not* marked as up-to-date
+        outputs.upToDateWhen { !IS_FORCE_TESTS }
 
         executable = JAVA;
         enableAssertions = true;
@@ -2309,7 +2186,6 @@ project(":base") {
     sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
 
     compileJava.dependsOn processVersionInfo
-    addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
 
@@ -2353,9 +2229,10 @@ project(":graphics") {
         stub
     }
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         antlr group: "org.antlr", name: "antlr4", version: "${antlr4Version}", classifier: "complete"
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
         implementation project(':base')
     }
 
@@ -2444,9 +2321,9 @@ project(":graphics") {
 
         classpath = configurations.compileClasspath
 
-        source = project.sourceSets.main.java.srcDirs
-        source += "$buildDir/gensrc/java"
-        source += project.sourceSets.shaders.output
+        source project.sourceSets.main.java.srcDirs
+        source "$buildDir/gensrc/java"
+        source project.sourceSets.shaders.output
 
         destinationDirectory = project.sourceSets.main.java.destinationDirectory
         options.compilerArgs.addAll([
@@ -2489,20 +2366,21 @@ project(":graphics") {
 
     if (IS_WINDOWS) {
         addNative(project, "prismD3D")
-        // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
+        def prismD3DSource = "src/main/native-prism-d3d"
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl"
-            inputs.file "src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl"
-            inputs.file "src/main/native-prism-d3d/PassThroughVS.hlsl"
+            inputs.files(fileTree("$prismD3DSource/hlsl") {
+                      include "*.hlsl"
+                      include "*.h"
+                  })
+            inputs.file("$prismD3DSource/PassThroughVS.hlsl")
             outputs.dir "$buildDir/headers/PrismD3D/"
-            outputs.dir "$buildDir/headers/PrismD3D/hlsl/"
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
-                def PS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl")
-                def VS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl")
-                def PASSTHROUGH_VS_SRC = file("src/main/native-prism-d3d/PassThroughVS.hlsl")
+                def PS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1PS.hlsl")
+                def VS_3D_SRC = file("$prismD3DSource/hlsl/Mtl1VS.hlsl")
+                def PASSTHROUGH_VS_SRC = file("$prismD3DSource/PassThroughVS.hlsl")
                 def jobs = [
                         ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$PASSTHROUGH_VS_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS.h", "/DSpec=0", "/DSType=0", "$PS_3D_SRC"],
@@ -2787,6 +2665,7 @@ project(":graphics") {
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-decora").mkdirs()
+            file("$project.buildDir/msl").mkdirs()
         }
     }
     project.processShaders.dependsOn(initShaderDirs)
@@ -2861,8 +2740,6 @@ project(":graphics") {
         }
     }
 
-    addMavenPublication(project, [ 'base' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -2893,9 +2770,11 @@ project(":controls") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(':base')
         implementation project(':graphics')
     }
@@ -2938,8 +2817,6 @@ project(":controls") {
         include "**/*.bss"
     }
     processShimsResources.dependsOn(copyShimBssTask)
-
-    addMavenPublication(project, [ 'graphics' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -2991,16 +2868,20 @@ project(":incubator.input") {
         'incubator.input'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
     }
 
     test {
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
     }
 
@@ -3008,8 +2889,6 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3048,11 +2927,15 @@ project(":incubator.richtext") {
         'incubator.richtext'
     ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def inputTestOutput = project(":incubator.input").sourceSets.test.output
     dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":incubator.input").sourceSets.test.output
+        testImplementation baseTestOutput
+        testImplementation graphicsTestOutput
+        testImplementation controlsTestOutput
+        testImplementation inputTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
@@ -3060,6 +2943,7 @@ project(":incubator.richtext") {
     }
 
     test {
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
     }
 
@@ -3067,8 +2951,6 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addMavenPublication(project, [ 'controls', 'incubator.input' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3127,10 +3009,6 @@ project(":swing") {
         jvmArgs enableNativeGraphics
     }
 
-    if (COMPILE_SWING) {
-        addMavenPublication(project, [ 'graphics' ])
-    }
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -3166,6 +3044,8 @@ project(":swt") {
                     into libsDir
                     from f.getParentFile()
                     include "**/*swt*.jar"
+                    exclude "**/*swt*-sources.jar"
+                    exclude "**/*swt*-javadoc.jar"
                     includeEmptyDirs = false
                     rename ".*swt.*jar", "swt-debug\\.jar"
                 }
@@ -3231,9 +3111,11 @@ project(":fxml") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'fxml' ])
 
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
         implementation project(":base")
         implementation project(":graphics")
     }
@@ -3247,8 +3129,6 @@ project(":fxml") {
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
-
-    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3287,6 +3167,7 @@ project(":media") {
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
             media name: "ffmpeg-6.0", ext: "tar.gz"
             media name: "ffmpeg-7.0.2", ext: "tar.gz"
+            media name: "ffmpeg-8.1", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -3429,7 +3310,7 @@ project(":media") {
             if (t.name == "linux") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
-                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything"]
+                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything", "--extra-cflags=\"-Wno-error=incompatible-pointer-types\""]
                 def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
@@ -3633,8 +3514,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0", "7.0.2" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60", "7.0.2" : "61" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0", "7.0.2", "8.1" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60", "7.0.2" : "61" , "8.1" : "62" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3714,7 +3595,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60", "61" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60", "61", "62" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
@@ -3856,8 +3737,6 @@ project(":media") {
         }
     }
 
-    addMavenPublication(project, [ 'graphics' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -3879,8 +3758,6 @@ project(":jsobject") {
 
     dependencies {
     }
-
-    addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3917,6 +3794,7 @@ project(":web") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
+    def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         if (IS_COMPILE_WEBKIT) {
             def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
@@ -3926,7 +3804,7 @@ project(":web") {
         implementation project(":graphics")
         implementation project(":controls")
         implementation project(":media")
-        testImplementation project(":base").sourceSets.test.output
+        testImplementation baseTestOutput
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -4035,13 +3913,17 @@ project(":web") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                         // Ensure the Clang environment is set up properly
-                        // Set the Clang compiler and linker as webkit has dropped MSVC compiler support
-                        def clangCompiler = "clang-cl.exe"  // Set to the path of clang-cl
-                        def msvcLinker = "link.exe"  // Set to the path of clang-cl
+                        // Set the Clang compiler as webkit has dropped MSVC compiler support
+                        def clangCompiler = "clang-cl.exe"
+                        def msvcLinker = "${WIN.MSVC_BIN_DIR}/link.exe"
                         // Define the flags for Clang compilation and MSVC linking
                         def cFlags = "-shared"
                         def lFlags = "-shared"
                         if (!IS_64) {
+                            def preferredMsvcLinker = msvcLinker.replace("/Hostx86/", "/Hostx64/").replace("/bin/x86/", "/bin/x64/")
+                            if (file(preferredMsvcLinker).exists()) {
+                                msvcLinker = preferredMsvcLinker
+                            }
                             cFlags += " /clang:-m32"
                             lFlags += " /machine:x86"
                         }
@@ -4051,8 +3933,7 @@ project(":web") {
 
                         // Specify Clang-CL as the compiler for C and C++
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
-                        // pass the MSVC bin dir for icu Third party lib
-                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER='${msvcLinker}'"
                         // Pass in the rt/build dir and WebKit output dir
                         cmakeArgs = "$cmakeArgs -DRT_BUILD_ROOT='${rootProject.buildDir}' -DWEBKIT_OUTPUTDIR=${webkitOutputDir}"
 
@@ -4186,8 +4067,6 @@ project(":web") {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
-    addMavenPublication(project, [ 'controls', 'media', 'jsobject' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -4241,11 +4120,15 @@ project(":systemTests") {
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
 
+    def baseTestOutput = project(":base").sourceSets.test.output
+    def graphicsTestOutput = project(":graphics").sourceSets.test.output
+    def controlsTestOutput = project(":controls").sourceSets.test.output
+    def swingTestOutput = project(":swing").sourceSets.test.output
     dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":swing").sourceSets.test.output
+        testImplementation graphicsTestOutput
+        testImplementation baseTestOutput
+        testImplementation controlsTestOutput
+        testImplementation swingTestOutput
     }
 
     def dependentProjects = [
@@ -4444,6 +4327,10 @@ project(":systemTests") {
 
     addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
+
+// Apply Maven Publishing to all projects (if enabled).
+// Need to be done after all projects were defined that should be published.
+apply from: 'maven-publish.gradle'
 
 void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
     lintOpts.split("[, ]").each { s ->
@@ -5299,6 +5186,10 @@ compileTargets { t ->
     }
     buildModules.dependsOn(buildModulesTask)
 
+    // Configures the publication for all projects of this compile target.
+    // Will only run during the all task, after the buildModulesTask.
+    configurePublication(moduleProjList, t, buildModulesTask)
+
     // BUNDLED SDK
     moduleProjList.each { project ->
         // Copy classes, bin, and lib directories
@@ -5485,7 +5376,7 @@ compileTargets { t ->
 
     // Zip module sources for standalone SDK
     //
-    // NOTE: the input is taken from the modular-sdk/modules_src dir
+    // Note: the input is taken from the modular-sdk/modules_src dir
     // so that we don't have to duplicate the logic and create another
     // temporary directory. This is somewhat inelegant, since the bundled sdk
     // and the standalone sdk should be independent of one another, but seems
@@ -5498,46 +5389,6 @@ compileTargets { t ->
         include "**/*.java"
     }
     buildModules.dependsOn(zipSourceFilesTask)
-
-    // ============================================================
-
-    // Maven Publications
-    def publicationDirName = "${platformPrefix}publications"
-    def publicationDir = "${rootProject.buildDir}/${publicationDirName}"
-
-    moduleProjList.each { project ->
-        // Create publications to be uploaded
-
-        def moduleName = project.ext.moduleName
-        def buildDir = project.buildDir
-
-        def dstModularJarDir="${publicationDir}"
-        def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
-        def srcLibsDir = "${buildDir}/${platformPrefix}module-lib"
-
-        def modularEmptyPublicationJarName = "${moduleName}.jar"
-        def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
-            destinationDirectory = file("${dstModularJarDir}")
-            archiveFileName = modularEmptyPublicationJarName
-            manifest {
-                attributes(
-                        'Automatic-Module-Name':"${moduleName}Empty"
-                )
-            }
-        }
-
-        def modularPublicationJarName = "${moduleName}-${t.name}.jar"
-        def modularPublicationJarTask = project.task("modularPublicationJar${t.capital}", type: Jar, dependsOn: modularEmptyPublicationJarTask) {
-            destinationDirectory = file("${dstModularJarDir}")
-            archiveFileName = modularPublicationJarName
-            from srcLibsDir
-            from srcClassesDir
-        }
-
-        buildModulesTask.dependsOn(modularPublicationJarTask)
-
-    }
-    // ============================================================
 
     def buildRunArgsTask = task("buildRunArgs$t.capital",
             group: "Build", dependsOn: buildModulesTask) {
@@ -5686,9 +5537,6 @@ compileTargets { t ->
         if (project.tasks.getByName("copyClassFiles$t.capital") != null) {
             project.tasks.getByName("copyClassFiles$t.capital").dependsOn(buildModuleClassesTask)
         }
-        if (project.tasks.getByName("modularPublicationJar$t.capital") != null) {
-            project.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleClassesTask)
-        }
     }
 
     def buildModuleLibsTask = task("buildModuleLibs$t.capital") {
@@ -5758,7 +5606,6 @@ compileTargets { t ->
         }
         baseProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleBaseTask)
         baseProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleBaseTask)
-        baseProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleBaseTask)
 
         def buildModuleGraphicsTask = task("buildModuleGraphics$t.capital", type: Copy, dependsOn: graphicsProject.assemble) {
             group = "Basic"
@@ -5833,7 +5680,6 @@ compileTargets { t ->
         graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleGraphicsTask)
-        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleGraphicsTask)
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5908,7 +5754,6 @@ compileTargets { t ->
         mediaProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleMediaTask)
-        mediaProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleMediaTask)
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5961,7 +5806,6 @@ compileTargets { t ->
         webProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleWeb)
-        webProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleWeb)
 
         def buildModuleSWT = task("buildModuleSWT$t.capital", type: Copy) {
             group = "Basic"
@@ -5986,7 +5830,6 @@ compileTargets { t ->
         graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleSWT)
-        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleSWT)
 
         dependsOn(
             buildModuleBaseTask,

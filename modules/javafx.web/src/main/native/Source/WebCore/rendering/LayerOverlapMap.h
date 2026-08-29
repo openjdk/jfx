@@ -45,7 +45,7 @@ public:
     ~LayerOverlapMap();
 
     struct LayerAndBounds {
-        RenderLayer& layer;
+        CheckedRef<RenderLayer> layer;
         LayoutRect bounds;
     };
 
@@ -71,7 +71,7 @@ private:
     Vector<std::unique_ptr<OverlapMapContainer>> m_overlapStack;
     Vector<std::unique_ptr<OverlapMapContainer>> m_speculativeOverlapStack;
     RenderGeometryMap m_geometryMap;
-    const RenderLayer& m_rootLayer;
+    const CheckedRef<const RenderLayer> m_rootLayer;
     bool m_isEmpty { true };
 };
 

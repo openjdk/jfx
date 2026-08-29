@@ -949,6 +949,7 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
   return TRUE;
 }
 
+#ifndef GSTREAMER_LITE
 /* Tuples {{{2
  *
  * Since tuples can contain a mix of variable- and fixed-sized items,
@@ -1342,6 +1343,7 @@ gvs_tuple_is_normal (GVariantSerialised value)
 
   return TRUE;
 }
+#endif // GSTREAMER_LITE
 
 /* Variants {{{2
  *
@@ -1504,6 +1506,7 @@ gvs_variant_is_normal (GVariantSerialised value)
       }                                                 \
   }
 
+#ifndef GSTREAMER_LITE
 #define DISPATCH_CASES(type_info, before, after) \
   switch (g_variant_type_info_get_type_char (type_info))        \
     {                                                           \
@@ -1524,6 +1527,22 @@ gvs_variant_is_normal (GVariantSerialised value)
           before ## variant ## after                            \
         }                                                       \
     }
+#else // GSTREAMER_LITE
+#define DISPATCH_CASES(type_info, before, after) \
+  switch (g_variant_type_info_get_type_char (type_info))        \
+    {                                                           \
+      case G_VARIANT_TYPE_INFO_CHAR_MAYBE:                      \
+        DISPATCH_FIXED (type_info, before, _maybe ## after)     \
+                                                                \
+      case G_VARIANT_TYPE_INFO_CHAR_ARRAY:                      \
+        DISPATCH_FIXED (type_info, before, _array ## after)     \
+                                                                \
+      case G_VARIANT_TYPE_INFO_CHAR_VARIANT:                    \
+        {                                                       \
+          before ## variant ## after                            \
+        }                                                       \
+    }
+#endif // GSTREAMER_LITE
 
 /* Serializer entry points {{{2
  *

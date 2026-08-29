@@ -33,7 +33,7 @@
 #include "OrderIterator.h"
 
 #include "RenderBox.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 
@@ -104,7 +104,7 @@ OrderIteratorPopulator::~OrderIteratorPopulator()
 
 bool OrderIteratorPopulator::collectChild(const RenderBox& child)
 {
-    m_iterator.m_orderValues.insert(child.style().order());
+    m_iterator.m_orderValues.insert(child.style().order().value);
     return !m_iterator.shouldSkipChild(child);
 }
 

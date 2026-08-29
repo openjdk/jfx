@@ -25,15 +25,19 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if PLATFORM(COCOA) && USE(LIBWEBRTC)
 
-#include "LibWebRTCUtils.h"
-#include "VideoFrame.h"
+#include <WebCore/LibWebRTCUtils.h>
+#include <WebCore/VideoFrame.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// FIXME: Modularize WebRTC
+IGNORE_CLANG_WARNINGS_BEGIN("non-modular-include-in-module")
 #include <webrtc/api/video/video_frame.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitUtilities.h>
+IGNORE_CLANG_WARNINGS_END
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
@@ -47,8 +51,6 @@ public:
     static RefPtr<VideoFrameLibWebRTC> create(MediaTime, bool isMirrored, Rotation, std::optional<PlatformVideoColorSpace>&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
 
     webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer() const { return webrtc::scoped_refptr { m_buffer.ptr() }; }
-
-    static std::optional<PlatformVideoColorSpace> colorSpaceFromFrame(const webrtc::VideoFrame&);
 
 private:
     VideoFrameLibWebRTC(MediaTime, bool isMirrored, Rotation, PlatformVideoColorSpace&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
@@ -64,7 +66,7 @@ private:
     IntSize m_size;
     uint32_t m_videoPixelFormat { 0 };
 
-    mutable ConversionCallback m_conversionCallback;
+    mutable ConversionCallback m_conversionCallback WTF_GUARDED_BY_LOCK(m_pixelBufferLock);
     mutable RetainPtr<CVPixelBufferRef> m_pixelBuffer WTF_GUARDED_BY_LOCK(m_pixelBufferLock);
     mutable Lock m_pixelBufferLock;
 };

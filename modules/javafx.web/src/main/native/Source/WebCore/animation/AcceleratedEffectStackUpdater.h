@@ -25,12 +25,11 @@
 
 #pragma once
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 
-#include "AcceleratedEffect.h"
-#include "AnimationMalloc.h"
-#include <wtf/HashSet.h>
-#include <wtf/Seconds.h>
+#include <WebCore/AcceleratedEffect.h>
+#include <WebCore/AnimationMalloc.h>
+#include <WebCore/Styleable.h>
 
 namespace WebCore {
 
@@ -41,21 +40,16 @@ struct Styleable;
 class AcceleratedEffectStackUpdater {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AcceleratedEffectStackUpdater, Animation);
 public:
-    AcceleratedEffectStackUpdater(Document&);
+    AcceleratedEffectStackUpdater() = default;
 
-    void updateEffectStacks();
-    void updateEffectStackForTarget(const Styleable&);
-
-    Seconds timeOrigin() const { return m_timeOrigin; }
-
-protected:
+    void update();
+    void scheduleUpdateForTarget(const Styleable&);
+    bool hasTargetsPendingUpdate() const { return !m_targetsPendingUpdate.isEmpty(); }
 
 private:
-    using HashedStyleable = std::pair<Element*, std::optional<Style::PseudoElementIdentifier>>;
-    HashSet<HashedStyleable> m_targetsPendingUpdate;
-    Seconds m_timeOrigin;
+    WeakStyleableHashSet m_targetsPendingUpdate;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(THREADED_ANIMATIONS)

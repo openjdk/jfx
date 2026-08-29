@@ -29,7 +29,6 @@
 
 #include "pas_shared_page_directory_by_size.h"
 
-#include <math.h>
 #include "pas_heap_lock.h"
 #include "pas_immortal_heap.h"
 #include "pas_segregated_page_config.h"

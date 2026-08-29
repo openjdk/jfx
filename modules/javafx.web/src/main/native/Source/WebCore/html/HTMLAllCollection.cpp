@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLAllNamedSubCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLAllNamedSubCollection);
 
 Ref<HTMLAllCollection> HTMLAllCollection::create(Document& document, CollectionType type)
 {
@@ -66,7 +66,7 @@ std::optional<Variant<RefPtr<HTMLCollection>, RefPtr<Element>>> HTMLAllCollectio
     if (namedItems.isEmpty())
         return std::nullopt;
     if (namedItems.size() == 1)
-        return Variant<RefPtr<HTMLCollection>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
+        return Variant<RefPtr<HTMLCollection>, RefPtr<Element>> { RefPtr<Element> { WTF::move(namedItems[0]) } };
 
     return Variant<RefPtr<HTMLCollection>, RefPtr<Element>> { RefPtr<HTMLCollection> { downcast<Document>(ownerNode()).allFilteredByName(name) } };
 }

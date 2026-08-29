@@ -20,11 +20,12 @@
 
 #pragma once
 
-#include "MediaQuery.h"
-#include "MediaQueryParserContext.h"
+#include <WebCore/MediaQuery.h>
+#include <WebCore/MediaQueryParserContext.h>
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WTF {
 class TextStream;
@@ -58,8 +59,8 @@ public:
     WEBCORE_EXPORT String mediaText() const;
     WEBCORE_EXPORT void setMediaText(const String&);
 
-    CSSRule* parentRule() const { return m_parentRule; }
-    CSSStyleSheet* parentStyleSheet() const { return m_parentStyleSheet; }
+    CSSRule* parentRule() const;
+    CSSStyleSheet* parentStyleSheet() const;
     void detachFromParent();
 
     const MQ::MediaQueryList& mediaQueries() const;
@@ -70,8 +71,8 @@ private:
 
     void setMediaQueries(MQ::MediaQueryList&&);
 
-    CSSStyleSheet* m_parentStyleSheet { nullptr };
-    CSSRule* m_parentRule { nullptr };
+    SingleThreadWeakPtr<CSSStyleSheet> m_parentStyleSheet;
+    WeakPtr<CSSRule> m_parentRule;
     std::optional<MQ::MediaQueryList> m_detachedMediaQueries;
 };
 

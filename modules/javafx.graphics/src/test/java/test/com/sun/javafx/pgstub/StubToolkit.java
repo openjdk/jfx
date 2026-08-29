@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
+
+import com.sun.javafx.util.Utils;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
@@ -779,7 +781,7 @@ public class StubToolkit extends Toolkit {
         return false;
     }
 
-    private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
+    private KeyCode platformShortcutKey;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {
         this.platformShortcutKey = platformShortcutKey;
@@ -787,6 +789,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        if (platformShortcutKey == null) {
+            return Utils.isMac() ? KeyCode.META : KeyCode.CONTROL;
+        }
+
         return platformShortcutKey;
     }
 

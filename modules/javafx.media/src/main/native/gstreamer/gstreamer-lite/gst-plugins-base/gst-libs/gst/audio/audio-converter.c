@@ -1583,9 +1583,9 @@ gst_audio_converter_reset (GstAudioConverter * convert)
  * gst_audio_converter_samples:
  * @convert: a #GstAudioConverter
  * @flags: extra #GstAudioConverterFlags
- * @in: input frames
+ * @in: (array) (element-type gpointer): input frames
  * @in_frames: number of input frames
- * @out: output frames
+ * @out: (array) (element-type gpointer): output frames
  * @out_frames: number of output frames
  *
  * Perform the conversion with @in_frames in @in to @out_frames in @out

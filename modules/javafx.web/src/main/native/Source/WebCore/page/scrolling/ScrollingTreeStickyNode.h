@@ -30,10 +30,10 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollingConstraints.h"
-#include "ScrollingPlatformLayer.h"
-#include "ScrollingTreeNode.h"
-#include "ScrollingTreeViewportConstrainedNode.h"
+#include <WebCore/ScrollingConstraints.h>
+#include <WebCore/ScrollingPlatformLayer.h>
+#include <WebCore/ScrollingTreeNode.h>
+#include <WebCore/ScrollingTreeViewportConstrainedNode.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 

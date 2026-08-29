@@ -29,13 +29,13 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatLine.h"
-#include "FloatQuad.h"
-#include "FloatRect.h"
-#include "InspectorOverlayLabel.h"
-#include "Path.h"
-#include "Timer.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatLine.h>
+#include <WebCore/FloatQuad.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/InspectorOverlayLabel.h>
+#include <WebCore/Path.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
@@ -60,10 +60,10 @@ class FontCascade;
 class FloatPoint;
 class GraphicsContext;
 class InspectorBackendClient;
-class InspectorController;
 class Node;
 class NodeList;
 class Page;
+class PageInspectorController;
 
 struct InspectorOverlayHighlight {
     WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(InspectorOverlayHighlight);
@@ -143,7 +143,7 @@ struct InspectorOverlayHighlight {
 class InspectorOverlay : public CanMakeWeakPtr<InspectorOverlay> {
     WTF_MAKE_TZONE_ALLOCATED(InspectorOverlay);
 public:
-    InspectorOverlay(InspectorController&, InspectorBackendClient*);
+    InspectorOverlay(PageInspectorController&, InspectorBackendClient*);
     ~InspectorOverlay();
 
     void ref() const;
@@ -163,6 +163,7 @@ public:
             bool showExtendedGridLines;
             bool showTrackSizes;
             bool showAreaNames;
+            bool showOrderNumbers;
         };
 
         WeakPtr<Node, WeakPtrImplWithEventTargetData> gridNode;
@@ -252,7 +253,7 @@ private:
 
     Page& page() const;
 
-    const WeakRef<InspectorController> m_controller;
+    const WeakRef<PageInspectorController> m_controller;
     InspectorBackendClient* m_client;
 
     RefPtr<Node> m_highlightNode;

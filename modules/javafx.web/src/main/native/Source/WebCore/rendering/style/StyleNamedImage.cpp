@@ -34,7 +34,7 @@ namespace WebCore {
 
 StyleNamedImage::StyleNamedImage(String&& name)
     : StyleGeneratedImage { Type::NamedImage, StyleNamedImage::isFixedSize }
-    , m_name { WTFMove(name) }
+    , m_name { WTF::move(name) }
 {
 }
 
@@ -65,7 +65,7 @@ void StyleNamedImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<Image> StyleNamedImage::image(const RenderElement* renderer, const FloatSize& size, bool) const
+RefPtr<Image> StyleNamedImage::image(const RenderElement* renderer, const FloatSize& size, const GraphicsContext&, bool) const
 {
     if (!renderer)
         return &Image::nullImage();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,7 +178,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             if (listView == null) return;
             listView.requestLayout();
         });
-        lh.addChangeListener(control.converterProperty(), e -> updateListViewItems());
+        lh.addChangeListener(control.converterProperty(), e -> {
+            listView.refresh();
+            updateDisplayNode();
+        });
         lh.addChangeListener(control.buttonCellProperty(), e -> {
             updateButtonCell();
             updateDisplayArea();
@@ -356,13 +359,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             T value = comboBox.getValue();
             int index = getIndexOfComboBoxValueInItemsList();
+
+            // This guarantees that the cell is cleared even when the
+            // value is null and contained in the items (which is allowed)
+            buttonCell.updateIndex(-1);
+
             if (index > -1) {
-                buttonCell.setItem(null);
                 buttonCell.updateIndex(index);
             } else {
                 // JDK-8127575 Show the ComboBox value even though it doesn't
                 // exist in the ComboBox items list (part two of fix)
-                buttonCell.updateIndex(-1);
                 boolean empty = updateDisplayText(buttonCell, value, false);
 
                 // Note that empty boolean collected above. This is used to resolve

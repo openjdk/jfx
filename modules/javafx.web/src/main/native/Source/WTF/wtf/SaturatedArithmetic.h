@@ -31,17 +31,25 @@
 
 #pragma once
 
+#include <concepts>
 #include <limits>
 #include <stdint.h>
 #include <stdlib.h>
 #include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 
 namespace WTF {
 
 // FIXME: Enhance this so it fails to compile calls where either of the arguments can be outside the range of the integral type instead of quietly converting.
-template<typename SignedIntegralType> std::enable_if_t<std::is_integral_v<SignedIntegralType> && std::is_signed_v<SignedIntegralType>, SignedIntegralType> saturatedSum(SignedIntegralType, SignedIntegralType);
-template<typename UnsignedIntegralType> constexpr std::enable_if_t<std::is_integral_v<UnsignedIntegralType> && !std::is_signed_v<UnsignedIntegralType>, UnsignedIntegralType> saturatedSum(UnsignedIntegralType, UnsignedIntegralType);
-template<typename IntegralType> IntegralType saturatedDifference(IntegralType, IntegralType);
+
+template<std::signed_integral SignedIntegralType>
+SignedIntegralType saturatedSum(SignedIntegralType, SignedIntegralType);
+
+template<std::unsigned_integral UnsignedIntegralType>
+constexpr UnsignedIntegralType saturatedSum(UnsignedIntegralType, UnsignedIntegralType);
+
+template<typename IntegralType>
+IntegralType saturatedDifference(IntegralType, IntegralType);
 
 inline bool signedAddInt32Overflows(int32_t a, int32_t b, int32_t& result)
 {
@@ -63,7 +71,7 @@ template<> inline int32_t saturatedSum<int32_t>(int32_t a, int32_t b)
 {
     int32_t result;
 #if CPU(ARM_THUMB2)
-    asm("qadd %[sum], %[addend], %[augend]"
+    __asm__("qadd %[sum], %[addend], %[augend]"
         : [sum]"=r"(result)
         : [augend]"r"(a), [addend]"r"(b)
         : /* Nothing is clobbered. */
@@ -96,7 +104,7 @@ template<> inline int32_t saturatedDifference<int32_t>(int32_t a, int32_t b)
 {
     int32_t result;
 #if CPU(ARM_THUMB2)
-    asm("qsub %[difference], %[minuend], %[subtrahend]"
+    __asm__("qsub %[difference], %[minuend], %[subtrahend]"
         : [difference]"=r"(result)
         : [minuend]"r"(a), [subtrahend]"r"(b)
         : /* Nothing is clobbered. */
@@ -108,13 +116,15 @@ template<> inline int32_t saturatedDifference<int32_t>(int32_t a, int32_t b)
     return result;
 }
 
-template<typename UnsignedIntegralType> constexpr std::enable_if_t<std::is_integral_v<UnsignedIntegralType> && !std::is_signed_v<UnsignedIntegralType>, UnsignedIntegralType> saturatedSum(UnsignedIntegralType a, UnsignedIntegralType b)
+template<std::unsigned_integral UnsignedIntegralType>
+constexpr UnsignedIntegralType saturatedSum(UnsignedIntegralType a, UnsignedIntegralType b)
 {
     auto sum = a + b;
     return sum < a ? std::numeric_limits<UnsignedIntegralType>::max() : sum;
 }
 
-template<typename IntegralType, typename... ArgumentTypes> constexpr uint32_t saturatedSum(IntegralType value, ArgumentTypes... arguments)
+template<typename IntegralType, typename... ArgumentTypes>
+constexpr uint32_t saturatedSum(IntegralType value, ArgumentTypes... arguments)
 {
     return saturatedSum<IntegralType>(value, saturatedSum<IntegralType>(arguments...));
 }

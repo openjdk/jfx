@@ -35,13 +35,15 @@
 #include "MathMLNames.h"
 #include "MathMLSelectElement.h"
 #include "RenderMathMLBlock.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLAnnotationElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLAnnotationElement);
 
 using namespace MathMLNames;
 
@@ -58,15 +60,18 @@ Ref<MathMLAnnotationElement> MathMLAnnotationElement::create(const QualifiedName
 
 RenderPtr<RenderElement> MathMLAnnotationElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    if (hasTagName(MathMLNames::annotationTag))
-        return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
+    if (document().settings().coreMathMLEnabled() || hasTagName(MathMLNames::annotationTag))
+        return MathMLElement::createElementRenderer(WTF::move(style), insertionPosition);
 
     ASSERT(hasTagName(annotation_xmlTag));
-    return createRenderer<RenderMathMLBlock>(RenderObject::Type::MathMLBlock, *this, WTFMove(style));
+    return createRenderer<RenderMathMLBlock>(RenderObject::Type::MathMLBlock, *this, WTF::move(style));
 }
 
 bool MathMLAnnotationElement::childShouldCreateRenderer(const Node& child) const
 {
+    if (document().settings().coreMathMLEnabled())
+        return MathMLElement::childShouldCreateRenderer(child);
+
     // For <annotation>, only text children are allowed.
     if (hasTagName(MathMLNames::annotationTag))
         return child.isTextNode();

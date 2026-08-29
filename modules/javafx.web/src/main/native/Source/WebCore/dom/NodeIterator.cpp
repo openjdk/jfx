@@ -26,13 +26,14 @@
 #include "NodeIterator.h"
 
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "NodeDocument.h"
 #include "NodeTraversal.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NodeIterator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NodeIterator);
 
 inline NodeIterator::NodePointer::NodePointer(Node& node, bool isPointerBeforeNode)
     : node(&node)
@@ -76,7 +77,7 @@ inline bool NodeIterator::NodePointer::moveToPrevious(Node& root)
 }
 
 inline NodeIterator::NodeIterator(Node& rootNode, unsigned whatToShow, RefPtr<NodeFilter>&& filter)
-    : NodeIteratorBase(rootNode, whatToShow, WTFMove(filter))
+    : NodeIteratorBase(rootNode, whatToShow, WTF::move(filter))
     , m_referenceNode(rootNode, true)
 {
     root().protectedDocument()->attachNodeIterator(*this);
@@ -84,7 +85,7 @@ inline NodeIterator::NodeIterator(Node& rootNode, unsigned whatToShow, RefPtr<No
 
 Ref<NodeIterator> NodeIterator::create(Node& rootNode, unsigned whatToShow, RefPtr<NodeFilter>&& filter)
 {
-    return adoptRef(*new NodeIterator(rootNode, whatToShow, WTFMove(filter)));
+    return adoptRef(*new NodeIterator(rootNode, whatToShow, WTF::move(filter)));
 }
 
 NodeIterator::~NodeIterator()
@@ -113,7 +114,7 @@ ExceptionOr<RefPtr<Node>> NodeIterator::nextNode()
         bool nodeWasAccepted = filterResult.returnValue() == NodeFilter::FILTER_ACCEPT;
         if (nodeWasAccepted) {
             m_referenceNode = m_candidateNode;
-            result = WTFMove(provisionalResult);
+            result = WTF::move(provisionalResult);
             break;
         }
     }
@@ -143,7 +144,7 @@ ExceptionOr<RefPtr<Node>> NodeIterator::previousNode()
         bool nodeWasAccepted = filterResult.returnValue() == NodeFilter::FILTER_ACCEPT;
         if (nodeWasAccepted) {
             m_referenceNode = m_candidateNode;
-            result = WTFMove(provisionalResult);
+            result = WTF::move(provisionalResult);
             break;
         }
     }
@@ -209,7 +210,7 @@ void NodeIterator::updateForNodeRemoval(Node& removedNode, NodePointer& referenc
                     node = NodeTraversal::previous(*node);
             }
             if (node)
-                referenceNode.node = WTFMove(node);
+                referenceNode.node = WTF::move(node);
         } else {
             // FIXME: This branch doesn't appear to have any LayoutTests.
             node = NodeTraversal::next(removedNode, root.ptr());
@@ -220,7 +221,7 @@ void NodeIterator::updateForNodeRemoval(Node& removedNode, NodePointer& referenc
                     node = NodeTraversal::previous(*node);
             }
             if (node)
-                referenceNode.node = WTFMove(node);
+                referenceNode.node = WTF::move(node);
         }
     }
 }

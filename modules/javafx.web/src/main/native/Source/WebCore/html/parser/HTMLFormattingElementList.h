@@ -48,7 +48,7 @@ public:
     public:
         // Inline because they're hot and Vector<T> uses them.
         explicit Entry(HTMLStackItem&& item)
-            : m_item(WTFMove(item))
+            : m_item(WTF::move(item))
         {
         }
         enum MarkerEntryType { MarkerEntry };
@@ -64,7 +64,7 @@ public:
             // Callers should check isMarker() before calling element().
             return m_item.element();
         }
-        void replaceElement(HTMLStackItem&& item) { m_item = WTFMove(item); }
+        void replaceElement(HTMLStackItem&& item) { m_item = WTF::move(item); }
 
         // Needed for use with Vector. This is super-hot and must be inline.
         bool operator==(Element* element) const { return m_item.elementOrNull() == element; }

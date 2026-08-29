@@ -26,15 +26,15 @@
 
 #pragma once
 
-#include "CrossOriginEmbedderPolicy.h"
-#include "ResourceRequest.h"
-#include "SecurityOrigin.h"
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/SecurityOrigin.h>
 
 namespace WebCore {
 
 struct RetrieveRecordsOptions {
     RetrieveRecordsOptions isolatedCopy() const & { return { request.isolatedCopy(), crossOriginEmbedderPolicy.isolatedCopy(), sourceOrigin->isolatedCopy(), ignoreSearch, ignoreMethod, ignoreVary, shouldProvideResponse }; }
-    RetrieveRecordsOptions isolatedCopy() && { return { WTFMove(request).isolatedCopy(), WTFMove(crossOriginEmbedderPolicy).isolatedCopy(), sourceOrigin->isolatedCopy(), ignoreSearch, ignoreMethod, ignoreVary, shouldProvideResponse }; }
+    RetrieveRecordsOptions isolatedCopy() && { return { WTF::move(request).isolatedCopy(), WTF::move(crossOriginEmbedderPolicy).isolatedCopy(), sourceOrigin->isolatedCopy(), ignoreSearch, ignoreMethod, ignoreVary, shouldProvideResponse }; }
 
     ResourceRequest request;
     CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;

@@ -24,6 +24,7 @@
  */
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary PeriodicWaveConstraints {
     boolean disableNormalization = false;
 };

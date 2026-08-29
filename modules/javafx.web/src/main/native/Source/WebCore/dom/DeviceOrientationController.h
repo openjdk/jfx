@@ -57,12 +57,20 @@ public:
 #endif
     DeviceClient& client() final;
 
-    static ASCIILiteral supplementName();
     static DeviceOrientationController* from(Page*);
     static bool isActiveAt(Page*);
 
 private:
+    static ASCIILiteral supplementName() { return "DeviceOrientationController"_s; }
+    bool isDeviceOrientationController() const final { return true; }
+
+    CheckedRef<DeviceOrientationClient> checkedClient();
+
     WeakRef<DeviceOrientationClient> m_client;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DeviceOrientationController)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDeviceOrientationController(); }
+SPECIALIZE_TYPE_TRAITS_END()

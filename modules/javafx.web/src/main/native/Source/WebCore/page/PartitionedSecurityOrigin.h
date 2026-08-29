@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "SecurityOrigin.h"
+#include <WebCore/SecurityOrigin.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/Ref.h>
@@ -34,8 +34,8 @@ namespace WebCore {
 
 struct PartitionedSecurityOrigin {
     PartitionedSecurityOrigin(Ref<SecurityOrigin>&& topOrigin, Ref<SecurityOrigin>&& clientOrigin)
-        : topOrigin(WTFMove(topOrigin))
-        , clientOrigin(WTFMove(clientOrigin))
+        : topOrigin(WTF::move(topOrigin))
+        , clientOrigin(WTF::move(clientOrigin))
     { }
 
     PartitionedSecurityOrigin(WTF::HashTableDeletedValueType)
@@ -71,14 +71,6 @@ inline void add(Hasher& hasher, const WebCore::PartitionedSecurityOrigin& origin
     add(hasher, origin.topOrigin.get(), origin.clientOrigin.get());
 }
 
-struct PartitionedSecurityOriginHash {
-    static unsigned hash(const WebCore::PartitionedSecurityOrigin& origin) { return computeHash(origin); }
-    static bool equal(const WebCore::PartitionedSecurityOrigin& a, const WebCore::PartitionedSecurityOrigin& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
-};
-
-template<> struct DefaultHash<WebCore::PartitionedSecurityOrigin> : PartitionedSecurityOriginHash { };
-
 template<> struct HashTraits<WebCore::PartitionedSecurityOrigin> : SimpleClassHashTraits<WebCore::PartitionedSecurityOrigin> {
     static constexpr bool emptyValueIsZero = true;
     static WebCore::PartitionedSecurityOrigin emptyValue() { return HashTableEmptyValue; }
@@ -96,7 +88,7 @@ template<> struct HashTraits<WebCore::PartitionedSecurityOrigin> : SimpleClassHa
     static PeekType peek(const WebCore::PartitionedSecurityOrigin& value) { return isEmptyValue(value) ? std::nullopt : std::optional { value }; }
 
     using TakeType = std::optional<WebCore::PartitionedSecurityOrigin>;
-    static TakeType take(WebCore::PartitionedSecurityOrigin&& value) { return isEmptyValue(value) ? std::nullopt : std::optional { WTFMove(value) }; }
+    static TakeType take(WebCore::PartitionedSecurityOrigin&& value) { return isEmptyValue(value) ? std::nullopt : std::optional { WTF::move(value) }; }
 };
 
 } // namespace WTF

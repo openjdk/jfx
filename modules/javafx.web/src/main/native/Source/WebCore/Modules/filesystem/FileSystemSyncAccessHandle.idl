@@ -37,6 +37,8 @@
     unsigned long long write([AllowShared] (ArrayBufferView or ArrayBuffer) buffer, optional FilesystemReadWriteOptions options = {});
 };
 
-dictionary FilesystemReadWriteOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FilesystemReadWriteOptions {
     [EnforceRange] unsigned long long at;
 };

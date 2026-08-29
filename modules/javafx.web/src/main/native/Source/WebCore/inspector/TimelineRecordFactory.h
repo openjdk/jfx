@@ -32,6 +32,7 @@
 #pragma once
 
 #include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/Forward.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Seconds.h>
@@ -55,6 +56,7 @@ public:
     static Ref<JSON::Object> createTimerInstallData(int timerId, Seconds timeout, bool singleShot);
     static Ref<JSON::Object> createEvaluateScriptData(const String&, int lineNumber, int columnNumber);
     static Ref<JSON::Object> createTimeStampData(const String&);
+    static Ref<JSON::Object> createLargestContentfulPaintData(Inspector::Protocol::DOM::NodeId, unsigned area);
     static Ref<JSON::Object> createAnimationFrameData(int callbackId);
     static Ref<JSON::Object> createObserverCallbackData(const String& callbackType);
     static Ref<JSON::Object> createPaintData(const FloatQuad&);

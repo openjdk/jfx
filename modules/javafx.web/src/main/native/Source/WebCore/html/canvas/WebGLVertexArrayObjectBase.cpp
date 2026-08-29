@@ -42,12 +42,17 @@ WebGLVertexArrayObjectBase::WebGLVertexArrayObjectBase(WebGLRenderingContextBase
     m_vertexAttribState.grow(context.maxVertexAttribs());
 }
 
+WebGLVertexArrayObjectBase::WebGLVertexArrayObjectBase()
+    : m_type(Type::User)
+{
+}
+
 void WebGLVertexArrayObjectBase::setElementArrayBuffer(const AbstractLocker& locker, WebGLBuffer* buffer)
 {
     if (buffer)
         buffer->onAttached();
     if (RefPtr boundElementArrayBuffer = m_boundElementArrayBuffer.get())
-        boundElementArrayBuffer->onDetached(locker, context()->protectedGraphicsContextGL().get());
+        boundElementArrayBuffer->onDetached(locker, graphicsContextGL().get());
     m_boundElementArrayBuffer = buffer;
 
 }
@@ -70,7 +75,7 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(const AbstractLocker& lock
     if (buffer)
         buffer->onAttached();
     if (RefPtr bufferBinding = state.bufferBinding.get())
-        bufferBinding->onDetached(locker, context()->protectedGraphicsContextGL().get());
+        bufferBinding->onDetached(locker, graphicsContextGL().get());
     state.bufferBinding = buffer;
     if (!state.validateBinding())
         m_allEnabledAttribBuffersBoundCache = false;
@@ -88,14 +93,15 @@ void WebGLVertexArrayObjectBase::setVertexAttribState(const AbstractLocker& lock
 
 void WebGLVertexArrayObjectBase::unbindBuffer(const AbstractLocker& locker, WebGLBuffer& buffer)
 {
+    RefPtr gl = graphicsContextGL();
     if (RefPtr boundElementArrayBuffer = m_boundElementArrayBuffer.get(); boundElementArrayBuffer == &buffer) {
-        boundElementArrayBuffer->onDetached(locker, context()->protectedGraphicsContextGL().get());
+        boundElementArrayBuffer->onDetached(locker, gl.get());
         m_boundElementArrayBuffer = nullptr;
     }
 
     for (auto& state : m_vertexAttribState) {
         if (state.bufferBinding == &buffer) {
-            buffer.onDetached(locker, context()->protectedGraphicsContextGL().get());
+            buffer.onDetached(locker, gl.get());
             state.bufferBinding = nullptr;
             if (!state.validateBinding())
                 m_allEnabledAttribBuffersBoundCache = false;

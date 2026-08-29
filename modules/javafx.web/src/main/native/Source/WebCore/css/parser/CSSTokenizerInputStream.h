@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-constexpr LChar kEndOfFileMarker = 0;
+constexpr Latin1Character kEndOfFileMarker = 0;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSTokenizerInputStream);
 class CSSTokenizerInputStream {

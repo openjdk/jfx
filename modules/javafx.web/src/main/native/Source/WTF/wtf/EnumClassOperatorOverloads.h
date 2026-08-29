@@ -28,14 +28,14 @@
 #include <type_traits>
 
 #define OVERLOAD_OPERATOR_FOR_ENUM_CLASS_WHEN(enumName, op, enableExpression) \
-    template<typename T> \
-    constexpr auto operator op(enumName enumEntry, T value) -> std::enable_if_t<(enableExpression), T> \
+    template<typename T> requires (enableExpression) \
+    constexpr auto operator op(enumName enumEntry, T value) -> T \
     { \
         return static_cast<T>(enumEntry) op value; \
     } \
     \
-    template<typename T> \
-    constexpr auto operator op(T value, enumName enumEntry) -> std::enable_if_t<(enableExpression), T> \
+    template<typename T> requires (enableExpression) \
+    constexpr auto operator op(T value, enumName enumEntry) -> T \
     { \
         return value op static_cast<T>(enumEntry); \
     } \

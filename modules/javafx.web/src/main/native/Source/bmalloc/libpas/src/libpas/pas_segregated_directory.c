@@ -29,11 +29,11 @@
 
 #include "pas_segregated_directory.h"
 
+#include "pas_heap_lock.h"
 #include "pas_log.h"
 #include "pas_page_sharing_pool.h"
 #include "pas_segregated_directory_inlines.h"
-#include "pas_segregated_heap.h"
-#include "pas_segregated_size_directory_inlines.h"
+#include "pas_segregated_page.h"
 
 PAS_API void pas_segregated_directory_construct(
     pas_segregated_directory* directory,

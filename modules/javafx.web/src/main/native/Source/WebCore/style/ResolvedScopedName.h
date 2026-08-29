@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StyleScopeIdentifier.h"
+#include <WebCore/StyleScopeIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/text/AtomString.h>
 
@@ -68,13 +68,6 @@ inline void add(Hasher& hasher, const ResolvedScopedName& name)
 } // namespace WebCore
 
 namespace WTF {
-
-template <>
-struct DefaultHash<WebCore::Style::ResolvedScopedName> {
-    static unsigned hash(const WebCore::Style::ResolvedScopedName& name) { return computeHash(name); }
-    static bool equal(const WebCore::Style::ResolvedScopedName& a, const WebCore::Style::ResolvedScopedName& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 
 template<>
 struct HashTraits<WebCore::Style::ResolvedScopedName> : GenericHashTraits<WebCore::Style::ResolvedScopedName> {

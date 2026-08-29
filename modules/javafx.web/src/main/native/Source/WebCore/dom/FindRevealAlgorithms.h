@@ -29,6 +29,6 @@ namespace WebCore {
 
 class Node;
 
-WEBCORE_EXPORT void revealClosedDetailsAndHiddenUntilFoundAncestors(Node&);
+WEBCORE_EXPORT bool revealClosedDetailsAndHiddenUntilFoundAncestors(Node&);
 
 } // namespace WebCore

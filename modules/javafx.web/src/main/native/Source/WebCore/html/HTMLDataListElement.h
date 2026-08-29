@@ -31,15 +31,15 @@
 
 #pragma once
 
-#include "HTMLElement.h"
-#include "TypedElementDescendantIterator.h"
+#include <WebCore/HTMLElement.h>
+#include <WebCore/TypedElementDescendantIterator.h>
 
 namespace WebCore {
 
 class HTMLCollection;
 
 class HTMLDataListElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDataListElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLDataListElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDataListElement);
 public:
     static Ref<HTMLDataListElement> create(const QualifiedName&, Document&);

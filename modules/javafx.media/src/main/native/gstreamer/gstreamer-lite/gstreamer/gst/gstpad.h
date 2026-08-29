@@ -264,7 +264,7 @@ typedef gboolean        (*GstPadActivateModeFunction)   (GstPad *pad, GstObject 
 /**
  * GstPadChainFunction:
  * @pad: the sink #GstPad that performed the chain.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @buffer: (transfer full): the #GstBuffer that is chained, not %NULL.
@@ -287,7 +287,7 @@ typedef GstFlowReturn       (*GstPadChainFunction)      (GstPad *pad, GstObject 
 /**
  * GstPadChainListFunction:
  * @pad: the sink #GstPad that performed the chain.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @list: (transfer full): the #GstBufferList that is chained, not %NULL.
@@ -310,7 +310,7 @@ typedef GstFlowReturn       (*GstPadChainListFunction)  (GstPad *pad, GstObject 
 /**
  * GstPadGetRangeFunction:
  * @pad: the src #GstPad to perform the getrange on.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @offset: the offset of the range
@@ -361,7 +361,7 @@ typedef GstFlowReturn       (*GstPadGetRangeFunction)   (GstPad *pad, GstObject 
 /**
  * GstPadEventFunction:
  * @pad: the #GstPad to handle the event.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @event: (transfer full): the #GstEvent to handle.
@@ -376,7 +376,7 @@ typedef gboolean        (*GstPadEventFunction)      (GstPad *pad, GstObject *par
 /**
  * GstPadEventFullFunction:
  * @pad: the #GstPad to handle the event.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @event: (transfer full): the #GstEvent to handle.
@@ -400,7 +400,7 @@ typedef GstFlowReturn       (*GstPadEventFullFunction)  (GstPad *pad, GstObject 
 /**
  * GstPadIterIntLinkFunction:
  * @pad: The #GstPad to query.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  *
@@ -417,7 +417,7 @@ typedef GstIterator*           (*GstPadIterIntLinkFunction)    (GstPad *pad, Gst
 /**
  * GstPadQueryFunction:
  * @pad: the #GstPad to query.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @query: the #GstQuery object to execute
@@ -434,7 +434,7 @@ typedef gboolean        (*GstPadQueryFunction)      (GstPad *pad, GstObject *par
 /**
  * GstPadLinkFunction:
  * @pad: the #GstPad that is linked.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  * @peer: the peer #GstPad of the link
@@ -447,7 +447,7 @@ typedef GstPadLinkReturn    (*GstPadLinkFunction)       (GstPad *pad, GstObject 
 /**
  * GstPadUnlinkFunction:
  * @pad: the #GstPad that is linked.
- * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ * @parent: (nullable): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
  *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
  *          during the execution of this function.
  *
@@ -579,7 +579,7 @@ typedef enum
  * GstPadProbeInfo:
  * @type: the current probe type
  * @id: the id of the probe
- * @data: (allow-none): type specific data, check the @type field to know the
+ * @data: (nullable): type specific data, check the @type field to know the
  *    datatype.  This field can be %NULL.
  * @offset: offset of pull probe, this field is valid when @type contains
  *    #GST_PAD_PROBE_TYPE_PULL
@@ -619,6 +619,21 @@ struct _GstPadProbeInfo
 #define GST_PAD_PROBE_INFO_SIZE(d)         ((d)->size)
 
 GST_API
+GstPadProbeType gst_pad_probe_info_get_type       (GstPadProbeInfo * info);
+
+GST_API
+gulong         gst_pad_probe_info_get_id          (GstPadProbeInfo * info);
+
+GST_API
+guint64        gst_pad_probe_info_get_offset      (GstPadProbeInfo * info);
+
+GST_API
+gsize          gst_pad_probe_info_get_size        (GstPadProbeInfo * info);
+
+GST_API
+GstFlowReturn  gst_pad_probe_info_get_flow_return  (GstPadProbeInfo * info);
+
+GST_API
 GstEvent*      gst_pad_probe_info_get_event       (GstPadProbeInfo * info);
 
 GST_API
@@ -629,6 +644,22 @@ GstBuffer*     gst_pad_probe_info_get_buffer      (GstPadProbeInfo * info);
 
 GST_API
 GstBufferList* gst_pad_probe_info_get_buffer_list (GstPadProbeInfo * info);
+
+GST_API
+void           gst_pad_probe_info_set_event       (GstPadProbeInfo * info,
+                                                   GstEvent        * event);
+
+GST_API
+void           gst_pad_probe_info_set_buffer      (GstPadProbeInfo * info,
+                                                   GstBuffer       * buffer);
+
+GST_API
+void           gst_pad_probe_info_set_buffer_list (GstPadProbeInfo * info,
+                                                   GstBufferList   * list);
+
+GST_API
+void           gst_pad_probe_info_set_flow_return  (GstPadProbeInfo * info,
+                                                    GstFlowReturn     flow_ret);
 
 /**
  * GstPadProbeCallback:
@@ -649,7 +680,7 @@ typedef GstPadProbeReturn   (*GstPadProbeCallback)   (GstPad *pad, GstPadProbeIn
 /**
  * GstPadStickyEventsForeachFunction:
  * @pad: the #GstPad.
- * @event: (allow-none): a sticky #GstEvent.
+ * @event: (inout) (nullable): a sticky #GstEvent.
  * @user_data: the #gpointer to optional user data.
  *
  * Callback used by gst_pad_sticky_events_foreach().
@@ -1313,13 +1344,13 @@ GType           gst_pad_get_type            (void);
 /* creating pads */
 
 GST_API
-GstPad*         gst_pad_new             (const gchar *name, GstPadDirection direction);
+GstPad*         gst_pad_new             (const gchar *name, GstPadDirection direction) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*         gst_pad_new_from_template       (GstPadTemplate *templ, const gchar *name);
+GstPad*         gst_pad_new_from_template       (GstPadTemplate *templ, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*         gst_pad_new_from_static_template    (GstStaticPadTemplate *templ, const gchar *name);
+GstPad*         gst_pad_new_from_static_template    (GstStaticPadTemplate *templ, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 
 /**
@@ -1388,14 +1419,14 @@ GST_API
 gpointer        gst_pad_get_element_private     (GstPad *pad);
 
 GST_API
-GstPadTemplate*     gst_pad_get_pad_template        (GstPad *pad);
+GstPadTemplate*     gst_pad_get_pad_template        (GstPad *pad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstFlowReturn           gst_pad_store_sticky_event              (GstPad *pad, GstEvent *event);
 
 GST_API
 GstEvent*               gst_pad_get_sticky_event                (GstPad *pad, GstEventType event_type,
-                                                                 guint idx);
+                                                                 guint idx) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_pad_sticky_events_foreach           (GstPad *pad, GstPadStickyEventsForeachFunction foreach_func, gpointer user_data);
@@ -1480,15 +1511,15 @@ GST_API
 gboolean        gst_pad_is_linked           (GstPad *pad);
 
 GST_API
-GstPad*         gst_pad_get_peer            (GstPad *pad);
+GstPad*         gst_pad_get_peer            (GstPad *pad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCaps*                gst_pad_get_pad_template_caps       (GstPad *pad);
+GstCaps*                gst_pad_get_pad_template_caps       (GstPad *pad) G_GNUC_WARN_UNUSED_RESULT;
 
 /* capsnego function for linked/unlinked pads */
 
 GST_API
-GstCaps *       gst_pad_get_current_caps                (GstPad * pad);
+GstCaps *       gst_pad_get_current_caps                (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean        gst_pad_has_current_caps                (GstPad * pad);
@@ -1496,7 +1527,7 @@ gboolean        gst_pad_has_current_caps                (GstPad * pad);
 /* capsnego for linked pads */
 
 GST_API
-GstCaps *       gst_pad_get_allowed_caps        (GstPad * pad);
+GstCaps *       gst_pad_get_allowed_caps        (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 /* pad offsets */
 
@@ -1563,15 +1594,15 @@ void                    gst_pad_set_iterate_internal_links_function_full (GstPad
                                                                  GDestroyNotify notify);
 
 GST_API
-GstIterator *           gst_pad_iterate_internal_links          (GstPad * pad);
+GstIterator *           gst_pad_iterate_internal_links          (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator *           gst_pad_iterate_internal_links_default  (GstPad * pad, GstObject *parent);
+GstIterator *           gst_pad_iterate_internal_links_default  (GstPad * pad, GstObject *parent) G_GNUC_WARN_UNUSED_RESULT;
 
 #define gst_pad_set_iterate_internal_links_function(p,f) gst_pad_set_iterate_internal_links_function_full((p),(f),NULL,NULL)
 
 GST_API
-GstPad *                gst_pad_get_single_internal_link        (GstPad * pad);
+GstPad *                gst_pad_get_single_internal_link        (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 /* generic query function */
 

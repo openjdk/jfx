@@ -99,10 +99,10 @@ private:
             , m_time(time)
             , m_timeConstant(timeConstant)
             , m_duration(duration)
-            , m_curve(WTFMove(curve))
+            , m_curve(WTF::move(curve))
             , m_curvePointsPerSecond(curvePointsPerSecond)
             , m_curveEndValue(curveEndValue)
-            , m_savedEvent(WTFMove(savedEvent))
+            , m_savedEvent(WTF::move(savedEvent))
         {
         }
 

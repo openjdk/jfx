@@ -92,6 +92,12 @@ const String& MockContentFilterSettings::unblockRequestURL() const
     return unblockRequestURL;
 }
 
+void MockContentFilterSettings::setWillSendRequestDecisionDelay(double willSendRequestDecisionDelay)
+{
+    m_willSendRequestDecisionDelay = Seconds(willSendRequestDecisionDelay);
+    MockContentFilterManager::singleton().notifySettingsChanged(singleton());
+}
+
 }; // namespace WebCore
 
 #endif // ENABLE(CONTENT_FILTERING)

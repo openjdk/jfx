@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,9 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -309,11 +311,16 @@ public abstract class Window {
      * Implementations should choose a sensible default height for their header button visualization if
      * {@link HeaderBar#USE_DEFAULT_SIZE} is specified.
      */
-    private final DoubleProperty prefHeaderButtonHeight =
-        new SimpleDoubleProperty(this, "prefHeaderButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
+    private ReadOnlyDoubleWrapper headerButtonHeight;
 
-    public final ReadOnlyDoubleProperty prefHeaderButtonHeightProperty() {
-        return prefHeaderButtonHeight;
+    private ReadOnlyDoubleWrapper headerButtonHeightPropertyImpl() {
+        return headerButtonHeight == null
+            ? headerButtonHeight = new ReadOnlyDoubleWrapper(this, "headerButtonHeight", HeaderBar.USE_DEFAULT_SIZE)
+            : headerButtonHeight;
+    }
+
+    public final ReadOnlyDoubleProperty headerButtonHeightProperty() {
+        return headerButtonHeightPropertyImpl().getReadOnlyProperty();
     }
 
     /**
@@ -322,8 +329,34 @@ public abstract class Window {
      * Note: Sub-classes must not use this method to change the preferred header button height.
      *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
      */
-    public final void setPrefHeaderButtonHeight(double height) {
-        prefHeaderButtonHeight.set(height);
+    public final void setHeaderButtonHeight(double height) {
+        headerButtonHeightPropertyImpl().set(height);
+    }
+
+    /**
+     * Specifies whether header buttons are displayed in a style appropriate for dark mode.
+     * Sub-classes can use this value in their header button visualization, but they are not required to do so.
+     */
+    private ReadOnlyBooleanWrapper headerButtonDarkStyle;
+
+    private ReadOnlyBooleanWrapper headerButtonDarkStylePropertyImpl() {
+        return headerButtonDarkStyle == null
+            ? headerButtonDarkStyle = new ReadOnlyBooleanWrapper(this, "headerButtonDarkStyle")
+            : headerButtonDarkStyle;
+    }
+
+    public final ReadOnlyBooleanProperty headerButtonDarkStyleProperty() {
+        return headerButtonDarkStylePropertyImpl().getReadOnlyProperty();
+    }
+
+    /**
+     * Sets the dark-style preference for header buttons.
+     * <p>
+     * Note: Sub-classes must not use this method to change the dark-style preference.
+     *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
+     */
+    public final void setHeaderButtonDarkStyle(boolean darkStyle) {
+        headerButtonDarkStylePropertyImpl().set(darkStyle);
     }
 
     /**

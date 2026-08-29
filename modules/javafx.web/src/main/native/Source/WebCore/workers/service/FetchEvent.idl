@@ -40,7 +40,9 @@
     undefined respondWith(Promise<FetchResponse> r);
 };
 
-dictionary FetchEventInit : ExtendableEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FetchEventInit : ExtendableEventInit {
     required FetchRequest request;
     DOMString clientId = "";
     DOMString resultingClientId = "";

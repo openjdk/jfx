@@ -28,12 +28,10 @@
 
 #include "CacheStorageProvider.h"
 #include "DOMCacheStorage.h"
-#include "Document.h"
-#include "FrameInlines.h"
+#include "DocumentPage.h"
 #include "LocalDOMWindow.h"
 #include "LocalDOMWindowProperty.h"
 #include "LocalFrameInlines.h"
-#include "Page.h"
 #include "Supplementable.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -88,7 +86,7 @@ DOMWindowCaches* DOMWindowCaches::from(LocalDOMWindow& window)
     if (!supplement) {
         auto newSupplement = makeUnique<DOMWindowCaches>(window);
         supplement = newSupplement.get();
-        provideTo(&window, supplementName(), WTFMove(newSupplement));
+        provideTo(&window, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -117,7 +115,7 @@ WorkerGlobalScopeCaches* WorkerGlobalScopeCaches::from(WorkerGlobalScope& scope)
     if (!supplement) {
         auto newSupplement = makeUnique<WorkerGlobalScopeCaches>(scope);
         supplement = newSupplement.get();
-        provideTo(&scope, supplementName(), WTFMove(newSupplement));
+        provideTo(&scope, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }

@@ -131,6 +131,8 @@ public:
         return m_op == LastNodeType && m_info;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream& out) const;
 
 private:
@@ -142,18 +144,9 @@ private:
     Graph* m_graph { nullptr };
 };
 
-struct PureValueHash {
-    static unsigned hash(const PureValue& key) { return key.hash(); }
-    static bool equal(const PureValue& a, const PureValue& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PureValue> : JSC::DFG::PureValueHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PureValue> : SimpleClassHashTraits<JSC::DFG::PureValue> {

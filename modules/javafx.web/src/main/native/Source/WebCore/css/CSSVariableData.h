@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
-#include "CSSParserTokenRange.h"
+#include <WebCore/CSSParserContext.h>
+#include <WebCore/CSSParserTokenRange.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

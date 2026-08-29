@@ -32,10 +32,12 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 typedef struct _GUri GUri;
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 GUri *       g_uri_ref              (GUri *uri);
 GLIB_AVAILABLE_IN_2_66
 void         g_uri_unref            (GUri *uri);
+#endif // GSTREAMER_LITE
 
 /**
  * GUriFlags:
@@ -92,6 +94,7 @@ typedef enum {
   G_URI_FLAGS_SCHEME_NORMALIZE GLIB_AVAILABLE_ENUMERATOR_IN_2_68 = 1 << 8,
 } GUriFlags;
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 gboolean     g_uri_split            (const gchar  *uri_ref,
                                      GUriFlags     flags,
@@ -186,6 +189,7 @@ GUri *       g_uri_build_with_user  (GUriFlags     flags,
                                      const gchar  *path,
                                      const gchar  *query,
                                      const gchar  *fragment);
+#endif // GSTREAMER_LITE
 
 /**
  * GUriHideFlags:
@@ -213,6 +217,7 @@ typedef enum {
   G_URI_HIDE_FRAGMENT    = 1 << 4,
 } GUriHideFlags;
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 char *       g_uri_to_string         (GUri          *uri);
 GLIB_AVAILABLE_IN_2_66
@@ -241,6 +246,7 @@ GLIB_AVAILABLE_IN_2_66
 const gchar *g_uri_get_fragment      (GUri          *uri);
 GLIB_AVAILABLE_IN_2_66
 GUriFlags    g_uri_get_flags         (GUri          *uri);
+#endif // GSTREAMER_LITE
 
 /**
  * GUriParamsFlags:
@@ -263,12 +269,14 @@ typedef enum {
   G_URI_PARAMS_PARSE_RELAXED    = 1 << 2,
 } GUriParamsFlags;
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 GHashTable *g_uri_parse_params       (const gchar    *params,
                                       gssize          length,
                                       const gchar    *separators,
                                       GUriParamsFlags flags,
                                       GError        **error);
+#endif // GSTREAMER_LITE
 
 typedef struct _GUriParamsIter GUriParamsIter;
 
@@ -281,6 +289,7 @@ struct _GUriParamsIter
   guint8   dummy3[256];
 };
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 void        g_uri_params_iter_init   (GUriParamsIter *iter,
                                       const gchar    *params,
@@ -293,6 +302,7 @@ gboolean    g_uri_params_iter_next   (GUriParamsIter *iter,
                                       gchar         **attribute,
                                       gchar         **value,
                                       GError        **error);
+#endif // GSTREAMER_LITE
 
 /**
  * G_URI_ERROR:
@@ -394,16 +404,19 @@ char *      g_uri_unescape_segment (const char *escaped_string,
                                     const char *escaped_string_end,
                                     const char *illegal_characters);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 char *      g_uri_parse_scheme     (const char *uri);
 GLIB_AVAILABLE_IN_2_66
 const char *g_uri_peek_scheme      (const char *uri);
+#endif // GSTREAMER_LITE
 
 GLIB_AVAILABLE_IN_ALL
 char *      g_uri_escape_string    (const char *unescaped,
                                     const char *reserved_chars_allowed,
                                     gboolean    allow_utf8);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_66
 GBytes *    g_uri_unescape_bytes   (const char *escaped_string,
                                     gssize      length,
@@ -414,6 +427,7 @@ GLIB_AVAILABLE_IN_2_66
 char *      g_uri_escape_bytes     (const guint8 *unescaped,
                                     gsize         length,
                                     const char   *reserved_chars_allowed);
+#endif // GSTREAMER_LITE
 
 G_GNUC_END_IGNORE_DEPRECATIONS
 

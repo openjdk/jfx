@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -184,7 +184,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     @Override
     public boolean present() {
         boolean presented = drawable.swapBuffers(context.getGLContext());
-        context.makeCurrent(null);
+        context.invalidateCurrentDrawable();  // no OpenGL call, just invalidating the drawable
         return presented;
     }
 
@@ -308,6 +308,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
 
         if (drawable != null) {
+            context.makeCurrent(null); // drawable must not be current when disposed
             drawable.dispose();
             drawable = null;
         }

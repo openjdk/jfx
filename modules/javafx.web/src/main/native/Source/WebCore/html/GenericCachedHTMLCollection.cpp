@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,9 @@
 #include "GenericCachedHTMLCollection.h"
 
 #include "CachedHTMLCollectionInlines.h"
-#include "HTMLFieldSetElement.h"
 #include "HTMLNames.h"
-#include "HTMLObjectElement.h"
 #include "HTMLOptionElement.h"
+#include "Settings.h"
 
 namespace WebCore {
 
@@ -68,7 +67,11 @@ bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element
         return element.hasTagName(trTag);
     case CollectionType::SelectedOptions: {
         auto* optionElement = dynamicDowncast<HTMLOptionElement>(element);
-        return optionElement && optionElement->selected();
+        if (!optionElement)
+            return false;
+        if (!element.document().settings().htmlEnhancedSelectParsingEnabled())
+            return optionElement->selected();
+        return optionElement->selected() && optionElement->ownerSelectElement() == &this->ownerNode();
     }
     case CollectionType::DataListOptions:
         return is<HTMLOptionElement>(element);

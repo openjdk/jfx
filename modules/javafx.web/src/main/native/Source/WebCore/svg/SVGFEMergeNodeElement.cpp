@@ -30,17 +30,18 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEMergeNodeElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEMergeNodeElement);
 
 inline SVGFEMergeNodeElement::SVGFEMergeNodeElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMergeNodeTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEMergeNodeElement::m_in1>();
-    });
+    }
 }
 
 Ref<SVGFEMergeNodeElement> SVGFEMergeNodeElement::create(const QualifiedName& tagName, Document& document)

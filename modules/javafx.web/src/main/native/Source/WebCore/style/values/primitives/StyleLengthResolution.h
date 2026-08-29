@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <WebCore/CSSPrimitiveNumericRange.h>
+
 namespace WebCore {
 
 class CSSToLengthConversionData;
@@ -51,9 +53,11 @@ namespace Style {
 //
 // If `RenderView` is nullptr, the following LengthUnits will all cause a return value of zero:
 //    Vw, Vh, Vmin, Vmax, Vb, Vi, Svw, Svh, Svmin, Svmax, Svb, Svi, Lvw, Lvh, Lvmin, Lvmax, Lvb, Lvi, Dvw, Dvh, Dvmin, Dvmax, Dvb, Dvi (viewport-percentage units)
-double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit, CSSPropertyID, const FontCascade* fontCascadeForUnit = nullptr, const RenderView* = nullptr);
+double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit, CSSPropertyID, const FontCascade* fontCascadeForUnit = nullptr, CSS::RangeZoomOptions = CSS::RangeZoomOptions::Default, const RenderView* = nullptr);
 
 double computeNonCalcLengthDouble(double value, CSS::LengthUnit, const CSSToLengthConversionData&);
+
+double computeCanonicalNonCalcLengthDouble(double value, CSS::LengthUnit, const CSSToLengthConversionData&);
 
 // True if `computeNonCalcLengthDouble` would produce identical results when resolved against both these styles.
 bool equalForLengthResolution(const RenderStyle&, const RenderStyle&);

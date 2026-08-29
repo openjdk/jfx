@@ -37,7 +37,7 @@ namespace WebCore {
 struct RTCRtpSendParameters : RTCRtpParameters {
     RTCRtpSendParameters() = default;
     explicit RTCRtpSendParameters(RTCRtpParameters&& parameters)
-        : RTCRtpParameters(WTFMove(parameters))
+        : RTCRtpParameters(WTF::move(parameters))
     {
     }
 

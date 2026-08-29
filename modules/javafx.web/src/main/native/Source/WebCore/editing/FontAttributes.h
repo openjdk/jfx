@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "Font.h"
-#include "FontShadow.h"
-#include "RenderStyleConstants.h"
-#include "StyleListStyleType.h"
+#include <WebCore/Font.h>
+#include <WebCore/FontShadow.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleListStyleType.h>
+#include <wtf/Platform.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 

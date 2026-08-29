@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CSSFontFace.h"
+#include "ExceptionOr.h"
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/Observer.h>
@@ -89,7 +90,7 @@ public:
 
     size_t facesPartitionIndex() const { return m_facesPartitionIndex; }
 
-    ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> matchingFacesExcludingPreinstalledFonts(ScriptExecutionContext&, const String& font, const String& text);
+    ExceptionOr<Vector<Ref<CSSFontFace>>> matchingFacesExcludingPreinstalledFonts(ScriptExecutionContext&, const String& font, const String& text);
 
     // FIXME: Should this be implemented?
     void updateStyleIfNeeded(CSSFontFace&) final { }
@@ -111,9 +112,7 @@ private:
     static String familyNameFromPrimitive(const CSSPrimitiveValue&);
 
     using FontSelectionKey = std::optional<FontSelectionRequest>;
-    struct FontSelectionKeyHash {
-        static unsigned hash(const FontSelectionKey& key) { return computeHash(key); }
-        static bool equal(const FontSelectionKey& a, const FontSelectionKey& b) { return a == b; }
+    struct FontSelectionKeyHash : WTF::HasherBasedHash<FontSelectionKey> {
         static const bool safeToCompareToEmptyOrDeleted = true;
     };
     struct FontSelectionKeyHashTraits : SimpleClassHashTraits<FontSelectionKey> {

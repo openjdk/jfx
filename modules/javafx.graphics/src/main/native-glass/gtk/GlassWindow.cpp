@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -293,9 +293,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setTitle
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    const char* ctitle = mainEnv->GetStringUTFChars(title, NULL);
+
+    gchar * ctitle = jstring_to_utf8(env, title);
     ctx->set_title(ctitle);
-    mainEnv->ReleaseStringUTFChars(title, ctitle);
+    g_free(ctitle);
 
     return JNI_TRUE;
 }

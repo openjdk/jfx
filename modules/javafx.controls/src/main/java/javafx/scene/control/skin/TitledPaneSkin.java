@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
@@ -49,6 +50,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
 
 /**
@@ -192,11 +194,13 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
-        super.dispose();
+        cancelTransitionAnimation();
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     // Override LabeledSkinBase updateChildren because
@@ -290,10 +294,12 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         }
 
         // we need to perform the transition between expanded / hidden
-        if (Platform.isFxApplicationThread() && getSkinnable().isAnimated()) {
+        if (shouldAnimate()) {
             transitionStartValue = getTransition();
-            doAnimationTransition();
+            runTransitionAnimation();
         } else {
+            cancelTransitionAnimation();
+
             if (expanded) {
                 setTransition(1.0f);
             } else {
@@ -325,7 +331,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         return headerHeight + snapSizeY(contentHeight) + snappedTopInset() + snappedBottomInset();
     }
 
-    private void doAnimationTransition() {
+    private void runTransitionAnimation() {
         if (content == null) {
             return;
         }
@@ -386,6 +392,23 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
         timeline.getKeyFrames().setAll(k1, k2);
         timeline.play();
+    }
+
+    private void cancelTransitionAnimation() {
+        if (timeline != null) {
+            timeline.stop();
+            timeline = null;
+        }
+    }
+
+    private boolean shouldAnimate() {
+        TitledPane skinnable = getSkinnable();
+        return skinnable != null
+            && Platform.isFxApplicationThread()
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.isAnimated()
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 
     /*

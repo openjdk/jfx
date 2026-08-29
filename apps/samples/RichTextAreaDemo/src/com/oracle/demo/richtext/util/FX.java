@@ -38,6 +38,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -78,6 +79,13 @@ public class FX {
         Menu m = new Menu(text);
         applyMnemonic(m);
         b.getMenus().add(m);
+        return m;
+    }
+
+    public static Menu menu(Menu b, String text) {
+        Menu m = new Menu(text);
+        applyMnemonic(m);
+        b.getItems().add(m);
         return m;
     }
 
@@ -123,6 +131,14 @@ public class FX {
         applyMnemonic(mi);
         lastMenu(b).getItems().add(mi);
         a.attach(mi);
+        return mi;
+    }
+
+    public static CheckMenuItem checkItem(MenuBar b, String text, BooleanProperty p) {
+        CheckMenuItem mi = new CheckMenuItem(text);
+        applyMnemonic(mi);
+        lastMenu(b).getItems().add(mi);
+        mi.selectedProperty().bindBidirectional(p);
         return mi;
     }
 
@@ -190,6 +206,12 @@ public class FX {
     public static SeparatorMenuItem separator(MenuBar b) {
         SeparatorMenuItem s = new SeparatorMenuItem();
         lastMenu(b).getItems().add(s);
+        return s;
+    }
+
+    public static SeparatorMenuItem separator(Menu m) {
+        SeparatorMenuItem s = new SeparatorMenuItem();
+        m.getItems().add(s);
         return s;
     }
 

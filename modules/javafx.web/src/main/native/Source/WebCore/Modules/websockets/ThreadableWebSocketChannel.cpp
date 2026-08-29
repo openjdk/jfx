@@ -33,13 +33,13 @@
 #include "ThreadableWebSocketChannel.h"
 
 #include "ContentRuleListResults.h"
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentSecurityOrigin.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
-#include "Page.h"
-#include "Quirks.h"
 #include "ScriptExecutionContext.h"
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
@@ -67,8 +67,8 @@ RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& 
 RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecutionContext& context, WebSocketChannelClient& client, SocketProvider& provider)
 {
     if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(context)) {
-        WorkerRunLoop& runLoop = workerGlobalScope->thread().runLoop();
-        return WorkerThreadableWebSocketChannel::create(*workerGlobalScope, client, makeString("webSocketChannelMode"_s, runLoop.createUniqueId()), provider);
+        auto identifier = workerGlobalScope->thread()->runLoop().createUniqueId();
+        return WorkerThreadableWebSocketChannel::create(*workerGlobalScope, client, makeString("webSocketChannelMode"_s, identifier), provider);
     }
 
     return create(downcast<Document>(context), client, provider);
@@ -84,8 +84,11 @@ std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChann
             return { };
 
 #if ENABLE(CONTENT_EXTENSIONS)
-        if (RefPtr documentLoader = document.loader()) {
-            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
+        RefPtr frame = document.frame();
+        RefPtr userContentProvider = frame ? frame->userContentProvider() : nullptr;
+        RefPtr documentLoader = document.loader();
+        if (userContentProvider && documentLoader) {
+            auto results = userContentProvider->processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
             if (results.shouldBlock())
                 return { };
 
@@ -111,12 +114,12 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
         return { };
 
     auto userAgent = document.userAgent(validatedURL->url);
-    ResourceRequest request { WTFMove(validatedURL->url) };
+    ResourceRequest request { WTF::move(validatedURL->url) };
     request.setHTTPUserAgent(userAgent);
     request.setDomainForCachePartition(document.domainForCachePartition());
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());
-    request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
+    request.setHTTPHeaderField(HTTPHeaderName::Origin, document.protectedSecurityOrigin()->toString());
 
     if (RefPtr documentLoader = document.loader())
         request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());

@@ -110,7 +110,6 @@ JSValue eventHandlerAttribute(EventTarget& eventTarget, const AtomString& eventT
     return jsNull();
 }
 
-
 template<typename Visitor>
 inline void JSEventListener::visitJSFunctionImpl(Visitor& visitor)
 {
@@ -224,14 +223,21 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     }
 
     MarkedArgumentBuffer args;
-    args.append(toJS(lexicalGlobalObject, globalObject, &event));
+    args.append(toJS(lexicalGlobalObject, globalObject, event));
     ASSERT(!args.hasOverflowed());
 
     VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : lexicalGlobalObject);
 
     JSExecState::instrumentFunction(&scriptExecutionContext, callData);
 
-    JSValue thisValue = handleEventFunction == jsFunction ? toJS(lexicalGlobalObject, globalObject, event.protectedCurrentTarget().get()) : jsFunction;
+    auto thisValue = [&] -> JSValue {
+        if (handleEventFunction != jsFunction)
+            return jsFunction;
+        if (RefPtr currentTarget = event.currentTarget())
+            return toJS(lexicalGlobalObject, globalObject, currentTarget.releaseNonNull());
+        return jsNull();
+    }();
+
     NakedPtr<JSC::Exception> uncaughtException;
     JSValue retval = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, handleEventFunction, callData, thisValue, args, uncaughtException);
 

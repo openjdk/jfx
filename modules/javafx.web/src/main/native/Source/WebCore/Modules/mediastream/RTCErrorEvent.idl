@@ -32,6 +32,8 @@
     [SameObject] readonly attribute RTCError error;
 };
 
-dictionary RTCErrorEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCErrorEventInit : EventInit {
     required RTCError error;
 };

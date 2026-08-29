@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "BoxExtents.h"
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleValueTypes.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 
@@ -38,7 +38,7 @@ namespace Style {
 // <'scroll-margin-*'> = <length>
 // https://drafts.csswg.org/css-scroll-snap-1/#margin-longhands-physical
 struct ScrollMarginEdge {
-    using Fixed = Length<>;
+    using Fixed = Length<CSS::AllUnzoomed>;
 
     ScrollMarginEdge(Fixed&& fixed) : m_value(fixed) { }
     ScrollMarginEdge(const Fixed& fixed) : m_value(fixed) { }
@@ -59,9 +59,10 @@ struct ScrollMarginEdge {
     bool operator==(const ScrollMarginEdge&) const = default;
 
 private:
-    friend struct Evaluation<ScrollMarginEdge>;
+    friend struct Evaluation<ScrollMarginEdge, LayoutUnit>;
+    friend struct Evaluation<ScrollMarginEdge, float>;
 
-    Length<> m_value;
+    Fixed m_value;
 };
 
 // <'scroll-margin'> = <length>{1,4}
@@ -74,14 +75,18 @@ template<> struct CSSValueConversion<ScrollMarginEdge> { auto operator()(Builder
 
 // MARK: - Evaluation
 
-template<> struct Evaluation<ScrollMarginEdge> {
-    auto operator()(const ScrollMarginEdge&, LayoutUnit referenceLength) -> LayoutUnit;
-    auto operator()(const ScrollMarginEdge&, float referenceLength) -> float;
+template<> struct Evaluation<ScrollMarginEdge, LayoutUnit> {
+    auto operator()(const ScrollMarginEdge&, LayoutUnit referenceLength, ZoomFactor) -> LayoutUnit;
+    auto operator()(const ScrollMarginEdge&, ZoomFactor) -> LayoutUnit;
+};
+template<> struct Evaluation<ScrollMarginEdge, float> {
+    auto operator()(const ScrollMarginEdge&, float referenceLength, ZoomFactor) -> float;
+    auto operator()(const ScrollMarginEdge&, ZoomFactor) -> float;
 };
 
 // MARK: - Extent
 
-LayoutBoxExtent extentForRect(const ScrollMarginBox&, const LayoutRect&);
+LayoutBoxExtent extentForRect(const ScrollMarginBox&, const LayoutRect&, ZoomFactor);
 
 } // namespace Style
 } // namespace WebCore

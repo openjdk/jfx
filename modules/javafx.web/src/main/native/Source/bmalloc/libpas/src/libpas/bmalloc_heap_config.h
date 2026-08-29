@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "pas_config.h"
 
+#if LIBPAS_ENABLED
 #if PAS_ENABLE_BMALLOC
 
 #include "bmalloc_type.h"
@@ -77,7 +78,8 @@ PAS_API void bmalloc_heap_config_activate(void);
     .use_marge_bitfit = true, \
     .marge_bitfit_min_align_shift = PAS_MIN_MARGE_ALIGN_SHIFT, \
     .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE, \
-    .pgm_enabled = true)
+    .pgm_enabled = true, \
+    .delegate_large_user_allocations = true)
 
 PAS_API extern const pas_heap_config bmalloc_heap_config;
 
@@ -87,5 +89,5 @@ PAS_END_EXTERN_C;
 
 #endif /* PAS_ENABLE_BMALLOC */
 
+#endif /* LIBPAS_ENABLED */
 #endif /* BMALLOC_HEAP_CONFIG_H */
-

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Performance.h"
 #include "PerformanceEntry.h"
 #include "PerformanceObserverCallback.h"
 #include "dom/DOMHighResTimeStamp.h"
@@ -50,7 +51,7 @@ public:
 
     static Ref<PerformanceObserver> create(ScriptExecutionContext& context, Ref<PerformanceObserverCallback>&& callback)
     {
-        return adoptRef(*new PerformanceObserver(context, WTFMove(callback)));
+        return adoptRef(*new PerformanceObserver(context, WTF::move(callback)));
     }
 
     static Vector<String> supportedEntryTypes(ScriptExecutionContext&);
@@ -71,6 +72,7 @@ public:
 
     bool isRegistered() const { return m_registered; }
     PerformanceObserverCallback& callback() { return m_callback.get(); }
+    Seconds durationThreshold() const { return m_durationThreshold; }
 
 private:
     PerformanceObserver(ScriptExecutionContext&, Ref<PerformanceObserverCallback>&&);
@@ -81,6 +83,7 @@ private:
     Vector<Ref<PerformanceEntry>> m_entriesToDeliver;
     const Ref<PerformanceObserverCallback> m_callback;
     OptionSet<PerformanceEntry::Type> m_typeFilter;
+    Seconds m_durationThreshold;
     bool m_registered { false };
     bool m_isTypeObserver { false };
     bool m_hasNavigationTiming { false };

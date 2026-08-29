@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpuvertexstate
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUVertexState : GPUProgrammableStage {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUVertexState : GPUProgrammableStage {
     sequence<GPUVertexBufferLayout?> buffers = [];
 };

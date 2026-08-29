@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "LengthPoint.h"
-#include "StylePosition.h"
-#include "StyleValueTypes.h"
+#include <WebCore/AcceleratedEffectOffsetAnchor.h>
+#include <WebCore/StylePosition.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -34,14 +34,18 @@ namespace Style {
 // <'offset-anchor'> = auto | <position>
 // https://drafts.fxtf.org/motion/#propdef-offset-anchor
 struct OffsetAnchor {
-    OffsetAnchor(CSS::Keyword::Auto) : value { WebCore::LengthType::Auto, WebCore::LengthType::Auto } { }
-    OffsetAnchor(Position&& position) : value { toPlatform(position) } { }
-    OffsetAnchor(const Position& position) : value { toPlatform(position) } { }
-    explicit OffsetAnchor(WebCore::LengthPoint&& point) : value { WTFMove(point) } { RELEASE_ASSERT(isValid(value)); }
-    explicit OffsetAnchor(const WebCore::LengthPoint& point) : value { point } { RELEASE_ASSERT(isValid(value)); }
+    OffsetAnchor(CSS::Keyword::Auto keyword) : m_value { keyword} { }
+    OffsetAnchor(Position&& position) : m_value { WTF::move(position) } { }
+    OffsetAnchor(const Position& position) : m_value { position } { }
 
-    ALWAYS_INLINE bool isAuto() const { return value.x.isAuto(); }
-    ALWAYS_INLINE bool isPosition() const { return value.x.isSpecified(); }
+#if ENABLE(THREADED_ANIMATIONS)
+    explicit OffsetAnchor(AcceleratedEffectOffsetAnchor&& point) : m_value { convert(point) } { }
+    explicit OffsetAnchor(const AcceleratedEffectOffsetAnchor& point) : m_value { convert(point) } { }
+#endif
+
+    ALWAYS_INLINE bool isAuto() const { return holdsAlternative<CSS::Keyword::Auto>(); }
+    ALWAYS_INLINE bool isPosition() const { return holdsAlternative<Position>(); }
+    std::optional<Position> tryPosition() const { return isPosition() ? std::make_optional(std::get<Position>(m_value)) : std::nullopt; }
 
     template<typename> bool holdsAlternative() const;
     template<typename... F> decltype(auto) switchOn(F&&...) const;
@@ -49,31 +53,21 @@ struct OffsetAnchor {
     bool operator==(const OffsetAnchor&) const = default;
 
 private:
-    friend struct Blending<OffsetAnchor>;
-    friend struct ToPlatform<OffsetAnchor>;
+#if ENABLE(THREADED_ANIMATIONS)
+    static auto convert(const AcceleratedEffectOffsetAnchor&) -> Variant<CSS::Keyword::Auto, Position>;
+#endif
 
-    static bool isValid(const WebCore::LengthPoint& point)
-    {
-        return (point.x.isAuto() && point.y.isAuto())
-            || (point.x.isSpecified() && point.y.isSpecified());
-    }
-
-    WebCore::LengthPoint value;
+    Variant<CSS::Keyword::Auto, Position> m_value;
 };
 
 template<typename T> bool OffsetAnchor::holdsAlternative() const
 {
-         if constexpr (std::same_as<T, CSS::Keyword::Auto>)     return isAuto();
-    else if constexpr (std::same_as<T, Position>)               return isPosition();
+    return std::holds_alternative<T>(m_value);
 }
 
 template<typename... F> decltype(auto) OffsetAnchor::switchOn(F&&... f) const
 {
-    auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
-
-    if (isAuto())
-        return visitor(CSS::Keyword::Auto { });
-    return visitor(Position { value });
+    return WTF::switchOn(m_value, std::forward<F>(f)...);
 }
 
 // MARK: - Conversion
@@ -88,9 +82,15 @@ template<> struct Blending<OffsetAnchor> {
     auto blend(const OffsetAnchor&, const OffsetAnchor&, const BlendingContext&) -> OffsetAnchor;
 };
 
-// MARK: - Platform
+// MARK: - Evaluation
 
-template<> struct ToPlatform<OffsetAnchor> { auto operator()(const OffsetAnchor&) -> WebCore::LengthPoint; };
+#if ENABLE(THREADED_ANIMATIONS)
+
+template<> struct Evaluation<OffsetAnchor, AcceleratedEffectOffsetAnchor> {
+    auto operator()(const OffsetAnchor&, FloatSize, ZoomNeeded) -> AcceleratedEffectOffsetAnchor;
+};
+
+#endif
 
 } // namespace Style
 } // namespace WebCore

@@ -33,6 +33,8 @@
     readonly attribute ViewTransition? viewTransition;
 };
 
-dictionary PageRevealEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PageRevealEventInit : EventInit {
   ViewTransition? viewTransition = null;
 };

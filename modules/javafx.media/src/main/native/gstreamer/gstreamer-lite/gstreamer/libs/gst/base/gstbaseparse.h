@@ -301,12 +301,12 @@ GType           gst_base_parse_frame_get_type (void);
 GST_BASE_API
 GstBaseParseFrame * gst_base_parse_frame_new  (GstBuffer              * buffer,
                                                GstBaseParseFrameFlags   flags,
-                                               gint                     overhead);
+                                               gint                     overhead) G_GNUC_WARN_UNUSED_RESULT;
 GST_BASE_API
 void            gst_base_parse_frame_init      (GstBaseParseFrame * frame);
 
 GST_BASE_API
-GstBaseParseFrame * gst_base_parse_frame_copy  (GstBaseParseFrame * frame);
+GstBaseParseFrame * gst_base_parse_frame_copy  (GstBaseParseFrame * frame) G_GNUC_WARN_UNUSED_RESULT;
 GST_BASE_API
 void            gst_base_parse_frame_free      (GstBaseParseFrame * frame);
 

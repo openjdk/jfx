@@ -97,7 +97,7 @@ GST_API
 GType gst_stream_collection_get_type (void);
 
 GST_API
-GstStreamCollection *gst_stream_collection_new (const gchar *upstream_id);
+GstStreamCollection *gst_stream_collection_new (const gchar *upstream_id) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 const gchar *gst_stream_collection_get_upstream_id (GstStreamCollection *collection);

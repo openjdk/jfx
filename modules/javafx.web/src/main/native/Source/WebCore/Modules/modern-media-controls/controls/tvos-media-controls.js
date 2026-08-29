@@ -46,7 +46,7 @@ class TVOSMediaControls extends MediaControls
 
         this.timeControl.scrubber.allowsRelativeScrubbing = true;
         this.timeControl.scrubber.knobStyle = Slider.KnobStyle.None;
-        this.timeControl.timeLabelsAttachment = TimeControl.TimeLabelsAttachment.Below;
+        this.timeControl.style = TimeControl.Style.Below;
 
         this.skipBackButton = new SkipBackButton(this);
         this.skipForwardButton = new SkipForwardButton(this);

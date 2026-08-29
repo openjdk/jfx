@@ -64,11 +64,8 @@ private:
         : AtomicValue(kind, origin, width, operand, pointer, 0)
     {
     }
-    template<typename Int,
-        typename = typename std::enable_if<std::is_integral<Int>::value>::type,
-        typename = typename std::enable_if<std::is_signed<Int>::value>::type,
-        typename = typename std::enable_if<sizeof(Int) <= sizeof(OffsetType)>::type
-    >
+    template<std::signed_integral Int>
+        requires (sizeof(Int) <= sizeof(OffsetType))
     AtomicValue(Kind kind, Origin origin, Width width, Value* operand, Value* pointer, Int offset, HeapRange range = HeapRange::top(), HeapRange fenceRange = HeapRange::top())
         : AtomicValue(AtomicValueRMWTag, kind, origin, width, operand, pointer, offset, range, fenceRange)
     {
@@ -78,11 +75,8 @@ private:
         : AtomicValue(kind, origin, width, expectedValue, newValue, pointer, 0)
     {
     }
-    template<typename Int,
-        typename = typename std::enable_if<std::is_integral<Int>::value>::type,
-        typename = typename std::enable_if<std::is_signed<Int>::value>::type,
-        typename = typename std::enable_if<sizeof(Int) <= sizeof(OffsetType)>::type
-    >
+    template<std::signed_integral Int>
+        requires (sizeof(Int) <= sizeof(OffsetType))
     AtomicValue(Kind kind, Origin origin, Width width, Value* expectedValue, Value* newValue, Value* pointer, Int offset, HeapRange range = HeapRange::top(), HeapRange fenceRange = HeapRange::top())
         : AtomicValue(AtomicValueCASTag, kind, origin, width, expectedValue, newValue, pointer, offset, range, fenceRange)
     {

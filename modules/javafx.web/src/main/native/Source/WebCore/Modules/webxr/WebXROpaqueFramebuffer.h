@@ -153,6 +153,7 @@ private:
     uint64_t m_renderingFrameIndex { ~0u };
     bool m_usingFoveation { false };
     bool m_blitDepth { false };
+    bool m_isForTesting { false };
 };
 
 } // namespace WebCore

@@ -45,13 +45,13 @@ const ClassInfo JSWebAssemblyException::s_info = { "WebAssembly.Exception"_s, &B
 
 Structure* JSWebAssemblyException::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
 JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, Ref<const Wasm::Tag>&& tag, FixedVector<uint64_t>&& payload)
     : Base(vm, structure)
-    , m_tag(WTFMove(tag))
-    , m_payload(WTFMove(payload))
+    , m_tag(WTF::move(tag))
+    , m_payload(WTF::move(payload))
 {
 }
 
@@ -68,7 +68,7 @@ void JSWebAssemblyException::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(cell, visitor);
 
     auto* exception = jsCast<JSWebAssemblyException*>(cell);
-    const auto& tagType = exception->tag().type();
+    SUPPRESS_UNCOUNTED_LOCAL const auto& tagType = exception->tag().type();
     unsigned offset = 0;
     for (unsigned i = 0; i < tagType.argumentCount(); ++i) {
         if (isRefType(tagType.argumentType(i)))
@@ -90,11 +90,11 @@ JSValue JSWebAssemblyException::getArg(JSGlobalObject* globalObject, unsigned i)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    const auto& tagType = tag().type();
+    SUPPRESS_UNCOUNTED_LOCAL const auto& tagType = tag().type();
     ASSERT(i < tagType.argumentCount());
 
     auto argTypeKind = tagType.argumentType(i).kind;
-    if (argTypeKind == Wasm::TypeKind::V128 || argTypeKind == Wasm::TypeKind::Exn) {
+    if (argTypeKind == Wasm::TypeKind::V128 || argTypeKind == Wasm::TypeKind::Exnref) {
         throwTypeError(globalObject, scope, "argument type cannot be a V128 or exnref");
         return { };
     }

@@ -28,20 +28,23 @@
 #include "WorkerNavigator.h"
 
 #include "Chrome.h"
+#include "ContextDestructionObserverInlines.h"
 #include "GPU.h"
 #include "JSDOMPromiseDeferred.h"
+#include "NavigatorUAData.h"
 #include "Page.h"
 #include "PushEvent.h"
 #include "ServiceWorkerGlobalScope.h"
+#include "UserAgentStringData.h"
+#include "UserAgentStringParser.h"
 #include "WorkerBadgeProxy.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <wtf/TZoneMallocInlines.h>
-#include "NavigatorUAData.h"
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerNavigator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerNavigator);
 
 WorkerNavigator::WorkerNavigator(ScriptExecutionContext& context, const String& userAgent, bool isOnline)
     : NavigatorBase(&context)
@@ -88,7 +91,7 @@ void WorkerNavigator::setAppBadge(std::optional<unsigned long long> badge, Ref<D
 #if ENABLE(DECLARATIVE_WEB_PUSH)
     if (RefPtr context = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext())) {
         if (RefPtr declarativePushEvent = context->declarativePushEvent()) {
-            declarativePushEvent->setUpdatedAppBadge(WTFMove(badge));
+            declarativePushEvent->setUpdatedAppBadge(WTF::move(badge));
             return;
         }
     }
@@ -100,30 +103,26 @@ void WorkerNavigator::setAppBadge(std::optional<unsigned long long> badge, Ref<D
         return;
     }
 
-    if (auto* workerBadgeProxy = scope->thread().workerBadgeProxy())
+    if (CheckedPtr workerBadgeProxy = scope->thread()->workerBadgeProxy())
         workerBadgeProxy->setAppBadge(badge);
     promise->resolve();
 }
 
 void WorkerNavigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 {
-    setAppBadge(0, WTFMove(promise));
-}
-
-void WorkerNavigator::initializeNavigatorUAData() const
-{
-    if (m_navigatorUAData)
-        return;
-
-    // FIXME(296489): populate the data structure
-    return;
+    setAppBadge(0, WTF::move(promise));
 }
 
 NavigatorUAData& WorkerNavigator::userAgentData() const
 {
-    if (!m_navigatorUAData)
-        initializeNavigatorUAData();
+    Ref parser = UserAgentStringParser::create(m_userAgent);
+    std::optional userAgentStringData = parser->parse();
+    if (userAgentStringData) {
+        m_navigatorUAData = NavigatorUAData::create(WTF::move(*userAgentStringData));
+        return *m_navigatorUAData;
+    }
 
+    m_navigatorUAData = NavigatorUAData::create();
     return *m_navigatorUAData;
 };
 

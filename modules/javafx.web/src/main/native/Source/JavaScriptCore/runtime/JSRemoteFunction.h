@@ -27,10 +27,10 @@
 
 #pragma once
 
-#include "AuxiliaryBarrier.h"
-#include "JSFunction.h"
-#include "JSObject.h"
-#include "JSString.h"
+#include <JavaScriptCore/AuxiliaryBarrier.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/JSString.h>
 #include <wtf/TaggedArrayStoragePtr.h>
 
 namespace JSC {

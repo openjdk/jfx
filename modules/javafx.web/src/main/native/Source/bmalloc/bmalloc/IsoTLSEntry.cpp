@@ -38,9 +38,7 @@ IsoTLSEntry::IsoTLSEntry(size_t size)
 {
 }
 
-IsoTLSEntry::~IsoTLSEntry()
-{
-}
+IsoTLSEntry::~IsoTLSEntry() = default;
 
 } // namespace bmalloc
 

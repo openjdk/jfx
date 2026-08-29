@@ -37,6 +37,8 @@
 
 #if OS(LINUX)
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
+#elif OS(HAIKU)
+#include <wtf/haiku/CurrentProcessMemoryStatus.h>
 #elif OS(FREEBSD)
 #include <sys/sysctl.h>
 #include <sys/types.h>
@@ -111,7 +113,7 @@ void MemoryPressureHandler::holdOff(Seconds seconds)
 
 static size_t processMemoryUsage()
 {
-#if OS(LINUX)
+#if OS(LINUX) || OS(HAIKU)
     ProcessMemoryStatus memoryStatus;
     currentProcessMemoryStatus(memoryStatus);
     return (memoryStatus.resident - memoryStatus.shared);

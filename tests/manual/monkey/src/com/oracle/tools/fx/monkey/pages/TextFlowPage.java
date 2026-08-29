@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Formats;
 import com.oracle.tools.fx.monkey.util.LayoutInfoVisualizer;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCaretPaths;
@@ -151,7 +152,7 @@ public class TextFlowPage extends TestPaneBase {
         setOptions(op);
 
         fontOption.selectSystemFont();
-        visualizer.attach(container, textFlow);
+        visualizer.attach(textFlow);
     }
 
     private void setContent(String text) {
@@ -236,15 +237,15 @@ public class TextFlowPage extends TestPaneBase {
                 Point3D p3 = pick.getIntersectedPoint();
                 Point2D p = new Point2D(p3.getX(), p3.getY());
                 HitInfo h = t.hitTest(p);
-                hitInfoText.setText(String.valueOf(h));
+                hitInfoText.setText(Formats.hit(h));
             }
         }
 
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = textFlow.hitTest(p);
-        hitInfo.setText(String.valueOf(h));
+        hitInfo.setText(Formats.hit(h));
         HitInfo h2 = textFlow.getHitInfo(p);
-        hitInfoNew.setText(String.valueOf(h2));
+        hitInfoNew.setText(Formats.hit(h2));
     }
 
     private String getText() {

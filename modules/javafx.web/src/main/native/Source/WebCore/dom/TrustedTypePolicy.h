@@ -48,10 +48,10 @@ enum class TrustedType : int8_t;
 enum class IfMissing : bool { Throw, ReturnNull };
 
 class TrustedTypePolicy : public ScriptWrappable, public RefCounted<TrustedTypePolicy> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TrustedTypePolicy);
+    WTF_MAKE_TZONE_ALLOCATED(TrustedTypePolicy);
 public:
     static Ref<TrustedTypePolicy> create(const String&, const TrustedTypePolicyOptions&);
-    ~TrustedTypePolicy() = default;
+    ~TrustedTypePolicy();
     ExceptionOr<Ref<TrustedHTML>> createHTML(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&&);
     ExceptionOr<Ref<TrustedScript>> createScript(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&&);
     ExceptionOr<Ref<TrustedScriptURL>> createScriptURL(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&&);

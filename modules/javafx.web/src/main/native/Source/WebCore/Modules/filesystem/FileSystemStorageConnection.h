@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "FileSystemHandleIdentifier.h"
-#include "FileSystemSyncAccessHandleIdentifier.h"
-#include "FileSystemWritableFileStreamIdentifier.h"
-#include "FileSystemWriteCloseReason.h"
-#include "FileSystemWriteCommandType.h"
-#include "ProcessQualified.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/FileSystemHandleIdentifier.h>
+#include <WebCore/FileSystemSyncAccessHandleIdentifier.h>
+#include <WebCore/FileSystemWritableFileStreamIdentifier.h>
+#include <WebCore/FileSystemWriteCloseReason.h>
+#include <WebCore/FileSystemWriteCommandType.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
@@ -57,7 +57,7 @@ public:
         FileSystemSyncAccessHandleIdentifier identifier;
         FileSystem::FileHandle file;
         uint64_t capacity { 0 };
-        SyncAccessHandleInfo isolatedCopy() && { return { identifier, WTFMove(file), capacity }; }
+        SyncAccessHandleInfo isolatedCopy() && { return { identifier, WTF::move(file), capacity }; }
     };
     using GetAccessHandleCallback = CompletionHandler<void(ExceptionOr<SyncAccessHandleInfo>&&)>;
     using VoidCallback = CompletionHandler<void(ExceptionOr<void>&&)>;
@@ -91,6 +91,8 @@ public:
     WEBCORE_EXPORT bool errorFileSystemWritable(FileSystemWritableFileStreamIdentifier);
     void registerFileSystemWritable(FileSystemWritableFileStreamIdentifier, FileSystemWritableFileStream&);
     void unregisterFileSystemWritable(FileSystemWritableFileStreamIdentifier);
+
+    size_t handleCount() const { return m_writables.size(); }
 
 private:
     HashMap<FileSystemWritableFileStreamIdentifier, WeakPtr<FileSystemWritableFileStream>> m_writables;

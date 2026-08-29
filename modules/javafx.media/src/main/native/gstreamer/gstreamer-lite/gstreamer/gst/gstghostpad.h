@@ -61,7 +61,7 @@ GST_API
 GType               gst_proxy_pad_get_type (void);
 
 GST_API
-GstProxyPad *       gst_proxy_pad_get_internal (GstProxyPad *pad);
+GstProxyPad *       gst_proxy_pad_get_internal (GstProxyPad *pad) G_GNUC_WARN_UNUSED_RESULT;
 
 
 GST_API
@@ -115,19 +115,19 @@ GST_API
 GType            gst_ghost_pad_get_type          (void);
 
 GST_API
-GstPad*          gst_ghost_pad_new               (const gchar *name, GstPad *target) G_GNUC_MALLOC;
+GstPad*          gst_ghost_pad_new               (const gchar *name, GstPad *target) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*          gst_ghost_pad_new_no_target     (const gchar *name, GstPadDirection dir) G_GNUC_MALLOC;
+GstPad*          gst_ghost_pad_new_no_target     (const gchar *name, GstPadDirection dir) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*          gst_ghost_pad_new_from_template (const gchar *name, GstPad * target, GstPadTemplate * templ) G_GNUC_MALLOC;
+GstPad*          gst_ghost_pad_new_from_template (const gchar *name, GstPad * target, GstPadTemplate * templ) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*          gst_ghost_pad_new_no_target_from_template (const gchar *name, GstPadTemplate * templ) G_GNUC_MALLOC;
+GstPad*          gst_ghost_pad_new_no_target_from_template (const gchar *name, GstPadTemplate * templ) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPad*          gst_ghost_pad_get_target        (GstGhostPad *gpad);
+GstPad*          gst_ghost_pad_get_target        (GstGhostPad *gpad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean         gst_ghost_pad_set_target        (GstGhostPad *gpad, GstPad *newtarget);

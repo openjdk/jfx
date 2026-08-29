@@ -117,9 +117,9 @@ static void setCairoFontOptionsFromFontConfigPattern(cairo_font_options_t* optio
 }
 
 FontPlatformData::FontPlatformData(cairo_font_face_t* fontFace, RefPtr<FcPattern>&& pattern, float size, bool fixedWidth, bool syntheticBold, bool syntheticOblique, FontOrientation orientation, const FontCustomPlatformData* customPlatformData)
-    : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, FontWidthVariant::RegularWidth, TextRenderingMode::AutoTextRendering, customPlatformData)
+    : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, FontWidthVariant::RegularWidth, TextRenderingMode::Auto, customPlatformData)
 {
-    m_pattern = WTFMove(pattern);
+    m_pattern = WTF::move(pattern);
     m_fixedWidth = fixedWidth;
 
     buildScaledFont(fontFace);
@@ -205,7 +205,7 @@ String FontPlatformData::familyName() const
 {
     FcChar8* family = nullptr;
     FcPatternGetString(m_pattern.get(), FC_FAMILY, 0, &family);
-    return String::fromUTF8(unsafeSpan8(reinterpret_cast<const char*>(family)));
+    return byteCast<char8_t>(unsafeSpan(byteCast<char>(family)));
 }
 
 Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames shouldLocalizeAxisNames) const
@@ -303,7 +303,7 @@ RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
     if (error || tableSize != expectedTableSize)
         return nullptr;
 
-    return SharedBuffer::create(WTFMove(data));
+    return SharedBuffer::create(WTF::move(data));
 }
 
 #if ENABLE(MATHML) && USE(HARFBUZZ)

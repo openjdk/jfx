@@ -53,8 +53,8 @@ public:
     RefPtr<Archive> popSubframeArchive(const String& frameName, const URL&);
 
 private:
-    HashMap<String, RefPtr<ArchiveResource>> m_subresources;
-    HashMap<String, RefPtr<Archive>> m_subframes;
+    HashMap<String, Ref<ArchiveResource>> m_subresources;
+    HashMap<String, Ref<Archive>> m_subframes;
 };
 
 } // namespace WebCore

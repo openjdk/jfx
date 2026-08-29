@@ -27,9 +27,12 @@
 
 #include "AnchorPositionEvaluator.h"
 #include "PropertyCascade.h"
+#include "RenderStyle.h"
+#include "ResolvedStyle.h"
 #include "SelectorChecker.h"
 #include "SelectorMatchingState.h"
 #include "StyleChange.h"
+#include "StylePositionTryFallback.h"
 #include "StyleUpdate.h"
 #include "Styleable.h"
 #include "TreeResolutionState.h"
@@ -99,13 +102,15 @@ private:
 
     HashSet<AnimatableCSSProperty> applyCascadeAfterAnimation(RenderStyle&, const HashSet<AnimatableCSSProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
 
-    std::optional<ElementUpdate> resolvePseudoElement(Element&, const PseudoElementIdentifier&, const ElementUpdate&, IsInDisplayNoneTree);
+    std::optional<ElementUpdate> resolvePseudoElement(Element&, const PseudoElementIdentifier&, const ElementUpdate&, IsInDisplayNoneTree, const RenderStyle*);
     std::optional<ElementUpdate> resolveAncestorPseudoElement(Element&, const PseudoElementIdentifier&, const ElementUpdate&);
     std::optional<ResolvedStyle> resolveAncestorFirstLinePseudoElement(Element&, const ElementUpdate&);
     std::optional<ResolvedStyle> resolveAncestorFirstLetterPseudoElement(Element&, const ElementUpdate&, ResolutionContext&);
 
+    void resetStyleForNonRenderedDescendants(Element&);
+
     struct Scope : RefCounted<Scope> {
-        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope, Scope);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Scope, TreeResolverScope);
         Ref<Resolver> resolver;
         SelectorMatchingState selectorMatchingState;
         RefPtr<ShadowRoot> shadowRoot;
@@ -172,17 +177,20 @@ private:
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     struct PositionOptions;
     void sortPositionOptionsIfNeeded(PositionOptions&, const Styleable&);
-    std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
+    std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const ResolutionContext&);
 
     void updateForPositionVisibility(RenderStyle&, const Styleable&);
 
     // This returns the style that was in effect (applied to the render tree) before we started the style resolution.
     // Layout interleaving may cause different styles to be applied during the style resolution.
     const RenderStyle* beforeResolutionStyle(const Element&, std::optional<PseudoElementIdentifier>);
-    void saveBeforeResolutionStyleForInterleaving(const Element&);
+    void saveBeforeResolutionStyleForInterleaving(const Element&, const RenderStyle*);
 
     bool hasUnresolvedAnchorPosition(const Styleable&) const;
     bool hasResolvedAnchorPosition(const Styleable&) const;
+    // Returns true if (1) the styleable specifies position fallbacks and
+    // (2) we're in the middle of trying position options.
+    bool isTryingPositionOption(const Styleable&) const;
 
     void collectChangedAnchorNames(const RenderStyle&, const RenderStyle* currentStyle);
 
@@ -212,14 +220,31 @@ private:
     TreeResolutionState m_treeResolutionState;
     HashMap<Ref<const Element>, std::unique_ptr<RenderStyle>> m_savedBeforeResolutionStylesForInterleaving;
 
+    struct PositionOption {
+        // New style after applying the option.
+        std::unique_ptr<RenderStyle> style;
+
+        // The position option used to generate the style. If option is nullopt, no position option is used.
+        std::optional<PositionTryFallback> option;
+
+        // The size of the content box of the element when the style is generated.
+        // Non-overlay scrollbars appearing or disappearing may affect the content box size that anchor functions are resolved against.
+        std::optional<LayoutSize> scrollContainerSizeOnGeneration;
+    };
+
     struct PositionOptions {
-        std::unique_ptr<RenderStyle> originalStyle;
-        Vector<std::unique_ptr<RenderStyle>> optionStyles { };
+        // Array of option styles. By convention, the original style is at index 0.
+        Vector<PositionOption> optionStyles { };
+        ResolvedStyle originalResolvedStyle;
         size_t index { 0 };
         bool sorted { false };
         bool chosen { false };
+        bool isFirstTry { true };
+
+        const RenderStyle& originalStyle() const;
+        std::unique_ptr<RenderStyle> currentOption() const;
     };
-    HashMap<Ref<Element>, PositionOptions> m_positionOptions;
+    HashMap<AnchorPositionedKey, PositionOptions> m_positionOptions;
 
     HashSet<AtomString> m_changedAnchorNames;
     bool m_allAnchorNamesInvalid { false };
@@ -230,6 +255,17 @@ private:
 // Integrate with the HTML5 event loop instead, see EventLoop.cpp and consumers.
 void deprecatedQueuePostResolutionCallback(Function<void()>&&);
 bool postResolutionCallbacksAreSuspended();
+
+inline bool supportsFirstLineAndLetterPseudoElement(const RenderStyle& style)
+{
+    auto display = style.display();
+    return display == DisplayType::Block
+        || display == DisplayType::ListItem
+        || display == DisplayType::InlineBlock
+        || display == DisplayType::TableCell
+        || display == DisplayType::TableCaption
+        || display == DisplayType::FlowRoot;
+}
 
 class PostResolutionCallbackDisabler {
 public:

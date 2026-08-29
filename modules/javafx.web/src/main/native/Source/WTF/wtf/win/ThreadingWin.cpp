@@ -147,13 +147,13 @@ static unsigned __stdcall wtfThreadEntryPoint(void* data)
     return 0;
 }
 
-bool Thread::establishHandle(NewThreadContext* data, std::optional<size_t> stackSize, QOS, SchedulingPolicy)
+bool Thread::establishHandle(NewThreadContext& data, std::optional<size_t> stackSize, QOS, SchedulingPolicy)
 {
     unsigned threadIdentifier = 0;
     unsigned initFlag = stackSize ? STACK_SIZE_PARAM_IS_A_RESERVATION : 0;
-    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize.value_or(0), wtfThreadEntryPoint, data, initFlag, &threadIdentifier));
+    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize.value_or(0), wtfThreadEntryPoint, &data, initFlag, &threadIdentifier));
     if (!threadHandle) {
-        LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", wtfThreadEntryPoint, data, errno);
+        LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", wtfThreadEntryPoint, &data, errno);
         return false;
     }
     establishPlatformSpecificHandle(threadHandle, threadIdentifier);
@@ -231,7 +231,7 @@ Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, ThreadIdentifier is not established yet.
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
+    Ref thread = adoptRef(*new Thread(SchedulingPolicy::Other));
 
     HANDLE handle;
     bool isSuccessful = DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
@@ -241,7 +241,7 @@ Thread& Thread::initializeCurrentTLS()
     thread->initializeInThread();
     initializeCurrentThreadEvenIfNonWTFCreated();
 
-    return initializeTLS(WTFMove(thread));
+    return initializeTLS(WTF::move(thread));
 }
 
 ThreadIdentifier Thread::currentID()
@@ -284,7 +284,7 @@ Thread* Thread::currentMayBeNull()
 
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
-    s_threadHolder.thread = WTFMove(thread);
+    s_threadHolder.thread = WTF::move(thread);
     return *s_threadHolder.thread;
 }
 

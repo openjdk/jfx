@@ -33,7 +33,9 @@
     readonly attribute DOMString command;
 };
 
-dictionary CommandEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CommandEventInit : EventInit {
     Element? source = null;
     DOMString command = "";
 };

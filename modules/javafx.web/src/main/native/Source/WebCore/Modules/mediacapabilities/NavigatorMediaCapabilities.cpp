@@ -41,18 +41,13 @@ NavigatorMediaCapabilities::NavigatorMediaCapabilities()
 
 NavigatorMediaCapabilities::~NavigatorMediaCapabilities() = default;
 
-ASCIILiteral NavigatorMediaCapabilities::supplementName()
-{
-    return "NavigatorMediaCapabilities"_s;
-}
-
 NavigatorMediaCapabilities& NavigatorMediaCapabilities::from(Navigator& navigator)
 {
-    NavigatorMediaCapabilities* supplement = static_cast<NavigatorMediaCapabilities*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorMediaCapabilities>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorMediaCapabilities>();
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return *supplement;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1568,6 +1568,12 @@ final class MacAccessible extends Accessible {
                     result = getAttribute(SELECTION_END);
                     if (result == null) return null;
                     end = (Integer)result;
+                } else {
+                    Integer caret = (Integer)getAttribute(CARET_OFFSET);
+                    if (caret != null && caret >= 0) {
+                        start = caret;
+                        end = caret;
+                    }
                 }
                 if (start < 0 || end < 0 || start > end) return null;
                 String string = (String)getAttribute(TEXT);

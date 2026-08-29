@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "HeapCellInlines.h"
-#include "JSGlobalObjectInlines.h"
-#include "JSString.h"
-#include "KeyAtomStringCacheInlines.h"
-#include "MarkedBlockInlines.h"
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/KeyAtomStringCacheInlines.h>
+#include <JavaScriptCore/MarkedBlockInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/ParsingUtilities.h>
 
@@ -176,11 +176,11 @@ inline JSValue jsMakeNontrivialString(JSGlobalObject* globalObject, StringType&&
     if (!result) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     ASSERT(result.length() <= JSString::MaxLength);
-    return jsNontrivialString(vm, WTFMove(result));
+    return jsNontrivialString(vm, WTF::move(result));
 }
 
 template <typename CharacterType>
-    requires (std::same_as<CharacterType, LChar> || std::same_as<CharacterType, char16_t>)
+    requires (std::same_as<CharacterType, Latin1Character> || std::same_as<CharacterType, char16_t>)
 inline JSString* repeatCharacter(JSGlobalObject* globalObject, CharacterType character, unsigned repeatCount)
 {
     VM& vm = globalObject->vm();
@@ -213,7 +213,7 @@ inline void JSRopeString::convertToNonRope(String&& string) const
     // store-store barrier here to ensure concurrent compiler threads see initialized String.
     ASSERT(JSString::isRope());
     WTF::storeStoreFence();
-    new (&uninitializedValueInternal()) String(WTFMove(string));
+    new (&uninitializedValueInternal()) String(WTF::move(string));
     static_assert(sizeof(String) == sizeof(RefPtr<StringImpl>), "JSString's String initialization must be done in one pointer move.");
     // We do not clear the trailing fibers and length information (fiber1 and fiber2) because we could be reading the length concurrently.
     ASSERT(!JSString::isRope());
@@ -453,7 +453,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         };
 
         if (string->valueInternal().is8Bit()) {
-            WTF::HashTranslatorCharBuffer<LChar> buffer { string->valueInternal().span8(), string->valueInternal().hash() };
+            WTF::HashTranslatorCharBuffer<Latin1Character> buffer { string->valueInternal().span8(), string->valueInternal().hash() };
             return vm.keyAtomStringCache.make(vm, buffer, createFromNonRope);
         }
 
@@ -466,7 +466,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
     auto createFromRope = [&](VM& vm, auto& buffer) {
         auto impl = AtomStringImpl::add(buffer);
         size_t sizeToReport = impl->hasOneRef() ? impl->cost() : 0;
-        ropeString->convertToNonRope(String { WTFMove(impl) });
+        ropeString->convertToNonRope(String { WTF::move(impl) });
         vm.heap.reportExtraMemoryAllocated(ropeString, sizeToReport);
         return ropeString;
     };
@@ -477,9 +477,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         JSString* fiber1 = ropeString->fiber1();
         JSString* fiber2 = ropeString->fiber2();
         if (ropeString->is8Bit()) {
-            std::array<LChar, KeyAtomStringCache::maxStringLengthForCache> characters;
+            std::array<Latin1Character, KeyAtomStringCache::maxStringLengthForCache> characters;
             JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length), stackLimit);
-            WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters }.first(length) };
+            WTF::HashTranslatorCharBuffer<Latin1Character> buffer { std::span { characters }.first(length) };
             return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
         }
         std::array<char16_t, KeyAtomStringCache::maxStringLengthForCache> characters;
@@ -490,7 +490,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
 
     auto view = StringView { ropeString->substringBase()->valueInternal() }.substring(ropeString->substringOffset(), length);
     if (view.is8Bit()) {
-        WTF::HashTranslatorCharBuffer<LChar> buffer { view.span8() };
+        WTF::HashTranslatorCharBuffer<Latin1Character> buffer { view.span8() };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
     WTF::HashTranslatorCharBuffer<char16_t> buffer { view.span16() };
@@ -566,9 +566,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
     };
 
     if (s1->is8Bit() && s2->is8Bit()) {
-        LChar characters[KeyAtomStringCache::maxStringLengthForCache];
+        Latin1Character characters[KeyAtomStringCache::maxStringLengthForCache];
         resolveWith2Fibers(s1, s2, std::span { characters }.first(length));
-        WTF::HashTranslatorCharBuffer<LChar> buffer { std::span(characters).first(length) };
+        WTF::HashTranslatorCharBuffer<Latin1Character> buffer { std::span(characters).first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
     char16_t characters[KeyAtomStringCache::maxStringLengthForCache];
@@ -625,9 +625,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
     };
 
     if (s1->is8Bit() && s2->is8Bit() && s3->is8Bit()) {
-        LChar characters[KeyAtomStringCache::maxStringLengthForCache];
+        Latin1Character characters[KeyAtomStringCache::maxStringLengthForCache];
         resolveWith3Fibers(s1, s2, s3, std::span { characters }.first(length));
-        WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters }.first(length) };
+        WTF::HashTranslatorCharBuffer<Latin1Character> buffer { std::span { characters }.first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
     char16_t characters[KeyAtomStringCache::maxStringLengthForCache];
@@ -668,8 +668,8 @@ inline JSString* jsSubstringOfResolved(VM& vm, GCDeferralContext* deferralContex
                 auto impl = AtomStringImpl::add(buffer);
                 return JSString::create(vm, deferralContext, impl.releaseNonNull());
             };
-            LChar buf[] = { static_cast<LChar>(first), static_cast<LChar>(second) };
-            WTF::HashTranslatorCharBuffer<LChar> buffer { unsafeMakeSpan(buf, length) };
+            Latin1Character buf[] = { static_cast<Latin1Character>(first), static_cast<Latin1Character>(second) };
+            WTF::HashTranslatorCharBuffer<Latin1Character> buffer { unsafeMakeSpan(buf, length) };
             return vm.keyAtomStringCache.make(vm, buffer, createFromSubstring);
         }
     }

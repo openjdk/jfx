@@ -30,8 +30,8 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
-#include "CSSValueList.h"
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/CSSValueList.h>
 
 namespace WebCore {
 

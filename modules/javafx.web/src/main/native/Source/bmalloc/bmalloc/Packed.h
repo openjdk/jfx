@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Algorithm.h"
 #include <array>
 #include <bit>
@@ -84,7 +86,8 @@ public:
         m_storage.swap(other.m_storage);
     }
 
-    template<typename Other, typename = std::enable_if_t<Other::isPackedType>>
+    template<typename Other>
+        requires Other::isPackedType
     void swap(Other& other)
     {
         T t1 = get();
@@ -195,7 +198,8 @@ public:
         m_storage.swap(other.m_storage);
     }
 
-    template<typename Other, typename = std::enable_if_t<Other::isPackedType>>
+    template<typename Other>
+        requires Other::isPackedType
     void swap(Other& other)
     {
         T* t1 = get();
@@ -241,3 +245,5 @@ struct PackedPtrTraits {
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

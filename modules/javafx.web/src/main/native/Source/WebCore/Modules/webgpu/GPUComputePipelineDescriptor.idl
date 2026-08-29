@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpucomputepipelinedescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUComputePipelineDescriptor : GPUPipelineDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUComputePipelineDescriptor : GPUPipelineDescriptorBase {
     required GPUProgrammableStage compute;
 };

@@ -28,28 +28,28 @@
 
 #if ENABLE(NOTIFICATION_EVENT)
 
+#include "EventTargetInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NotificationEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NotificationEvent);
 
 Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
-    auto notification = init.notification;
-    ASSERT(notification);
+    Ref notification = init.notification.releaseNonNull();
     auto action = init.action;
-    return adoptRef(*new NotificationEvent(type, WTFMove(init), notification.get(), action, isTrusted));
+    return adoptRef(*new NotificationEvent(type, WTF::move(init), WTF::move(notification), action, isTrusted));
 }
 
-Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Notification* notification, const String& action, IsTrusted isTrusted)
+Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Ref<Notification>&& notification, const String& action, IsTrusted isTrusted)
 {
-    return adoptRef(*new NotificationEvent(type, { }, notification, action, isTrusted));
+    return adoptRef(*new NotificationEvent(type, { }, WTF::move(notification), action, isTrusted));
 }
 
-NotificationEvent::NotificationEvent(const AtomString& type, NotificationEventInit&& eventInit, Notification* notification, const String& action, IsTrusted isTrusted)
-    : ExtendableEvent(EventInterfaceType::NotificationEvent, type, WTFMove(eventInit), isTrusted)
-    , m_notification(notification)
+NotificationEvent::NotificationEvent(const AtomString& type, NotificationEventInit&& eventInit, Ref<Notification>&& notification, const String& action, IsTrusted isTrusted)
+    : ExtendableEvent(EventInterfaceType::NotificationEvent, type, WTF::move(eventInit), isTrusted)
+    , m_notification(WTF::move(notification))
     , m_action(action)
 {
 }

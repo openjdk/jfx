@@ -33,6 +33,7 @@
 #import "CommandEncoder.h"
 #import "ComputePassEncoder.h"
 #import "ComputePipeline.h"
+#import "DDMesh.h"
 #import "Device.h"
 #import "ExternalTexture.h"
 #import "Instance.h"
@@ -53,6 +54,7 @@
 #import "XRSubImage.h"
 #import "XRView.h"
 #import <wtf/BlockPtr.h>
+#import <wtf/SwiftBridging.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebGPU {
@@ -204,6 +206,16 @@ inline String fromAPI(const char* string)
     return String::fromUTF8(string);
 }
 
+inline DDMesh& fromAPI(WGPUDDMesh mesh)
+{
+    return static_cast<DDMesh&>(*mesh);
+}
+
+inline Ref<DDMesh> protectedFromAPI(WGPUDDMesh mesh)
+{
+    return static_cast<DDMesh&>(*mesh);
+}
+
 inline Ref<Adapter> protectedFromAPI(WGPUAdapter adapter)
 {
     return static_cast<Adapter&>(*adapter);
@@ -347,7 +359,7 @@ inline Ref<XRView> protectedFromAPI(WGPUXRView view)
 template<typename R, typename... Args>
 inline BlockPtr<R (Args...)> fromAPI(R (^ __strong &&block)(Args...))
 {
-    return makeBlockPtr(WTFMove(block));
+    return makeBlockPtr(WTF::move(block));
 }
 
 template <typename T>

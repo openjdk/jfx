@@ -91,6 +91,12 @@ gst_video_filter_propose_allocation (GstBaseTransform * trans,
       gst_query_add_allocation_param (query, allocator, &params);
 
     pool = gst_video_buffer_pool_new ();
+    {
+      gchar *name =
+          g_strdup_printf ("%s-propose-pool", GST_OBJECT_NAME (filter));
+      g_object_set (pool, "name", name, NULL);
+      g_free (name);
+    }
 
     structure = gst_buffer_pool_get_config (pool);
     gst_buffer_pool_config_set_params (structure, caps, size, 0, 0);
@@ -147,11 +153,24 @@ gst_video_filter_decide_allocation (GstBaseTransform * trans, GstQuery * query)
     update_pool = FALSE;
   }
 
-  if (!pool)
+  if (!pool) {
     pool = gst_video_buffer_pool_new ();
+    {
+      gchar *name = g_strdup_printf ("%s-decide-pool", GST_OBJECT_NAME (trans));
+      g_object_set (pool, "name", name, NULL);
+      g_free (name);
+    }
+  }
 
   config = gst_buffer_pool_get_config (pool);
   gst_buffer_pool_config_add_option (config, GST_BUFFER_POOL_OPTION_VIDEO_META);
+  if (gst_query_find_allocation_meta (query, GST_VIDEO_META_API_TYPE, NULL) &&
+      gst_buffer_pool_has_option (pool, GST_BUFFER_POOL_OPTION_VIDEO_META) &&
+      gst_buffer_pool_has_option (pool,
+          GST_BUFFER_POOL_OPTION_VIDEO_ALIGNMENT)) {
+    gst_buffer_pool_config_add_option (config,
+        GST_BUFFER_POOL_OPTION_VIDEO_ALIGNMENT);
+  }
   if (outcaps)
     gst_buffer_pool_config_set_params (config, outcaps, size, 0, 0);
   gst_buffer_pool_set_config (pool, config);

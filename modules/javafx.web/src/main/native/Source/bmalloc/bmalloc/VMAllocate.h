@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,18 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "AllocationCounts.h"
 #include "BAssert.h"
-#include "BCompiler.h"
+#include "BPlatform.h"
 #include "BSyscall.h"
 #include "BVMTags.h"
 #include "Logging.h"
 #include "Range.h"
 #include "Sizes.h"
 #include <algorithm>
+#include <cstddef>
 
 #if BOS(WINDOWS)
 #include <windows.h>
@@ -43,6 +46,7 @@
 #endif
 
 #if BOS(DARWIN)
+#include <mach/mach.h>
 #include <mach/vm_page_size.h>
 #endif
 
@@ -263,6 +267,10 @@ inline void vmRevokePermissions(void* p, size_t vmSize)
     mprotect(p, vmSize, PROT_NONE);
 }
 
+#if BENABLE(MTE) && BOS(DARWIN)
+bool tryVmZeroAndPurgeMTECase(void* p, size_t vmSize, VMTag usage);
+#endif // BENABLE(MTE) && BOS(DARWIN)
+
 inline void vmZeroAndPurge(void* p, size_t vmSize, VMTag usage)
 {
     vmValidate(p, vmSize);
@@ -276,6 +284,10 @@ inline void vmZeroAndPurge(void* p, size_t vmSize, VMTag usage)
     }
 #endif
     BPROFILE_ZERO_FILL_PAGE(p, vmSize, flags, tag);
+#if BENABLE(MTE) && BOS(DARWIN)
+    if (tryVmZeroAndPurgeMTECase(p, vmSize, usage))
+        return;
+#endif // BENABLE(MTE) && BOS(DARWIN)
     // MAP_ANON guarantees the memory is zeroed. This will also cause
     // page faults on accesses to this range following this call.
     void* result = mmap(p, vmSize, PROT_READ | PROT_WRITE, flags, tag, 0);
@@ -400,3 +412,5 @@ inline void vmAllocatePhysicalPages(void* p, size_t vmSize)
 } // namespace bmalloc
 
 BALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // __cplusplus

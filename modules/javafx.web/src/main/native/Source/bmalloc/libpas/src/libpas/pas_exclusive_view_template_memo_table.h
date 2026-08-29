@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 
 #include "pas_hashtable.h"
 #include "pas_segregated_size_directory.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -121,5 +123,5 @@ PAS_API extern pas_exclusive_view_template_memo_table pas_exclusive_view_templat
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_EXCLUSIVE_VIEW_TEMPLATE_MEMO_TABLE_H */
-

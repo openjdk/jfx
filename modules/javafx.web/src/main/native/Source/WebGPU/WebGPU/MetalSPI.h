@@ -95,4 +95,10 @@ constexpr MTLPixelFormat MTLPixelFormatYCBCR12_444_2P_PACKED_PQ = static_cast<MT
 - (id <MTLSharedEvent>)newSharedEventWithMachPort:(mach_port_t)machPort;
 @end
 
+@protocol MTLRasterizationRateMapDescriptorSPI
+@property (nonatomic) float minFactor;
+@property (nonatomic) MTLMutability mutability;
+@property (nonatomic) BOOL skipSampleValidationAndApplySampleAtTileGranularity;
+@end
+
 #endif

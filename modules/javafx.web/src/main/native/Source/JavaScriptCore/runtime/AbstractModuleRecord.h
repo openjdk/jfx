@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Identifier.h"
-#include "JSGenerator.h"
-#include "JSInternalFieldObjectImpl.h"
-#include "ScriptFetchParameters.h"
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/JSGenerator.h>
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
+#include <JavaScriptCore/ScriptFetchParameters.h>
 #include <wtf/ListHashSet.h>
 
 namespace JSC {

@@ -1166,6 +1166,35 @@ qtdemux_dump_gmin (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 }
 
 gboolean
+qtdemux_dump_mhaC (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  guint8 config_version;
+  guint8 mpegh3da_profile_level_indication;
+  guint8 reference_channel_layout;
+  guint16 mpegh3da_config_length;
+  if (!gst_byte_reader_get_uint8 (data, &config_version) ||
+      !gst_byte_reader_get_uint8 (data, &mpegh3da_profile_level_indication)
+      || !gst_byte_reader_get_uint8 (data, &reference_channel_layout)
+      || !gst_byte_reader_get_uint16_be (data, &mpegh3da_config_length)
+      || !gst_byte_reader_skip (data, mpegh3da_config_length))
+    return FALSE;
+
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  config version:                           %d", depth, "",
+      (gint) config_version);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  MPEG-H 3D audio profile level indication: %d", depth, "",
+      (gint) mpegh3da_profile_level_indication);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  reference channel layout:                 %d", depth, "",
+      (gint) reference_channel_layout);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  MPEG-H 3D audio configuration length:     %" G_GUINT16_FORMAT,
+      depth, "", mpegh3da_config_length);
+  return TRUE;
+}
+
+gboolean
 qtdemux_dump_unknown (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
   int len;

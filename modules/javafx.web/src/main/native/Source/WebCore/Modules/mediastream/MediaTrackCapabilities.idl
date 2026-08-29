@@ -27,6 +27,7 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackCapabilities {
     LongRange width;
     LongRange height;

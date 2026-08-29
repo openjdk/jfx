@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "CachedResourceHandle.h"
-#include "DragActions.h"
-#include "DragImage.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/DragActions.h>
+#include <WebCore/DragImage.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -169,7 +169,7 @@ private:
     IntPoint m_dragLocation;
     CachedResourceHandle<CachedImage> m_dragImage;
     RefPtr<Element> m_dragImageElement;
-    std::unique_ptr<DragImageLoader> m_dragImageLoader;
+    RefPtr<DragImageLoader> m_dragImageLoader;
 #endif
 };
 

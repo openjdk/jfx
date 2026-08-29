@@ -27,8 +27,8 @@
 
 #pragma once
 
-#include "AffineTransform.h"
-#include "SourceImage.h"
+#include <WebCore/AffineTransform.h>
+#include <WebCore/SourceImage.h>
 
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -70,8 +70,8 @@ public:
     WEBCORE_EXPORT const SourceImage& tileImage() const;
     WEBCORE_EXPORT void setTileImage(SourceImage&&);
 
-    RefPtr<NativeImage> tileNativeImage() const;
-    RefPtr<ImageBuffer> tileImageBuffer() const;
+    WEBCORE_EXPORT RefPtr<NativeImage> tileNativeImage() const;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> tileImageBuffer() const;
 
     const Parameters& parameters() const { return m_parameters; }
 

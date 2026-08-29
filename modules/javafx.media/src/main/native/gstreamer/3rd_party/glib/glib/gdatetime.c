@@ -3169,6 +3169,7 @@ format_number (GString     *str,
     g_string_append (str, tmp[--i]);
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 format_ampm (GDateTime *datetime,
              GString   *outstr,
@@ -3876,6 +3877,7 @@ g_date_time_format_iso8601 (GDateTime *datetime)
 
   return g_string_free (outstr, FALSE);
 }
+#endif // GSTREAMER_LITE
 
 
 /* Epilogue {{{1 */

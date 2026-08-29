@@ -23,7 +23,8 @@
  */
 
 [
-    Conditional=WEB_AUDIO
+    Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioBufferSourceOptions {
     AudioBuffer? buffer;
     float detune = 0;

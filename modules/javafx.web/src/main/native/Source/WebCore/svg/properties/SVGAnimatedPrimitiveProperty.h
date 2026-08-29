@@ -146,11 +146,11 @@ protected:
     {
     }
 
-    RefPtr<SVGSharedPrimitiveProperty<PropertyType>>& ensureAnimVal()
+    SVGSharedPrimitiveProperty<PropertyType>& ensureAnimVal()
     {
         if (!m_animVal)
             m_animVal = SVGSharedPrimitiveProperty<PropertyType>::create(m_baseVal->value());
-        return m_animVal;
+        return *m_animVal;
     }
 
     const Ref<SVGSharedPrimitiveProperty<PropertyType>> m_baseVal;

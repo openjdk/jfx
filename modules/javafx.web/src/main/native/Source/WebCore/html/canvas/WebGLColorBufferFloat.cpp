@@ -32,15 +32,15 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLColorBufferFloat);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLColorBufferFloat);
 
 WebGLColorBufferFloat::WebGLColorBufferFloat(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLColorBufferFloat)
 {
     RefPtr graphicsContextGL = context.graphicsContextGL();
-    graphicsContextGL->ensureExtensionEnabled("GL_CHROMIUM_color_buffer_float_rgba"_s);
+    graphicsContextGL->enableExtension(GCGLExtension::CHROMIUM_color_buffer_float_rgba);
     // Optimistically enable RGB floating-point render targets also, if possible.
-    graphicsContextGL->ensureExtensionEnabled("GL_CHROMIUM_color_buffer_float_rgb"_s);
+    graphicsContextGL->enableExtension(GCGLExtension::CHROMIUM_color_buffer_float_rgb);
 
     // https://github.com/KhronosGroup/WebGL/pull/2830
     // Spec requires EXT_float_blend to be turned on implicitly here.
@@ -52,8 +52,8 @@ WebGLColorBufferFloat::~WebGLColorBufferFloat() = default;
 
 bool WebGLColorBufferFloat::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_texture_float"_s)
-        && context.supportsExtension("GL_CHROMIUM_color_buffer_float_rgba"_s);
+    return context.supportsExtension(GCGLExtension::OES_texture_float)
+        && context.supportsExtension(GCGLExtension::CHROMIUM_color_buffer_float_rgba);
 }
 
 } // namespace WebCore

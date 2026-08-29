@@ -33,7 +33,9 @@
     readonly attribute any reason;
 };
 
-dictionary PromiseRejectionEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PromiseRejectionEventInit : EventInit {
     required Promise<any> promise;
     any reason;
 };

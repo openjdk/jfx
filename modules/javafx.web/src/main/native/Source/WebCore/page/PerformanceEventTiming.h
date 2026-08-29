@@ -26,35 +26,53 @@
 
 #pragma once
 
+#include "DOMHighResTimeStamp.h"
+#include "EventTarget.h"
+#include "EventTimingInteractionID.h"
 #include "PerformanceEntry.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Node;
+struct PerformanceEventTimingCandidate;
 
 class PerformanceEventTiming final : public PerformanceEntry {
 public:
+    static Ref<PerformanceEventTiming> create(const PerformanceEventTimingCandidate&, bool isFirst = false);
+    ~PerformanceEventTiming();
 
-    static Ref<PerformanceEventTiming> create()
-    {
-        return adoptRef(*new PerformanceEventTiming());
-    }
+    DOMHighResTimeStamp processingStart() const { return m_processingStart.milliseconds(); }
+    DOMHighResTimeStamp processingEnd() const { return m_processingEnd.milliseconds(); }
+    bool cancelable() const { return m_cancelable; }
+    RefPtr<Node> target() const;
+    uint64_t interactionId() const;
 
-    ~PerformanceEventTiming() = default;
+    Type performanceEntryType() const final;
+    ASCIILiteral entryType() const final;
 
-    double processingStart() const;
-    double processingEnd() const;
-    bool cancelable() const;
-    Node* target() const;
-    unsigned interactionId() const;
-    ASCIILiteral entryType() const final { return "event"_s; }
-
-protected:
-    PerformanceEventTiming();
+    static constexpr DOMHighResTimeStamp durationResolutionInMilliseconds = 8;
+    static constexpr Seconds durationResolution = 8_ms;
+    static constexpr Seconds minimumDurationThreshold = 16_ms;
+    static constexpr Seconds defaultDurationThreshold = 104_ms;
 
 private:
-    Type performanceEntryType() const final;
+    PerformanceEventTiming(const PerformanceEventTimingCandidate&, bool isFirst);
+
+    bool m_isFirst;
+    bool m_cancelable;
+    Seconds m_processingStart;
+    Seconds m_processingEnd;
+    EventTimingInteractionID m_interactionID;
+    WeakPtr<EventTarget, EventTarget::WeakPtrImplType> m_target;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PerformanceEventTiming)
+static bool isType(const WebCore::PerformanceEntry& entry)
+{
+    auto type = entry.performanceEntryType();
+    return type == WebCore::PerformanceEntry::Type::FirstInput || type == WebCore::PerformanceEntry::Type::Event;
+}
+SPECIALIZE_TYPE_TRAITS_END()

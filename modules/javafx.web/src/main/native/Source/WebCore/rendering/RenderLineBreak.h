@@ -21,7 +21,8 @@
 
 #pragma once
 
-#include "RenderBoxModelObject.h"
+#include <WebCore/RenderBoxModelObject.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -29,7 +30,7 @@ class HTMLElement;
 class Position;
 
 class RenderLineBreak final : public RenderBoxModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLineBreak);
+    WTF_MAKE_TZONE_ALLOCATED(RenderLineBreak);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLineBreak);
 public:
     RenderLineBreak(HTMLElement&, RenderStyle&&);
@@ -56,7 +57,7 @@ private:
     bool canHaveChildren() const final { return false; }
     void paint(PaintInfo&, const LayoutPoint&) final { }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
     int caretMinOffset() const final;
     int caretMaxOffset() const final;
     bool canBeSelectionLeaf() const final;

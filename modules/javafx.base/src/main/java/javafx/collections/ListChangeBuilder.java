@@ -207,10 +207,6 @@ final class ListChangeBuilder<E> {
 
         if (last != null && last.to == idx) {
             last.removed.add(removed);
-        } else if (last != null && last.from == idx + 1) {
-            last.from--;
-            last.to--;
-            last.removed.add(0, removed);
         } else {
             insertRemoved(idx, removed);
         }

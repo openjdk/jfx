@@ -39,6 +39,7 @@
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
+#include "DocumentEventLoop.h"
 #include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "Logging.h"
@@ -99,11 +100,7 @@ const unsigned long long quotaIncreaseSize = 5 * 1024 * 1024;
 
 static const String& fullyQualifiedInfoTableName()
 {
-    static LazyNeverDestroyed<String> qualifiedName;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        qualifiedName.construct(MAKE_STATIC_STRING_IMPL("main.__WebKitDatabaseInfoTable__"));
-    });
+    static NeverDestroyed<String> qualifiedName { MAKE_STATIC_STRING_IMPL("main.__WebKitDatabaseInfoTable__") };
     return qualifiedName;
 }
 
@@ -134,7 +131,7 @@ static bool retrieveTextResultFromDatabase(SQLiteDatabase& db, StringView query,
 {
     auto statement = db.prepareStatementSlow(query);
     if (!statement) {
-        LOG_ERROR("Error (%i) preparing statement to read text result from database (%s)", statement.error(), query.utf8().data());
+        LOG_ERROR("Error (%i) preparing statement to read text result from database (%s)", db.lastError(), query.utf8().data());
         return false;
     }
 
@@ -155,28 +152,27 @@ static bool retrieveTextResultFromDatabase(SQLiteDatabase& db, StringView query,
 // FIXME: move all guid-related functions to a DatabaseVersionTracker class.
 static Lock guidLock;
 
-static HashMap<DatabaseGUID, String>& guidToVersionMap() WTF_REQUIRES_LOCK(guidLock)
+struct VersionAndUseCount {
+    String version;
+    size_t useCount { 0 };
+};
+
+static HashMap<DatabaseGUID, VersionAndUseCount>& guidToVersionMap() WTF_REQUIRES_LOCK(guidLock)
 {
-    static NeverDestroyed<HashMap<DatabaseGUID, String>> map;
+    static NeverDestroyed<HashMap<DatabaseGUID, VersionAndUseCount>> map;
     return map;
 }
 
 static inline void updateGUIDVersionMap(DatabaseGUID guid, const String& newVersion) WTF_REQUIRES_LOCK(guidLock)
 {
-    // Note: It is not safe to put an empty string into the guidToVersionMap() map.
-    // That's because the map is cross-thread, but empty strings are per-thread.
-    // The copy() function makes a version of the string you can use on the current
-    // thread, but we need a string we can keep in a cross-thread data structure.
-    // FIXME: This is a quite-awkward restriction to have to program with.
+    // FIXME: This code maps empty string to null string because at one time static strings were not thread-safe.
+    // But that time is long gone. So we can remove the mapping now.
 
-    // Map empty string to null string (see comment above).
-    guidToVersionMap().set(guid, newVersion.isEmpty() ? String() : newVersion.isolatedCopy());
-}
-
-static HashMap<DatabaseGUID, HashSet<Database*>>& guidToDatabaseMap() WTF_REQUIRES_LOCK(guidLock)
-{
-    static NeverDestroyed<HashMap<DatabaseGUID, HashSet<Database*>>> map;
-    return map;
+    auto addResult = guidToVersionMap().ensure(guid, [&] {
+        return VersionAndUseCount { String(), 0 };
+    });
+    addResult.iterator->value.version = newVersion.isEmpty() ? String() : newVersion.isolatedCopy(); // Map empty string to null string (see comment above).
+    ++addResult.iterator->value.useCount;
 }
 
 static inline DatabaseGUID guidForOriginAndName(const String& origin, const String& name) WTF_REQUIRES_LOCK(guidLock)
@@ -198,20 +194,18 @@ Database::Database(DatabaseContext& context, const String& name, const String& e
     , m_displayName(displayName.isolatedCopy())
     , m_estimatedSize(estimatedSize)
     , m_filename(DatabaseManager::singleton().fullPathForDatabase(m_document->securityOrigin(), m_name))
+    , m_sqliteDatabase(makeUniqueRef<SQLiteDatabase>())
     , m_databaseAuthorizer(DatabaseAuthorizer::create(unqualifiedInfoTableName))
 {
     {
         Locker locker { guidLock };
 
         m_guid = guidForOriginAndName(securityOrigin().securityOrigin()->toString(), name);
-        guidToDatabaseMap().ensure(m_guid, [] {
-            return HashSet<Database*>();
-        }).iterator->value.add(this);
     }
 
-    m_databaseContext->databaseThread();
+    context.databaseThread();
 
-    ASSERT(m_databaseContext->existingDatabaseThread());
+    ASSERT(context.existingDatabaseThread());
 }
 
 DatabaseThread& Database::databaseThread()
@@ -224,7 +218,7 @@ Database::~Database()
 {
     // The reference to the Document needs to be cleared on the JavaScript thread. If we're on that thread already, we can just let the RefPtr's destruction do the dereffing.
     if (!isMainThread())
-        callOnMainThread([document = WTFMove(m_document), databaseContext = WTFMove(m_databaseContext)] { });
+        callOnMainThread([document = WTF::move(m_document), databaseContext = WTF::move(m_databaseContext)] { });
 
     // SQLite is "multi-thread safe", but each database handle can only be used
     // on a single thread at a time.
@@ -241,13 +235,13 @@ Database::~Database()
 ExceptionOr<void> Database::openAndVerifyVersion(bool setVersionInNewDatabase)
 {
     DatabaseTaskSynchronizer synchronizer;
-    auto& thread = databaseThread();
-    if (thread.terminationRequested(&synchronizer))
+    Ref thread = databaseThread();
+    if (thread->terminationRequested(&synchronizer))
         return Exception { ExceptionCode::InvalidStateError };
 
     ExceptionOr<void> result;
     auto task = makeUnique<DatabaseOpenTask>(*this, setVersionInNewDatabase, synchronizer, result);
-    thread.scheduleImmediateTask(WTFMove(task));
+    thread->scheduleImmediateTask(WTF::move(task));
     synchronizer.waitForTaskCompletion();
 
     return result;
@@ -256,20 +250,20 @@ ExceptionOr<void> Database::openAndVerifyVersion(bool setVersionInNewDatabase)
 void Database::interrupt()
 {
     // It is safe to call this from any thread for an opened or closed database.
-    m_sqliteDatabase.interrupt();
+    m_sqliteDatabase->interrupt();
 }
 
 void Database::close()
 {
-    auto& thread = databaseThread();
+    Ref thread = databaseThread();
 
     DatabaseTaskSynchronizer synchronizer;
-    if (thread.terminationRequested(&synchronizer)) {
+    if (thread->terminationRequested(&synchronizer)) {
         LOG(StorageAPI, "Database handle %p is on a terminated DatabaseThread, cannot be marked for normal closure\n", this);
         return;
     }
 
-    thread.scheduleImmediateTask(makeUnique<DatabaseCloseTask>(*this, synchronizer));
+    thread->scheduleImmediateTask(makeUnique<DatabaseCloseTask>(*this, synchronizer));
 
     // FIXME: iOS depends on this function blocking until the database is closed as part
     // of closing all open databases from a process assertion expiration handler.
@@ -303,9 +297,9 @@ void Database::performClose()
     // unschedule any DatabaseTasks that refer to it before the database gets
     // deleted.
     Ref<Database> protectedThis(*this);
-    auto& thread = databaseThread();
-    thread.recordDatabaseClosed(*this);
-    thread.unscheduleDatabaseTasks(*this);
+    Ref thread = databaseThread();
+    thread->recordDatabaseClosed(*this);
+    thread->unscheduleDatabaseTasks(*this);
 }
 
 class DoneCreatingDatabaseOnExitCaller {
@@ -317,11 +311,11 @@ public:
 
     ~DoneCreatingDatabaseOnExitCaller()
     {
-        DatabaseTracker::singleton().doneCreatingDatabase(m_database);
+        DatabaseTracker::singleton().doneCreatingDatabase(m_database.get());
     }
 
 private:
-    Database& m_database;
+    ThreadSafeWeakRef<Database> m_database;
 };
 
 ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatabase)
@@ -339,12 +333,12 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
 
     SQLiteTransactionInProgressAutoCounter transactionCounter;
 
-    if (!m_sqliteDatabase.open(m_filename))
-        return Exception { ExceptionCode::InvalidStateError, formatErrorMessage("unable to open database"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg()) };
-    if (!m_sqliteDatabase.turnOnIncrementalAutoVacuum())
-        LOG_ERROR("Unable to turn on incremental auto-vacuum (%d %s)", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+    if (!m_sqliteDatabase->open(m_filename))
+        return Exception { ExceptionCode::InvalidStateError, formatErrorMessage("unable to open database"_s, m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg()) };
+    if (!m_sqliteDatabase->turnOnIncrementalAutoVacuum())
+        LOG_ERROR("Unable to turn on incremental auto-vacuum (%d %s)", m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg());
 
-    m_sqliteDatabase.setBusyTimeout(maxSqliteBusyWaitTime);
+    m_sqliteDatabase->setBusyTimeout(maxSqliteBusyWaitTime);
 
     String currentVersion;
     {
@@ -353,33 +347,33 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
         auto entry = guidToVersionMap().find(m_guid);
         if (entry != guidToVersionMap().end()) {
             // Map null string to empty string (see updateGUIDVersionMap()).
-            currentVersion = entry->value.isNull() ? emptyString() : entry->value.isolatedCopy();
+            currentVersion = entry->value.version.isNull() ? emptyString() : entry->value.version.isolatedCopy();
             LOG(StorageAPI, "Current cached version for guid %i is %s", m_guid, currentVersion.ascii().data());
         } else {
             LOG(StorageAPI, "No cached version for guid %i", m_guid);
 
-            SQLiteTransaction transaction(m_sqliteDatabase);
+            SQLiteTransaction transaction(m_sqliteDatabase.get());
             transaction.begin();
             if (!transaction.inProgress()) {
-                String message = formatErrorMessage("unable to open database, failed to start transaction"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
-                m_sqliteDatabase.close();
-                return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
+                String message = formatErrorMessage("unable to open database, failed to start transaction"_s, m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg());
+                m_sqliteDatabase->close();
+                return Exception { ExceptionCode::InvalidStateError, WTF::move(message) };
             }
 
-            if (!m_sqliteDatabase.tableExists(unqualifiedInfoTableName)) {
+            if (!m_sqliteDatabase->tableExists(unqualifiedInfoTableName)) {
                 m_new = true;
 
-                if (!m_sqliteDatabase.executeCommandSlow(makeString("CREATE TABLE "_s, unqualifiedInfoTableName, " (key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE,value TEXT NOT NULL ON CONFLICT FAIL);"_s))) {
-                    String message = formatErrorMessage("unable to open database, failed to create 'info' table"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                if (!m_sqliteDatabase->executeCommandSlow(makeString("CREATE TABLE "_s, unqualifiedInfoTableName, " (key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE,value TEXT NOT NULL ON CONFLICT FAIL);"_s))) {
+                    String message = formatErrorMessage("unable to open database, failed to create 'info' table"_s, m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg());
                     transaction.rollback();
-                    m_sqliteDatabase.close();
-                return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
+                    m_sqliteDatabase->close();
+                return Exception { ExceptionCode::InvalidStateError, WTF::move(message) };
                 }
             } else if (!getVersionFromDatabase(currentVersion, false)) {
-                String message = formatErrorMessage("unable to open database, failed to read current version"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                String message = formatErrorMessage("unable to open database, failed to read current version"_s, m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg());
                 transaction.rollback();
-                m_sqliteDatabase.close();
-                return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
+                m_sqliteDatabase->close();
+                return Exception { ExceptionCode::InvalidStateError, WTF::move(message) };
             }
 
             if (currentVersion.length()) {
@@ -387,10 +381,10 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
             } else if (!m_new || shouldSetVersionInNewDatabase) {
                 LOG(StorageAPI, "Setting version %s in database %s that was just created", m_expectedVersion.ascii().data(), databaseDebugName().ascii().data());
                 if (!setVersionInDatabase(m_expectedVersion, false)) {
-                    String message = formatErrorMessage("unable to open database, failed to write current version"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                    String message = formatErrorMessage("unable to open database, failed to write current version"_s, m_sqliteDatabase->lastError(), m_sqliteDatabase->lastErrorMsg());
                     transaction.rollback();
-                    m_sqliteDatabase.close();
-                    return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
+                    m_sqliteDatabase->close();
+                    return Exception { ExceptionCode::InvalidStateError, WTF::move(message) };
                 }
                 currentVersion = m_expectedVersion;
             }
@@ -407,11 +401,11 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
     // If the expected version isn't the empty string, ensure that the current database version we have matches that version. Otherwise, set an exception.
     // If the expected version is the empty string, then we always return with whatever version of the database we have.
     if ((!m_new || shouldSetVersionInNewDatabase) && m_expectedVersion.length() && m_expectedVersion != currentVersion) {
-        m_sqliteDatabase.close();
+        m_sqliteDatabase->close();
         return Exception { ExceptionCode::InvalidStateError, makeString("unable to open database, version mismatch, '"_s, m_expectedVersion, "' does not match the currentVersion of '"_s, currentVersion, '\'') };
     }
 
-    m_sqliteDatabase.setAuthorizer(m_databaseAuthorizer.get());
+    m_sqliteDatabase->setAuthorizer(m_databaseAuthorizer.get());
 
     DatabaseTracker::singleton().addOpenDatabase(*this);
     m_opened = true;
@@ -429,7 +423,7 @@ void Database::closeDatabase()
     if (!m_opened)
         return;
 
-    m_sqliteDatabase.close();
+    m_sqliteDatabase->close();
     m_opened = false;
 
     // See comment at the top this file regarding calling removeOpenDatabase().
@@ -438,14 +432,11 @@ void Database::closeDatabase()
     {
         Locker locker { guidLock };
 
-        auto it = guidToDatabaseMap().find(m_guid);
-        ASSERT(it != guidToDatabaseMap().end());
-        ASSERT(it->value.contains(this));
-        it->value.remove(this);
-        if (it->value.isEmpty()) {
-            guidToDatabaseMap().remove(it);
-            guidToVersionMap().remove(m_guid);
-        }
+        auto it = guidToVersionMap().find(m_guid);
+        RELEASE_ASSERT(it != guidToVersionMap().end());
+        --it->value.useCount;
+        if (!it->value.useCount)
+            guidToVersionMap().remove(it);
     }
 }
 
@@ -496,7 +487,7 @@ String Database::getCachedVersion() const
 {
     Locker locker { guidLock };
 
-    return guidToVersionMap().get(m_guid).isolatedCopy();
+    return guidToVersionMap().get(m_guid).version.isolatedCopy();
 }
 
 void Database::setCachedVersion(const String& actualVersion)
@@ -508,7 +499,7 @@ void Database::setCachedVersion(const String& actualVersion)
 
 bool Database::getActualVersionForTransaction(String &actualVersion)
 {
-    ASSERT(m_sqliteDatabase.transactionInProgress());
+    ASSERT(m_sqliteDatabase->transactionInProgress());
 
     // Note: In multi-process browsers the cached value may be inaccurate.
     // So we retrieve the value from the database and update the cached value here.
@@ -527,18 +518,18 @@ void Database::scheduleTransaction()
     m_transactionInProgress = true;
 
     auto transaction = m_transactionQueue.takeFirst();
-    auto task = makeUnique<DatabaseTransactionTask>(WTFMove(transaction));
+    auto task = makeUnique<DatabaseTransactionTask>(WTF::move(transaction));
     LOG(StorageAPI, "Scheduling DatabaseTransactionTask %p for transaction %p\n", task.get(), task->transaction());
-    databaseThread().scheduleTask(WTFMove(task));
+    databaseThread().scheduleTask(WTF::move(task));
 }
 
 void Database::scheduleTransactionStep(SQLTransaction& transaction)
 {
-    auto& thread = databaseThread();
+    Ref thread = databaseThread();
 
     auto task = makeUnique<DatabaseTransactionTask>(&transaction);
     LOG(StorageAPI, "Scheduling DatabaseTransactionTask %p for the transaction step\n", task.get());
-    thread.scheduleTask(WTFMove(task));
+    thread->scheduleTask(WTF::move(task));
 }
 
 void Database::inProgressTransactionCompleted()
@@ -583,19 +574,19 @@ void Database::markAsDeletedAndClose()
 
 void Database::changeVersion(String&& oldVersion, String&& newVersion, RefPtr<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
 {
-    runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), ChangeVersionWrapper::create(WTFMove(oldVersion), WTFMove(newVersion)), false);
+    runTransaction(WTF::move(callback), WTF::move(errorCallback), WTF::move(successCallback), ChangeVersionWrapper::create(WTF::move(oldVersion), WTF::move(newVersion)), false);
 }
 
 void Database::transaction(Ref<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
 {
     RELEASE_LOG_FAULT(SQLDatabase, "Database::transaction: Web SQL is deprecated.");
-    runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), nullptr, false);
+    runTransaction(WTF::move(callback), WTF::move(errorCallback), WTF::move(successCallback), nullptr, false);
 }
 
 void Database::readTransaction(Ref<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
 {
     RELEASE_LOG_FAULT(SQLDatabase, "Database::readTransaction: Web SQL is deprecated.");
-    runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), nullptr, true);
+    runTransaction(WTF::move(callback), WTF::move(errorCallback), WTF::move(successCallback), nullptr, true);
 }
 
 String Database::stringIdentifierIsolatedCopy() const
@@ -685,22 +676,22 @@ void Database::runTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<
     Locker locker { m_transactionInProgressLock };
     if (!m_isTransactionQueueEnabled) {
         if (errorCallback) {
-            m_document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = Ref { *errorCallback }]() {
+            m_document->checkedEventLoop()->queueTask(TaskSource::Networking, [errorCallback = Ref { *errorCallback }] {
                 errorCallback->invoke(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"_s));
             });
         }
         return;
     }
 
-    m_transactionQueue.append(SQLTransaction::create(*this, WTFMove(callback), WTFMove(successCallback), errorCallback.copyRef(), WTFMove(wrapper), readOnly));
+    m_transactionQueue.append(SQLTransaction::create(*this, WTF::move(callback), WTF::move(successCallback), errorCallback.copyRef(), WTF::move(wrapper), readOnly));
     if (!m_transactionInProgress)
         scheduleTransaction();
 }
 
 void Database::scheduleTransactionCallback(SQLTransaction* transaction)
 {
-    callOnMainThread([this, protectedThis = Ref { *this }, transaction = RefPtr { transaction }]() mutable {
-        m_document->eventLoop().queueTask(TaskSource::Networking, [transaction = WTFMove(transaction)] {
+    callOnMainThread([this, protectedThis = Ref { *this }, transaction = RefPtr { transaction }] mutable {
+        m_document->checkedEventLoop()->queueTask(TaskSource::Networking, [transaction = WTF::move(transaction)] {
             transaction->performPendingCallback();
         });
     });
@@ -739,12 +730,12 @@ void Database::incrementalVacuumIfNeeded()
 {
     SQLiteTransactionInProgressAutoCounter transactionCounter;
 
-    int64_t freeSpaceSize = m_sqliteDatabase.freeSpaceSize();
-    int64_t totalSize = m_sqliteDatabase.totalSize();
+    int64_t freeSpaceSize = m_sqliteDatabase->freeSpaceSize();
+    int64_t totalSize = m_sqliteDatabase->totalSize();
     if (totalSize <= 10 * freeSpaceSize) {
-        int result = m_sqliteDatabase.runIncrementalVacuumCommand();
+        int result = m_sqliteDatabase->runIncrementalVacuumCommand();
         if (result != SQLITE_OK)
-            logErrorMessage(formatErrorMessage("error vacuuming database"_s, result, m_sqliteDatabase.lastErrorMsg()));
+            logErrorMessage(formatErrorMessage("error vacuuming database"_s, result, m_sqliteDatabase->lastErrorMsg()));
     }
 }
 
@@ -759,12 +750,12 @@ Vector<String> Database::tableNames()
     // in dealing with them. However, if the code changes, this may not be true anymore.
     Vector<String> result;
     DatabaseTaskSynchronizer synchronizer;
-    auto& thread = databaseThread();
-    if (thread.terminationRequested(&synchronizer))
+    Ref thread = databaseThread();
+    if (thread->terminationRequested(&synchronizer))
         return result;
 
     auto task = makeUnique<DatabaseTableNamesTask>(*this, synchronizer, result);
-    thread.scheduleImmediateTask(WTFMove(task));
+    thread->scheduleImmediateTask(WTF::move(task));
     synchronizer.waitForTaskCompletion();
 
     return result;

@@ -27,6 +27,7 @@
 [
     Conditional=WEBXR,
     EnabledBySetting=WebXREnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRInputSourceEventInit : EventInit {
     required WebXRFrame frame;
     required WebXRInputSource inputSource;

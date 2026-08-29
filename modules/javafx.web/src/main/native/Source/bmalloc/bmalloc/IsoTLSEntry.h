@@ -25,8 +25,11 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BAssert.h"
 #include "BMalloced.h"
+#include "BPlatform.h"
 #include "IsoTLSLayout.h"
 #include <climits>
 
@@ -94,9 +97,6 @@ private:
 
 template<typename EntryType>
 class DefaultIsoTLSEntry : public IsoTLSEntry {
-public:
-    ~DefaultIsoTLSEntry() = default;
-
 protected:
     DefaultIsoTLSEntry();
 
@@ -112,3 +112,5 @@ protected:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

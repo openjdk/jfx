@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class PushSubscriptionChangeEvent final : public ExtendableEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushSubscriptionChangeEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PushSubscriptionChangeEvent);
 public:
     static Ref<PushSubscriptionChangeEvent> create(const AtomString&, PushSubscriptionChangeEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushSubscriptionChangeEvent> create(const AtomString&, ExtendableEventInit&&, RefPtr<PushSubscription>&& newSubscription, RefPtr<PushSubscription>&& oldSubscription, IsTrusted);
@@ -48,3 +48,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(PushSubscriptionChangeEvent)

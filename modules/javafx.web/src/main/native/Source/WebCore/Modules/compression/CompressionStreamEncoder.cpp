@@ -44,7 +44,7 @@ ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::encode(const BufferSou
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::flush()
@@ -59,14 +59,8 @@ ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::flush()
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
-
-
-
-    // Values chosen here are based off
-    // https://developer.apple.com/documentation/compression/compression_algorithm/compression_zlib?language=objc
-
 
 // The compression algorithm is broken up into 2 steps.
 // 1. Compression of Data
@@ -90,6 +84,7 @@ static bool didDeflateFail(int result)
 #endif
     return true;
 }
+
 ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(std::span<const uint8_t> input)
 {
 #if PLATFORM(COCOA)
@@ -113,6 +108,7 @@ static ZStream::Algorithm compressionAlgorithm(Formats::CompressionFormat format
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
+
 ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compressZlib(std::span<const uint8_t> input)
 {
 #if !PLATFORM(JAVA)
@@ -161,11 +157,12 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compressZlib(std::s
         storage.append(output);
     }
 
-    RefPtr compressedData = storage.takeAsArrayBuffer();
+    RefPtr compressedData = storage.takeBufferAsArrayBuffer();
     if (!compressedData)
         return Exception { ExceptionCode::OutOfMemoryError };
 
     return compressedData.releaseNonNull();
 #endif
 }
+
 } // namespace WebCore

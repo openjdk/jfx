@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,31 @@
 
 #pragma once
 
-#include "CertificateSummary.h"
-#include "NotImplemented.h"
-#include "WebCorePersistentCoders.h"
+#include <WebCore/CertificateSummary.h>
+#include <WebCore/NotImplemented.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
+#include <wtf/persistence/PersistentCoders.h>
+#include <wtf/persistence/PersistentDecoder.h>
+#include <wtf/persistence/PersistentEncoder.h>
 
+#include <optional>
 
 namespace WebCore {
 
-struct CertificateSummary;
 class CertificateInfo {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(CertificateInfo);
 public:
     using Certificate = Vector<uint8_t>;
     using CertificateChain = Vector<Certificate>;
+
     CertificateInfo() = default;
     WEBCORE_EXPORT CertificateInfo(int verificationError, CertificateChain&&);
-
-
 
     WEBCORE_EXPORT CertificateInfo isolatedCopy() const;
 
     int verificationError() const { return m_verificationError; }
-    const Vector<Certificate>& certificateChain() const { return m_certificateChain; }
+    const Vector<Certificate>& certificateChain() const LIFETIME_BOUND { return m_certificateChain; }
 
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
 

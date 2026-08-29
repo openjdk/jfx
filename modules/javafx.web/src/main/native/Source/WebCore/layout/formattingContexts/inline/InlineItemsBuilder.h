@@ -30,11 +30,14 @@
 #include "InlineLineTypes.h"
 #include "LayoutElementBox.h"
 #include "SecurityOrigin.h"
+#include "StyleTextAutospace.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class Document;
+
 namespace Layout {
 class InlineTextBox;
 

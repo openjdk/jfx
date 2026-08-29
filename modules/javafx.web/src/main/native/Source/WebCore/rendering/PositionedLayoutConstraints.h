@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "BoxSides.h"
-#include "LayoutRange.h"
-#include "RenderBox.h"
-#include "StyleInset.h"
-#include "StyleMargin.h"
-#include "StyleSelfAlignmentData.h"
+#include <WebCore/BoxSides.h>
+#include <WebCore/LayoutRange.h>
+#include <WebCore/RenderBox.h>
+#include <WebCore/StyleInset.h>
+#include <WebCore/StyleMargin.h>
+#include <WebCore/StyleSelfAlignmentData.h>
 
 namespace WebCore {
 
@@ -46,6 +46,7 @@ public:
     LayoutUnit containingSize() const { return m_containingRange.size(); }
     LayoutUnit containingInlineSize() const { return m_containingInlineSize; }
     LayoutRange containingRange() const { return m_containingRange; }
+    LayoutRange originalContainingRange() const { return m_originalContainingRange; }
     LayoutRange extractRange(LayoutRect);
 
     BoxAxis physicalAxis() const { return m_physicalAxis; }
@@ -74,12 +75,14 @@ public:
     Style::MarginEdge marginAfter() const { return m_marginAfter; }
     Style::InsetEdge insetBefore() const { return m_insetBefore; }
     Style::InsetEdge insetAfter() const { return m_insetAfter; }
-    LayoutUnit marginBeforeValue() const { return Style::evaluateMinimum(m_marginBefore, m_containingInlineSize); }
-    LayoutUnit marginAfterValue() const { return Style::evaluateMinimum(m_marginAfter, m_containingInlineSize); }
-    LayoutUnit insetBeforeValue() const { return Style::evaluateMinimum(m_insetBefore, containingSize()); }
-    LayoutUnit insetAfterValue() const { return Style::evaluateMinimum(m_insetAfter, containingSize()); }
+    LayoutUnit marginBeforeValue() const { return Style::evaluateMinimum<LayoutUnit>(m_marginBefore, m_containingInlineSize, m_style.usedZoomForLength()); }
+    LayoutUnit marginAfterValue() const { return Style::evaluateMinimum<LayoutUnit>(m_marginAfter, m_containingInlineSize, m_style.usedZoomForLength()); }
+    LayoutUnit insetBeforeValue() const { return Style::evaluateMinimum<LayoutUnit>(m_insetBefore, containingSize(), m_style.usedZoomForLength()); }
+    LayoutUnit insetAfterValue() const { return Style::evaluateMinimum<LayoutUnit>(m_insetAfter, containingSize(), m_style.usedZoomForLength()); }
+    bool insetFitsContent() const; // One or both insets are auto for sizing purposes.
 
     LayoutUnit insetModifiedContainingSize() const { return m_insetModifiedContainingRange.size(); }
+    LayoutRange insetModifiedContainingRange() const { return m_insetModifiedContainingRange; }
     LayoutUnit availableContentSpace() const { return insetModifiedContainingSize() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue(); } // This may be negative.
 
     void resolvePosition(RenderBox::LogicalExtentComputedValues&) const;
@@ -88,19 +91,22 @@ public:
     void fixupLogicalLeftPosition(RenderBox::LogicalExtentComputedValues&) const;
     void adjustLogicalTopWithLogicalHeightIfNeeded(RenderBox::LogicalExtentComputedValues&) const;
 
+    LayoutUnit computedInlineStaticDistance() const;
+
 private:
     bool containingCoordsAreFlipped() const;
 
     void captureInsets();
     void captureGridArea();
     void captureAnchorGeometry();
+    void expandToScrollableArea(LayoutRange&, const std::optional<ScrollPosition> fromScrollPosition = { }) const;
     LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis);
+    std::pair<bool, bool> containerAllowsInfiniteOverflow() const;
 
     bool needsGridAreaAdjustmentBeforeStaticPositioning() const;
-    bool isEligibleForStaticRangeAlignment(LayoutUnit spaceInStaticRange, LayoutUnit itemSize) const;
+    std::optional<LayoutUnit> remainingSpaceForStaticAlignment(LayoutUnit itemSize) const;
     void computeStaticPosition();
-    void computeInlineStaticDistance();
-    void computeBlockStaticDistance();
+    LayoutUnit computedBlockStaticDistance() const;
 
     CheckedRef<const RenderBox> m_renderer;
     CheckedPtr<const RenderBoxModelObject> m_container;
@@ -125,6 +131,9 @@ private:
     Style::InsetEdge m_insetBefore;
     Style::InsetEdge m_insetAfter;
     bool m_useStaticPosition { false };
+#if ASSERT_ENABLED
+    mutable bool m_isEligibleForStaticRangeAlignment { false };
+#endif
 };
 
 inline bool PositionedLayoutConstraints::isOpposing() const

@@ -32,9 +32,9 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ImageBuffer.h"
-#include "MockMediaDevice.h"
-#include "RealtimeMediaSourceFactory.h"
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/MockMediaDevice.h>
+#include <WebCore/RealtimeMediaSourceFactory.h>
 #include <wtf/RunLoop.h>
 #include <wtf/WorkQueue.h>
 

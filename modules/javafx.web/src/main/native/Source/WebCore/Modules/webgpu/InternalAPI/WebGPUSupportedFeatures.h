@@ -35,7 +35,7 @@ class SupportedFeatures final : public RefCounted<SupportedFeatures> {
 public:
     static Ref<SupportedFeatures> create(Vector<String>&& features)
     {
-        return adoptRef(*new SupportedFeatures(WTFMove(features)));
+        return adoptRef(*new SupportedFeatures(WTF::move(features)));
     }
 
     static Ref<SupportedFeatures> create(const Vector<String>& features)
@@ -52,7 +52,7 @@ public:
 
 private:
     SupportedFeatures(Vector<String>&& features)
-        : m_features(WTFMove(features))
+        : m_features(WTF::move(features))
     {
     }
 

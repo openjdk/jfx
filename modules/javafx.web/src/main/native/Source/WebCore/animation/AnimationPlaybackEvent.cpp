@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AnimationPlaybackEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationPlaybackEvent);
 
 AnimationPlaybackEvent::AnimationPlaybackEvent(const AtomString& type, const AnimationPlaybackEventInit& initializer, IsTrusted isTrusted)
     : AnimationEventBase(EventInterfaceType::AnimationPlaybackEvent, type, initializer, isTrusted)

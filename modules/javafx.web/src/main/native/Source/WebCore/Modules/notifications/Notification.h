@@ -33,20 +33,20 @@
 
 #if ENABLE(NOTIFICATIONS)
 
-#include "ActiveDOMObject.h"
-#include "ContextDestructionObserverInlines.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "NotificationDirection.h"
-#include "NotificationPayload.h"
-#include "NotificationPermission.h"
-#include "NotificationResources.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "SerializedScriptValue.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/NotificationDirection.h>
+#include <WebCore/NotificationPayload.h>
+#include <WebCore/NotificationPermission.h>
+#include <WebCore/NotificationResources.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/SerializedScriptValue.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
 #include <wtf/UUID.h>
-#include "WritingMode.h"
+#include <wtf/WallTime.h>
 
 namespace WebCore {
 
@@ -59,11 +59,8 @@ class NotificationResourcesLoader;
 struct NotificationData;
 
 class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
 
@@ -89,6 +86,11 @@ public:
     static Ref<Notification> create(ScriptExecutionContext&, const URL& registrationURL, const NotificationPayload&);
 
     WEBCORE_EXPORT virtual ~Notification();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void show(CompletionHandler<void()>&& = [] { });
     void close();
@@ -117,7 +119,8 @@ public:
     static Permission permission(ScriptExecutionContext&);
     static void requestPermission(Document&, RefPtr<NotificationPermissionCallback>&&, Ref<DeferredPromise>&&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     WEBCORE_EXPORT NotificationData data() const;
     RefPtr<NotificationResources> resources() const { return m_resources; }
@@ -128,6 +131,8 @@ public:
     WTF::UUID identifier() const { return m_identifier; }
 
     bool isPersistent() const { return !m_serviceWorkerRegistrationURL.isNull(); }
+
+    WEBCORE_EXPORT static void setOverridePersistentNotificationMinimumLifetime(Seconds);
 
     WEBCORE_EXPORT static void ensureOnNotificationThread(ScriptExecutionContextIdentifier, WTF::UUID notificationIdentifier, Function<void(Notification*)>&&);
     WEBCORE_EXPORT static void ensureOnNotificationThread(const NotificationData&, Function<void(Notification*)>&&);
@@ -175,10 +180,13 @@ private:
     };
     NotificationSource m_notificationSource;
     URL m_serviceWorkerRegistrationURL;
+    WallTime m_creationTime;
     std::unique_ptr<NotificationResourcesLoader> m_resourcesLoader;
     RefPtr<NotificationResources> m_resources;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Notification)
 
 #endif // ENABLE(NOTIFICATIONS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -137,7 +137,17 @@ public class TextPage extends TestPaneBase {
     private void handleMouseEvent(MouseEvent ev) {
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = text.hitTest(p);
-        hitInfo.setText(String.valueOf(h));
+        StringBuilder sb = new StringBuilder();
+        if (h == null) {
+            sb.append("null");
+        } else {
+            sb.append("cix=").append(h.getCharIndex());
+            sb.append(", ix=").append(h.getInsertionIndex());
+            if (h.isLeading()) {
+                sb.append(", leading");
+            }
+        }
+        hitInfo.setText(sb.toString());
     }
 
     private ContextMenu createPopupMenu(PickResult pick) {

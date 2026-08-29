@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,8 +225,7 @@ public abstract class Toolkit {
             forcedToolkit = lookupToolkitClass(forcedToolkit);
         }
 
-        boolean printToolkit = verbose
-                || (userSpecifiedToolkit && !forcedToolkit.endsWith("StubToolkit"));
+        boolean printToolkit = verbose || userSpecifiedToolkit;
 
         try {
             Class clz = null;
@@ -250,7 +249,7 @@ public abstract class Toolkit {
             TOOLKIT = (Toolkit)clz.getDeclaredConstructor().newInstance();
             if (TOOLKIT.init()) {
                 if (printToolkit) {
-                    System.err.println("JavaFX: using " + forcedToolkit);
+                    System.out.println("JavaFX: using " + forcedToolkit);
                 }
                 return TOOLKIT;
             }

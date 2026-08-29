@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SVGAnimatedString.h"
 
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "SVGScriptElement.h"
 #include "ScriptExecutionContext.h"
@@ -37,9 +38,9 @@ ExceptionOr<void> SVGAnimatedString::setBaseVal(const StringOrTrustedScriptURL& 
 {
     auto stringValueHolder = WTF::switchOn(baseVal,
         [&](const String& str) -> ExceptionOr<String> {
-            SVGElement* el = contextElement();
+            RefPtr el = contextElement();
             if (el && isScriptElement(*el) && m_isHrefProperty == IsHrefProperty::Yes)
-                return trustedTypeCompliantString(TrustedType::TrustedScriptURL, *(contextElement()->document().scriptExecutionContext()), str, "SVGScriptElement href"_s);
+                return trustedTypeCompliantString(TrustedType::TrustedScriptURL, *contextElement()->scriptExecutionContext(), str, "SVGScriptElement href"_s);
             return String(str);
         },
         [](const RefPtr<TrustedScriptURL>& trustedScriptURL) -> ExceptionOr<String> {

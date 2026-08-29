@@ -32,9 +32,9 @@
 
 #pragma once
 
-#include "HTMLInputElement.h"
-#include "HTMLTextFormControlElement.h"
-#include "RenderPtr.h"
+#include <WebCore/HTMLInputElement.h>
+#include <WebCore/HTMLTextFormControlElement.h>
+#include <WebCore/RenderPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
@@ -279,6 +279,7 @@ public:
     virtual void willDispatchClick(InputElementClickState&) { }
     virtual void didDispatchClick(Event&, const InputElementClickState&) { }
     virtual void handleDOMActivateEvent(Event&) { }
+    virtual void handleAccessibilityActivation() { }
 
     virtual bool allowsShowPickerAcrossFrames();
     virtual void showPicker();

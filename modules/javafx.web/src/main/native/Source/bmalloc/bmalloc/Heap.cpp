@@ -53,7 +53,7 @@ namespace bmalloc {
 Heap::Heap(HeapKind kind, LockHolder&)
     : m_kind { kind }, m_constants { *HeapConstants::get() }
 {
-    BASSERT(!Environment::get()->isSystemHeapEnabled());
+    BASSERT(!Environment::get()->shouldBmallocAllocateThroughSystemHeap());
 
     Gigacage::ensureGigacage();
 #if GIGACAGE_ENABLED

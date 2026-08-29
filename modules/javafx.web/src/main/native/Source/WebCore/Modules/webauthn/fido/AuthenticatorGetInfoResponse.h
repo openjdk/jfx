@@ -31,10 +31,10 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticatorSupportedOptions.h"
-#include "AuthenticatorTransport.h"
-#include "FidoConstants.h"
-#include "PublicKeyCredentialParameters.h"
+#include <WebCore/AuthenticatorSupportedOptions.h>
+#include <WebCore/AuthenticatorTransport.h>
+#include <WebCore/FidoConstants.h>
+#include <WebCore/PublicKeyCredentialParameters.h>
 #include <wtf/StdSet.h>
 
 namespace fido {
@@ -51,7 +51,7 @@ public:
     AuthenticatorGetInfoResponse& operator=(AuthenticatorGetInfoResponse&& other) = default;
 
     AuthenticatorGetInfoResponse& setMaxMsgSize(uint32_t);
-    AuthenticatorGetInfoResponse& setPinProtocols(Vector<uint8_t>&&);
+    AuthenticatorGetInfoResponse& setPinProtocols(StdSet<PINUVAuthProtocol>&&);
     AuthenticatorGetInfoResponse& setExtensions(Vector<String>&&);
     AuthenticatorGetInfoResponse& setOptions(AuthenticatorSupportedOptions&&);
     AuthenticatorGetInfoResponse& setTransports(Vector<WebCore::AuthenticatorTransport>&&);
@@ -64,7 +64,7 @@ public:
     const StdSet<ProtocolVersion>& versions() const { return m_versions; }
     const Vector<uint8_t>& aaguid() const { return m_aaguid; }
     const std::optional<uint32_t>& maxMsgSize() const { return m_maxMsgSize; }
-    const std::optional<Vector<uint8_t>>& pinProtocol() const { return m_pinProtocols; }
+    const std::optional<StdSet<PINUVAuthProtocol>>& pinProtocol() const { return m_pinProtocols; }
     const std::optional<Vector<String>>& extensions() const { return m_extensions; }
     const AuthenticatorSupportedOptions& options() const { return m_options; }
     AuthenticatorSupportedOptions& mutableOptions() { return m_options; }
@@ -79,7 +79,7 @@ private:
     StdSet<ProtocolVersion> m_versions;
     Vector<uint8_t> m_aaguid;
     std::optional<uint32_t> m_maxMsgSize;
-    std::optional<Vector<uint8_t>> m_pinProtocols;
+    std::optional<StdSet<PINUVAuthProtocol>> m_pinProtocols;
     std::optional<uint32_t> m_maxCredentialCountInList;
     std::optional<uint32_t> m_maxCredentialIdLength;
     std::optional<Vector<String>> m_extensions;

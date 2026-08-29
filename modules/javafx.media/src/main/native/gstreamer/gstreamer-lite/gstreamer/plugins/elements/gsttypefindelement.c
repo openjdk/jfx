@@ -1208,8 +1208,10 @@ gst_type_find_element_loop (GstPad * pad)
 
     /* Pull 4k blocks and send downstream */
     ret = gst_pad_pull_range (typefind->sink, typefind->offset, 4096, &outbuf);
-    if (ret != GST_FLOW_OK)
+    if (ret != GST_FLOW_OK) {
+      gst_clear_buffer (&outbuf);
       goto pause;
+    }
 
     typefind->offset += gst_buffer_get_size (outbuf);
 

@@ -51,22 +51,17 @@ LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(DOMWindow* window)
 
 LocalDOMWindowSpeechSynthesis::~LocalDOMWindowSpeechSynthesis() = default;
 
-ASCIILiteral LocalDOMWindowSpeechSynthesis::supplementName()
-{
-    return "LocalDOMWindowSpeechSynthesis"_s;
-}
-
 // static
 LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(DOMWindow* window)
 {
     RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
     if (!localWindow)
         return nullptr;
-    auto* supplement = static_cast<LocalDOMWindowSpeechSynthesis*>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
+    auto* supplement = downcast<LocalDOMWindowSpeechSynthesis>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<LocalDOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
-        provideTo(localWindow.get(), supplementName(), WTFMove(newSupplement));
+        provideTo(localWindow.get(), supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }

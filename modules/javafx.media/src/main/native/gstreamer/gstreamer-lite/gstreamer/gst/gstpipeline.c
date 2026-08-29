@@ -400,7 +400,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
 {
   GstStateChangeReturn result = GST_STATE_CHANGE_SUCCESS;
   GstPipeline *pipeline = GST_PIPELINE_CAST (element);
-  GstClock *clock;
 
   switch (transition) {
     case GST_STATE_CHANGE_NULL_TO_NULL:
@@ -452,6 +451,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       /* only do this for top-level, however */
       if (GST_OBJECT_PARENT (element) == NULL &&
           (update_clock || last_start_time != start_time)) {
+        GstClock *clock = NULL;
         GST_DEBUG_OBJECT (pipeline, "Need to update start_time");
 
         /* when going to PLAYING, select a clock when needed. If we just got
@@ -464,8 +464,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               "Don't need to update clock, using old clock.");
           /* only try to ref if cur_clock is not NULL */
           if (cur_clock)
-            gst_object_ref (cur_clock);
-          clock = cur_clock;
+            clock = gst_object_ref (cur_clock);
         }
 
         if (clock) {
@@ -479,8 +478,17 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
           /* now distribute the clock (which could be NULL). If some
            * element refuses the clock, this will return FALSE and
            * we effectively fail the state change. */
-          if (!gst_element_set_clock (element, clock))
-            goto invalid_clock;
+          if (!gst_element_set_clock (element, clock)) {
+            /* selected clock was not accepted by some element */
+            GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
+                (_("Selected clock cannot be used in pipeline.")),
+                ("Pipeline cannot operate with selected clock"));
+            GST_DEBUG_OBJECT (pipeline,
+                "Pipeline cannot operate with selected clock %p", clock);
+            gst_clear_object (&clock);
+            gst_clear_object (&cur_clock);
+            return GST_STATE_CHANGE_FAILURE;
+          }
 
           /* if we selected and distributed a new clock, let the app
            * know about it */
@@ -488,8 +496,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               gst_message_new_new_clock (GST_OBJECT_CAST (element), clock));
         }
 
-        if (clock)
-          gst_object_unref (clock);
+        gst_clear_object (&clock);
 
         if (start_time != GST_CLOCK_TIME_NONE && now != GST_CLOCK_TIME_NONE) {
           GstClockTime new_base_time = now - start_time + delay;
@@ -509,8 +516,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
             "NOT adjusting base_time because we selected one before");
       }
 
-      if (cur_clock)
-        gst_object_unref (cur_clock);
+      gst_clear_object (&cur_clock);
       break;
     }
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
@@ -590,21 +596,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
     }
   }
   return result;
-
-  /* ERRORS */
-invalid_clock:
-  {
-    /* we generate this error when the selected clock was not
-     * accepted by some element */
-    GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
-        (_("Selected clock cannot be used in pipeline.")),
-        ("Pipeline cannot operate with selected clock"));
-    GST_DEBUG_OBJECT (pipeline,
-        "Pipeline cannot operate with selected clock %p", clock);
-    if (clock)
-      gst_object_unref (clock);
-    return GST_STATE_CHANGE_FAILURE;
-  }
 }
 
 /* intercept the bus messages from our children. We watch for the ASYNC_START

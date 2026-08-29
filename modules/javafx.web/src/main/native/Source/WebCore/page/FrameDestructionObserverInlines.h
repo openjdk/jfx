@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FrameDestructionObserver.h"
-#include "LocalFrame.h"
+#include <WebCore/FrameDestructionObserver.h>
+#include <WebCore/LocalFrame.h>
 
 namespace WebCore {
 

@@ -333,19 +333,19 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
     ASSERT(configuration.type == MediaDecodingType::WebRTC);
 
     // FIXME: Validate additional parameters, in particular mime type parameters.
-    MediaCapabilitiesDecodingInfo info { { }, WTFMove(configuration) };
+    MediaCapabilitiesDecodingInfo info { { }, WTF::move(configuration) };
 
 #if ENABLE(WEB_RTC)
     if (info.configuration.video) {
         ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoDecodingCapabilities());
         if (!codec) {
-            callback({ { }, WTFMove(info.configuration) });
+            callback({ { }, WTF::move(info.configuration) });
             return;
         }
         if (auto infoOverride = videoDecodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
-                callback({ { }, WTFMove(info.configuration) });
+                callback({ { }, WTF::move(info.configuration) });
                 return;
             }
             info.smooth = infoOverride->smooth;
@@ -356,7 +356,7 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
         ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioDecodingCapabilities());
         if (!codec) {
-            callback({ { }, WTFMove(info.configuration) });
+            callback({ { }, WTF::move(info.configuration) });
             return;
         }
     }
@@ -368,19 +368,19 @@ void WebRTCProvider::createDecodingConfiguration(MediaDecodingConfiguration&& co
         videoConfiguration.video->contentType = contentTypeFromRTPVideoMimeType(info.configuration.video->contentType);
         videoConfiguration.type = MediaDecodingType::MediaSource;
 
-        MediaEngineConfigurationFactory::createDecodingConfiguration(WTFMove(videoConfiguration), [info = WTFMove(info), callback = WTFMove(callback)](auto&& result) mutable {
+        MediaEngineConfigurationFactory::createDecodingConfiguration(WTF::move(videoConfiguration), [info = WTF::move(info), callback = WTF::move(callback)](auto&& result) mutable {
             info.supported = result.supported;
             info.smooth = result.smooth;
             info.powerEfficient = result.powerEfficient;
             if (!info.supported)
                 info.configuration = { };
-            callback(WTFMove(info));
+            callback(WTF::move(info));
         });
         return;
     }
 
     info.supported = true;
-    callback(WTFMove(info));
+    callback(WTF::move(info));
 }
 
 void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& configuration, EncodingConfigurationCallback&& callback)
@@ -388,19 +388,19 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
     ASSERT(configuration.type == MediaEncodingType::WebRTC);
 
     // FIXME: Validate additional parameters, in particular mime type parameters.
-    MediaCapabilitiesEncodingInfo info { { }, WTFMove(configuration) };
+    MediaCapabilitiesEncodingInfo info { { }, WTF::move(configuration) };
 
 #if ENABLE(WEB_RTC)
     if (info.configuration.video) {
         ContentType contentType { info.configuration.video->contentType };
         auto codec = codecCapability(contentType, videoEncodingCapabilities());
         if (!codec) {
-            callback({ { }, WTFMove(info.configuration) });
+            callback({ { }, WTF::move(info.configuration) });
             return;
         }
         if (auto infoOverride = videoEncodingCapabilitiesOverride(*info.configuration.video)) {
             if (!infoOverride->supported) {
-                callback({ { }, WTFMove(info.configuration) });
+                callback({ { }, WTF::move(info.configuration) });
                 return;
             }
             info.smooth = infoOverride->smooth;
@@ -411,13 +411,13 @@ void WebRTCProvider::createEncodingConfiguration(MediaEncodingConfiguration&& co
         ContentType contentType { info.configuration.audio->contentType };
         auto codec = codecCapability(contentType, audioEncodingCapabilities());
         if (!codec) {
-            callback({ { }, WTFMove(info.configuration) });
+            callback({ { }, WTF::move(info.configuration) });
             return;
         }
     }
 #endif
     info.supported = true;
-    callback(WTFMove(info));
+    callback(WTF::move(info));
 }
 
 void WebRTCProvider::initializeAudioDecodingCapabilities()

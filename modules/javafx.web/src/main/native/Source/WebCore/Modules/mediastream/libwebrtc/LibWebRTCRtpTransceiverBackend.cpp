@@ -46,7 +46,7 @@ std::unique_ptr<LibWebRTCRtpReceiverBackend> LibWebRTCRtpTransceiverBackend::cre
 
 Ref<LibWebRTCRtpSenderBackend> LibWebRTCRtpTransceiverBackend::createSenderBackend(LibWebRTCPeerConnectionBackend& backend, LibWebRTCRtpSenderBackend::Source&& source)
 {
-    return LibWebRTCRtpSenderBackend::create(backend, toRefPtr(m_rtcTransceiver->sender()), WTFMove(source));
+    return LibWebRTCRtpSenderBackend::create(backend, toRefPtr(m_rtcTransceiver->sender()), WTF::move(source));
 }
 
 RTCRtpTransceiverDirection LibWebRTCRtpTransceiverBackend::direction() const

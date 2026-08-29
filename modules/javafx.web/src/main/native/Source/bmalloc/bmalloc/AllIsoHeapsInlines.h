@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 
 #if !BUSE(TZONE)
@@ -47,3 +49,5 @@ void AllIsoHeaps::forEach(const Func& func)
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

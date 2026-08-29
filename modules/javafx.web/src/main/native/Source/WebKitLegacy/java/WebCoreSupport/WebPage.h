@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ class WebPage
     : GraphicsLayerClient
 {
 public:
-    WebPage(std::unique_ptr<Page> page);
+    WebPage(RefPtr<Page> page);
     ~WebPage();
 
     inline Page* page()
@@ -115,7 +115,7 @@ private:
     // GraphicsLayerClient
     void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, MonotonicTime /*time*/) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */,  OptionSet<GraphicsLayerPaintBehavior>) override;
+    void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& /* inClip */,  OptionSet<GraphicsLayerPaintBehavior>) override;
 
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);
@@ -129,8 +129,8 @@ private:
     LocalFrame* focusedWebCoreFrame();
     Node* focusedWebCoreNode();
 
-    std::unique_ptr<Page> m_page;
-    std::unique_ptr<PrintContext> m_printContext;
+    RefPtr<Page> m_page;
+    RefPtr<PrintContext> m_printContext;
     RefPtr<RQRef> m_jRenderTheme;
 
     RefPtr<GraphicsLayer> m_rootLayer;
@@ -148,4 +148,3 @@ private:
 };
 
 } // namespace WebCore
-

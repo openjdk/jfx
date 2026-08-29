@@ -40,27 +40,27 @@ class ResizeObserverSize;
 class ResizeObserverEntry : public RefCounted<ResizeObserverEntry> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(ResizeObserverEntry);
 public:
-    static Ref<ResizeObserverEntry> create(Element* target, const FloatRect& contentRect, FloatSize borderBoxSize, FloatSize contentBoxSize)
+    static Ref<ResizeObserverEntry> create(Ref<Element>&& target, const FloatRect& contentRect, FloatSize borderBoxSize, FloatSize contentBoxSize)
     {
-        return adoptRef(*new ResizeObserverEntry(target, contentRect, borderBoxSize, contentBoxSize));
+        return adoptRef(*new ResizeObserverEntry(WTF::move(target), contentRect, borderBoxSize, contentBoxSize));
     }
 
-    Element* target() const { return m_target.get(); }
-    DOMRectReadOnly* contentRect() const { return m_contentRect.ptr(); }
+    Element& target() const { return m_target; }
+    DOMRectReadOnly& contentRect() const { return m_contentRect; }
 
     const Vector<Ref<ResizeObserverSize>>& borderBoxSize() const { return m_borderBoxSizes; }
     const Vector<Ref<ResizeObserverSize>>& contentBoxSize() const { return m_contentBoxSizes; }
 
 private:
-    ResizeObserverEntry(Element* target, const FloatRect& contentRect, FloatSize borderBoxSize, FloatSize contentBoxSize)
-        : m_target(target)
+    ResizeObserverEntry(Ref<Element>&& target, const FloatRect& contentRect, FloatSize borderBoxSize, FloatSize contentBoxSize)
+        : m_target(WTF::move(target))
         , m_contentRect(DOMRectReadOnly::create(contentRect.x(), contentRect.y(), contentRect.width(), contentRect.height()))
         , m_borderBoxSizes({ ResizeObserverSize::create(borderBoxSize.width(), borderBoxSize.height()) })
         , m_contentBoxSizes({ ResizeObserverSize::create(contentBoxSize.width(), contentBoxSize.height()) })
     {
     }
 
-    const RefPtr<Element> m_target;
+    const Ref<Element> m_target;
     const Ref<DOMRectReadOnly> m_contentRect;
     // The spec is designed to allow mulitple boxes for multicol scenarios, but for now these vectors only ever contain one entry.
     Vector<Ref<ResizeObserverSize>> m_borderBoxSizes;

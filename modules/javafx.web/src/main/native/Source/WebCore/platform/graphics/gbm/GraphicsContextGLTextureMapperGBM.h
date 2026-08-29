@@ -41,6 +41,8 @@ public:
     static RefPtr<GraphicsContextGLTextureMapperGBM> create(GraphicsContextGLAttributes&&, RefPtr<GraphicsLayerContentsDisplayDelegate>&& = nullptr);
     virtual ~GraphicsContextGLTextureMapperGBM();
 
+    static bool checkRequirements();
+
     WTF::UnixFileDescriptor createExportedFence() const;
     void prepareForDisplayWithFinishedSignal(Function<void()>&&);
     DMABufBuffer* displayBuffer() { return m_displayBuffer.dmabuf.get(); }

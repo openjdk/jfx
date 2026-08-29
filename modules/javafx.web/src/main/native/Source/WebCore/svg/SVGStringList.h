@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SVGParserUtilities.h"
-#include "SVGPrimitiveList.h"
+#include <WebCore/SVGParserUtilities.h>
+#include <WebCore/SVGPrimitiveList.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {

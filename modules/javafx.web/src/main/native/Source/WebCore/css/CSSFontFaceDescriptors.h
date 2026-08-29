@@ -24,14 +24,14 @@
 
 #pragma once
 
-#include "PropertySetCSSDescriptors.h"
+#include <WebCore/PropertySetCSSDescriptors.h>
 
 namespace WebCore {
 
 class CSSFontFaceRule;
 
 class CSSFontFaceDescriptors final : public PropertySetCSSDescriptors {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSFontFaceDescriptors);
+    WTF_MAKE_TZONE_ALLOCATED(CSSFontFaceDescriptors);
 public:
     static Ref<CSSFontFaceDescriptors> create(MutableStyleProperties& propertySet, CSSFontFaceRule& parentRule)
     {

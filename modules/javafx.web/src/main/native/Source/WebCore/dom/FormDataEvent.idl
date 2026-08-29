@@ -31,6 +31,8 @@
     readonly attribute DOMFormData formData;
 };
 
-dictionary FormDataEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FormDataEventInit : EventInit {
     required DOMFormData formData;
 };

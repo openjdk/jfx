@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "StrongForward.h"
-#include "TypedArrayAdaptersForwardDeclarations.h"
+#include <JavaScriptCore/StrongForward.h>
+#include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
+#include <cstdint>
 
 namespace JSC {
 class ArrayBuffer;

@@ -131,7 +131,7 @@ FormController::SavedFormState FormController::SavedFormState::consumeSerialized
         auto state = consumeSerializedFormControlState(reader);
         if (!state)
             return { };
-        result.m_map.add({ name, type }, Deque<FormControlState> { }).iterator->value.append(WTFMove(*state));
+        result.m_map.add({ name, type }, Deque<FormControlState> { }).iterator->value.append(WTF::move(*state));
     }
     return result;
 }
@@ -331,7 +331,7 @@ FormController::SavedFormStateMap FormController::parseStateVector(const Vector<
         auto state = SavedFormState::consumeSerializedState(reader);
         if (state.isEmpty())
             return { };
-        map.add(formKey, WTFMove(state));
+        map.add(formKey, WTF::move(state));
     }
 }
 

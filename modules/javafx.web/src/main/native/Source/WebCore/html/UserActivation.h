@@ -34,7 +34,7 @@ class LocalDOMWindow;
 class Navigator;
 
 class UserActivation final : public RefCounted<UserActivation> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(UserActivation);
+    WTF_MAKE_TZONE_ALLOCATED(UserActivation);
 
 public:
     static Ref<UserActivation> create(Navigator&);

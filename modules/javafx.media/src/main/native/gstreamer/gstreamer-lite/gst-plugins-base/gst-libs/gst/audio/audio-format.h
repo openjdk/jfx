@@ -70,6 +70,10 @@ G_BEGIN_DECLS
  * @GST_AUDIO_FORMAT_F32BE: 32-bit floating point samples, big endian
  * @GST_AUDIO_FORMAT_F64LE: 64-bit floating point samples, little endian
  * @GST_AUDIO_FORMAT_F64BE: 64-bit floating point samples, big endian
+ * @GST_AUDIO_FORMAT_S20_32LE: 20 bits in 32 bits, signed, little endian (Since: 1.28)
+ * @GST_AUDIO_FORMAT_S20_32BE: 20 bits in 32 bits, signed, big endian (Since: 1.28)
+ * @GST_AUDIO_FORMAT_U20_32LE: 20 bits in 32 bits, unsigned, little endian (Since: 1.28)
+ * @GST_AUDIO_FORMAT_U20_32BE: 20 bits in 32 bits, unsigned, big endian (Since: 1.28)
  * @GST_AUDIO_FORMAT_S16: 16 bits in 16 bits, signed, native endianness
  * @GST_AUDIO_FORMAT_U16: 16 bits in 16 bits, unsigned, native endianness
  * @GST_AUDIO_FORMAT_S24_32: 24 bits in 32 bits, signed, native endianness
@@ -80,6 +84,8 @@ G_BEGIN_DECLS
  * @GST_AUDIO_FORMAT_U24: 24 bits in 24 bits, unsigned, native endianness
  * @GST_AUDIO_FORMAT_S20: 20 bits in 24 bits, signed, native endianness
  * @GST_AUDIO_FORMAT_U20: 20 bits in 24 bits, unsigned, native endianness
+ * @GST_AUDIO_FORMAT_S20_32: 20 bits in 32 bits, signed, native endianness
+ * @GST_AUDIO_FORMAT_U20_32: 20 bits in 32 bits, unsigned, native endianness
  * @GST_AUDIO_FORMAT_S18: 18 bits in 24 bits, signed, native endianness
  * @GST_AUDIO_FORMAT_U18: 18 bits in 24 bits, unsigned, native endianness
  * @GST_AUDIO_FORMAT_F32: 32-bit floating point samples, native endianness
@@ -128,6 +134,39 @@ typedef enum {
   GST_AUDIO_FORMAT_F32BE,
   GST_AUDIO_FORMAT_F64LE,
   GST_AUDIO_FORMAT_F64BE,
+  /* 20 bit in 32 bits */
+  /**
+   * GST_AUDIO_FORMAT_S20_32LE:
+   *
+   * 20 bits in 32 bits, signed, little endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_S20_32LE,
+  /**
+   * GST_AUDIO_FORMAT_S20_32BE:
+   *
+   * 20 bits in 32 bits, signed, big endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_S20_32BE,
+  /**
+   * GST_AUDIO_FORMAT_U20_32LE:
+   *
+   * 20 bits in 32 bits, unsigned, little endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_U20_32LE,
+  /**
+   * GST_AUDIO_FORMAT_U20_32BE:
+   *
+   * 20 bits in 32 bits, unsigned, big endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_U20_32BE,
 
   /* Update GST_AUDIO_FORMAT_LAST below when adding more formats here */
 
@@ -142,6 +181,22 @@ typedef enum {
   GST_AUDIO_FORMAT_U24 = _GST_AUDIO_FORMAT_NE(U24),
   GST_AUDIO_FORMAT_S20 = _GST_AUDIO_FORMAT_NE(S20),
   GST_AUDIO_FORMAT_U20 = _GST_AUDIO_FORMAT_NE(U20),
+  /**
+   * GST_AUDIO_FORMAT_S20_32:
+   *
+   * 20 bits in 32 bits, signed, native endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_S20_32 = _GST_AUDIO_FORMAT_NE(S20_32),
+  /**
+   * GST_AUDIO_FORMAT_U20_32:
+   *
+   * 20 bits in 32 bits, unsigned, native endian.
+   *
+   * Since: 1.28
+   */
+  GST_AUDIO_FORMAT_U20_32 = _GST_AUDIO_FORMAT_NE(U20_32),
   GST_AUDIO_FORMAT_S18 = _GST_AUDIO_FORMAT_NE(S18),
   GST_AUDIO_FORMAT_U18 = _GST_AUDIO_FORMAT_NE(U18),
   GST_AUDIO_FORMAT_F32 = _GST_AUDIO_FORMAT_NE(F32),
@@ -155,7 +210,7 @@ typedef enum {
  *
  * Since: 1.26
  */
-#define GST_AUDIO_FORMAT_LAST (GST_AUDIO_FORMAT_F64BE + 1)
+#define GST_AUDIO_FORMAT_LAST (GST_AUDIO_FORMAT_U20_32BE + 1)
 
 typedef struct _GstAudioFormatInfo GstAudioFormatInfo;
 
@@ -364,6 +419,7 @@ void           gst_audio_format_fill_silence      (const GstAudioFormatInfo *inf
     "F32BE, F32LE, S32BE, S32LE, U32BE, U32LE, " \
     "S24_32BE, S24_32LE, U24_32BE, U24_32LE, " \
     "S24BE, S24LE, U24BE, U24LE, " \
+    "S20_32BE, S20_32LE, U20_32BE, U20_32LE, " \
     "S20BE, S20LE, U20BE, U20LE, " \
     "S18BE, S18LE, U18BE, U18LE, " \
     "S16BE, S16LE, U16BE, U16LE, " \
@@ -373,6 +429,7 @@ void           gst_audio_format_fill_silence      (const GstAudioFormatInfo *inf
     "F32LE, F32BE, S32LE, S32BE, U32LE, U32BE, " \
     "S24_32LE, S24_32BE, U24_32LE, U24_32BE, " \
     "S24LE, S24BE, U24LE, U24BE, " \
+    "S20_32LE, S20_32BE, U20_32LE, U20_32BE, " \
     "S20LE, S20BE, U20LE, U20BE, " \
     "S18LE, S18BE, U18LE, U18BE, " \
     "S16LE, S16BE, U16LE, U16BE, " \

@@ -84,13 +84,13 @@ void ServiceWorkerInspectorProxy::disconnectFromWorker(FrontendChannel& channel)
 
         // In case the worker is paused running debugger tasks, ensure we break out of
         // the pause since this will be the last debugger task we send to the worker.
-        downcast<WorkerGlobalScope>(context).protectedThread()->stopRunningDebuggerTasks();
+        downcast<WorkerGlobalScope>(context).thread()->stopRunningDebuggerTasks();
     });
 }
 
 void ServiceWorkerInspectorProxy::sendMessageToWorker(String&& message)
 {
-    m_serviceWorkerThreadProxy.get()->thread().runLoop().postDebuggerTask([message = WTFMove(message).isolatedCopy()] (ScriptExecutionContext& context) {
+    m_serviceWorkerThreadProxy.get()->thread().runLoop().postDebuggerTask([message = WTF::move(message).isolatedCopy()] (ScriptExecutionContext& context) {
         downcast<WorkerGlobalScope>(context).inspectorController().dispatchMessageFromFrontend(message);
     });
 }
@@ -100,7 +100,7 @@ void ServiceWorkerInspectorProxy::sendMessageFromWorkerToFrontend(String&& messa
     if (!m_channel)
         return;
 
-    m_channel->sendMessageToFrontend(WTFMove(message));
+    m_channel->sendMessageToFrontend(WTF::move(message));
 }
 
 } // namespace WebCore

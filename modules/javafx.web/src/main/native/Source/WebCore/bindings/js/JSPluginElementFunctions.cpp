@@ -51,7 +51,7 @@ Instance* pluginInstance(HTMLElement& element)
 
 JSObject* pluginScriptObject(JSGlobalObject* lexicalGlobalObject, JSHTMLElement* jsHTMLElement)
 {
-    auto* element = dynamicDowncast<HTMLPlugInElement>(jsHTMLElement->wrapped());
+    CheckedPtr element = dynamicDowncast<HTMLPlugInElement>(jsHTMLElement->wrapped());
     if (!element)
         return nullptr;
 

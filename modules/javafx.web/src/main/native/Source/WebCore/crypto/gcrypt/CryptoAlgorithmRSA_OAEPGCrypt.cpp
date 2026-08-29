@@ -117,7 +117,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformEncrypt(const Cryp
     auto output = gcryptEncrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), plainText, key.keySizeInBits() / 8);
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(const CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& cipherText)
@@ -125,7 +125,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(const Cryp
     auto output = gcryptDecrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), cipherText);
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 } // namespace WebCore

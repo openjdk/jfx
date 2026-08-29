@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <atomic>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -40,7 +41,7 @@ struct OpaqueJSString : public ThreadSafeRefCounted<OpaqueJSString> {
         return adoptRef(*new OpaqueJSString);
     }
 
-    static Ref<OpaqueJSString> create(std::span<const LChar> characters)
+    static Ref<OpaqueJSString> create(std::span<const Latin1Character> characters)
     {
         return adoptRef(*new OpaqueJSString(characters));
     }
@@ -56,7 +57,7 @@ struct OpaqueJSString : public ThreadSafeRefCounted<OpaqueJSString> {
     JS_EXPORT_PRIVATE ~OpaqueJSString();
 
     bool is8Bit() { return m_string.is8Bit(); }
-    std::span<const LChar> span8() LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const Latin1Character> span8() LIFETIME_BOUND { return m_string.span8(); }
     std::span<const char16_t> span16() LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() { return m_string.length(); }
 
@@ -75,19 +76,13 @@ private:
     {
     }
 
-    OpaqueJSString(const String& string)
-        : m_string(string.isolatedCopy())
-        , m_characters(m_string.impl() && m_string.is8Bit() ? nullptr : const_cast<char16_t*>(m_string.span16().data()))
-    {
-    }
-
     explicit OpaqueJSString(String&& string)
-        : m_string(WTFMove(string))
+        : m_string(WTF::move(string).isolatedCopy())
         , m_characters(m_string.impl() && m_string.is8Bit() ? nullptr : const_cast<char16_t*>(m_string.span16().data()))
     {
     }
 
-    OpaqueJSString(std::span<const LChar> characters)
+    OpaqueJSString(std::span<const Latin1Character> characters)
         : m_string(characters)
         , m_characters(nullptr)
     {

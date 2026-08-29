@@ -29,9 +29,28 @@
 
 namespace WebCore {
 
+// MARK: - CustomIdentifier
+
 WTF::TextStream& operator<<(WTF::TextStream& ts, const CustomIdentifier& value)
 {
     return ts << value.value;
+}
+
+void add(Hasher& hasher, const CustomIdentifier& value)
+{
+    add(hasher, value.value);
+}
+
+// MARK: - PropertyIdentifier
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const PropertyIdentifier& value)
+{
+    return ts << nameLiteral(value.value);
+}
+
+void add(Hasher& hasher, const PropertyIdentifier& value)
+{
+    add(hasher, value.value);
 }
 
 } // namespace WebCore

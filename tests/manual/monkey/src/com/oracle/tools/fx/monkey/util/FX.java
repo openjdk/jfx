@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,12 @@ import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
@@ -49,6 +53,9 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -67,14 +74,14 @@ public class FX {
 
     public static Menu menu(MenuBar b, String text) {
         Menu m = new Menu(text);
-        applyMnemonic(m);
+        m.setMnemonicParsing(false);
         b.getMenus().add(m);
         return m;
     }
 
     public static Menu menu(ContextMenu cm, String text) {
         Menu m = new Menu(text);
-        applyMnemonic(m);
+        m.setMnemonicParsing(false);
         cm.getItems().add(m);
         return m;
     }
@@ -91,7 +98,7 @@ public class FX {
 
     public static MenuItem item(MenuBar b, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         if (action == null) {
             mi.setDisable(true);
         } else {
@@ -119,25 +126,16 @@ public class FX {
     }
 
     public static MenuItem item(MenuBar b, MenuItem mi) {
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         lastMenu(b).getItems().add(mi);
         return mi;
     }
 
     public static MenuItem item(MenuBar b, String text) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         lastMenu(b).getItems().add(mi);
         return mi;
-    }
-
-    private static void applyMnemonic(MenuItem m) {
-        String text = m.getText();
-        if (text != null) {
-            if (text.contains("_")) {
-                m.setMnemonicParsing(true);
-            }
-        }
     }
 
     private static Menu lastMenu(MenuBar b) {
@@ -167,11 +165,14 @@ public class FX {
 
     public static MenuItem item(ContextMenu cm, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         if (action == null) {
             mi.setDisable(true);
         } else {
-            mi.setOnAction((ev) -> action.run());
+            mi.setOnAction((ev) -> {
+                action.run();
+                ev.consume();
+            });
         }
         cm.getItems().add(mi);
         return mi;
@@ -409,21 +410,21 @@ public class FX {
 
     public static Menu menu(Menu menu, String text) {
         Menu m = new Menu(text);
-        applyMnemonic(m);
+        m.setMnemonicParsing(false);
         menu.getItems().add(m);
         return m;
     }
 
     public static MenuItem item(Menu m, String text) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         m.getItems().add(mi);
         return mi;
     }
 
     public static MenuItem item(Menu m, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         if (action == null) {
             mi.setDisable(true);
         } else {
@@ -431,5 +432,41 @@ public class FX {
         }
         m.getItems().add(mi);
         return mi;
+    }
+
+    public static HBox buttonBar(Node... buttons) {
+        HBox hb = new HBox(5);
+        hb.setPadding(new Insets(5, 10, 5, 10));
+        for (Node b: buttons) {
+            if (b == null) {
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                hb.getChildren().add(spacer);
+            } else {
+                hb.getChildren().add(b);
+            }
+        }
+        return hb;
+    }
+
+    public static void print(Node n) {
+        if (n == null) {
+            return;
+        }
+        Window w = FX.getParentWindow(n);
+        PrinterJob job = PrinterJob.createPrinterJob();
+        System.out.println("PrinterJob: " + job);
+        if (job == null) {
+            Alert a = new Alert(AlertType.ERROR, "No printers found.");
+            a.initOwner(w);
+            a.showAndWait();
+        } else {
+            boolean ready = job.showPrintDialog(w);
+            if (ready) {
+                job.printPage(n);
+                job.endJob();
+            }
+            System.out.println("Done: " + ready);
+        }
     }
 }

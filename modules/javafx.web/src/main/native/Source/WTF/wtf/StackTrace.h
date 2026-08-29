@@ -28,7 +28,9 @@
 
 #include <optional>
 #include <span>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/SystemFree.h>
 
 #if HAVE(BACKTRACE_SYMBOLS) || HAVE(BACKTRACE)
@@ -40,7 +42,6 @@
 #endif
 
 #if HAVE(DLADDR)
-#include <cxxabi.h>
 #include <dlfcn.h>
 #endif
 
@@ -110,7 +111,7 @@ public:
         { }
 
         const char* m_mangledName { nullptr };
-        std::unique_ptr<const char[], SystemFree<const char[]>> m_demangledName;
+        std::unique_ptr<const char, SystemFree<const char>> m_demangledName;
     };
 
     WTF_EXPORT_PRIVATE static std::optional<DemangleEntry> demangle(void*);

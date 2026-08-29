@@ -179,6 +179,10 @@ private:
     bool isSpatial() const final { return m_descriptor.isSpatial(); }
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    bool isMaybePanoramic() const final { return m_descriptor.isMaybePanoramic(); }
+#endif
+
     // ImageFrame metadata
     ImageOrientation frameOrientationAtIndex(unsigned index) const final;
 

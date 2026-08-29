@@ -41,13 +41,14 @@ namespace WebCore {
 
 Ref<FEColorMatrix> FEColorMatrix::create(ColorMatrixType type, Vector<float>&& values, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEColorMatrix(type, WTFMove(values), colorSpace));
+    ASSERT(areValuesValidForType(type, values));
+    return adoptRef(*new FEColorMatrix(type, WTF::move(values), colorSpace));
 }
 
 FEColorMatrix::FEColorMatrix(ColorMatrixType type, Vector<float>&& values, DestinationColorSpace colorSpace)
     : FilterEffect(FilterEffect::Type::FEColorMatrix, colorSpace)
     , m_type(type)
-    , m_values(WTFMove(values))
+    , m_values(WTF::move(values))
 {
 }
 
@@ -72,6 +73,22 @@ bool FEColorMatrix::setValues(const Vector<float> &values)
         return false;
     m_values = values;
     return true;
+}
+
+bool FEColorMatrix::areValuesValidForType(ColorMatrixType type, const Vector<float>& values)
+{
+    switch (type) {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:
+        return values.size() == 20;
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
+        return values.size() == 1;
+    case ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
+        return true;
+    case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:
+        return false;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void FEColorMatrix::calculateSaturateComponents(std::span<float, 9> components, float value)
@@ -110,10 +127,7 @@ void FEColorMatrix::calculateHueRotateComponents(std::span<float, 9> components,
 
 Vector<float> FEColorMatrix::normalizedFloats(const Vector<float>& values)
 {
-    Vector<float> normalizedValues(values.size());
-    for (size_t i = 0; i < values.size(); ++i)
-        normalizedValues[i] = normalizedFloat(values[i]);
-    return normalizedValues;
+    return values.map([](float value) { return normalizedFloat(value); });
 }
 
 bool FEColorMatrix::resultIsAlphaImage(std::span<const Ref<FilterImage>>) const
@@ -121,7 +135,7 @@ bool FEColorMatrix::resultIsAlphaImage(std::span<const Ref<FilterImage>>) const
     return m_type == ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA;
 }
 
-OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
 #if USE(CORE_IMAGE)
@@ -137,7 +151,7 @@ OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() co
         || m_type == ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> FEColorMatrix::createAcceleratedApplier() const
