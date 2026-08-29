@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,9 @@ public class XPathNSResolverImpl implements XPathNSResolver {
         return (arg == null) ? 0L : ((XPathNSResolverImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        XPathNSResolverNative.dispose(peer);
+    }
 
     static XPathNSResolver getImpl(long peer) {
         return (XPathNSResolver)create(peer);
@@ -85,8 +87,10 @@ public class XPathNSResolverImpl implements XPathNSResolver {
         return lookupNamespaceURIImpl(getPeer()
             , prefix);
     }
-    native static String lookupNamespaceURIImpl(long peer
-        , String prefix);
+    static String lookupNamespaceURIImpl(long peer
+        , String prefix) {
+        return XPathNSResolverNative.lookupNamespaceURI(peer, prefix);
+    }
 
 
 }

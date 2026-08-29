@@ -4,8 +4,6 @@ SUNWprivate_1.0 {
                   scripts accept glob patterns, so this single entry exports every
                   WKJ_EXPORT wkj_* function without per-symbol maintenance. */
                wkj_*;
-               JNI_OnLoad;
-               JNI_OnUnload;
                WTFCrash;
                WTFCrashWithSecurityImplication;
                WTFReportArgumentAssertionFailure;
@@ -140,39 +138,6 @@ SUNWprivate_1.0 {
                _ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb;
                _ZN18WebCoreTestSupport23allowsAnySSLCertificateEv;
                WebPage_doJSCGarbageCollection;
-               Java_com_sun_webkit_ContextMenu_twkHandleItemSelected;
-               Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions;
-               Java_com_sun_webkit_MainThread_twkSetShutdown;
-               Java_com_sun_webkit_SharedBuffer_twkAppend;
-               Java_com_sun_webkit_SharedBuffer_twkCreate;
-               Java_com_sun_webkit_SharedBuffer_twkDispose;
-               Java_com_sun_webkit_SharedBuffer_twkGetSomeData;
-               Java_com_sun_webkit_SharedBuffer_twkSize;
-               Java_com_sun_webkit_Timer_twkFireTimerEvent;
-               Java_com_sun_webkit_WCPluginWidget_initIDs;
-               Java_com_sun_webkit_WCPluginWidget_twkConvertToPage;
-               Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect;
-               Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused;
-               Java_com_sun_webkit_WCWidget_initIDs;
-               Java_com_sun_webkit_WatchdogTimer_twkFire;
-               Java_com_sun_webkit_graphics_WCGraphicsManager_append;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyBufferChanged;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyDurationChanged;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyFinished;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNetworkStateChanged;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNewFrame;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyPaused;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReady;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReadyStateChanged;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifySeeking;
-               Java_com_sun_webkit_graphics_WCMediaPlayer_notifySizeChanged;
-               Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease;
-               Java_com_sun_webkit_network_URLLoaderBase_twkDidFail;
-               Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading;
-               Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData;
-               Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse;
-               Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData;
-               Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest;
                kJSClassDefinitionEmpty;
         local:
                 *;

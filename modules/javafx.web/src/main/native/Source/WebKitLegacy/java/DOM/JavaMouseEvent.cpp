@@ -36,138 +36,126 @@
 #include <wtf/GetPtr.h>
 
 #include "AbstractViewInternal.h"
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<MouseEvent*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<MouseEvent*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenXImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getScreenX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->screenX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getScreenY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->screenY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientXImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getClientX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->clientX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getClientY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->clientY();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getCtrlKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getCtrlKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->ctrlKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getShiftKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getShiftKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->shiftKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getAltKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getAltKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->altKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getMetaKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getMetaKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->metaKey();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getButton(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
         int16_t button = enumToUnderlyingType(IMPL->button());
     return button;
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getRelatedTargetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_MouseEvent_getRelatedTarget(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->relatedTarget()));
+    return WKJReturnPeer<EventTarget>(WTF::getPtr(IMPL->relatedTarget()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetXImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getOffsetX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MouseEvent_getOffsetY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetY();
 }
-//This code has been commented as the corresponding apis have been removed
-/*JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getXImpl(JNIEnv*, jclass, jlong peer)
+
+WKJ_EXPORT int64_t wkj_dom_MouseEvent_getFromElement(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->x();
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->fromElement()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_MouseEvent_getToElement(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->y();
-}*/
-
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getFromElementImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->fromElement()));
-}
-
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getToElementImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->toElement()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->toElement()));
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jboolean canBubble
-    , jboolean cancelable
-    , jlong view
-    , jint detail
-    , jint screenX
-    , jint screenY
-    , jint clientX
-    , jint clientY
-    , jboolean ctrlKey
-    , jboolean altKey
-    , jboolean shiftKey
-    , jboolean metaKey
-    , jshort button
-    , jlong relatedTarget)
+WKJ_EXPORT void wkj_dom_MouseEvent_initMouseEvent(int64_t peer, const uint16_t* type, int32_t type_length, int32_t canBubble, int32_t cancelable, int64_t view, int32_t detail, int32_t screenX, int32_t screenY, int32_t clientX, int32_t clientY, int32_t ctrlKey, int32_t altKey, int32_t shiftKey, int32_t metaKey, int16_t button, int64_t relatedTarget)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initMouseEvent(AtomString {String(env, type)}
+    IMPL->initMouseEvent(AtomString {WKJString(type, type_length)}
             , canBubble
             , cancelable
-            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
+            , toWindowProxy(static_cast<DOMWindow*>(wkj_to_ptr(view)))
             , detail
             , screenX
             , screenY
@@ -178,7 +166,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl
             , shiftKey
             , metaKey
             , button
-            , static_cast<EventTarget*>(jlong_to_ptr(relatedTarget)));
+            , static_cast<EventTarget*>(wkj_to_ptr(relatedTarget)));
 }
 
 

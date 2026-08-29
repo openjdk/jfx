@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,10 +75,14 @@ public class HTMLCollectionImpl implements HTMLCollection {
         return (arg == null) ? 0L : ((HTMLCollectionImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        HTMLCollectionNative.dispose(peer);
+    }
 
     private static final int TYPE_HTMLOptionsCollection = 1;
-    native private static int getCPPTypeImpl(long peer);
+    private static int getCPPTypeImpl(long peer) {
+        return HTMLCollectionNative.getCPPType(peer);
+    }
 
     static HTMLCollection getImpl(long peer) {
         return (HTMLCollection)create(peer);
@@ -90,7 +94,9 @@ public class HTMLCollectionImpl implements HTMLCollection {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return HTMLCollectionNative.getLength(peer);
+    }
 
 
 // Functions
@@ -100,8 +106,10 @@ public class HTMLCollectionImpl implements HTMLCollection {
         return NodeImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return HTMLCollectionNative.item(peer, index);
+    }
 
 
     @Override
@@ -110,8 +118,10 @@ public class HTMLCollectionImpl implements HTMLCollection {
         return NodeImpl.getImpl(namedItemImpl(getPeer()
             , name));
     }
-    native static long namedItemImpl(long peer
-        , String name);
+    static long namedItemImpl(long peer
+        , String name) {
+        return HTMLCollectionNative.namedItem(peer, name);
+    }
 
 
 }

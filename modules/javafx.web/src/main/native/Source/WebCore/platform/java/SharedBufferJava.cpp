@@ -27,7 +27,10 @@
 
 #include "SharedBuffer.h"
 #include "NotImplemented.h"
-#include "com_sun_webkit_SharedBuffer.h"
+#include "WKJDOMUtils.h"
+
+#include <cstring>
+#include <webkit_java_api.h>
 
 namespace WebCore {
 
@@ -40,26 +43,27 @@ RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String&)
 
 extern "C" {
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
-  (JNIEnv*, jclass)
+WKJ_EXPORT int64_t wkj_shared_buffer_create(void)
 {
+   WKJCallScope wkjScope;
    auto buffer = SharedBuffer::create();
-   return ptr_to_jlong(new SharedBufferBuilder(WTF::move(buffer)));
+   return wkj_from_ptr(new SharedBufferBuilder(WTF::move(buffer)));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize
-  (JNIEnv*, jclass, jlong nativePointer)
+WKJ_EXPORT int64_t wkj_shared_buffer_size(int64_t nativePointer)
 {
-    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
+    WKJCallScope wkjScope;
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(wkj_to_ptr(nativePointer));
     ASSERT(p);
     return p->size();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
-  (JNIEnv* env, jclass, jlong nativePointer, jlong position, jbyteArray buffer,
-   jint offset, jint length)
+WKJ_EXPORT int32_t wkj_shared_buffer_get_some_data(int64_t nativePointer, int64_t position,
+                                                   uint8_t* buffer, int32_t offset,
+                                                   int32_t length)
 {
-    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
+    WKJCallScope wkjScope;
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(wkj_to_ptr(nativePointer));
     ASSERT(p);
     ASSERT(position >= 0);
     ASSERT(buffer);
@@ -77,38 +81,43 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
         if (len > length) {
             len = length;
         }
-        uint8_t* bufferBody = static_cast<uint8_t*>(
-                env->GetPrimitiveArrayCritical(buffer, NULL));
-        memcpy(bufferBody + offset, segment, len);
-        env->ReleasePrimitiveArrayCritical(buffer, bufferBody, 0);
+        memcpy(buffer + offset, segment, len);
     }
 
     return len;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkAppend
-  (JNIEnv* env, jclass, jlong nativePointer, jbyteArray buffer,
-   jint offset, jint length)
+WKJ_EXPORT void wkj_shared_buffer_append(int64_t nativePointer, const uint8_t* buffer,
+                                         int32_t offset, int32_t length)
 {
-    SharedBufferBuilder* p = static_cast<SharedBufferBuilder*>(jlong_to_ptr(nativePointer));
+    WKJCallScope wkjScope;
+    SharedBufferBuilder* p = static_cast<SharedBufferBuilder*>(wkj_to_ptr(nativePointer));
     ASSERT(p);
     ASSERT(buffer);
     ASSERT(offset >= 0);
     ASSERT(length >= 0);
 
-    char* bufferBody = static_cast<char*>(
-            env->GetPrimitiveArrayCritical(buffer, NULL));
-    std::span<const uint8_t> spanBuffer(reinterpret_cast<const uint8_t*>(bufferBody + offset), length);
+    std::span<const uint8_t> spanBuffer(buffer + offset, length);
     p->append(spanBuffer);
-    env->ReleasePrimitiveArrayCritical(buffer, bufferBody, JNI_ABORT);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkDispose
-  (JNIEnv *, jclass, jlong nativePointer)
+/*
+ * KNOWN LEAK, REPRODUCED ON PURPOSE.
+ *
+ * This body casts the pointer and does nothing with it, exactly as the JNI twkDispose did,
+ * so every SharedBufferBuilder allocated by wkj_shared_buffer_create is still leaked. That
+ * is a bug (FFM-AUDIT-wtf-webcore.md section 9.2, "Bug, not a verdict"), and deleting the
+ * builder here is a one-line fix - but it is a fix, and a migration commit has to be
+ * behaviour-neutral. It needs its own commit, with evidence that no SharedBuffer created
+ * from this builder is still referenced when Java disposes it, because turning a leak into
+ * a double free is a much worse trade.
+ */
+WKJ_EXPORT void wkj_shared_buffer_dispose(int64_t nativePointer)
 {
-    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
+    WKJCallScope wkjScope;
+    FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(wkj_to_ptr(nativePointer));
     ASSERT(p);
-        UNUSED_PARAM(p);
+    UNUSED_PARAM(p);
 }
 
 }

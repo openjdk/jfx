@@ -30,7 +30,7 @@
 #include "GraphicsContext.h"
 #include "StyleResolver.h"
 
-#include <jni.h>
+#include <stdint.h>
 
 namespace WebCore {
 
@@ -124,7 +124,7 @@ private:
     String m_mediaControlsStyleSheet;
     String m_mediaControlsScript;
 #if ENABLE(VIDEO)
-    bool paintMediaControl(jint type, const RenderElement&, const PaintInfo&, const IntRect&);
+    bool paintMediaControl(int32_t type, const RenderElement&, const PaintInfo&, const IntRect&);
 #endif
 };
 

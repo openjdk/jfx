@@ -36,72 +36,72 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSStyleSheet*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSStyleSheet*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_getOwnerRuleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSStyleSheet_getOwnerRule(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRule>(env, WTF::getPtr(IMPL->ownerRule()));
+    return WKJReturnPeer<CSSRule>(WTF::getPtr(IMPL->ownerRule()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_getCssRulesImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSStyleSheet_getCssRules(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRuleList>(env, WTF::getPtr(IMPL->cssRules()));
+    return WKJReturnPeer<CSSRuleList>(WTF::getPtr(IMPL->cssRules()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_getRulesImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSStyleSheet_getRules(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRuleList>(env, WTF::getPtr(IMPL->cssRules()));
+    return WKJReturnPeer<CSSRuleList>(WTF::getPtr(IMPL->cssRules()));
 }
 
 
 // Functions
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_insertRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jstring rule
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleSheet_insertRule(int64_t peer, const uint16_t* rule, int32_t rule_length, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->insertRule(String(env, rule)
+    return raiseOnDOMError(IMPL->insertRule(WKJString(rule, rule_length)
             , index));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_deleteRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT void wkj_dom_CSSStyleSheet_deleteRule(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteRule(index));
+    raiseOnDOMError(IMPL->deleteRule(index));
 }
 
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_addRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jstring selector
-    , jstring style
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleSheet_addRule(int64_t peer, const uint16_t* selector, int32_t selector_length, const uint16_t* style, int32_t style_length, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->addRule(String(env, selector)
-            , AtomString{String(env, style)}
+    return raiseOnDOMError(IMPL->addRule(WKJString(selector, selector_length)
+            , AtomString{WKJString(style, style_length)}
             , index));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_removeRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT void wkj_dom_CSSStyleSheet_removeRule(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->removeRule(index));
+    raiseOnDOMError(IMPL->removeRule(index));
 }
 
 

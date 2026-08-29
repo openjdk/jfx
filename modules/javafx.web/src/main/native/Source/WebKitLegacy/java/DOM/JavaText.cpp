@@ -33,39 +33,40 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<Text*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<Text*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_TextImpl_getWholeTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Text_getWholeText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->wholeText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->wholeText());
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TextImpl_splitTextImpl(JNIEnv* env, jclass, jlong peer
-    , jint offset)
+WKJ_EXPORT int64_t wkj_dom_Text_splitText(int64_t peer, int32_t offset)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Text>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->splitText(offset))));
+    return WKJReturnPeer<Text>(WTF::getPtr(raiseOnDOMError(IMPL->splitText(offset))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TextImpl_replaceWholeTextImpl(JNIEnv* env, jclass, jlong peer
-    , jstring content)
+WKJ_EXPORT int64_t wkj_dom_Text_replaceWholeText(int64_t peer, const uint16_t* content, int32_t content_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->replaceWholeText(String(env, content));
-    return JavaReturn<Text>(env, nullptr); //REVISIT
+    IMPL->replaceWholeText(WKJString(content, content_length));
+    return WKJReturnPeer<Text>(nullptr); //REVISIT
 }
 
 

@@ -28,114 +28,136 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLAppletElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLAppletElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getAlignImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getAlign(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setAlign(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getAltImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getAlt(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setAltImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setAlt(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getArchiveImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getArchive(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setArchiveImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setArchive(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getCodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getCode(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setCodeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setCode(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getCodeBaseImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getCodeBase(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setCodeBaseImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setCodeBase(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getHeightImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getHeight(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setHeightImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setHeight(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getHspaceImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getHspace(int64_t peer)
 {
+    WKJCallScope wkjScope;
     return 0;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setHspaceImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setHspace(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setName(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getObjectImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getObject(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setObjectImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setObject(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getVspaceImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getVspace(int64_t peer)
 {
+    WKJCallScope wkjScope;
     return 0;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setVspaceImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setVspace(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_getWidthImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLAppletElement_getWidth(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAppletElementImpl_setWidthImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLAppletElement_setWidth(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,105 +27,16 @@
 
 #include "NotImplemented.h"
 
-#include "PlatformJavaClasses.h"
-#include "StringJava.h"
-// #include "PluginPackage.h" //XXX: win only?
-// #include "PluginView.h" //XXX: win only?
-
-#include "com_sun_webkit_WCPluginWidget.h"
-
-namespace WebCore {
-
 /*
-PluginWidgetJava::PluginWidgetJava(jobject wfh, const IntSize& size,
-                                   const String& url, const String& mimeType,
-                                   const Vector<String>& paramNames,
-                                   const Vector<String>& paramValues)
-{
-    m_size = size;
-    m_url = url;
-    m_mimeType = mimeType;
-    m_paramNames = paramNames;
-    m_paramValues = paramValues;
-
-    JNIEnv* env = WTF::GetJavaEnv();
-    jstring urlJavaString = url.toJavaString(env);
-    jstring mimeTypeJavaString = mimeType.toJavaString(env);
-
-    jclass cls = env->FindClass("com/sun/webkit/WCPluginWidget");
-    ASSERT(cls);
-
-    jobjectArray pNames = strVect2JArray(env, paramNames);
-
-    jobjectArray pValues = strVect2JArray(env, paramValues);
-
-    jobject obj = env->CallStaticObjectMethod(cls, pluginWidgetCreateMID, wfh,
-        url.toJavaString(env), mimeTypeJavaString, pNames, pValues);
-    WTF::CheckAndClearException(env);
-    ASSERT(obj);
-    if (obj) {
-        setJavaObject(obj);
-        env->CallVoidMethod(obj, pluginWidgetFWKInitMID, size.width(),
-                        size.height(), url.toJavaString(env));
-        WTF::CheckAndClearException(env);
-        env->DeleteLocalRef(obj);
-    }
-    env->DeleteLocalRef(cls);
-    env->DeleteLocalRef(pNames);
-    env->DeleteLocalRef(pValues);
-}
-*/
-
-/*
-PluginWidgetJava::~PluginWidgetJava()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    env->CallVoidMethod(javaObject(), pluginWidgetFWKDestroyMID);
-    WTF::CheckAndClearException(env);
-}
-*/
-
-/* //XXX recheck
-PluginView::~PluginView()
-{
-    notImplemented();
-}
-
-void PluginView::paint(GraphicsContext* gc, const IntRect& r)
-{
-    notImplemented();
-}
-
-void PluginView::invalidateRect(const IntRect& r)
-{
-    notImplemented();
-}
-
-void PluginView::setFocus()
-{
-    notImplemented();
-}
-
-void PluginView::show()
-{
-    notImplemented();
-}
-
-void PluginView::hide()
-{
-    notImplemented();
-}
-
-void PluginView::setParent(ScrollView* parent)
-{
-    notImplemented();
-}
-
-void PluginView::setParentVisible(bool visible)
-{
-    notImplemented();
-}
-*/
-
-} // namespace WebCore
+ * This translation unit defines nothing.
+ *
+ * Everything it held was commented out: an old PluginWidgetJava constructor and destructor,
+ * superseded by the live ones in PluginWidgetJava.cpp, and six PluginView stubs marked
+ * "XXX recheck". The bodies named a JNI environment, cached method ids and a Java array
+ * built by strVect2JArray, none of which exists any more, so the text was no longer even
+ * translatable if it were uncommented - it described an API that has been replaced by
+ * WKJHostTheme.plugin_widget_create.
+ *
+ * Only comments were removed; nothing was compiled before and nothing is compiled now. The
+ * file stays in WebCore/SourcesJava.txt so the build list is untouched.
+ */

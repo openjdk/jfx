@@ -25,20 +25,22 @@
 
 #undef IMPL
 
-#include <wtf/java/JavaEnv.h>
+#include <webkit_java_api.h>
 
 extern "C" {
 
 // This has been removed from the CSS OM, so we're just keeping this around to not crash.
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSCharsetRuleImpl_getEncodingImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_CSSCharsetRule_getEncoding(int64_t arg0, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSCharsetRuleImpl_setEncodingImpl(JNIEnv*, jclass, jlong, jstring)
+WKJ_EXPORT void wkj_dom_CSSCharsetRule_setEncoding(int64_t arg0, const uint16_t* arg1, int32_t arg1_length)
 {
+    WKJCallScope wkjScope;
 }
 
 }

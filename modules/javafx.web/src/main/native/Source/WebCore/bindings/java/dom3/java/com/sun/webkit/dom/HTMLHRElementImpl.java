@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,49 +42,65 @@ public class HTMLHRElementImpl extends HTMLElementImpl implements HTMLHRElement 
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLHRElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLHRElementNative.setAlign(peer, value);
+    }
 
     @Override
     public boolean getNoShade() {
         return getNoShadeImpl(getPeer());
     }
-    native static boolean getNoShadeImpl(long peer);
+    static boolean getNoShadeImpl(long peer) {
+        return HTMLHRElementNative.getNoShade(peer);
+    }
 
     @Override
     public void setNoShade(boolean value) {
         setNoShadeImpl(getPeer(), value);
     }
-    native static void setNoShadeImpl(long peer, boolean value);
+    static void setNoShadeImpl(long peer, boolean value) {
+        HTMLHRElementNative.setNoShade(peer, value);
+    }
 
     @Override
     public String getSize() {
         return getSizeImpl(getPeer());
     }
-    native static String getSizeImpl(long peer);
+    static String getSizeImpl(long peer) {
+        return HTMLHRElementNative.getSize(peer);
+    }
 
     @Override
     public void setSize(String value) {
         setSizeImpl(getPeer(), value);
     }
-    native static void setSizeImpl(long peer, String value);
+    static void setSizeImpl(long peer, String value) {
+        HTMLHRElementNative.setSize(peer, value);
+    }
 
     @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static String getWidthImpl(long peer);
+    static String getWidthImpl(long peer) {
+        return HTMLHRElementNative.getWidth(peer);
+    }
 
     @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, String value);
+    static void setWidthImpl(long peer, String value) {
+        HTMLHRElementNative.setWidth(peer, value);
+    }
 
 }
 

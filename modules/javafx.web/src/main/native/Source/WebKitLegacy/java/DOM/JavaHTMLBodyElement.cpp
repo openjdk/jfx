@@ -35,315 +35,365 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLBodyElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLBodyElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getALinkImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getALink(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::alinkAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::alinkAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setALinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setALink(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alinkAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alinkAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBackgroundImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getBackground(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::backgroundAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::backgroundAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setBackgroundImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setBackground(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::backgroundAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::backgroundAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBgColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getBgColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::bgcolorAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::bgcolorAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setBgColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getLinkImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getLink(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::linkAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::linkAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setLinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setLink(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::linkAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::linkAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::textAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::textAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::textAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::textAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getVLinkImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLBodyElement_getVLink(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::vlinkAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::vlinkAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setVLinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setVLink(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::vlinkAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::vlinkAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnblurImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnblur(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().blurEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().blurEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnblurImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnblur(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().blurEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().blurEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnerrorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnerror(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().errorEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().errorEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnerrorImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnerror(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().errorEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().errorEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnfocusImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnfocus(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().focusEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnfocusImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnfocus(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().focusEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().focusEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnfocusinImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnfocusin(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusinEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().focusinEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnfocusinImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnfocusin(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().focusinEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().focusinEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnfocusoutImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnfocusout(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusoutEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().focusoutEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnfocusoutImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnfocusout(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().focusoutEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().focusoutEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnloadImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnload(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().loadEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().loadEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnloadImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnload(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().loadEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().loadEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnresizeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnresize(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().resizeEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().resizeEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnresizeImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnresize(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().resizeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().resizeEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnscrollImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnscroll(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().scrollEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().scrollEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnscrollImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnscroll(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().scrollEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().scrollEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnselectionchangeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnselectionchange(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().selectionchangeEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().selectionchangeEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnselectionchangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnselectionchange(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().selectionchangeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().selectionchangeEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnbeforeunloadImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnbeforeunload(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().beforeunloadEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().beforeunloadEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnbeforeunloadImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnbeforeunload(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().beforeunloadEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().beforeunloadEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnhashchangeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnhashchange(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().hashchangeEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().hashchangeEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnhashchangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnhashchange(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().hashchangeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().hashchangeEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnmessageImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnmessage(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().messageEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().messageEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnmessageImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnmessage(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().messageEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().messageEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnofflineImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnoffline(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().offlineEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().offlineEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnofflineImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnoffline(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().offlineEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().offlineEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnonlineImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnonline(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().onlineEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().onlineEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnonlineImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnonline(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().onlineEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().onlineEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnpagehideImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnpagehide(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().pagehideEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().pagehideEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnpagehideImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnpagehide(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().pagehideEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().pagehideEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnpageshowImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnpageshow(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().pageshowEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().pageshowEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnpageshowImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnpageshow(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().pageshowEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().pageshowEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnpopstateImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnpopstate(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().popstateEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().popstateEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnpopstateImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnpopstate(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().popstateEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().popstateEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnstorageImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnstorage(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().storageEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().storageEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnstorageImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnstorage(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().storageEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().storageEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnunloadImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLBodyElement_getOnunload(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().unloadEvent, mainThreadNormalWorldSingleton())));
+    return WKJReturnPeer<EventListener>(WTF::getPtr(IMPL->attributeEventListener(eventNames().unloadEvent, mainThreadNormalWorldSingleton())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setOnunloadImpl(JNIEnv*, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_HTMLBodyElement_setOnunload(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeEventListener(eventNames().unloadEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorldSingleton());
+    IMPL->setAttributeEventListener(eventNames().unloadEvent, static_cast<EventListener*>(wkj_to_ptr(value)), mainThreadNormalWorldSingleton());
 }
 
 }

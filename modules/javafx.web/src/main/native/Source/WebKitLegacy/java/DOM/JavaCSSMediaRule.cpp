@@ -35,46 +35,47 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSMediaRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSMediaRule*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSMediaRuleImpl_getMediaImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSMediaRule_getMedia(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<MediaList>(env, WTF::getPtr(IMPL->media()));
+    return WKJReturnPeer<MediaList>(WTF::getPtr(IMPL->media()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSMediaRuleImpl_getCssRulesImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSMediaRule_getCssRules(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRuleList>(env, WTF::getPtr(IMPL->cssRules()));
+    return WKJReturnPeer<CSSRuleList>(WTF::getPtr(IMPL->cssRules()));
 }
 
 
 // Functions
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSMediaRuleImpl_insertRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jstring rule
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_CSSMediaRule_insertRule(int64_t peer, const uint16_t* rule, int32_t rule_length, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->insertRule(AtomString{String(env, rule)}
+    return raiseOnDOMError(IMPL->insertRule(AtomString{WKJString(rule, rule_length)}
             , index));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSMediaRuleImpl_deleteRuleImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT void wkj_dom_CSSMediaRule_deleteRule(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteRule(index));
+    raiseOnDOMError(IMPL->deleteRule(index));
 }
 
 

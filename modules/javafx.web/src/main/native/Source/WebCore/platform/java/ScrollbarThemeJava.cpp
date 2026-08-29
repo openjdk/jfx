@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "Frame.h"
 #include "FrameInlines.h"
@@ -40,8 +41,6 @@
 #include "DocumentPage.h"
 
 #include "PlatformJavaClasses.h"
-#include "com_sun_webkit_graphics_ScrollBarTheme.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
 namespace WebCore {
 
@@ -52,75 +51,61 @@ ScrollbarTheme& ScrollbarTheme::nativeTheme()
     return *s_sharedInstance;
 }
 
-jclass getJScrollBarThemeClass()
-{
-    static JGClass jScrollbarThemeClass(
-        WTF::GetJavaEnv()->FindClass("com/sun/webkit/graphics/ScrollBarTheme"));
-    ASSERT(jScrollbarThemeClass);
-
-    return jScrollbarThemeClass;
-}
-
-JLObject getJScrollBarTheme(Scrollbar& sb)
+/*
+ * The com.sun.webkit.graphics.ScrollBarTheme of the page a scrollbar belongs to, owned by
+ * the caller. The three early returns are unchanged and each still means "no Java theme":
+ * a detached scrollbar, a scrollbar with no page, and a page with no Java WebPage - the
+ * last being a utility page, per Page::isUtilityPage.
+ */
+WKJHandle getJScrollBarTheme(Scrollbar& sb)
 {
     FrameView* fv = sb.enabled() ? sb.root() : nullptr;
     if (!fv) {
         // the scrollbar has been detached
-        return 0;
+        return WKJHandle();
     }
 
     Page* page = fv->frame().page();
     if (!page) {
-        return 0;
+        return WKJHandle();
     }
 
     PageSupplementJava* pageSupplement = PageSupplementJava::from(page);
     if (!pageSupplement || !pageSupplement->jWebPage()) {
         // Non Java Page, might be a utility Page(svg?), refer Page::isUtilityPage
-        return 0;
+        return WKJHandle();
     }
 
-    JLObject jWebPage = pageSupplement->jWebPage();
+    WKJHandle jWebPage = pageSupplement->jWebPage();
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid  = env->GetMethodID(
-        PG_GetWebPageClass(env),
-        "getScrollBarTheme",
-        "()Lcom/sun/webkit/graphics/ScrollBarTheme;");
-    ASSERT(mid);
-
-    JLObject jScrollbarTheme = env->CallObjectMethod(jWebPage, mid);
+    WKJHandle jScrollbarTheme = wkjScrollBarThemeForPage(jWebPage.get());
     ASSERT(jScrollbarTheme);
-    WTF::CheckAndClearException(env);
 
     return jScrollbarTheme;
 }
 
 IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
+    WKJHandle jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
         return IntRect();
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID midGetPartRect = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "getScrollBarPartRect",
-        "(JI[I)V");
-    ASSERT(midGetPartRect);
-    JLocalRef<jintArray> jrect(env->NewIntArray(4));
-    WTF::CheckAndClearException(env); // OOME
-    ASSERT(jrect);
-    env->CallVoidMethod(jtheme,
-            midGetPartRect,
-            ptr_to_jlong(&scrollbar),
-            (jint)part,
-            (jintArray)jrect);
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->scroll_bar_get_part_rect) {
+        return IntRect();
+    }
 
-    jint *r = (jint*)env->GetPrimitiveArrayCritical(jrect, 0);
+    /*
+     * The int[4] the C++ used to allocate with NewIntArray and read back under a critical
+     * section is now a plain local that Java writes through. A 0 return means Java wrote
+     * nothing, which the zero-initialised array made indistinguishable from an empty rect -
+     * and an empty rect is what that case produced, so it still does.
+     */
+    int32_t r[4] = { 0, 0, 0, 0 };
+    cb->scroll_bar_get_part_rect(jtheme.get(), wkj_from_ptr(&scrollbar), (int32_t)part, r);
+    wkjCheckAndClearException();
+
     IntRect rect(r[0], r[1], r[2], r[3]);
-    env->ReleasePrimitiveArrayCritical(jrect, r, 0);
     if (rect.isEmpty()) {
         return rect;
     }
@@ -138,7 +123,7 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
         return false;
     }
 
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
+    WKJHandle jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
         return false;
     }
@@ -153,26 +138,28 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
         return true;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->scroll_bar_create_widget) {
+        return false;
+    }
 
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "createWidget",
-        "(JIIIIII)Lcom/sun/webkit/graphics/Ref;");
-    ASSERT(mid);
-
-    RefPtr<RQRef> widgetRef = RQRef::create( env->CallObjectMethod(
-        jtheme,
-        mid,
-        ptr_to_jlong(&scrollbar),
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation(),
-        (jint)scrollbar.value(),
-        (jint)scrollbar.visibleSize(),
-        (jint)scrollbar.totalSize()));
+    /*
+     * The id the slot returns is owned by this frame, so it is adopted into a WKJHandle and
+     * RQRef::create adds its own reference - the two steps the JNI code took with the local
+     * reference the JNI call returned.
+     */
+    WKJHandle widget { cb->scroll_bar_create_widget(
+        jtheme.get(),
+        wkj_from_ptr(&scrollbar),
+        (int32_t)scrollbar.width(),
+        (int32_t)scrollbar.height(),
+        (int32_t)scrollbar.orientation(),
+        (int32_t)scrollbar.value(),
+        (int32_t)scrollbar.visibleSize(),
+        (int32_t)scrollbar.totalSize()) };
+    RefPtr<RQRef> widgetRef = RQRef::create(widget.get());
     ASSERT(widgetRef.get());
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
     if (opacity != 1) {
         gc.save();
@@ -181,13 +168,13 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
     }
     // widgetRef will go into rq's inner refs vector.
     gc.platformContext()->rq().freeSpace(28)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSCROLLBAR
-        << RQRef::create(jtheme)
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWSCROLLBAR
+        << RQRef::create(jtheme.get())
         << widgetRef
-        << (jint)scrollbar.x()
-        << (jint)scrollbar.y()
-        << (jint)scrollbar.pressedPart()
-        << (jint)scrollbar.hoveredPart();
+        << (int32_t)scrollbar.x()
+        << (int32_t)scrollbar.y()
+        << (int32_t)scrollbar.pressedPart()
+        << (int32_t)scrollbar.hoveredPart();
 
     if (opacity != 1) {
         gc.endTransparencyLayer();
@@ -222,18 +209,12 @@ IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
 
 int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth width, OverlayScrollbarSizeRelevancy relevancy)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->scroll_bar_get_thickness)
+        return 0;
 
-    static jmethodID mid = env->GetStaticMethodID(
-        getJScrollBarThemeClass(),
-        "getThickness",
-        "()I");
-    ASSERT(mid);
-
-    int thickness = env->CallStaticIntMethod(
-        getJScrollBarThemeClass(),
-        mid);
-    WTF::CheckAndClearException(env);
+    int thickness = cb->scroll_bar_get_thickness();
+    wkjCheckAndClearException();
 
     return thickness;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,9 @@ public class CounterImpl implements Counter {
         return (arg == null) ? 0L : ((CounterImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        CounterNative.dispose(peer);
+    }
 
     static Counter getImpl(long peer) {
         return (Counter)create(peer);
@@ -83,19 +85,25 @@ public class CounterImpl implements Counter {
     public String getIdentifier() {
         return getIdentifierImpl(getPeer());
     }
-    native static String getIdentifierImpl(long peer);
+    static String getIdentifierImpl(long peer) {
+        return CounterNative.getIdentifier(peer);
+    }
 
     @Override
     public String getListStyle() {
         return getListStyleImpl(getPeer());
     }
-    native static String getListStyleImpl(long peer);
+    static String getListStyleImpl(long peer) {
+        return CounterNative.getListStyle(peer);
+    }
 
     @Override
     public String getSeparator() {
         return getSeparatorImpl(getPeer());
     }
-    native static String getSeparatorImpl(long peer);
+    static String getSeparatorImpl(long peer) {
+        return CounterNative.getSeparator(peer);
+    }
 
 }
 

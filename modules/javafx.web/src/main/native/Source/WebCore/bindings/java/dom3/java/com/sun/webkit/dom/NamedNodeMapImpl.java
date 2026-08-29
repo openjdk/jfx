@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,9 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return (arg == null) ? 0L : ((NamedNodeMapImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        NamedNodeMapNative.dispose(peer);
+    }
 
     static NamedNodeMap getImpl(long peer) {
         return (NamedNodeMap)create(peer);
@@ -85,7 +87,9 @@ public class NamedNodeMapImpl implements NamedNodeMap {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return NamedNodeMapNative.getLength(peer);
+    }
 
 
 // Functions
@@ -95,8 +99,10 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return NodeImpl.getImpl(getNamedItemImpl(getPeer()
             , name));
     }
-    native static long getNamedItemImpl(long peer
-        , String name);
+    static long getNamedItemImpl(long peer
+        , String name) {
+        return NamedNodeMapNative.getNamedItem(peer, name);
+    }
 
 
     @Override
@@ -105,8 +111,10 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return NodeImpl.getImpl(setNamedItemImpl(getPeer()
             , NodeImpl.getPeer(node)));
     }
-    native static long setNamedItemImpl(long peer
-        , long node);
+    static long setNamedItemImpl(long peer
+        , long node) {
+        return NamedNodeMapNative.setNamedItem(peer, node);
+    }
 
 
     @Override
@@ -115,8 +123,10 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return NodeImpl.getImpl(removeNamedItemImpl(getPeer()
             , name));
     }
-    native static long removeNamedItemImpl(long peer
-        , String name);
+    static long removeNamedItemImpl(long peer
+        , String name) {
+        return NamedNodeMapNative.removeNamedItem(peer, name);
+    }
 
 
     @Override
@@ -125,8 +135,10 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return NodeImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return NamedNodeMapNative.item(peer, index);
+    }
 
 
     @Override
@@ -137,9 +149,11 @@ public class NamedNodeMapImpl implements NamedNodeMap {
             , namespaceURI
             , localName));
     }
-    native static long getNamedItemNSImpl(long peer
+    static long getNamedItemNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return NamedNodeMapNative.getNamedItemNS(peer, namespaceURI, localName);
+    }
 
 
     @Override
@@ -148,8 +162,10 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         return NodeImpl.getImpl(setNamedItemNSImpl(getPeer()
             , NodeImpl.getPeer(node)));
     }
-    native static long setNamedItemNSImpl(long peer
-        , long node);
+    static long setNamedItemNSImpl(long peer
+        , long node) {
+        return NamedNodeMapNative.setNamedItemNS(peer, node);
+    }
 
 
     @Override
@@ -160,9 +176,11 @@ public class NamedNodeMapImpl implements NamedNodeMap {
             , namespaceURI
             , localName));
     }
-    native static long removeNamedItemNSImpl(long peer
+    static long removeNamedItemNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return NamedNodeMapNative.removeNamedItemNS(peer, namespaceURI, localName);
+    }
 
 
 }

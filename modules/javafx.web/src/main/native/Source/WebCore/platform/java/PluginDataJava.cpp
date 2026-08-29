@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 
 #include "config.h"
-#include "PlatformJavaClasses.h"
 #include "PluginData.h"
 
 namespace WebCore {
@@ -32,161 +31,15 @@ namespace WebCore {
 
 void init_plugins(bool, Vector<PluginInfo>*) {
 /*
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    jclass clsPluginManager
-        = env->FindClass("com/sun/webkit/plugin/PluginManager");
-    ASSERT(clsPluginManager);
-    if (!clsPluginManager) {    // for safety
-        WTF::CheckAndClearException(env);
-        return;
-    }
-
-
-    static jmethodID midGetCount = 0;
-    if (!midGetCount) {
-        midGetCount = env->GetStaticMethodID(clsPluginManager,
-            "getEnabledPluginCount", "()I");
-
-        ASSERT(midGetCount);
-        if (!midGetCount) { // for safety
-            WTF::CheckAndClearException(env);
-            return;
-        }
-    }
-
-    jint count = 0;
-    count = env->CallStaticIntMethod(clsPluginManager, midGetCount);
-
-    if (count > 0) {
-        static jmethodID midGetPlugin = 0;
-        if (!midGetPlugin) {
-            midGetPlugin = env->GetStaticMethodID(clsPluginManager,
-                "getEnabledPlugin", "(I)Lcom/sun/webkit/plugin/PluginHandler;");
-
-            ASSERT(midGetPlugin);
-            if (!midGetPlugin) {    // for safety
-                WTF::CheckAndClearException(env);
-                return;
-            }
-        }
-
-        jclass clsPlugin = env->FindClass("com/sun/webkit/plugin/PluginHandler");
-        ASSERT(clsPlugin);
-        if (!clsPlugin) {   // for safety
-            WTF::CheckAndClearException(env);
-            return;
-        }
-
-        static jmethodID midGetName = 0;
-        if (!midGetName) {
-            midGetName = env->GetMethodID(clsPlugin,
-                "getName", "()Ljava/lang/String;");
-
-            ASSERT(midGetName);
-            if (!midGetName) {
-                WTF::CheckAndClearException(env);
-                //return; don't return!
-            }
-        }
-
-        static jmethodID midGetFileName = 0;
-        if (!midGetFileName) {
-            midGetFileName = env->GetMethodID(clsPlugin,
-                "getFileName", "()Ljava/lang/String;");
-
-            ASSERT(midGetFileName);
-            if (!midGetFileName) {
-                WTF::CheckAndClearException(env);
-                //return; don't return!
-            }
-        }
-
-        static jmethodID midGetDescr = 0;
-        if (!midGetDescr) {
-            midGetDescr = env->GetMethodID(clsPlugin,
-                "getDescription", "()Ljava/lang/String;");
-
-            ASSERT(midGetDescr);
-            if (!midGetDescr) {
-                WTF::CheckAndClearException(env);
-                //return; don't return!
-            }
-        }
-
-        static jmethodID midGetMimeTypes = 0;
-        if (!midGetMimeTypes) {
-            midGetMimeTypes = env->GetMethodID(clsPlugin,
-                "supportedMIMETypes", "()[Ljava/lang/String;");
-
-            ASSERT(midGetMimeTypes);
-            if (!midGetMimeTypes) {
-                WTF::CheckAndClearException(env);
-                //return; don't return!
-            }
-        }
-
-        // am: TODO: add getSupportedExtensions
-
-        for (jint i=0; i<count; i++) {
-            jobject plugin = NULL;
-            plugin = env->CallStaticObjectMethod(clsPluginManager, midGetPlugin, i);
-            if (plugin) {
-                PluginInfo *info = new PluginInfo();
-
-                jstring jstrName = NULL;
-                jstrName = (jstring)env->CallObjectMethod(plugin, midGetName);
-                if (jstrName) {
-                    info->name = String(env, jstrName);
-                    env->DeleteLocalRef(jstrName);
-                } else {
-                    info->name = "unknown";
-                }
-
-                jstring jstrFileName = NULL;
-                jstrFileName = (jstring)env->CallObjectMethod(plugin, midGetFileName);
-                if (jstrFileName) {
-                    info->file = String(env, jstrFileName);
-                    env->DeleteLocalRef(jstrFileName);
-                } else {
-                    info->file = "unknown";
-                }
-
-                jstring jstrDescr = NULL;
-                jstrDescr = (jstring)env->CallObjectMethod(plugin, midGetDescr);
-                if (jstrDescr) {
-                    info->desc = String(env, jstrDescr);
-                    env->DeleteLocalRef(jstrDescr);
-                } else {
-                    //info->desc = "n/a";
-                }
-
-                jobjectArray jMimes = NULL;
-                jMimes = (jobjectArray)env->CallObjectMethod(plugin, midGetMimeTypes);
-                if (jMimes) {
-                    jint n = env->GetArrayLength(jMimes);
-                    for (jint j=0; j<n; j++) {
-                        jstring jstrMime = (jstring)env->GetObjectArrayElement(jMimes, j);
-                        if (jstrMime) {
-                            MimeClassInfo *mime = new MimeClassInfo;
-                            mime->type = String(env, jstrMime);
-                            mime->desc = "--mime type description--";
-                            //mime->suffixes = ;
-                            //mime->plugin = info;
-
-                            info->mimes.append(mime);
-
-                            env->DeleteLocalRef(jstrMime);
-                        }
-                    }
-                }
-
-                m_plugins.append(info);
-            }
-        }
-    }
-    WTF::CheckAndClearException(env);
-*/
+ * The body was a 150-line commented-out block that enumerated NPAPI plugins through
+ * com.sun.webkit.plugin.PluginManager and PluginHandler. It named a JNI environment,
+ * cached method ids and a Java array of strings, none of which exists any more.
+ *
+ * FFM-AUDIT-wtf-webcore.md section 7 counts those calls among the tree upcall sites, but
+ * they are dead comments, so they get no slot in WKJHostTheme: building a C ABI for code
+ * that has been commented out for years would entrench it rather than remove it. The
+ * function keeps its empty body and its callers, which are themselves unreachable.
+ */
 }
 
 

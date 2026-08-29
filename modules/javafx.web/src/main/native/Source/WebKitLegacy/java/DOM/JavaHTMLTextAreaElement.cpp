@@ -37,318 +37,356 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLTextAreaElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLTextAreaElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAutofocusImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getAutofocus(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::autofocusAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setAutofocusImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setAutofocus(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::autofocusAttr, value);
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getDirNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getDirName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::dirnameAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::dirnameAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setDirNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setDirName(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::dirnameAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::dirnameAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getDisabled(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::disabledAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setDisabledImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setDisabled(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::disabledAttr, value);
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getFormImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLTextAreaElement_getForm(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLFormElement>(env, WTF::getPtr(IMPL->form()));
+    return WKJReturnPeer<HTMLFormElement>(WTF::getPtr(IMPL->form()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getMaxLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getMaxLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->maxLength();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setMaxLengthImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setMaxLength(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setMaxLength(value);
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getNameAttribute());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getNameAttribute());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setName(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getPlaceholderImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getPlaceholder(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::placeholderAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::placeholderAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setPlaceholderImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setPlaceholder(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::placeholderAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::placeholderAttr, AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getReadOnlyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getReadOnly(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::readonlyAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setReadOnlyImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setReadOnly(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::readonlyAttr, value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getRequiredImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getRequired(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::requiredAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRequiredImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setRequired(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::requiredAttr, value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getRowsImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getRows(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->rows();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRowsImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setRows(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setRows(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getColsImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getCols(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->cols();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setColsImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setCols(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setCols(value);
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getWrapImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getWrap(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::wrapAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::wrapAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setWrapImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setWrap(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::wrapAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::wrapAttr, AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getType(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->type());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->type());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getDefaultValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getDefaultValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->defaultValue());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->defaultValue());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setDefaultValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setDefaultValue(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setDefaultValue(String(env, value));
+    IMPL->setDefaultValue(WKJString(value, value_length));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->value());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->value());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setValue(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(AtomString{String(env, value)});
+    IMPL->setValue(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getTextLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getTextLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->textLength();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getWillValidate(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->willValidate();
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getValidationMessageImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getValidationMessage(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->validationMessage());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->validationMessage());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getLabelsImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLTextAreaElement_getLabels(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->labels()));
+    return WKJReturnPeer<NodeList>(WTF::getPtr(IMPL->labels()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getSelectionStartImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getSelectionStart(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->selectionStart();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelectionStartImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setSelectionStart(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectionStart(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getSelectionEndImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getSelectionEnd(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->selectionEnd();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelectionEndImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setSelectionEnd(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectionEnd(value);
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getSelectionDirectionImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getSelectionDirection(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->selectionDirection());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->selectionDirection());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelectionDirectionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setSelectionDirection(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setSelectionDirection(AtomString{String(env, value)});
+    IMPL->setSelectionDirection(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getAccessKey(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setAccessKey(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAutocompleteImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_getAutocomplete(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->autocomplete());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->autocomplete());
 }
 
 
 // Functions
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_checkValidityImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTextAreaElement_checkValidity(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->checkValidity();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setCustomValidityImpl(JNIEnv* env, jclass, jlong peer
-    , jstring error)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setCustomValidity(int64_t peer, const uint16_t* error, int32_t error_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setCustomValidity(AtomString{String(env, error)});
+    IMPL->setCustomValidity(AtomString{WKJString(error, error_length)});
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_selectImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_select(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->select();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRangeTextImpl(JNIEnv* env, jclass, jlong peer
-    , jstring replacement)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setRangeText(int64_t peer, const uint16_t* replacement, int32_t replacement_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setRangeText(AtomString{String(env, replacement)}));
+    raiseOnDOMError(IMPL->setRangeText(AtomString{WKJString(replacement, replacement_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRangeTextExImpl(JNIEnv* env, jclass, jlong peer
-    , jstring replacement
-    , jint start
-    , jint end
-    , jstring selectionMode)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setRangeTextEx(int64_t peer, const uint16_t* replacement, int32_t replacement_length, int32_t start, int32_t end, const uint16_t* selectionMode, int32_t selectionMode_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setRangeText(String(env, replacement)
+    raiseOnDOMError(IMPL->setRangeText(WKJString(replacement, replacement_length)
             , start
             , end
-            , AtomString{String(env, selectionMode)}));
+            , AtomString{WKJString(selectionMode, selectionMode_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelectionRangeImpl(JNIEnv* env, jclass, jlong peer
-    , jint start
-    , jint end
-    , jstring direction)
+WKJ_EXPORT void wkj_dom_HTMLTextAreaElement_setSelectionRange(int64_t peer, int32_t start, int32_t end, const uint16_t* direction, int32_t direction_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectionRange(start
             , end
-            , AtomString{String(env, direction)});
+            , AtomString{WKJString(direction, direction_length)});
 }
 
 

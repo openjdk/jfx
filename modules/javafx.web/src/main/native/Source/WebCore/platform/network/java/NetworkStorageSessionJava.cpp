@@ -32,55 +32,32 @@
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandle.h"
+#include "WKJPlatformJava.h"
 
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
-#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 
 namespace CookieInternalJava {
 
-static JGClass cookieJarClass;
-static jmethodID getMethod;
-static jmethodID putMethod;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!cookieJarClass) {
-        cookieJarClass = JLClass(env->FindClass(
-                "com/sun/webkit/network/CookieJar"));
-        ASSERT(cookieJarClass);
-
-        getMethod = env->GetStaticMethodID(
-                cookieJarClass,
-                "fwkGet",
-                "(Ljava/lang/String;Z)Ljava/lang/String;");
-        ASSERT(getMethod);
-
-        putMethod = env->GetStaticMethodID(
-                cookieJarClass,
-                "fwkPut",
-                "(Ljava/lang/String;Ljava/lang/String;)V");
-        ASSERT(putMethod);
-    }
-}
-
 static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 {
-    using namespace CookieInternalJava;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->cookie_jar_get)
+        return emptyString();
 
-    JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
-            cookieJarClass,
-            getMethod,
-            (jstring) url.string().toJavaString(env),
-            bool_to_jbool(includeHttpOnlyCookies)));
-    WTF::CheckAndClearException(env);
+    WKJStringArg urlArg(url.string());
 
-    return result ? String(env, result) : emptyString();
+    String result = wkjFetchString([&](uint16_t* buf, int32_t cap, int32_t* length) {
+        return cb->cookie_jar_get(urlArg.data(), urlArg.length(),
+                                  includeHttpOnlyCookies ? 1 : 0, buf, cap, length);
+    });
+    wkjCheckAndClearException();
+
+    // A null return became the empty string before, and still does.
+    return result.isNull() ? emptyString() : result;
 }
 }
 
@@ -95,16 +72,15 @@ NetworkStorageSession::~NetworkStorageSession()
 
 void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, RequiresScriptTrackingPrivacy requiresScriptTrackingPrivacy, const String& value, ShouldRelaxThirdPartyCookieBlocking relaxThirdPartyCookieBlocking, IsKnownCrossSiteTracker isKnownCrossSiteTracker) const
 {
-    using namespace CookieInternalJava;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->cookie_jar_put)
+        return;
 
-    env->CallStaticVoidMethod(
-            cookieJarClass,
-            putMethod,
-            (jstring) url.string().toJavaString(env),
-            (jstring) value.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WKJStringArg urlArg(url.string());
+    WKJStringArg valueArg(value);
+
+    cb->cookie_jar_put(urlArg.data(), urlArg.length(), valueArg.data(), valueArg.length());
+    wkjCheckAndClearException();
 }
 
 std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking, IsKnownCrossSiteTracker isKnownCrossSiteTracker) const

@@ -24,10 +24,6 @@
 #include "PlatformTouchPoint.h"
 #include <wtf/Vector.h>
 
-#if PLATFORM(JAVA)
-#include <jni.h>
-#endif
-
 #if ENABLE(TOUCH_EVENTS)
 
 namespace WebCore {
@@ -39,11 +35,6 @@ public:
         : PlatformEvent(PlatformEvent::Type::TouchStart)
     {
     }
-
-#if PLATFORM(JAVA)
-    PlatformTouchEvent(JNIEnv* env, jint id, jobject touchData,
-               jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);
-#endif
 
     const Vector<PlatformTouchPoint>& touchPoints() const { return m_touchPoints; }
 

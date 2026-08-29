@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,29 +103,39 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
     public String getData() {
         return getDataImpl(getPeer());
     }
-    native static String getDataImpl(long peer);
+    static String getDataImpl(long peer) {
+        return CharacterDataNative.getData(peer);
+    }
 
     @Override
     public void setData(String value) {
         setDataImpl(getPeer(), value);
     }
-    native static void setDataImpl(long peer, String value);
+    static void setDataImpl(long peer, String value) {
+        CharacterDataNative.setData(peer, value);
+    }
 
     @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return CharacterDataNative.getLength(peer);
+    }
 
     public Element getPreviousElementSibling() {
         return ElementImpl.getImpl(getPreviousElementSiblingImpl(getPeer()));
     }
-    native static long getPreviousElementSiblingImpl(long peer);
+    static long getPreviousElementSiblingImpl(long peer) {
+        return CharacterDataNative.getPreviousElementSibling(peer);
+    }
 
     public Element getNextElementSibling() {
         return ElementImpl.getImpl(getNextElementSiblingImpl(getPeer()));
     }
-    native static long getNextElementSiblingImpl(long peer);
+    static long getNextElementSiblingImpl(long peer) {
+        return CharacterDataNative.getNextElementSibling(peer);
+    }
 
 
 // Functions
@@ -137,9 +147,11 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
             , offset
             , length);
     }
-    native static String substringDataImpl(long peer
+    static String substringDataImpl(long peer
         , int offset
-        , int length);
+        , int length) {
+        return CharacterDataNative.substringData(peer, offset, length);
+    }
 
 
     @Override
@@ -148,8 +160,10 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         appendDataImpl(getPeer()
             , data);
     }
-    native static void appendDataImpl(long peer
-        , String data);
+    static void appendDataImpl(long peer
+        , String data) {
+        CharacterDataNative.appendData(peer, data);
+    }
 
 
     @Override
@@ -160,9 +174,11 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
             , offset
             , data);
     }
-    native static void insertDataImpl(long peer
+    static void insertDataImpl(long peer
         , int offset
-        , String data);
+        , String data) {
+        CharacterDataNative.insertData(peer, offset, data);
+    }
 
 
     @Override
@@ -173,9 +189,11 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
             , offset
             , length);
     }
-    native static void deleteDataImpl(long peer
+    static void deleteDataImpl(long peer
         , int offset
-        , int length);
+        , int length) {
+        CharacterDataNative.deleteData(peer, offset, length);
+    }
 
 
     @Override
@@ -188,17 +206,21 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
             , length
             , data);
     }
-    native static void replaceDataImpl(long peer
+    static void replaceDataImpl(long peer
         , int offset
         , int length
-        , String data);
+        , String data) {
+        CharacterDataNative.replaceData(peer, offset, length, data);
+    }
 
 
     public void remove() throws DOMException
     {
         removeImpl(getPeer());
     }
-    native static void removeImpl(long peer);
+    static void removeImpl(long peer) {
+        CharacterDataNative.remove(peer);
+    }
 
 
 }

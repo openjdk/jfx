@@ -27,6 +27,7 @@ package com.sun.webkit.dom;
 
 import com.sun.webkit.Disposer;
 import com.sun.webkit.DisposerRecord;
+import com.sun.webkit.WebKitNative;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,7 +78,26 @@ final class EventListenerImpl implements EventListener {
 
         return peer;
     }
-    private native long twkCreatePeer();
+    /**
+     * Creates the native listener that forwards to this one.
+     * <p>
+     * The registry entry is <em>strong</em> and it is minted here only so that the library has
+     * something to retain: {@code wkj_event_listener_create} borrows the id and retains what it
+     * keeps, so the count goes to two inside the call and back to one when this method releases its
+     * own, leaving the library holding the only reference. That reference is what keeps this
+     * object, and with it the application's listener, alive - {@link #EL2peer} is a
+     * {@link WeakHashMap} and {@link #peer2EL} holds {@link WeakReference}s, so nothing else does.
+     *
+     * @return the native listener peer
+     */
+    private long twkCreatePeer() {
+        long id = WebKitNative.register(this);
+        try {
+            return EventListenerNative.create(id);
+        } finally {
+            WebKitNative.release(id);
+        }
+    }
 
     private static EventListener getELfromPeer(long peer) {
         WeakReference<EventListener> wr = peer2EL.get(peer);
@@ -111,7 +131,9 @@ final class EventListenerImpl implements EventListener {
             twkDispatchEvent(jsPeer, ((EventImpl)evt).getPeer() );
         }
     }
-    private native static void twkDispatchEvent(long eventListenerPeer, long eventPeer);
+    private static void twkDispatchEvent(long eventListenerPeer, long eventPeer) {
+        EventListenerNative.dispatchEvent(eventListenerPeer, eventPeer);
+    }
 
     private EventListenerImpl(EventListener eventListener, long jsPeer) {
         this.eventListener = eventListener;
@@ -119,16 +141,22 @@ final class EventListenerImpl implements EventListener {
     }
 
     //dispose JavaEL <-> JSstab connection (JSstab die)
-    private static void dispose(long peer) {
+    // Package private, not private: the WKJEventListenerCallbacks dispose slot dispatches here
+    // through EventListenerNative, and an FFM upcall stub is an ordinary Java call where JNI could
+    // reach a private member.
+    static void dispose(long peer) {
         EventListener ev = getELfromPeer(peer);
         if (ev != null )
             EL2peer.remove(ev);
         peer2EL.remove(peer);
     }
     //dispose JSstab for JS-native EL
-    private native static void twkDisposeJSPeer(long peer);
+    private static void twkDisposeJSPeer(long peer) {
+        EventListenerNative.disposeJSPeer(peer);
+    }
 
-    private void fwkHandleEvent(long eventPeer) {
+    // Package private for the same reason as dispose above: this is the handle_event slot.
+    void fwkHandleEvent(long eventPeer) {
         eventListener.handleEvent(EventImpl.getImpl(eventPeer));
     }
 }

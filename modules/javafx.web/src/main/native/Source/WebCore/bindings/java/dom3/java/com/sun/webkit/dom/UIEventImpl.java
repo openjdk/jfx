@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,48 +43,66 @@ public class UIEventImpl extends EventImpl implements UIEvent {
     public AbstractView getView() {
         return DOMWindowImpl.getImpl(getViewImpl(getPeer()));
     }
-    native static long getViewImpl(long peer);
+    static long getViewImpl(long peer) {
+        return UIEventNative.getView(peer);
+    }
 
     @Override
     public int getDetail() {
         return getDetailImpl(getPeer());
     }
-    native static int getDetailImpl(long peer);
+    static int getDetailImpl(long peer) {
+        return UIEventNative.getDetail(peer);
+    }
 
     public int getKeyCode() {
         return getKeyCodeImpl(getPeer());
     }
-    native static int getKeyCodeImpl(long peer);
+    static int getKeyCodeImpl(long peer) {
+        return UIEventNative.getKeyCode(peer);
+    }
 
     public int getCharCode() {
         return getCharCodeImpl(getPeer());
     }
-    native static int getCharCodeImpl(long peer);
+    static int getCharCodeImpl(long peer) {
+        return UIEventNative.getCharCode(peer);
+    }
 
     public int getLayerX() {
         return getLayerXImpl(getPeer());
     }
-    native static int getLayerXImpl(long peer);
+    static int getLayerXImpl(long peer) {
+        return UIEventNative.getLayerX(peer);
+    }
 
     public int getLayerY() {
         return getLayerYImpl(getPeer());
     }
-    native static int getLayerYImpl(long peer);
+    static int getLayerYImpl(long peer) {
+        return UIEventNative.getLayerY(peer);
+    }
 
     public int getPageX() {
         return getPageXImpl(getPeer());
     }
-    native static int getPageXImpl(long peer);
+    static int getPageXImpl(long peer) {
+        return UIEventNative.getPageX(peer);
+    }
 
     public int getPageY() {
         return getPageYImpl(getPeer());
     }
-    native static int getPageYImpl(long peer);
+    static int getPageYImpl(long peer) {
+        return UIEventNative.getPageY(peer);
+    }
 
     public int getWhich() {
         return getWhichImpl(getPeer());
     }
-    native static int getWhichImpl(long peer);
+    static int getWhichImpl(long peer) {
+        return UIEventNative.getWhich(peer);
+    }
 
 
 // Functions
@@ -102,12 +120,14 @@ public class UIEventImpl extends EventImpl implements UIEvent {
             , DOMWindowImpl.getPeer(view)
             , detail);
     }
-    native static void initUIEventImpl(long peer
+    static void initUIEventImpl(long peer
         , String type
         , boolean canBubble
         , boolean cancelable
         , long view
-        , int detail);
+        , int detail) {
+        UIEventNative.initUIEvent(peer, type, canBubble, cancelable, view, detail);
+    }
 
 
 }

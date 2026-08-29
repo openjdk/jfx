@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,18 +66,23 @@ public final class ColorChooser {
         colorChooserDialog.show();
     }
 
-    private static ColorChooser fwkCreateAndShowColorChooser(WebPage webPage, int r, int g, int b, long pdata) {
+    // Called from the native code, through ColorChooserNative.
+    static ColorChooser fwkCreateAndShowColorChooser(WebPage webPage, int r, int g, int b, long pdata) {
         return new ColorChooser(webPage, Color.rgb(r,g,b), pdata);
     }
 
-    private void fwkShowColorChooser(int r, int g, int b) {
+    // Called from the native code, through ColorChooserNative.
+    void fwkShowColorChooser(int r, int g, int b) {
         colorChooserDialog.setCurrentColor(Color.rgb(r,g,b));
         colorChooserDialog.show();
     }
 
-    private void fwkHideColorChooser() {
+    // Called from the native code, through ColorChooserNative.
+    void fwkHideColorChooser() {
         colorChooserDialog.hide();
     }
 
-    private native void twkSetSelectedColor(long data, int r, int g, int b);
+    private void twkSetSelectedColor(long data, int r, int g, int b) {
+        ColorChooserNative.setSelectedColor(data, r, g, b);
+    }
 }

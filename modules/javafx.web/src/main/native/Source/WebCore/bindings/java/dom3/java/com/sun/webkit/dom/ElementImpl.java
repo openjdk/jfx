@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,9 @@ public class ElementImpl extends NodeImpl implements Element {
         return (Element)create(peer);
     }
 
-    native static boolean isHTMLElementImpl(long peer);
+    static boolean isHTMLElementImpl(long peer) {
+        return ElementNative.isHTMLElement(peer);
+    }
 
 
 // Constants
@@ -55,903 +57,1265 @@ public class ElementImpl extends NodeImpl implements Element {
     public String getTagName() {
         return getTagNameImpl(getPeer());
     }
-    native static String getTagNameImpl(long peer);
+    static String getTagNameImpl(long peer) {
+        return ElementNative.getTagName(peer);
+    }
 
     @Override
     public NamedNodeMap getAttributes() {
         return NamedNodeMapImpl.getImpl(getAttributesImpl(getPeer()));
     }
-    native static long getAttributesImpl(long peer);
+    static long getAttributesImpl(long peer) {
+        return ElementNative.getAttributes(peer);
+    }
 
     public CSSStyleDeclaration getStyle() {
         return CSSStyleDeclarationImpl.getImpl(getStyleImpl(getPeer()));
     }
-    native static long getStyleImpl(long peer);
+    static long getStyleImpl(long peer) {
+        return ElementNative.getStyle(peer);
+    }
 
     public String getId() {
         return getIdImpl(getPeer());
     }
-    native static String getIdImpl(long peer);
+    static String getIdImpl(long peer) {
+        return ElementNative.getId(peer);
+    }
 
     public void setId(String value) {
         setIdImpl(getPeer(), value);
     }
-    native static void setIdImpl(long peer, String value);
+    static void setIdImpl(long peer, String value) {
+        ElementNative.setId(peer, value);
+    }
 
     public double getOffsetLeft() {
         return getOffsetLeftImpl(getPeer());
     }
-    native static double getOffsetLeftImpl(long peer);
+    static double getOffsetLeftImpl(long peer) {
+        return ElementNative.getOffsetLeft(peer);
+    }
 
     public double getOffsetTop() {
         return getOffsetTopImpl(getPeer());
     }
-    native static double getOffsetTopImpl(long peer);
+    static double getOffsetTopImpl(long peer) {
+        return ElementNative.getOffsetTop(peer);
+    }
 
     public double getOffsetWidth() {
         return getOffsetWidthImpl(getPeer());
     }
-    native static double getOffsetWidthImpl(long peer);
+    static double getOffsetWidthImpl(long peer) {
+        return ElementNative.getOffsetWidth(peer);
+    }
 
     public double getOffsetHeight() {
         return getOffsetHeightImpl(getPeer());
     }
-    native static double getOffsetHeightImpl(long peer);
+    static double getOffsetHeightImpl(long peer) {
+        return ElementNative.getOffsetHeight(peer);
+    }
 
     public double getClientLeft() {
         return getClientLeftImpl(getPeer());
     }
-    native static double getClientLeftImpl(long peer);
+    static double getClientLeftImpl(long peer) {
+        return ElementNative.getClientLeft(peer);
+    }
 
     public double getClientTop() {
         return getClientTopImpl(getPeer());
     }
-    native static double getClientTopImpl(long peer);
+    static double getClientTopImpl(long peer) {
+        return ElementNative.getClientTop(peer);
+    }
 
     public double getClientWidth() {
         return getClientWidthImpl(getPeer());
     }
-    native static double getClientWidthImpl(long peer);
+    static double getClientWidthImpl(long peer) {
+        return ElementNative.getClientWidth(peer);
+    }
 
     public double getClientHeight() {
         return getClientHeightImpl(getPeer());
     }
-    native static double getClientHeightImpl(long peer);
+    static double getClientHeightImpl(long peer) {
+        return ElementNative.getClientHeight(peer);
+    }
 
     public int getScrollLeft() {
         return getScrollLeftImpl(getPeer());
     }
-    native static int getScrollLeftImpl(long peer);
+    static int getScrollLeftImpl(long peer) {
+        return ElementNative.getScrollLeft(peer);
+    }
 
     public void setScrollLeft(int value) {
         setScrollLeftImpl(getPeer(), value);
     }
-    native static void setScrollLeftImpl(long peer, int value);
+    static void setScrollLeftImpl(long peer, int value) {
+        ElementNative.setScrollLeft(peer, value);
+    }
 
     public int getScrollTop() {
         return getScrollTopImpl(getPeer());
     }
-    native static int getScrollTopImpl(long peer);
+    static int getScrollTopImpl(long peer) {
+        return ElementNative.getScrollTop(peer);
+    }
 
     public void setScrollTop(int value) {
         setScrollTopImpl(getPeer(), value);
     }
-    native static void setScrollTopImpl(long peer, int value);
+    static void setScrollTopImpl(long peer, int value) {
+        ElementNative.setScrollTop(peer, value);
+    }
 
     public int getScrollWidth() {
         return getScrollWidthImpl(getPeer());
     }
-    native static int getScrollWidthImpl(long peer);
+    static int getScrollWidthImpl(long peer) {
+        return ElementNative.getScrollWidth(peer);
+    }
 
     public int getScrollHeight() {
         return getScrollHeightImpl(getPeer());
     }
-    native static int getScrollHeightImpl(long peer);
+    static int getScrollHeightImpl(long peer) {
+        return ElementNative.getScrollHeight(peer);
+    }
 
     public Element getOffsetParent() {
         return ElementImpl.getImpl(getOffsetParentImpl(getPeer()));
     }
-    native static long getOffsetParentImpl(long peer);
+    static long getOffsetParentImpl(long peer) {
+        return ElementNative.getOffsetParent(peer);
+    }
 
     public String getInnerHTML() {
         return getInnerHTMLImpl(getPeer());
     }
-    native static String getInnerHTMLImpl(long peer);
+    static String getInnerHTMLImpl(long peer) {
+        return ElementNative.getInnerHTML(peer);
+    }
 
     public void setInnerHTML(String value) throws DOMException {
         setInnerHTMLImpl(getPeer(), value);
     }
-    native static void setInnerHTMLImpl(long peer, String value);
+    static void setInnerHTMLImpl(long peer, String value) {
+        ElementNative.setInnerHTML(peer, value);
+    }
 
     public String getOuterHTML() {
         return getOuterHTMLImpl(getPeer());
     }
-    native static String getOuterHTMLImpl(long peer);
+    static String getOuterHTMLImpl(long peer) {
+        return ElementNative.getOuterHTML(peer);
+    }
 
     public void setOuterHTML(String value) throws DOMException {
         setOuterHTMLImpl(getPeer(), value);
     }
-    native static void setOuterHTMLImpl(long peer, String value);
+    static void setOuterHTMLImpl(long peer, String value) {
+        ElementNative.setOuterHTML(peer, value);
+    }
 
     public String getClassName() {
         return getClassNameImpl(getPeer());
     }
-    native static String getClassNameImpl(long peer);
+    static String getClassNameImpl(long peer) {
+        return ElementNative.getClassName(peer);
+    }
 
     public void setClassName(String value) {
         setClassNameImpl(getPeer(), value);
     }
-    native static void setClassNameImpl(long peer, String value);
+    static void setClassNameImpl(long peer, String value) {
+        ElementNative.setClassName(peer, value);
+    }
 
     public EventListener getOnbeforecopy() {
         return EventListenerImpl.getImpl(getOnbeforecopyImpl(getPeer()));
     }
-    native static long getOnbeforecopyImpl(long peer);
+    static long getOnbeforecopyImpl(long peer) {
+        return ElementNative.getOnbeforecopy(peer);
+    }
 
     public void setOnbeforecopy(EventListener value) {
         setOnbeforecopyImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnbeforecopyImpl(long peer, long value);
+    static void setOnbeforecopyImpl(long peer, long value) {
+        ElementNative.setOnbeforecopy(peer, value);
+    }
 
     public EventListener getOnbeforecut() {
         return EventListenerImpl.getImpl(getOnbeforecutImpl(getPeer()));
     }
-    native static long getOnbeforecutImpl(long peer);
+    static long getOnbeforecutImpl(long peer) {
+        return ElementNative.getOnbeforecut(peer);
+    }
 
     public void setOnbeforecut(EventListener value) {
         setOnbeforecutImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnbeforecutImpl(long peer, long value);
+    static void setOnbeforecutImpl(long peer, long value) {
+        ElementNative.setOnbeforecut(peer, value);
+    }
 
     public EventListener getOnbeforepaste() {
         return EventListenerImpl.getImpl(getOnbeforepasteImpl(getPeer()));
     }
-    native static long getOnbeforepasteImpl(long peer);
+    static long getOnbeforepasteImpl(long peer) {
+        return ElementNative.getOnbeforepaste(peer);
+    }
 
     public void setOnbeforepaste(EventListener value) {
         setOnbeforepasteImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnbeforepasteImpl(long peer, long value);
+    static void setOnbeforepasteImpl(long peer, long value) {
+        ElementNative.setOnbeforepaste(peer, value);
+    }
 
     public EventListener getOncopy() {
         return EventListenerImpl.getImpl(getOncopyImpl(getPeer()));
     }
-    native static long getOncopyImpl(long peer);
+    static long getOncopyImpl(long peer) {
+        return ElementNative.getOncopy(peer);
+    }
 
     public void setOncopy(EventListener value) {
         setOncopyImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOncopyImpl(long peer, long value);
+    static void setOncopyImpl(long peer, long value) {
+        ElementNative.setOncopy(peer, value);
+    }
 
     public EventListener getOncut() {
         return EventListenerImpl.getImpl(getOncutImpl(getPeer()));
     }
-    native static long getOncutImpl(long peer);
+    static long getOncutImpl(long peer) {
+        return ElementNative.getOncut(peer);
+    }
 
     public void setOncut(EventListener value) {
         setOncutImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOncutImpl(long peer, long value);
+    static void setOncutImpl(long peer, long value) {
+        ElementNative.setOncut(peer, value);
+    }
 
     public EventListener getOnpaste() {
         return EventListenerImpl.getImpl(getOnpasteImpl(getPeer()));
     }
-    native static long getOnpasteImpl(long peer);
+    static long getOnpasteImpl(long peer) {
+        return ElementNative.getOnpaste(peer);
+    }
 
     public void setOnpaste(EventListener value) {
         setOnpasteImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnpasteImpl(long peer, long value);
+    static void setOnpasteImpl(long peer, long value) {
+        ElementNative.setOnpaste(peer, value);
+    }
 
     public EventListener getOnselectstart() {
         return EventListenerImpl.getImpl(getOnselectstartImpl(getPeer()));
     }
-    native static long getOnselectstartImpl(long peer);
+    static long getOnselectstartImpl(long peer) {
+        return ElementNative.getOnselectstart(peer);
+    }
 
     public void setOnselectstart(EventListener value) {
         setOnselectstartImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnselectstartImpl(long peer, long value);
+    static void setOnselectstartImpl(long peer, long value) {
+        ElementNative.setOnselectstart(peer, value);
+    }
 
     public EventListener getOnanimationend() {
         return EventListenerImpl.getImpl(getOnanimationendImpl(getPeer()));
     }
-    native static long getOnanimationendImpl(long peer);
+    static long getOnanimationendImpl(long peer) {
+        return ElementNative.getOnanimationend(peer);
+    }
 
     public void setOnanimationend(EventListener value) {
         setOnanimationendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnanimationendImpl(long peer, long value);
+    static void setOnanimationendImpl(long peer, long value) {
+        ElementNative.setOnanimationend(peer, value);
+    }
 
     public EventListener getOnanimationiteration() {
         return EventListenerImpl.getImpl(getOnanimationiterationImpl(getPeer()));
     }
-    native static long getOnanimationiterationImpl(long peer);
+    static long getOnanimationiterationImpl(long peer) {
+        return ElementNative.getOnanimationiteration(peer);
+    }
 
     public void setOnanimationiteration(EventListener value) {
         setOnanimationiterationImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnanimationiterationImpl(long peer, long value);
+    static void setOnanimationiterationImpl(long peer, long value) {
+        ElementNative.setOnanimationiteration(peer, value);
+    }
 
     public EventListener getOnanimationstart() {
         return EventListenerImpl.getImpl(getOnanimationstartImpl(getPeer()));
     }
-    native static long getOnanimationstartImpl(long peer);
+    static long getOnanimationstartImpl(long peer) {
+        return ElementNative.getOnanimationstart(peer);
+    }
 
     public void setOnanimationstart(EventListener value) {
         setOnanimationstartImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnanimationstartImpl(long peer, long value);
+    static void setOnanimationstartImpl(long peer, long value) {
+        ElementNative.setOnanimationstart(peer, value);
+    }
 
     public EventListener getOntransitionend() {
         return EventListenerImpl.getImpl(getOntransitionendImpl(getPeer()));
     }
-    native static long getOntransitionendImpl(long peer);
+    static long getOntransitionendImpl(long peer) {
+        return ElementNative.getOntransitionend(peer);
+    }
 
     public void setOntransitionend(EventListener value) {
         setOntransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOntransitionendImpl(long peer, long value);
+    static void setOntransitionendImpl(long peer, long value) {
+        ElementNative.setOntransitionend(peer, value);
+    }
 
     public EventListener getOnwebkitanimationend() {
         return EventListenerImpl.getImpl(getOnwebkitanimationendImpl(getPeer()));
     }
-    native static long getOnwebkitanimationendImpl(long peer);
+    static long getOnwebkitanimationendImpl(long peer) {
+        return ElementNative.getOnwebkitanimationend(peer);
+    }
 
     public void setOnwebkitanimationend(EventListener value) {
         setOnwebkitanimationendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationendImpl(long peer, long value);
+    static void setOnwebkitanimationendImpl(long peer, long value) {
+        ElementNative.setOnwebkitanimationend(peer, value);
+    }
 
     public EventListener getOnwebkitanimationiteration() {
         return EventListenerImpl.getImpl(getOnwebkitanimationiterationImpl(getPeer()));
     }
-    native static long getOnwebkitanimationiterationImpl(long peer);
+    static long getOnwebkitanimationiterationImpl(long peer) {
+        return ElementNative.getOnwebkitanimationiteration(peer);
+    }
 
     public void setOnwebkitanimationiteration(EventListener value) {
         setOnwebkitanimationiterationImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationiterationImpl(long peer, long value);
+    static void setOnwebkitanimationiterationImpl(long peer, long value) {
+        ElementNative.setOnwebkitanimationiteration(peer, value);
+    }
 
     public EventListener getOnwebkitanimationstart() {
         return EventListenerImpl.getImpl(getOnwebkitanimationstartImpl(getPeer()));
     }
-    native static long getOnwebkitanimationstartImpl(long peer);
+    static long getOnwebkitanimationstartImpl(long peer) {
+        return ElementNative.getOnwebkitanimationstart(peer);
+    }
 
     public void setOnwebkitanimationstart(EventListener value) {
         setOnwebkitanimationstartImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationstartImpl(long peer, long value);
+    static void setOnwebkitanimationstartImpl(long peer, long value) {
+        ElementNative.setOnwebkitanimationstart(peer, value);
+    }
 
     public EventListener getOnwebkittransitionend() {
         return EventListenerImpl.getImpl(getOnwebkittransitionendImpl(getPeer()));
     }
-    native static long getOnwebkittransitionendImpl(long peer);
+    static long getOnwebkittransitionendImpl(long peer) {
+        return ElementNative.getOnwebkittransitionend(peer);
+    }
 
     public void setOnwebkittransitionend(EventListener value) {
         setOnwebkittransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkittransitionendImpl(long peer, long value);
+    static void setOnwebkittransitionendImpl(long peer, long value) {
+        ElementNative.setOnwebkittransitionend(peer, value);
+    }
 
     public EventListener getOnfocusin() {
         return EventListenerImpl.getImpl(getOnfocusinImpl(getPeer()));
     }
-    native static long getOnfocusinImpl(long peer);
+    static long getOnfocusinImpl(long peer) {
+        return ElementNative.getOnfocusin(peer);
+    }
 
     public void setOnfocusin(EventListener value) {
         setOnfocusinImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnfocusinImpl(long peer, long value);
+    static void setOnfocusinImpl(long peer, long value) {
+        ElementNative.setOnfocusin(peer, value);
+    }
 
     public EventListener getOnfocusout() {
         return EventListenerImpl.getImpl(getOnfocusoutImpl(getPeer()));
     }
-    native static long getOnfocusoutImpl(long peer);
+    static long getOnfocusoutImpl(long peer) {
+        return ElementNative.getOnfocusout(peer);
+    }
 
     public void setOnfocusout(EventListener value) {
         setOnfocusoutImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnfocusoutImpl(long peer, long value);
+    static void setOnfocusoutImpl(long peer, long value) {
+        ElementNative.setOnfocusout(peer, value);
+    }
 
     public EventListener getOnbeforeload() {
         return EventListenerImpl.getImpl(getOnbeforeloadImpl(getPeer()));
     }
-    native static long getOnbeforeloadImpl(long peer);
+    static long getOnbeforeloadImpl(long peer) {
+        return ElementNative.getOnbeforeload(peer);
+    }
 
     public void setOnbeforeload(EventListener value) {
         setOnbeforeloadImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnbeforeloadImpl(long peer, long value);
+    static void setOnbeforeloadImpl(long peer, long value) {
+        ElementNative.setOnbeforeload(peer, value);
+    }
 
     public EventListener getOnabort() {
         return EventListenerImpl.getImpl(getOnabortImpl(getPeer()));
     }
-    native static long getOnabortImpl(long peer);
+    static long getOnabortImpl(long peer) {
+        return ElementNative.getOnabort(peer);
+    }
 
     public void setOnabort(EventListener value) {
         setOnabortImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnabortImpl(long peer, long value);
+    static void setOnabortImpl(long peer, long value) {
+        ElementNative.setOnabort(peer, value);
+    }
 
     public EventListener getOnblur() {
         return EventListenerImpl.getImpl(getOnblurImpl(getPeer()));
     }
-    native static long getOnblurImpl(long peer);
+    static long getOnblurImpl(long peer) {
+        return ElementNative.getOnblur(peer);
+    }
 
     public void setOnblur(EventListener value) {
         setOnblurImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnblurImpl(long peer, long value);
+    static void setOnblurImpl(long peer, long value) {
+        ElementNative.setOnblur(peer, value);
+    }
 
     public EventListener getOncanplay() {
         return EventListenerImpl.getImpl(getOncanplayImpl(getPeer()));
     }
-    native static long getOncanplayImpl(long peer);
+    static long getOncanplayImpl(long peer) {
+        return ElementNative.getOncanplay(peer);
+    }
 
     public void setOncanplay(EventListener value) {
         setOncanplayImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOncanplayImpl(long peer, long value);
+    static void setOncanplayImpl(long peer, long value) {
+        ElementNative.setOncanplay(peer, value);
+    }
 
     public EventListener getOncanplaythrough() {
         return EventListenerImpl.getImpl(getOncanplaythroughImpl(getPeer()));
     }
-    native static long getOncanplaythroughImpl(long peer);
+    static long getOncanplaythroughImpl(long peer) {
+        return ElementNative.getOncanplaythrough(peer);
+    }
 
     public void setOncanplaythrough(EventListener value) {
         setOncanplaythroughImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOncanplaythroughImpl(long peer, long value);
+    static void setOncanplaythroughImpl(long peer, long value) {
+        ElementNative.setOncanplaythrough(peer, value);
+    }
 
     public EventListener getOnchange() {
         return EventListenerImpl.getImpl(getOnchangeImpl(getPeer()));
     }
-    native static long getOnchangeImpl(long peer);
+    static long getOnchangeImpl(long peer) {
+        return ElementNative.getOnchange(peer);
+    }
 
     public void setOnchange(EventListener value) {
         setOnchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnchangeImpl(long peer, long value);
+    static void setOnchangeImpl(long peer, long value) {
+        ElementNative.setOnchange(peer, value);
+    }
 
     public EventListener getOnclick() {
         return EventListenerImpl.getImpl(getOnclickImpl(getPeer()));
     }
-    native static long getOnclickImpl(long peer);
+    static long getOnclickImpl(long peer) {
+        return ElementNative.getOnclick(peer);
+    }
 
     public void setOnclick(EventListener value) {
         setOnclickImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnclickImpl(long peer, long value);
+    static void setOnclickImpl(long peer, long value) {
+        ElementNative.setOnclick(peer, value);
+    }
 
     public EventListener getOncontextmenu() {
         return EventListenerImpl.getImpl(getOncontextmenuImpl(getPeer()));
     }
-    native static long getOncontextmenuImpl(long peer);
+    static long getOncontextmenuImpl(long peer) {
+        return ElementNative.getOncontextmenu(peer);
+    }
 
     public void setOncontextmenu(EventListener value) {
         setOncontextmenuImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOncontextmenuImpl(long peer, long value);
+    static void setOncontextmenuImpl(long peer, long value) {
+        ElementNative.setOncontextmenu(peer, value);
+    }
 
     public EventListener getOndblclick() {
         return EventListenerImpl.getImpl(getOndblclickImpl(getPeer()));
     }
-    native static long getOndblclickImpl(long peer);
+    static long getOndblclickImpl(long peer) {
+        return ElementNative.getOndblclick(peer);
+    }
 
     public void setOndblclick(EventListener value) {
         setOndblclickImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndblclickImpl(long peer, long value);
+    static void setOndblclickImpl(long peer, long value) {
+        ElementNative.setOndblclick(peer, value);
+    }
 
     public EventListener getOndrag() {
         return EventListenerImpl.getImpl(getOndragImpl(getPeer()));
     }
-    native static long getOndragImpl(long peer);
+    static long getOndragImpl(long peer) {
+        return ElementNative.getOndrag(peer);
+    }
 
     public void setOndrag(EventListener value) {
         setOndragImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragImpl(long peer, long value);
+    static void setOndragImpl(long peer, long value) {
+        ElementNative.setOndrag(peer, value);
+    }
 
     public EventListener getOndragend() {
         return EventListenerImpl.getImpl(getOndragendImpl(getPeer()));
     }
-    native static long getOndragendImpl(long peer);
+    static long getOndragendImpl(long peer) {
+        return ElementNative.getOndragend(peer);
+    }
 
     public void setOndragend(EventListener value) {
         setOndragendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragendImpl(long peer, long value);
+    static void setOndragendImpl(long peer, long value) {
+        ElementNative.setOndragend(peer, value);
+    }
 
     public EventListener getOndragenter() {
         return EventListenerImpl.getImpl(getOndragenterImpl(getPeer()));
     }
-    native static long getOndragenterImpl(long peer);
+    static long getOndragenterImpl(long peer) {
+        return ElementNative.getOndragenter(peer);
+    }
 
     public void setOndragenter(EventListener value) {
         setOndragenterImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragenterImpl(long peer, long value);
+    static void setOndragenterImpl(long peer, long value) {
+        ElementNative.setOndragenter(peer, value);
+    }
 
     public EventListener getOndragleave() {
         return EventListenerImpl.getImpl(getOndragleaveImpl(getPeer()));
     }
-    native static long getOndragleaveImpl(long peer);
+    static long getOndragleaveImpl(long peer) {
+        return ElementNative.getOndragleave(peer);
+    }
 
     public void setOndragleave(EventListener value) {
         setOndragleaveImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragleaveImpl(long peer, long value);
+    static void setOndragleaveImpl(long peer, long value) {
+        ElementNative.setOndragleave(peer, value);
+    }
 
     public EventListener getOndragover() {
         return EventListenerImpl.getImpl(getOndragoverImpl(getPeer()));
     }
-    native static long getOndragoverImpl(long peer);
+    static long getOndragoverImpl(long peer) {
+        return ElementNative.getOndragover(peer);
+    }
 
     public void setOndragover(EventListener value) {
         setOndragoverImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragoverImpl(long peer, long value);
+    static void setOndragoverImpl(long peer, long value) {
+        ElementNative.setOndragover(peer, value);
+    }
 
     public EventListener getOndragstart() {
         return EventListenerImpl.getImpl(getOndragstartImpl(getPeer()));
     }
-    native static long getOndragstartImpl(long peer);
+    static long getOndragstartImpl(long peer) {
+        return ElementNative.getOndragstart(peer);
+    }
 
     public void setOndragstart(EventListener value) {
         setOndragstartImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndragstartImpl(long peer, long value);
+    static void setOndragstartImpl(long peer, long value) {
+        ElementNative.setOndragstart(peer, value);
+    }
 
     public EventListener getOndrop() {
         return EventListenerImpl.getImpl(getOndropImpl(getPeer()));
     }
-    native static long getOndropImpl(long peer);
+    static long getOndropImpl(long peer) {
+        return ElementNative.getOndrop(peer);
+    }
 
     public void setOndrop(EventListener value) {
         setOndropImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndropImpl(long peer, long value);
+    static void setOndropImpl(long peer, long value) {
+        ElementNative.setOndrop(peer, value);
+    }
 
     public EventListener getOndurationchange() {
         return EventListenerImpl.getImpl(getOndurationchangeImpl(getPeer()));
     }
-    native static long getOndurationchangeImpl(long peer);
+    static long getOndurationchangeImpl(long peer) {
+        return ElementNative.getOndurationchange(peer);
+    }
 
     public void setOndurationchange(EventListener value) {
         setOndurationchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOndurationchangeImpl(long peer, long value);
+    static void setOndurationchangeImpl(long peer, long value) {
+        ElementNative.setOndurationchange(peer, value);
+    }
 
     public EventListener getOnemptied() {
         return EventListenerImpl.getImpl(getOnemptiedImpl(getPeer()));
     }
-    native static long getOnemptiedImpl(long peer);
+    static long getOnemptiedImpl(long peer) {
+        return ElementNative.getOnemptied(peer);
+    }
 
     public void setOnemptied(EventListener value) {
         setOnemptiedImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnemptiedImpl(long peer, long value);
+    static void setOnemptiedImpl(long peer, long value) {
+        ElementNative.setOnemptied(peer, value);
+    }
 
     public EventListener getOnended() {
         return EventListenerImpl.getImpl(getOnendedImpl(getPeer()));
     }
-    native static long getOnendedImpl(long peer);
+    static long getOnendedImpl(long peer) {
+        return ElementNative.getOnended(peer);
+    }
 
     public void setOnended(EventListener value) {
         setOnendedImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnendedImpl(long peer, long value);
+    static void setOnendedImpl(long peer, long value) {
+        ElementNative.setOnended(peer, value);
+    }
 
     public EventListener getOnerror() {
         return EventListenerImpl.getImpl(getOnerrorImpl(getPeer()));
     }
-    native static long getOnerrorImpl(long peer);
+    static long getOnerrorImpl(long peer) {
+        return ElementNative.getOnerror(peer);
+    }
 
     public void setOnerror(EventListener value) {
         setOnerrorImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnerrorImpl(long peer, long value);
+    static void setOnerrorImpl(long peer, long value) {
+        ElementNative.setOnerror(peer, value);
+    }
 
     public EventListener getOnfocus() {
         return EventListenerImpl.getImpl(getOnfocusImpl(getPeer()));
     }
-    native static long getOnfocusImpl(long peer);
+    static long getOnfocusImpl(long peer) {
+        return ElementNative.getOnfocus(peer);
+    }
 
     public void setOnfocus(EventListener value) {
         setOnfocusImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnfocusImpl(long peer, long value);
+    static void setOnfocusImpl(long peer, long value) {
+        ElementNative.setOnfocus(peer, value);
+    }
 
     public EventListener getOninput() {
         return EventListenerImpl.getImpl(getOninputImpl(getPeer()));
     }
-    native static long getOninputImpl(long peer);
+    static long getOninputImpl(long peer) {
+        return ElementNative.getOninput(peer);
+    }
 
     public void setOninput(EventListener value) {
         setOninputImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOninputImpl(long peer, long value);
+    static void setOninputImpl(long peer, long value) {
+        ElementNative.setOninput(peer, value);
+    }
 
     public EventListener getOninvalid() {
         return EventListenerImpl.getImpl(getOninvalidImpl(getPeer()));
     }
-    native static long getOninvalidImpl(long peer);
+    static long getOninvalidImpl(long peer) {
+        return ElementNative.getOninvalid(peer);
+    }
 
     public void setOninvalid(EventListener value) {
         setOninvalidImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOninvalidImpl(long peer, long value);
+    static void setOninvalidImpl(long peer, long value) {
+        ElementNative.setOninvalid(peer, value);
+    }
 
     public EventListener getOnkeydown() {
         return EventListenerImpl.getImpl(getOnkeydownImpl(getPeer()));
     }
-    native static long getOnkeydownImpl(long peer);
+    static long getOnkeydownImpl(long peer) {
+        return ElementNative.getOnkeydown(peer);
+    }
 
     public void setOnkeydown(EventListener value) {
         setOnkeydownImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnkeydownImpl(long peer, long value);
+    static void setOnkeydownImpl(long peer, long value) {
+        ElementNative.setOnkeydown(peer, value);
+    }
 
     public EventListener getOnkeypress() {
         return EventListenerImpl.getImpl(getOnkeypressImpl(getPeer()));
     }
-    native static long getOnkeypressImpl(long peer);
+    static long getOnkeypressImpl(long peer) {
+        return ElementNative.getOnkeypress(peer);
+    }
 
     public void setOnkeypress(EventListener value) {
         setOnkeypressImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnkeypressImpl(long peer, long value);
+    static void setOnkeypressImpl(long peer, long value) {
+        ElementNative.setOnkeypress(peer, value);
+    }
 
     public EventListener getOnkeyup() {
         return EventListenerImpl.getImpl(getOnkeyupImpl(getPeer()));
     }
-    native static long getOnkeyupImpl(long peer);
+    static long getOnkeyupImpl(long peer) {
+        return ElementNative.getOnkeyup(peer);
+    }
 
     public void setOnkeyup(EventListener value) {
         setOnkeyupImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnkeyupImpl(long peer, long value);
+    static void setOnkeyupImpl(long peer, long value) {
+        ElementNative.setOnkeyup(peer, value);
+    }
 
     public EventListener getOnload() {
         return EventListenerImpl.getImpl(getOnloadImpl(getPeer()));
     }
-    native static long getOnloadImpl(long peer);
+    static long getOnloadImpl(long peer) {
+        return ElementNative.getOnload(peer);
+    }
 
     public void setOnload(EventListener value) {
         setOnloadImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnloadImpl(long peer, long value);
+    static void setOnloadImpl(long peer, long value) {
+        ElementNative.setOnload(peer, value);
+    }
 
     public EventListener getOnloadeddata() {
         return EventListenerImpl.getImpl(getOnloadeddataImpl(getPeer()));
     }
-    native static long getOnloadeddataImpl(long peer);
+    static long getOnloadeddataImpl(long peer) {
+        return ElementNative.getOnloadeddata(peer);
+    }
 
     public void setOnloadeddata(EventListener value) {
         setOnloadeddataImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnloadeddataImpl(long peer, long value);
+    static void setOnloadeddataImpl(long peer, long value) {
+        ElementNative.setOnloadeddata(peer, value);
+    }
 
     public EventListener getOnloadedmetadata() {
         return EventListenerImpl.getImpl(getOnloadedmetadataImpl(getPeer()));
     }
-    native static long getOnloadedmetadataImpl(long peer);
+    static long getOnloadedmetadataImpl(long peer) {
+        return ElementNative.getOnloadedmetadata(peer);
+    }
 
     public void setOnloadedmetadata(EventListener value) {
         setOnloadedmetadataImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnloadedmetadataImpl(long peer, long value);
+    static void setOnloadedmetadataImpl(long peer, long value) {
+        ElementNative.setOnloadedmetadata(peer, value);
+    }
 
     public EventListener getOnloadstart() {
         return EventListenerImpl.getImpl(getOnloadstartImpl(getPeer()));
     }
-    native static long getOnloadstartImpl(long peer);
+    static long getOnloadstartImpl(long peer) {
+        return ElementNative.getOnloadstart(peer);
+    }
 
     public void setOnloadstart(EventListener value) {
         setOnloadstartImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnloadstartImpl(long peer, long value);
+    static void setOnloadstartImpl(long peer, long value) {
+        ElementNative.setOnloadstart(peer, value);
+    }
 
     public EventListener getOnmousedown() {
         return EventListenerImpl.getImpl(getOnmousedownImpl(getPeer()));
     }
-    native static long getOnmousedownImpl(long peer);
+    static long getOnmousedownImpl(long peer) {
+        return ElementNative.getOnmousedown(peer);
+    }
 
     public void setOnmousedown(EventListener value) {
         setOnmousedownImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmousedownImpl(long peer, long value);
+    static void setOnmousedownImpl(long peer, long value) {
+        ElementNative.setOnmousedown(peer, value);
+    }
 
     public EventListener getOnmouseenter() {
         return EventListenerImpl.getImpl(getOnmouseenterImpl(getPeer()));
     }
-    native static long getOnmouseenterImpl(long peer);
+    static long getOnmouseenterImpl(long peer) {
+        return ElementNative.getOnmouseenter(peer);
+    }
 
     public void setOnmouseenter(EventListener value) {
         setOnmouseenterImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmouseenterImpl(long peer, long value);
+    static void setOnmouseenterImpl(long peer, long value) {
+        ElementNative.setOnmouseenter(peer, value);
+    }
 
     public EventListener getOnmouseleave() {
         return EventListenerImpl.getImpl(getOnmouseleaveImpl(getPeer()));
     }
-    native static long getOnmouseleaveImpl(long peer);
+    static long getOnmouseleaveImpl(long peer) {
+        return ElementNative.getOnmouseleave(peer);
+    }
 
     public void setOnmouseleave(EventListener value) {
         setOnmouseleaveImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmouseleaveImpl(long peer, long value);
+    static void setOnmouseleaveImpl(long peer, long value) {
+        ElementNative.setOnmouseleave(peer, value);
+    }
 
     public EventListener getOnmousemove() {
         return EventListenerImpl.getImpl(getOnmousemoveImpl(getPeer()));
     }
-    native static long getOnmousemoveImpl(long peer);
+    static long getOnmousemoveImpl(long peer) {
+        return ElementNative.getOnmousemove(peer);
+    }
 
     public void setOnmousemove(EventListener value) {
         setOnmousemoveImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmousemoveImpl(long peer, long value);
+    static void setOnmousemoveImpl(long peer, long value) {
+        ElementNative.setOnmousemove(peer, value);
+    }
 
     public EventListener getOnmouseout() {
         return EventListenerImpl.getImpl(getOnmouseoutImpl(getPeer()));
     }
-    native static long getOnmouseoutImpl(long peer);
+    static long getOnmouseoutImpl(long peer) {
+        return ElementNative.getOnmouseout(peer);
+    }
 
     public void setOnmouseout(EventListener value) {
         setOnmouseoutImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmouseoutImpl(long peer, long value);
+    static void setOnmouseoutImpl(long peer, long value) {
+        ElementNative.setOnmouseout(peer, value);
+    }
 
     public EventListener getOnmouseover() {
         return EventListenerImpl.getImpl(getOnmouseoverImpl(getPeer()));
     }
-    native static long getOnmouseoverImpl(long peer);
+    static long getOnmouseoverImpl(long peer) {
+        return ElementNative.getOnmouseover(peer);
+    }
 
     public void setOnmouseover(EventListener value) {
         setOnmouseoverImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmouseoverImpl(long peer, long value);
+    static void setOnmouseoverImpl(long peer, long value) {
+        ElementNative.setOnmouseover(peer, value);
+    }
 
     public EventListener getOnmouseup() {
         return EventListenerImpl.getImpl(getOnmouseupImpl(getPeer()));
     }
-    native static long getOnmouseupImpl(long peer);
+    static long getOnmouseupImpl(long peer) {
+        return ElementNative.getOnmouseup(peer);
+    }
 
     public void setOnmouseup(EventListener value) {
         setOnmouseupImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmouseupImpl(long peer, long value);
+    static void setOnmouseupImpl(long peer, long value) {
+        ElementNative.setOnmouseup(peer, value);
+    }
 
     public EventListener getOnmousewheel() {
         return EventListenerImpl.getImpl(getOnmousewheelImpl(getPeer()));
     }
-    native static long getOnmousewheelImpl(long peer);
+    static long getOnmousewheelImpl(long peer) {
+        return ElementNative.getOnmousewheel(peer);
+    }
 
     public void setOnmousewheel(EventListener value) {
         setOnmousewheelImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnmousewheelImpl(long peer, long value);
+    static void setOnmousewheelImpl(long peer, long value) {
+        ElementNative.setOnmousewheel(peer, value);
+    }
 
     public EventListener getOnpause() {
         return EventListenerImpl.getImpl(getOnpauseImpl(getPeer()));
     }
-    native static long getOnpauseImpl(long peer);
+    static long getOnpauseImpl(long peer) {
+        return ElementNative.getOnpause(peer);
+    }
 
     public void setOnpause(EventListener value) {
         setOnpauseImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnpauseImpl(long peer, long value);
+    static void setOnpauseImpl(long peer, long value) {
+        ElementNative.setOnpause(peer, value);
+    }
 
     public EventListener getOnplay() {
         return EventListenerImpl.getImpl(getOnplayImpl(getPeer()));
     }
-    native static long getOnplayImpl(long peer);
+    static long getOnplayImpl(long peer) {
+        return ElementNative.getOnplay(peer);
+    }
 
     public void setOnplay(EventListener value) {
         setOnplayImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnplayImpl(long peer, long value);
+    static void setOnplayImpl(long peer, long value) {
+        ElementNative.setOnplay(peer, value);
+    }
 
     public EventListener getOnplaying() {
         return EventListenerImpl.getImpl(getOnplayingImpl(getPeer()));
     }
-    native static long getOnplayingImpl(long peer);
+    static long getOnplayingImpl(long peer) {
+        return ElementNative.getOnplaying(peer);
+    }
 
     public void setOnplaying(EventListener value) {
         setOnplayingImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnplayingImpl(long peer, long value);
+    static void setOnplayingImpl(long peer, long value) {
+        ElementNative.setOnplaying(peer, value);
+    }
 
     public EventListener getOnprogress() {
         return EventListenerImpl.getImpl(getOnprogressImpl(getPeer()));
     }
-    native static long getOnprogressImpl(long peer);
+    static long getOnprogressImpl(long peer) {
+        return ElementNative.getOnprogress(peer);
+    }
 
     public void setOnprogress(EventListener value) {
         setOnprogressImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnprogressImpl(long peer, long value);
+    static void setOnprogressImpl(long peer, long value) {
+        ElementNative.setOnprogress(peer, value);
+    }
 
     public EventListener getOnratechange() {
         return EventListenerImpl.getImpl(getOnratechangeImpl(getPeer()));
     }
-    native static long getOnratechangeImpl(long peer);
+    static long getOnratechangeImpl(long peer) {
+        return ElementNative.getOnratechange(peer);
+    }
 
     public void setOnratechange(EventListener value) {
         setOnratechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnratechangeImpl(long peer, long value);
+    static void setOnratechangeImpl(long peer, long value) {
+        ElementNative.setOnratechange(peer, value);
+    }
 
     public EventListener getOnreset() {
         return EventListenerImpl.getImpl(getOnresetImpl(getPeer()));
     }
-    native static long getOnresetImpl(long peer);
+    static long getOnresetImpl(long peer) {
+        return ElementNative.getOnreset(peer);
+    }
 
     public void setOnreset(EventListener value) {
         setOnresetImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnresetImpl(long peer, long value);
+    static void setOnresetImpl(long peer, long value) {
+        ElementNative.setOnreset(peer, value);
+    }
 
     public EventListener getOnresize() {
         return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
     }
-    native static long getOnresizeImpl(long peer);
+    static long getOnresizeImpl(long peer) {
+        return ElementNative.getOnresize(peer);
+    }
 
     public void setOnresize(EventListener value) {
         setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnresizeImpl(long peer, long value);
+    static void setOnresizeImpl(long peer, long value) {
+        ElementNative.setOnresize(peer, value);
+    }
 
     public EventListener getOnscroll() {
         return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
     }
-    native static long getOnscrollImpl(long peer);
+    static long getOnscrollImpl(long peer) {
+        return ElementNative.getOnscroll(peer);
+    }
 
     public void setOnscroll(EventListener value) {
         setOnscrollImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnscrollImpl(long peer, long value);
+    static void setOnscrollImpl(long peer, long value) {
+        ElementNative.setOnscroll(peer, value);
+    }
 
     public EventListener getOnseeked() {
         return EventListenerImpl.getImpl(getOnseekedImpl(getPeer()));
     }
-    native static long getOnseekedImpl(long peer);
+    static long getOnseekedImpl(long peer) {
+        return ElementNative.getOnseeked(peer);
+    }
 
     public void setOnseeked(EventListener value) {
         setOnseekedImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnseekedImpl(long peer, long value);
+    static void setOnseekedImpl(long peer, long value) {
+        ElementNative.setOnseeked(peer, value);
+    }
 
     public EventListener getOnseeking() {
         return EventListenerImpl.getImpl(getOnseekingImpl(getPeer()));
     }
-    native static long getOnseekingImpl(long peer);
+    static long getOnseekingImpl(long peer) {
+        return ElementNative.getOnseeking(peer);
+    }
 
     public void setOnseeking(EventListener value) {
         setOnseekingImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnseekingImpl(long peer, long value);
+    static void setOnseekingImpl(long peer, long value) {
+        ElementNative.setOnseeking(peer, value);
+    }
 
     public EventListener getOnselect() {
         return EventListenerImpl.getImpl(getOnselectImpl(getPeer()));
     }
-    native static long getOnselectImpl(long peer);
+    static long getOnselectImpl(long peer) {
+        return ElementNative.getOnselect(peer);
+    }
 
     public void setOnselect(EventListener value) {
         setOnselectImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnselectImpl(long peer, long value);
+    static void setOnselectImpl(long peer, long value) {
+        ElementNative.setOnselect(peer, value);
+    }
 
     public EventListener getOnstalled() {
         return EventListenerImpl.getImpl(getOnstalledImpl(getPeer()));
     }
-    native static long getOnstalledImpl(long peer);
+    static long getOnstalledImpl(long peer) {
+        return ElementNative.getOnstalled(peer);
+    }
 
     public void setOnstalled(EventListener value) {
         setOnstalledImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnstalledImpl(long peer, long value);
+    static void setOnstalledImpl(long peer, long value) {
+        ElementNative.setOnstalled(peer, value);
+    }
 
     public EventListener getOnsubmit() {
         return EventListenerImpl.getImpl(getOnsubmitImpl(getPeer()));
     }
-    native static long getOnsubmitImpl(long peer);
+    static long getOnsubmitImpl(long peer) {
+        return ElementNative.getOnsubmit(peer);
+    }
 
     public void setOnsubmit(EventListener value) {
         setOnsubmitImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnsubmitImpl(long peer, long value);
+    static void setOnsubmitImpl(long peer, long value) {
+        ElementNative.setOnsubmit(peer, value);
+    }
 
     public EventListener getOnsuspend() {
         return EventListenerImpl.getImpl(getOnsuspendImpl(getPeer()));
     }
-    native static long getOnsuspendImpl(long peer);
+    static long getOnsuspendImpl(long peer) {
+        return ElementNative.getOnsuspend(peer);
+    }
 
     public void setOnsuspend(EventListener value) {
         setOnsuspendImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnsuspendImpl(long peer, long value);
+    static void setOnsuspendImpl(long peer, long value) {
+        ElementNative.setOnsuspend(peer, value);
+    }
 
     public EventListener getOntimeupdate() {
         return EventListenerImpl.getImpl(getOntimeupdateImpl(getPeer()));
     }
-    native static long getOntimeupdateImpl(long peer);
+    static long getOntimeupdateImpl(long peer) {
+        return ElementNative.getOntimeupdate(peer);
+    }
 
     public void setOntimeupdate(EventListener value) {
         setOntimeupdateImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOntimeupdateImpl(long peer, long value);
+    static void setOntimeupdateImpl(long peer, long value) {
+        ElementNative.setOntimeupdate(peer, value);
+    }
 
     public EventListener getOnvolumechange() {
         return EventListenerImpl.getImpl(getOnvolumechangeImpl(getPeer()));
     }
-    native static long getOnvolumechangeImpl(long peer);
+    static long getOnvolumechangeImpl(long peer) {
+        return ElementNative.getOnvolumechange(peer);
+    }
 
     public void setOnvolumechange(EventListener value) {
         setOnvolumechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnvolumechangeImpl(long peer, long value);
+    static void setOnvolumechangeImpl(long peer, long value) {
+        ElementNative.setOnvolumechange(peer, value);
+    }
 
     public EventListener getOnwaiting() {
         return EventListenerImpl.getImpl(getOnwaitingImpl(getPeer()));
     }
-    native static long getOnwaitingImpl(long peer);
+    static long getOnwaitingImpl(long peer) {
+        return ElementNative.getOnwaiting(peer);
+    }
 
     public void setOnwaiting(EventListener value) {
         setOnwaitingImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwaitingImpl(long peer, long value);
+    static void setOnwaitingImpl(long peer, long value) {
+        ElementNative.setOnwaiting(peer, value);
+    }
 
     public EventListener getOnsearch() {
         return EventListenerImpl.getImpl(getOnsearchImpl(getPeer()));
     }
-    native static long getOnsearchImpl(long peer);
+    static long getOnsearchImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.ElementImpl.getOnsearchImpl: no wkj_* function exists for it"
+                + " in any jfxwebkit build");
+    }
 
     public void setOnsearch(EventListener value) {
         setOnsearchImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnsearchImpl(long peer, long value);
+    static void setOnsearchImpl(long peer, long value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.ElementImpl.setOnsearchImpl: no wkj_* function exists for it"
+                + " in any jfxwebkit build");
+    }
 
     public EventListener getOnwheel() {
         return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
     }
-    native static long getOnwheelImpl(long peer);
+    static long getOnwheelImpl(long peer) {
+        return ElementNative.getOnwheel(peer);
+    }
 
     public void setOnwheel(EventListener value) {
         setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwheelImpl(long peer, long value);
+    static void setOnwheelImpl(long peer, long value) {
+        ElementNative.setOnwheel(peer, value);
+    }
 
     public Element getPreviousElementSibling() {
         return ElementImpl.getImpl(getPreviousElementSiblingImpl(getPeer()));
     }
-    native static long getPreviousElementSiblingImpl(long peer);
+    static long getPreviousElementSiblingImpl(long peer) {
+        return ElementNative.getPreviousElementSibling(peer);
+    }
 
     public Element getNextElementSibling() {
         return ElementImpl.getImpl(getNextElementSiblingImpl(getPeer()));
     }
-    native static long getNextElementSiblingImpl(long peer);
+    static long getNextElementSiblingImpl(long peer) {
+        return ElementNative.getNextElementSibling(peer);
+    }
 
     public HTMLCollection getChildren() {
         return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
     }
-    native static long getChildrenImpl(long peer);
+    static long getChildrenImpl(long peer) {
+        return ElementNative.getChildren(peer);
+    }
 
     public Element getFirstElementChild() {
         return ElementImpl.getImpl(getFirstElementChildImpl(getPeer()));
     }
-    native static long getFirstElementChildImpl(long peer);
+    static long getFirstElementChildImpl(long peer) {
+        return ElementNative.getFirstElementChild(peer);
+    }
 
     public Element getLastElementChild() {
         return ElementImpl.getImpl(getLastElementChildImpl(getPeer()));
     }
-    native static long getLastElementChildImpl(long peer);
+    static long getLastElementChildImpl(long peer) {
+        return ElementNative.getLastElementChild(peer);
+    }
 
     public int getChildElementCount() {
         return getChildElementCountImpl(getPeer());
     }
-    native static int getChildElementCountImpl(long peer);
+    static int getChildElementCountImpl(long peer) {
+        return ElementNative.getChildElementCount(peer);
+    }
 
 
 // Functions
@@ -961,8 +1325,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return getAttributeImpl(getPeer()
             , name);
     }
-    native static String getAttributeImpl(long peer
-        , String name);
+    static String getAttributeImpl(long peer
+        , String name) {
+        return ElementNative.getAttribute(peer, name);
+    }
 
 
     @Override
@@ -973,9 +1339,11 @@ public class ElementImpl extends NodeImpl implements Element {
             , name
             , value);
     }
-    native static void setAttributeImpl(long peer
+    static void setAttributeImpl(long peer
         , String name
-        , String value);
+        , String value) {
+        ElementNative.setAttribute(peer, name, value);
+    }
 
 
     @Override
@@ -984,8 +1352,10 @@ public class ElementImpl extends NodeImpl implements Element {
         removeAttributeImpl(getPeer()
             , name);
     }
-    native static void removeAttributeImpl(long peer
-        , String name);
+    static void removeAttributeImpl(long peer
+        , String name) {
+        ElementNative.removeAttribute(peer, name);
+    }
 
 
     @Override
@@ -994,8 +1364,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return AttrImpl.getImpl(getAttributeNodeImpl(getPeer()
             , name));
     }
-    native static long getAttributeNodeImpl(long peer
-        , String name);
+    static long getAttributeNodeImpl(long peer
+        , String name) {
+        return ElementNative.getAttributeNode(peer, name);
+    }
 
 
     @Override
@@ -1004,8 +1376,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return AttrImpl.getImpl(setAttributeNodeImpl(getPeer()
             , AttrImpl.getPeer(newAttr)));
     }
-    native static long setAttributeNodeImpl(long peer
-        , long newAttr);
+    static long setAttributeNodeImpl(long peer
+        , long newAttr) {
+        return ElementNative.setAttributeNode(peer, newAttr);
+    }
 
 
     @Override
@@ -1014,8 +1388,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return AttrImpl.getImpl(removeAttributeNodeImpl(getPeer()
             , AttrImpl.getPeer(oldAttr)));
     }
-    native static long removeAttributeNodeImpl(long peer
-        , long oldAttr);
+    static long removeAttributeNodeImpl(long peer
+        , long oldAttr) {
+        return ElementNative.removeAttributeNode(peer, oldAttr);
+    }
 
 
     @Override
@@ -1024,8 +1400,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return NodeListImpl.getImpl(getElementsByTagNameImpl(getPeer()
             , name));
     }
-    native static long getElementsByTagNameImpl(long peer
-        , String name);
+    static long getElementsByTagNameImpl(long peer
+        , String name) {
+        return ElementNative.getElementsByTagName(peer, name);
+    }
 
 
     @Override
@@ -1033,7 +1411,9 @@ public class ElementImpl extends NodeImpl implements Element {
     {
         return hasAttributesImpl(getPeer());
     }
-    native static boolean hasAttributesImpl(long peer);
+    static boolean hasAttributesImpl(long peer) {
+        return ElementNative.hasAttributes(peer);
+    }
 
 
     @Override
@@ -1044,9 +1424,11 @@ public class ElementImpl extends NodeImpl implements Element {
             , namespaceURI
             , localName);
     }
-    native static String getAttributeNSImpl(long peer
+    static String getAttributeNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return ElementNative.getAttributeNS(peer, namespaceURI, localName);
+    }
 
 
     @Override
@@ -1059,10 +1441,12 @@ public class ElementImpl extends NodeImpl implements Element {
             , qualifiedName
             , value);
     }
-    native static void setAttributeNSImpl(long peer
+    static void setAttributeNSImpl(long peer
         , String namespaceURI
         , String qualifiedName
-        , String value);
+        , String value) {
+        ElementNative.setAttributeNS(peer, namespaceURI, qualifiedName, value);
+    }
 
 
     @Override
@@ -1073,9 +1457,11 @@ public class ElementImpl extends NodeImpl implements Element {
             , namespaceURI
             , localName);
     }
-    native static void removeAttributeNSImpl(long peer
+    static void removeAttributeNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        ElementNative.removeAttributeNS(peer, namespaceURI, localName);
+    }
 
 
     @Override
@@ -1086,9 +1472,11 @@ public class ElementImpl extends NodeImpl implements Element {
             , namespaceURI
             , localName));
     }
-    native static long getElementsByTagNameNSImpl(long peer
+    static long getElementsByTagNameNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return ElementNative.getElementsByTagNameNS(peer, namespaceURI, localName);
+    }
 
 
     @Override
@@ -1099,9 +1487,11 @@ public class ElementImpl extends NodeImpl implements Element {
             , namespaceURI
             , localName));
     }
-    native static long getAttributeNodeNSImpl(long peer
+    static long getAttributeNodeNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return ElementNative.getAttributeNodeNS(peer, namespaceURI, localName);
+    }
 
 
     @Override
@@ -1110,8 +1500,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return AttrImpl.getImpl(setAttributeNodeNSImpl(getPeer()
             , AttrImpl.getPeer(newAttr)));
     }
-    native static long setAttributeNodeNSImpl(long peer
-        , long newAttr);
+    static long setAttributeNodeNSImpl(long peer
+        , long newAttr) {
+        return ElementNative.setAttributeNodeNS(peer, newAttr);
+    }
 
 
     @Override
@@ -1120,8 +1512,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return hasAttributeImpl(getPeer()
             , name);
     }
-    native static boolean hasAttributeImpl(long peer
-        , String name);
+    static boolean hasAttributeImpl(long peer
+        , String name) {
+        return ElementNative.hasAttribute(peer, name);
+    }
 
 
     @Override
@@ -1132,23 +1526,29 @@ public class ElementImpl extends NodeImpl implements Element {
             , namespaceURI
             , localName);
     }
-    native static boolean hasAttributeNSImpl(long peer
+    static boolean hasAttributeNSImpl(long peer
         , String namespaceURI
-        , String localName);
+        , String localName) {
+        return ElementNative.hasAttributeNS(peer, namespaceURI, localName);
+    }
 
 
     public void focus()
     {
         focusImpl(getPeer());
     }
-    native static void focusImpl(long peer);
+    static void focusImpl(long peer) {
+        ElementNative.focus(peer);
+    }
 
 
     public void blur()
     {
         blurImpl(getPeer());
     }
-    native static void blurImpl(long peer);
+    static void blurImpl(long peer) {
+        ElementNative.blur(peer);
+    }
 
 
     public void scrollIntoView(boolean alignWithTop)
@@ -1156,8 +1556,10 @@ public class ElementImpl extends NodeImpl implements Element {
         scrollIntoViewImpl(getPeer()
             , alignWithTop);
     }
-    native static void scrollIntoViewImpl(long peer
-        , boolean alignWithTop);
+    static void scrollIntoViewImpl(long peer
+        , boolean alignWithTop) {
+        ElementNative.scrollIntoView(peer, alignWithTop);
+    }
 
 
     public void scrollIntoViewIfNeeded(boolean centerIfNeeded)
@@ -1165,8 +1567,10 @@ public class ElementImpl extends NodeImpl implements Element {
         scrollIntoViewIfNeededImpl(getPeer()
             , centerIfNeeded);
     }
-    native static void scrollIntoViewIfNeededImpl(long peer
-        , boolean centerIfNeeded);
+    static void scrollIntoViewIfNeededImpl(long peer
+        , boolean centerIfNeeded) {
+        ElementNative.scrollIntoViewIfNeeded(peer, centerIfNeeded);
+    }
 
 
     public void scrollByLines(int lines)
@@ -1174,8 +1578,11 @@ public class ElementImpl extends NodeImpl implements Element {
         scrollByLinesImpl(getPeer()
             , lines);
     }
-    native static void scrollByLinesImpl(long peer
-        , int lines);
+    static void scrollByLinesImpl(long peer
+        , int lines) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.ElementImpl.scrollByLinesImpl: no wkj_* function exists for"
+                + " it in any jfxwebkit build");
+    }
 
 
     public void scrollByPages(int pages)
@@ -1183,8 +1590,11 @@ public class ElementImpl extends NodeImpl implements Element {
         scrollByPagesImpl(getPeer()
             , pages);
     }
-    native static void scrollByPagesImpl(long peer
-        , int pages);
+    static void scrollByPagesImpl(long peer
+        , int pages) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.ElementImpl.scrollByPagesImpl: no wkj_* function exists for"
+                + " it in any jfxwebkit build");
+    }
 
 
     public HTMLCollection getElementsByClassName(String name)
@@ -1192,8 +1602,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return HTMLCollectionImpl.getImpl(getElementsByClassNameImpl(getPeer()
             , name));
     }
-    native static long getElementsByClassNameImpl(long peer
-        , String name);
+    static long getElementsByClassNameImpl(long peer
+        , String name) {
+        return ElementNative.getElementsByClassName(peer, name);
+    }
 
 
     public boolean matches(String selectors) throws DOMException
@@ -1201,8 +1613,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return matchesImpl(getPeer()
             , selectors);
     }
-    native static boolean matchesImpl(long peer
-        , String selectors);
+    static boolean matchesImpl(long peer
+        , String selectors) {
+        return ElementNative.matches(peer, selectors);
+    }
 
 
     public Element closest(String selectors) throws DOMException
@@ -1210,8 +1624,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return ElementImpl.getImpl(closestImpl(getPeer()
             , selectors));
     }
-    native static long closestImpl(long peer
-        , String selectors);
+    static long closestImpl(long peer
+        , String selectors) {
+        return ElementNative.closest(peer, selectors);
+    }
 
 
     public boolean webkitMatchesSelector(String selectors) throws DOMException
@@ -1219,8 +1635,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return webkitMatchesSelectorImpl(getPeer()
             , selectors);
     }
-    native static boolean webkitMatchesSelectorImpl(long peer
-        , String selectors);
+    static boolean webkitMatchesSelectorImpl(long peer
+        , String selectors) {
+        return ElementNative.webkitMatchesSelector(peer, selectors);
+    }
 
 
     public void webkitRequestFullScreen(short flags)
@@ -1228,22 +1646,28 @@ public class ElementImpl extends NodeImpl implements Element {
         webkitRequestFullScreenImpl(getPeer()
             , flags);
     }
-    native static void webkitRequestFullScreenImpl(long peer
-        , short flags);
+    static void webkitRequestFullScreenImpl(long peer
+        , short flags) {
+        ElementNative.webkitRequestFullScreen(peer, flags);
+    }
 
 
     public void webkitRequestFullscreen()
     {
         webkitRequestFullscreenImpl(getPeer());
     }
-    native static void webkitRequestFullscreenImpl(long peer);
+    static void webkitRequestFullscreenImpl(long peer) {
+        ElementNative.webkitRequestFullscreen(peer);
+    }
 
 
     public void remove() throws DOMException
     {
         removeImpl(getPeer());
     }
-    native static void removeImpl(long peer);
+    static void removeImpl(long peer) {
+        ElementNative.remove(peer);
+    }
 
 
     public Element querySelector(String selectors) throws DOMException
@@ -1251,8 +1675,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return ElementImpl.getImpl(querySelectorImpl(getPeer()
             , selectors));
     }
-    native static long querySelectorImpl(long peer
-        , String selectors);
+    static long querySelectorImpl(long peer
+        , String selectors) {
+        return ElementNative.querySelector(peer, selectors);
+    }
 
 
     public NodeList querySelectorAll(String selectors) throws DOMException
@@ -1260,8 +1686,10 @@ public class ElementImpl extends NodeImpl implements Element {
         return NodeListImpl.getImpl(querySelectorAllImpl(getPeer()
             , selectors));
     }
-    native static long querySelectorAllImpl(long peer
-        , String selectors);
+    static long querySelectorAllImpl(long peer
+        , String selectors) {
+        return ElementNative.querySelectorAll(peer, selectors);
+    }
 
 
 

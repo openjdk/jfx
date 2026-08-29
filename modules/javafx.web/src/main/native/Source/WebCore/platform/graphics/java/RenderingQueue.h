@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,10 @@
 
 #pragma once
 
-#include <jni.h>
 #include <wtf/Vector.h>
 #include <wtf/RefCounted.h>
 #include <wtf/HashSet.h>
-#include <wtf/java/DbgUtils.h>
+#include <wtf/java/WKJHandle.h>
 
 #include "RQRef.h"
 
@@ -38,38 +37,43 @@ namespace WebCore {
 class RQRef;
 
 class ByteBuffer : public RefCounted<ByteBuffer> {
-    RQ_LOG_INSTANCE_COUNT(ByteBuffer)
 public:
     static RefPtr<ByteBuffer> create(int capacity) {
         return adoptRef(new ByteBuffer(capacity));
     }
 
-    JLObject createDirectByteBuffer(JNIEnv* env) {
-        ASSERT(!isEmpty());
-        JLObject ret(env->NewDirectByteBuffer(m_buffer, m_position));
-        m_nio_holder = ret;
-        return ret;
-    }
+    /*
+     * Hands this buffer to Java's WCRenderQueue, which wraps the address without copying and
+     * appends it to the queue. This is NewDirectByteBuffer followed by fwkAddBuffer: the
+     * number of Java calls is unchanged at one, because wrapping an address is a JNI service
+     * that has no counterpart in the C ABI and so moves to the Java side of the callback.
+     *
+     * The id that comes back is the Java ByteBuffer object. It is held here, in m_nio_holder,
+     * for exactly as long as this C++ ByteBuffer lives - that is, until wkj_rq_release drops
+     * the last reference to it - so the Java object cannot be collected while the queue still
+     * refers to the memory. That is the lifetime the global reference gave it.
+     */
+    void addToRenderQueue(wkj_ref renderQueue);
 
     char* bufferAddress() { return m_buffer; }
 
     void putRef(RefPtr<RQRef> ref) {
-        ASSERT(m_position + sizeof(jint) <= m_capacity);
+        ASSERT(m_position + sizeof(int32_t) <= m_capacity);
         RefPtr<RQRef> repeatable_use_holder(ref);
         m_refList.append(repeatable_use_holder);
-        putInt(static_cast<jint>(*repeatable_use_holder));
+        putInt(static_cast<int32_t>(*repeatable_use_holder));
     }
 
-    void putInt(jint i) {
-        ASSERT(m_position + sizeof(jint) <= m_capacity);
-        memcpy((m_buffer + m_position), &i, sizeof(jint));
-        m_position += sizeof(jint);
+    void putInt(int32_t i) {
+        ASSERT(m_position + sizeof(int32_t) <= m_capacity);
+        memcpy((m_buffer + m_position), &i, sizeof(int32_t));
+        m_position += sizeof(int32_t);
     }
 
-    void putFloat(jfloat f) {
-        ASSERT(m_position + sizeof(jfloat) <= m_capacity);
-        memcpy((m_buffer + m_position), &f, sizeof(jfloat));
-        m_position += sizeof(jfloat);
+    void putFloat(float f) {
+        ASSERT(m_position + sizeof(float) <= m_capacity);
+        memcpy((m_buffer + m_position), &f, sizeof(float));
+        m_position += sizeof(float);
     }
 
     bool hasFreeSpace(int size) { return m_position + size <= m_capacity; }
@@ -90,7 +94,7 @@ private:
     char* m_buffer;
     int m_capacity;
     int m_position;
-    JGObject m_nio_holder;
+    WKJHandle m_nio_holder;
     Vector< RefPtr<RQRef> > m_refList;
 };
 
@@ -105,12 +109,11 @@ private:
  * with rendering (performed on the Render thread on the java side).
  */
 class RenderingQueue : public RefCounted<RenderingQueue> {
-    RQ_LOG_INSTANCE_COUNT(RenderingQueue)
 public:
     static const size_t MAX_BUFFER_COUNT = 8;
 
     static RefPtr<RenderingQueue> create(
-        const JLObject &jRQ,
+        wkj_ref jRQ,
         int capacity,
         bool autoFlush);
 
@@ -121,12 +124,12 @@ public:
         return *this;
     }
 
-    RenderingQueue& operator << (jint i) {
+    RenderingQueue& operator << (int32_t i) {
         m_buffer->putInt(i);
         return *this;
     }
 
-    RenderingQueue& operator << (jfloat f) {
+    RenderingQueue& operator << (float f) {
         m_buffer->putFloat(f);
         return *this;
     }
@@ -138,8 +141,13 @@ public:
         return m_buffer == nullptr || m_buffer->isEmpty();
     }
 
-    JLObject getWCRenderingQueue() {
-        return m_rqoRenderingQueue->cloneLocalCopy();
+    /*
+     * The Java WCRenderQueue, borrowed: the id belongs to m_rqoRenderingQueue and stays valid
+     * for the lifetime of this object. The JNI version minted a local ref per call; borrowing
+     * the owner's id is the same reference with no registry traffic.
+     */
+    wkj_ref getWCRenderingQueue() const {
+        return wkj_ref(*m_rqoRenderingQueue);
     }
 
     //this method need for enclosed Queue serialization
@@ -153,7 +161,7 @@ public:
     }
 
 private:
-    RenderingQueue(const JLObject& jRQ, int capacity, bool autoFlush) :
+    RenderingQueue(wkj_ref jRQ, int capacity, bool autoFlush) :
         m_rqoRenderingQueue(RQRef::create(jRQ)),
         m_capacity(capacity),
         m_autoFlush(autoFlush),

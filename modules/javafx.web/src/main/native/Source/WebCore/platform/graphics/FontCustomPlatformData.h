@@ -43,7 +43,7 @@ typedef const struct __CTFontDescriptor* CTFontDescriptorRef;
 #elif PLATFORM(JAVA)
 #include "TextFlags.h"
 #include "RenderStyleConstants.h"
-#include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
+#include <wtf/java/WKJHandle.h>
 #elif USE(CAIRO)
 #include "RefPtrCairo.h"
 
@@ -90,7 +90,7 @@ public:
     FontCustomPlatformData(sk_sp<SkTypeface>&&, FontPlatformData::CreationData&&);
 #endif
 #if PLATFORM(JAVA)
-    FontCustomPlatformData(const JLObject& data, FontPlatformData::CreationData&&);
+    FontCustomPlatformData(wkj_ref data, FontPlatformData::CreationData&&);
 #endif
     WEBCORE_EXPORT ~FontCustomPlatformData();
 
@@ -120,7 +120,7 @@ public:
 #endif
     FontPlatformData::CreationData creationData;
 #if PLATFORM(JAVA)
-    JGObject m_data;
+    WKJHandle m_data;
 #endif
     RenderingResourceIdentifier m_renderingResourceIdentifier;
 };

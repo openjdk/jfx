@@ -33,63 +33,67 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<MediaList*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<MediaList*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_MediaList_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MediaListImpl_getMediaTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MediaList_getMediaText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->mediaText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->mediaText());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_setMediaTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_MediaList_setMediaText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setMediaText(AtomString {String(env, value)});
+    IMPL->setMediaText(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MediaListImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MediaList_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
 
 // Functions
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MediaListImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_MediaList_item(int64_t peer, int32_t index, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->item(index));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->item(index));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_deleteMediumImpl(JNIEnv* env, jclass, jlong peer
-    , jstring oldMedium)
+WKJ_EXPORT void wkj_dom_MediaList_deleteMedium(int64_t peer, const uint16_t* oldMedium, int32_t oldMedium_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteMedium(AtomString {String(env, oldMedium)}));
+    raiseOnDOMError(IMPL->deleteMedium(AtomString {WKJString(oldMedium, oldMedium_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_appendMediumImpl(JNIEnv* env, jclass, jlong peer
-    , jstring newMedium)
+WKJ_EXPORT void wkj_dom_MediaList_appendMedium(int64_t peer, const uint16_t* newMedium, int32_t newMedium_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->appendMedium(AtomString{String(env, newMedium)});
+    IMPL->appendMedium(AtomString{WKJString(newMedium, newMedium_length)});
 }
 
 

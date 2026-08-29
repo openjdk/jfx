@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,19 +44,25 @@ public class CSSImportRuleImpl extends CSSRuleImpl implements CSSImportRule {
     public String getHref() {
         return getHrefImpl(getPeer());
     }
-    native static String getHrefImpl(long peer);
+    static String getHrefImpl(long peer) {
+        return CSSImportRuleNative.getHref(peer);
+    }
 
     @Override
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }
-    native static long getMediaImpl(long peer);
+    static long getMediaImpl(long peer) {
+        return CSSImportRuleNative.getMedia(peer);
+    }
 
     @Override
     public CSSStyleSheet getStyleSheet() {
         return CSSStyleSheetImpl.getImpl(getStyleSheetImpl(getPeer()));
     }
-    native static long getStyleSheetImpl(long peer);
+    static long getStyleSheetImpl(long peer) {
+        return CSSImportRuleNative.getStyleSheet(peer);
+    }
 
 }
 

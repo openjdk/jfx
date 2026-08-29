@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,133 +42,177 @@ public class HTMLAppletElementImpl extends HTMLElementImpl implements HTMLApplet
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLAppletElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLAppletElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getAlt() {
         return getAltImpl(getPeer());
     }
-    native static String getAltImpl(long peer);
+    static String getAltImpl(long peer) {
+        return HTMLAppletElementNative.getAlt(peer);
+    }
 
     @Override
     public void setAlt(String value) {
         setAltImpl(getPeer(), value);
     }
-    native static void setAltImpl(long peer, String value);
+    static void setAltImpl(long peer, String value) {
+        HTMLAppletElementNative.setAlt(peer, value);
+    }
 
     @Override
     public String getArchive() {
         return getArchiveImpl(getPeer());
     }
-    native static String getArchiveImpl(long peer);
+    static String getArchiveImpl(long peer) {
+        return HTMLAppletElementNative.getArchive(peer);
+    }
 
     @Override
     public void setArchive(String value) {
         setArchiveImpl(getPeer(), value);
     }
-    native static void setArchiveImpl(long peer, String value);
+    static void setArchiveImpl(long peer, String value) {
+        HTMLAppletElementNative.setArchive(peer, value);
+    }
 
     @Override
     public String getCode() {
         return getCodeImpl(getPeer());
     }
-    native static String getCodeImpl(long peer);
+    static String getCodeImpl(long peer) {
+        return HTMLAppletElementNative.getCode(peer);
+    }
 
     @Override
     public void setCode(String value) {
         setCodeImpl(getPeer(), value);
     }
-    native static void setCodeImpl(long peer, String value);
+    static void setCodeImpl(long peer, String value) {
+        HTMLAppletElementNative.setCode(peer, value);
+    }
 
     @Override
     public String getCodeBase() {
         return getCodeBaseImpl(getPeer());
     }
-    native static String getCodeBaseImpl(long peer);
+    static String getCodeBaseImpl(long peer) {
+        return HTMLAppletElementNative.getCodeBase(peer);
+    }
 
     @Override
     public void setCodeBase(String value) {
         setCodeBaseImpl(getPeer(), value);
     }
-    native static void setCodeBaseImpl(long peer, String value);
+    static void setCodeBaseImpl(long peer, String value) {
+        HTMLAppletElementNative.setCodeBase(peer, value);
+    }
 
     @Override
     public String getHeight() {
         return getHeightImpl(getPeer());
     }
-    native static String getHeightImpl(long peer);
+    static String getHeightImpl(long peer) {
+        return HTMLAppletElementNative.getHeight(peer);
+    }
 
     @Override
     public void setHeight(String value) {
         setHeightImpl(getPeer(), value);
     }
-    native static void setHeightImpl(long peer, String value);
+    static void setHeightImpl(long peer, String value) {
+        HTMLAppletElementNative.setHeight(peer, value);
+    }
 
     @Override
     public String getHspace() {
         return getHspaceImpl(getPeer())+"";
     }
-    native static int getHspaceImpl(long peer);
+    static int getHspaceImpl(long peer) {
+        return HTMLAppletElementNative.getHspace(peer);
+    }
 
     @Override
     public void setHspace(String value) {
         setHspaceImpl(getPeer(), Integer.parseInt(value));
     }
-    native static void setHspaceImpl(long peer, int value);
+    static void setHspaceImpl(long peer, int value) {
+        HTMLAppletElementNative.setHspace(peer, value);
+    }
 
     @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLAppletElementNative.getName(peer);
+    }
 
     @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLAppletElementNative.setName(peer, value);
+    }
 
     @Override
     public String getObject() {
         return getObjectImpl(getPeer());
     }
-    native static String getObjectImpl(long peer);
+    static String getObjectImpl(long peer) {
+        return HTMLAppletElementNative.getObject(peer);
+    }
 
     @Override
     public void setObject(String value) {
         setObjectImpl(getPeer(), value);
     }
-    native static void setObjectImpl(long peer, String value);
+    static void setObjectImpl(long peer, String value) {
+        HTMLAppletElementNative.setObject(peer, value);
+    }
 
     @Override
     public String getVspace() {
         return getVspaceImpl(getPeer())+"";
     }
-    native static int getVspaceImpl(long peer);
+    static int getVspaceImpl(long peer) {
+        return HTMLAppletElementNative.getVspace(peer);
+    }
 
     @Override
     public void setVspace(String value) {
         setVspaceImpl(getPeer(), Integer.parseInt(value));
     }
-    native static void setVspaceImpl(long peer, int value);
+    static void setVspaceImpl(long peer, int value) {
+        HTMLAppletElementNative.setVspace(peer, value);
+    }
 
     @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static String getWidthImpl(long peer);
+    static String getWidthImpl(long peer) {
+        return HTMLAppletElementNative.getWidth(peer);
+    }
 
     @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, String value);
+    static void setWidthImpl(long peer, String value) {
+        HTMLAppletElementNative.setWidth(peer, value);
+    }
 
 }
 

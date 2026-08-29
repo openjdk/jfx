@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,9 @@ public class DOMStringListImpl implements DOMStringList {
         return (arg == null) ? 0L : ((DOMStringListImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        DOMStringListNative.dispose(peer);
+    }
 
     static DOMStringList getImpl(long peer) {
         return (DOMStringList)create(peer);
@@ -83,7 +85,9 @@ public class DOMStringListImpl implements DOMStringList {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return DOMStringListNative.getLength(peer);
+    }
 
 
 // Functions
@@ -93,8 +97,10 @@ public class DOMStringListImpl implements DOMStringList {
         return itemImpl(getPeer()
             , index);
     }
-    native static String itemImpl(long peer
-        , int index);
+    static String itemImpl(long peer
+        , int index) {
+        return DOMStringListNative.item(peer, index);
+    }
 
 
     @Override
@@ -103,8 +109,10 @@ public class DOMStringListImpl implements DOMStringList {
         return containsImpl(getPeer()
             , string);
     }
-    native static boolean containsImpl(long peer
-        , String string);
+    static boolean containsImpl(long peer
+        , String string) {
+        return DOMStringListNative.contains(peer, string);
+    }
 
 
 }

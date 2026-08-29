@@ -34,63 +34,71 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLMetaElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLMetaElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getContentImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLMetaElement_getContent(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::contentAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::contentAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setContentImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLMetaElement_setContent(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::contentAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::contentAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getHttpEquivImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLMetaElement_getHttpEquiv(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::http_equivAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::http_equivAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setHttpEquivImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLMetaElement_setHttpEquiv(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::http_equivAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::http_equivAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLMetaElement_getName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getNameAttribute());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getNameAttribute());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLMetaElement_setName(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getSchemeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLMetaElement_getScheme(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::schemeAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::schemeAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setSchemeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLMetaElement_setScheme(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::schemeAttr, AtomString{String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::schemeAttr, AtomString{WKJString(value, value_length)});
 }
 
 }

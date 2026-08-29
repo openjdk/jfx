@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.webkit.dom.FrameDOMNative;
+import com.sun.webkit.dom.JSObjectNative;
 import com.sun.webkit.event.WCFocusEvent;
 import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
@@ -173,7 +175,7 @@ public final class WebPage {
         // by the JVM GC.
         Disposer.addRecord(new Object(), WebPage::collectJSCGarbages);
         // Invoke JavaScriptCore GC.
-        twkDoJSCGarbageCollection();
+        WebPageNative.doJSCGarbageCollection();
     }
 
     public WebPage(WebPageClient pageClient,
@@ -198,7 +200,11 @@ public final class WebPage {
         }
 
         hostWindow = new WCFrameView(this);
-        pPage = twkCreatePage(editable);
+
+        // Creation installs the process-wide callback tables and registers the wkj_ref that names
+        // this WebPage, in the same call: the frame loader client reads the page out of them while
+        // the page is being built, so there is no moment between the two for anything to observe.
+        pPage = WebPageNative.createPage(this, editable);
 
         twkInit(pPage, false, WCGraphicsManager.getGraphicsManager().getDevicePixelScale());
 
@@ -220,7 +226,7 @@ public final class WebPage {
     }
 
     // Called from the native code
-    private WCWidget getHostWindow() {
+    WCWidget getHostWindow() {
         return hostWindow;
     }
 
@@ -516,15 +522,15 @@ public final class WebPage {
         }
     }
 
-    private RenderTheme getRenderTheme() {
+    RenderTheme getRenderTheme() {
         return renderTheme;
     }
 
-    private static RenderTheme fwkGetDefaultRenderTheme() {
+    static RenderTheme fwkGetDefaultRenderTheme() {
         return ThemeClient.getDefaultRenderTheme();
     }
 
-    private ScrollBarTheme getScrollBarTheme() {
+    ScrollBarTheme getScrollBarTheme() {
         return scrollbarTheme;
     }
 
@@ -1237,11 +1243,9 @@ public final class WebPage {
             if (!frames.contains(frameID)) {
                 return null;
             }
-            String iconURL = twkGetIconURL(frameID);
-            // do we need any cache for icons here?
-            if (iconURL != null && !iconURL.isEmpty()) {
-                return WCGraphicsManager.getGraphicsManager().getIconImage(iconURL);
-            }
+            // Always null. This called twkGetIconURL, whose C body was `return 0;` for every input
+            // because ENABLE(ICONDATABASE) is never defined for this port, so the URL was always
+            // null and the icon lookup below it never ran. Answering in Java is parity exact.
             return null;
 
         } finally {
@@ -2119,7 +2123,7 @@ public final class WebPage {
     // Native callbacks
     // *************************************************************************
 
-    private void fwkFrameCreated(long frameID) {
+    void fwkFrameCreated(long frameID) {
         log.fine("Frame created: frame = " + frameID);
         if (frames.contains(frameID)) {
             log.fine("Error in fwkFrameCreated: frame is already in frames");
@@ -2128,7 +2132,7 @@ public final class WebPage {
         frames.add(frameID);
     }
 
-    private void fwkFrameDestroyed(long frameID) {
+    void fwkFrameDestroyed(long frameID) {
         log.fine("Frame destroyed: frame = " + frameID);
         if (!frames.contains(frameID)) {
             log.fine("Error in fwkFrameDestroyed: frame is not found in frames");
@@ -2137,7 +2141,7 @@ public final class WebPage {
         frames.remove(frameID);
     }
 
-    private void fwkRepaint(int x, int y, int w, int h) {
+    void fwkRepaint(int x, int y, int w, int h) {
         lockPage();
         try {
             if (paintLog.isLoggable(Level.FINEST)) {
@@ -2150,7 +2154,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkScroll(int x, int y, int w, int h, int deltaX, int deltaY) {
+    void fwkScroll(int x, int y, int w, int h, int deltaX, int deltaY) {
         if (paintLog.isLoggable(Level.FINEST)) {
             paintLog.finest("Scroll: " + x + " " + y + " " + w + " " + h + "  " + deltaX + " " + deltaY);
         }
@@ -2162,7 +2166,7 @@ public final class WebPage {
         scroll(x, y, w, h, deltaX, deltaY);
     }
 
-    private void fwkTransferFocus(boolean forward) {
+    void fwkTransferFocus(boolean forward) {
         log.finer("Transfer focus " + (forward ? "forward" : "backward"));
 
         if (pageClient != null) {
@@ -2170,7 +2174,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkSetCursor(long id) {
+    void fwkSetCursor(long id) {
         log.finer("Set cursor: " + id);
 
         if (pageClient != null) {
@@ -2178,7 +2182,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkSetFocus(boolean focus) {
+    void fwkSetFocus(boolean focus) {
         log.finer("Set focus: " + (focus ? "true" : "false"));
 
         if (pageClient != null) {
@@ -2186,7 +2190,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkSetTooltip(String tooltip) {
+    void fwkSetTooltip(String tooltip) {
         log.finer("Set tooltip: " + tooltip);
 
         if (pageClient != null) {
@@ -2194,7 +2198,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkPrint() {
+    void fwkPrint() {
         log.finer("Print");
 
         if (uiClient != null) {
@@ -2202,7 +2206,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkSetRequestURL(long pFrame, int id, String url) {
+    void fwkSetRequestURL(long pFrame, int id, String url) {
         log.finer("Set request URL: id = " + id + ", url = " + url);
 
         synchronized (requestURLs) {
@@ -2210,7 +2214,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkRemoveRequestURL(long pFrame, int id) {
+    void fwkRemoveRequestURL(long pFrame, int id) {
         log.finer("Set request URL: id = " + id);
 
         synchronized (requestURLs) {
@@ -2219,7 +2223,7 @@ public final class WebPage {
         }
     }
 
-    private WebPage fwkCreateWindow(
+    WebPage fwkCreateWindow(
             boolean menu, boolean status, boolean toolbar, boolean resizable) {
         log.finer("Create window");
 
@@ -2229,7 +2233,7 @@ public final class WebPage {
         return null;
     }
 
-    private void fwkShowWindow() {
+    void fwkShowWindow() {
         log.finer("Show window");
 
         if (uiClient != null) {
@@ -2237,7 +2241,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkCloseWindow() {
+    void fwkCloseWindow() {
         log.finer("Close window");
 
         if (permitCloseWindowAction()) {
@@ -2247,7 +2251,7 @@ public final class WebPage {
         }
     }
 
-    private WCRectangle fwkGetWindowBounds() {
+    WCRectangle fwkGetWindowBounds() {
         log.fine("Get window bounds");
 
         if (uiClient != null) {
@@ -2259,7 +2263,7 @@ public final class WebPage {
         return fwkGetPageBounds();
     }
 
-    private void fwkSetWindowBounds(int x, int y, int w, int h) {
+    void fwkSetWindowBounds(int x, int y, int w, int h) {
         log.finer("Set window bounds: " + x + " " + y + " " + w + " " + h);
 
         if (uiClient != null) {
@@ -2267,16 +2271,16 @@ public final class WebPage {
         }
     }
 
-    private WCRectangle fwkGetPageBounds() {
+    WCRectangle fwkGetPageBounds() {
         log.finer("Get page bounds");
         return new WCRectangle(0, 0, width, height);
     }
 
-    private void fwkSetScrollbarsVisible(boolean visible) {
+    void fwkSetScrollbarsVisible(boolean visible) {
         // TODO: handle this request internally
     }
 
-    private void fwkSetStatusbarText(String text) {
+    void fwkSetStatusbarText(String text) {
         log.finer("Set statusbar text: " + text);
 
         if (uiClient != null) {
@@ -2284,7 +2288,7 @@ public final class WebPage {
         }
     }
 
-    private String[] fwkChooseFile(String initialFileName, boolean multiple, String mimeFilters) {
+    String[] fwkChooseFile(String initialFileName, boolean multiple, String mimeFilters) {
         log.finer("Choose file, initial=" + initialFileName);
 
         return uiClient != null
@@ -2292,7 +2296,7 @@ public final class WebPage {
                 : null;
     }
 
-    private void fwkStartDrag(
+    void fwkStartDrag(
           Object image,
           int imageOffsetX, int imageOffsetY,
           int eventPosX, int eventPosY,
@@ -2310,7 +2314,7 @@ public final class WebPage {
         }
     }
 
-    private WCPoint fwkScreenToWindow(WCPoint ptScreen) {
+    WCPoint fwkScreenToWindow(WCPoint ptScreen) {
         log.finer("fwkScreenToWindow");
 
         if (pageClient != null) {
@@ -2319,7 +2323,7 @@ public final class WebPage {
         return ptScreen;
     }
 
-    private WCPoint fwkWindowToScreen(WCPoint ptWindow) {
+    WCPoint fwkWindowToScreen(WCPoint ptWindow) {
         log.finer("fwkWindowToScreen");
 
         if (pageClient != null) {
@@ -2329,7 +2333,7 @@ public final class WebPage {
     }
 
 
-    private void fwkAlert(String text) {
+    void fwkAlert(String text) {
         log.fine("JavaScript alert(): text = " + text);
 
         if (uiClient != null) {
@@ -2337,7 +2341,7 @@ public final class WebPage {
         }
     }
 
-    private boolean fwkConfirm(String text) {
+    boolean fwkConfirm(String text) {
         log.fine("JavaScript confirm(): text = " + text);
 
         if (uiClient != null) {
@@ -2346,7 +2350,7 @@ public final class WebPage {
         return false;
     }
 
-    private String fwkPrompt(String text, String defaultValue) {
+    String fwkPrompt(String text, String defaultValue) {
         log.fine("JavaScript prompt(): text = " + text + ", default = " + defaultValue);
 
         if (uiClient != null) {
@@ -2355,7 +2359,7 @@ public final class WebPage {
         return null;
     }
 
-    private boolean fwkCanRunBeforeUnloadConfirmPanel() {
+    boolean fwkCanRunBeforeUnloadConfirmPanel() {
         log.fine("JavaScript canRunBeforeUnloadConfirmPanel()");
 
         if (uiClient != null) {
@@ -2364,7 +2368,7 @@ public final class WebPage {
         return false;
     }
 
-    private boolean fwkRunBeforeUnloadConfirmPanel(String message) {
+    boolean fwkRunBeforeUnloadConfirmPanel(String message) {
         log.fine("JavaScript runBeforeUnloadConfirmPanel(): message = " + message);
 
         if (uiClient != null) {
@@ -2373,7 +2377,7 @@ public final class WebPage {
         return false;
     }
 
-    private void fwkAddMessageToConsole(String message, int lineNumber,
+    void fwkAddMessageToConsole(String message, int lineNumber,
             String sourceId)
     {
         log.fine("fwkAddMessageToConsole(): message = " + message
@@ -2383,7 +2387,7 @@ public final class WebPage {
         }
     }
 
-    private void fwkFireLoadEvent(long frameID, int state,
+    void fwkFireLoadEvent(long frameID, int state,
                                   String url, String contentType,
                                   double progress, int errorCode)
     {
@@ -2394,7 +2398,7 @@ public final class WebPage {
         fireLoadEvent(frameID, state, url, contentType, progress, errorCode);
     }
 
-    private void fwkFireResourceLoadEvent(long frameID, int state,
+    void fwkFireResourceLoadEvent(long frameID, int state,
                                           int id, String contentType,
                                           double progress, int errorCode)
     {
@@ -2421,7 +2425,7 @@ public final class WebPage {
         fireResourceLoadEvent(frameID, eventState, url, contentType, progress, errorCode);
     }
 
-    private boolean fwkPermitNavigateAction(long pFrame, String url) {
+    boolean fwkPermitNavigateAction(long pFrame, String url) {
         log.fine("Policy: permit NAVIGATE: pFrame = " + pFrame + ", url = " + url);
 
         if (policyClient != null) {
@@ -2430,7 +2434,7 @@ public final class WebPage {
         return true;
     }
 
-    private boolean fwkPermitRedirectAction(long pFrame, String url) {
+    boolean fwkPermitRedirectAction(long pFrame, String url) {
         log.fine("Policy: permit REDIRECT: pFrame = " + pFrame + ", url = " + url);
 
         if (policyClient != null) {
@@ -2439,7 +2443,7 @@ public final class WebPage {
         return true;
     }
 
-    private boolean fwkPermitAcceptResourceAction(long pFrame, String url) {
+    boolean fwkPermitAcceptResourceAction(long pFrame, String url) {
         log.fine("Policy: permit ACCEPT_RESOURCE: pFrame + " + pFrame + ", url = " + url);
 
         if (policyClient != null) {
@@ -2448,7 +2452,7 @@ public final class WebPage {
         return true;
     }
 
-    private boolean fwkPermitSubmitDataAction(long pFrame, String url,
+    boolean fwkPermitSubmitDataAction(long pFrame, String url,
                                               String httpMethod, boolean isSubmit)
     {
         log.fine("Policy: permit " + (isSubmit ? "" : "RE") + "SUBMIT_DATA: pFrame = " +
@@ -2464,16 +2468,7 @@ public final class WebPage {
         return true;
     }
 
-    private boolean fwkPermitEnableScriptsAction(long pFrame, String url) {
-        log.fine("Policy: permit ENABLE_SCRIPTS: pFrame + " + pFrame + ", url = " + url);
-
-        if (policyClient != null) {
-            return policyClient.permitEnableScriptsAction(pFrame, str2url(url));
-        }
-        return true;
-    }
-
-    private boolean fwkPermitNewWindowAction(long pFrame, String url) {
+    boolean fwkPermitNewWindowAction(long pFrame, String url) {
         log.fine("Policy: permit NEW_PAGE: pFrame = " + pFrame + ", url = " + url);
 
         if (policyClient != null) {
@@ -2494,12 +2489,12 @@ public final class WebPage {
         return true;
     }
 
-    private void fwkRepaintAll() {
+    void fwkRepaintAll() {
         log.fine("Repainting the entire page");
         repaintAll();
     }
 
-    private boolean fwkSendInspectorMessageToFrontend(String message) {
+    boolean fwkSendInspectorMessageToFrontend(String message) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("Sending inspector message to frontend, message: [{0}]",
                     message);
@@ -2521,9 +2516,11 @@ public final class WebPage {
         return twkWorkerThreadCount();
     }
 
-    private static native int twkWorkerThreadCount();
+    private static int twkWorkerThreadCount() {
+        return WebPageNative.workerThreadCount();
+    }
 
-    private void fwkDidClearWindowObject(long pContext, long pWindowObject) {
+    void fwkDidClearWindowObject(long pContext, long pWindowObject) {
         if (pageClient != null) {
             pageClient.didClearWindowObject(pContext, pWindowObject);
         }
@@ -2594,134 +2591,375 @@ public final class WebPage {
     // Native methods
     // *************************************************************************
 
-    private static native void twkInitWebCore(boolean useJIT, boolean useDFGJIT, boolean useCSS3D);
-    private native long twkCreatePage(boolean editable);
-    private native void twkInit(long pPage, boolean usePlugins, float devicePixelScale);
-    private native void twkDestroyPage(long pPage);
+    // Everything below forwards to WebPageNative, the FFM facade for the wkj_* page ABI declared by
+    // Source/WebKitLegacy/java/api/webkit_java_api_page.h. The eleven methods still marked `native`
+    // are the ones that ABI deliberately does not carry, each with the reason on the spot.
 
-    private native long twkGetMainFrame(long pPage);
-    private native long twkGetParentFrame(long pFrame);
-    private native long[] twkGetChildFrames(long pFrame);
+    private static void twkInitWebCore(boolean useJIT, boolean useDFGJIT, boolean useCSS3D) {
+        WebPageNative.initWebCore(useJIT, useDFGJIT, useCSS3D);
+    }
 
-    private native String twkGetName(long pFrame);
-    private native String twkGetURL(long pFrame);
-    private native String twkGetInnerText(long pFrame);
-    private native String twkGetRenderTree(long pFrame);
-    private native String twkGetContentType(long pFrame);
-    private native String twkGetTitle(long pFrame);
-    private native String twkGetIconURL(long pFrame);
-    private native static Document twkGetDocument(long pFrame);
-    private native static Element twkGetOwnerElement(long pFrame);
+    private void twkInit(long pPage, boolean usePlugins, float devicePixelScale) {
+        WebPageNative.init(pPage, usePlugins, devicePixelScale);
+    }
 
-    private native void twkOpen(long pFrame, String url);
-    private native void twkOverridePreference(long pPage, String key, String value);
-    private native void twkResetToConsistentStateBeforeTesting(long pPage);
-    private native void twkLoad(long pFrame, String text, String contentType);
-    private native boolean twkIsLoading(long pFrame);
-    private native void twkStop(long pFrame);
-    private native void twkStopAll(long pPage); // sync
-    private native void twkRefresh(long pFrame);
+    private void twkDestroyPage(long pPage) {
+        WebPageNative.destroyPage(pPage);
+    }
 
-    private native boolean twkGoBackForward(long pPage, int distance);
+    private long twkGetMainFrame(long pPage) {
+        return WebPageNative.getMainFrame(pPage);
+    }
 
-    private native boolean twkCopy(long pFrame);
-    private native boolean twkFindInPage(long pPage,
-                                         String stringToFind, boolean forward,
-                                         boolean wrap, boolean matchCase);
-    private native boolean twkFindInFrame(long pFrame,
-                                          String stringToFind, boolean forward,
-                                          boolean wrap, boolean matchCase);
+    private long twkGetParentFrame(long pFrame) {
+        return WebPageNative.getParentFrame(pFrame);
+    }
 
-    private native float twkGetZoomFactor(long pFrame, boolean textOnly);
-    private native void twkSetZoomFactor(long pFrame, float zoomFactor, boolean textOnly);
+    private long[] twkGetChildFrames(long pFrame) {
+        return WebPageNative.getChildFrames(pFrame);
+    }
 
-    private native Object twkExecuteScript(long pFrame, String script);
+    private String twkGetName(long pFrame) {
+        return WebPageNative.getName(pFrame);
+    }
 
-    private native void twkReset(long pFrame);
+    private String twkGetURL(long pFrame) {
+        return WebPageNative.getURL(pFrame);
+    }
 
-    private native int twkGetFrameHeight(long pFrame);
-    private native int twkBeginPrinting(long pPage, float width, float height);
-    private native void twkEndPrinting(long pPage);
-    private native void twkPrint(long pPage, WCRenderQueue gc, int pageNumber, float width);
-    private native float twkAdjustFrameHeight(long pFrame, float oldTop, float oldBottom, float bottomLimit);
+    private String twkGetInnerText(long pFrame) {
+        return WebPageNative.getInnerText(pFrame);
+    }
 
-    private native int[] twkGetVisibleRect(long pFrame);
-    private native void twkScrollToPosition(long pFrame, int x, int y);
-    private native int[] twkGetContentSize(long pFrame);
-    private native void twkSetTransparent(long pFrame, boolean isTransparent);
-    private native void twkSetBackgroundColor(long pFrame, int backgroundColor);
+    private String twkGetRenderTree(long pFrame) {
+        return WebPageNative.getRenderTree(pFrame);
+    }
 
-    private native void twkSetBounds(long pPage, int x, int y, int w, int h);
-    private native void twkPrePaint(long pPage);
-    private native void twkUpdateContent(long pPage, WCRenderQueue rq, int x, int y, int w, int h);
-    private native void twkUpdateRendering(long pPage);
-    private native void twkPostPaint(long pPage, WCRenderQueue rq,
-                                     int x, int y, int w, int h);
+    private String twkGetContentType(long pFrame) {
+        return WebPageNative.getContentType(pFrame);
+    }
 
-    private native String twkGetEncoding(long pPage);
-    private native void twkSetEncoding(long pPage, String encoding);
+    private String twkGetTitle(long pFrame) {
+        return WebPageNative.getTitle(pFrame);
+    }
 
-    private native void twkProcessFocusEvent(long pPage, int id, int direction);
-    private native boolean twkProcessKeyEvent(long pPage, int type, String text,
-                                              String keyIdentifier,
-                                              int windowsVirtualKeyCode,
-                                              boolean shift, boolean ctrl,
-                                              boolean alt, boolean meta, double when);
-    private native boolean twkProcessMouseEvent(long pPage, int id,
-                                                int button, int buttonMask, int clickCount,
-                                                int x, int y, int sx, int sy,
-                                                boolean shift, boolean control, boolean alt, boolean meta,
-                                                boolean popupTrigger, double when);
-    private native boolean twkProcessMouseWheelEvent(long pPage,
-                                                     int x, int y, int sx, int sy,
-                                                     float dx, float dy,
-                                                     boolean shift, boolean control, boolean alt, boolean meta,
-                                                     double when);
-    private native boolean twkProcessInputTextChange(long pPage, String committed, String composed,
-                                                     int[] attributes, int caretPosition);
-    private native boolean twkProcessCaretPositionChange(long pPage, int caretPosition);
-    private native int[] twkGetTextLocation(long pPage, int charIndex);
-    private native int twkGetInsertPositionOffset(long pPage);
-    private native int twkGetCommittedTextLength(long pPage);
-    private native String twkGetCommittedText(long pPage);
-    private native String twkGetSelectedText(long pPage);
+    // Both peers carry exactly one reference for Java, which NodeImpl's disposer drops. The facade
+    // is in com.sun.webkit.dom because NodeImpl.getImpl is package private there and because that
+    // is the one place the reference rule has to be stated.
+    private static Document twkGetDocument(long pFrame) {
+        return FrameDOMNative.getDocument(pFrame);
+    }
 
-    private native int twkProcessDrag(long page,
+    private static Element twkGetOwnerElement(long pFrame) {
+        return FrameDOMNative.getOwnerElement(pFrame);
+    }
+
+    private void twkOpen(long pFrame, String url) {
+        WebPageNative.open(pFrame, url);
+    }
+
+    private void twkOverridePreference(long pPage, String key, String value) {
+        WebPageNative.overridePreference(pPage, key, value);
+    }
+
+    private void twkResetToConsistentStateBeforeTesting(long pPage) {
+        WebPageNative.resetToConsistentStateBeforeTesting(pPage);
+    }
+
+    private void twkLoad(long pFrame, String text, String contentType) {
+        WebPageNative.load(pFrame, text, contentType);
+    }
+
+    private boolean twkIsLoading(long pFrame) {
+        return WebPageNative.isLoading(pFrame);
+    }
+
+    private void twkStop(long pFrame) {
+        WebPageNative.stop(pFrame);
+    }
+
+    private void twkStopAll(long pPage) { // sync
+        WebPageNative.stopAll(pPage);
+    }
+
+    private void twkRefresh(long pFrame) {
+        WebPageNative.refresh(pFrame);
+    }
+
+    private boolean twkGoBackForward(long pPage, int distance) {
+        return WebPageNative.goBackForward(pPage, distance);
+    }
+
+    private boolean twkCopy(long pFrame) {
+        return WebPageNative.copy(pFrame);
+    }
+
+    private boolean twkFindInPage(long pPage,
+                                  String stringToFind, boolean forward,
+                                  boolean wrap, boolean matchCase) {
+        return WebPageNative.findInPage(pPage, stringToFind, forward, wrap, matchCase);
+    }
+
+    private boolean twkFindInFrame(long pFrame,
+                                   String stringToFind, boolean forward,
+                                   boolean wrap, boolean matchCase) {
+        return WebPageNative.findInFrame(pFrame, stringToFind, forward, wrap, matchCase);
+    }
+
+    private float twkGetZoomFactor(long pFrame, boolean textOnly) {
+        return WebPageNative.getZoomFactor(pFrame, textOnly);
+    }
+
+    private void twkSetZoomFactor(long pFrame, float zoomFactor, boolean textOnly) {
+        WebPageNative.setZoomFactor(pFrame, zoomFactor, textOnly);
+    }
+
+    // Everything this does after finding the frame is LiveConnect, which is why its facade is
+    // JSObjectNative rather than WebPageNative: the result needs the same WKJJSValue that
+    // JSObject.eval does.
+    private Object twkExecuteScript(long pFrame, String script) {
+        return JSObjectNative.executeScript(pFrame, script);
+    }
+
+    private void twkReset(long pFrame) {
+        WebPageNative.reset(pFrame);
+    }
+
+    private int twkGetFrameHeight(long pFrame) {
+        return WebPageNative.getFrameHeight(pFrame);
+    }
+
+    private int twkBeginPrinting(long pPage, float width, float height) {
+        return WebPageNative.beginPrinting(pPage, width, height);
+    }
+
+    private void twkEndPrinting(long pPage) {
+        WebPageNative.endPrinting(pPage);
+    }
+
+    private void twkPrint(long pPage, WCRenderQueue gc, int pageNumber, float width) {
+        WebPageNative.print(pPage, gc, pageNumber, width);
+    }
+
+    private float twkAdjustFrameHeight(long pFrame, float oldTop, float oldBottom, float bottomLimit) {
+        return WebPageNative.adjustFrameHeight(pFrame, oldTop, oldBottom, bottomLimit);
+    }
+
+    private int[] twkGetVisibleRect(long pFrame) {
+        return WebPageNative.getVisibleRect(pFrame);
+    }
+
+    private void twkScrollToPosition(long pFrame, int x, int y) {
+        WebPageNative.scrollToPosition(pFrame, x, y);
+    }
+
+    private int[] twkGetContentSize(long pFrame) {
+        return WebPageNative.getContentSize(pFrame);
+    }
+
+    private void twkSetTransparent(long pFrame, boolean isTransparent) {
+        WebPageNative.setTransparent(pFrame, isTransparent);
+    }
+
+    private void twkSetBackgroundColor(long pFrame, int backgroundColor) {
+        WebPageNative.setBackgroundColor(pFrame, backgroundColor);
+    }
+
+    private void twkSetBounds(long pPage, int x, int y, int w, int h) {
+        WebPageNative.setBounds(pPage, x, y, w, h);
+    }
+
+    private void twkPrePaint(long pPage) {
+        WebPageNative.prePaint(pPage);
+    }
+
+    private void twkUpdateContent(long pPage, WCRenderQueue rq, int x, int y, int w, int h) {
+        WebPageNative.updateContent(pPage, rq, x, y, w, h);
+    }
+
+    private void twkUpdateRendering(long pPage) {
+        WebPageNative.updateRendering(pPage);
+    }
+
+    private void twkPostPaint(long pPage, WCRenderQueue rq, int x, int y, int w, int h) {
+        WebPageNative.postPaint(pPage, rq, x, y, w, h);
+    }
+
+    private String twkGetEncoding(long pPage) {
+        return WebPageNative.getEncoding(pPage);
+    }
+
+    private void twkSetEncoding(long pPage, String encoding) {
+        WebPageNative.setEncoding(pPage, encoding);
+    }
+
+    private void twkProcessFocusEvent(long pPage, int id, int direction) {
+        WebPageNative.processFocusEvent(pPage, id, direction);
+    }
+
+    private boolean twkProcessKeyEvent(long pPage, int type, String text,
+                                       String keyIdentifier,
+                                       int windowsVirtualKeyCode,
+                                       boolean shift, boolean ctrl,
+                                       boolean alt, boolean meta, double when) {
+        return WebPageNative.processKeyEvent(pPage, type, text, keyIdentifier,
+                windowsVirtualKeyCode, shift, ctrl, alt, meta, when);
+    }
+
+    private boolean twkProcessMouseEvent(long pPage, int id,
+                                         int button, int buttonMask, int clickCount,
+                                         int x, int y, int sx, int sy,
+                                         boolean shift, boolean control, boolean alt, boolean meta,
+                                         boolean popupTrigger, double when) {
+        return WebPageNative.processMouseEvent(pPage, id, button, buttonMask, clickCount,
+                x, y, sx, sy, shift, control, alt, meta, popupTrigger, when);
+    }
+
+    private boolean twkProcessMouseWheelEvent(long pPage,
+                                              int x, int y, int sx, int sy,
+                                              float dx, float dy,
+                                              boolean shift, boolean control, boolean alt, boolean meta,
+                                              double when) {
+        return WebPageNative.processMouseWheelEvent(pPage, x, y, sx, sy, dx, dy,
+                shift, control, alt, meta, when);
+    }
+
+    private boolean twkProcessInputTextChange(long pPage, String committed, String composed,
+                                              int[] attributes, int caretPosition) {
+        return WebPageNative.processInputTextChange(pPage, committed, composed, attributes,
+                caretPosition);
+    }
+
+    private boolean twkProcessCaretPositionChange(long pPage, int caretPosition) {
+        return WebPageNative.processCaretPositionChange(pPage, caretPosition);
+    }
+
+    private int[] twkGetTextLocation(long pPage, int charIndex) {
+        return WebPageNative.getTextLocation(pPage, charIndex);
+    }
+
+    private int twkGetInsertPositionOffset(long pPage) {
+        return WebPageNative.getInsertPositionOffset(pPage);
+    }
+
+    private int twkGetCommittedTextLength(long pPage) {
+        return WebPageNative.getCommittedTextLength(pPage);
+    }
+
+    private String twkGetCommittedText(long pPage) {
+        return WebPageNative.getCommittedText(pPage);
+    }
+
+    private String twkGetSelectedText(long pPage) {
+        return WebPageNative.getSelectedText(pPage);
+    }
+
+    private int twkProcessDrag(long page,
             int commandId,
             String[] mimeTypes, String[] values,
             int x, int y,
             int screenX, int screenY,
-            int dndActionId);
+            int dndActionId) {
+        return WebPageNative.processDrag(page, commandId, mimeTypes, values, x, y,
+                screenX, screenY, dndActionId);
+    }
 
-    private native boolean twkExecuteCommand(long page, String command,
-                                             String value);
-    private native boolean twkQueryCommandEnabled(long page, String command);
-    private native boolean twkQueryCommandState(long page, String command);
-    private native String twkQueryCommandValue(long page, String command);
-    private native boolean twkIsEditable(long page);
-    private native void twkSetEditable(long page, boolean editable);
-    private native String twkGetHtml(long pFrame);
+    private boolean twkExecuteCommand(long page, String command,
+                                      String value) {
+        return WebPageNative.executeCommand(page, command, value);
+    }
 
-    private native boolean twkGetUsePageCache(long page);
-    private native void twkSetUsePageCache(long page, boolean usePageCache);
-    private native boolean twkGetDeveloperExtrasEnabled(long page);
-    private native void twkSetDeveloperExtrasEnabled(long page,
-                                                     boolean enabled);
-    private native boolean twkIsJavaScriptEnabled(long page);
-    private native void twkSetJavaScriptEnabled(long page, boolean enable);
-    private native boolean twkIsContextMenuEnabled(long page);
-    private native void twkSetContextMenuEnabled(long page, boolean enable);
-    private native void twkSetUserStyleSheetLocation(long page, String url);
-    private native String twkGetUserAgent(long page);
-    private native void twkSetUserAgent(long page, String userAgent);
-    private native void twkSetLocalStorageDatabasePath(long page, String path);
-    private native void twkSetLocalStorageEnabled(long page, boolean enabled);
+    private boolean twkQueryCommandEnabled(long page, String command) {
+        return WebPageNative.queryCommandEnabled(page, command);
+    }
 
-    private native int twkGetUnloadEventListenersCount(long pFrame);
+    private boolean twkQueryCommandState(long page, String command) {
+        return WebPageNative.queryCommandState(page, command);
+    }
 
-    private native void twkConnectInspectorFrontend(long pPage);
-    private native void twkDisconnectInspectorFrontend(long pPage);
-    private native void twkDispatchInspectorMessageFromFrontend(long pPage,
-                                                                String message);
-    private static native void twkDoJSCGarbageCollection();
+    private String twkQueryCommandValue(long page, String command) {
+        return WebPageNative.queryCommandValue(page, command);
+    }
+
+    private boolean twkIsEditable(long page) {
+        return WebPageNative.isEditable(page);
+    }
+
+    private void twkSetEditable(long page, boolean editable) {
+        WebPageNative.setEditable(page, editable);
+    }
+
+    private String twkGetHtml(long pFrame) {
+        return WebPageNative.getHtml(pFrame);
+    }
+
+    private boolean twkGetUsePageCache(long page) {
+        return WebPageNative.getUsePageCache(page);
+    }
+
+    private void twkSetUsePageCache(long page, boolean usePageCache) {
+        WebPageNative.setUsePageCache(page, usePageCache);
+    }
+
+    private boolean twkGetDeveloperExtrasEnabled(long page) {
+        return WebPageNative.getDeveloperExtrasEnabled(page);
+    }
+
+    private void twkSetDeveloperExtrasEnabled(long page,
+                                              boolean enabled) {
+        WebPageNative.setDeveloperExtrasEnabled(page, enabled);
+    }
+
+    private boolean twkIsJavaScriptEnabled(long page) {
+        return WebPageNative.isJavaScriptEnabled(page);
+    }
+
+    private void twkSetJavaScriptEnabled(long page, boolean enable) {
+        WebPageNative.setJavaScriptEnabled(page, enable);
+    }
+
+    private boolean twkIsContextMenuEnabled(long page) {
+        return WebPageNative.isContextMenuEnabled(page);
+    }
+
+    private void twkSetContextMenuEnabled(long page, boolean enable) {
+        WebPageNative.setContextMenuEnabled(page, enable);
+    }
+
+    private void twkSetUserStyleSheetLocation(long page, String url) {
+        WebPageNative.setUserStyleSheetLocation(page, url);
+    }
+
+    private String twkGetUserAgent(long page) {
+        return WebPageNative.getUserAgent(page);
+    }
+
+    private void twkSetUserAgent(long page, String userAgent) {
+        WebPageNative.setUserAgent(page, userAgent);
+    }
+
+    private void twkSetLocalStorageDatabasePath(long page, String path) {
+        WebPageNative.setLocalStorageDatabasePath(page, path);
+    }
+
+    private void twkSetLocalStorageEnabled(long page, boolean enabled) {
+        WebPageNative.setLocalStorageEnabled(page, enabled);
+    }
+
+    private int twkGetUnloadEventListenersCount(long pFrame) {
+        return WebPageNative.getUnloadEventListenersCount(pFrame);
+    }
+
+    private void twkConnectInspectorFrontend(long pPage) {
+        WebPageNative.connectInspectorFrontend(pPage);
+    }
+
+    private void twkDisconnectInspectorFrontend(long pPage) {
+        WebPageNative.disconnectInspectorFrontend(pPage);
+    }
+
+    private void twkDispatchInspectorMessageFromFrontend(long pPage,
+                                                         String message) {
+        WebPageNative.dispatchInspectorMessageFromFrontend(pPage, message);
+    }
 }

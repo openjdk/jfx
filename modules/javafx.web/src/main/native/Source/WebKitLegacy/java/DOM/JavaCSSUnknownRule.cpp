@@ -30,13 +30,13 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSUnknownRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSUnknownRule*>(wkj_to_ptr(peer)))
 
 }

@@ -31,12 +31,19 @@
 #include "SharedBuffer.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
 
-FontCustomPlatformData::FontCustomPlatformData(const JLObject& data, FontPlatformData::CreationData&& cdata)
+/*
+ * m_data is the Java WCFontCustomPlatformData, held for the lifetime of this object. It is a
+ * WKJHandle now rather than a global reference; the release point is ~FontCustomPlatformData,
+ * which runs the handle destructor. (Declared in platform/graphics/FontCustomPlatformData.h,
+ * outside this directory - see the migration report.)
+ */
+FontCustomPlatformData::FontCustomPlatformData(wkj_ref data, FontPlatformData::CreationData&& cdata)
     :creationData(cdata)
-    ,m_data(data)
+    ,m_data(WKJHandle::retained(data))
     ,m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
 {
 }
@@ -47,60 +54,33 @@ FontCustomPlatformData::~FontCustomPlatformData()
 
 FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext&)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     int size = fontDescription.computedPixelSize();
-    static jmethodID mid = env->GetMethodID(
-            PG_GetFontCustomPlatformDataClass(env),
-            "createFont",
-            "(IZZ)Lcom/sun/webkit/graphics/WCFont;");
-    ASSERT(mid);
 
-    JLObject font(env->CallObjectMethod(
-            m_data,
-            mid,
-            size,
-            bool_to_jbool(bold),
-            bool_to_jbool(italic)));
-    WTF::CheckAndClearException(env);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_custom_data_create_font)
+        return FontPlatformData(nullptr, size);
 
-    return FontPlatformData(RQRef::create(font), size);
+    WKJHandle font { cb->font_custom_data_create_font(m_data.get(), size,
+                                                      bold ? 1 : 0, italic ? 1 : 0) };
+    wkjCheckAndClearException();
+
+    return FontPlatformData(RQRef::create(font.get()), size);
 }
 
 RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& itemInCollection)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->create_shared_buffer || !cb->create_font_custom_platform_data)
+        return nullptr;
 
-    static JGClass sharedBufferClass(env->FindClass(
-            "com/sun/webkit/SharedBuffer"));
-    ASSERT(sharedBufferClass);
+    WKJHandle sharedBuffer { cb->create_shared_buffer(wkj_from_ptr(&buffer)) };
+    wkjCheckAndClearException();
 
-    static jmethodID mid1 = env->GetStaticMethodID(
-            sharedBufferClass,
-            "fwkCreate",
-            "(J)Lcom/sun/webkit/SharedBuffer;");
-    ASSERT(mid1);
+    WKJHandle data { cb->create_font_custom_platform_data(sharedBuffer.get()) };
+    wkjCheckAndClearException();
 
-    JLObject sharedBuffer(env->CallStaticObjectMethod(
-            sharedBufferClass,
-            mid1,
-            ptr_to_jlong(&buffer)));
-    WTF::CheckAndClearException(env);
-
-    static jmethodID mid2 = env->GetMethodID(
-            PG_GetGraphicsManagerClass(env),
-            "fwkCreateFontCustomPlatformData",
-            "(Lcom/sun/webkit/SharedBuffer;)"
-            "Lcom/sun/webkit/graphics/WCFontCustomPlatformData;");
-    ASSERT(mid2);
-
-    JLObject data(env->CallObjectMethod(
-            PL_GetGraphicsManager(env),
-            mid2,
-            (jobject) sharedBuffer));
-    WTF::CheckAndClearException(env);
     FontPlatformData::CreationData creationData = { buffer, WTF::String::fromUTF8("") };
-    return data ? adoptRef(new FontCustomPlatformData(data, WTF::move(creationData))) : nullptr;
+    return data ? adoptRef(new FontCustomPlatformData(data.get(), WTF::move(creationData))) : nullptr;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

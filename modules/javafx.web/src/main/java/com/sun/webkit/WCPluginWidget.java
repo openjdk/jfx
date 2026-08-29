@@ -43,13 +43,10 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
             PlatformLogger.getLogger(WCPluginWidget.class.getName());
 
     private final Plugin plugin;
-    private long pData = 0L;//for native code
-
-    private static native void initIDs();
-
-    static {
-        initIDs();
-    }
+    // The WebCore::PluginWidgetJava peer. WKJHostTheme.plugin_widget_set_peer writes it, and the
+    // three wkj_plugin_widget_ entry points take it explicitly, where the JNI functions read this
+    // field for themselves with GetLongField.
+    private long pData = 0L;
 
     private WCPluginWidget(
             WebPage webPage,
@@ -66,12 +63,24 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
                 this);
     }
 
+    /**
+     * Stores the {@code WebCore::PluginWidgetJava*} this widget calls back through, which is the
+     * {@code theme.plugin_widget_set_peer} callback slot. It replaces the {@code SetLongField} the
+     * C++ constructor performed, and is why the three {@code wkj_plugin_widget_} entry points no
+     * longer need a field id.
+     *
+     * @param peer the peer, zero to detach
+     */
+    void setPeer(long peer) {
+        this.pData = peer;
+    }
+
     @Override
     protected void requestFocus() {
         plugin.requestFocus();
     }
 
-    private static WCPluginWidget create(
+    static WCPluginWidget create(
         final WebPage webPage,
         final int width, final int height,
         final String urlString,
@@ -91,7 +100,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
                 width, height);
     }
 
-    private void fwkSetNativeContainerBounds(
+    void fwkSetNativeContainerBounds(
             int x,
             int y,
             int width,
@@ -154,16 +163,21 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
     }
 
     //converts widget coordinates to container
-    private native WCRectangle twkConvertToPage(WCRectangle rc);
+    private WCRectangle twkConvertToPage(WCRectangle rc) {
+        return WCPluginWidgetNative.convertToPage(pData, rc);
+    }
 
-    private native void twkInvalidateWindowlessPluginRect(
+    private void twkInvalidateWindowlessPluginRect(
             //client coordinates!!!
             int x,
             int y,
             int width,
-            int height);
+            int height)
+    {
+        WCPluginWidgetNative.invalidateRect(pData, x, y, width, height);
+    }
 
-    private boolean fwkHandleMouseEvent(
+    boolean fwkHandleMouseEvent(
             String type,
             int offsetX,
             int offsetY,
@@ -198,7 +212,9 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
         twkInvalidateWindowlessPluginRect(x, y, width, height);
     }
 
-    private native void twkSetPlugunFocused(boolean isFocused);
+    private void twkSetPlugunFocused(boolean isFocused) {
+        WCPluginWidgetNative.setFocused(pData, isFocused);
+    }
 
     @Override
     public String fwkEvent(

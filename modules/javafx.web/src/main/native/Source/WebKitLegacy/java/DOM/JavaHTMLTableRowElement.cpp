@@ -37,110 +37,123 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLTableRowElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLTableRowElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getRowIndexImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getRowIndex(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->rowIndex();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getSectionRowIndexImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getSectionRowIndex(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->sectionRowIndex();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getCellsImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLTableRowElement_getCells(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->cells()));
+    return WKJReturnPeer<HTMLCollection>(WTF::getPtr(IMPL->cells()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getAlignImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getAlign(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::alignAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::alignAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_setAlign(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getBgColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getBgColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::bgcolorAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::bgcolorAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_setBgColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getChImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getCh(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::charAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::charAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_setChImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_setCh(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getChOffImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getChOff(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::charoffAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::charoffAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_setChOffImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_setChOff(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_getVAlignImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLTableRowElement_getVAlign(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::valignAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::valignAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_setVAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_setVAlign(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, AtomString {WKJString(value, value_length)});
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_insertCellImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_HTMLTableRowElement_insertCell(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLElement>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->insertCell(index))));
+    return WKJReturnPeer<HTMLElement>(WTF::getPtr(raiseOnDOMError(IMPL->insertCell(index))));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableRowElementImpl_deleteCellImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT void wkj_dom_HTMLTableRowElement_deleteCell(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteCell(index));
+    raiseOnDOMError(IMPL->deleteCell(index));
 }
 
 

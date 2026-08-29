@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class MediaListImpl implements MediaList {
         return (arg == null) ? 0L : ((MediaListImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        MediaListNative.dispose(peer);
+    }
 
     static MediaList getImpl(long peer) {
         return (MediaList)create(peer);
@@ -84,19 +86,25 @@ public class MediaListImpl implements MediaList {
     public String getMediaText() {
         return getMediaTextImpl(getPeer());
     }
-    native static String getMediaTextImpl(long peer);
+    static String getMediaTextImpl(long peer) {
+        return MediaListNative.getMediaText(peer);
+    }
 
     @Override
     public void setMediaText(String value) throws DOMException {
         setMediaTextImpl(getPeer(), value);
     }
-    native static void setMediaTextImpl(long peer, String value);
+    static void setMediaTextImpl(long peer, String value) {
+        MediaListNative.setMediaText(peer, value);
+    }
 
     @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return MediaListNative.getLength(peer);
+    }
 
 
 // Functions
@@ -106,8 +114,10 @@ public class MediaListImpl implements MediaList {
         return itemImpl(getPeer()
             , index);
     }
-    native static String itemImpl(long peer
-        , int index);
+    static String itemImpl(long peer
+        , int index) {
+        return MediaListNative.item(peer, index);
+    }
 
 
     @Override
@@ -116,8 +126,10 @@ public class MediaListImpl implements MediaList {
         deleteMediumImpl(getPeer()
             , oldMedium);
     }
-    native static void deleteMediumImpl(long peer
-        , String oldMedium);
+    static void deleteMediumImpl(long peer
+        , String oldMedium) {
+        MediaListNative.deleteMedium(peer, oldMedium);
+    }
 
 
     @Override
@@ -126,8 +138,10 @@ public class MediaListImpl implements MediaList {
         appendMediumImpl(getPeer()
             , newMedium);
     }
-    native static void appendMediumImpl(long peer
-        , String newMedium);
+    static void appendMediumImpl(long peer
+        , String newMedium) {
+        MediaListNative.appendMedium(peer, newMedium);
+    }
 
 
 }

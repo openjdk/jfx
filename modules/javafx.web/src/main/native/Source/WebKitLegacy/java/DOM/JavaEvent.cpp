@@ -38,22 +38,24 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<Event*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<Event*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_Event_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_EventImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getCPPType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     if (is<WheelEvent>(*IMPL))
         return 1;
     if (is<MouseEvent>(*IMPL))
@@ -69,120 +71,135 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_EventImpl_getCPPTypeImpl(JNIEnv*,
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EventImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getType(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->type());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->type());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getTargetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Event_getTarget(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->target()));
+    return WKJReturnPeer<EventTarget>(WTF::getPtr(IMPL->target()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getCurrentTargetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Event_getCurrentTarget(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->currentTarget()));
+    return WKJReturnPeer<EventTarget>(WTF::getPtr(IMPL->currentTarget()));
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_EventImpl_getEventPhaseImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_Event_getEventPhase(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->eventPhase();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getBubblesImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getBubbles(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->bubbles();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelableImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getCancelable(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->cancelable();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getTimeStampImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Event_getTimeStamp(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->timeStamp().approximateWallTime().secondsSinceEpoch().milliseconds();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getDefaultPreventedImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getDefaultPrevented(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->defaultPrevented();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getIsTrustedImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getIsTrusted(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->isTrusted();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getSrcElementImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Event_getSrcElement(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->target()));
+    return WKJReturnPeer<EventTarget>(WTF::getPtr(IMPL->target()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getReturnValueImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getReturnValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->legacyReturnValue();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setReturnValueImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_Event_setReturnValue(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setLegacyReturnValue(value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelBubbleImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Event_getCancelBubble(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->cancelBubble();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setCancelBubbleImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_Event_setCancelBubble(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setCancelBubble(value);
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopPropagationImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_Event_stopPropagation(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->stopPropagation();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_preventDefaultImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_Event_preventDefault(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->preventDefault();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_initEventImpl(JNIEnv* env, jclass, jlong peer
-    , jstring eventTypeArg
-    , jboolean canBubbleArg
-    , jboolean cancelableArg)
+WKJ_EXPORT void wkj_dom_Event_initEvent(int64_t peer, const uint16_t* eventTypeArg, int32_t eventTypeArg_length, int32_t canBubbleArg, int32_t cancelableArg)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initEvent(AtomString{ String(env, eventTypeArg) }
+    IMPL->initEvent(AtomString{ WKJString(eventTypeArg, eventTypeArg_length) }
             , canBubbleArg
             , cancelableArg);
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopImmediatePropagationImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_Event_stopImmediatePropagation(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->stopImmediatePropagation();
 }

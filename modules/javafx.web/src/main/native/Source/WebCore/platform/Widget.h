@@ -51,9 +51,8 @@ OBJC_CLASS NSView;
 OBJC_CLASS NSWindow;
 typedef NSView *PlatformWidget;
 #elif PLATFORM(JAVA)
-#include <jni.h>
-#include <wtf/java/JavaRef.h>
-typedef JGObject PlatformWidget;
+#include <wtf/java/WKJHandle.h>
+typedef WKJHandle PlatformWidget;
 #elif PLATFORM(WIN)
 typedef struct HWND__* HWND;
 typedef HWND PlatformWidget;

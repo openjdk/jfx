@@ -228,7 +228,7 @@ final class RenderMediaControls {
     /**
      * returns ((width << 16) | height)
      */
-    private static int fwkGetSliderThumbSize(int type) {
+    static int fwkGetSliderThumbSize(int type) {
         WCImage image = null;
         switch (type) {
             case SLIDER_TYPE_TIME:

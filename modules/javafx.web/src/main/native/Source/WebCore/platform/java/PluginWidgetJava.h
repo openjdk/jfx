@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 #include "ScrollView.h"
 #include "Widget.h"
 
+#include <webkit_java_api.h>
 #include <wtf/text/WTFString.h>
 
 
@@ -49,8 +50,12 @@ class PluginWidgetJava final : public Widget {
     Vector<AtomString> m_paramValues;
 
 public:
+    /*
+     * `wfh` is the registry id of the Java WebPage that owns the frame. It used to be the
+     * same object as a raw Java reference, held by FrameLoaderClientJava.
+     */
     PluginWidgetJava(
-        jobject wfh,
+        wkj_ref wfh,
         HTMLPlugInElement* element,
         const String& url,
         const String& mimeType,

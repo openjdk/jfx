@@ -40,9 +40,8 @@ typedef RetainPtr<CGPatternRef> PlatformPatternPtr;
 typedef struct _cairo_pattern cairo_pattern_t;
 typedef cairo_pattern_t* PlatformPatternPtr;
 #elif PLATFORM(JAVA)
-#include <jni.h>
-#include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
-typedef JGObject PlatformPatternPtr;
+#include <wtf/java/WKJHandle.h>
+typedef WKJHandle PlatformPatternPtr;
 #endif
 
 namespace WebCore {

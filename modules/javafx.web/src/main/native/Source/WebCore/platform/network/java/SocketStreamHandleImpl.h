@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2011 Google Inc.  All rights reserved.
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,7 +35,7 @@
 #include "SocketStreamHandle.h"
 
 #include <pal/SessionID.h>
-#include <wtf/java/JavaRef.h>
+#include <wtf/java/WKJHandle.h>
 #include <wtf/RefCounted.h>
 #include <wtf/StreamBuffer.h>
 
@@ -70,7 +70,7 @@ private:
     SocketStreamHandleImpl(const URL&, Page*, SocketStreamHandleClient&, const StorageSessionProvider*);
 
     RefPtr<const StorageSessionProvider> m_storageSessionProvider;
-    JGObject m_ref;
+    WKJHandle m_ref;
     StreamBuffer<uint8_t, 1024 * 1024> m_buffer;
     static const unsigned maxBufferSize = 100 * 1024 * 1024;
 };

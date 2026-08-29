@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,17 @@
 
 #include "config.h"
 
-#include "PlatformJavaClasses.h"
 #include "RenderingQueue.h"
-#include "RQRef.h"
 
-#include <wtf/java/JavaRef.h>
+#include "RQRef.h"
+#include "WKJPlatformJava.h"
+
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 
-#include "com_sun_webkit_graphics_WCRenderQueue.h"
+// WKJ_EXPORT, wkj_rq_release and WKJHostGraphics all arrive with webkit_java_api.h, which
+// WKJPlatformJava.h includes; webkit_java_api_platform.h is not includable on its own.
+
 
 namespace WebCore {
 
@@ -45,9 +47,21 @@ static Addr2ByteBuffer& getAddr2ByteBuffer()
     return container.get();
 }
 
+void ByteBuffer::addToRenderQueue(wkj_ref renderQueue)
+{
+    ASSERT(!isEmpty());
+
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->rq_add_buffer)
+        return;
+
+    m_nio_holder = WKJHandle(cb->rq_add_buffer(renderQueue, m_buffer, m_position));
+    wkjCheckAndClearException();
+}
+
 /*static*/
 RefPtr<RenderingQueue> RenderingQueue::create(
-    const JLObject &jRQ,
+    wkj_ref jRQ,
     int capacity,
     bool autoFlush)
 {
@@ -71,29 +85,23 @@ RenderingQueue& RenderingQueue::freeSpace(int size) {
 }
 
 void RenderingQueue::flush() {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->rq_flush)
+        return;
 
-    static jmethodID midFwkFlush = env->GetMethodID(
-            PG_GetRenderQueueClass(env), "fwkFlush", "()V");
-    ASSERT(midFwkFlush);
-
-    env->CallVoidMethod(getWCRenderingQueue(), midFwkFlush);
-    WTF::CheckAndClearException(env);
+    cb->rq_flush(getWCRenderingQueue());
+    wkjCheckAndClearException();
 }
 
 void RenderingQueue::disposeGraphics() {
-    JNIEnv* env = WTF::GetJavaEnv();
     // The method is called from the dtor which potentially can be called after VM detach.
-    // So the check for nullptr.
-    if (!env)
+    // So the check for a host table, which is what the null environment check meant.
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->rq_dispose_graphics)
        return;
 
-    static jmethodID midFwkDisposeGraphics = env->GetMethodID(
-        PG_GetRenderQueueClass(env), "fwkDisposeGraphics", "()V");
-    ASSERT(midFwkDisposeGraphics);
-
-    env->CallVoidMethod(getWCRenderingQueue(), midFwkDisposeGraphics);
-    WTF::CheckAndClearException(env);
+    cb->rq_dispose_graphics(getWCRenderingQueue());
+    wkjCheckAndClearException();
 }
 
 /*
@@ -103,29 +111,21 @@ RenderingQueue& RenderingQueue::flushBuffer() {
     if (isEmpty()) {
         return *this;
     }
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID midFwkAddBuffer = env->GetMethodID(PG_GetRenderQueueClass(env),
-        "fwkAddBuffer", "(Ljava/nio/ByteBuffer;)V");
-    ASSERT(midFwkAddBuffer);
 
     Addr2ByteBuffer &a2bb = getAddr2ByteBuffer();
     a2bb.set(m_buffer->bufferAddress(), m_buffer);
-    env->CallVoidMethod(
-        getWCRenderingQueue(),
-        midFwkAddBuffer,
-        (jobject)(m_buffer->createDirectByteBuffer(env)));
-    WTF::CheckAndClearException(env);
+    m_buffer->addToRenderQueue(getWCRenderingQueue());
 
     m_buffer = nullptr;
 
     return *this;
 }
-}
 
+} // namespace WebCore
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
-    (JNIEnv* env, jobject, jobjectArray bufs)
+extern "C" {
+
+WKJ_EXPORT void wkj_rq_release(const int64_t* buffer_addrs, int32_t count)
 {
     using namespace WebCore;
     /*
@@ -134,12 +134,16 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
      * so when a resource is dereferenced (as a result of ByteBuffer destruction)
      * it should be thread safe.
      */
+    if (!buffer_addrs)
+        return;
+
     Addr2ByteBuffer& a2bb = getAddr2ByteBuffer();
-    for (int i = 0; i < env->GetArrayLength(bufs); ++i) {
-        char *key = (char *)env->GetDirectBufferAddress(
-            JLObject(env->GetObjectArrayElement(bufs, i)));
+    for (int32_t i = 0; i < count; ++i) {
+        char* key = static_cast<char*>(wkj_to_ptr(buffer_addrs[i]));
         if (key != 0) {
             a2bb.remove(key);
         }
     }
 }
+
+} // extern "C"

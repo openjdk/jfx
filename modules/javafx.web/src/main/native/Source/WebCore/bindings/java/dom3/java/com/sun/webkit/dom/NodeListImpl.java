@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class NodeListImpl implements NodeList {
         return (arg == null) ? 0L : ((NodeListImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        NodeListNative.dispose(peer);
+    }
 
     static NodeList getImpl(long peer) {
         return (NodeList)create(peer);
@@ -84,7 +86,9 @@ public class NodeListImpl implements NodeList {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return NodeListNative.getLength(peer);
+    }
 
 
 // Functions
@@ -94,8 +98,10 @@ public class NodeListImpl implements NodeList {
         return NodeImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return NodeListNative.item(peer, index);
+    }
 
 
 }

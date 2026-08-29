@@ -34,33 +34,36 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSImportRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSImportRule*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSImportRuleImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSImportRule_getHref(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->href());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->href());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSImportRuleImpl_getMediaImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSImportRule_getMedia(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<MediaList>(env, WTF::getPtr(IMPL->media()));
+    return WKJReturnPeer<MediaList>(WTF::getPtr(IMPL->media()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSImportRuleImpl_getStyleSheetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSImportRule_getStyleSheet(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleSheet>(env, WTF::getPtr(IMPL->styleSheet()));
+    return WKJReturnPeer<CSSStyleSheet>(WTF::getPtr(IMPL->styleSheet()));
 }
 
 }

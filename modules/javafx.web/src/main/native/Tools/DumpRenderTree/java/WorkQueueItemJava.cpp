@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,22 +24,23 @@
  */
 
 #include "config.h"
-#include "JavaEnv.h"
+
+#include <drt_java_api.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSStringRef.h>
-#include <wtf/java/JavaRef.h>
 
 #include "WorkQueueItem.h"
 
-extern jstring JSStringRef_to_jstring(JSStringRef ref, JNIEnv* env);
-extern JSStringRef jstring_to_JSStringRef(jstring str, JNIEnv* env);
+// Defined in TestRunnerJava.cpp, as its JNI predecessor was.
+extern const uint16_t* JSStringRef_to_utf16(JSStringRef ref, int32_t* length);
 
 bool LoadItem::invoke() const
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    JLString jUrl(JSStringRef_to_jstring(m_url.get(), env));
-    env->CallStaticObjectMethod(getDumpRenderTreeClass(), getLoadURLMID(), (jstring)jUrl);
-    CheckAndClearException(env);
+    if (drt_host && drt_host->drt.load_url) {
+        int32_t urlLength = 0;
+        const uint16_t* url = JSStringRef_to_utf16(m_url.get(), &urlLength);
+        drt_host->drt.load_url(url, urlLength);
+    }
 
     return true;
 }
@@ -58,9 +59,8 @@ bool ScriptItem::invoke() const
 
 bool BackForwardItem::invoke() const
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    env->CallStaticObjectMethod(getDumpRenderTreeClass(), getGoBackForward(), m_howFar);
-    CheckAndClearException(env);
+    if (drt_host && drt_host->drt.go_back_forward)
+        drt_host->drt.go_back_forward((int32_t) m_howFar);
 
     return true;
 }

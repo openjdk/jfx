@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -99,8 +99,17 @@ public final class BackForwardList {
             return (pitem == 0 ? title : (title = bflItemGetTitle(pitem)));
         }
 
+        /**
+         * Always {@code null}. This called {@code bflItemGetIcon}, whose C body was entirely
+         * commented out because {@code ENABLE(ICONDATABASE)} is never defined for this port, so the
+         * native call returned null for every input. Answering in Java is parity exact: the
+         * observable result is the same for every item, and the icon field is never assigned by
+         * anything else.
+         *
+         * @return {@code null}
+         */
         public WCImage getIcon() {
-            return (pitem == 0 ? icon : (icon = bflItemGetIcon(pitem)));
+            return null;
         }
 
         public String getTarget() {
@@ -212,7 +221,7 @@ public final class BackForwardList {
     }
 
      public Entry get(int index) {
-        Entry host = (Entry)bflGet(page.getPage(), index);
+        Entry host = bflGet(page.getPage(), index);
         return host;
     }
 
@@ -305,30 +314,97 @@ public final class BackForwardList {
         return listenerList.toArray(new WCChangeListener[0]);
     }
 
-    // Only called from the native code.
-    private void notifyChanged() {
+    /**
+     * Builds the entry that mirrors one {@code HistoryItem}. Called from the native code, through
+     * {@link BackForwardListNative#createEntry}, which registers the returned object and hands the
+     * library the id it parks in {@code HistoryItem::m_hostObject}.
+     *
+     * @param item the {@code HistoryItem} handle
+     * @param page the page handle
+     * @return the new entry
+     */
+    static Entry createEntry(long item, long page) {
+        return new Entry(item, page);
+    }
+
+    /**
+     * Tells an entry that its {@code HistoryItem} has been destroyed. Called from the native code,
+     * through {@link BackForwardListNative#itemDestroyed}.
+     *
+     * @param entry the entry
+     */
+    static void notifyItemDestroyed(Entry entry) {
+        entry.notifyItemDestroyed();
+    }
+
+    // Only called from the native code, through BackForwardListNative.
+    void notifyChanged() {
         for (WCChangeListener l : listenerList) {
             l.stateChanged(new WCChangeEvent(this));
         }
     }
 
-    native private static String bflItemGetURL(long item);
-    native private static String bflItemGetTitle(long item);
-    native private static WCImage bflItemGetIcon(long item);
-    native private static long bflItemGetLastVisitedDate(long item);
-    native private static boolean bflItemIsTargetItem(long item);
-    native private static Entry[] bflItemGetChildren(long item, long page);
-    native private static String bflItemGetTarget(long item);
-    native private static void bflClearBackForwardListForDRT(long page);
+    private static String bflItemGetURL(long item) {
+        return BackForwardListNative.itemGetURL(item);
+    }
 
-    native private static int bflSize(long page);
-    native private static int bflGetMaximumSize(long page);
-    native private static void bflSetMaximumSize(long page, int size);
-    native private static int bflGetCurrentIndex(long page);
-    native private static int bflIndexOf(long page, long item, boolean reverse);
-    native private static void bflSetEnabled(long page, boolean flag);
-    native private static boolean bflIsEnabled(long page);
-    native private static Object bflGet(long page, int index);
-    native private static int bflSetCurrentIndex(long page, int index);
-    native private static void bflSetHostObject(long page, Object host);
+    private static String bflItemGetTitle(long item) {
+        return BackForwardListNative.itemGetTitle(item);
+    }
+
+    private static boolean bflItemIsTargetItem(long item) {
+        return BackForwardListNative.itemIsTargetItem(item);
+    }
+
+    private static Entry[] bflItemGetChildren(long item, long page) {
+        return BackForwardListNative.itemChildren(item, page);
+    }
+
+    private static String bflItemGetTarget(long item) {
+        return BackForwardListNative.itemGetTarget(item);
+    }
+
+    private static void bflClearBackForwardListForDRT(long page) {
+        BackForwardListNative.clearBackForwardListForDRT(page);
+    }
+
+    private static int bflSize(long page) {
+        return BackForwardListNative.size(page);
+    }
+
+    private static int bflGetMaximumSize(long page) {
+        return BackForwardListNative.getMaximumSize(page);
+    }
+
+    private static void bflSetMaximumSize(long page, int size) {
+        BackForwardListNative.setMaximumSize(page, size);
+    }
+
+    private static int bflGetCurrentIndex(long page) {
+        return BackForwardListNative.getCurrentIndex(page);
+    }
+
+    private static int bflIndexOf(long page, long item, boolean reverse) {
+        return BackForwardListNative.indexOf(page, item, reverse);
+    }
+
+    private static void bflSetEnabled(long page, boolean flag) {
+        BackForwardListNative.setEnabled(page, flag);
+    }
+
+    private static boolean bflIsEnabled(long page) {
+        return BackForwardListNative.isEnabled(page);
+    }
+
+    private static Entry bflGet(long page, int index) {
+        return BackForwardListNative.itemAt(page, index);
+    }
+
+    private static int bflSetCurrentIndex(long page, int index) {
+        return BackForwardListNative.setCurrentIndex(page, index);
+    }
+
+    private static void bflSetHostObject(long page, BackForwardList host) {
+        BackForwardListNative.setHostObject(page, host);
+    }
 }

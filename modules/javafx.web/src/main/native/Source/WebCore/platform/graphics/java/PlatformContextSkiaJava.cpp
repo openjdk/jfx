@@ -176,7 +176,7 @@ SkColor PlatformContextSkiaJava::State::applyAlpha(SkColor c) const
 
 // Danger: canvas can be NULL.
 PlatformContextSkiaJava::PlatformContextSkiaJava(
-    jobject jgc, int x, int y, int w, int h) : PlatformContextJava(jgc)
+    wkj_ref jgc, int x, int y, int w, int h) : PlatformContextJava(jgc)
 {
     m_stateStack.append(State());
     m_state = &m_stateStack.last();

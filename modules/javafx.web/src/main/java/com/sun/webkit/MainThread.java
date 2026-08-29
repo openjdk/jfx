@@ -30,12 +30,17 @@ package com.sun.webkit;
  */
 final class MainThread {
 
-    private static void fwkScheduleDispatchFunctions() {
+    static void fwkScheduleDispatchFunctions() {
         Invoker.getInvoker().postOnEventThread(() -> {
             twkScheduleDispatchFunctions();
         });
     }
 
-    private static native void twkScheduleDispatchFunctions();
-    static native void twkSetShutdown(boolean isShutdown);
+    private static void twkScheduleDispatchFunctions() {
+        MainThreadNative.dispatchFunctions();
+    }
+
+    static void twkSetShutdown(boolean isShutdown) {
+        MainThreadNative.setShutdown(isShutdown);
+    }
 }

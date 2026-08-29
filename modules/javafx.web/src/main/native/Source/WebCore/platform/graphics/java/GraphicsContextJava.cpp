@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -41,10 +42,10 @@
 #include "FontRanges.h"
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
+#include "WKJPlatformJava.h"
 #include "Gradient.h"
 #include "IntRect.h"
 #include "ImageBuffer.h"
-#include "PlatformJavaClasses.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "Path.h"
@@ -54,8 +55,6 @@
 #include "Font.h"
 #include "TransformationMatrix.h"
 
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
-#include "com_sun_webkit_graphics_WCPath.h"
 
 
 #ifndef M_PI
@@ -65,7 +64,7 @@
 namespace WebCore {
 
 static void setGradient(Gradient &gradient,
-    const AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, jint id)
+    const AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, int32_t id)
 {
     const Vector<GradientColorStop, 2> stops = gradient.stops().stops();
     int nStops = stops.size();
@@ -95,26 +94,26 @@ static void setGradient(Gradient &gradient,
 
     context->rq().freeSpace(4 * 11 + 20 * nStops)
     << id
-    << (jfloat)p0.x()
-    << (jfloat)p0.y()
-    << (jfloat)p1.x()
-    << (jfloat)p1.y()
-    << (jint)isRadialGradient;
+    << (float)p0.x()
+    << (float)p0.y()
+    << (float)p1.x()
+    << (float)p1.y()
+    << (int32_t)isRadialGradient;
 
     if (isRadialGradient) {
         context->rq()
-        << (jfloat)(gradientSpaceTransformation.xScale() * startRadius)
-        << (jfloat)(gradientSpaceTransformation.xScale() * endRadius);
+        << (float)(gradientSpaceTransformation.xScale() * startRadius)
+        << (float)(gradientSpaceTransformation.xScale() * endRadius);
     }
     context->rq()
-    << (jint)0 //is not proportional
-    << (jint)gradient.spreadMethod()
-    << (jint)nStops;
+    << (int32_t)0 //is not proportional
+    << (int32_t)gradient.spreadMethod()
+    << (int32_t)nStops;
 
     for (const auto& cs : stops) {
         auto [r, g, b, a] = cs.color.toColorTypeLossy<SRGBA<float>>().resolved();
         context->rq()
-        << r << g << b << a << (jfloat)cs.offset;
+        << r << g << b << a << (float)cs.offset;
     }
 }
 
@@ -131,7 +130,7 @@ static void flushImageRQ(PlatformGraphicsContext* context, const PlatformImagePt
 
         // 2. The buffered image's RenderQueue is to be decoded.
         context->rq().freeSpace(8)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
         << rq->getRQRenderingQueue();
     }
 }
@@ -162,7 +161,7 @@ void GraphicsContextJava::savePlatformState()
         return;
 
     platformContext()->rq().freeSpace(4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SAVESTATE;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SAVESTATE;
 }
 
 void GraphicsContextJava::restore(GraphicsContextState::Purpose) {
@@ -176,7 +175,7 @@ void GraphicsContextJava::restorePlatformState()
         return;
 
     platformContext()->rq().freeSpace(4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_RESTORESTATE;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_RESTORESTATE;
 }
 
 // Draws a filled rectangle with a stroked border.
@@ -187,8 +186,8 @@ void GraphicsContextJava::drawRect(const FloatRect& rect, float borderThickness 
         return;
 
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWRECT
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWRECT
+    << (int32_t)rect.x() << (int32_t)rect.y() << (int32_t)rect.width() << (int32_t)rect.height();
 }
 
 // This is only used to draw borders.
@@ -198,8 +197,8 @@ void GraphicsContextJava::drawLine(const FloatPoint& point1, const FloatPoint& p
         return;
 
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWLINE
-    << (jint)point1.x() << (jint)point1.y() << (jint)point2.x() << (jint)point2.y();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWLINE
+    << (int32_t)point1.x() << (int32_t)point1.y() << (int32_t)point2.x() << (int32_t)point2.y();
 }
 
 // This method is only used to draw the little circles used in lists.
@@ -209,8 +208,8 @@ void GraphicsContextJava::drawEllipse(const FloatRect& rect)
         return;
 
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWELLIPSE
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height(); // TODO-java: float to int conversion
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWELLIPSE
+    << (int32_t)rect.x() << (int32_t)rect.y() << (int32_t)rect.width() << (int32_t)rect.height(); // TODO-java: float to int conversion
 }
 
 // FIXME: This function needs to be adjusted to match the functionality on the Mac side.
@@ -220,9 +219,9 @@ void GraphicsContextJava::drawEllipse(const FloatRect& rect)
 //        return;
 //
 //    platformContext()->rq().freeSpace(28)
-//    << (jint)com_sun_webkit_graphics_GraphicsDecoder_STROKEARC
-//    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height()
-//    << (jint)startAngle << (jint)angleSpan;
+//    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_STROKEARC
+//    << (int32_t)rect.x() << (int32_t)rect.y() << (int32_t)rect.width() << (int32_t)rect.height()
+//    << (int32_t)startAngle << (int32_t)angleSpan;
 //}
 
 void GraphicsContextJava::fillRect(const FloatRect& rect, const Color& color)
@@ -232,7 +231,7 @@ void GraphicsContextJava::fillRect(const FloatRect& rect, const Color& color)
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     platformContext()->rq().freeSpace(36)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFFI
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFFI
     << rect.x() << rect.y()
     << rect.width() << rect.height()
     << r << g << b << a;
@@ -262,7 +261,7 @@ void GraphicsContextJava::fillRect(const FloatRect& rect, RequiresClipToRect req
         }
 
         platformContext()->rq().freeSpace(20)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFF
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFF
         << rect.x() << rect.y()
         << rect.width() << rect.height();
     }
@@ -285,8 +284,8 @@ void GraphicsContextJava::clip(const FloatRect& rect)
 
     m_state.clipBounds.intersect(m_state.transform.mapRect(rect));
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
+    << (int32_t)rect.x() << (int32_t)rect.y() << (int32_t)rect.width() << (int32_t)rect.height();
 }
 
 IntRect GraphicsContextJava::clipBounds() const
@@ -348,9 +347,9 @@ void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float of
     for (size_t i = 0; i < toDraw.size(); i++) {
         IntRect focusRect = toDraw[i];
         auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
-        platformContext()->rq() << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
-        << (jint)focusRect.x() << (jint)focusRect.y()
-        << (jint)focusRect.width() << (jint)focusRect.height()
+        platformContext()->rq() << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
+        << (int32_t)focusRect.x() << (int32_t)focusRect.y()
+        << (int32_t)focusRect.width() << (int32_t)focusRect.height()
         << r << g << b << a;
     }
 }
@@ -496,7 +495,7 @@ void GraphicsContextJava::translate(float x, float y)
 
     m_state.transform.translate(x, y);
     platformContext()->rq().freeSpace(12)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_TRANSLATE
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_TRANSLATE
     << x << y;
 }
 
@@ -507,7 +506,7 @@ void GraphicsContextJava::setPlatformFillColor(const Color& color)
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
     << r << g << b << a;
 }
 
@@ -517,12 +516,12 @@ void GraphicsContextJava::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
         return;
 
     platformContext()->rq().freeSpace(16)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_TEXT_MODE
-    << (jint)(mode.contains(TextDrawingMode::Fill))
-    << (jint)(mode.contains(TextDrawingMode::Stroke))
-    << (jint)0;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_TEXT_MODE
+    << (int32_t)(mode.contains(TextDrawingMode::Fill))
+    << (int32_t)(mode.contains(TextDrawingMode::Stroke))
+    << (int32_t)0;
     //utatodo:
-    //<< (jint)(mode & TextModeClip);
+    //<< (int32_t)(mode & TextModeClip);
 }
 
 void GraphicsContextJava::setPlatformStrokeStyle(StrokeStyle style)
@@ -531,8 +530,8 @@ void GraphicsContextJava::setPlatformStrokeStyle(StrokeStyle style)
         return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKESTYLE
-    << (jint)style;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKESTYLE
+    << (int32_t)style;
 }
 
 void GraphicsContextJava::setPlatformStrokeColor(const Color& color)
@@ -542,7 +541,7 @@ void GraphicsContextJava::setPlatformStrokeColor(const Color& color)
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKECOLOR
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKECOLOR
     << r << g << b << a;
 }
 
@@ -552,7 +551,7 @@ void GraphicsContextJava::setPlatformStrokeThickness(float strokeThickness)
         return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKEWIDTH
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKEWIDTH
     << strokeThickness;
 }
 
@@ -578,7 +577,7 @@ void GraphicsContextJava::concatCTM(const AffineTransform& at)
 
     m_state.transform.multiply(at);
     platformContext()->rq().freeSpace(28)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_CONCATTRANSFORM_FFFFFF
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_CONCATTRANSFORM_FFFFFF
     << (float)at.a() << (float)at.b() << (float)at.c() << (float)at.d() << (float)at.e() << (float)at.f();
 }
 
@@ -612,7 +611,7 @@ void GraphicsContextJava::setPlatformShadow(const FloatSize& s, float blur, cons
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     platformContext()->rq().freeSpace(32)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
     << width << height << blur << r << g << b << a;;
 }
 
@@ -624,7 +623,7 @@ void GraphicsContextJava::beginTransparencyLayer(float opacity)
       return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_BEGINTRANSPARENCYLAYER
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_BEGINTRANSPARENCYLAYER
     << opacity;
 }
 
@@ -634,7 +633,7 @@ void GraphicsContextJava::endTransparencyLayer()
       return;
 
     platformContext()->rq().freeSpace(4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_ENDTRANSPARENCYLAYER;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_ENDTRANSPARENCYLAYER;
 
     GraphicsContext::endTransparencyLayer();
 }
@@ -645,7 +644,7 @@ void GraphicsContextJava::clearRect(const FloatRect& rect)
         return;
 
     platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_CLEARRECT_FFFF
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_CLEARRECT_FFFF
     << rect.x() << rect.y()
     << rect.width() << rect.height();
 }
@@ -664,7 +663,7 @@ void GraphicsContextJava::strokeRect(const FloatRect& rect, float lineWidth)
     }
 
     platformContext()->rq().freeSpace(24)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_STROKERECT_FFFFF
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_STROKERECT_FFFFF
     << rect.x() << rect.y() << rect.width() << rect.height() << lineWidth;
 }
 
@@ -676,9 +675,9 @@ void GraphicsContextJava::setLineDash(const DashArray& dashes, float dashOffset)
     size_t size = dashes.size();
 
     platformContext()->rq().freeSpace((3 + size) * 4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_DASH
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_DASH
     << dashOffset
-    << (jint)size;
+    << (int32_t)size;
 
     for (size_t i = 0; i < size; i++) {
         platformContext()->rq()
@@ -695,8 +694,8 @@ void GraphicsContextJava::setLineCap(LineCap cap)
     }
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_CAP
-    << (jint)cap;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_CAP
+    << (int32_t)cap;
 
     platformContext()->setLineCap(cap);
 }
@@ -707,8 +706,8 @@ void GraphicsContextJava::setLineJoin(LineJoin join)
         return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_JOIN
-    << (jint)join;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_LINE_JOIN
+    << (int32_t)join;
 
     platformContext()->setLineJoin(join);
 }
@@ -719,8 +718,8 @@ void GraphicsContextJava::setMiterLimit(float limit)
         return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_MITER_LIMIT
-    << (jfloat)limit;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_MITER_LIMIT
+    << (float)limit;
 
     platformContext()->setMiterLimit(limit);
 }
@@ -728,7 +727,7 @@ void GraphicsContextJava::setMiterLimit(float limit)
 void GraphicsContextJava::setPlatformAlpha(float alpha)
 {
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETALPHA
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETALPHA
     << alpha;
 }
 
@@ -738,8 +737,8 @@ void GraphicsContextJava::setPlatformCompositeOperation(CompositeOperator op, Bl
         return;
 
     platformContext()->rq().freeSpace(8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCOMPOSITE
-    << (jint)op;
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETCOMPOSITE
+    << (int32_t)op;
     //utatodo: add BlendMode
 }
 
@@ -757,9 +756,9 @@ void GraphicsContextJava::strokePath(const Path& path)
     }
 
     platformContext()->rq().freeSpace(12)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_STROKE_PATH
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_STROKE_PATH
     << copyPath(path.platformPath())
-    << (jint)fillRule();
+    << (int32_t)fillRule();
 }
 
 static void setClipPath(
@@ -774,12 +773,12 @@ static void setClipPath(
 
     state.clipBounds.intersect(state.transform.mapRect(path.fastBoundingRect()));
     gc.platformContext()->rq().freeSpace(16)
-    << jint(com_sun_webkit_graphics_GraphicsDecoder_CLIP_PATH)
+    << int32_t(com_sun_webkit_graphics_GraphicsDecoder_CLIP_PATH)
     << copyPath(path.platformPath())
-    << jint(wrule == WindRule::EvenOdd
+    << int32_t(wrule == WindRule::EvenOdd
        ? com_sun_webkit_graphics_WCPath_RULE_EVENODD
        : com_sun_webkit_graphics_WCPath_RULE_NONZERO)
-    << jint(isOut);
+    << int32_t(isOut);
 }
 
 void GraphicsContextJava::canvasClip(const Path& path, WindRule fillRule)
@@ -828,7 +827,7 @@ void GraphicsContextJava::drawPlatformImage(const PlatformImagePtr& image, const
     }
 
     platformContext()->rq().freeSpace(72)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
         << image->getImage()
         << adjustedDestRect.x() << adjustedDestRect.y()
         << adjustedDestRect.width() << adjustedDestRect.height()
@@ -842,8 +841,6 @@ void GraphicsContextJava::drawPlatformPattern(const PlatformImagePtr& image, con
     if (paintingDisabled() || !patternTransform.isInvertible())
         return;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (tileRect.isEmpty()) {
         return;
     }
@@ -852,20 +849,19 @@ void GraphicsContextJava::drawPlatformPattern(const PlatformImagePtr& image, con
 
     TransformationMatrix tm = patternTransform.toTransformationMatrix();
 
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-                "createTransform",
-                "(DDDDDD)Lcom/sun/webkit/graphics/WCTransform;");
-    ASSERT(mid);
-    JLObject transform(env->CallObjectMethod(PL_GetGraphicsManager(env), mid,
-                tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()));
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->create_transform)
+        return;
+
+    WKJHandle transform { cb->create_transform(tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()) };
     ASSERT(transform);
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
     platformContext()->rq().freeSpace(13 * 4)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
         << image->getImage()
         << tileRect.x() << tileRect.y() << tileRect.width() << tileRect.height()
-        << RQRef::create(transform)
+        << RQRef::create(transform.get())
         << phase.x() << phase.y()
         << destRect.x() << destRect.y() << destRect.width() << destRect.height();
 }
@@ -900,9 +896,9 @@ void GraphicsContextJava::fillPath(const Path& path)
         }
 
         platformContext()->rq().freeSpace(12)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_PATH
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_FILL_PATH
         << copyPath(path.platformPath())
-        << (jint)fillRule();
+        << (int32_t)fillRule();
     }
 }
 
@@ -913,7 +909,7 @@ void GraphicsContextJava::rotate(float radians)
 
     m_state.transform.rotate(radians);
     platformContext()->rq().freeSpace(2 * 4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_ROTATE
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_ROTATE
     << radians;
 
 }
@@ -925,7 +921,7 @@ void GraphicsContextJava::scale(const FloatSize& size)
 
     m_state.transform.scale(size.width(), size.height());
     platformContext()->rq().freeSpace(12)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SCALE
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SCALE
     << size.width() << size.height();
 }
 
@@ -943,13 +939,13 @@ void GraphicsContextJava::fillRoundedRect(const FloatRoundedRect& rect, const Co
         rect.radii().bottomRight().height() == rect.radii().bottomLeft().height()) {
         auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
         platformContext()->rq().freeSpace(68)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
-        << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
-        << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
-        << (jfloat)rect.radii().topLeft().width() << (jfloat)rect.radii().topLeft().height()
-        << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
-        << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
-        << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
+        << (float)rect.rect().x() << (float)rect.rect().y()
+        << (float)rect.rect().width() << (float)rect.rect().height()
+        << (float)rect.radii().topLeft().width() << (float)rect.radii().topLeft().height()
+        << (float)rect.radii().topRight().width() << (float)rect.radii().topRight().height()
+        << (float)rect.radii().bottomLeft().width() << (float)rect.radii().bottomLeft().height()
+        << (float)rect.radii().bottomRight().width() << (float)rect.radii().bottomRight().height()
         << r << g << b << a;
     }
     else {
@@ -1034,7 +1030,7 @@ void GraphicsContextJava::didUpdateState(GraphicsContextState& state)
         } else {
             float clr = 0.0f;
             platformContext()->rq().freeSpace(32)
-            << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
+            << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
             << clr << clr << clr << clr << clr << clr << clr;
         }
     }
@@ -1072,7 +1068,7 @@ void GraphicsContextJava::setCTM(const AffineTransform& tm)
 
     m_state.transform = tm;
     platformContext()->rq().freeSpace(28)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_TRANSFORM
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_SET_TRANSFORM
     << (float)tm.a() << (float)tm.b() << (float)tm.c() << (float)tm.d() << (float)tm.e() << (float)tm.f();
 }
 

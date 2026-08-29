@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,215 +44,289 @@ public class HTMLObjectElementImpl extends HTMLElementImpl implements HTMLObject
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
-    native static long getFormImpl(long peer);
+    static long getFormImpl(long peer) {
+        return HTMLObjectElementNative.getForm(peer);
+    }
 
     @Override
     public String getCode() {
         return getCodeImpl(getPeer());
     }
-    native static String getCodeImpl(long peer);
+    static String getCodeImpl(long peer) {
+        return HTMLObjectElementNative.getCode(peer);
+    }
 
     @Override
     public void setCode(String value) {
         setCodeImpl(getPeer(), value);
     }
-    native static void setCodeImpl(long peer, String value);
+    static void setCodeImpl(long peer, String value) {
+        HTMLObjectElementNative.setCode(peer, value);
+    }
 
     @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLObjectElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLObjectElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getArchive() {
         return getArchiveImpl(getPeer());
     }
-    native static String getArchiveImpl(long peer);
+    static String getArchiveImpl(long peer) {
+        return HTMLObjectElementNative.getArchive(peer);
+    }
 
     @Override
     public void setArchive(String value) {
         setArchiveImpl(getPeer(), value);
     }
-    native static void setArchiveImpl(long peer, String value);
+    static void setArchiveImpl(long peer, String value) {
+        HTMLObjectElementNative.setArchive(peer, value);
+    }
 
     @Override
     public String getBorder() {
         return getBorderImpl(getPeer());
     }
-    native static String getBorderImpl(long peer);
+    static String getBorderImpl(long peer) {
+        return HTMLObjectElementNative.getBorder(peer);
+    }
 
     @Override
     public void setBorder(String value) {
         setBorderImpl(getPeer(), value);
     }
-    native static void setBorderImpl(long peer, String value);
+    static void setBorderImpl(long peer, String value) {
+        HTMLObjectElementNative.setBorder(peer, value);
+    }
 
     @Override
     public String getCodeBase() {
         return getCodeBaseImpl(getPeer());
     }
-    native static String getCodeBaseImpl(long peer);
+    static String getCodeBaseImpl(long peer) {
+        return HTMLObjectElementNative.getCodeBase(peer);
+    }
 
     @Override
     public void setCodeBase(String value) {
         setCodeBaseImpl(getPeer(), value);
     }
-    native static void setCodeBaseImpl(long peer, String value);
+    static void setCodeBaseImpl(long peer, String value) {
+        HTMLObjectElementNative.setCodeBase(peer, value);
+    }
 
     @Override
     public String getCodeType() {
         return getCodeTypeImpl(getPeer());
     }
-    native static String getCodeTypeImpl(long peer);
+    static String getCodeTypeImpl(long peer) {
+        return HTMLObjectElementNative.getCodeType(peer);
+    }
 
     @Override
     public void setCodeType(String value) {
         setCodeTypeImpl(getPeer(), value);
     }
-    native static void setCodeTypeImpl(long peer, String value);
+    static void setCodeTypeImpl(long peer, String value) {
+        HTMLObjectElementNative.setCodeType(peer, value);
+    }
 
     @Override
     public String getData() {
         return getDataImpl(getPeer());
     }
-    native static String getDataImpl(long peer);
+    static String getDataImpl(long peer) {
+        return HTMLObjectElementNative.getData(peer);
+    }
 
     @Override
     public void setData(String value) {
         setDataImpl(getPeer(), value);
     }
-    native static void setDataImpl(long peer, String value);
+    static void setDataImpl(long peer, String value) {
+        HTMLObjectElementNative.setData(peer, value);
+    }
 
     @Override
     public boolean getDeclare() {
         return getDeclareImpl(getPeer());
     }
-    native static boolean getDeclareImpl(long peer);
+    static boolean getDeclareImpl(long peer) {
+        return HTMLObjectElementNative.getDeclare(peer);
+    }
 
     @Override
     public void setDeclare(boolean value) {
         setDeclareImpl(getPeer(), value);
     }
-    native static void setDeclareImpl(long peer, boolean value);
+    static void setDeclareImpl(long peer, boolean value) {
+        HTMLObjectElementNative.setDeclare(peer, value);
+    }
 
     @Override
     public String getHeight() {
         return getHeightImpl(getPeer());
     }
-    native static String getHeightImpl(long peer);
+    static String getHeightImpl(long peer) {
+        return HTMLObjectElementNative.getHeight(peer);
+    }
 
     @Override
     public void setHeight(String value) {
         setHeightImpl(getPeer(), value);
     }
-    native static void setHeightImpl(long peer, String value);
+    static void setHeightImpl(long peer, String value) {
+        HTMLObjectElementNative.setHeight(peer, value);
+    }
 
     @Override
     public String getHspace() {
         return getHspaceImpl(getPeer())+"";
     }
-    native static int getHspaceImpl(long peer);
+    static int getHspaceImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLObjectElementImpl.getHspaceImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     @Override
     public void setHspace(String value) {
         setHspaceImpl(getPeer(), Integer.parseInt(value));
     }
-    native static void setHspaceImpl(long peer, int value);
+    static void setHspaceImpl(long peer, int value) {
+        HTMLObjectElementNative.setHspace(peer, value);
+    }
 
     @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLObjectElementNative.getName(peer);
+    }
 
     @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLObjectElementNative.setName(peer, value);
+    }
 
     @Override
     public String getStandby() {
         return getStandbyImpl(getPeer());
     }
-    native static String getStandbyImpl(long peer);
+    static String getStandbyImpl(long peer) {
+        return HTMLObjectElementNative.getStandby(peer);
+    }
 
     @Override
     public void setStandby(String value) {
         setStandbyImpl(getPeer(), value);
     }
-    native static void setStandbyImpl(long peer, String value);
+    static void setStandbyImpl(long peer, String value) {
+        HTMLObjectElementNative.setStandby(peer, value);
+    }
 
     @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return HTMLObjectElementNative.getType(peer);
+    }
 
     @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
-    native static void setTypeImpl(long peer, String value);
+    static void setTypeImpl(long peer, String value) {
+        HTMLObjectElementNative.setType(peer, value);
+    }
 
     @Override
     public String getUseMap() {
         return getUseMapImpl(getPeer());
     }
-    native static String getUseMapImpl(long peer);
+    static String getUseMapImpl(long peer) {
+        return HTMLObjectElementNative.getUseMap(peer);
+    }
 
     @Override
     public void setUseMap(String value) {
         setUseMapImpl(getPeer(), value);
     }
-    native static void setUseMapImpl(long peer, String value);
+    static void setUseMapImpl(long peer, String value) {
+        HTMLObjectElementNative.setUseMap(peer, value);
+    }
 
     @Override
     public String getVspace() {
         return getVspaceImpl(getPeer())+"";
     }
-    native static int getVspaceImpl(long peer);
+    static int getVspaceImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLObjectElementImpl.getVspaceImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     @Override
     public void setVspace(String value) {
         setVspaceImpl(getPeer(), Integer.parseInt(value));
     }
-    native static void setVspaceImpl(long peer, int value);
+    static void setVspaceImpl(long peer, int value) {
+        HTMLObjectElementNative.setVspace(peer, value);
+    }
 
     @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static String getWidthImpl(long peer);
+    static String getWidthImpl(long peer) {
+        return HTMLObjectElementNative.getWidth(peer);
+    }
 
     @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, String value);
+    static void setWidthImpl(long peer, String value) {
+        HTMLObjectElementNative.setWidth(peer, value);
+    }
 
     public boolean getWillValidate() {
         return getWillValidateImpl(getPeer());
     }
-    native static boolean getWillValidateImpl(long peer);
+    static boolean getWillValidateImpl(long peer) {
+        return HTMLObjectElementNative.getWillValidate(peer);
+    }
 
     public String getValidationMessage() {
         return getValidationMessageImpl(getPeer());
     }
-    native static String getValidationMessageImpl(long peer);
+    static String getValidationMessageImpl(long peer) {
+        return HTMLObjectElementNative.getValidationMessage(peer);
+    }
 
     @Override
     public Document getContentDocument() {
         return DocumentImpl.getImpl(getContentDocumentImpl(getPeer()));
     }
-    native static long getContentDocumentImpl(long peer);
+    static long getContentDocumentImpl(long peer) {
+        return HTMLObjectElementNative.getContentDocument(peer);
+    }
 
 
 // Functions
@@ -260,7 +334,9 @@ public class HTMLObjectElementImpl extends HTMLElementImpl implements HTMLObject
     {
         return checkValidityImpl(getPeer());
     }
-    native static boolean checkValidityImpl(long peer);
+    static boolean checkValidityImpl(long peer) {
+        return HTMLObjectElementNative.checkValidity(peer);
+    }
 
 
     public void setCustomValidity(String error)
@@ -268,8 +344,10 @@ public class HTMLObjectElementImpl extends HTMLElementImpl implements HTMLObject
         setCustomValidityImpl(getPeer()
             , error);
     }
-    native static void setCustomValidityImpl(long peer
-        , String error);
+    static void setCustomValidityImpl(long peer
+        , String error) {
+        HTMLObjectElementNative.setCustomValidity(peer, error);
+    }
 
 
 }

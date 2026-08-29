@@ -31,33 +31,27 @@
 
 using namespace JSC::Bindings;
 
-JobjectWrapper::JobjectWrapper(jobject instance, bool useGlobalRef)
+JobjectWrapper::JobjectWrapper(wkj_ref instance, bool useGlobalRef)
 {
     ASSERT(instance);
 
-    // Cache the JNIEnv used to get the global ref for this java instanace.
-    // It'll be used to delete the reference.
-    m_env = getJNIEnv();
-
-    if (useGlobalRef) {
-        m_instance = m_env->NewGlobalRef(instance);
-    } else {
-        m_instance = m_env->NewWeakGlobalRef(instance);
-    }
+    /*
+     * There is no JNI environment to cache any more. The JNI version kept one so the destructor
+     * could delete the reference with the same environment it created it with; a registry id
+     * is not tied to a thread, so release works from wherever the last reference dies.
+     */
+    m_instance = useGlobalRef ? WKJHandle::retained(instance) : WKJHandle::retainedWeak(instance);
 
     if (!m_instance)
-        LOG_ERROR("Could not get GlobalRef for %p", instance);
+        LOG_ERROR("Could not get GlobalRef for %llu", static_cast<unsigned long long>(instance));
 }
 
 JobjectWrapper::~JobjectWrapper()
 {
-    jobjectRefType objreftype = m_env->GetObjectRefType(m_instance);
-
-    if(objreftype == JNIWeakGlobalRefType) {
-        m_env->DeleteWeakGlobalRef(m_instance);
-    } else {
-        m_env->DeleteGlobalRef(m_instance);
-    }
+    /*
+     * WKJHandle releases whatever it holds, strong or weak alike, so the GetObjectRefType
+     * branch this destructor used to carry has nothing left to choose between.
+     */
 }
 
 #endif // ENABLE(JAVA_BRIDGE)

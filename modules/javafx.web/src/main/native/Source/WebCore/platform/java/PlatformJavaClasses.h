@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,69 @@
  * questions.
 */
 
+/*
+ * PlatformJavaClasses.h - the C++ glue of the WebCore/platform/java Java-port directory.
+ *
+ * WHAT THIS FILE USED TO BE. It declared 18 PG_Get*Class() accessors, each a cached
+ * lookup of one com.sun.webkit class, plus PL_GetGraphicsManager() and getTimerClass().
+ * They existed for one reason: JNI needed a class reference before it could look up a
+ * member id. With the WKJHost callback table there is neither, so all 20 are
+ * gone - FFM-AUDIT-wtf-webcore.md section 9.2 rules the block WRAPPER, PARITY exact.
+ *
+ * The name is kept because roughly twenty files across WebCore and WebKitLegacy include it,
+ * and because the file still has a job: it is where this directory reaches the theme and
+ * filesystem halves of the host table, exactly as WKJPlatformJava.h is for
+ * platform/graphics/java and platform/network/java. Everything string-shaped -
+ * wkjMakeString, WKJStringArg, wkjFetchString - and wkjCheckAndClearException come from
+ * that header, which this one includes; both directories are on the WebCore include path
+ * (WebCore/PlatformJava.cmake), so the include resolves from either side.
+ *
+ * The two accessors that did real work rather than class caching survive below as
+ * wkjRenderThemeForPage and wkjScrollBarThemeForPage.
+ */
+
 #pragma once
 
-#include <wtf/java/JavaEnv.h>
-#include <jni.h>
+#include <stdint.h>
+
+#include <webkit_java_api.h>
+
+#include <wtf/java/WKJHandle.h>
+
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
 
-jclass PG_GetFontClass(JNIEnv* env);
-jclass PG_GetFontCustomPlatformDataClass(JNIEnv* env);
-jclass PG_GetGraphicsImageDecoderClass(JNIEnv* env);
-jclass PG_GetGraphicsContextClass(JNIEnv* env);
-jclass PG_GetGraphicsManagerClass(JNIEnv* env);
-jclass PG_GetImageClass(JNIEnv* env);
-jclass PG_GetImageFrameClass(JNIEnv* env);
-jclass PG_GetMediaPlayerClass(JNIEnv* env);
-jclass PG_GetPathClass(JNIEnv* env);
-jclass PG_GetPathIteratorClass(JNIEnv* env);
-jclass PG_GetRectangleClass(JNIEnv* env);
-jclass PG_GetRefClass(JNIEnv* env);
-jclass PG_GetRenderQueueClass(JNIEnv* env);
-jclass PG_GetTransformClass(JNIEnv* env);
-jclass PG_GetWebPageClass(JNIEnv* env);
-jclass PG_GetColorChooserClass(JNIEnv* env);
-JLObject PL_GetGraphicsManager(JNIEnv* env);
-jclass getTimerClass(JNIEnv* env);
-jclass PG_GetRenderThemeClass(JNIEnv* env);
-JLObject PG_GetRenderThemeObjectFromPage(JNIEnv* env, JLObject page);
+/*
+ * The installed theme and filesystem tables, or nullptr before wkj_init has run. Every
+ * caller tests both the table and the individual slot, because contract 4 lets Java leave
+ * any slot NULL.
+ */
+inline const WKJHostTheme* wkjTheme()
+{
+    return wkj_host ? &wkj_host->theme : nullptr;
+}
+
+inline const WKJHostFileSystem* wkjFileSystem()
+{
+    return wkj_host ? &wkj_host->filesystem : nullptr;
+}
+
+/*
+ * The com.sun.webkit.graphics.RenderTheme of a page, owned by the caller.
+ *
+ * This is PG_GetRenderThemeObjectFromPage, unchanged in behaviour including its two
+ * branches: a zero webPage asks WebPage.fwkGetDefaultRenderTheme() and a non-zero one asks
+ * that page's getRenderTheme(). Both branches are live.
+ */
+WKJHandle wkjRenderThemeForPage(wkj_ref webPage);
+
+/*
+ * The com.sun.webkit.graphics.ScrollBarTheme of a page, owned by the caller. Unlike the
+ * render theme there is no default: a null handle means the scrollbar has no Java theme and
+ * the caller skips the work, which is what ScrollbarThemeJava already did with a null
+ * reference.
+ */
+WKJHandle wkjScrollBarThemeForPage(wkj_ref webPage);
 
 } // namespace

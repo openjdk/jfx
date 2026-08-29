@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,18 +45,24 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
     public CSSRule getOwnerRule() {
         return CSSRuleImpl.getImpl(getOwnerRuleImpl(getPeer()));
     }
-    native static long getOwnerRuleImpl(long peer);
+    static long getOwnerRuleImpl(long peer) {
+        return CSSStyleSheetNative.getOwnerRule(peer);
+    }
 
     @Override
     public CSSRuleList getCssRules() {
         return CSSRuleListImpl.getImpl(getCssRulesImpl(getPeer()));
     }
-    native static long getCssRulesImpl(long peer);
+    static long getCssRulesImpl(long peer) {
+        return CSSStyleSheetNative.getCssRules(peer);
+    }
 
     public CSSRuleList getRules() {
         return CSSRuleListImpl.getImpl(getRulesImpl(getPeer()));
     }
-    native static long getRulesImpl(long peer);
+    static long getRulesImpl(long peer) {
+        return CSSStyleSheetNative.getRules(peer);
+    }
 
 
 // Functions
@@ -68,9 +74,11 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
             , rule
             , index);
     }
-    native static int insertRuleImpl(long peer
+    static int insertRuleImpl(long peer
         , String rule
-        , int index);
+        , int index) {
+        return CSSStyleSheetNative.insertRule(peer, rule, index);
+    }
 
 
     @Override
@@ -79,8 +87,10 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
         deleteRuleImpl(getPeer()
             , index);
     }
-    native static void deleteRuleImpl(long peer
-        , int index);
+    static void deleteRuleImpl(long peer
+        , int index) {
+        CSSStyleSheetNative.deleteRule(peer, index);
+    }
 
 
     public int addRule(String selector
@@ -92,10 +102,12 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
             , style
             , index);
     }
-    native static int addRuleImpl(long peer
+    static int addRuleImpl(long peer
         , String selector
         , String style
-        , int index);
+        , int index) {
+        return CSSStyleSheetNative.addRule(peer, selector, style, index);
+    }
 
 
     public void removeRule(int index) throws DOMException
@@ -103,8 +115,10 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
         removeRuleImpl(getPeer()
             , index);
     }
-    native static void removeRuleImpl(long peer
-        , int index);
+    static void removeRuleImpl(long peer
+        , int index) {
+        CSSStyleSheetNative.removeRule(peer, index);
+    }
 
 
 }

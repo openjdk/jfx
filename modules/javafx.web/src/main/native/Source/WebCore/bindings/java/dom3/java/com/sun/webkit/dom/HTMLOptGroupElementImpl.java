@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,25 +42,33 @@ public class HTMLOptGroupElementImpl extends HTMLElementImpl implements HTMLOptG
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
-    native static boolean getDisabledImpl(long peer);
+    static boolean getDisabledImpl(long peer) {
+        return HTMLOptGroupElementNative.getDisabled(peer);
+    }
 
     @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
-    native static void setDisabledImpl(long peer, boolean value);
+    static void setDisabledImpl(long peer, boolean value) {
+        HTMLOptGroupElementNative.setDisabled(peer, value);
+    }
 
     @Override
     public String getLabel() {
         return getLabelImpl(getPeer());
     }
-    native static String getLabelImpl(long peer);
+    static String getLabelImpl(long peer) {
+        return HTMLOptGroupElementNative.getLabel(peer);
+    }
 
     @Override
     public void setLabel(String value) {
         setLabelImpl(getPeer(), value);
     }
-    native static void setLabelImpl(long peer, String value);
+    static void setLabelImpl(long peer, String value) {
+        HTMLOptGroupElementNative.setLabel(peer, value);
+    }
 
 }
 

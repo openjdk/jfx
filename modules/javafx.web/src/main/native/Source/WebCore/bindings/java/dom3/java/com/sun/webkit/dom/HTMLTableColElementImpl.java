@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,73 +42,97 @@ public class HTMLTableColElementImpl extends HTMLElementImpl implements HTMLTabl
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLTableColElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLTableColElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getCh() {
         return getChImpl(getPeer());
     }
-    native static String getChImpl(long peer);
+    static String getChImpl(long peer) {
+        return HTMLTableColElementNative.getCh(peer);
+    }
 
     @Override
     public void setCh(String value) {
         setChImpl(getPeer(), value);
     }
-    native static void setChImpl(long peer, String value);
+    static void setChImpl(long peer, String value) {
+        HTMLTableColElementNative.setCh(peer, value);
+    }
 
     @Override
     public String getChOff() {
         return getChOffImpl(getPeer());
     }
-    native static String getChOffImpl(long peer);
+    static String getChOffImpl(long peer) {
+        return HTMLTableColElementNative.getChOff(peer);
+    }
 
     @Override
     public void setChOff(String value) {
         setChOffImpl(getPeer(), value);
     }
-    native static void setChOffImpl(long peer, String value);
+    static void setChOffImpl(long peer, String value) {
+        HTMLTableColElementNative.setChOff(peer, value);
+    }
 
     @Override
     public int getSpan() {
         return getSpanImpl(getPeer());
     }
-    native static int getSpanImpl(long peer);
+    static int getSpanImpl(long peer) {
+        return HTMLTableColElementNative.getSpan(peer);
+    }
 
     @Override
     public void setSpan(int value) {
         setSpanImpl(getPeer(), value);
     }
-    native static void setSpanImpl(long peer, int value);
+    static void setSpanImpl(long peer, int value) {
+        HTMLTableColElementNative.setSpan(peer, value);
+    }
 
     @Override
     public String getVAlign() {
         return getVAlignImpl(getPeer());
     }
-    native static String getVAlignImpl(long peer);
+    static String getVAlignImpl(long peer) {
+        return HTMLTableColElementNative.getVAlign(peer);
+    }
 
     @Override
     public void setVAlign(String value) {
         setVAlignImpl(getPeer(), value);
     }
-    native static void setVAlignImpl(long peer, String value);
+    static void setVAlignImpl(long peer, String value) {
+        HTMLTableColElementNative.setVAlign(peer, value);
+    }
 
     @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static String getWidthImpl(long peer);
+    static String getWidthImpl(long peer) {
+        return HTMLTableColElementNative.getWidth(peer);
+    }
 
     @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, String value);
+    static void setWidthImpl(long peer, String value) {
+        HTMLTableColElementNative.setWidth(peer, value);
+    }
 
 }
 

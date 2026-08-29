@@ -35,119 +35,79 @@
 #include "PluginWidgetJava.h"
 #include "RenderBox.h"
 #include "StringJava.h"
+#include "WKJDOMUtils.h"
 #include "NodeDocument.h"
 
-#include "com_sun_webkit_WCPluginWidget.h"
+#include <webkit_java_api.h>
+
 
 namespace WebCore {
 
-jmethodID pluginWidgetPaintMID;
-jmethodID pluginWidgetCreateMID;
-jmethodID pluginWidgetBlurMID;
-jmethodID pluginWidgetFWKHandleMouseEventMID;
-jmethodID pluginWidgetFWKSetNativeContainerBoundsMID;
-jfieldID  pluginWidgetPDataFID;
-
-/************************************************************************
- * WCRectangle fields
+/*
+ * The four cached method ids, the five cached field ids (the pData long plus the four float
+ * fields of WCRectangle), the cached WCRectangle class and the exported initIDs that filled
+ * them are all gone: they are the plugin_widget_ section of WKJHostTheme. See the report and
+ * FFM-AUDIT-wtf-webcore.md 15.5 row 14 - this is one of only two WRAPPER verdicts in the
+ * whole tree that deletes a Java `native` declaration.
  */
 
-jfieldID xFID;
-jfieldID yFID;
-jfieldID widthFID;
-jfieldID heightFID;
-jmethodID wcRectCTOR;
-JGClass clwcRectangle;
-
 extern "C" {
-JNIEXPORT void JNICALL Java_com_sun_webkit_WCPluginWidget_initIDs(JNIEnv* env, jclass pluginWidgetClass)
+
+/*
+ * The three entry points below used to read the PluginWidgetJava* out of the receiver's
+ * `pData` field with GetLongField. It is now an explicit parameter, which is what removed
+ * the last cached field id from this directory; the `if (pThis)` guard is unchanged.
+ */
+
+WKJ_EXPORT void wkj_plugin_widget_invalidate_rect(int64_t pluginWidget, int32_t x, int32_t y,
+                                                  int32_t width, int32_t height)
 {
-    pluginWidgetPaintMID = env->GetMethodID(pluginWidgetClass, "paint",
-       "(Lcom/sun/webkit/graphics/WCGraphicsContext;IIII)V");
-    ASSERT(pluginWidgetPaintMID);
-
-    pluginWidgetCreateMID = env->GetStaticMethodID(pluginWidgetClass, "create",
-       "(Lcom/sun/webkit/WebPage;IILjava/lang/String;"
-       "Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)"
-       "Lcom/sun/webkit/WCPluginWidget;");
-    ASSERT(pluginWidgetCreateMID);
-
-    pluginWidgetFWKSetNativeContainerBoundsMID = env->GetMethodID(
-        pluginWidgetClass, "fwkSetNativeContainerBounds",
-        "(IIII)V");
-    ASSERT(pluginWidgetFWKSetNativeContainerBoundsMID);
-
-    pluginWidgetFWKHandleMouseEventMID = env->GetMethodID(pluginWidgetClass,
-        "fwkHandleMouseEvent", "(Ljava/lang/String;IIIIIZZZZZJ)Z");
-    ASSERT(pluginWidgetFWKHandleMouseEventMID);
-
-    pluginWidgetPDataFID = env->GetFieldID(pluginWidgetClass, "pData", "J");
-    ASSERT(pluginWidgetPDataFID);
-
-
-    clwcRectangle = JLClass(env->FindClass("com/sun/webkit/graphics/WCRectangle"));
-    ASSERT(clwcRectangle);
-
-    wcRectCTOR = env->GetMethodID(clwcRectangle, "<init>", "(FFFF)V");
-    ASSERT(wcRectCTOR);
-
-    xFID = env->GetFieldID(clwcRectangle, "x", "F");
-    ASSERT(xFID);
-
-    yFID = env->GetFieldID(clwcRectangle, "y", "F");
-    ASSERT(yFID);
-
-    widthFID = env->GetFieldID(clwcRectangle, "w", "F");
-    ASSERT(widthFID);
-
-    heightFID = env->GetFieldID(clwcRectangle, "h", "F");
-    ASSERT(heightFID);
-}
-
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect
-    (JNIEnv* env,jobject self, jint x, jint y, jint width, jint height)
-{
-    PluginWidgetJava *pThis = ((PluginWidgetJava *)jlong_to_ptr(env->GetLongField(self, pluginWidgetPDataFID)));
+    WKJCallScope wkjScope;
+    PluginWidgetJava *pThis = static_cast<PluginWidgetJava*>(wkj_to_ptr(pluginWidget));
     if(pThis)
         pThis->invalidateWindowlessPluginRect( IntRect(x, y, width, height) );
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused
-    (JNIEnv* env, jobject self, jboolean isFocused)
+WKJ_EXPORT void wkj_plugin_widget_set_focused(int64_t pluginWidget, int32_t isFocused)
 {
-    PluginWidgetJava *pThis = ((PluginWidgetJava *)jlong_to_ptr(env->GetLongField(self, pluginWidgetPDataFID)));
+    WKJCallScope wkjScope;
+    PluginWidgetJava *pThis = static_cast<PluginWidgetJava*>(wkj_to_ptr(pluginWidget));
     if(pThis)
-        pThis->focusPluginElement( isFocused );
+        pThis->focusPluginElement( isFocused != 0 );
 }
 
-JNIEXPORT jobject JNICALL Java_com_sun_webkit_WCPluginWidget_twkConvertToPage
-    (JNIEnv* env, jobject self, jobject rc)
+/*
+ * The JNI version read four float fields off the WCRectangle it was given and returned a
+ * freshly constructed one, or null when the peer was 0. The caller now provides both
+ * buffers; a return of 0 is the null return. The truncation through an int rect and back is
+ * the existing behaviour, kept.
+ */
+WKJ_EXPORT int32_t wkj_plugin_widget_convert_to_page(int64_t pluginWidget,
+                                                     const float inXYWH[4], float outXYWH[4])
 {
-    PluginWidgetJava *pThis = ((PluginWidgetJava *)jlong_to_ptr(env->GetLongField(self, pluginWidgetPDataFID)));
+    WKJCallScope wkjScope;
+    PluginWidgetJava *pThis = static_cast<PluginWidgetJava*>(wkj_to_ptr(pluginWidget));
     if(pThis){
         IntRect irc(
-            (int)env->GetFloatField(rc, xFID),
-            (int)env->GetFloatField(rc, yFID),
-            (int)env->GetFloatField(rc, widthFID),
-            (int)env->GetFloatField(rc, heightFID));
+            (int)inXYWH[0],
+            (int)inXYWH[1],
+            (int)inXYWH[2],
+            (int)inXYWH[3]);
         pThis->convertToPage(irc);
-        return env->NewObject(
-            clwcRectangle,
-            wcRectCTOR,
-            jdouble(irc.x()),
-            jdouble(irc.y()),
-            jdouble(irc.width()),
-            jdouble(irc.height()));
+        outXYWH[0] = static_cast<float>(irc.x());
+        outXYWH[1] = static_cast<float>(irc.y());
+        outXYWH[2] = static_cast<float>(irc.width());
+        outXYWH[3] = static_cast<float>(irc.height());
+        return 1;
     }
-    return NULL;
+    return 0;
 }
 
 
 } // extern "C"
 
 PluginWidgetJava::PluginWidgetJava(
-    jobject wfh,
+    wkj_ref wfh,
     HTMLPlugInElement* element,
     const String& url,
     const String& mimeType,
@@ -160,32 +120,37 @@ PluginWidgetJava::PluginWidgetJava(
         m_paramValues(paramValues)
 {
     //TODO: have to be moved into setParent(non-null)
-    JNIEnv* env = WTF::GetJavaEnv();
-    JLString urlJavaString(url.toJavaString(env));
-    JLString mimeTypeJavaString(mimeType.toJavaString(env));
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->plugin_widget_create)
+        return;
 
-    //better to delegate this upto org/webkit/webcore/platform/api/WebPage
-    //as for "createScrollView"
-    JLClass cls(env->FindClass("com/sun/webkit/WCPluginWidget"));
-    ASSERT(cls);
+    WKJStringArg urlArg(url);
+    WKJStringArg mimeTypeArg(mimeType);
+    // WebKit builds these two in lockstep, so one count describes both, as the two
+    // separate Java arrays always had the same length.
+    WKJStringArrayArg pNames(paramNames);
+    WKJStringArrayArg pValues(paramValues);
+    ASSERT(pNames.count() == pValues.count());
 
-    jobjectArray pNames = strVect2JArray(env, paramNames);
-    jobjectArray pValues = strVect2JArray(env, paramValues);
-    jint width = 0,height=0;
-    JLObject obj(env->CallStaticObjectMethod(
-                                                       cls,
-                                                       pluginWidgetCreateMID,
-                                                       wfh,
-                                                       width,height,
-                                                       (jstring)urlJavaString,
-                                                       (jstring)mimeTypeJavaString,
-                                                       pNames, pValues));
-    WTF::CheckAndClearException(env);
+    // width and height were declared and never assigned, so 0 is what Java always received.
+    int32_t width = 0, height = 0;
+    WKJHandle obj { cb->plugin_widget_create(
+        wfh,
+        width, height,
+        urlArg.data(), urlArg.length(),
+        mimeTypeArg.data(), mimeTypeArg.length(),
+        pNames.data(), pNames.lengths(),
+        pValues.data(), pValues.lengths(),
+        pNames.count()) };
+    wkjCheckAndClearException();
 
     ASSERT(obj);
     if (obj) {
         setPlatformWidget(obj);
-        env->SetLongField(obj, pluginWidgetPDataFID, ptr_to_jlong(this));
+        if (cb->plugin_widget_set_peer) {
+            cb->plugin_widget_set_peer(obj.get(), wkj_from_ptr(this));
+            wkjCheckAndClearException();
+        }
         setSelfVisible(true);
         setParentVisible(true);
     }
@@ -215,14 +180,23 @@ void PluginWidgetJava::paint(
     //if (context.paintingDisabled())
         //return;
 
-    JLObject obj = platformWidget();
-    if (obj){
-        JNIEnv *env = WTF::GetJavaEnv();
+    PlatformWidget obj = platformWidget();
+    const WKJHostTheme* cb = wkjTheme();
+    if (obj && cb && cb->plugin_widget_paint){
         context.save();
-        env->CallVoidMethod(
-            jobject(obj),
-            pluginWidgetPaintMID,
-            context.platformContext(),
+        /*
+         * BUG PRESERVED. The second argument is declared in Java as a
+         * com.sun.webkit.graphics.WCGraphicsContext, but what has always been passed is
+         * context.platformContext(), i.e. a WebCore::PlatformContextJava* - a C++ pointer,
+         * not a Java object. The ABI declares the parameter as the int64_t it really is so
+         * that the mistake is visible rather than hidden behind a cast, and so that Java
+         * receives a value it can reject instead of a bogus object reference. Deciding what
+         * a plugin widget should actually be handed to draw with is a behaviour change and
+         * belongs in its own commit.
+         */
+        cb->plugin_widget_paint(
+            obj.get(),
+            wkj_from_ptr(context.platformContext()),
             rc.x(), rc.y(), rc.width(), rc.height());
         context.restore();
     }
@@ -267,16 +241,15 @@ void PluginWidgetJava::updatePluginWidget()
 
     FrameView* frameView = static_cast<FrameView*>(parent());
     IntRect windowRect(frameView->contentsToWindow(frameRect().location()), frameRect().size());
-    JLObject obj = platformWidget();
-    if(obj){
-        JNIEnv *env = WTF::GetJavaEnv();
-        env->CallVoidMethod(
-            jobject(obj),
-            pluginWidgetFWKSetNativeContainerBoundsMID,
-            (jint)windowRect.x(),
-            (jint)windowRect.y(),
-            (jint)windowRect.width(),
-            (jint)windowRect.height());
+    PlatformWidget obj = platformWidget();
+    const WKJHostTheme* cb = wkjTheme();
+    if(obj && cb && cb->plugin_widget_set_native_container_bounds){
+        cb->plugin_widget_set_native_container_bounds(
+            obj.get(),
+            (int32_t)windowRect.x(),
+            (int32_t)windowRect.y(),
+            (int32_t)windowRect.width(),
+            (int32_t)windowRect.height());
 
     }
 }
@@ -313,30 +286,31 @@ void PluginWidgetJava::focusPluginElement(bool)
 
 void PluginWidgetJava::handleEvent(Event& event)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    JLObject obj = platformWidget();
-    jboolean cancelBubble = false;
-    if (obj && event.isMouseEvent()) {
+    PlatformWidget obj = platformWidget();
+    const WKJHostTheme* cb = wkjTheme();
+    int32_t cancelBubble = 0;
+    if (obj && cb && cb->plugin_widget_handle_mouse_event && event.isMouseEvent()) {
         MouseEvent* me = static_cast<MouseEvent*>(&event);
         //look at "void PluginView::handleMouseEvent(MouseEvent* event)"
         //takes into account zoomFactor for offsetX, offsetY
         IntPoint p = static_cast<FrameView*>(parent())->contentsToWindow(
             IntPoint(me->pageX(), me->pageY()));
-        cancelBubble = env->CallBooleanMethod(
-            jobject(obj),
-            pluginWidgetFWKHandleMouseEventMID,
-            (jstring)me->type().string().toJavaString(env),
-            (jint)p.x(),
-            (jint)p.y(),
-            (jint)me->screenX(),
-            (jint)me->screenY(),
-            (jint)me->button(),
-            (jboolean)me->buttonDown(),
-            (jboolean)me->altKey(),
-            (jboolean)me->metaKey(),
-            (jboolean)me->ctrlKey(),
-            (jboolean)me->shiftKey(),
-            (jlong)me->timeStamp().approximateWallTime().secondsSinceEpoch().milliseconds());
+        WKJStringArg type(me->type().string());
+        cancelBubble = cb->plugin_widget_handle_mouse_event(
+            obj.get(),
+            type.data(), type.length(),
+            (int32_t)p.x(),
+            (int32_t)p.y(),
+            (int32_t)me->screenX(),
+            (int32_t)me->screenY(),
+            (int32_t)me->button(),
+            me->buttonDown() ? 1 : 0,
+            me->altKey() ? 1 : 0,
+            me->metaKey() ? 1 : 0,
+            me->ctrlKey() ? 1 : 0,
+            me->shiftKey() ? 1 : 0,
+            (int64_t)me->timeStamp().approximateWallTime().secondsSinceEpoch().milliseconds());
+        wkjCheckAndClearException();
     }
 
     if(cancelBubble) {

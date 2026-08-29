@@ -1,18 +1,23 @@
 set(WTF_LIBRARY_TYPE STATIC)
 
+# No JDK include path here any more. WTF was the only target whose include directories were
+# load bearing for the JVM headers: _WEBKIT_TARGET_SETUP applies <target>_INCLUDE_DIRECTORIES
+# as PUBLIC, so this list propagates to PAL, JavaScriptCore, WebCore and WebKitLegacy, and the
+# equivalent entries in their own PlatformJava.cmake files were redundant. Nothing under Source
+# or Tools includes the JNI header now, so it comes out. The redundant copies in
+# WebCore/PlatformJava.cmake and JavaScriptCore/PlatformJava.cmake, and the JNI package lookup
+# in cmake/OptionsJava.cmake, are the remaining three and belong to those slices.
 list(APPEND WTF_INCLUDE_DIRECTORIES
     "${WTF_DIR}/wtf/java"
     "${CMAKE_SOURCE_DIR}/Source"
-    "${JAVA_INCLUDE_PATH}"
-    "${JAVA_INCLUDE_PATH2}"
+    # FFM C ABI: webkit_java_api.h (WKJ_EXPORT, wkj_ref, WKJHost)
+    "${WEBKITLEGACY_DIR}/java/api"
 )
 
 list(APPEND WTF_PUBLIC_HEADERS
-    java/JavaEnv.h
-    java/JavaRef.h
-    java/DbgUtils.h
+    java/WKJHandle.h
+    java/WKJRuntime.h
     java/JavaMath.h
-    unicode/java/UnicodeJava.h
 )
 
 if (UNIX)
@@ -23,20 +28,15 @@ endif ()
 
 list(APPEND WTF_SOURCES
     java/FileSystemJava.cpp
-    java/JavaEnv.cpp
     java/MainThreadJava.cpp
-    java/StringJava.cpp
     java/TextBreakIteratorInternalICUJava.cpp
     java/CPUTimeJava.cpp
+    java/WKJRuntime.cpp
 )
 
-list(APPEND WTF_LIBRARIES
-    "${JAVA_JVM_LIBRARY}"
-)
-
-list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
-	  "${JDK_INCLUDE_DIRS}"
-)
+# WTF_LIBRARIES no longer names the JVM import library: nothing in WTF calls a JNI function,
+# so there is nothing to link against. WTF_SYSTEM_INCLUDE_DIRECTORIES went with it - it named
+# a variable that is defined nowhere in the tree and always expanded to nothing.
 
 if (APPLE)
     file(COPY mac/MachExceptions.defs DESTINATION ${WTF_DERIVED_SOURCES_DIR})

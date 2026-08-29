@@ -35,51 +35,57 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLLabelElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLLabelElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getFormImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLLabelElement_getForm(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLFormElement>(env, WTF::getPtr(IMPL->form()));
+    return WKJReturnPeer<HTMLFormElement>(WTF::getPtr(IMPL->form()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getHtmlForImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLLabelElement_getHtmlFor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::forAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::forAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_setHtmlForImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLLabelElement_setHtmlFor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::forAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::forAttr, AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getControlImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLLabelElement_getControl(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLElement>(env, WTF::getPtr(IMPL->control()));
+    return WKJReturnPeer<HTMLElement>(WTF::getPtr(IMPL->control()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLLabelElement_getAccessKey(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLLabelElement_setAccessKey(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {String(env, value)});
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {WKJString(value, value_length)});
 }
 
 }

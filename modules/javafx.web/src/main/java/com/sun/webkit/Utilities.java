@@ -88,7 +88,25 @@ public abstract class Utilities {
         "sun.misc"
     );
 
-    private static Object fwkInvokeWithContext(final Method method,
+    /**
+     * The one place a Java method reached from page script is actually invoked, and the allow list
+     * that decides whether it may be. It is the {@code invoke} slot of {@code WKJLiveConnectHost}.
+     * <p>
+     * It is public rather than private only because the upcall target that calls it is
+     * {@code com.sun.webkit.dom.LiveConnectNative}, which has to be in that package to reach
+     * {@code JSObject} and {@code NodeImpl}. Neither package is exported by {@code javafx.web}, so
+     * the reachability is unchanged; what has changed is that an FFM upcall target obeys ordinary
+     * Java access rules where a JNI one did not.
+     *
+     * @param method the method to invoke
+     * @param instance the receiver, {@code null} for a static method
+     * @param args the arguments
+     * @param dummyAcc the opaque access control placeholder, unused
+     * @return the result, {@code null} for a void method
+     * @throws Throwable whatever the invoked method threw, or an
+     *         {@link UnsupportedOperationException} when the allow list rejects the call
+     */
+    public static Object fwkInvokeWithContext(final Method method,
                                                final Object instance,
                                                final Object[] args,
                                                Object dummyAcc) // UNUSED

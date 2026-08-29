@@ -43,34 +43,34 @@ final class WCPasteboard {
     private WCPasteboard() {
     }
 
-    private static String getPlainText() {
+    static String getPlainText() {
         log.fine("getPlainText()");
         return pasteboard.getPlainText();
     }
 
-    private static String getHtml() {
+    static String getHtml() {
         log.fine("getHtml()");
         return pasteboard.getHtml();
     }
 
-    private static void writePlainText(String text) {
+    static void writePlainText(String text) {
         log.fine("writePlainText(): text = {0}", new Object[] {text});
         pasteboard.writePlainText(text);
     }
 
-    private static void writeSelection(boolean canSmartCopyOrDelete, String text, String html)
+    static void writeSelection(boolean canSmartCopyOrDelete, String text, String html)
     {
         log.fine("writeSelection(): canSmartCopyOrDelete = {0},\n text = \n{1}\n html=\n{2}",
                 new Object[] {canSmartCopyOrDelete, text, html});
         pasteboard.writeSelection(canSmartCopyOrDelete, text, html);
     }
 
-    private static void writeImage(WCImageFrame img) {
+    static void writeImage(WCImageFrame img) {
         log.fine("writeImage(): img = {0}", new Object[] {img});
         pasteboard.writeImage(img);
     }
 
-    private static void writeUrl(String url, String markup) {
+    static void writeUrl(String url, String markup) {
         log.fine("writeUrl(): url = {0}, markup = {1}",
                 new Object[] {url, markup});
         pasteboard.writeUrl(url, markup);

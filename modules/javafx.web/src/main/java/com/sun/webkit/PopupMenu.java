@@ -47,35 +47,43 @@ public abstract class PopupMenu {
         twkPopupClosed(pdata);
     }
 
-    private static PopupMenu fwkCreatePopupMenu(long pData) {
+    // The six fwk methods below are the WKJPopupCallbacks slots. They are package private rather
+    // than private because PopupMenuNative, not the library, now dispatches them: an FFM upcall
+    // stub is an ordinary Java call and cannot reach a private member, where JNI could.
+    static PopupMenu fwkCreatePopupMenu(long pData) {
         PopupMenu popupMenu = Utilities.getUtilities().createPopupMenu();
         popupMenu.pdata = pData;
         return popupMenu;
     }
 
-    private void fwkShow(WebPage page, int x, int y, int width) {
+    void fwkShow(WebPage page, int x, int y, int width) {
         assert(page != null);
         show(page, x, y, width);
     }
 
-    private void fwkHide() {
+    void fwkHide() {
         hide();
     }
 
-    private void fwkSetSelectedItem(int index) {
+    void fwkSetSelectedItem(int index) {
         setSelectedItem(index);
     }
 
-    private void fwkAppendItem(String itemText, boolean isLabel, boolean isSeparator,
-                               boolean isEnabled, int bgColor, int fgColor, WCFont font)
+    void fwkAppendItem(String itemText, boolean isLabel, boolean isSeparator,
+                       boolean isEnabled, int bgColor, int fgColor, WCFont font)
     {
         appendItem(itemText, isLabel, isSeparator, isEnabled, bgColor, fgColor, font);
     }
 
-    private void fwkDestroy() {
+    void fwkDestroy() {
         pdata = 0;
     }
 
-    private native void twkSelectionCommited(long pdata, int index);
-    private native void twkPopupClosed(long pdata);
+    private void twkSelectionCommited(long pdata, int index) {
+        PopupMenuNative.selectionCommitted(pdata, index);
+    }
+
+    private void twkPopupClosed(long pdata) {
+        PopupMenuNative.closed(pdata);
+    }
 }

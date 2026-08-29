@@ -24,23 +24,22 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "GraphicsContext.h"
-#include "PlatformJavaClasses.h"
 #include "MediaPlayerPrivateJava.h"
 #include "NotImplemented.h"
 #include "PlatformContextJava.h"
+#include "WKJPlatformJava.h"
 
 #include "Document.h"
 #include "Settings.h"
 
 #include <wtf/text/CString.h> // todo tav remove when building w/ pch
-
-#include "com_sun_webkit_graphics_WCMediaPlayer.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
-
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
+
 
 
 ///////////////////////// log support
@@ -182,12 +181,16 @@ private:
     }
 };
 
+
 void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
 {
     LOG_TRACE0(">>registerMediaEngine\n");
-    JNIEnv* env = WTF::GetJavaEnv();
-    jclass playerCls = PG_GetMediaPlayerClass(env);
-    if (!playerCls) {
+
+    // The JNI version refused to register when the com.sun.webkit.graphics.WCMediaPlayer class
+    // could not be found. The class lookup went with the id cache; the equivalent test is that
+    // the media table is installed and can actually create a player.
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->create_player) {
         LOG_ERROR0("<<registerMediaEngine ERROR: MediaPlayer class is unavailable\n");
         return;
     }
@@ -226,6 +229,7 @@ MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const Medi
     return MediaPlayer::SupportsType::IsNotSupported;
 }
 
+
 HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes()
 {
     static HashSet<String, ASCIICaseInsensitiveHash> supportedTypes;
@@ -235,21 +239,28 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
         return supportedTypes;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-        "getSupportedMediaTypes", "()[Ljava/lang/String;");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->get_supported_types) {
+        return supportedTypes;
+    }
 
-    JLocalRef<jobjectArray> jArray(
-        (jobjectArray)env->CallObjectMethod(PL_GetGraphicsManager(env), s_mID));
-    ASSERT(jArray);
-    WTF::CheckAndClearException(env);
+    /*
+     * WCGraphicsManager.getSupportedMediaTypes() returned a String[]; the slot returns the
+     * same list as one string with the elements separated by WKJ_MEDIA_TYPE_SEPARATOR, which
+     * cannot appear in a MIME type. Splitting it here produces the same set of strings the
+     * GetObjectArrayElement loop produced, including for an empty array.
+     */
+    String joined = wkjFetchString([&](uint16_t* buf, int32_t cap, int32_t* length) {
+        return cb->get_supported_types(buf, cap, length);
+    });
+    wkjCheckAndClearException();
 
-    jsize len = env->GetArrayLength(jArray);
-    for (jsize  i=0; i<len; i++) {
-        JLString jStr((jstring)env->GetObjectArrayElement(jArray, i));
-        String s(env, jStr);
-        supportedTypes.add(s);
+    if (joined.isNull()) {
+        return supportedTypes;
+    }
+
+    for (auto type : StringView(joined).split(static_cast<UChar>(WKJ_MEDIA_TYPE_SEPARATOR))) {
+        supportedTypes.add(type.toString());
     }
 
     return supportedTypes;
@@ -270,29 +281,27 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer &player)
     , m_bytesLoaded(0)
     , m_didLoadingProgress(false)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-        "fwkCreateMediaPlayer", "(J)Lcom/sun/webkit/graphics/WCMediaPlayer;");
-    ASSERT(mid);
-
-    JLocalRef<jobject> obj(env->CallObjectMethod(PL_GetGraphicsManager(env),
-        mid, ptr_to_jlong(this)));
-    ASSERT(obj);
-    WTF::CheckAndClearException(env);
-
     m_buffered = std::make_unique<PlatformTimeRanges>();
-    m_jPlayer = RQRef::create(obj);
+
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->create_player)
+        return;
+
+    WKJHandle obj { cb->create_player(wkj_from_ptr(this)) };
+    ASSERT(obj);
+    wkjCheckAndClearException();
+
+    m_jPlayer = RQRef::create(obj.get());
 }
 
 MediaPlayerPrivate::~MediaPlayerPrivate()
 {
-    WC_GETJAVAENV_CHKRET(env);
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkDispose", "()V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->dispose || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    cb->dispose(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 }
 
 void MediaPlayerPrivate::load(const String& url)
@@ -308,15 +317,19 @@ void MediaPlayerPrivate::load(const String& url)
     //     userAgent = doc->settings()->userAgent();
     // }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkLoad", "(Ljava/lang/String;Ljava/lang/String;)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->load || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID,
-        (jstring)url.toJavaString(env),
-        userAgent.isEmpty() ? NULL : (jstring)userAgent.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WKJStringArg urlArg(url);
+    WKJStringArg userAgentArg(userAgent);
+
+    // An empty user agent was passed as null and still is: userAgentArg.data() is only
+    // non-null for a non-null String, and the empty case is filtered here as it was before.
+    cb->load(wkj_ref(*m_jPlayer), urlArg.data(), urlArg.length(),
+             userAgent.isEmpty() ? nullptr : userAgentArg.data(),
+             userAgent.isEmpty() ? 0 : userAgentArg.length());
+    wkjCheckAndClearException();
 }
 
 void MediaPlayerPrivate::cancelLoad()
@@ -324,24 +337,22 @@ void MediaPlayerPrivate::cancelLoad()
     m_paused = true;
     m_seeking = false;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkCancelLoad", "()V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->cancel_load || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    cb->cancel_load(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 }
 
 void MediaPlayerPrivate::prepareToPlay()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPrepareToPlay", "()V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->prepare_to_play || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    cb->prepare_to_play(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 }
 
 //PlatformMedia MediaPlayerPrivate::platformMedia() const { return NoPlatformMedia; }
@@ -351,6 +362,7 @@ void MediaPlayerPrivate::prepareToPlay()
 //#endif
 
 void MediaPlayerPrivate::play()
+void MediaPlayerPrivate::play()
 {
     PLOG_TRACE0(">>MediaPlayerPrivate::play\n");
 
@@ -359,13 +371,12 @@ void MediaPlayerPrivate::play()
         return;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPlay", "()V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->play || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    cb->play(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 
     PLOG_TRACE0("<<MediaPlayerPrivate::play\n");
 }
@@ -376,13 +387,12 @@ void MediaPlayerPrivate::pause()
         return;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPause", "()V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->pause || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    cb->pause(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 }
 
 //bool MediaPlayerPrivate::supportsFullscreen() const { return false; }
@@ -427,18 +437,16 @@ MediaTime MediaPlayerPrivate::currentTime() const
         return m_seekTime;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    // in case of error Unsupported protocol Data in JavaMediaPlayer
-    // The Native MediaElement is getting garbage collected in javascript core, hence calling
-    // currentTime from gc thread, GetJavaEnv will return null env
-    if (!env)
+    // In case of an "Unsupported protocol Data" error in JavaMediaPlayer the native
+    // MediaElement is collected by JavaScriptCore, so currentTime can be reached from the GC
+    // thread. The JNI version returned zero when there was no environment there; the host
+    // table test is the equivalent, and it also covers a NULL slot.
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->get_current_time || !m_jPlayer)
         return MediaTime::zeroTime();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
-    ASSERT(s_mID);
 
-    double result = env->CallFloatMethod(*m_jPlayer, s_mID);
-    WTF::CheckAndClearException(env);
+    double result = cb->get_current_time(wkj_ref(*m_jPlayer));
+    wkjCheckAndClearException();
 
 //    LOG_TRACE1("MediaPlayerPrivate currentTime returns: %f\n", (float)result);
     return MediaTime::createWithDouble(result);
@@ -450,13 +458,11 @@ void MediaPlayerPrivate::seek(float time)
 
     m_seekTime = MediaTime::createWithFloat(time);
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSeek", "(F)V");
-    ASSERT(s_mID);
-
-    env->CallVoidMethod(*m_jPlayer, s_mID, time);
-    WTF::CheckAndClearException(env);
+    const WKJHostMedia* cb = wkjMedia();
+    if (cb && cb->seek && m_jPlayer) {
+        cb->seek(wkj_ref(*m_jPlayer), time);
+        wkjCheckAndClearException();
+    }
 
     PLOG_TRACE1("<<MediaPlayerPrivate::seek(%f)\n", time);
 }
@@ -478,24 +484,22 @@ MediaTime MediaPlayerPrivate::startTime() const
 
 void MediaPlayerPrivate::setRate(float rate)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetRate", "(F)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_rate || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, rate);
-    WTF::CheckAndClearException(env);
+    cb->set_rate(wkj_ref(*m_jPlayer), rate);
+    wkjCheckAndClearException();
 }
 
 void MediaPlayerPrivate::setPreservesPitch(bool preserve)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetPreservesPitch", "(Z)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_preserves_pitch || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, bool_to_jbool(preserve));
-    WTF::CheckAndClearException(env);
+    cb->set_preserves_pitch(wkj_ref(*m_jPlayer), preserve ? 1 : 0);
+    wkjCheckAndClearException();
 }
 
 bool MediaPlayerPrivate::paused() const
@@ -505,13 +509,12 @@ bool MediaPlayerPrivate::paused() const
 
 void MediaPlayerPrivate::setVolume(float volume)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetVolume", "(F)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_volume || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, volume);
-    WTF::CheckAndClearException(env);
+    cb->set_volume(wkj_ref(*m_jPlayer), volume);
+    wkjCheckAndClearException();
 }
 
 bool MediaPlayerPrivate::supportsMuting() const
@@ -521,13 +524,12 @@ bool MediaPlayerPrivate::supportsMuting() const
 
 void MediaPlayerPrivate::setMuted(bool mute)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID
-        s_mID = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetMute", "(Z)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_mute || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, bool_to_jbool(mute));
-    WTF::CheckAndClearException(env);
+    cb->set_mute(wkj_ref(*m_jPlayer), mute ? 1 : 0);
+    wkjCheckAndClearException();
 }
 
 //bool MediaPlayerPrivate::hasClosedCaptions() const { return false; }
@@ -570,13 +572,12 @@ unsigned MediaPlayerPrivate::bytesLoaded() const
 
 void MediaPlayerPrivate::setSize(const IntSize& size)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetSize", "(II)V");
-    ASSERT(s_mID);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_size || !m_jPlayer)
+        return;
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, (jint)size.width(), (jint)size.height());
-    WTF::CheckAndClearException(env);
+    cb->set_size(wkj_ref(*m_jPlayer), size.width(), size.height());
+    wkjCheckAndClearException();
 }
 
 void MediaPlayerPrivate::paint(GraphicsContext& gc, const FloatRect& r)
@@ -592,9 +593,9 @@ void MediaPlayerPrivate::paint(GraphicsContext& gc, const FloatRect& r)
     }
 
     gc.platformContext()->rq().freeSpace(24)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIAPLAYER
-    << m_jPlayer << (jint)r.x() <<  (jint)r.y()
-    << (jint)r.width() << (jint)r.height();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIAPLAYER
+    << m_jPlayer << (int32_t)r.x() <<  (int32_t)r.y()
+    << (int32_t)r.width() << (int32_t)r.height();
 
 //    PLOG_TRACE0("<<MediaPlayerPrivate paint (OK)\n");
 }
@@ -605,7 +606,7 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
 {
     // enum Preload { None, MetaData, Auto };
     PLOG_TRACE1("MediaPlayerPrivate setPreload, preload=%u\n", (int)preload);
-    jint jPreload =
+    int32_t jPreload =
         (preload == MediaPlayer::Preload::None) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_NONE
         : (preload == MediaPlayer::Preload::MetaData) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_METADATA
         : (preload == MediaPlayer::Preload::Auto) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_AUTO
@@ -614,13 +615,13 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
         // unexpected preload value
         return;
     }
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_mID
-        = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetPreload", "(I)V");
-    ASSERT(s_mID);
 
-    env->CallVoidMethod(*m_jPlayer, s_mID, jPreload);
-    WTF::CheckAndClearException(env);
+    const WKJHostMedia* cb = wkjMedia();
+    if (!cb || !cb->set_preload || !m_jPlayer)
+        return;
+
+    cb->set_preload(wkj_ref(*m_jPlayer), jPreload);
+    wkjCheckAndClearException();
 }
 
 //bool MediaPlayerPrivate::hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::ReadyState::HaveCurrentData; }
@@ -665,11 +666,10 @@ void MediaPlayerPrivate::setReadyState(MediaPlayer::ReadyState readyState)
 }
 
 
-MediaPlayerPrivate* MediaPlayerPrivate::getPlayer(jlong ptr)
+MediaPlayerPrivate* MediaPlayerPrivate::getPlayer(int64_t ptr)
 {
-    return reinterpret_cast<MediaPlayerPrivate *>(jlong_to_ptr(ptr));
+    return static_cast<MediaPlayerPrivate*>(wkj_to_ptr(ptr));
 }
-
 void MediaPlayerPrivate::notifyNetworkStateChanged(int networkState)
 {
     switch (networkState) {
@@ -790,100 +790,88 @@ void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges>
 }
 
 
+
 // *********************************************************
-// JNI functions
+// C ABI entry points (com.sun.webkit.graphics.WCMediaPlayer notifications)
 // *********************************************************
 extern "C" {
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNetworkStateChanged
-    (JNIEnv*, jobject, jlong ptr, jint networkState)
+
+WKJ_EXPORT void wkj_media_notify_network_state(int64_t player_peer, int32_t state)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    player->notifyNetworkStateChanged(networkState);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
+    player->notifyNetworkStateChanged(state);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReadyStateChanged
-    (JNIEnv*, jobject, jlong ptr, jint readyState)
+WKJ_EXPORT void wkj_media_notify_ready_state(int64_t player_peer, int32_t state)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    player->notifyReadyStateChanged(readyState);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
+    player->notifyReadyStateChanged(state);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyPaused
-    (JNIEnv*, jobject, jlong ptr, jboolean paused)
+WKJ_EXPORT void wkj_media_notify_paused(int64_t player_peer, int32_t paused)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    player->notifyPaused(jbool_to_bool(paused));
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
+    player->notifyPaused(paused != 0);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifySeeking
-    (JNIEnv*, jobject, jlong ptr, jboolean seeking, jint /*readyState*/)
+WKJ_EXPORT void wkj_media_notify_seeking(int64_t player_peer, int32_t seeking, int32_t /*ready_state*/)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    player->notifySeeking(jbool_to_bool(seeking));
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
+    player->notifySeeking(seeking != 0);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyFinished
-    (JNIEnv*, jobject, jlong ptr)
+WKJ_EXPORT void wkj_media_notify_finished(int64_t player_peer)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
     player->notifyFinished();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReady
-    (JNIEnv*, jobject, jlong ptr, jboolean hasVideo, jboolean hasAudio, jfloat duration)
+WKJ_EXPORT void wkj_media_notify_ready(int64_t player_peer, int32_t has_video,
+                                       int32_t has_audio, float duration)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    player->notifyReady(jbool_to_bool(hasVideo), jbool_to_bool(hasAudio));
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
+    player->notifyReady(has_video != 0, has_audio != 0);
     if (duration >= 0) {
         player->notifyDurationChanged(duration);
     }
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyDurationChanged
-  (JNIEnv*, jobject, jlong ptr, jfloat duration)
+WKJ_EXPORT void wkj_media_notify_duration_changed(int64_t player_peer, float duration)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
     if (duration != player->duration().toFloat()) {
         player->notifyDurationChanged(duration);
     }
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifySizeChanged
-    (JNIEnv*, jobject, jlong ptr, jint width, jint height)
+WKJ_EXPORT void wkj_media_notify_size_changed(int64_t player_peer, int32_t width, int32_t height)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
     player->notifySizeChanged(width, height);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNewFrame
-    (JNIEnv*, jobject, jlong ptr)
+WKJ_EXPORT void wkj_media_notify_new_frame(int64_t player_peer)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
     player->notifyNewFrame();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyBufferChanged
-  (JNIEnv *env, jobject, jlong ptr, jfloatArray ranges, jint bytesLoaded)
+WKJ_EXPORT void wkj_media_notify_buffer_changed(int64_t player_peer, const float* ranges,
+                                                int32_t count, int32_t bytes_loaded)
 {
-    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
+    MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(player_peer);
 
-    jboolean isCopy;
-    jint len = env->GetArrayLength(ranges);
-    jfloat* rangesElems = env->GetFloatArrayElements(ranges, &isCopy);
-
+    // `count` is the number of floats, as GetArrayLength on the float[] was; the pairs are
+    // read exactly as before, and an odd count reads one past the last pair in both versions.
     PlatformTimeRanges* timeRanges = new PlatformTimeRanges();
-    for (int i = 0; i < len; i+=2) {
-        timeRanges->add(MediaTime::createWithDouble(rangesElems[i]),
-                        MediaTime::createWithDouble(rangesElems[i+1]));
-    }
-    if (isCopy == JNI_TRUE) {
-       env->ReleaseFloatArrayElements(ranges, rangesElems, JNI_ABORT);
+    for (int32_t i = 0; i < count; i += 2) {
+        timeRanges->add(MediaTime::createWithDouble(ranges[i]),
+                        MediaTime::createWithDouble(ranges[i + 1]));
     }
 
-    player->notifyBufferChanged(std::unique_ptr<PlatformTimeRanges>(timeRanges), bytesLoaded);
+    player->notifyBufferChanged(std::unique_ptr<PlatformTimeRanges>(timeRanges), bytes_loaded);
 }
 
 } // extern "C"
 
 } // namespace WebCore
-

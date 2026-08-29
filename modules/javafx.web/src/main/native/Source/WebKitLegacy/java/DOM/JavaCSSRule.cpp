@@ -34,50 +34,56 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSRule*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_CSSRule_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_CSSRule_getType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->typeForCSSOM();
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getCssTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSRule_getCssText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->cssText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->cssText());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_setCssTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_CSSRule_setCssText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setCssText(AtomString{String(env, value)});
+    IMPL->setCssText(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getParentStyleSheetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSRule_getParentStyleSheet(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleSheet>(env, WTF::getPtr(IMPL->parentStyleSheet()));
+    return WKJReturnPeer<CSSStyleSheet>(WTF::getPtr(IMPL->parentStyleSheet()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getParentRuleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSRule_getParentRule(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRule>(env, WTF::getPtr(IMPL->parentRule()));
+    return WKJReturnPeer<CSSRule>(WTF::getPtr(IMPL->parentRule()));
 }
 
 }

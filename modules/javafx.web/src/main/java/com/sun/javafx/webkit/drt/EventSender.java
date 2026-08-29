@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,7 +127,7 @@ final class EventSender {
      * Implements the {@code keyDown}
      * method of the DRT event sender object.
      */
-    private void keyDown(String key, int modifiers) {
+    void keyDown(String key, int modifiers) {
         String keyChar = null;
         KeyCode code = MAP.get(key);
         if (1 == key.length()) {
@@ -167,7 +167,7 @@ final class EventSender {
      * Implements the {@code mouseUp} and {@code mouseDown}
      * methods of the DRT event sender object.
      */
-    private void mouseUpDown(int button, int modifiers) {
+    void mouseUpDown(int button, int modifiers) {
         mousePressed = isSet(modifiers, PRESSED);
         if (mousePressed) {
             updateClickCountForButton(button);
@@ -188,7 +188,7 @@ final class EventSender {
      * Implements the {@code mouseMoveTo}
      * method of the DRT event sender object.
      */
-    private void mouseMoveTo(int x, int y) {
+    void mouseMoveTo(int x, int y) {
         mousePositionX = x;
         mousePositionY = y;
         dispatchMouseEvent(mousePressed
@@ -201,7 +201,7 @@ final class EventSender {
      * Implements the {@code mouseScrollBy} and {@code continuousMouseScrollBy}
      * methods of the DRT event sender object.
      */
-    private void mouseScroll(float x, float y, boolean continuous) {
+    void mouseScroll(float x, float y, boolean continuous) {
         if (continuous) {
             x /= SCROLL;
             y /= SCROLL;
@@ -222,7 +222,7 @@ final class EventSender {
      * Implements the {@code leapForward}
      * method of the DRT event sender object.
      */
-    private void leapForward(int timeOffset) {
+    void leapForward(int timeOffset) {
         this.timeOffset += timeOffset;
     }
 
@@ -230,7 +230,7 @@ final class EventSender {
      * Implements the {@code contextClick}
      * method of the DRT event sender object.
      */
-    private void contextClick() {
+    void contextClick() {
         dispatchMouseEvent(WCMouseEvent.MOUSE_PRESSED, WCMouseEvent.BUTTON2, 1, 0);
         dispatchMouseEvent(WCMouseEvent.MOUSE_RELEASED, WCMouseEvent.BUTTON2, 1, 0);
     }
@@ -239,7 +239,7 @@ final class EventSender {
      * Implements the {@code scheduleAsynchronousClick}
      * method of the DRT event sender object.
      */
-    private void scheduleAsynchronousClick() {
+    void scheduleAsynchronousClick() {
         dispatchMouseEvent(WCMouseEvent.MOUSE_PRESSED, WCMouseEvent.BUTTON1, 1, 0);
         dispatchMouseEvent(WCMouseEvent.MOUSE_RELEASED, WCMouseEvent.BUTTON1, 1, 0);
     }
@@ -248,7 +248,7 @@ final class EventSender {
      * Implements the {@code touchStart}
      * method of the DRT event sender object.
      */
-    private void touchStart() {
+    void touchStart() {
         throw new UnsupportedOperationException("touchStart");
     }
 
@@ -256,7 +256,7 @@ final class EventSender {
      * Implements the {@code touchCancel}
      * method of the DRT event sender object.
      */
-    private void touchCancel() {
+    void touchCancel() {
         throw new UnsupportedOperationException("touchCancel");
     }
 
@@ -264,7 +264,7 @@ final class EventSender {
      * Implements the {@code touchMove}
      * method of the DRT event sender object.
      */
-    private void touchMove() {
+    void touchMove() {
         throw new UnsupportedOperationException("touchMove");
     }
 
@@ -272,7 +272,7 @@ final class EventSender {
      * Implements the {@code touchEnd}
      * method of the DRT event sender object.
      */
-    private void touchEnd() {
+    void touchEnd() {
         throw new UnsupportedOperationException("touchEnd");
     }
 
@@ -280,7 +280,7 @@ final class EventSender {
      * Implements the {@code addTouchPoint}
      * method of the DRT event sender object.
      */
-    private void addTouchPoint(int x, int y) {
+    void addTouchPoint(int x, int y) {
         throw new UnsupportedOperationException("addTouchPoint");
     }
 
@@ -288,7 +288,7 @@ final class EventSender {
      * Implements the {@code updateTouchPoint}
      * method of the DRT event sender object.
      */
-    private void updateTouchPoint(int i, int x, int y) {
+    void updateTouchPoint(int i, int x, int y) {
         throw new UnsupportedOperationException("updateTouchPoint");
     }
 
@@ -296,7 +296,7 @@ final class EventSender {
      * Implements the {@code cancelTouchPoint}
      * method of the DRT event sender object.
      */
-    private void cancelTouchPoint(int i) {
+    void cancelTouchPoint(int i) {
         throw new UnsupportedOperationException("cancelTouchPoint");
     }
 
@@ -304,7 +304,7 @@ final class EventSender {
      * Implements the {@code releaseTouchPoint}
      * method of the DRT event sender object.
      */
-    private void releaseTouchPoint(int i) {
+    void releaseTouchPoint(int i) {
         throw new UnsupportedOperationException("releaseTouchPoint");
     }
 
@@ -312,7 +312,7 @@ final class EventSender {
      * Implements the {@code clearTouchPoints}
      * method of the DRT event sender object.
      */
-    private void clearTouchPoints() {
+    void clearTouchPoints() {
         throw new UnsupportedOperationException("clearTouchPoints");
     }
 
@@ -320,7 +320,7 @@ final class EventSender {
      * Implements the {@code setTouchModifier}
      * method of the DRT event sender object.
      */
-    private void setTouchModifier(int modifier, boolean set) {
+    void setTouchModifier(int modifier, boolean set) {
         modifiers = set ? (modifiers | modifier) : (modifiers & ~modifier);
     }
 
@@ -328,7 +328,7 @@ final class EventSender {
      * Implements the {@code scalePageBy}
      * method of the DRT event sender object.
      */
-    private void scalePageBy(float scale, int x, int y) {
+    void scalePageBy(float scale, int x, int y) {
         throw new UnsupportedOperationException("scalePageBy(" + scale + "); x=" + x + "; y=" + y);
     }
 
@@ -337,7 +337,7 @@ final class EventSender {
      * {@code zoomPageInt}, and {@code zoomPageOut}
      * methods of the DRT event sender object.
      */
-    private void zoom(boolean in, boolean textOnly) {
+    void zoom(boolean in, boolean textOnly) {
         float factor = webPage.getZoomFactor(textOnly);
         webPage.setZoomFactor(in ? (factor * ZOOM) : (factor / ZOOM), textOnly);
     }
@@ -346,7 +346,7 @@ final class EventSender {
      * Implements the {@code beginDragWithFiles}
      * method of the DRT event sender object.
      */
-    private void beginDragWithFiles(String[] names) {
+    void beginDragWithFiles(String[] names) {
         StringBuilder sb = new StringBuilder("beginDragWithFiles");
         for (String name : names) {
             sb.append(", ").append(name);
@@ -358,7 +358,7 @@ final class EventSender {
      * Returns the {@code dragMode}
      * variable of the DRT event sender object.
      */
-    private boolean getDragMode() {
+    boolean getDragMode() {
         return dragMode;
     }
 
@@ -366,7 +366,7 @@ final class EventSender {
      * Sets the {@code dragMode}
      * variable of the DRT event sender object.
      */
-    private void setDragMode(boolean mode) {
+    void setDragMode(boolean mode) {
         dragMode = mode;
     }
 

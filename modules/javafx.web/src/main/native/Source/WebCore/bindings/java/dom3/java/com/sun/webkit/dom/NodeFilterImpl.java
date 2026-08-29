@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class NodeFilterImpl implements NodeFilter {
         return (arg == null) ? 0L : ((NodeFilterImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        NodeFilterNative.dispose(peer);
+    }
 
     static NodeFilter getImpl(long peer) {
         return (NodeFilter)create(peer);
@@ -104,8 +106,10 @@ public class NodeFilterImpl implements NodeFilter {
         return acceptNodeImpl(getPeer()
             , NodeImpl.getPeer(n));
     }
-    native static short acceptNodeImpl(long peer
-        , long n);
+    static short acceptNodeImpl(long peer
+        , long n) {
+        return NodeFilterNative.acceptNode(peer, n);
+    }
 
 
 }

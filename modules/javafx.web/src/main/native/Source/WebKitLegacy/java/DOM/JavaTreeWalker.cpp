@@ -35,145 +35,159 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<TreeWalker*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<TreeWalker*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_TreeWalker_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getRootImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_getRoot(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->root()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->root()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getWhatToShowImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_TreeWalker_getWhatToShow(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->whatToShow();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getFilterImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_getFilter(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeFilter>(env, WTF::getPtr(IMPL->filter()));
+    return WKJReturnPeer<NodeFilter>(WTF::getPtr(IMPL->filter()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getExpandEntityReferencesImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_TreeWalker_getExpandEntityReferences(int64_t arg0)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JNI_FALSE;
+    return 0;
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getCurrentNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_getCurrentNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->currentNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->currentNode()));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_setCurrentNodeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+WKJ_EXPORT void wkj_dom_TreeWalker_setCurrentNode(int64_t peer, int64_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (!value) {
-        raiseTypeErrorException(env);
+        raiseTypeErrorException();
         return;
     }
-    IMPL->setCurrentNode(*static_cast<Node*>(jlong_to_ptr(value)));
+    IMPL->setCurrentNode(*static_cast<Node*>(wkj_to_ptr(value)));
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_parentNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_parentNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->parentNode();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_firstChildImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_firstChild(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->firstChild();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_lastChildImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_lastChild(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->lastChild();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_previousSiblingImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_previousSibling(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->previousSibling();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_nextSiblingImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_nextSibling(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->nextSibling();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_previousNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_previousNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->previousNode();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_nextNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_TreeWalker_nextNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->nextNode();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 

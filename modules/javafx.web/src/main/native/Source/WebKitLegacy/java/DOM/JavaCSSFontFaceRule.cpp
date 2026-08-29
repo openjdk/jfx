@@ -34,21 +34,22 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSFontFaceRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSFontFaceRule*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSFontFaceRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSFontFaceRule_getStyle(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSFontFaceDescriptors>(env, &IMPL->style());
+    return WKJReturnPeer<CSSFontFaceDescriptors>(&IMPL->style());
 }
 
 }

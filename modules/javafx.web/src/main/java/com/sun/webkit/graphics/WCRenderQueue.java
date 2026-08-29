@@ -123,11 +123,11 @@ public abstract class WCRenderQueue extends Ref {
 
     protected abstract void flush();
 
-    private void fwkFlush() {
+    void fwkFlush() {
         flush();
     }
 
-    private void fwkAddBuffer(ByteBuffer buffer) {
+    void fwkAddBuffer(ByteBuffer buffer) {
         addBuffer(buffer);
     }
 
@@ -157,11 +157,13 @@ public abstract class WCRenderQueue extends Ref {
 
     protected abstract void disposeGraphics();
 
-    private void fwkDisposeGraphics() {
+    void fwkDisposeGraphics() {
         disposeGraphics();
     }
 
-    private native void twkRelease(Object[] bufs);
+    private void twkRelease(Object[] bufs) {
+        WCRenderQueueNative.release(bufs);
+    }
 
     /*is called from native*/
     private int refString(String str) {
@@ -169,12 +171,12 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     /*is called from native*/
-    private int refIntArr(int[] arr) {
+    int refIntArr(int[] arr) {
         return currentBuffer.addIntArray(arr);
     }
 
     /*is called from native*/
-    private int refFloatArr(float[] arr) {
+    int refFloatArr(float[] arr) {
         return currentBuffer.addFloatArray(arr);
     }
 

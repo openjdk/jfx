@@ -32,7 +32,7 @@
 #include "RQRef.h"
 #include <wtf/TZoneMalloc.h>
 
-#include <jni.h>
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 
@@ -76,14 +76,16 @@ public:
     bool isAllDataReceived() const final { return m_isAllDataReceived;}
     void clearFrameBufferCache(size_t) final {  }
 
-    JLObject nativeDecoder() const { return m_nativeDecoder; }
+    wkj_ref nativeDecoder() const { return m_nativeDecoder.get(); }
 
 protected:
     bool m_isAllDataReceived { false };
     size_t m_receivedDataSize { 0 };
     mutable EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::Unknown };
-    // Native Handle for Java object.
-    JGObject m_nativeDecoder;
+    // The Java WCImageDecoder, held for this object's whole lifetime. The release point is
+    // ~ImageDecoderJava, which calls WCImageDecoder.destroy() and then lets this handle's
+    // destructor drop the registry id. It replaces the global reference one for one.
+    WKJHandle m_nativeDecoder;
     mutable IntSize m_size;
 };
 

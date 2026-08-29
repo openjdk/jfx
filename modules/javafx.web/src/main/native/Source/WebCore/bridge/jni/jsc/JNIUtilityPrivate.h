@@ -38,10 +38,34 @@ namespace Bindings {
 
 class RootObject;
 
-jvalue convertValueToJValue(JSGlobalObject*, RootObject*, JSValue, JavaType, const char* javaClassName);
-jobject convertUndefinedToJObject();
-jthrowable dispatchJNICall(int, RootObject *rootObject, jobject, bool isStatic, JavaType returnType, jmethodID, jobject* args, jvalue& result, jobject accessControlContext);
-jobject jvalueToJObject(jvalue value, JavaType);
+/*
+ * The JavaScript value as a Java value of the requested type. Every object it produces is
+ * owned by the caller; declare a JavaValueScope beside the result, which is what replaces
+ * the JNI local reference frame that used to reclaim these.
+ */
+WKJJavaValue convertValueToJValue(JSGlobalObject*, RootObject*, JSValue, JavaType,
+    const char* javaClassName);
+
+/* The com.sun.webkit.dom.JSObject.UNDEFINED singleton, as a reference the caller owns. */
+WKJHandle convertUndefinedToJObject();
+
+/*
+ * Invokes a Java method through com.sun.webkit.Utilities.fwkInvokeWithContext and converts
+ * its result to `result` according to `returnType`. Returns the Throwable the invocation
+ * ended with, or a null handle.
+ *
+ * This was dispatchJNICall, which took a JNI method id and turned it into a
+ * java.lang.reflect.Method with ToReflectedMethod before handing it to Java. The Method now
+ * arrives as a wkj_ref, so the conversion - and with it the isStatic argument that only
+ * ToReflectedMethod needed - is gone. Nothing is lost with it: JavaClass always passed
+ * false, and JavaInstance::invokeMethod throws a TypeError for a static method before it
+ * ever reaches here.
+ */
+WKJHandle dispatchJavaCall(int argumentCount, RootObject*, wkj_ref instance, JavaType returnType,
+    wkj_ref method, const wkj_ref* args, WKJJavaValue& result, wkj_ref accessControlContext);
+
+/* The value as a Java object, boxing it if it is a primitive. The caller owns the result. */
+WKJHandle javaValueToObject(const WKJJavaValue&, JavaType);
 
 } // namespace Bindings
 

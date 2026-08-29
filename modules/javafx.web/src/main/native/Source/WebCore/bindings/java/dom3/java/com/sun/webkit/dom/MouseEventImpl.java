@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,91 +45,125 @@ public class MouseEventImpl extends UIEventImpl implements MouseEvent {
     public int getScreenX() {
         return getScreenXImpl(getPeer());
     }
-    native static int getScreenXImpl(long peer);
+    static int getScreenXImpl(long peer) {
+        return MouseEventNative.getScreenX(peer);
+    }
 
     @Override
     public int getScreenY() {
         return getScreenYImpl(getPeer());
     }
-    native static int getScreenYImpl(long peer);
+    static int getScreenYImpl(long peer) {
+        return MouseEventNative.getScreenY(peer);
+    }
 
     @Override
     public int getClientX() {
         return getClientXImpl(getPeer());
     }
-    native static int getClientXImpl(long peer);
+    static int getClientXImpl(long peer) {
+        return MouseEventNative.getClientX(peer);
+    }
 
     @Override
     public int getClientY() {
         return getClientYImpl(getPeer());
     }
-    native static int getClientYImpl(long peer);
+    static int getClientYImpl(long peer) {
+        return MouseEventNative.getClientY(peer);
+    }
 
     @Override
     public boolean getCtrlKey() {
         return getCtrlKeyImpl(getPeer());
     }
-    native static boolean getCtrlKeyImpl(long peer);
+    static boolean getCtrlKeyImpl(long peer) {
+        return MouseEventNative.getCtrlKey(peer);
+    }
 
     @Override
     public boolean getShiftKey() {
         return getShiftKeyImpl(getPeer());
     }
-    native static boolean getShiftKeyImpl(long peer);
+    static boolean getShiftKeyImpl(long peer) {
+        return MouseEventNative.getShiftKey(peer);
+    }
 
     @Override
     public boolean getAltKey() {
         return getAltKeyImpl(getPeer());
     }
-    native static boolean getAltKeyImpl(long peer);
+    static boolean getAltKeyImpl(long peer) {
+        return MouseEventNative.getAltKey(peer);
+    }
 
     @Override
     public boolean getMetaKey() {
         return getMetaKeyImpl(getPeer());
     }
-    native static boolean getMetaKeyImpl(long peer);
+    static boolean getMetaKeyImpl(long peer) {
+        return MouseEventNative.getMetaKey(peer);
+    }
 
     @Override
     public short getButton() {
         return getButtonImpl(getPeer());
     }
-    native static short getButtonImpl(long peer);
+    static short getButtonImpl(long peer) {
+        return MouseEventNative.getButton(peer);
+    }
 
     @Override
     public EventTarget getRelatedTarget() {
         return (EventTarget)NodeImpl.getImpl(getRelatedTargetImpl(getPeer()));
     }
-    native static long getRelatedTargetImpl(long peer);
+    static long getRelatedTargetImpl(long peer) {
+        return MouseEventNative.getRelatedTarget(peer);
+    }
 
     public int getOffsetX() {
         return getOffsetXImpl(getPeer());
     }
-    native static int getOffsetXImpl(long peer);
+    static int getOffsetXImpl(long peer) {
+        return MouseEventNative.getOffsetX(peer);
+    }
 
     public int getOffsetY() {
         return getOffsetYImpl(getPeer());
     }
-    native static int getOffsetYImpl(long peer);
+    static int getOffsetYImpl(long peer) {
+        return MouseEventNative.getOffsetY(peer);
+    }
 
     public int getX() {
         return getXImpl(getPeer());
     }
-    native static int getXImpl(long peer);
+    static int getXImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.MouseEventImpl.getXImpl: no wkj_* function exists for it in"
+                + " any jfxwebkit build");
+    }
 
     public int getY() {
         return getYImpl(getPeer());
     }
-    native static int getYImpl(long peer);
+    static int getYImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.MouseEventImpl.getYImpl: no wkj_* function exists for it in"
+                + " any jfxwebkit build");
+    }
 
     public Node getFromElement() {
         return NodeImpl.getImpl(getFromElementImpl(getPeer()));
     }
-    native static long getFromElementImpl(long peer);
+    static long getFromElementImpl(long peer) {
+        return MouseEventNative.getFromElement(peer);
+    }
 
     public Node getToElement() {
         return NodeImpl.getImpl(getToElementImpl(getPeer()));
     }
-    native static long getToElementImpl(long peer);
+    static long getToElementImpl(long peer) {
+        return MouseEventNative.getToElement(peer);
+    }
 
 
 // Functions
@@ -167,7 +201,7 @@ public class MouseEventImpl extends UIEventImpl implements MouseEvent {
             , button
             , NodeImpl.getPeer((NodeImpl)relatedTarget));
     }
-    native static void initMouseEventImpl(long peer
+    static void initMouseEventImpl(long peer
         , String type
         , boolean canBubble
         , boolean cancelable
@@ -182,7 +216,10 @@ public class MouseEventImpl extends UIEventImpl implements MouseEvent {
         , boolean shiftKey
         , boolean metaKey
         , short button
-        , long relatedTarget);
+        , long relatedTarget) {
+        MouseEventNative.initMouseEvent(peer, type, canBubble, cancelable, view, detail, screenX, screenY, clientX,
+                clientY, ctrlKey, altKey, shiftKey, metaKey, button, relatedTarget);
+    }
 
 
 }

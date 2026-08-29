@@ -94,11 +94,11 @@ public abstract class CursorManager<T> {
 
     protected abstract T getPredefinedCursor(int type);
 
-    private long getCustomCursorID(WCImageFrame frame, int hotspotX, int hotspotY) {
+    long getCustomCursorID(WCImageFrame frame, int hotspotX, int hotspotY) {
         return putCursor(getCustomCursor(frame.getFrame(), hotspotX, hotspotY));
     }
 
-    private long getPredefinedCursorID(int type) {
+    long getPredefinedCursorID(int type) {
         return putCursor(getPredefinedCursor(type));
     }
 

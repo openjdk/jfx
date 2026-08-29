@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,25 +42,33 @@ public class HTMLModElementImpl extends HTMLElementImpl implements HTMLModElemen
     public String getCite() {
         return getCiteImpl(getPeer());
     }
-    native static String getCiteImpl(long peer);
+    static String getCiteImpl(long peer) {
+        return HTMLModElementNative.getCite(peer);
+    }
 
     @Override
     public void setCite(String value) {
         setCiteImpl(getPeer(), value);
     }
-    native static void setCiteImpl(long peer, String value);
+    static void setCiteImpl(long peer, String value) {
+        HTMLModElementNative.setCite(peer, value);
+    }
 
     @Override
     public String getDateTime() {
         return getDateTimeImpl(getPeer());
     }
-    native static String getDateTimeImpl(long peer);
+    static String getDateTimeImpl(long peer) {
+        return HTMLModElementNative.getDateTime(peer);
+    }
 
     @Override
     public void setDateTime(String value) {
         setDateTimeImpl(getPeer(), value);
     }
-    native static void setDateTimeImpl(long peer, String value);
+    static void setDateTimeImpl(long peer, String value) {
+        HTMLModElementNative.setDateTime(peer, value);
+    }
 
 }
 

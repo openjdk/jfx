@@ -33,44 +33,49 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DeprecatedCSSOMRect*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DeprecatedCSSOMRect*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RectImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_Rect_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RectImpl_getTopImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Rect_getTop(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->top()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->top()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RectImpl_getRightImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Rect_getRight(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->right()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->right()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RectImpl_getBottomImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Rect_getBottom(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->bottom()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->bottom()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RectImpl_getLeftImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Rect_getLeft(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->left()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->left()));
 }
 
 }

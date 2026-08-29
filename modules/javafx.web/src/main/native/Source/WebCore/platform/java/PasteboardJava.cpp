@@ -44,7 +44,6 @@
 #include "DataObjectJava.h"
 #include "DragData.h"
 #include "PlatformJavaClasses.h"
-#include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringBuilder.h>
 #include "NamedNodeMap.h"
@@ -56,81 +55,104 @@
 
 namespace WebCore {
 
-///////////////////
-// WCPasteboard JNI
-///////////////////
+//////////////////////////////
+// com.sun.webkit.WCPasteboard
+//////////////////////////////
 
 namespace {
 
-#define PB_CLASS jPBClass()
-
-#define DEFINE_PB_CLASS(_name) \
-    JNIEnv* env = WTF::GetJavaEnv(); \
-    static JGClass cls(env->FindClass(_name)); \
-    ASSERT(cls);
-
-#define DEFINE_PB_STATIC_METHOD(_name, _params) \
-    JNIEnv* env = WTF::GetJavaEnv(); \
-    static jmethodID mid = env->GetStaticMethodID(PB_CLASS, _name, _params); \
-    ASSERT(mid);
-
-#define CALL_PB_STATIC_VOID_METHOD(...) \
-    env->CallStaticVoidMethod(PB_CLASS, mid, __VA_ARGS__); \
-    WTF::CheckAndClearException(env);
-
-#define CALL_PB_STATIC_JSTROBJ_METHOD(_jstrobj) \
-    JLString _jstrobj(static_cast<jstring>(env->CallStaticObjectMethod(PB_CLASS, mid))); \
-    WTF::CheckAndClearException(env);
-
-jclass jPBClass()
-{
-    DEFINE_PB_CLASS("com/sun/webkit/WCPasteboard");
-    return cls;
-}
+/*
+ * The five macros this block used to carry - PB_CLASS, DEFINE_PB_CLASS,
+ * DEFINE_PB_STATIC_METHOD, CALL_PB_STATIC_VOID_METHOD and CALL_PB_STATIC_JSTROBJ_METHOD -
+ * existed to hide one class lookup and one method-id lookup per function. There is nothing
+ * left for them to hide: each function is now one slot call.
+ *
+ * Two of these hand Java TWO live strings in a single call. Under contract 13 there is no
+ * arena and no library-owned string memory, so each string is materialised into its own
+ * WKJStringArg local, and both locals outlive the call by construction. That is why the ABI
+ * passes a string as two flat parameters instead of anything shared: two strings in one call
+ * need two independent buffers, and any scheme with a single per-thread buffer would have
+ * had the second conversion overwrite the first.
+ */
 
 String jGetPlainText()
 {
-    DEFINE_PB_STATIC_METHOD("getPlainText", "()Ljava/lang/String;");
-    CALL_PB_STATIC_JSTROBJ_METHOD(jstr);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_get_plain_text)
+        return String();
 
-    return jstr ? String(env, jstr) : String();
+    String text = wkjFetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return cb->pasteboard_get_plain_text(buffer, capacity, length);
+    });
+    wkjCheckAndClearException();
+
+    // WKJ_STR_NULL comes back as the null String, which is what the null test gave before.
+    return text;
 }
 
 void jWritePlainText(const String& plainText)
 {
-    DEFINE_PB_STATIC_METHOD("writePlainText", "(Ljava/lang/String;)V");
-    CALL_PB_STATIC_VOID_METHOD((jstring)plainText.toJavaString(env));
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_write_plain_text)
+        return;
+
+    WKJStringArg text(plainText);
+    cb->pasteboard_write_plain_text(text.data(), text.length());
+    wkjCheckAndClearException();
 }
 
 void jWriteSelection(bool canSmartCopyOrDelete, const String& plainText, const String& markup)
 {
-    DEFINE_PB_STATIC_METHOD("writeSelection", "(ZLjava/lang/String;Ljava/lang/String;)V");
-    CALL_PB_STATIC_VOID_METHOD(
-        bool_to_jbool(canSmartCopyOrDelete),
-        (jstring)plainText.toJavaString(env),
-        (jstring)markup.toJavaString(env));
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_write_selection)
+        return;
+
+    // One buffer per string; both live until the call returns.
+    WKJStringArg text(plainText);
+    WKJStringArg markupArg(markup);
+    cb->pasteboard_write_selection(canSmartCopyOrDelete ? 1 : 0,
+                                   text.data(), text.length(),
+                                   markupArg.data(), markupArg.length());
+    wkjCheckAndClearException();
 }
 
 void jWriteImage(const Image& image)
 {
-    DEFINE_PB_STATIC_METHOD("writeImage", "(Lcom/sun/webkit/graphics/WCImageFrame;)V");
-    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()->platformImage()->getImage()));
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_write_image)
+        return;
+
+    cb->pasteboard_write_image(
+        wkj_ref(*const_cast<Image&>(image).javaImage()->platformImage()->getImage()));
+    wkjCheckAndClearException();
 }
 
 void jWriteURL(const String& url, const String& markup)
 {
-    DEFINE_PB_STATIC_METHOD("writeUrl", "(Ljava/lang/String;Ljava/lang/String;)V");
-    CALL_PB_STATIC_VOID_METHOD(
-        (jstring)url.toJavaString(env),
-        (jstring)markup.toJavaString(env));
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_write_url)
+        return;
+
+    // One buffer per string; both live until the call returns.
+    WKJStringArg urlArg(url);
+    WKJStringArg markupArg(markup);
+    cb->pasteboard_write_url(urlArg.data(), urlArg.length(),
+                             markupArg.data(), markupArg.length());
+    wkjCheckAndClearException();
 }
 
 String jGetHtml()
 {
-    DEFINE_PB_STATIC_METHOD("getHtml", "()Ljava/lang/String;");
-    CALL_PB_STATIC_JSTROBJ_METHOD(jstr);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->pasteboard_get_html)
+        return String();
 
-    return jstr ? String(env, jstr) : String();
+    String html = wkjFetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return cb->pasteboard_get_html(buffer, capacity, length);
+    });
+    wkjCheckAndClearException();
+
+    return html;
 }
 
 ///////////////////

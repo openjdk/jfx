@@ -38,85 +38,101 @@
 using namespace JSC;
 using namespace JSC::Bindings;
 
-JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessControlContext)
+JavaClass::JavaClass(wkj_ref anInstance, RootObject* rootObject, wkj_ref accessControlContext)
 {
-    // Since anInstance is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(anInstance, true);
+    // Since anInstance is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(anInstance);
+    WKJHandle dummyInstance;
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaClass Constructor", (jobject)jlinstance);
-        anInstance = createDummyObject();
-        if (anInstance == nullptr) {
-            LOG_ERROR("Could not createDummyObject for %p in JavaClass Constructor", anInstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaClass Constructor", static_cast<unsigned long long>(anInstance));
+        dummyInstance = createDummyObject();
+        anInstance = dummyInstance.get();
+        if (anInstance == 0) {
+            LOG_ERROR("Could not createDummyObject for %llu in JavaClass Constructor", static_cast<unsigned long long>(anInstance));
             m_name = fastStrDup("<Unknown>");
             return;
         }
     }
 
-    jobject aClass = callJNIMethod<jobject>(anInstance, "getClass", "()Ljava/lang/Class;");
+    WKJHandle aClass = javaObjectClass(anInstance);
 
     if (!aClass) {
-        LOG_ERROR("Unable to call getClass on instance %p", anInstance);
+        LOG_ERROR("Unable to call getClass on instance %llu", static_cast<unsigned long long>(anInstance));
         m_name = fastStrDup("<Unknown>");
         return;
     }
 
-    if (jstring className = (jstring)callJNIMethod<jobject>(aClass, "getName", "()Ljava/lang/String;")) {
-        const char* classNameC = getCharactersFromJString(className);
-        m_name = fastStrDup(classNameC);
-        releaseCharactersForJString(className, classNameC);
-    } else
+    /*
+     * The class name arrives as UTF-16 and is converted here once. The JNI code read it with
+     * GetStringUTFChars, which is modified UTF-8: the two agree for every name in the Basic
+     * Multilingual Plane, and this conversion is what makes the difference impossible for
+     * the rest (webkit_java_api_bridge.h, faithfulness note 2). Everything downstream -
+     * strcmp against ASCII literals here, array-descriptor parsing in BridgeUtils - is
+     * unchanged.
+     */
+    String className = javaClassName(aClass.get());
+    if (!className.isNull())
+        m_name = fastStrDup(className.utf8().data());
+    else
         m_name = fastStrDup("<Unknown>");
 
     int i;
-    JNIEnv* env = getJNIEnv();
 
     // Get the fields
-    jvalue result;
-    jobject args[1];
-    jmethodID methodId = getMethodID(aClass, "getFields", "()[Ljava/lang/reflect/Field;");
-    if (dispatchJNICall(0, rootObject, aClass, false, JavaTypeArray, methodId,
-                        args, result, accessControlContext) == nullptr) {
-        jarray fields = (jarray) result.l;
-        int numFields = env->GetArrayLength(fields);
-        for (i = 0; i < numFields; i++) {
-            jobject aJField = env->GetObjectArrayElement((jobjectArray)fields, i);
-            JavaField* aField = new JavaField(env, aJField); // deleted in the JavaClass destructor
-            {
-                // FIXME: Should we acquire a JSLock here?
-                m_fields.set(aField->name().impl(), aField);
+    {
+        WKJJavaValue result = emptyJavaValue();
+        JavaValueScope resultScope(result);
+        WKJHandle methodId = javaResolveMethod(aClass.get(), "getFields"_s,
+            "()[Ljava/lang/reflect/Field;"_s);
+        if (!dispatchJavaCall(0, rootObject, aClass.get(), JavaTypeArray, methodId.get(),
+                              nullptr, result, accessControlContext)) {
+            wkj_ref fields = result.l;
+            int numFields = javaArrayLength(fields);
+            for (i = 0; i < numFields; i++) {
+                WKJJavaValue element = emptyJavaValue();
+                JavaValueScope elementScope(element);
+                if (!javaArrayGet(fields, i, JavaTypeObject, element))
+                    continue;
+                JavaField* aField = new JavaField(element.l); // deleted in the JavaClass destructor
+                {
+                    // FIXME: Should we acquire a JSLock here?
+                    m_fields.set(aField->name().impl(), aField);
+                }
             }
-            env->DeleteLocalRef(aJField);
         }
-        env->DeleteLocalRef(fields);
     }
 
     // Get the methods
-    methodId = getMethodID(aClass, "getMethods", "()[Ljava/lang/reflect/Method;");
-    if (dispatchJNICall(0, rootObject, aClass, false, JavaTypeArray, methodId,
-                        args, result, accessControlContext) == nullptr) {
-        jarray methods = (jarray) result.l;
-        int numMethods = env->GetArrayLength(methods);
-        for (i = 0; i < numMethods; i++) {
-            jobject aJMethod = env->GetObjectArrayElement((jobjectArray)methods, i);
-            JavaMethod* aMethod = new JavaMethod(env, aJMethod); // deleted in the JavaClass destructor
-            MethodList* methodList;
-            {
-                // FIXME: Should we acquire a JSLock here?
+    {
+        WKJJavaValue result = emptyJavaValue();
+        JavaValueScope resultScope(result);
+        WKJHandle methodId = javaResolveMethod(aClass.get(), "getMethods"_s,
+            "()[Ljava/lang/reflect/Method;"_s);
+        if (!dispatchJavaCall(0, rootObject, aClass.get(), JavaTypeArray, methodId.get(),
+                              nullptr, result, accessControlContext)) {
+            wkj_ref methods = result.l;
+            int numMethods = javaArrayLength(methods);
+            for (i = 0; i < numMethods; i++) {
+                WKJJavaValue element = emptyJavaValue();
+                JavaValueScope elementScope(element);
+                if (!javaArrayGet(methods, i, JavaTypeObject, element))
+                    continue;
+                JavaMethod* aMethod = new JavaMethod(element.l); // deleted in the JavaClass destructor
+                MethodList* methodList;
+                {
+                    // FIXME: Should we acquire a JSLock here?
 
-                methodList = m_methods.get(aMethod->name().impl());
-                if (!methodList) {
-                    methodList = new MethodList();
-                    m_methods.set(aMethod->name().impl(), methodList);
+                    methodList = m_methods.get(aMethod->name().impl());
+                    if (!methodList) {
+                        methodList = new MethodList();
+                        m_methods.set(aMethod->name().impl(), methodList);
+                    }
                 }
+                methodList->append(aMethod);
             }
-            methodList->append(aMethod);
-            env->DeleteLocalRef(aJMethod);
         }
-        env->DeleteLocalRef(methods);
     }
-
-    env->DeleteLocalRef(aClass);
 }
 
 JavaClass::~JavaClass()
@@ -137,26 +153,17 @@ JavaClass::~JavaClass()
     m_methods.clear();
 }
 
-jobject JavaClass::createDummyObject()
+WKJHandle JavaClass::createDummyObject()
 {
-    JNIEnv* env = getJNIEnv();
-    jclass objectCls = env->FindClass("java/lang/Object");
-    if (!objectCls) {
-        LOG_ERROR("Unable to FindClass for java/lang/Object in JavaClass::createDummyObject");
-        return nullptr;
-    }
-
-    jmethodID methodId = env->GetMethodID(objectCls, "<init>", "()V");
-    if (!methodId) {
-        LOG_ERROR("Unable to Get MethodID in JavaClass::createDummyObject");
-        return nullptr;
-    }
-
-    jobject instance = env->NewObject(objectCls, methodId);
-    if (!instance) {
+    /*
+     * FindClass("java/lang/Object") + GetMethodID("<init>") + NewObject, in one host slot.
+     * The three separate failure messages the JNI version logged had one cause between them
+     * - the JVM would not give us a java.lang.Object - and one outcome, so they are one
+     * message now.
+     */
+    WKJHandle instance = javaCreateDummyObject();
+    if (!instance)
         LOG_ERROR("Unable to create NewObject in JavaClass::createDummyObject");
-        return nullptr;
-    }
     return instance;
 }
 

@@ -183,6 +183,8 @@ list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebKitVersi
 
 list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES
     "${WebKitLegacy_DERIVED_SOURCES_DIR}"
+    # FFM C ABI: webkit_java_api.h (WKJ_EXPORT, wkj_ref, WKJHost)
+    "${WEBKITLEGACY_DIR}/java/api"
     "${WEBKITLEGACY_DIR}/java/DOM"
     "${WEBKITLEGACY_DIR}/java/WebCoreSupport"
     "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}/WebCore"

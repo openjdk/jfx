@@ -31,6 +31,10 @@
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
 
+#if PLATFORM(JAVA)
+#include <wtf/java/WKJHandle.h>
+#endif
+
 #if OS(WINDOWS)
 #include <wtf/win/Win32Handle.h>
 #elif OS(LINUX)
@@ -46,11 +50,15 @@ class MappedFileData;
 enum class FileOpenMode : uint8_t;
 enum class MappedFileMode : bool;
 #if PLATFORM(JAVA)
-typedef JGObject PlatformFileHandle;
-const PlatformFileHandle invalidPlatformFileHandle { nullptr };
+// A java.io.RandomAccessFile, held as a registry id rather than a JNI global reference:
+// the handle IS the open file for this port, which is why PlatformFileHandle is an owning
+// type here and a plain descriptor everywhere else. wtf/java/FileSystemJava.cpp is the only
+// code that creates one (WKJHostFileSystem::open_file) and closes one.
+typedef WKJHandle PlatformFileHandle;
+const PlatformFileHandle invalidPlatformFileHandle { };
 struct JavaHandleMarkableTraits{
-    static bool isEmptyValue(JGObject value) { return value == invalidPlatformFileHandle; }
-    static JGObject emptyValue() { return invalidPlatformFileHandle; }
+    static bool isEmptyValue(const WKJHandle& value) { return value == invalidPlatformFileHandle; }
+    static WKJHandle emptyValue() { return invalidPlatformFileHandle; }
 
 };
 using PlatformHandleTraits = JavaHandleMarkableTraits;

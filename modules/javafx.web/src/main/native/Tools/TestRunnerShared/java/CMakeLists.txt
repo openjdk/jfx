@@ -16,7 +16,6 @@ set(TestRunnerShared_SOURCES
 )
 
 set(TestRunnerShared_LIBRARIES
-    ${JAVA_JVM_LIBRARY}
     ${ICU_I18N_LIBRARIES}
 )
 
@@ -34,8 +33,6 @@ set(TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES
     ${CMAKE_BINARY_DIR}/JavaScriptCore/Headers
     ${CMAKE_BINARY_DIR}/WTF/Headers
     ${CMAKE_BINARY_DIR}/bmalloc/Headers
-    ${JAVA_INCLUDE_PATH}
-    ${JAVA_INCLUDE_PATH2}
 )
 
 list(APPEND TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES

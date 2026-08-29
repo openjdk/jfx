@@ -32,8 +32,6 @@ typedef unsigned char LChar;
 #include <wtf/unicode/icu/UnicodeIcu.h>
 #elif USE(WCHAR_UNICODE)
 #include <wtf/unicode/wchar/UnicodeWchar.h>
-#elif USE(JAVA_UNICODE)
-#include <wtf/unicode/java/UnicodeJava.h>
 #else
 #error "Unknown Unicode implementation"
 #endif

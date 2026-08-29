@@ -24,19 +24,21 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
-#include <wtf/java/JavaEnv.h>
 #include "KeyboardEvent.h"
+#include "PlatformJavaClasses.h"
 #include "PlatformKeyboardEvent.h"
 #include "NotImplemented.h"
 
+#include <stdint.h>
+
 #include <wtf/Assertions.h>
 
-#include "com_sun_webkit_event_WCKeyEvent.h"
 
 namespace WebCore {
 
-static PlatformEvent::Type toPlatformKeyboardEventType(jint type)
+static PlatformEvent::Type toPlatformKeyboardEventType(int32_t type)
 {
     switch (type) {
         case com_sun_webkit_event_WCKeyEvent_KEY_PRESSED:
@@ -51,35 +53,44 @@ static PlatformEvent::Type toPlatformKeyboardEventType(jint type)
     }
 }
 
+/*
+ * The two strings arrive as (pointer, length) pairs rather than as Java string objects.
+ *
+ * The null test is load-bearing and is kept exactly where it was: a NULL pointer produces the
+ * NULL String, while a non-NULL pointer with length 0 produces the empty one. That is not the
+ * inbound collapse of contract 11.1, which applies to WKJString and to the Java string
+ * constructor it replaces; this call site tested for null itself, before ever building a
+ * String, so both halves of the distinction have always been visible here.
+ */
 PlatformKeyboardEvent::PlatformKeyboardEvent(
-    jint type,
-    jstring text,
-    jstring keyIdentifier,
-    jint windowsVirtualKeyCode,
-    jboolean shiftKey,
-    jboolean ctrlKey,
-    jboolean altKey,
-    jboolean metaKey,
-    jdouble timestamp)
+    int32_t type,
+    const uint16_t* text,
+    int32_t textLength,
+    const uint16_t* keyIdentifier,
+    int32_t keyIdentifierLength,
+    int32_t windowsVirtualKeyCode,
+    int32_t shiftKey,
+    int32_t ctrlKey,
+    int32_t altKey,
+    int32_t metaKey,
+    double timestamp)
         : PlatformEvent(
             toPlatformKeyboardEventType(type),
-            shiftKey,
-            ctrlKey,
-            altKey,
-            metaKey,
+            shiftKey != 0,
+            ctrlKey != 0,
+            altKey != 0,
+            metaKey != 0,
             MonotonicTime::fromRawSeconds(timestamp))
         , m_autoRepeat(false)
         , m_isKeypad(false)
         , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     m_text = text
-        ? String(env, text)
+        ? wkjMakeString(text, textLength)
         : String();
     m_unmodifiedText = m_text;
     m_keyIdentifier = keyIdentifier
-        ? String(env, keyIdentifier)
+        ? wkjMakeString(keyIdentifier, keyIdentifierLength)
         : String();
 }
 

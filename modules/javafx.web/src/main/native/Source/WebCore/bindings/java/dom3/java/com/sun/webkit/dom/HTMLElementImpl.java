@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,165 +45,230 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
     public String getId() {
         return getIdImpl(getPeer());
     }
-    native static String getIdImpl(long peer);
+    static String getIdImpl(long peer) {
+        return HTMLElementNative.getId(peer);
+    }
 
     @Override
     public void setId(String value) {
         setIdImpl(getPeer(), value);
     }
-    native static void setIdImpl(long peer, String value);
+    static void setIdImpl(long peer, String value) {
+        HTMLElementNative.setId(peer, value);
+    }
 
     @Override
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
-    native static String getTitleImpl(long peer);
+    static String getTitleImpl(long peer) {
+        return HTMLElementNative.getTitle(peer);
+    }
 
     @Override
     public void setTitle(String value) {
         setTitleImpl(getPeer(), value);
     }
-    native static void setTitleImpl(long peer, String value);
+    static void setTitleImpl(long peer, String value) {
+        HTMLElementNative.setTitle(peer, value);
+    }
 
     @Override
     public String getLang() {
         return getLangImpl(getPeer());
     }
-    native static String getLangImpl(long peer);
+    static String getLangImpl(long peer) {
+        return HTMLElementNative.getLang(peer);
+    }
 
     @Override
     public void setLang(String value) {
         setLangImpl(getPeer(), value);
     }
-    native static void setLangImpl(long peer, String value);
+    static void setLangImpl(long peer, String value) {
+        HTMLElementNative.setLang(peer, value);
+    }
 
     public boolean getTranslate() {
         return getTranslateImpl(getPeer());
     }
-    native static boolean getTranslateImpl(long peer);
+    static boolean getTranslateImpl(long peer) {
+        return HTMLElementNative.getTranslate(peer);
+    }
 
     public void setTranslate(boolean value) {
         setTranslateImpl(getPeer(), value);
     }
-    native static void setTranslateImpl(long peer, boolean value);
+    static void setTranslateImpl(long peer, boolean value) {
+        HTMLElementNative.setTranslate(peer, value);
+    }
 
     @Override
     public String getDir() {
         return getDirImpl(getPeer());
     }
-    native static String getDirImpl(long peer);
+    static String getDirImpl(long peer) {
+        return HTMLElementNative.getDir(peer);
+    }
 
     @Override
     public void setDir(String value) {
         setDirImpl(getPeer(), value);
     }
-    native static void setDirImpl(long peer, String value);
+    static void setDirImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLElementImpl.setDirImpl: no wkj_* function exists for it"
+                + " in any jfxwebkit build");
+    }
 
     public int getTabIndex() {
         return getTabIndexImpl(getPeer());
     }
-    native static int getTabIndexImpl(long peer);
+    static int getTabIndexImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLElementImpl.getTabIndexImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     public void setTabIndex(int value) {
         setTabIndexImpl(getPeer(), value);
     }
-    native static void setTabIndexImpl(long peer, int value);
+    static void setTabIndexImpl(long peer, int value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLElementImpl.setTabIndexImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     public boolean getDraggable() {
         return getDraggableImpl(getPeer());
     }
-    native static boolean getDraggableImpl(long peer);
+    static boolean getDraggableImpl(long peer) {
+        return HTMLElementNative.getDraggable(peer);
+    }
 
     public void setDraggable(boolean value) {
         setDraggableImpl(getPeer(), value);
     }
-    native static void setDraggableImpl(long peer, boolean value);
+    static void setDraggableImpl(long peer, boolean value) {
+        HTMLElementNative.setDraggable(peer, value);
+    }
 
     public String getWebkitdropzone() {
         return getWebkitdropzoneImpl(getPeer());
     }
-    native static String getWebkitdropzoneImpl(long peer);
+    static String getWebkitdropzoneImpl(long peer) {
+        return HTMLElementNative.getWebkitdropzone(peer);
+    }
 
     public void setWebkitdropzone(String value) {
         setWebkitdropzoneImpl(getPeer(), value);
     }
-    native static void setWebkitdropzoneImpl(long peer, String value);
+    static void setWebkitdropzoneImpl(long peer, String value) {
+        HTMLElementNative.setWebkitdropzone(peer, value);
+    }
 
     public boolean getHidden() {
         return getHiddenImpl(getPeer());
     }
-    native static boolean getHiddenImpl(long peer);
+    static boolean getHiddenImpl(long peer) {
+        return HTMLElementNative.getHidden(peer);
+    }
 
     public void setHidden(boolean value) {
         setHiddenImpl(getPeer(), value);
     }
-    native static void setHiddenImpl(long peer, boolean value);
+    static void setHiddenImpl(long peer, boolean value) {
+        HTMLElementNative.setHidden(peer, value);
+    }
 
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
-    native static String getAccessKeyImpl(long peer);
+    static String getAccessKeyImpl(long peer) {
+        return HTMLElementNative.getAccessKey(peer);
+    }
 
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
-    native static void setAccessKeyImpl(long peer, String value);
+    static void setAccessKeyImpl(long peer, String value) {
+        HTMLElementNative.setAccessKey(peer, value);
+    }
 
     public String getInnerText() {
         return getInnerTextImpl(getPeer());
     }
-    native static String getInnerTextImpl(long peer);
+    static String getInnerTextImpl(long peer) {
+        return HTMLElementNative.getInnerText(peer);
+    }
 
     public void setInnerText(String value) throws DOMException {
         setInnerTextImpl(getPeer(), value);
     }
-    native static void setInnerTextImpl(long peer, String value);
+    static void setInnerTextImpl(long peer, String value) {
+        HTMLElementNative.setInnerText(peer, value);
+    }
 
     public String getOuterText() {
         return getOuterTextImpl(getPeer());
     }
-    native static String getOuterTextImpl(long peer);
+    static String getOuterTextImpl(long peer) {
+        return HTMLElementNative.getOuterText(peer);
+    }
 
     public void setOuterText(String value) throws DOMException {
         setOuterTextImpl(getPeer(), value);
     }
-    native static void setOuterTextImpl(long peer, String value);
+    static void setOuterTextImpl(long peer, String value) {
+        HTMLElementNative.setOuterText(peer, value);
+    }
 
     @Override
     public HTMLCollection getChildren() {
         return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
     }
-    native static long getChildrenImpl(long peer);
+    static long getChildrenImpl(long peer) {
+        return HTMLElementNative.getChildren(peer);
+    }
 
     public String getContentEditable() {
         return getContentEditableImpl(getPeer());
     }
-    native static String getContentEditableImpl(long peer);
+    static String getContentEditableImpl(long peer) {
+        return HTMLElementNative.getContentEditable(peer);
+    }
 
     public void setContentEditable(String value) throws DOMException {
         setContentEditableImpl(getPeer(), value);
     }
-    native static void setContentEditableImpl(long peer, String value);
+    static void setContentEditableImpl(long peer, String value) {
+        HTMLElementNative.setContentEditable(peer, value);
+    }
 
     public boolean getIsContentEditable() {
         return getIsContentEditableImpl(getPeer());
     }
-    native static boolean getIsContentEditableImpl(long peer);
+    static boolean getIsContentEditableImpl(long peer) {
+        return HTMLElementNative.getIsContentEditable(peer);
+    }
 
     public boolean getSpellcheck() {
         return getSpellcheckImpl(getPeer());
     }
-    native static boolean getSpellcheckImpl(long peer);
+    static boolean getSpellcheckImpl(long peer) {
+        return HTMLElementNative.getSpellcheck(peer);
+    }
 
     public void setSpellcheck(boolean value) {
         setSpellcheckImpl(getPeer(), value);
     }
-    native static void setSpellcheckImpl(long peer, boolean value);
+    static void setSpellcheckImpl(long peer, boolean value) {
+        HTMLElementNative.setSpellcheck(peer, value);
+    }
 
     public String getTitleDisplayString() {
         return getTitleDisplayStringImpl(getPeer());
     }
-    native static String getTitleDisplayStringImpl(long peer);
+    static String getTitleDisplayStringImpl(long peer) {
+        return HTMLElementNative.getTitleDisplayString(peer);
+    }
 
 
 // Functions
@@ -214,9 +279,11 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
             , where
             , ElementImpl.getPeer(element)));
     }
-    native static long insertAdjacentElementImpl(long peer
+    static long insertAdjacentElementImpl(long peer
         , String where
-        , long element);
+        , long element) {
+        return HTMLElementNative.insertAdjacentElement(peer, where, element);
+    }
 
 
     public void insertAdjacentHTML(String where
@@ -226,9 +293,11 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
             , where
             , html);
     }
-    native static void insertAdjacentHTMLImpl(long peer
+    static void insertAdjacentHTMLImpl(long peer
         , String where
-        , String html);
+        , String html) {
+        HTMLElementNative.insertAdjacentHTML(peer, where, html);
+    }
 
 
     public void insertAdjacentText(String where
@@ -238,16 +307,20 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
             , where
             , text);
     }
-    native static void insertAdjacentTextImpl(long peer
+    static void insertAdjacentTextImpl(long peer
         , String where
-        , String text);
+        , String text) {
+        HTMLElementNative.insertAdjacentText(peer, where, text);
+    }
 
 
     public void click()
     {
         clickImpl(getPeer());
     }
-    native static void clickImpl(long peer);
+    static void clickImpl(long peer) {
+        HTMLElementNative.click(peer);
+    }
 
 
 }

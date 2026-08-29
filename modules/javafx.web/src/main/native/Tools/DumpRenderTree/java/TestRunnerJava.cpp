@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,31 +24,46 @@
  */
 
 #include "config.h"
-#include "JavaEnv.h"
+
+#include <vector>
+
+#include <drt_java_api.h>
 #include "TestRunner.h"
 #include "WorkQueue.h"
 #include "WorkQueueItem.h"
 
-#include <wtf/java/JavaRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSStringRef.h>
 
 extern JSGlobalContextRef gContext;
 
-jstring JSStringRef_to_jstring(JSStringRef ref, JNIEnv* env)
+// The UTF-16 code units of `ref`, for handing to a WKJDrtCallbacks or WKJEventSenderCallbacks
+// slot. The pointer is owned by `ref` and is valid only while `ref` is alive. It is never
+// null, which is what the Java String these two helpers used to produce also guaranteed.
+// EventSender.cpp and WorkQueueItemJava.cpp declare it extern, exactly as they declared its
+// JNI predecessor.
+const uint16_t* JSStringRef_to_utf16(JSStringRef ref, int32_t* length)
 {
-    size_t size = JSStringGetLength(ref);
-    const JSChar* jschars = JSStringGetCharactersPtr(ref);
-    return env->NewString((const jchar*)jschars, (jsize)size);
+    static const uint16_t emptyString[1] = { 0 };
+    const size_t size = JSStringGetLength(ref);
+    const JSChar* characters = JSStringGetCharactersPtr(ref);
+    if (!characters) {
+        *length = 0;
+        return emptyString;
+    }
+    *length = (int32_t) size;
+    return reinterpret_cast<const uint16_t*>(characters);
 }
 
-JSStringRef jstring_to_JSStringRef(jstring str, JNIEnv* env)
+// The inverse: a JSStringRef holding a copy of `length` UTF-16 code units. The caller owns
+// the returned reference.
+JSStringRef utf16_to_JSStringRef(const uint16_t* characters, int32_t length)
 {
-    jsize size = env->GetStringLength(str);
-    const jchar* chars = env->GetStringCritical(str, NULL);
-    JSStringRef ref = JSStringCreateWithCharacters((const JSChar*)chars, size);
-    env->ReleaseStringCritical(str, chars);
-    return ref;
+    static const uint16_t emptyString[1] = { 0 };
+    if (!characters || length <= 0)
+        return JSStringCreateWithCharacters(reinterpret_cast<const JSChar*>(emptyString), 0);
+    return JSStringCreateWithCharacters(reinterpret_cast<const JSChar*>(characters),
+            (size_t) length);
 }
 
 bool LoadHTMLStringItem::invoke() const
@@ -74,9 +89,8 @@ void TestRunner::clearAllDatabases()
 
 void TestRunner::clearBackForwardList()
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    env->CallStaticVoidMethod(getDumpRenderTreeClass(), getClearBackForwardListMID());
-    CheckAndClearException(env);
+    if (drt_host && drt_host->drt.clear_back_forward_list)
+        drt_host->drt.clear_back_forward_list();
 }
 
 void TestRunner::clearPersistentUserStyleSheet()
@@ -139,18 +153,20 @@ void TestRunner::keepWebHistory()
 
 void TestRunner::notifyDone()
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    env->CallStaticVoidMethod(getDumpRenderTreeClass(), getNotifyDoneMID());
-    CheckAndClearException(env);
+    if (drt_host && drt_host->drt.notify_done)
+        drt_host->drt.notify_done();
 }
 
 void TestRunner::overridePreference(JSStringRef key, JSStringRef value)
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    JLString jRelKey(JSStringRef_to_jstring(key, env));
-    JLString jRelValue(JSStringRef_to_jstring(value, env));
-    env->CallStaticVoidMethod(getDumpRenderTreeClass(), getOverridePreferenceMID(), (jstring)jRelKey, (jstring)jRelValue);
-    CheckAndClearException(env);
+    if (!drt_host || !drt_host->drt.override_preference)
+        return;
+
+    int32_t keyLength = 0;
+    const uint16_t* keyCharacters = JSStringRef_to_utf16(key, &keyLength);
+    int32_t valueLength = 0;
+    const uint16_t* valueCharacters = JSStringRef_to_utf16(value, &valueLength);
+    drt_host->drt.override_preference(keyCharacters, keyLength, valueCharacters, valueLength);
 }
 
 void TestRunner::removeAllVisitedLinks()
@@ -166,19 +182,39 @@ JSRetainPtr<JSStringRef> TestRunner::pathToLocalResource(JSContextRef context, J
 
 size_t TestRunner::webHistoryItemCount()
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    jint count = env->CallStaticIntMethod(getDumpRenderTreeClass(), getGetBackForwardItemCountMID());
-    CheckAndClearException(env);
-    return (size_t)count;
+    if (!drt_host || !drt_host->drt.get_back_forward_item_count)
+        return 0;
+    return (size_t) drt_host->drt.get_back_forward_item_count();
 }
 
 void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    JLString jRelUrl(JSStringRef_to_jstring(url, env));
-    JLString jAbsUrl((jstring)env->CallStaticObjectMethod(getDumpRenderTreeClass(), getResolveURLMID(), (jstring)jRelUrl));
-    CheckAndClearException(env);
-    JSStringRef absUrlRef = jstring_to_JSStringRef((jstring)jAbsUrl, env);
+    int32_t relativeLength = 0;
+    const uint16_t* relative = JSStringRef_to_utf16(url, &relativeLength);
+
+    // A resolved file: URL is a path, so one page of code units covers every real test and
+    // the WKJ_STR_OVERFLOW retry below is a safety net rather than the common case.
+    std::vector<uint16_t> resolved(1024);
+    int32_t resolvedLength = 0;
+    int32_t status = WKJ_STR_NULL;
+    if (drt_host && drt_host->drt.resolve_url) {
+        status = drt_host->drt.resolve_url(relative, relativeLength, resolved.data(),
+                (int32_t) resolved.size(), &resolvedLength);
+        if (status == WKJ_STR_OVERFLOW && resolvedLength > 0) {
+            resolved.resize((size_t) resolvedLength);
+            status = drt_host->drt.resolve_url(relative, relativeLength, resolved.data(),
+                    (int32_t) resolved.size(), &resolvedLength);
+        }
+    }
+    // DumpRenderTree.resolveURL never returns null, so WKJ_STR_NULL cannot occur today. It is
+    // treated as the empty string, where the JNI code passed a null reference straight to
+    // GetStringLength.
+    if (status != WKJ_STR_OK)
+        resolvedLength = 0;
+
+    JSStringRef absUrlRef = utf16_to_JSStringRef(resolved.data(), resolvedLength);
+    // LoadItem retains absUrlRef; the reference created here is not released, exactly as the
+    // one its JNI predecessor created was not.
     DRT::WorkQueue::singleton().queue(new LoadItem(absUrlRef, target));
 }
 
@@ -247,19 +283,6 @@ void TestRunner::waitForPolicyDelegate()
     // FIXME: implement
 }
 
-/*
-unsigned TestRunner::workerThreadCount() const
-{
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-
-    static jmethodID workerThreadCountMID = env->GetStaticMethodID(getDRTClass(env), "getWorkerThreadCount", "()I");
-    ASSERT(workerThreadCountMID);
-    jint count = env->CallStaticIntMethod(getDRTClass(env), workerThreadCountMID);
-    CheckAndClearException(env);
-    return count;
-}
-*/
-
 int TestRunner::windowCount()
 {
     // FIXME: implement
@@ -268,15 +291,13 @@ int TestRunner::windowCount()
 
 void TestRunner::setWaitToDump(bool waitUntilDone)
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-
     if (!waitUntilDone) {
         // FIXME: implement
         return;
     }
 
-    env->CallStaticVoidMethod(getDumpRenderTreeClass(), getWaitUntillDoneMethodId());
-    CheckAndClearException(env);
+    if (drt_host && drt_host->drt.wait_until_done)
+        drt_host->drt.wait_until_done();
 }
 
 void TestRunner::setWindowIsKey(bool windowIsKey)

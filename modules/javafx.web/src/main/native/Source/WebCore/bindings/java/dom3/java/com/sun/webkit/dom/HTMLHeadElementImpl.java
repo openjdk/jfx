@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,13 +42,17 @@ public class HTMLHeadElementImpl extends HTMLElementImpl implements HTMLHeadElem
     public String getProfile() {
         return getProfileImpl(getPeer());
     }
-    native static String getProfileImpl(long peer);
+    static String getProfileImpl(long peer) {
+        return HTMLHeadElementNative.getProfile(peer);
+    }
 
     @Override
     public void setProfile(String value) {
         setProfileImpl(getPeer(), value);
     }
-    native static void setProfileImpl(long peer, String value);
+    static void setProfileImpl(long peer, String value) {
+        HTMLHeadElementNative.setProfile(peer, value);
+    }
 
 }
 

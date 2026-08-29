@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,42 +43,56 @@ public class HTMLStyleElementImpl extends HTMLElementImpl implements HTMLStyleEl
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
-    native static boolean getDisabledImpl(long peer);
+    static boolean getDisabledImpl(long peer) {
+        return HTMLStyleElementNative.getDisabled(peer);
+    }
 
     @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
-    native static void setDisabledImpl(long peer, boolean value);
+    static void setDisabledImpl(long peer, boolean value) {
+        HTMLStyleElementNative.setDisabled(peer, value);
+    }
 
     @Override
     public String getMedia() {
         return getMediaImpl(getPeer());
     }
-    native static String getMediaImpl(long peer);
+    static String getMediaImpl(long peer) {
+        return HTMLStyleElementNative.getMedia(peer);
+    }
 
     @Override
     public void setMedia(String value) {
         setMediaImpl(getPeer(), value);
     }
-    native static void setMediaImpl(long peer, String value);
+    static void setMediaImpl(long peer, String value) {
+        HTMLStyleElementNative.setMedia(peer, value);
+    }
 
     @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return HTMLStyleElementNative.getType(peer);
+    }
 
     @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
-    native static void setTypeImpl(long peer, String value);
+    static void setTypeImpl(long peer, String value) {
+        HTMLStyleElementNative.setType(peer, value);
+    }
 
     public StyleSheet getSheet() {
         return StyleSheetImpl.getImpl(getSheetImpl(getPeer()));
     }
-    native static long getSheetImpl(long peer);
+    static long getSheetImpl(long peer) {
+        return HTMLStyleElementNative.getSheet(peer);
+    }
 
 }
 

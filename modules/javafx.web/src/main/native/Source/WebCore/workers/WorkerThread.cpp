@@ -43,9 +43,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 
 namespace WebCore {
 
@@ -143,9 +140,6 @@ Ref<Thread> WorkerThread::createThread()
 
 RefPtr<WorkerOrWorkletGlobalScope> WorkerThread::createGlobalScope()
 {
-#if PLATFORM(JAVA)
-    WTF::AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
     return createWorkerGlobalScope(m_startupData->params, WTF::move(m_startupData->origin), WTF::move(m_startupData->topOrigin));
 }
 

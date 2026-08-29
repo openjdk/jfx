@@ -37,22 +37,18 @@ namespace WebCore {
 
 String getLocalizedProperty(String name)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->get_localized_property)
+        return name;
 
-    static JGClass cls(env->FindClass("com/sun/webkit/LocalizedStrings"));
-    ASSERT(cls);
+    WKJStringArg key(name);
+    String value = wkjFetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return cb->get_localized_property(key.data(), key.length(), buffer, capacity, length);
+    });
+    wkjCheckAndClearException();
 
-    static jmethodID mid = env->GetStaticMethodID(cls,
-        "getLocalizedProperty",
-        "(Ljava/lang/String;)Ljava/lang/String;");
-    ASSERT(mid);
-
-
-    JLString ls(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid,
-        (jstring)name.toJavaString(env))));
-    WTF::CheckAndClearException(env);
-
-    return !ls ? name : String(env, ls);
+    // An unknown property falls back to the key, exactly as the null return did.
+    return value.isNull() ? name : value;
 }
 
 String contextMenuItemTagInspectElement()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,9 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     public short getPrimitiveType() {
         return getPrimitiveTypeImpl(getPeer());
     }
-    native static short getPrimitiveTypeImpl(long peer);
+    static short getPrimitiveTypeImpl(long peer) {
+        return CSSPrimitiveValueNative.getPrimitiveType(peer);
+    }
 
 
 // Functions
@@ -90,9 +92,11 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
             , unitType
             , floatValue);
     }
-    native static void setFloatValueImpl(long peer
+    static void setFloatValueImpl(long peer
         , short unitType
-        , float floatValue);
+        , float floatValue) {
+        CSSPrimitiveValueNative.setFloatValue(peer, unitType, floatValue);
+    }
 
 
     @Override
@@ -101,8 +105,10 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
         return getFloatValueImpl(getPeer()
             , unitType);
     }
-    native static float getFloatValueImpl(long peer
-        , short unitType);
+    static float getFloatValueImpl(long peer
+        , short unitType) {
+        return CSSPrimitiveValueNative.getFloatValue(peer, unitType);
+    }
 
 
     @Override
@@ -113,9 +119,11 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
             , stringType
             , stringValue);
     }
-    native static void setStringValueImpl(long peer
+    static void setStringValueImpl(long peer
         , short stringType
-        , String stringValue);
+        , String stringValue) {
+        CSSPrimitiveValueNative.setStringValue(peer, stringType, stringValue);
+    }
 
 
     @Override
@@ -123,7 +131,9 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     {
         return getStringValueImpl(getPeer());
     }
-    native static String getStringValueImpl(long peer);
+    static String getStringValueImpl(long peer) {
+        return CSSPrimitiveValueNative.getStringValue(peer);
+    }
 
 
     @Override
@@ -131,7 +141,9 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     {
         return CounterImpl.getImpl(getCounterValueImpl(getPeer()));
     }
-    native static long getCounterValueImpl(long peer);
+    static long getCounterValueImpl(long peer) {
+        return CSSPrimitiveValueNative.getCounterValue(peer);
+    }
 
 
     @Override
@@ -139,7 +151,9 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     {
         return RectImpl.getImpl(getRectValueImpl(getPeer()));
     }
-    native static long getRectValueImpl(long peer);
+    static long getRectValueImpl(long peer) {
+        return CSSPrimitiveValueNative.getRectValue(peer);
+    }
 
 
     @Override
@@ -147,7 +161,9 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     {
         return RGBColorImpl.getImpl(getRGBColorValueImpl(getPeer()));
     }
-    native static long getRGBColorValueImpl(long peer);
+    static long getRGBColorValueImpl(long peer) {
+        return CSSPrimitiveValueNative.getRGBColorValue(peer);
+    }
 
 
 }

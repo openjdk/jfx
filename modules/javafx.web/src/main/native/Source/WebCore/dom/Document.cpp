@@ -379,10 +379,6 @@
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/TextStream.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/unicode/java/UnicodeJava.h>
-#endif
-
 #if ENABLE(APP_HIGHLIGHTS)
 #include "AppHighlightStorage.h"
 #endif

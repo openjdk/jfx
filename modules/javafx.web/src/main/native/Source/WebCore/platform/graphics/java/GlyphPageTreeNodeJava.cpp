@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,38 +28,34 @@
 #include "GlyphPage.h"
 #include "GraphicsContextJava.h"
 #include "Font.h"
+#include "WKJPlatformJava.h"
+
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
 bool GlyphPage::fill(std::span<const UChar> characterBuffer)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     RefPtr<RQRef> jFont = this->font().platformData().nativeFontData();
     if (!jFont)
         return false;
 
-    JLocalRef<jcharArray> jchars(env->NewCharArray(characterBuffer.size()));
-    WTF::CheckAndClearException(env); // OOME
-    ASSERT(jchars);
-    if (!jchars)
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_get_glyph_codes)
         return false;
 
-    jchar* chars = (jchar*)env->GetPrimitiveArrayCritical(jchars, NULL);
-    ASSERT(chars);
-    memcpy(chars, characterBuffer.data(), characterBuffer.size() * 2);
-    env->ReleasePrimitiveArrayCritical(jchars, chars, 0);
-
-    static jmethodID mid = env->GetMethodID(PG_GetFontClass(env), "getGlyphCodes", "([C)[I");
-    ASSERT(mid);
-    JLocalRef<jintArray> jglyphs(static_cast<jintArray>(env->CallObjectMethod(*jFont, mid, (jcharArray)jchars)));
-    WTF::CheckAndClearException(env);
-    ASSERT(jglyphs);
-    if (!jglyphs)
+    // WCFont.getGlyphCodes(char[]) returned an int[] of the same length; the slot writes into
+    // a buffer of that length instead and reports how many entries it filled, or -1 for the
+    // null return that used to abort the fill.
+    Vector<int32_t, GlyphPage::size> glyphs(characterBuffer.size());
+    int32_t count = cb->font_get_glyph_codes(wkj_ref(*jFont),
+                                             reinterpret_cast<const uint16_t*>(characterBuffer.data()),
+                                             static_cast<int32_t>(characterBuffer.size()),
+                                             glyphs.span().data(),
+                                             static_cast<int32_t>(characterBuffer.size()));
+    wkjCheckAndClearException();
+    if (count < 0)
         return false;
-
-    Glyph* glyphs = (Glyph*)env->GetPrimitiveArrayCritical(jglyphs, NULL);
-    ASSERT(glyphs);
 
     unsigned step;  // 1 for BMP, 2 for non-BMP
     if (characterBuffer.size() == GlyphPage::size) {
@@ -79,7 +75,6 @@ bool GlyphPage::fill(std::span<const UChar> characterBuffer)
         } else
             setGlyphForIndex(i, 0, this->font().colorGlyphType(glyph));
     }
-    env->ReleasePrimitiveArrayCritical(jglyphs, glyphs, JNI_ABORT);
 
     return haveGlyphs;
 }

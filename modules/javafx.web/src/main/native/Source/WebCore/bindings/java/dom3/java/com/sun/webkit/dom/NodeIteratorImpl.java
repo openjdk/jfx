@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,9 @@ public class NodeIteratorImpl implements NodeIterator {
         return (arg == null) ? 0L : ((NodeIteratorImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        NodeIteratorNative.dispose(peer);
+    }
 
     static NodeIterator getImpl(long peer) {
         return (NodeIterator)create(peer);
@@ -85,35 +87,47 @@ public class NodeIteratorImpl implements NodeIterator {
     public Node getRoot() {
         return NodeImpl.getImpl(getRootImpl(getPeer()));
     }
-    native static long getRootImpl(long peer);
+    static long getRootImpl(long peer) {
+        return NodeIteratorNative.getRoot(peer);
+    }
 
     @Override
     public int getWhatToShow() {
         return getWhatToShowImpl(getPeer());
     }
-    native static int getWhatToShowImpl(long peer);
+    static int getWhatToShowImpl(long peer) {
+        return NodeIteratorNative.getWhatToShow(peer);
+    }
 
     @Override
     public NodeFilter getFilter() {
         return NodeFilterImpl.getImpl(getFilterImpl(getPeer()));
     }
-    native static long getFilterImpl(long peer);
+    static long getFilterImpl(long peer) {
+        return NodeIteratorNative.getFilter(peer);
+    }
 
     @Override
     public boolean getExpandEntityReferences() {
         return getExpandEntityReferencesImpl(getPeer());
     }
-    native static boolean getExpandEntityReferencesImpl(long peer);
+    static boolean getExpandEntityReferencesImpl(long peer) {
+        return NodeIteratorNative.getExpandEntityReferences(peer);
+    }
 
     public Node getReferenceNode() {
         return NodeImpl.getImpl(getReferenceNodeImpl(getPeer()));
     }
-    native static long getReferenceNodeImpl(long peer);
+    static long getReferenceNodeImpl(long peer) {
+        return NodeIteratorNative.getReferenceNode(peer);
+    }
 
     public boolean getPointerBeforeReferenceNode() {
         return getPointerBeforeReferenceNodeImpl(getPeer());
     }
-    native static boolean getPointerBeforeReferenceNodeImpl(long peer);
+    static boolean getPointerBeforeReferenceNodeImpl(long peer) {
+        return NodeIteratorNative.getPointerBeforeReferenceNode(peer);
+    }
 
 
 // Functions
@@ -122,7 +136,9 @@ public class NodeIteratorImpl implements NodeIterator {
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));
     }
-    native static long nextNodeImpl(long peer);
+    static long nextNodeImpl(long peer) {
+        return NodeIteratorNative.nextNode(peer);
+    }
 
 
     @Override
@@ -130,7 +146,9 @@ public class NodeIteratorImpl implements NodeIterator {
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
     }
-    native static long previousNodeImpl(long peer);
+    static long previousNodeImpl(long peer) {
+        return NodeIteratorNative.previousNode(peer);
+    }
 
 
     @Override
@@ -138,7 +156,9 @@ public class NodeIteratorImpl implements NodeIterator {
     {
         detachImpl(getPeer());
     }
-    native static void detachImpl(long peer);
+    static void detachImpl(long peer) {
+        NodeIteratorNative.detach(peer);
+    }
 
 
 }

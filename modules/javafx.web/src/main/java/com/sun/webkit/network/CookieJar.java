@@ -39,7 +39,7 @@ final class CookieJar {
     private CookieJar() {
     }
 
-    private static void fwkPut(String url, String cookie) {
+    static void fwkPut(String url, String cookie) {
         CookieHandler handler = CookieHandler.getDefault();
         if (handler != null) {
             URI uri = null;
@@ -61,7 +61,7 @@ final class CookieJar {
         }
     }
 
-    private static String fwkGet(String url, boolean includeHttpOnlyCookies) {
+    static String fwkGet(String url, boolean includeHttpOnlyCookies) {
         CookieHandler handler = CookieHandler.getDefault();
         if (handler != null) {
             URI uri = null;

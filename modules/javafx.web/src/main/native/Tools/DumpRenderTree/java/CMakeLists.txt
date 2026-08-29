@@ -13,7 +13,6 @@ set(DumpRenderTree_SOURCES
     DumpRenderTree.cpp
     EventSender.cpp
     GCControllerJava.cpp
-    JavaEnv.cpp
     TestRunnerJava.cpp
     UIScriptControllerJava.cpp
     WorkQueueItemJava.cpp
@@ -22,7 +21,6 @@ set(DumpRenderTree_SOURCES
 set(DumpRenderTree_LIBRARIES
     WebKitLegacy
     TestRunnerShared
-    ${JAVA_JVM_LIBRARY}
     ${ICU_I18N_LIBRARIES}
     ${ICU_LIBRARIES}
 )
@@ -44,8 +42,10 @@ list(APPEND DumpRenderTree_PRIVATE_INCLUDE_DIRECTORIES
     ${CMAKE_BINARY_DIR}/JavaScriptCore/Headers
     ${CMAKE_BINARY_DIR}/WTF/Headers
     ${CMAKE_BINARY_DIR}/bmalloc/Headers
-    ${JAVA_INCLUDE_PATH}
-    ${JAVA_INCLUDE_PATH2}
+    # FFM C ABI: drt_java_api.h, plus webkit_java_api.h which it includes for WKJ_EXPORT,
+    # wkj_ref and the WKJ_STR_* protocol. This library no longer needs the JDK headers.
+    ${TOOLS_DIR}/DumpRenderTree/java/api
+    ${WEBKITLEGACY_DIR}/java/api
     ${CMAKE_SOURCE_DIR}/Source
     ${WEBCORE_DIR}/testing/js
 )

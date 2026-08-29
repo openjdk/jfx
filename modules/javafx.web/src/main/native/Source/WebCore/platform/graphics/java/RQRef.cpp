@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,37 +27,40 @@
 
 #include "RQRef.h"
 
+#include "WKJPlatformJava.h"
+
 namespace WebCore {
 
 RQRef::~RQRef()
 {
     if (-1 != m_refID) {
-        JNIEnv* env = WTF::GetJavaEnv();
+        const WKJHostGraphics* cb = wkjGraphics();
 
-        if (env) {
-            //do it if JVM is here.
-            static jmethodID mid = env->GetMethodID(PG_GetRefClass(env), "deref", "()V");
-            ASSERT(mid);
-            env->CallVoidMethod(m_ref, mid);
-
-            WTF::CheckAndClearException(env);
+        // Do it only if the host table is here. The JNI version made the same test against
+        // the JNI environment, because this destructor can run after the VM has detached.
+        if (cb && cb->ref_deref) {
+            cb->ref_deref(m_ref.get());
+            wkjCheckAndClearException();
         }
     }
 }
 
-RQRef::operator jint() {
+RQRef::operator int32_t()
+{
     if (-1 == m_refID) {
-        JNIEnv* env = WTF::GetJavaEnv();
+        const WKJHostGraphics* cb = wkjGraphics();
+        if (!cb)
+            return m_refID;
 
-        static jmethodID midGetId = env->GetMethodID(PG_GetRefClass(env), "getID", "()I");
-        ASSERT(midGetId);
-        m_refID = env->CallIntMethod(m_ref, midGetId);
+        if (cb->ref_get_id)
+            m_refID = cb->ref_get_id(m_ref.get());
 
-        static jmethodID midRef = env->GetMethodID(PG_GetRefClass(env), "ref", "()V");
-        ASSERT(midRef);
-        env->CallVoidMethod(m_ref, midRef);
+        // Pair the ref() with the deref() in the destructor, which only runs once an id has
+        // been resolved. Without an id there is nothing to pair, so nothing is ref()ed.
+        if (-1 != m_refID && cb->ref_ref)
+            cb->ref_ref(m_ref.get());
 
-        WTF::CheckAndClearException(env);
+        wkjCheckAndClearException();
     }
     return m_refID;
 }

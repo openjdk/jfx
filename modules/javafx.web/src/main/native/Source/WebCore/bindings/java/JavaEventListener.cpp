@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,22 @@
 
 #include "config.h"
 
-#include "JavaDOMUtils.h"
-#include <wtf/java/JavaEnv.h>
+#include "WKJDOMUtils.h"
 #include "JavaEventListener.h"
 
+#include <webkit_java_api.h>
+
 namespace WebCore {
+
+/*
+ * The table installed by wkj_install_event_listener_callbacks, NULL until Java installs it.
+ * The pointer is kept, not the struct: Java owns the memory and it outlives the library, the
+ * same rule wkj_init states for WKJHost.
+ *
+ * The name carries the wkj prefix on purpose - WebCore builds these sources unified, so
+ * several .cpp files share one translation unit and therefore one set of file-scope names.
+ */
+static const WKJEventListenerCallbacks* wkjEventListenerCallbacks = nullptr;
 
 // DOM Document implements ScriptExecutionContext!
 // FIXME: it need to be per-thread object then [WORKERS] would be introduced!
@@ -52,71 +63,91 @@ bool JavaEventListener::operator==(const EventListener& other) const
 
 void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& event)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     //we need to store context for cascade JS EL execution.
     sm_vScriptExecutionContexts.append(&context);
 
-    static jmethodID midFwkHandleEvent(env->GetMethodID(
-        JLClass(env->FindClass("com/sun/webkit/dom/EventListenerImpl")),
-        "fwkHandleEvent",
-        "(J)V"));
-    ASSERT(midFwkHandleEvent);
-
-    event.ref();
-    env->CallVoidMethod(
-        EventListenerManager::get_instance().getListenerJObject(this),
-        midFwkHandleEvent,
-        ptr_to_jlong(&event));
+    /*
+     * The JNI version resolved com.sun.webkit.dom.EventListenerImpl with FindClass in a
+     * function-local static and cached the method id beside it, which bound the class to
+     * whatever class loader happened to be on the stack the first time any listener fired.
+     * The installed table has no lookup and no loader.
+     *
+     * event.ref() stays exactly where it was: the reference it takes is the one that
+     * EventImpl.getImpl hands to the Java disposer, or that getCachedImpl drops at once on a
+     * cache hit. It is taken only when there is a Java listener to hand it to, so that the
+     * pairing balances on every path - with no table installed, and with no map entry.
+     *
+     * A missing map entry cannot happen: the constructor registers, and the entry outlives
+     * the listener. The JNI code did not test for it either, but its failure mode was worse -
+     * CallVoidMethod on a null jobject, i.e. a crash rather than a skipped dispatch.
+     */
+    const WKJEventListenerCallbacks* callbacks = wkjEventListenerCallbacks;
+    wkj_ref listener = EventListenerManager::get_instance().getListenerJObject(this);
+    if (callbacks && callbacks->handle_event && listener) {
+        event.ref();
+        callbacks->handle_event(listener, wkj_from_ptr(&event));
+    }
 
     sm_vScriptExecutionContexts.removeLast();
-    WTF::CheckAndClearException(env);
+
+    /*
+     * This is WTF::CheckAndClearException(env), which the JNI code called here and whose
+     * result it ignored: a Throwable out of a listener was discarded and dispatch carried on
+     * with the next listener. That swallowing is the behaviour of every page with a throwing
+     * listener, so it is preserved rather than fixed. Java has already caught the Throwable -
+     * an escaping exception would take down the JVM - and this call only clears the flag it
+     * left behind, so that a later caller that does branch on it is not misled.
+     */
+    if (wkj_host && wkj_host->core.check_and_clear_exception)
+        wkj_host->core.check_and_clear_exception();
 }
 
 JavaEventListener::~JavaEventListener()
 {
-    WC_GETJAVAENV_CHKRET(env);
-
-    JGClass eli(env->FindClass("com/sun/webkit/dom/EventListenerImpl"));
-    static jmethodID midDispose(env->GetStaticMethodID(
-        eli,
-        "dispose",
-        "(J)V"));
-    ASSERT(midDispose);
-
-    env->CallStaticVoidMethod(
-        eli,
-        midDispose,
-        ptr_to_jlong(this));
+    /*
+     * WC_GETJAVAENV_CHKRET(env) used to return early here when the JVM was no longer
+     * reachable, which is what an uninstalled or detached table now reproduces.
+     */
+    const WKJEventListenerCallbacks* callbacks = wkjEventListenerCallbacks;
+    if (callbacks && callbacks->dispose)
+        callbacks->dispose(wkj_from_ptr(this));
 }
+
+} // namespace WebCore
+
+using namespace WebCore;
 
 extern "C" {
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer
-    (JNIEnv*, jobject self)
+WKJ_EXPORT void wkj_install_event_listener_callbacks(const WKJEventListenerCallbacks* callbacks)
 {
-    return ptr_to_jlong(new JavaEventListener(JLObject(self, true)));
+    WKJCallScope wkjScope;
+    WebCore::wkjEventListenerCallbacks = callbacks;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDisposeJSPeer
-    (JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_event_listener_create(wkj_ref self)
 {
-    EventListener* pEventListener = static_cast<EventListener *>(jlong_to_ptr(peer));
+    WKJCallScope wkjScope;
+    return wkj_from_ptr(new WebCore::JavaEventListener(self));
+}
+
+WKJ_EXPORT void wkj_event_listener_dispose_js_peer(int64_t peer)
+{
+    WKJCallScope wkjScope;
+    EventListener* pEventListener = static_cast<EventListener *>(wkj_to_ptr(peer));
     if (pEventListener)
         pEventListener->deref();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDispatchEvent
-    (JNIEnv*, jclass, jlong peer, jlong eventPeer)
+WKJ_EXPORT void wkj_event_listener_dispatch_event(int64_t listenerPeer, int64_t eventPeer)
 {
-    if (!peer || !eventPeer || !JavaEventListener::scriptExecutionContext())
+    WKJCallScope wkjScope;
+    if (!listenerPeer || !eventPeer || !JavaEventListener::scriptExecutionContext())
         return;
 
-    static_cast<EventListener *>(jlong_to_ptr(peer))->handleEvent(
+    static_cast<EventListener *>(wkj_to_ptr(listenerPeer))->handleEvent(
         *JavaEventListener::scriptExecutionContext(),
-        *static_cast<Event*>(jlong_to_ptr(eventPeer)));
+        *static_cast<Event*>(wkj_to_ptr(eventPeer)));
 }
 
 }
-}
-

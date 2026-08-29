@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,23 +42,32 @@ public class HTMLPreElementImpl extends HTMLElementImpl implements HTMLPreElemen
     public int getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static int getWidthImpl(long peer);
+    static int getWidthImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLPreElementImpl.getWidthImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     @Override
     public void setWidth(int value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, int value);
+    static void setWidthImpl(long peer, int value) {
+        HTMLPreElementNative.setWidth(peer, value);
+    }
 
     public boolean getWrap() {
         return getWrapImpl(getPeer());
     }
-    native static boolean getWrapImpl(long peer);
+    static boolean getWrapImpl(long peer) {
+        return HTMLPreElementNative.getWrap(peer);
+    }
 
     public void setWrap(boolean value) {
         setWrapImpl(getPeer(), value);
     }
-    native static void setWrapImpl(long peer, boolean value);
+    static void setWrapImpl(long peer, boolean value) {
+        HTMLPreElementNative.setWrap(peer, value);
+    }
 
 }
 

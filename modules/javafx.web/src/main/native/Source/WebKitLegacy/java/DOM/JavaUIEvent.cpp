@@ -36,89 +36,94 @@
 #include <wtf/URL.h>
 
 #include "AbstractViewInternal.h"
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<UIEvent*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<UIEvent*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_UIEventImpl_getViewImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_UIEvent_getView(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(toDOMWindow(IMPL->view())));
+    return WKJReturnPeer<DOMWindow>(WTF::getPtr(toDOMWindow(IMPL->view())));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getDetailImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getDetail(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->detail();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getKeyCodeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getKeyCode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (is<WebCore::KeyboardEvent>(*IMPL))
         return downcast<WebCore::KeyboardEvent>(*IMPL).keyCode();
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getCharCodeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getCharCode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (is<WebCore::KeyboardEvent>(*IMPL))
         return downcast<WebCore::KeyboardEvent>(*IMPL).charCode();
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerXImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getLayerX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->layerX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getLayerY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->layerY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageXImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getPageX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->pageX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageYImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getPageY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->pageY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getWhichImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_UIEvent_getWhich(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->which();
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_UIEventImpl_initUIEventImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jboolean canBubble
-    , jboolean cancelable
-    , jlong view
-    , jint detail)
+WKJ_EXPORT void wkj_dom_UIEvent_initUIEvent(int64_t peer, const uint16_t* type, int32_t type_length, int32_t canBubble, int32_t cancelable, int64_t view, int32_t detail)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initUIEvent(AtomString{String(env, type)}
+    IMPL->initUIEvent(AtomString{WKJString(type, type_length)}
             , canBubble
             , cancelable
-            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
+            , toWindowProxy(static_cast<DOMWindow*>(wkj_to_ptr(view)))
             , detail);
 }
 

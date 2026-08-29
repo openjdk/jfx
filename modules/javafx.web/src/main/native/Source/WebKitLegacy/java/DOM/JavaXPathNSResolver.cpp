@@ -32,27 +32,28 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<XPathNSResolver*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<XPathNSResolver*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathNSResolverImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_XPathNSResolver_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Functions
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_XPathNSResolverImpl_lookupNamespaceURIImpl(JNIEnv* env, jclass, jlong peer
-    , jstring prefix)
+WKJ_EXPORT int32_t wkj_dom_XPathNSResolver_lookupNamespaceURI(int64_t peer, const uint16_t* prefix, int32_t prefix_length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->lookupNamespaceURI(AtomString{String(env, prefix)}));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->lookupNamespaceURI(AtomString{WKJString(prefix, prefix_length)}));
 }
 
 

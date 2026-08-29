@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,37 +44,49 @@ public class DocumentTypeImpl extends NodeImpl implements DocumentType {
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return DocumentTypeNative.getName(peer);
+    }
 
     @Override
     public NamedNodeMap getEntities() {
         return NamedNodeMapImpl.getImpl(getEntitiesImpl(getPeer()));
     }
-    native static long getEntitiesImpl(long peer);
+    static long getEntitiesImpl(long peer) {
+        return DocumentTypeNative.getEntities(peer);
+    }
 
     @Override
     public NamedNodeMap getNotations() {
         return NamedNodeMapImpl.getImpl(getNotationsImpl(getPeer()));
     }
-    native static long getNotationsImpl(long peer);
+    static long getNotationsImpl(long peer) {
+        return DocumentTypeNative.getNotations(peer);
+    }
 
     @Override
     public String getPublicId() {
         return getPublicIdImpl(getPeer());
     }
-    native static String getPublicIdImpl(long peer);
+    static String getPublicIdImpl(long peer) {
+        return DocumentTypeNative.getPublicId(peer);
+    }
 
     @Override
     public String getSystemId() {
         return getSystemIdImpl(getPeer());
     }
-    native static String getSystemIdImpl(long peer);
+    static String getSystemIdImpl(long peer) {
+        return DocumentTypeNative.getSystemId(peer);
+    }
 
     @Override
     public String getInternalSubset() {
         return getInternalSubsetImpl(getPeer());
     }
-    native static String getInternalSubsetImpl(long peer);
+    static String getInternalSubsetImpl(long peer) {
+        return DocumentTypeNative.getInternalSubset(peer);
+    }
 
 
 // Functions
@@ -82,7 +94,9 @@ public class DocumentTypeImpl extends NodeImpl implements DocumentType {
     {
         removeImpl(getPeer());
     }
-    native static void removeImpl(long peer);
+    static void removeImpl(long peer) {
+        DocumentTypeNative.remove(peer);
+    }
 
 
 }

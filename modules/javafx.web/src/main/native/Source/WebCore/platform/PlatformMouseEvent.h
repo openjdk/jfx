@@ -155,9 +155,9 @@ inline bool operator!=(short a, MouseButton b)
 #endif
 
 #if PLATFORM(JAVA)
-    MouseButton getWebCoreMouseButton(jint javaButton);
-    unsigned short getWebCoreMouseButtons(jint javaButton);
-    PlatformEvent::Type getWebCoreMouseEventType(jint eventID);
+    MouseButton getWebCoreMouseButton(int32_t javaButton);
+    unsigned short getWebCoreMouseButtons(int32_t javaButton);
+    PlatformEvent::Type getWebCoreMouseEventType(int32_t eventID);
 #endif
 
 } // namespace WebCore

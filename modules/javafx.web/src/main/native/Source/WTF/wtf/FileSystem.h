@@ -42,10 +42,6 @@
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
-#endif
-
 #if USE(CF)
 #include <wtf/RetainPtr.h>
 #endif

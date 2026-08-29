@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,9 @@ public class XPathResultImpl implements XPathResult {
         return (arg == null) ? 0L : ((XPathResultImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        XPathResultNative.dispose(peer);
+    }
 
     static XPathResult getImpl(long peer) {
         return (XPathResult)create(peer);
@@ -97,43 +99,57 @@ public class XPathResultImpl implements XPathResult {
     public short getResultType() {
         return getResultTypeImpl(getPeer());
     }
-    native static short getResultTypeImpl(long peer);
+    static short getResultTypeImpl(long peer) {
+        return XPathResultNative.getResultType(peer);
+    }
 
     @Override
     public double getNumberValue() throws DOMException {
         return getNumberValueImpl(getPeer());
     }
-    native static double getNumberValueImpl(long peer);
+    static double getNumberValueImpl(long peer) {
+        return XPathResultNative.getNumberValue(peer);
+    }
 
     @Override
     public String getStringValue() throws DOMException {
         return getStringValueImpl(getPeer());
     }
-    native static String getStringValueImpl(long peer);
+    static String getStringValueImpl(long peer) {
+        return XPathResultNative.getStringValue(peer);
+    }
 
     @Override
     public boolean getBooleanValue() throws DOMException {
         return getBooleanValueImpl(getPeer());
     }
-    native static boolean getBooleanValueImpl(long peer);
+    static boolean getBooleanValueImpl(long peer) {
+        return XPathResultNative.getBooleanValue(peer);
+    }
 
     @Override
     public Node getSingleNodeValue() throws DOMException {
         return NodeImpl.getImpl(getSingleNodeValueImpl(getPeer()));
     }
-    native static long getSingleNodeValueImpl(long peer);
+    static long getSingleNodeValueImpl(long peer) {
+        return XPathResultNative.getSingleNodeValue(peer);
+    }
 
     @Override
     public boolean getInvalidIteratorState() {
         return getInvalidIteratorStateImpl(getPeer());
     }
-    native static boolean getInvalidIteratorStateImpl(long peer);
+    static boolean getInvalidIteratorStateImpl(long peer) {
+        return XPathResultNative.getInvalidIteratorState(peer);
+    }
 
     @Override
     public int getSnapshotLength() throws DOMException {
         return getSnapshotLengthImpl(getPeer());
     }
-    native static int getSnapshotLengthImpl(long peer);
+    static int getSnapshotLengthImpl(long peer) {
+        return XPathResultNative.getSnapshotLength(peer);
+    }
 
 
 // Functions
@@ -142,7 +158,9 @@ public class XPathResultImpl implements XPathResult {
     {
         return NodeImpl.getImpl(iterateNextImpl(getPeer()));
     }
-    native static long iterateNextImpl(long peer);
+    static long iterateNextImpl(long peer) {
+        return XPathResultNative.iterateNext(peer);
+    }
 
 
     @Override
@@ -151,8 +169,10 @@ public class XPathResultImpl implements XPathResult {
         return NodeImpl.getImpl(snapshotItemImpl(getPeer()
             , index));
     }
-    native static long snapshotItemImpl(long peer
-        , int index);
+    static long snapshotItemImpl(long peer
+        , int index) {
+        return XPathResultNative.snapshotItem(peer, index);
+    }
 
 
 }

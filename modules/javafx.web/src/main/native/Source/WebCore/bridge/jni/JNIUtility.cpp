@@ -29,173 +29,351 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include <cstring>
-
-#if !ENABLE(JAVA_JSC)
-#include <dlfcn.h>
-#else
-#include <wtf/java/JavaEnv.h>
-#endif
+#include <wtf/Vector.h>
 
 namespace JSC {
 
 namespace Bindings {
 
-#if !ENABLE(JAVA_JSC)
-static jint KJSGetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
-{
-    static void* javaVMFramework = 0;
-    if (!javaVMFramework)
-        javaVMFramework = dlopen("/System/Library/Frameworks/JavaVM.framework/JavaVM", RTLD_LAZY);
-    if (!javaVMFramework)
-        return JNI_ERR;
+/*
+ * The C ABI carries a Java type as an int32_t, and it carries the values of JavaType so that
+ * this code can pass its existing JavaType straight through. JavaType.h warns that the order
+ * of its enumerators must not change; these bind that warning to a compile error.
+ */
+static_assert(static_cast<int32_t>(JavaTypeInvalid) == WKJ_JT_INVALID, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeVoid) == WKJ_JT_VOID, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeObject) == WKJ_JT_OBJECT, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeBoolean) == WKJ_JT_BOOLEAN, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeByte) == WKJ_JT_BYTE, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeChar) == WKJ_JT_CHAR, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeShort) == WKJ_JT_SHORT, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeInt) == WKJ_JT_INT, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeLong) == WKJ_JT_LONG, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeFloat) == WKJ_JT_FLOAT, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeDouble) == WKJ_JT_DOUBLE, "JavaType drifted");
+static_assert(static_cast<int32_t>(JavaTypeArray) == WKJ_JT_ARRAY, "JavaType drifted");
 
-    typedef jint(*FunctionPointerType)(JavaVM**, jsize, jsize*);
-    static FunctionPointerType functionPointer = 0;
-    if (!functionPointer)
-        functionPointer = reinterpret_cast<FunctionPointerType>(dlsym(javaVMFramework, "JNI_GetCreatedJavaVMs"));
-    if (!functionPointer)
-        return JNI_ERR;
-    return functionPointer(vmBuf, bufLen, nVMs);
+/*
+ * Every call below starts here. A table that was never installed behaves exactly like a
+ * table of NULL slots, which in turn behaves like the JNI code did when it could not find
+ * the class or the method: nothing happens and the caller gets a zero.
+ */
+static const WKJLiveConnectHost* host()
+{
+    return wkj_live_connect_host;
 }
 
-static JavaVM* jvm = 0;
-#endif
-
-// Provide the ability for an outside component to specify the JavaVM to use
-// If the jvm value is set, the getJavaVM function below will just return.
-// In getJNIEnv(), if AttachCurrentThread is called to a VM that is already
-// attached, the result is a no-op.
-void setJavaVM(JavaVM* javaVM)
+/*
+ * Runs a WKJ_STR_* producing callback and returns its result as a WTF::String, growing the
+ * buffer once if the first attempt did not fit. A null String means the Java value was null
+ * or the slot was missing; that distinction is what the "<Unknown>" substitutions in
+ * JavaClass, JavaField and JavaMethod are keyed on.
+ *
+ * The inline buffer is sized for what actually travels here: class names, method names and
+ * field names. A name longer than that costs one extra call and no correctness.
+ */
+template<typename Fetch> static WTF::String fetchString(Fetch&& fetch)
 {
-    jvm = javaVM;
+    char16_t inlineBuffer[128];
+    int32_t length = 0;
+
+    int32_t status = fetch(reinterpret_cast<uint16_t*>(inlineBuffer),
+        static_cast<int32_t>(sizeof(inlineBuffer) / sizeof(inlineBuffer[0])), &length);
+    if (status == WKJ_STR_OK)
+        return WTF::String(std::span<const char16_t>(inlineBuffer, static_cast<size_t>(length)));
+    if (status != WKJ_STR_OVERFLOW || length <= 0)
+        return WTF::String();
+
+    Vector<char16_t> buffer(static_cast<size_t>(length));
+    status = fetch(reinterpret_cast<uint16_t*>(buffer.mutableSpan().data()), length, &length);
+    if (status != WKJ_STR_OK || length <= 0)
+        return WTF::String();
+
+    return WTF::String(std::span<const char16_t>(buffer.span().data(), static_cast<size_t>(length)));
 }
 
-JavaVM* getJavaVM()
-{
-#if !ENABLE(JAVA_JSC)
-    if (jvm)
-        return jvm;
+/*
+ * A WTF::String as the (pointer, length) pair the ABI takes. A null String is passed as a
+ * null pointer. The characters are only valid for the duration of the call, which is all
+ * any slot is allowed to keep them for.
+ *
+ * A Latin-1 String has to be widened rather than reinterpreted: StringImpl::span16() asserts
+ * !is8Bit() and, with the assert compiled out, reads past the end of the allocation.
+ */
+class UTF16Argument {
+    WTF_MAKE_NONCOPYABLE(UTF16Argument);
+public:
+    explicit UTF16Argument(const WTF::String& value)
+    {
+        if (value.isNull())
+            return;
 
-    JavaVM* jvmArray[1];
-    jsize bufLen = 1;
-    jsize nJVMs = 0;
-    jint jniError = 0;
-
-    // Assumes JVM is already running ..., one per process
-    jniError = KJSGetCreatedJavaVMs(jvmArray, bufLen, &nJVMs);
-    if (jniError == JNI_OK && nJVMs > 0)
-        jvm = jvmArray[0];
-    else
-        LOG_ERROR("JNI_GetCreatedJavaVMs failed, returned %ld", static_cast<long>(jniError));
-#endif
-
-    return jvm;
-}
-
-// JDK 1.0 mistakenly declared the first parameter to AttachCurrentThread as
-// void** rather than as JNIEnv**. This quirk appears to have been carried
-// forward in implementations of Java despite what the documentation says.
-// On OS(ANDROID), however, AttachCurrentThread appears to follow the
-// documentation and expects a JNIEnv** parameter. The following typedef should
-// give each implementation what it desires.
-#if OS(ANDROID)
-typedef JNIEnv* JNIEnvDummy;
-#else
-typedef void* JNIEnvDummy;
-#endif
-
-JNIEnv* getJNIEnv()
-{
-#if ENABLE(JAVA_JSC)
-    return WTF::GetJavaEnv();
-#else
-    union {
-        JNIEnv* env;
-        JNIEnvDummy dummy;
-    } u;
-    jint jniError = 0;
-
-    jniError = getJavaVM()->AttachCurrentThread(&u.dummy, 0);
-
-    if (jniError == JNI_OK)
-        return u.env;
-    LOG_ERROR("AttachCurrentThread failed, returned %ld", static_cast<long>(jniError));
-    return 0;
-#endif
-}
-
-jmethodID getMethodID(jobject obj, const char* name, const char* sig)
-{
-    JNIEnv* env = getJNIEnv();
-    jmethodID mid = 0;
-
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getMethodID", (jobject)jlinstance);
-        return mid;
-    }
-
-    if (env) {
-        jclass cls = env->GetObjectClass(obj);
-        if (cls) {
-            mid = env->GetMethodID(cls, name, sig);
-            if (!mid) {
-                env->ExceptionClear();
-                mid = env->GetStaticMethodID(cls, name, sig);
-                if (!mid)
-                    env->ExceptionClear();
-            }
+        m_length = static_cast<int32_t>(value.length());
+        if (!value.is8Bit()) {
+            m_data = reinterpret_cast<const uint16_t*>(value.span16().data());
+            return;
         }
-        env->DeleteLocalRef(cls);
+
+        auto characters = value.span8();
+        m_widened.grow(static_cast<size_t>(m_length));
+        for (int32_t i = 0; i < m_length; ++i)
+            m_widened[static_cast<size_t>(i)] = characters[static_cast<size_t>(i)];
+        m_data = reinterpret_cast<const uint16_t*>(m_widened.span().data());
     }
-    return mid;
+
+    const uint16_t* data() const { return m_data; }
+    int32_t length() const { return m_length; }
+
+private:
+    const uint16_t* m_data { nullptr };
+    int32_t m_length { 0 };
+    Vector<char16_t> m_widened;
+};
+
+WKJJavaValue emptyJavaValue()
+{
+    WKJJavaValue value;
+    std::memset(&value, 0, sizeof(value));
+    value.type = WKJ_JT_INVALID;
+    return value;
 }
 
-const char* getCharactersFromJString(jstring aJString)
+/* --- java.lang.Object and java.lang.Class -------------------------------------------- */
+
+WKJHandle javaObjectClass(wkj_ref object)
 {
-    return getCharactersFromJStringInEnv(getJNIEnv(), aJString);
+    if (!object || !host() || !host()->object_get_class)
+        return WKJHandle();
+    return WKJHandle(host()->object_get_class(object));
 }
 
-void releaseCharactersForJString(jstring aJString, const char* s)
+WTF::String javaClassName(wkj_ref javaClass)
 {
-    releaseCharactersForJStringInEnv(getJNIEnv(), aJString, s);
+    if (!javaClass || !host() || !host()->class_get_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->class_get_name(javaClass, buffer, capacity, length);
+    });
 }
 
-const char* getCharactersFromJStringInEnv(JNIEnv* env, jstring aJString)
+bool javaClassIsArray(wkj_ref javaClass)
 {
-    jboolean isCopy;
-    const char* s = env->GetStringUTFChars(aJString, &isCopy);
-    if (!s) {
-        env->ExceptionDescribe();
-        env->ExceptionClear();
-        fprintf(stderr, "\n");
-    }
-    return s;
+    if (!javaClass || !host() || !host()->class_is_array)
+        return false;
+    return host()->class_is_array(javaClass) != 0;
 }
 
-void releaseCharactersForJStringInEnv(JNIEnv* env, jstring aJString, const char* s)
+WKJHandle javaCreateDummyObject()
 {
-    env->ReleaseStringUTFChars(aJString, s);
+    if (!host() || !host()->create_dummy_object)
+        return WKJHandle();
+    return WKJHandle(host()->create_dummy_object());
 }
 
-const jchar* getUCharactersFromJStringInEnv(JNIEnv* env, jstring aJString)
+/* --- java.lang.reflect.Method -------------------------------------------------------- */
+
+WKJHandle javaResolveMethod(wkj_ref object, const WTF::String& name, const WTF::String& signature)
 {
-    jboolean isCopy;
-    const jchar* s = env->GetStringChars(aJString, &isCopy);
-    if (!s) {
-        env->ExceptionDescribe();
-        env->ExceptionClear();
-        fprintf(stderr, "\n");
-    }
-    return s;
+    if (!object || !host() || !host()->resolve_method)
+        return WKJHandle();
+
+    UTF16Argument nameArgument(name);
+    UTF16Argument signatureArgument(signature);
+    return WKJHandle(host()->resolve_method(object, nameArgument.data(), nameArgument.length(),
+        signatureArgument.data(), signatureArgument.length()));
 }
 
-void releaseUCharactersForJStringInEnv(JNIEnv* env, jstring aJString, const jchar* s)
+WKJHandle javaInvoke(wkj_ref method, wkj_ref instance, const wkj_ref* args, int argumentCount,
+    wkj_ref accessControlContext, WKJHandle& exception)
 {
-    env->ReleaseStringChars(aJString, s);
+    exception.clear();
+
+    if (!method || !host() || !host()->invoke)
+        return WKJHandle();
+
+    wkj_ref thrown = 0;
+    WKJHandle result(host()->invoke(method, instance, args, static_cast<int32_t>(argumentCount),
+        accessControlContext, &thrown));
+    exception = WKJHandle(thrown);
+    return result;
 }
+
+WTF::String javaMethodName(wkj_ref method)
+{
+    if (!method || !host() || !host()->method_get_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->method_get_name(method, buffer, capacity, length);
+    });
+}
+
+WTF::String javaMethodReturnTypeName(wkj_ref method)
+{
+    if (!method || !host() || !host()->method_get_return_type_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->method_get_return_type_name(method, buffer, capacity, length);
+    });
+}
+
+int javaMethodParameterCount(wkj_ref method)
+{
+    if (!method || !host() || !host()->method_get_parameter_count)
+        return 0;
+    return host()->method_get_parameter_count(method);
+}
+
+WTF::String javaMethodParameterTypeName(wkj_ref method, int index)
+{
+    if (!method || !host() || !host()->method_get_parameter_type_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->method_get_parameter_type_name(method, static_cast<int32_t>(index),
+            buffer, capacity, length);
+    });
+}
+
+int javaMethodModifiers(wkj_ref method)
+{
+    if (!method || !host() || !host()->method_get_modifiers)
+        return 0;
+    return host()->method_get_modifiers(method);
+}
+
+/* --- java.lang.reflect.Field --------------------------------------------------------- */
+
+WTF::String javaFieldName(wkj_ref field)
+{
+    if (!field || !host() || !host()->field_get_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->field_get_name(field, buffer, capacity, length);
+    });
+}
+
+WTF::String javaFieldTypeName(wkj_ref field)
+{
+    if (!field || !host() || !host()->field_get_type_name)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->field_get_type_name(field, buffer, capacity, length);
+    });
+}
+
+bool javaFieldGet(wkj_ref field, wkj_ref instance, JavaType type, WKJJavaValue& result)
+{
+    result = emptyJavaValue();
+    if (!field || !host() || !host()->field_get)
+        return false;
+    return host()->field_get(field, instance, static_cast<int32_t>(type), &result) != 0;
+}
+
+bool javaFieldSet(wkj_ref field, wkj_ref instance, JavaType type, const WKJJavaValue& value)
+{
+    if (!field || !host() || !host()->field_set)
+        return false;
+    return host()->field_set(field, instance, static_cast<int32_t>(type), &value) != 0;
+}
+
+/* --- Java arrays --------------------------------------------------------------------- */
+
+int javaArrayLength(wkj_ref array)
+{
+    if (!array || !host() || !host()->array_length)
+        return 0;
+    return host()->array_length(array);
+}
+
+bool javaArrayGet(wkj_ref array, int index, JavaType type, WKJJavaValue& result)
+{
+    result = emptyJavaValue();
+    if (!array || !host() || !host()->array_get)
+        return false;
+    return host()->array_get(array, static_cast<int32_t>(index), static_cast<int32_t>(type),
+        &result) != 0;
+}
+
+bool javaArraySet(wkj_ref array, int index, JavaType type, const WKJJavaValue& value)
+{
+    if (!array || !host() || !host()->array_set)
+        return false;
+    return host()->array_set(array, static_cast<int32_t>(index), static_cast<int32_t>(type),
+        &value) != 0;
+}
+
+/* --- boxing, unboxing and strings ---------------------------------------------------- */
+
+WKJHandle javaBox(const WKJJavaValue& value)
+{
+    if (!host() || !host()->box)
+        return WKJHandle();
+    return WKJHandle(host()->box(&value));
+}
+
+bool javaUnbox(wkj_ref boxed, JavaType type, WKJJavaValue& result)
+{
+    result = emptyJavaValue();
+    if (!boxed || !host() || !host()->unbox)
+        return false;
+    return host()->unbox(boxed, static_cast<int32_t>(type), &result) != 0;
+}
+
+WKJHandle javaBoxString(const WTF::String& value)
+{
+    if (value.isNull() || !host() || !host()->box_string)
+        return WKJHandle();
+
+    UTF16Argument argument(value);
+    return WKJHandle(host()->box_string(argument.data(), argument.length()));
+}
+
+WTF::String javaStringValue(wkj_ref string)
+{
+    if (!string || !host() || !host()->string_value)
+        return WTF::String();
+
+    return fetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return host()->string_value(string, buffer, capacity, length);
+    });
+}
+
+/* --- the three LiveConnect objects --------------------------------------------------- */
+
+WKJHandle javaUndefinedObject()
+{
+    /*
+     * The JNI code cached the JSObject.UNDEFINED field in a function-local static global
+     * resolved on first use and never released. The same shape, with an id: one reference
+     * held for the life of the process, and a fresh reference handed to each caller so that
+     * "the receiver owns what it is given" holds here too.
+     */
+    static WKJHandle undefined;
+    if (!undefined && host() && host()->undefined_object)
+        undefined = WKJHandle(host()->undefined_object());
+    return WKJHandle::retained(undefined.get());
+}
+
+WKJHandle javaJSObjectCreate(int64_t peer, int32_t peerType)
+{
+    if (!host() || !host()->jsobject_create)
+        return WKJHandle();
+    return WKJHandle(host()->jsobject_create(peer, peerType));
+}
+
+WKJHandle javaNodeCachedImpl(int64_t nodePeer)
+{
+    if (!host() || !host()->node_get_cached_impl)
+        return WKJHandle();
+    return WKJHandle(host()->node_get_cached_impl(nodePeer));
+}
+
+/* --- type names, unchanged ------------------------------------------------------------ */
 
 JavaType javaTypeFromClassName(const char* name)
 {
@@ -310,126 +488,6 @@ JavaType javaTypeFromPrimitiveType(char type)
         break;
     }
     return JavaTypeInvalid;
-}
-
-jvalue getJNIField(jobject obj, JavaType type, const char* name, const char* signature)
-{
-    JavaVM* jvm = getJavaVM();
-    JNIEnv* env = getJNIEnv();
-    jvalue result;
-
-    memset(&result, 0, sizeof(jvalue));
-
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getJNIField", (jobject)jlinstance);
-        return result;
-    }
-
-    if (obj && jvm && env) {
-        jclass cls = env->GetObjectClass(obj);
-        if (cls) {
-            jfieldID field = env->GetFieldID(cls, name, signature);
-            if (field) {
-                switch (type) {
-                case JavaTypeArray:
-                case JavaTypeObject:
-                    result.l = env->functions->GetObjectField(env, obj, field);
-                    break;
-                case JavaTypeBoolean:
-                    result.z = env->functions->GetBooleanField(env, obj, field);
-                    break;
-                case JavaTypeByte:
-                    result.b = env->functions->GetByteField(env, obj, field);
-                    break;
-                case JavaTypeChar:
-                    result.c = env->functions->GetCharField(env, obj, field);
-                    break;
-                case JavaTypeShort:
-                    result.s = env->functions->GetShortField(env, obj, field);
-                    break;
-                case JavaTypeInt:
-                    result.i = env->functions->GetIntField(env, obj, field);
-                    break;
-                case JavaTypeLong:
-                    result.j = env->functions->GetLongField(env, obj, field);
-                    break;
-                case JavaTypeFloat:
-                    result.f = env->functions->GetFloatField(env, obj, field);
-                    break;
-                case JavaTypeDouble:
-                    result.d = env->functions->GetDoubleField(env, obj, field);
-                    break;
-                default:
-                    LOG_ERROR("Invalid field type (%d)", static_cast<int>(type));
-                }
-            } else {
-                LOG_ERROR("Could not find field: %s", name);
-                env->ExceptionDescribe();
-                env->ExceptionClear();
-                fprintf(stderr, "\n");
-            }
-
-            env->DeleteLocalRef(cls);
-        } else
-            LOG_ERROR("Could not find class for object");
-    }
-
-    return result;
-}
-
-jvalue callJNIMethod(jobject object, JavaType returnType, const char* name, const char* signature, jvalue* args)
-{
-    jvalue result;
-    memset(&result, 0, sizeof(jvalue));
-
-    // Since object is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(object, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod", (jobject)jlinstance);
-        return result;
-    }
-
-    jmethodID methodId = getMethodID(object, name, signature);
-
-    switch (returnType) {
-    case JavaTypeVoid:
-        callJNIMethodIDA<void>(object, methodId, args);
-        break;
-    case JavaTypeObject:
-        result.l = callJNIMethodIDA<jobject>(object, methodId, args);
-        break;
-    case JavaTypeBoolean:
-        result.z = callJNIMethodIDA<jboolean>(object, methodId, args);
-        break;
-    case JavaTypeByte:
-        result.b = callJNIMethodIDA<jbyte>(object, methodId, args);
-        break;
-    case JavaTypeChar:
-        result.c = callJNIMethodIDA<jchar>(object, methodId, args);
-        break;
-    case JavaTypeShort:
-        result.s = callJNIMethodIDA<jshort>(object, methodId, args);
-        break;
-    case JavaTypeInt:
-        result.i = callJNIMethodIDA<jint>(object, methodId, args);
-        break;
-    case JavaTypeLong:
-        result.j = callJNIMethodIDA<jlong>(object, methodId, args);
-        break;
-    case JavaTypeFloat:
-        result.f = callJNIMethodIDA<jfloat>(object, methodId, args);
-        break;
-    case JavaTypeDouble:
-        result.d = callJNIMethodIDA<jdouble>(object, methodId, args);
-        break;
-    default:
-        break;
-    }
-    return result;
 }
 
 } // namespace Bindings

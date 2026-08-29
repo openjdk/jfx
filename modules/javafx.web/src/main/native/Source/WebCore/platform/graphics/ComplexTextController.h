@@ -38,7 +38,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
+#include <webkit_java_api.h>
 typedef jint CGGlyph;
 #else
 typedef unsigned short CGGlyph;
@@ -102,7 +102,7 @@ public:
         }
 
 #if PLATFORM(JAVA)
-        static Ref<ComplexTextRun> create(JLObject jRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength)
+        static Ref<ComplexTextRun> create(wkj_ref jRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength)
         {
             return adoptRef(*new ComplexTextRun(jRun, font, characters, stringLocation, stringLength));
         }
@@ -143,7 +143,7 @@ public:
         ComplexTextRun(CTRunRef, const Font&, std::span<const char16_t> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd);
         ComplexTextRun(hb_buffer_t*, const Font&, std::span<const char16_t> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd);
 #if PLATFORM(JAVA)
-        ComplexTextRun(JLObject, const Font&, const UChar* characters, unsigned stringLocation, unsigned stringLength);
+        ComplexTextRun(wkj_ref, const Font&, const UChar* characters, unsigned stringLocation, unsigned stringLength);
 #endif
         ComplexTextRun(const Font&, std::span<const char16_t> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd, bool ltr);
         WEBCORE_EXPORT ComplexTextRun(const Vector<FloatSize>& advances, const Vector<FloatPoint>& origins, const Vector<Glyph>& glyphs, const Vector<unsigned>& stringIndices, FloatSize initialAdvance, const Font&, std::span<const char16_t> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd, bool ltr);

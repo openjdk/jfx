@@ -34,49 +34,55 @@
 #include <wtf/GetPtr.h>
 #include "HTMLNames.h"
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<Attr*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<Attr*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_AttrImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Attr_getName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->name());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->name());
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Attr_getSpecified(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->specified();
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_AttrImpl_getValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Attr_getValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->value());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->value());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_AttrImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_Attr_setValue(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(AtomString{String(env, value)});
+    IMPL->setValue(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_Attr_getOwnerElement(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->ownerElement()));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->ownerElement()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_isIdImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_Attr_isId(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->qualifiedName().matches(WebCore::HTMLNames::idAttr);
 }

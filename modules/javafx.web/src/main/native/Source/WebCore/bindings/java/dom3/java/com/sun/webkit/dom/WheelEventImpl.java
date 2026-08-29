@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,42 +46,66 @@ public class WheelEventImpl extends MouseEventImpl {
     public double getDeltaX() {
         return getDeltaXImpl(getPeer());
     }
-    native static double getDeltaXImpl(long peer);
+    static double getDeltaXImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getDeltaXImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public double getDeltaY() {
         return getDeltaYImpl(getPeer());
     }
-    native static double getDeltaYImpl(long peer);
+    static double getDeltaYImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getDeltaYImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public double getDeltaZ() {
         return getDeltaZImpl(getPeer());
     }
-    native static double getDeltaZImpl(long peer);
+    static double getDeltaZImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getDeltaZImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public int getDeltaMode() {
         return getDeltaModeImpl(getPeer());
     }
-    native static int getDeltaModeImpl(long peer);
+    static int getDeltaModeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getDeltaModeImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public int getWheelDeltaX() {
         return getWheelDeltaXImpl(getPeer());
     }
-    native static int getWheelDeltaXImpl(long peer);
+    static int getWheelDeltaXImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getWheelDeltaXImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public int getWheelDeltaY() {
         return getWheelDeltaYImpl(getPeer());
     }
-    native static int getWheelDeltaYImpl(long peer);
+    static int getWheelDeltaYImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getWheelDeltaYImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public int getWheelDelta() {
         return getWheelDeltaImpl(getPeer());
     }
-    native static int getWheelDeltaImpl(long peer);
+    static int getWheelDeltaImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getWheelDeltaImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     public boolean getWebkitDirectionInvertedFromDevice() {
         return getWebkitDirectionInvertedFromDeviceImpl(getPeer());
     }
-    native static boolean getWebkitDirectionInvertedFromDeviceImpl(long peer);
+    static boolean getWebkitDirectionInvertedFromDeviceImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.getWebkitDirectionInvertedFromDeviceImpl:"
+                + " JavaWheelEvent.cpp is not compiled into jfxwebkit");
+    }
 
 
 // Functions
@@ -110,7 +134,7 @@ public class WheelEventImpl extends MouseEventImpl {
             , shiftKey
             , metaKey);
     }
-    native static void initWheelEventImpl(long peer
+    static void initWheelEventImpl(long peer
         , int wheelDeltaX
         , int wheelDeltaY
         , long view
@@ -121,7 +145,10 @@ public class WheelEventImpl extends MouseEventImpl {
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey
-        , boolean metaKey);
+        , boolean metaKey) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.WheelEventImpl.initWheelEventImpl: JavaWheelEvent.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
 }

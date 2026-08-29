@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,9 @@ public class XPathExpressionImpl implements XPathExpression {
         return (arg == null) ? 0L : ((XPathExpressionImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        XPathExpressionNative.dispose(peer);
+    }
 
     static XPathExpression getImpl(long peer) {
         return (XPathExpression)create(peer);
@@ -94,10 +96,12 @@ public class XPathExpressionImpl implements XPathExpression {
             , type
             , XPathResultImpl.getPeer(inResult)));
     }
-    native static long evaluateImpl(long peer
+    static long evaluateImpl(long peer
         , long contextNode
         , short type
-        , long inResult);
+        , long inResult) {
+        return XPathExpressionNative.evaluate(peer, contextNode, type, inResult);
+    }
 
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,22 +45,30 @@ public class DocumentFragmentImpl extends NodeImpl implements DocumentFragment {
     public HTMLCollection getChildren() {
         return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
     }
-    native static long getChildrenImpl(long peer);
+    static long getChildrenImpl(long peer) {
+        return DocumentFragmentNative.getChildren(peer);
+    }
 
     public Element getFirstElementChild() {
         return ElementImpl.getImpl(getFirstElementChildImpl(getPeer()));
     }
-    native static long getFirstElementChildImpl(long peer);
+    static long getFirstElementChildImpl(long peer) {
+        return DocumentFragmentNative.getFirstElementChild(peer);
+    }
 
     public Element getLastElementChild() {
         return ElementImpl.getImpl(getLastElementChildImpl(getPeer()));
     }
-    native static long getLastElementChildImpl(long peer);
+    static long getLastElementChildImpl(long peer) {
+        return DocumentFragmentNative.getLastElementChild(peer);
+    }
 
     public int getChildElementCount() {
         return getChildElementCountImpl(getPeer());
     }
-    native static int getChildElementCountImpl(long peer);
+    static int getChildElementCountImpl(long peer) {
+        return DocumentFragmentNative.getChildElementCount(peer);
+    }
 
 
 // Functions
@@ -69,8 +77,10 @@ public class DocumentFragmentImpl extends NodeImpl implements DocumentFragment {
         return ElementImpl.getImpl(getElementByIdImpl(getPeer()
             , elementId));
     }
-    native static long getElementByIdImpl(long peer
-        , String elementId);
+    static long getElementByIdImpl(long peer
+        , String elementId) {
+        return DocumentFragmentNative.getElementById(peer, elementId);
+    }
 
 
     public Element querySelector(String selectors) throws DOMException
@@ -78,8 +88,10 @@ public class DocumentFragmentImpl extends NodeImpl implements DocumentFragment {
         return ElementImpl.getImpl(querySelectorImpl(getPeer()
             , selectors));
     }
-    native static long querySelectorImpl(long peer
-        , String selectors);
+    static long querySelectorImpl(long peer
+        , String selectors) {
+        return DocumentFragmentNative.querySelector(peer, selectors);
+    }
 
 
     public NodeList querySelectorAll(String selectors) throws DOMException
@@ -87,8 +99,10 @@ public class DocumentFragmentImpl extends NodeImpl implements DocumentFragment {
         return NodeListImpl.getImpl(querySelectorAllImpl(getPeer()
             , selectors));
     }
-    native static long querySelectorAllImpl(long peer
-        , String selectors);
+    static long querySelectorAllImpl(long peer
+        , String selectors) {
+        return DocumentFragmentNative.querySelectorAll(peer, selectors);
+    }
 
 
 }

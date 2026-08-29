@@ -37,55 +37,52 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<EventTarget*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<EventTarget*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_EventTarget_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_addEventListenerImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jlong listener
-    , jboolean useCapture)
+WKJ_EXPORT void wkj_dom_EventTarget_addEventListener(int64_t peer, const uint16_t* type, int32_t type_length, int64_t listener, int32_t useCapture)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->addEventListenerForBindings(AtomString{String(env, type)}
-            , static_cast<EventListener*>(jlong_to_ptr(listener))
+    IMPL->addEventListenerForBindings(AtomString{WKJString(type, type_length)}
+            , static_cast<EventListener*>(wkj_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_removeEventListenerImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jlong listener
-    , jboolean useCapture)
+WKJ_EXPORT void wkj_dom_EventTarget_removeEventListener(int64_t peer, const uint16_t* type, int32_t type_length, int64_t listener, int32_t useCapture)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->removeEventListenerForBindings(AtomString{String(env, type)}
-            , static_cast<EventListener*>(jlong_to_ptr(listener))
+    IMPL->removeEventListenerForBindings(AtomString{WKJString(type, type_length)}
+            , static_cast<EventListener*>(wkj_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventTargetImpl_dispatchEventImpl(JNIEnv* env, jclass, jlong peer
-    , jlong event)
+WKJ_EXPORT int32_t wkj_dom_EventTarget_dispatchEvent(int64_t peer, int64_t event)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (!event) {
-        raiseTypeErrorException(env);
-        return JNI_FALSE;
+        raiseTypeErrorException();
+        return 0;
     }
-    return raiseOnDOMError(env, IMPL->dispatchEventForBindings(*static_cast<Event*>(jlong_to_ptr(event))));
+    return raiseOnDOMError(IMPL->dispatchEventForBindings(*static_cast<Event*>(wkj_to_ptr(event))));
 }
 
 

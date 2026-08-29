@@ -86,7 +86,7 @@ final class SocketStreamHandle {
         this.data = data;
     }
 
-    private static SocketStreamHandle fwkCreate(String host, int port,
+    static SocketStreamHandle fwkCreate(String host, int port,
                                                 boolean ssl, WebPage webPage,
                                                 long data)
     {
@@ -266,7 +266,7 @@ final class SocketStreamHandle {
         }
     }
 
-    private int fwkSend(byte[] buffer) {
+    int fwkSend(byte[] buffer) {
         if (logger.isLoggable(Level.FINEST)) {
             logger.finest(format("%s sending len: [%d], data:%s",
                     this, buffer.length, dump(buffer, buffer.length)));
@@ -287,7 +287,7 @@ final class SocketStreamHandle {
         }
     }
 
-    private void fwkClose() {
+    void fwkClose() {
         synchronized (this) {
             logger.finest("{0}", this);
             state = State.CLOSE_REQUESTED;
@@ -299,7 +299,7 @@ final class SocketStreamHandle {
         }
     }
 
-    private void fwkNotifyDisposed() {
+    void fwkNotifyDisposed() {
         logger.finest("{0}", this);
         state = State.DISPOSED;
     }
@@ -363,12 +363,23 @@ final class SocketStreamHandle {
         twkDidClose(data);
     }
 
-    private static native void twkDidOpen(long data);
-    private static native void twkDidReceiveData(byte[] buffer, int len,
-                                                 long data);
-    private static native void twkDidFail(int errorCode,
-                                          String errorDescription, long data);
-    private static native void twkDidClose(long data);
+    private static void twkDidOpen(long data) {
+        SocketStreamHandleNative.didOpen(data);
+    }
+
+    private static void twkDidReceiveData(byte[] buffer, int len,
+                                          long data) {
+        SocketStreamHandleNative.didReceiveData(buffer, len, data);
+    }
+
+    private static void twkDidFail(int errorCode,
+                                   String errorDescription, long data) {
+        SocketStreamHandleNative.didFail(errorCode, errorDescription, data);
+    }
+
+    private static void twkDidClose(long data) {
+        SocketStreamHandleNative.didClose(data);
+    }
 
     private static String dump(byte[] buffer, int len) {
         StringBuilder sb = new StringBuilder();

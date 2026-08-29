@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,79 +45,105 @@ public class HTMLTableRowElementImpl extends HTMLElementImpl implements HTMLTabl
     public int getRowIndex() {
         return getRowIndexImpl(getPeer());
     }
-    native static int getRowIndexImpl(long peer);
+    static int getRowIndexImpl(long peer) {
+        return HTMLTableRowElementNative.getRowIndex(peer);
+    }
 
     @Override
     public int getSectionRowIndex() {
         return getSectionRowIndexImpl(getPeer());
     }
-    native static int getSectionRowIndexImpl(long peer);
+    static int getSectionRowIndexImpl(long peer) {
+        return HTMLTableRowElementNative.getSectionRowIndex(peer);
+    }
 
     @Override
     public HTMLCollection getCells() {
         return HTMLCollectionImpl.getImpl(getCellsImpl(getPeer()));
     }
-    native static long getCellsImpl(long peer);
+    static long getCellsImpl(long peer) {
+        return HTMLTableRowElementNative.getCells(peer);
+    }
 
     @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLTableRowElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLTableRowElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getBgColor() {
         return getBgColorImpl(getPeer());
     }
-    native static String getBgColorImpl(long peer);
+    static String getBgColorImpl(long peer) {
+        return HTMLTableRowElementNative.getBgColor(peer);
+    }
 
     @Override
     public void setBgColor(String value) {
         setBgColorImpl(getPeer(), value);
     }
-    native static void setBgColorImpl(long peer, String value);
+    static void setBgColorImpl(long peer, String value) {
+        HTMLTableRowElementNative.setBgColor(peer, value);
+    }
 
     @Override
     public String getCh() {
         return getChImpl(getPeer());
     }
-    native static String getChImpl(long peer);
+    static String getChImpl(long peer) {
+        return HTMLTableRowElementNative.getCh(peer);
+    }
 
     @Override
     public void setCh(String value) {
         setChImpl(getPeer(), value);
     }
-    native static void setChImpl(long peer, String value);
+    static void setChImpl(long peer, String value) {
+        HTMLTableRowElementNative.setCh(peer, value);
+    }
 
     @Override
     public String getChOff() {
         return getChOffImpl(getPeer());
     }
-    native static String getChOffImpl(long peer);
+    static String getChOffImpl(long peer) {
+        return HTMLTableRowElementNative.getChOff(peer);
+    }
 
     @Override
     public void setChOff(String value) {
         setChOffImpl(getPeer(), value);
     }
-    native static void setChOffImpl(long peer, String value);
+    static void setChOffImpl(long peer, String value) {
+        HTMLTableRowElementNative.setChOff(peer, value);
+    }
 
     @Override
     public String getVAlign() {
         return getVAlignImpl(getPeer());
     }
-    native static String getVAlignImpl(long peer);
+    static String getVAlignImpl(long peer) {
+        return HTMLTableRowElementNative.getVAlign(peer);
+    }
 
     @Override
     public void setVAlign(String value) {
         setVAlignImpl(getPeer(), value);
     }
-    native static void setVAlignImpl(long peer, String value);
+    static void setVAlignImpl(long peer, String value) {
+        HTMLTableRowElementNative.setVAlign(peer, value);
+    }
 
 
 // Functions
@@ -127,8 +153,10 @@ public class HTMLTableRowElementImpl extends HTMLElementImpl implements HTMLTabl
         return HTMLElementImpl.getImpl(insertCellImpl(getPeer()
             , index));
     }
-    native static long insertCellImpl(long peer
-        , int index);
+    static long insertCellImpl(long peer
+        , int index) {
+        return HTMLTableRowElementNative.insertCell(peer, index);
+    }
 
 
     @Override
@@ -137,8 +165,10 @@ public class HTMLTableRowElementImpl extends HTMLElementImpl implements HTMLTabl
         deleteCellImpl(getPeer()
             , index);
     }
-    native static void deleteCellImpl(long peer
-        , int index);
+    static void deleteCellImpl(long peer
+        , int index) {
+        HTMLTableRowElementNative.deleteCell(peer, index);
+    }
 
 
 }

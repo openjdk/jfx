@@ -26,23 +26,26 @@
 #undef IMPL
 
 
-#include <wtf/java/JavaEnv.h>
+#include <webkit_java_api.h>
 
 extern "C" {
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getPublicIdImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_Entity_getPublicId(int64_t arg0, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getSystemIdImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_Entity_getSystemId(int64_t arg0, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getNotationNameImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_Entity_getNotationName(int64_t arg0, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     return nullptr;
 }
 

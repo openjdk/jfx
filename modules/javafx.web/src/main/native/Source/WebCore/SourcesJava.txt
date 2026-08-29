@@ -33,7 +33,6 @@ bridge/jni/jsc/JavaMethodJSC.cpp
 bridge/jni/jsc/JavaRuntimeObject.cpp
 
 editing/java/EditorJava.cpp
-editing/java/SmartReplaceJava.cpp
 
 platform/java/ContextMenuJava.cpp
 platform/java/CursorJava.cpp
@@ -64,7 +63,6 @@ platform/java/SharedBufferJava.cpp
 platform/java/SharedMemoryJava.cpp
 platform/java/MainThreadSharedTimerJava.cpp
 platform/java/StringJava.cpp
-platform/java/TouchEventJava.cpp
 platform/java/WebKitLogging.cpp
 platform/java/WheelEventJava.cpp
 platform/java/WidgetJava.cpp
@@ -106,9 +104,10 @@ platform/network/java/SocketStreamHandleImplJava.cpp
 platform/network/java/SynchronousLoaderClientJava.cpp
 platform/network/java/URLLoader.cpp
 
-bindings/java/JavaDOMUtils.cpp
+bindings/java/WKJFrameDOM.cpp
 bindings/java/JavaEventListener.cpp
 bindings/java/EventListenerManager.cpp
+bindings/java/WKJDOMUtils.cpp
 
 page/java/DragControllerJava.cpp
 page/java/EventHandlerJava.cpp

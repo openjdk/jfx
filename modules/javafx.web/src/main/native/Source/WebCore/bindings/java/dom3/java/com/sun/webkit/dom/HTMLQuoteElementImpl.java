@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,13 +42,17 @@ public class HTMLQuoteElementImpl extends HTMLElementImpl implements HTMLQuoteEl
     public String getCite() {
         return getCiteImpl(getPeer());
     }
-    native static String getCiteImpl(long peer);
+    static String getCiteImpl(long peer) {
+        return HTMLQuoteElementNative.getCite(peer);
+    }
 
     @Override
     public void setCite(String value) {
         setCiteImpl(getPeer(), value);
     }
-    native static void setCiteImpl(long peer, String value);
+    static void setCiteImpl(long peer, String value) {
+        HTMLQuoteElementNative.setCite(peer, value);
+    }
 
 }
 

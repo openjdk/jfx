@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,7 +225,9 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return (arg == null) ? 0L : ((NodeImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        NodeNative.dispose(peer);
+    }
 
     static Node getImpl(long peer) {
         return (Node)create(peer);
@@ -257,120 +259,160 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     public String getNodeName() {
         return getNodeNameImpl(getPeer());
     }
-    native static String getNodeNameImpl(long peer);
+    static String getNodeNameImpl(long peer) {
+        return NodeNative.getNodeName(peer);
+    }
 
     @Override
     public String getNodeValue() {
         return getNodeValueImpl(getPeer());
     }
-    native static String getNodeValueImpl(long peer);
+    static String getNodeValueImpl(long peer) {
+        return NodeNative.getNodeValue(peer);
+    }
 
     @Override
     public void setNodeValue(String value) throws DOMException {
         setNodeValueImpl(getPeer(), value);
     }
-    native static void setNodeValueImpl(long peer, String value);
+    static void setNodeValueImpl(long peer, String value) {
+        NodeNative.setNodeValue(peer, value);
+    }
 
     @Override
     public short getNodeType() {
         return getNodeTypeImpl(getPeer());
     }
-    native static short getNodeTypeImpl(long peer);
+    static short getNodeTypeImpl(long peer) {
+        return NodeNative.getNodeType(peer);
+    }
 
     @Override
     public Node getParentNode() {
         return NodeImpl.getImpl(getParentNodeImpl(getPeer()));
     }
-    native static long getParentNodeImpl(long peer);
+    static long getParentNodeImpl(long peer) {
+        return NodeNative.getParentNode(peer);
+    }
 
     @Override
     public NodeList getChildNodes() {
         return NodeListImpl.getImpl(getChildNodesImpl(getPeer()));
     }
-    native static long getChildNodesImpl(long peer);
+    static long getChildNodesImpl(long peer) {
+        return NodeNative.getChildNodes(peer);
+    }
 
     @Override
     public Node getFirstChild() {
         return NodeImpl.getImpl(getFirstChildImpl(getPeer()));
     }
-    native static long getFirstChildImpl(long peer);
+    static long getFirstChildImpl(long peer) {
+        return NodeNative.getFirstChild(peer);
+    }
 
     @Override
     public Node getLastChild() {
         return NodeImpl.getImpl(getLastChildImpl(getPeer()));
     }
-    native static long getLastChildImpl(long peer);
+    static long getLastChildImpl(long peer) {
+        return NodeNative.getLastChild(peer);
+    }
 
     @Override
     public Node getPreviousSibling() {
         return NodeImpl.getImpl(getPreviousSiblingImpl(getPeer()));
     }
-    native static long getPreviousSiblingImpl(long peer);
+    static long getPreviousSiblingImpl(long peer) {
+        return NodeNative.getPreviousSibling(peer);
+    }
 
     @Override
     public Node getNextSibling() {
         return NodeImpl.getImpl(getNextSiblingImpl(getPeer()));
     }
-    native static long getNextSiblingImpl(long peer);
+    static long getNextSiblingImpl(long peer) {
+        return NodeNative.getNextSibling(peer);
+    }
 
     @Override
     public Document getOwnerDocument() {
         return DocumentImpl.getImpl(getOwnerDocumentImpl(getPeer()));
     }
-    native static long getOwnerDocumentImpl(long peer);
+    static long getOwnerDocumentImpl(long peer) {
+        return NodeNative.getOwnerDocument(peer);
+    }
 
     @Override
     public String getNamespaceURI() {
         return getNamespaceURIImpl(getPeer());
     }
-    native static String getNamespaceURIImpl(long peer);
+    static String getNamespaceURIImpl(long peer) {
+        return NodeNative.getNamespaceURI(peer);
+    }
 
     @Override
     public String getPrefix() {
         return getPrefixImpl(getPeer());
     }
-    native static String getPrefixImpl(long peer);
+    static String getPrefixImpl(long peer) {
+        return NodeNative.getPrefix(peer);
+    }
 
     @Override
     public void setPrefix(String value) throws DOMException {
         setPrefixImpl(getPeer(), value);
     }
-    native static void setPrefixImpl(long peer, String value);
+    static void setPrefixImpl(long peer, String value) {
+        NodeNative.setPrefix(peer, value);
+    }
 
     @Override
     public String getLocalName() {
         return getLocalNameImpl(getPeer());
     }
-    native static String getLocalNameImpl(long peer);
+    static String getLocalNameImpl(long peer) {
+        return NodeNative.getLocalName(peer);
+    }
 
     @Override
     public NamedNodeMap getAttributes() {
         return NamedNodeMapImpl.getImpl(getAttributesImpl(getPeer()));
     }
-    native static long getAttributesImpl(long peer);
+    static long getAttributesImpl(long peer) {
+        return NodeNative.getAttributes(peer);
+    }
 
     @Override
     public String getBaseURI() {
         return getBaseURIImpl(getPeer());
     }
-    native static String getBaseURIImpl(long peer);
+    static String getBaseURIImpl(long peer) {
+        return NodeNative.getBaseURI(peer);
+    }
 
     @Override
     public String getTextContent() {
         return getTextContentImpl(getPeer());
     }
-    native static String getTextContentImpl(long peer);
+    static String getTextContentImpl(long peer) {
+        return NodeNative.getTextContent(peer);
+    }
 
     @Override
     public void setTextContent(String value) throws DOMException {
         setTextContentImpl(getPeer(), value);
     }
-    native static void setTextContentImpl(long peer, String value);
+    static void setTextContentImpl(long peer, String value) {
+        NodeNative.setTextContent(peer, value);
+    }
 
     public Element getParentElement() {
         return ElementImpl.getImpl(getParentElementImpl(getPeer()));
     }
-    native static long getParentElementImpl(long peer);
+    static long getParentElementImpl(long peer) {
+        return NodeNative.getParentElement(peer);
+    }
 
 
 // Functions
@@ -382,9 +424,11 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             , NodeImpl.getPeer(newChild)
             , NodeImpl.getPeer(refChild)));
     }
-    native static long insertBeforeImpl(long peer
+    static long insertBeforeImpl(long peer
         , long newChild
-        , long refChild);
+        , long refChild) {
+        return NodeNative.insertBefore(peer, newChild, refChild);
+    }
 
 
     @Override
@@ -395,9 +439,11 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             , NodeImpl.getPeer(newChild)
             , NodeImpl.getPeer(oldChild)));
     }
-    native static long replaceChildImpl(long peer
+    static long replaceChildImpl(long peer
         , long newChild
-        , long oldChild);
+        , long oldChild) {
+        return NodeNative.replaceChild(peer, newChild, oldChild);
+    }
 
 
     @Override
@@ -406,8 +452,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return NodeImpl.getImpl(removeChildImpl(getPeer()
             , NodeImpl.getPeer(oldChild)));
     }
-    native static long removeChildImpl(long peer
-        , long oldChild);
+    static long removeChildImpl(long peer
+        , long oldChild) {
+        return NodeNative.removeChild(peer, oldChild);
+    }
 
 
     @Override
@@ -416,8 +464,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return NodeImpl.getImpl(appendChildImpl(getPeer()
             , NodeImpl.getPeer(newChild)));
     }
-    native static long appendChildImpl(long peer
-        , long newChild);
+    static long appendChildImpl(long peer
+        , long newChild) {
+        return NodeNative.appendChild(peer, newChild);
+    }
 
 
     @Override
@@ -425,7 +475,9 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     {
         return hasChildNodesImpl(getPeer());
     }
-    native static boolean hasChildNodesImpl(long peer);
+    static boolean hasChildNodesImpl(long peer) {
+        return NodeNative.hasChildNodes(peer);
+    }
 
 
     @Override
@@ -434,8 +486,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return NodeImpl.getImpl(cloneNodeImpl(getPeer()
             , deep));
     }
-    native static long cloneNodeImpl(long peer
-        , boolean deep);
+    static long cloneNodeImpl(long peer
+        , boolean deep) {
+        return NodeNative.cloneNode(peer, deep);
+    }
 
 
     @Override
@@ -443,7 +497,9 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     {
         normalizeImpl(getPeer());
     }
-    native static void normalizeImpl(long peer);
+    static void normalizeImpl(long peer) {
+        NodeNative.normalize(peer);
+    }
 
 
     @Override
@@ -454,9 +510,12 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             , feature
             , version);
     }
-    native static boolean isSupportedImpl(long peer
+    static boolean isSupportedImpl(long peer
         , String feature
-        , String version);
+        , String version) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.NodeImpl.isSupportedImpl: no wkj_* function exists for it in"
+                + " any jfxwebkit build");
+    }
 
 
     @Override
@@ -464,7 +523,9 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     {
         return hasAttributesImpl(getPeer());
     }
-    native static boolean hasAttributesImpl(long peer);
+    static boolean hasAttributesImpl(long peer) {
+        return NodeNative.hasAttributes(peer);
+    }
 
 
     @Override
@@ -473,8 +534,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return isSameNodeImpl(getPeer()
             , NodeImpl.getPeer(other));
     }
-    native static boolean isSameNodeImpl(long peer
-        , long other);
+    static boolean isSameNodeImpl(long peer
+        , long other) {
+        return NodeNative.isSameNode(peer, other);
+    }
 
 
     @Override
@@ -483,8 +546,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return isEqualNodeImpl(getPeer()
             , NodeImpl.getPeer(other));
     }
-    native static boolean isEqualNodeImpl(long peer
-        , long other);
+    static boolean isEqualNodeImpl(long peer
+        , long other) {
+        return NodeNative.isEqualNode(peer, other);
+    }
 
 
     @Override
@@ -493,8 +558,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return lookupPrefixImpl(getPeer()
             , namespaceURI);
     }
-    native static String lookupPrefixImpl(long peer
-        , String namespaceURI);
+    static String lookupPrefixImpl(long peer
+        , String namespaceURI) {
+        return NodeNative.lookupPrefix(peer, namespaceURI);
+    }
 
 
     @Override
@@ -503,8 +570,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return isDefaultNamespaceImpl(getPeer()
             , namespaceURI);
     }
-    native static boolean isDefaultNamespaceImpl(long peer
-        , String namespaceURI);
+    static boolean isDefaultNamespaceImpl(long peer
+        , String namespaceURI) {
+        return NodeNative.isDefaultNamespace(peer, namespaceURI);
+    }
 
 
     @Override
@@ -513,8 +582,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return lookupNamespaceURIImpl(getPeer()
             , prefix);
     }
-    native static String lookupNamespaceURIImpl(long peer
-        , String prefix);
+    static String lookupNamespaceURIImpl(long peer
+        , String prefix) {
+        return NodeNative.lookupNamespaceURI(peer, prefix);
+    }
 
 
     @Override
@@ -523,8 +594,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return compareDocumentPositionImpl(getPeer()
             , NodeImpl.getPeer(other));
     }
-    native static short compareDocumentPositionImpl(long peer
-        , long other);
+    static short compareDocumentPositionImpl(long peer
+        , long other) {
+        return NodeNative.compareDocumentPosition(peer, other);
+    }
 
 
     public boolean contains(Node other)
@@ -532,8 +605,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return containsImpl(getPeer()
             , NodeImpl.getPeer(other));
     }
-    native static boolean containsImpl(long peer
-        , long other);
+    static boolean containsImpl(long peer
+        , long other) {
+        return NodeNative.contains(peer, other);
+    }
 
 
     @Override
@@ -546,10 +621,12 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             , EventListenerImpl.getPeer(listener)
             , useCapture);
     }
-    native static void addEventListenerImpl(long peer
+    static void addEventListenerImpl(long peer
         , String type
         , long listener
-        , boolean useCapture);
+        , boolean useCapture) {
+        NodeNative.addEventListener(peer, type, listener, useCapture);
+    }
 
 
     @Override
@@ -562,10 +639,12 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             , EventListenerImpl.getPeer(listener)
             , useCapture);
     }
-    native static void removeEventListenerImpl(long peer
+    static void removeEventListenerImpl(long peer
         , String type
         , long listener
-        , boolean useCapture);
+        , boolean useCapture) {
+        NodeNative.removeEventListener(peer, type, listener, useCapture);
+    }
 
 
     @Override
@@ -574,8 +653,10 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         return dispatchEventImpl(getPeer()
             , EventImpl.getPeer(event));
     }
-    native static boolean dispatchEventImpl(long peer
-        , long event);
+    static boolean dispatchEventImpl(long peer
+        , long event) {
+        return NodeNative.dispatchEvent(peer, event);
+    }
 
 
 

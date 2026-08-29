@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,9 @@ public class RangeImpl implements Range {
         return (arg == null) ? 0L : ((RangeImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        RangeNative.dispose(peer);
+    }
 
     static Range getImpl(long peer) {
         return (Range)create(peer);
@@ -96,42 +98,56 @@ public class RangeImpl implements Range {
     public Node getStartContainer() {
         return NodeImpl.getImpl(getStartContainerImpl(getPeer()));
     }
-    native static long getStartContainerImpl(long peer);
+    static long getStartContainerImpl(long peer) {
+        return RangeNative.getStartContainer(peer);
+    }
 
     @Override
     public int getStartOffset() {
         return getStartOffsetImpl(getPeer());
     }
-    native static int getStartOffsetImpl(long peer);
+    static int getStartOffsetImpl(long peer) {
+        return RangeNative.getStartOffset(peer);
+    }
 
     @Override
     public Node getEndContainer() {
         return NodeImpl.getImpl(getEndContainerImpl(getPeer()));
     }
-    native static long getEndContainerImpl(long peer);
+    static long getEndContainerImpl(long peer) {
+        return RangeNative.getEndContainer(peer);
+    }
 
     @Override
     public int getEndOffset() {
         return getEndOffsetImpl(getPeer());
     }
-    native static int getEndOffsetImpl(long peer);
+    static int getEndOffsetImpl(long peer) {
+        return RangeNative.getEndOffset(peer);
+    }
 
     @Override
     public boolean getCollapsed() {
         return getCollapsedImpl(getPeer());
     }
-    native static boolean getCollapsedImpl(long peer);
+    static boolean getCollapsedImpl(long peer) {
+        return RangeNative.getCollapsed(peer);
+    }
 
     @Override
     public Node getCommonAncestorContainer() {
         return NodeImpl.getImpl(getCommonAncestorContainerImpl(getPeer()));
     }
-    native static long getCommonAncestorContainerImpl(long peer);
+    static long getCommonAncestorContainerImpl(long peer) {
+        return RangeNative.getCommonAncestorContainer(peer);
+    }
 
     public String getText() {
         return getTextImpl(getPeer());
     }
-    native static String getTextImpl(long peer);
+    static String getTextImpl(long peer) {
+        return RangeNative.getText(peer);
+    }
 
 
 // Functions
@@ -143,9 +159,11 @@ public class RangeImpl implements Range {
             , NodeImpl.getPeer(refNode)
             , offset);
     }
-    native static void setStartImpl(long peer
+    static void setStartImpl(long peer
         , long refNode
-        , int offset);
+        , int offset) {
+        RangeNative.setStart(peer, refNode, offset);
+    }
 
 
     @Override
@@ -156,9 +174,11 @@ public class RangeImpl implements Range {
             , NodeImpl.getPeer(refNode)
             , offset);
     }
-    native static void setEndImpl(long peer
+    static void setEndImpl(long peer
         , long refNode
-        , int offset);
+        , int offset) {
+        RangeNative.setEnd(peer, refNode, offset);
+    }
 
 
     @Override
@@ -167,8 +187,10 @@ public class RangeImpl implements Range {
         setStartBeforeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void setStartBeforeImpl(long peer
-        , long refNode);
+    static void setStartBeforeImpl(long peer
+        , long refNode) {
+        RangeNative.setStartBefore(peer, refNode);
+    }
 
 
     @Override
@@ -177,8 +199,10 @@ public class RangeImpl implements Range {
         setStartAfterImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void setStartAfterImpl(long peer
-        , long refNode);
+    static void setStartAfterImpl(long peer
+        , long refNode) {
+        RangeNative.setStartAfter(peer, refNode);
+    }
 
 
     @Override
@@ -187,8 +211,10 @@ public class RangeImpl implements Range {
         setEndBeforeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void setEndBeforeImpl(long peer
-        , long refNode);
+    static void setEndBeforeImpl(long peer
+        , long refNode) {
+        RangeNative.setEndBefore(peer, refNode);
+    }
 
 
     @Override
@@ -197,8 +223,10 @@ public class RangeImpl implements Range {
         setEndAfterImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void setEndAfterImpl(long peer
-        , long refNode);
+    static void setEndAfterImpl(long peer
+        , long refNode) {
+        RangeNative.setEndAfter(peer, refNode);
+    }
 
 
     @Override
@@ -207,8 +235,10 @@ public class RangeImpl implements Range {
         collapseImpl(getPeer()
             , toStart);
     }
-    native static void collapseImpl(long peer
-        , boolean toStart);
+    static void collapseImpl(long peer
+        , boolean toStart) {
+        RangeNative.collapse(peer, toStart);
+    }
 
 
     @Override
@@ -217,8 +247,10 @@ public class RangeImpl implements Range {
         selectNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void selectNodeImpl(long peer
-        , long refNode);
+    static void selectNodeImpl(long peer
+        , long refNode) {
+        RangeNative.selectNode(peer, refNode);
+    }
 
 
     @Override
@@ -227,8 +259,10 @@ public class RangeImpl implements Range {
         selectNodeContentsImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static void selectNodeContentsImpl(long peer
-        , long refNode);
+    static void selectNodeContentsImpl(long peer
+        , long refNode) {
+        RangeNative.selectNodeContents(peer, refNode);
+    }
 
 
     @Override
@@ -239,9 +273,11 @@ public class RangeImpl implements Range {
             , how
             , RangeImpl.getPeer(sourceRange));
     }
-    native static short compareBoundaryPointsImpl(long peer
+    static short compareBoundaryPointsImpl(long peer
         , short how
-        , long sourceRange);
+        , long sourceRange) {
+        return RangeNative.compareBoundaryPoints(peer, how, sourceRange);
+    }
 
 
     @Override
@@ -249,7 +285,9 @@ public class RangeImpl implements Range {
     {
         deleteContentsImpl(getPeer());
     }
-    native static void deleteContentsImpl(long peer);
+    static void deleteContentsImpl(long peer) {
+        RangeNative.deleteContents(peer);
+    }
 
 
     @Override
@@ -257,7 +295,9 @@ public class RangeImpl implements Range {
     {
         return DocumentFragmentImpl.getImpl(extractContentsImpl(getPeer()));
     }
-    native static long extractContentsImpl(long peer);
+    static long extractContentsImpl(long peer) {
+        return RangeNative.extractContents(peer);
+    }
 
 
     @Override
@@ -265,7 +305,9 @@ public class RangeImpl implements Range {
     {
         return DocumentFragmentImpl.getImpl(cloneContentsImpl(getPeer()));
     }
-    native static long cloneContentsImpl(long peer);
+    static long cloneContentsImpl(long peer) {
+        return RangeNative.cloneContents(peer);
+    }
 
 
     @Override
@@ -274,8 +316,10 @@ public class RangeImpl implements Range {
         insertNodeImpl(getPeer()
             , NodeImpl.getPeer(newNode));
     }
-    native static void insertNodeImpl(long peer
-        , long newNode);
+    static void insertNodeImpl(long peer
+        , long newNode) {
+        RangeNative.insertNode(peer, newNode);
+    }
 
 
     @Override
@@ -284,8 +328,10 @@ public class RangeImpl implements Range {
         surroundContentsImpl(getPeer()
             , NodeImpl.getPeer(newParent));
     }
-    native static void surroundContentsImpl(long peer
-        , long newParent);
+    static void surroundContentsImpl(long peer
+        , long newParent) {
+        RangeNative.surroundContents(peer, newParent);
+    }
 
 
     @Override
@@ -293,7 +339,9 @@ public class RangeImpl implements Range {
     {
         return RangeImpl.getImpl(cloneRangeImpl(getPeer()));
     }
-    native static long cloneRangeImpl(long peer);
+    static long cloneRangeImpl(long peer) {
+        return RangeNative.cloneRange(peer);
+    }
 
 
     @Override
@@ -301,7 +349,9 @@ public class RangeImpl implements Range {
     {
         return toStringImpl(getPeer());
     }
-    native static String toStringImpl(long peer);
+    static String toStringImpl(long peer) {
+        return RangeNative.toString(peer);
+    }
 
 
     @Override
@@ -309,7 +359,9 @@ public class RangeImpl implements Range {
     {
         detachImpl(getPeer());
     }
-    native static void detachImpl(long peer);
+    static void detachImpl(long peer) {
+        RangeNative.detach(peer);
+    }
 
 
     public DocumentFragment createContextualFragment(String html) throws DOMException
@@ -317,8 +369,10 @@ public class RangeImpl implements Range {
         return DocumentFragmentImpl.getImpl(createContextualFragmentImpl(getPeer()
             , html));
     }
-    native static long createContextualFragmentImpl(long peer
-        , String html);
+    static long createContextualFragmentImpl(long peer
+        , String html) {
+        return RangeNative.createContextualFragment(peer, html);
+    }
 
 
     public short compareNode(Node refNode) throws DOMException
@@ -326,8 +380,10 @@ public class RangeImpl implements Range {
         return compareNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static short compareNodeImpl(long peer
-        , long refNode);
+    static short compareNodeImpl(long peer
+        , long refNode) {
+        return RangeNative.compareNode(peer, refNode);
+    }
 
 
     public short comparePoint(Node refNode
@@ -337,9 +393,11 @@ public class RangeImpl implements Range {
             , NodeImpl.getPeer(refNode)
             , offset);
     }
-    native static short comparePointImpl(long peer
+    static short comparePointImpl(long peer
         , long refNode
-        , int offset);
+        , int offset) {
+        return RangeNative.comparePoint(peer, refNode, offset);
+    }
 
 
     public boolean intersectsNode(Node refNode) throws DOMException
@@ -347,8 +405,10 @@ public class RangeImpl implements Range {
         return intersectsNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
     }
-    native static boolean intersectsNodeImpl(long peer
-        , long refNode);
+    static boolean intersectsNodeImpl(long peer
+        , long refNode) {
+        return RangeNative.intersectsNode(peer, refNode);
+    }
 
 
     public boolean isPointInRange(Node refNode
@@ -358,9 +418,11 @@ public class RangeImpl implements Range {
             , NodeImpl.getPeer(refNode)
             , offset);
     }
-    native static boolean isPointInRangeImpl(long peer
+    static boolean isPointInRangeImpl(long peer
         , long refNode
-        , int offset);
+        , int offset) {
+        return RangeNative.isPointInRange(peer, refNode, offset);
+    }
 
 
     public void expand(String unit) throws DOMException
@@ -368,8 +430,10 @@ public class RangeImpl implements Range {
         expandImpl(getPeer()
             , unit);
     }
-    native static void expandImpl(long peer
-        , String unit);
+    static void expandImpl(long peer
+        , String unit) {
+        RangeNative.expand(peer, unit);
+    }
 
 
 }

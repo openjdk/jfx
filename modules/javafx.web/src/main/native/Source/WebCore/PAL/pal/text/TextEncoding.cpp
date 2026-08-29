@@ -35,10 +35,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringView.h>
 
-#if USE(JAVA_UNICODE)
-#include "TextNormalizerJava.h"
-#endif
-
 namespace PAL {
 
 static const TextEncoding& UTF7Encoding()
@@ -80,14 +76,9 @@ Vector<uint8_t> TextEncoding::encode(StringView string, PAL::UnencodableHandling
     // FIXME: What's the right place to do normalization?
     // It's a little strange to do it inside the encode function.
     // Perhaps normalization should be an explicit step done before calling encode.
-#if !USE(JAVA_UNICODE)
     if (normalize == NFCNormalize::Yes)
         return newTextCodec(*this)->encode(normalizedNFC(string).view, handling);
     return newTextCodec(*this)->encode(string, handling);
-#else
-    String normalized = TextNormalizer::normalize(text.upconvertedCharacters(), text.length(), TextNormalizer::NFC);
-    return newTextCodec(*this)->encode(StringView { normalized.characters16(), normalized.length() }, handling);
-#endif
 }
 
 ASCIILiteral TextEncoding::domName() const

@@ -30,7 +30,6 @@
 #include "BitmapImage.h"
 #include "GraphicsContext.h"
 #include "ImageObserver.h"
-#include "PlatformJavaClasses.h"
 #include "GraphicsContextJava.h"
 
 #include "PlatformContextJava.h"

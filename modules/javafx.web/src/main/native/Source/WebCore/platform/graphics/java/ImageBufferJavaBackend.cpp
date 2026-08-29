@@ -34,6 +34,7 @@
 #include "MIMETypeRegistry.h"
 #include "PlatformContextJava.h"
 #include "GraphicsContextJava.h"
+#include "WKJPlatformJava.h"
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
@@ -43,43 +44,27 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
     if (backendSize.isEmpty())
         return nullptr;
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->create_rt_image || !cb->create_buffered_context_rq)
+        return nullptr;
 
-    static jmethodID midCreateImage = env->GetMethodID(
-        PG_GetGraphicsManagerClass(env),
-        "createRTImage",
-        "(II)Lcom/sun/webkit/graphics/WCImage;");
-    ASSERT(midCreateImage);
+    WKJHandle imageObj { cb->create_rt_image(
+        (int32_t) ceilf(parameters.resolutionScale * parameters.backendSize.width()),
+        (int32_t) ceilf(parameters.resolutionScale * parameters.backendSize.height())) };
 
-    jobject imageObj = env->CallObjectMethod(
-        PL_GetGraphicsManager(env),
-        midCreateImage,
-        (jint) ceilf(parameters.resolutionScale * parameters.backendSize.width()),
-        (jint) ceilf(parameters.resolutionScale * parameters.backendSize.height())
-    );
-
-    if (WTF::CheckAndClearException(env) || !imageObj) {
+    if (wkjCheckAndClearException() || !imageObj) {
         return nullptr;
     }
 
-    auto image = RQRef::create(JLObject(imageObj));
+    auto image = RQRef::create(imageObj.get());
 
-    static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
-        PG_GetGraphicsManagerClass(env),
-        "createBufferedContextRQ",
-        "(Lcom/sun/webkit/graphics/WCImage;)Lcom/sun/webkit/graphics/WCRenderQueue;");
-    ASSERT(midCreateBufferedContextRQ);
-
-    JLObject wcRenderQueue(env->CallObjectMethod(
-        PL_GetGraphicsManager(env),
-        midCreateBufferedContextRQ,
-        (jobject)(image->cloneLocalCopy())));
+    WKJHandle wcRenderQueue { cb->create_buffered_context_rq(wkj_ref(*image)) };
     ASSERT(wcRenderQueue);
-    if (WTF::CheckAndClearException(env) || !wcRenderQueue) {
+    if (wkjCheckAndClearException() || !wcRenderQueue) {
         return nullptr;
     }
 
-    auto context = makeUnique<GraphicsContextJava>(new PlatformContextJava(wcRenderQueue, true));
+    auto context = makeUnique<GraphicsContextJava>(new PlatformContextJava(wcRenderQueue.get(), true));
 
     auto platformImage = ImageJava::create(image, context->platformContext()->rq_ref(),
         backendSize.width(), backendSize.height());
@@ -103,9 +88,14 @@ ImageBufferJavaBackend::ImageBufferJavaBackend(
 {
 }
 
-JLObject ImageBufferJavaBackend::getWCImage() const
+/*
+ * The Java WCImage, borrowed from the RQRef that owns it for the lifetime of this backend.
+ * The JNI version minted a local ref per call; borrowing costs no registry traffic and has
+ * the same reach, because every caller uses it inside one expression.
+ */
+wkj_ref ImageBufferJavaBackend::getWCImage() const
 {
-    return m_image->getImage()->cloneLocalCopy();
+    return wkj_ref(*m_image->getImage());
 }
 
 Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::optional<double>)
@@ -115,25 +105,33 @@ Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::
         // For that purpose it has to be in actual state.
         context().platformContext()->rq().flushBuffer();
 
-        JNIEnv* env = WTF::GetJavaEnv();
+        const WKJHostGraphics* cb = wkjGraphics();
+        if (!cb || !cb->image_to_data)
+            return { };
 
-        static jmethodID midToData = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toData",
-                "(Ljava/lang/String;)[B");
-        ASSERT(midToData);
+        WKJStringArg mime(mimeType);
 
-        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
-                getWCImage(),
-                midToData,
-                (jstring) JLString(mimeType.toJavaString(env))));
+        /*
+         * WCImage.toData(String) returned a byte[]; the slot copies into a buffer this side
+         * provides. The first guess is the raw BGRA size, which every encoder this path
+         * supports comes in under, so the WKJ_STR_OVERFLOW retry - which would re-encode on
+         * the Java side - is not the normal path.
+         */
+        int32_t capacity = static_cast<int32_t>(bytesPerRow()) * m_backendSize.height() + 4096;
+        Vector<uint8_t> data(static_cast<size_t>(capacity));
+        int32_t length = 0;
 
-        if (!WTF::CheckAndClearException(env) && jdata) {
-            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
-            Vector<uint8_t> data;
-            std::span<uint8_t> span(dataArray, env->GetArrayLength(jdata));
-            data.append(span);
-            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
+        int32_t status = cb->image_to_data(getWCImage(), mime.data(), mime.length(),
+                                           data.span().data(), capacity, &length);
+        if (status == WKJ_STR_OVERFLOW && length > 0) {
+            data.grow(static_cast<size_t>(length));
+            status = cb->image_to_data(getWCImage(), mime.data(), mime.length(),
+                                       data.span().data(), length, &length);
+        }
+        wkjCheckAndClearException();
+
+        if (status == WKJ_STR_OK) {
+            data.shrink(static_cast<size_t>(length));
             return data;
         }
     }
@@ -142,43 +140,33 @@ Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::
 
 std::pair<void*, size_t> ImageBufferJavaBackend::getDataAndSize()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     //RenderQueue need to be processed before pixel buffer extraction.
     //For that purpose it has to be in actual state.
     context().platformContext()->rq().flushBuffer();
 
-    static jmethodID midGetBGRABytes = env->GetMethodID(
-        PG_GetImageClass(env),
-        "getPixelBuffer",
-        "()Ljava/nio/ByteBuffer;");
-    ASSERT(midGetBGRABytes);
-
-    jobject pixelBuf = env->CallObjectMethod(getWCImage(), midGetBGRABytes);
-    if (WTF::CheckAndClearException(env) || !pixelBuf) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_get_pixel_buffer)
         return {nullptr, 0};
-    }
-    JLObject byteBuffer(pixelBuf);
 
-    void* data = env->GetDirectBufferAddress(byteBuffer);
-    jlong capacity = env->GetDirectBufferCapacity(byteBuffer);
-    if (!data || capacity <= 0)
+    // Replaces getPixelBuffer() plus GetDirectBufferAddress/GetDirectBufferCapacity. The
+    // memory belongs to the Java image and outlives this call, exactly as it did when the
+    // local ref to the ByteBuffer went out of scope while the address stayed in use.
+    int64_t capacity = 0;
+    void* data = cb->image_get_pixel_buffer(getWCImage(), &capacity);
+    if (wkjCheckAndClearException() || !data || capacity <= 0)
         return {nullptr, 0};
+
     return {data, static_cast<size_t>(capacity)};
 }
 
 void ImageBufferJavaBackend::update() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_draw_pixel_buffer)
+        return;
 
-    static jmethodID midUpdateByteBuffer = env->GetMethodID(
-        PG_GetImageClass(env),
-        "drawPixelBuffer",
-        "()V");
-    ASSERT(midUpdateByteBuffer);
-
-    env->CallObjectMethod(getWCImage(), midUpdateByteBuffer);
-    WTF::CheckAndClearException(env);
+    cb->image_draw_pixel_buffer(getWCImage());
+    wkjCheckAndClearException();
 }
 
 GraphicsContext& ImageBufferJavaBackend::context()

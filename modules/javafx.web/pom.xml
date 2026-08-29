@@ -46,6 +46,16 @@
 
     <properties>
         <jfx.web.skipTests>true</jfx.web.skipTests>
+        <!-- The FFM binding tests are a separate surefire execution: they run
+             against the wkjstub recording stub built from src/test/native/wkjstub,
+             not against jfxwebkit, so they need neither a prebuilt WebKit nor
+             -Djfx.web.skipTests=false and they run in the default build. Turn
+             them off with -Djfx.web.skipFfmTests=true, which also skips building
+             the stub; -DskipNative=true skips the stub build on its own, and the
+             tests then skip themselves through their library-availability
+             assumption. -->
+        <jfx.web.skipFfmTests>false</jfx.web.skipFfmTests>
+        <jfx.web.stub.bindir>${project.build.directory}/native/bin</jfx.web.stub.bindir>
         <!-- The "release NN" option cannot be combined with upgrade-module-path
              (needed to override the deprecated-for-removal system jdk.jsobject with
              this repository's copy), so -source/-target are used instead and the
@@ -268,8 +278,49 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <!-- The module tests, which need a prebuilt jfxwebkit. The
+                             FFM binding tests are tagged "ffm" and excluded here;
+                             they run in the execution below against wkjstub. -->
+                        <id>default-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skipTests>${jfx.web.skipTests}</skipTests>
+                            <excludedGroups>ffm</excludedGroups>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- FFM binding tests: same module configuration, but the
+                             wkjstub output directory is first on java.library.path
+                             and WebKitNative is pointed at the stub by name, so no
+                             jfxwebkit is loaded and nothing collides with one. -->
+                        <id>ffm-binding-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skipTests>${jfx.web.skipFfmTests}</skipTests>
+                            <groups>ffm</groups>
+                            <argLine>
+                                --upgrade-module-path "${jfx.shims.base}${path.separator}${jfx.shims.graphics}${path.separator}${jfx.shims.controls}${path.separator}${jfx.web.modulepath.extra}${path.separator}${jfx.shims.web}"
+                                --add-modules javafx.base,javafx.graphics,javafx.controls,javafx.media,jdk.jsobject,javafx.web
+                                @${project.basedir}/src/test/addExports
+                                @${jfx.root}/buildtools/addExports
+                                --enable-native-access=javafx.graphics,javafx.media,javafx.web
+                                "-Djava.library.path=${jfx.web.stub.bindir}${path.separator}${jfx.native.librarypath}"
+                                -Djavafx.web.nativeLibrary=wkjstub
+                                -Djfx.web.dom.abi.spec=${jfx.root}/buildtools/ffm-web/dom-abi.tsv
+                                -Djfx.web.page.abi.header=${project.basedir}/src/main/native/Source/WebKitLegacy/java/api/webkit_java_api_page.h
+                                -DWEB_ARCHIVE_JAR_TEST_DIR=${project.build.directory}/testing/resources
+                            </argLine>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
-                    <skipTests>${jfx.web.skipTests}</skipTests>
                     <argLine>
                         --upgrade-module-path "${jfx.shims.base}${path.separator}${jfx.shims.graphics}${path.separator}${jfx.shims.controls}${path.separator}${jfx.web.modulepath.extra}${path.separator}${jfx.shims.web}"
                         --add-modules javafx.base,javafx.graphics,javafx.controls,javafx.media,jdk.jsobject,javafx.web
@@ -293,4 +344,147 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- The wkjstub test library: a generated recording implementation of the
+         whole wkj_* C ABI (src/test/native/wkjstub). It is what makes the FFM
+         binding layer executable here, since this build cannot compile WebKit
+         (FFM-ABI-CONTRACT.md section 8). It is test-only: it is never packaged,
+         never installed, and is named wkjstub rather than jfxwebkit so that it
+         cannot be confused with, or shadow, a real WebKit library. -->
+    <profiles>
+        <!-- -DskipTests must skip these too. The ffm-binding-test execution sets
+             its own <skipTests>, which takes precedence over the command line, so
+             the flag has to arrive as a property instead. -->
+        <profile>
+            <id>web-ffm-tests-skipped</id>
+            <activation>
+                <property>
+                    <name>skipTests</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <jfx.web.skipFfmTests>true</jfx.web.skipFfmTests>
+            </properties>
+        </profile>
+        <profile>
+            <id>web-stub-native-win</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+                <property>
+                    <name>skipNative</name>
+                    <value>!true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>wkjstub-cmake-configure</id>
+                                <phase>generate-test-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>${jfx.web.skipFfmTests}</skip>
+                                    <executable>cmake</executable>
+                                    <arguments>
+                                        <argument>-S</argument>
+                                        <argument>${project.basedir}/src/test/native/wkjstub</argument>
+                                        <argument>-B</argument>
+                                        <argument>${project.build.directory}/native/cmake</argument>
+                                        <argument>-A</argument>
+                                        <argument>x64</argument>
+                                        <argument>-DJFX_ROOT=${jfx.root}</argument>
+                                        <argument>-DBIN_DIR=${jfx.web.stub.bindir}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>wkjstub-cmake-build</id>
+                                <phase>generate-test-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>${jfx.web.skipFfmTests}</skip>
+                                    <executable>cmake</executable>
+                                    <arguments>
+                                        <argument>--build</argument>
+                                        <argument>${project.build.directory}/native/cmake</argument>
+                                        <argument>--config</argument>
+                                        <argument>${CONF}</argument>
+                                        <argument>--parallel</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>web-stub-native-unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+                <property>
+                    <name>skipNative</name>
+                    <value>!true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>wkjstub-cmake-configure</id>
+                                <phase>generate-test-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>${jfx.web.skipFfmTests}</skip>
+                                    <executable>cmake</executable>
+                                    <arguments>
+                                        <argument>-S</argument>
+                                        <argument>${project.basedir}/src/test/native/wkjstub</argument>
+                                        <argument>-B</argument>
+                                        <argument>${project.build.directory}/native/cmake</argument>
+                                        <argument>-DJFX_ROOT=${jfx.root}</argument>
+                                        <argument>-DBIN_DIR=${jfx.web.stub.bindir}</argument>
+                                        <argument>-DCMAKE_BUILD_TYPE=${CONF}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>wkjstub-cmake-build</id>
+                                <phase>generate-test-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>${jfx.web.skipFfmTests}</skip>
+                                    <executable>cmake</executable>
+                                    <arguments>
+                                        <argument>--build</argument>
+                                        <argument>${project.build.directory}/native/cmake</argument>
+                                        <argument>--parallel</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 #include "TextureMapperJava.h"
 
 #include "PlatformContextJava.h"
@@ -31,7 +32,6 @@
 #include "GraphicsLayer.h"
 #include "NotImplemented.h"
 
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {

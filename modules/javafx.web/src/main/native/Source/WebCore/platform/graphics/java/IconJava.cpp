@@ -24,27 +24,26 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
 #include "Icon.h"
 #include "IntRect.h"
-#include "PlatformJavaClasses.h"
-#include <wtf/java/JavaRef.h>
+#include "WKJPlatformJava.h"
 #include "NotImplemented.h"
 
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
 #include "PlatformContextJava.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
 
 using namespace WebCore;
 
 namespace WebCore {
 
-Icon::Icon(const JLObject &jicon)
+Icon::Icon(wkj_ref jicon)
     : m_jicon(RQRef::create(jicon))
 {
 }
@@ -62,8 +61,8 @@ RefPtr<Icon> Icon::createIconForFiles(const Vector<String>&)
 void Icon::paint(GraphicsContext& gc, const FloatRect& rect)
 {
     gc.platformContext()->rq().freeSpace(16)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON
-    << m_jicon << (jint)rect.x() <<  (jint)rect.y();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON
+    << m_jicon << (int32_t)rect.x() <<  (int32_t)rect.y();
 }
 
 } // namespace WebCore

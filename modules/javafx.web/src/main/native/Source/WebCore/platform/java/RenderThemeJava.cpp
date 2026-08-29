@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include <cstdio>
 #include <wtf/Vector.h>
@@ -51,13 +52,14 @@
 #include "Page.h"
 #include "RenderStyle+SettersInlines.h"
 
-#include "com_sun_webkit_graphics_RenderTheme.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
-#include "com_sun_webkit_graphics_RenderMediaControls.h"
+#include <stdint.h>
 
 
-#define RENDER_MEDIA_CONTROLS_CLASS_NAME    "com/sun/webkit/graphics/RenderMediaControls"
 
+/*
+ * The constant names are unchanged: they now come from the generated wkj_constants.h instead
+ * of from javac -h output, and these two macros compose exactly the same spellings.
+ */
 #define JNI_EXPAND(n) com_sun_webkit_graphics_RenderTheme_##n
 #define JNI_EXPAND_MEDIA(n) com_sun_webkit_graphics_RenderMediaControls_##n
 
@@ -123,98 +125,106 @@ bool RenderThemeJava::paintWidget(
         ? object.style().visitedDependentColor()
         : object.style().visitedDependentBackgroundColor();
 
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    WTF::Vector<jbyte> extParams;
+    /*
+     * The extParams block is the same native-endian scratch buffer the JNI code built; only
+     * the element type changes, from a signed byte to uint8_t. The Java side still reads
+     * it as a ByteBuffer, and it stays alive for exactly the duration of the createWidget call.
+     */
+    WTF::Vector<uint8_t> extParams;
     if (JNI_EXPAND(SLIDER) == widgetIndex && is<RenderSlider>(object)) {
         HTMLInputElement& input = downcast<RenderSlider>(object).element();
 
-        extParams.grow(sizeof(jint) + 3 * sizeof(jfloat));
-        jbyte *data = const_cast<jbyte*>(extParams.span().data());
-        auto isVertical = jint((object.style().appearance() == StyleAppearance::SliderHorizontal)
+        extParams.grow(sizeof(int32_t) + 3 * sizeof(float));
+        uint8_t *data = const_cast<uint8_t*>(extParams.span().data());
+        auto isVertical = int32_t((object.style().appearance() == StyleAppearance::SliderHorizontal)
             ? 0
             : 1);
         memcpy(data, &isVertical, sizeof(isVertical));
-        data += sizeof(jint);
+        data += sizeof(int32_t);
 
-        auto maximum = jfloat(input.maximum());
+        auto maximum = float(input.maximum());
         memcpy(data, &maximum, sizeof(maximum));
-        data += sizeof(jfloat);
+        data += sizeof(float);
 
-        auto minimum = jfloat(input.minimum());
+        auto minimum = float(input.minimum());
         memcpy(data, &minimum, sizeof(minimum));
-        data += sizeof(jfloat);
+        data += sizeof(float);
 
-        auto valueAsNumber = jfloat(input.valueAsNumber());
+        auto valueAsNumber = float(input.valueAsNumber());
         memcpy(data, &valueAsNumber, sizeof(valueAsNumber));
     } else if (JNI_EXPAND(PROGRESS_BAR) == widgetIndex) {
         if (is<RenderProgress>(object)) {
             const RenderProgress& renderProgress = downcast<RenderProgress>(object);
 
-            extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
-            jbyte *data = const_cast<jbyte*>(extParams.span().data());
-            auto isDeterminate = jint(renderProgress.isDeterminate() ? 1 : 0);
+            extParams.grow(sizeof(int32_t) + 3*sizeof(float));
+            uint8_t *data = const_cast<uint8_t*>(extParams.span().data());
+            auto isDeterminate = int32_t(renderProgress.isDeterminate() ? 1 : 0);
             memcpy(data, &isDeterminate, sizeof(isDeterminate));
-            data += sizeof(jint);
+            data += sizeof(int32_t);
 
-            auto position = jfloat(renderProgress.position());
+            auto position = float(renderProgress.position());
             memcpy(data, &position, sizeof(position));
-            data += sizeof(jfloat);
+            data += sizeof(float);
 
-            auto animationProgress = jfloat(renderProgress.animationProgress());
+            auto animationProgress = float(renderProgress.animationProgress());
             memcpy(data, &animationProgress, sizeof(animationProgress));
-            data += sizeof(jfloat);
+            data += sizeof(float);
         }
     } else if (JNI_EXPAND(METER) == widgetIndex) {
-        jfloat value = 0;
-        jint region = 0;
+        float value = 0;
+        int32_t region = 0;
         if (object.isRenderMeter()) {
             HTMLMeterElement* meter = static_cast<HTMLMeterElement*>(object.element());
             value = meter->valueRatio();
             region = meter->gaugeRegion();
         } else if (is<RenderProgress>(object)) {
             const RenderProgress& renderProgress = downcast<RenderProgress>(object);
-            value = jfloat(renderProgress.position());
+            value = float(renderProgress.position());
         }
 
-        extParams.grow(sizeof(jfloat) + sizeof(jint));
-        jbyte *data = const_cast<jbyte*>(extParams.span().data());
+        extParams.grow(sizeof(float) + sizeof(int32_t));
+        uint8_t *data = const_cast<uint8_t*>(extParams.span().data());
         memcpy(data, &value, sizeof(value));
-        data += sizeof(jfloat);
+        data += sizeof(float);
 
         memcpy(data, &region, sizeof(region));
     }
 
-    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "createWidget",
-            "(JIIIIILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/Ref;");
-    ASSERT(mid);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->create_widget) {
+        // No theme callback: fall through to the WebKit default render, as a null Ref did.
+        return true;
+    }
 
     auto [r, g, b, a] = bgColor.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-    RefPtr<RQRef> widgetRef = RQRef::create(
-        env->CallObjectMethod(jobject(*jRenderTheme), mid,
-            ptr_to_jlong(&object),
-            (jint)widgetIndex,
-            (jint)state,
-            (jint)rect.width(), (jint)rect.height(),
-            (jint)(a << 24 | r << 16 | g << 8 | b),
-            (jobject)JLObject(extParams.isEmpty()
-                ? nullptr
-                : env->NewDirectByteBuffer(
-                    const_cast<jbyte*>(extParams.span().data()),
-                    extParams.size())))
-        );
+
+    /*
+     * The id create_widget returns is owned by this frame, so it is adopted into a WKJHandle
+     * and RQRef::create adds its own reference - the same two steps the JNI code took with
+     * the local reference the JNI call returned.
+     */
+    WKJHandle widget { cb->create_widget(
+        wkj_ref(*jRenderTheme),
+        wkj_from_ptr(&object),
+        (int32_t)widgetIndex,
+        (int32_t)state,
+        (int32_t)rect.width(), (int32_t)rect.height(),
+        (int32_t)(a << 24 | r << 16 | g << 8 | b),
+        extParams.isEmpty() ? nullptr : extParams.span().data(),
+        (int32_t)extParams.size()) };
+    RefPtr<RQRef> widgetRef = RQRef::create(widget.get());
     if (!widgetRef.get()) {
         //switch to WebKit default render
         return true;
     }
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
     // widgetRef will go into rq's inner refs vector.
     paintInfo.context().platformContext()->rq().freeSpace(20)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWWIDGET
-    << (jint)*jRenderTheme
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWWIDGET
+    << (int32_t)*jRenderTheme
     << widgetRef
-    << (jint)rect.x() << (jint)rect.y();
+    << (int32_t)rect.x() << (int32_t)rect.y();
 
     return false;
 }
@@ -274,13 +284,15 @@ void RenderThemeJava::setRadioSize(RenderStyle& style) const
     if (!style.width().isAuto() && !style.height().isAuto())
         return;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getRadioButtonSize", "()I");
-    ASSERT(mid);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->get_radio_button_size)
+        return;
 
-    int radioSize = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid);
+    // The default theme, which is what a null page asked for before.
+    WKJHandle theme = wkjRenderThemeForPage(0);
+    int radioSize = cb->get_radio_button_size(theme.get());
 
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
     if (style.width().isAuto())
         style.setWidth(Style::MinimumSize::Fixed(radioSize));
@@ -367,17 +379,15 @@ bool RenderThemeJava::paintSliderTrack(const RenderElement&object, const PaintIn
     return paintWidget(JNI_EXPAND(SLIDER), object, info, rect);
 }
 
-void getSliderThumbSize(jint sliderType, int *width, int *height)
+void getSliderThumbSize(int32_t sliderType, int *width, int *height)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    JGClass cls = JLClass(env->FindClass(RENDER_MEDIA_CONTROLS_CLASS_NAME));
-    ASSERT(cls);
-
-    jmethodID mid = env->GetStaticMethodID(cls, "fwkGetSliderThumbSize", "(I)I");
-    ASSERT(mid);
-
-    jint size = env->CallStaticIntMethod(cls, mid, sliderType);
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    int32_t size = 0;
+    if (cb && cb->get_slider_thumb_size) {
+        size = cb->get_slider_thumb_size(sliderType);
+        wkjCheckAndClearException();
+    }
+    // The width is the high 16 bits and the height the low 16, as the packed int always was.
     *width = (size >> 16) & 0xFFFF;
     *height = size & 0xFFFF;
 }
@@ -442,15 +452,14 @@ bool RenderThemeJava::supportsFocusRing(const RenderElement& obj, const RenderSt
 
 Color RenderThemeJava::getSelectionColor(int index) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    ASSERT(env);
-
-    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getSelectionColor", "(I)I");
-    ASSERT(mid);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->get_selection_color)
+        return SRGBA<uint8_t> { 0, 0, 0, 0 };
 
     // Get from default theme object.
-    uint32_t color = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
-    WTF::CheckAndClearException(env);
+    WKJHandle theme = wkjRenderThemeForPage(0);
+    uint32_t color = static_cast<uint32_t>(cb->get_selection_color(theme.get(), index));
+    wkjCheckAndClearException();
 
     return SRGBA<uint8_t> { static_cast<uint8_t>(color >> 16), static_cast<uint8_t>(color >> 8),
         static_cast<uint8_t>(color), static_cast<uint8_t>(color >> 24) };
@@ -509,31 +518,32 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderElement& renderObject, c
         + 4 + 4             // duration and currentTime
         + 4 + 4 + 4 + 4     // x, y, w, h
         )
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_TIMETRACK
-    << (jint)timeRanges->length();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_TIMETRACK
+    << (int32_t)timeRanges->length();
 
     //utatodo: need [double] support
     for (unsigned i = 0; i < timeRanges->length(); i++) {
         paintInfo.context().platformContext()->rq()
-        << (jfloat)timeRanges->start(i).releaseReturnValue() << (jfloat)timeRanges->end(i).releaseReturnValue();
+        << (float)timeRanges->start(i).releaseReturnValue() << (float)timeRanges->end(i).releaseReturnValue();
     }
 
     paintInfo.context().platformContext()->rq()
-    << (jfloat)mediaElement->duration()
-    << (jfloat)mediaElement->currentTime()
-    << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
+    << (float)mediaElement->duration()
+    << (float)mediaElement->currentTime()
+    << (int32_t)r.x() <<  (int32_t)r.y() << (int32_t)r.width() << (int32_t)r.height();
     return true;
 }
 bool RenderThemeJava::paintMediaSliderThumb(const RenderElement& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
     return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), renderObject, paintInfo, r);
 }
-bool RenderThemeJava::paintMediaControl(jint type, const RenderElement&, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaControl(int32_t type, const RenderElement&, const PaintInfo& paintInfo,
+                                        const IntRect& r)
 {
     paintInfo.context().platformContext()->rq().freeSpace(24)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIACONTROL
-    << type << (jint)r.x() <<  (jint)r.y()
-    << (jint)r.width() << (jint)r.height();
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIACONTROL
+    << type << (int32_t)r.x() <<  (int32_t)r.y()
+    << (int32_t)r.width() << (int32_t)r.height();
 
     return true;
 }

@@ -33,84 +33,82 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<WheelEvent*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<WheelEvent*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getDeltaXImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT double wkj_dom_WheelEvent_getDeltaX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->deltaX();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getDeltaYImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT double wkj_dom_WheelEvent_getDeltaY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->deltaY();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getDeltaZImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT double wkj_dom_WheelEvent_getDeltaZ(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->deltaZ();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getDeltaModeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_WheelEvent_getDeltaMode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->deltaMode();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaXImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_WheelEvent_getWheelDeltaX(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->wheelDeltaX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaYImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_WheelEvent_getWheelDeltaY(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->wheelDeltaY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_WheelEvent_getWheelDelta(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->wheelDelta();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_WheelEventImpl_getWebkitDirectionInvertedFromDeviceImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_WheelEvent_getWebkitDirectionInvertedFromDevice(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->webkitDirectionInvertedFromDevice();
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_WheelEventImpl_initWheelEventImpl(JNIEnv* env, jclass, jlong peer
-    , jint wheelDeltaX
-    , jint wheelDeltaY
-    , jlong view
-    , jint screenX
-    , jint screenY
-    , jint clientX
-    , jint clientY
-    , jboolean ctrlKey
-    , jboolean altKey
-    , jboolean shiftKey
-    , jboolean metaKey)
+WKJ_EXPORT void wkj_dom_WheelEvent_initWheelEvent(int64_t peer, int32_t wheelDeltaX, int32_t wheelDeltaY, int64_t view, int32_t screenX, int32_t screenY, int32_t clientX, int32_t clientY, int32_t ctrlKey, int32_t altKey, int32_t shiftKey, int32_t metaKey)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->initWheelEvent(wheelDeltaX
             , wheelDeltaY
-            , static_cast<DOMWindow*>(jlong_to_ptr(view))
+            , static_cast<DOMWindow*>(wkj_to_ptr(view))
             , screenX
             , screenY
             , clientX

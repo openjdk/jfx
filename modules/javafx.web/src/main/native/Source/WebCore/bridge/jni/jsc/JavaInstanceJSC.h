@@ -40,7 +40,7 @@ class JavaClass;
 
 class JavaInstance : public Instance {
 public:
-    static RefPtr<JavaInstance> create(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+    static RefPtr<JavaInstance> create(wkj_ref instance, RefPtr<RootObject>&& rootObject, wkj_ref accessControlContext)
     {
         return adoptRef(new JavaInstance(instance, WTF::move(rootObject), accessControlContext));
     }
@@ -55,15 +55,15 @@ public:
     virtual JSValue getMethod(JSGlobalObject*, PropertyName);
     virtual JSValue invokeMethod(JSGlobalObject*, CallFrame*, RuntimeMethod*);
 
-    jobject javaInstance() const { return m_instance->instance(); }
+    wkj_ref javaInstance() const { return m_instance->instance(); }
 
     JSValue stringValue(JSGlobalObject*) const;
     JSValue numberValue(JSGlobalObject*) const;
     JSValue booleanValue() const;
-    jobject accessControlContext() const { return m_accessControlContext->instance(); }
+    wkj_ref accessControlContext() const { return m_accessControlContext->instance(); }
 
 protected:
-    JavaInstance(jobject instance, RefPtr<RootObject>&&, jobject accessControlContext);
+    JavaInstance(wkj_ref instance, RefPtr<RootObject>&&, wkj_ref accessControlContext);
 
     virtual RuntimeObject* newRuntimeObject(JSGlobalObject*);
 

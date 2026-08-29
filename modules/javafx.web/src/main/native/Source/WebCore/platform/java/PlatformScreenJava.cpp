@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,50 +36,11 @@
 
 #include "NotImplemented.h"
 
-namespace PlatformScreenJavaInternal {
-
-static JGClass rectangleCls;
-static JGClass widgetClass;
-
-static jfieldID rectxFID;
-static jfieldID rectyFID;
-static jfieldID rectwFID;
-static jfieldID recthFID;
-static jmethodID getScreenDepthMID;
-static jmethodID getScreenRectMID;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!widgetClass) {
-        widgetClass = JLClass(env->FindClass("com/sun/webkit/WCWidget"));
-        ASSERT(widgetClass);
-
-        getScreenDepthMID = env->GetMethodID(
-                widgetClass,
-                "fwkGetScreenDepth",
-                "()I");
-        ASSERT(getScreenDepthMID);
-
-        getScreenRectMID = env->GetMethodID(
-                widgetClass,
-                "fwkGetScreenRect",
-                "(Z)Lcom/sun/webkit/graphics/WCRectangle;");
-        ASSERT(getScreenRectMID);
-
-        rectangleCls = JLClass(env->FindClass("com/sun/webkit/graphics/WCRectangle"));
-        ASSERT(rectangleCls);
-
-        rectxFID = env->GetFieldID(rectangleCls, "x", "F");
-        ASSERT(rectxFID);
-        rectyFID = env->GetFieldID(rectangleCls, "y", "F");
-        ASSERT(rectyFID);
-        rectwFID = env->GetFieldID(rectangleCls, "w", "F");
-        ASSERT(rectwFID);
-        recthFID = env->GetFieldID(rectangleCls, "h", "F");
-        ASSERT(recthFID);
-    }
-}
-}
+/*
+ * The four cached WCRectangle field ids and the two cached WCWidget method ids are gone with
+ * initRefs(): the rectangle is returned through a caller-provided float[4] and the two calls
+ * are slots on the theme table.
+ */
 
 namespace WebCore
 {
@@ -98,7 +59,6 @@ int screenVerticalDPI(Widget*)
 
 int screenDepth(Widget* w)
 {
-    using namespace PlatformScreenJavaInternal;
     if (!w)
         return 24;
 
@@ -108,13 +68,12 @@ int screenDepth(Widget* w)
     if (!j)
         return 24;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_get_screen_depth)
+        return 24;
 
-    jint depth(env->CallIntMethod(
-            (jobject) j,
-            getScreenDepthMID));
-    WTF::CheckAndClearException(env);
+    int32_t depth = cb->widget_get_screen_depth(j.get());
+    wkjCheckAndClearException();
 
     return depth;
 }
@@ -132,7 +91,6 @@ bool screenIsMonochrome(Widget*)
 
 FloatRect getScreenRect(Widget* w, bool available)
 {
-    using namespace PlatformScreenJavaInternal;
     if (!w)
         return IntRect(0, 0, 0, 0);
 
@@ -142,25 +100,20 @@ FloatRect getScreenRect(Widget* w, bool available)
     if (!j)
         return IntRect(0, 0, 0, 0);
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_get_screen_rect)
+        return IntRect(0, 0, 0, 0);
 
-    JLObject rect(env->CallObjectMethod(
-            (jobject) j,
-            getScreenRectMID,
-            bool_to_jbool(available)));
-    WTF::CheckAndClearException(env);
+    // A 0 return is the null WCRectangle, which produced the same empty rect.
+    float xywh[4] = { 0, 0, 0, 0 };
+    int32_t written = cb->widget_get_screen_rect(j.get(), available ? 1 : 0, xywh);
+    wkjCheckAndClearException();
 
-    if (!rect) {
+    if (!written) {
         return IntRect(0, 0, 0, 0);
     }
 
-    float x = env->GetFloatField(rect, rectxFID);
-    float y = env->GetFloatField(rect, rectyFID);
-    float width = env->GetFloatField(rect, rectwFID);
-    float height = env->GetFloatField(rect, recthFID);
-
-    return FloatRect(x, y, width, height);
+    return FloatRect(xywh[0], xywh[1], xywh[2], xywh[3]);
 }
 
 FloatRect screenRect(Widget* w)

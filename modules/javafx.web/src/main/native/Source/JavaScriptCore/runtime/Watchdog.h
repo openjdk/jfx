@@ -31,9 +31,6 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
-#endif
 
 namespace JSC {
 

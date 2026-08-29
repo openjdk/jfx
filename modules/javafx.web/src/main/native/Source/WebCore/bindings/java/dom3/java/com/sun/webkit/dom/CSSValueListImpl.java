@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,9 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return CSSValueListNative.getLength(peer);
+    }
 
 
 // Functions
@@ -53,8 +55,10 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
         return CSSValueImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return CSSValueListNative.item(peer, index);
+    }
 
 
 }

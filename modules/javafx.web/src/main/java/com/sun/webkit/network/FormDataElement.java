@@ -101,14 +101,14 @@ abstract class FormDataElement {
     /**
      * Creates a new FormDataElement from a byte array.
      */
-    private static FormDataElement fwkCreateFromByteArray(byte[] byteArray) {
+    static FormDataElement fwkCreateFromByteArray(byte[] byteArray) {
         return new ByteArrayElement(byteArray);
     }
 
     /**
      * Creates a new FormDataElement from a file.
      */
-    private static FormDataElement fwkCreateFromFile(String fileName) {
+    static FormDataElement fwkCreateFromFile(String fileName) {
         return new FileElement(fileName);
     }
 

@@ -1,20 +1,20 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
  * Copyright 2010, The Android Open Source Project
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  * Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -43,27 +43,25 @@ using namespace JSC;
 using namespace JSC::Bindings;
 using namespace WebCore;
 
-JavaField::JavaField(JNIEnv* env, jobject aField)
+JavaField::JavaField(wkj_ref aField)
 {
-    // Get field type name
-    jstring fieldTypeName = 0;
-    jclass fieldType = static_cast<jclass>(callJNIMethod<jobject>(aField, "getType", "()Ljava/lang/Class;"));
-    if (fieldType)
-        fieldTypeName = static_cast<jstring>(callJNIMethod<jobject>(fieldType, "getName", "()Ljava/lang/String;"));
-    if (!fieldTypeName)
-        fieldTypeName = env->NewStringUTF("<Unknown>");
-    m_typeClassName = JavaString(env, fieldTypeName);
+    /*
+     * Get field type name. This is getType().getName() in one call: the intermediate Class
+     * object the JNI code fetched was used for nothing else, and a null from either half
+     * lands on the same "<Unknown>" it always did.
+     */
+    String fieldTypeName = javaFieldTypeName(aField);
+    if (fieldTypeName.isNull())
+        fieldTypeName = "<Unknown>"_s;
+    m_typeClassName = JavaString(fieldTypeName);
 
     m_type = javaTypeFromClassName(m_typeClassName.utf8());
-    env->DeleteLocalRef(fieldType);
-    env->DeleteLocalRef(fieldTypeName);
 
     // Get field name
-    jstring fieldName = static_cast<jstring>(callJNIMethod<jobject>(aField, "getName", "()Ljava/lang/String;"));
-    if (!fieldName)
-        fieldName = env->NewStringUTF("<Unknown>");
-    m_name = JavaString(env, fieldName);
-    env->DeleteLocalRef(fieldName);
+    String fieldName = javaFieldName(aField);
+    if (fieldName.isNull())
+        fieldName = "<Unknown>"_s;
+    m_name = JavaString(fieldName);
 
     m_field = JobjectWrapper::create(aField);
 }
@@ -73,23 +71,26 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
 
     JSValue jsresult = jsUndefined();
-    jobject jfield = m_field->instance();
-    // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlfield(jfield, true);
+    wkj_ref jfield = m_field->instance();
+    // Since jfield is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlfield = WKJHandle::retained(jfield);
 
     if (!jlfield) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", (jobject)jlfield);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaField::valueFromInstance", static_cast<unsigned long long>(jfield));
         return jsresult;
     }
 
-    jobject jinstance = instance->javaInstance();
-    // Since jinstance is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(jinstance, true);
+    wkj_ref jinstance = instance->javaInstance();
+    // Since jinstance is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(jinstance);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaField::valueFromInstance", static_cast<unsigned long long>(jinstance));
         return jsresult;
     }
+
+    WKJJavaValue value = emptyJavaValue();
+    JavaValueScope valueScope(value);
 
     switch (m_type) {
     case JavaTypeArray:
@@ -98,7 +99,8 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
     // to treat it as JS foreign object.
     case JavaTypeChar:
         {
-            jobject anObject = callJNIMethod<jobject>(jfield, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", jinstance);
+            javaFieldGet(jfield, jinstance, JavaTypeObject, value);
+            wkj_ref anObject = value.l;
             if (!anObject)
                 return jsNull();
 
@@ -107,35 +109,42 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
                 jsresult = JavaArray::convertJObjectToArray(globalObject, anObject, arrayType, instance->rootObject(), instance->accessControlContext());
             else if (anObject)
 
-            jsresult = toJS(globalObject, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(globalObject), instance->rootObject(), anObject, instance->accessControlContext()));
+            jsresult = toJS(globalObject, WebCore::Java_Object_to_JSValue(toRef(globalObject), instance->rootObject(), anObject, instance->accessControlContext()));
         }
         break;
 
     case JavaTypeBoolean:
-        jsresult = jsBoolean(callJNIMethod<jboolean>(jfield, "getBoolean", "(Ljava/lang/Object;)Z", jinstance));
+        javaFieldGet(jfield, jinstance, JavaTypeBoolean, value);
+        jsresult = jsBoolean(value.i != 0);
         break;
 
     case JavaTypeByte:
-        jsresult = jsNumber(callJNIMethod<jbyte>(jfield, "getByte", "(Ljava/lang/Object;)B", jinstance));
+        javaFieldGet(jfield, jinstance, JavaTypeByte, value);
+        jsresult = jsNumber(value.i);
         break;
 
     case JavaTypeShort:
-        jsresult = jsNumber(callJNIMethod<jshort>(jfield, "getShort", "(Ljava/lang/Object;)S", jinstance));
+        javaFieldGet(jfield, jinstance, JavaTypeShort, value);
+        jsresult = jsNumber(value.i);
         break;
 
     case JavaTypeInt:
-        jsresult = jsNumber(static_cast<int>(callJNIMethod<jint>(jfield, "getInt", "(Ljava/lang/Object;)I", jinstance)));
+        javaFieldGet(jfield, jinstance, JavaTypeInt, value);
+        jsresult = jsNumber(static_cast<int>(value.i));
         break;
 
     case JavaTypeLong:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jlong>(jfield, "getLong", "(Ljava/lang/Object;)J", jinstance)));
+        javaFieldGet(jfield, jinstance, JavaTypeLong, value);
+        jsresult = jsNumber(static_cast<double>(value.j));
         break;
     case JavaTypeFloat:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jfloat>(jfield, "getFloat", "(Ljava/lang/Object;)F", jinstance)));
+        javaFieldGet(jfield, jinstance, JavaTypeFloat, value);
+        jsresult = jsNumber(static_cast<double>(static_cast<float>(value.d)));
         break;
 
     case JavaTypeDouble:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jdouble>(jfield, "getDouble", "(Ljava/lang/Object;)D", jinstance)));
+        javaFieldGet(jfield, jinstance, JavaTypeDouble, value);
+        jsresult = jsNumber(value.d);
         break;
 
     default:
@@ -151,65 +160,47 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
 bool JavaField::setValueToInstance(JSGlobalObject* globalObject, const Instance* i, JSValue aValue) const
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
-    jvalue javaValue = convertValueToJValue(globalObject, i->rootObject(), aValue, m_type, typeClassName());
+    WKJJavaValue javaValue = convertValueToJValue(globalObject, i->rootObject(), aValue, m_type, typeClassName());
+    JavaValueScope javaValueScope(javaValue);
 #if !PLATFORM(JAVA)
     LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(globalObject)->value(globalObject).ascii().data());
 #endif
 
-    jobject jfield = m_field->instance();
-    // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlfield(jfield, true);
+    wkj_ref jfield = m_field->instance();
+    // Since jfield is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlfield = WKJHandle::retained(jfield);
 
     if (!jlfield) {
-        LOG_ERROR("Could not get Instance for %p in JavaField::setValueToInstance", (jobject)jlfield);
+        LOG_ERROR("Could not get Instance for %llu in JavaField::setValueToInstance", static_cast<unsigned long long>(jfield));
         return false;
     }
 
-    jobject jinstance = instance->javaInstance();
-    // Since jinstance is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
-    JLObject jlinstance(jinstance, true);
+    wkj_ref jinstance = instance->javaInstance();
+    // Since jinstance is a weak reference, taking a strong one to safeguard javaInstance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(jinstance);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::setValueToInstance", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaField::setValueToInstance", static_cast<unsigned long long>(jinstance));
         return false;
     }
 
     switch (m_type) {
     case JavaTypeArray:
     case JavaTypeObject:
-        callJNIMethod<void>(jfield, "set", "(Ljava/lang/Object;Ljava/lang/Object;)V", jinstance, javaValue.l);
-        break;
-
     case JavaTypeBoolean:
-        callJNIMethod<void>(jfield, "setBoolean", "(Ljava/lang/Object;Z)V", jinstance, javaValue.z);
-        break;
-
     case JavaTypeByte:
-        callJNIMethod<void>(jfield, "setByte", "(Ljava/lang/Object;B)V", jinstance, javaValue.b);
-        break;
-
     case JavaTypeChar:
-        callJNIMethod<void>(jfield, "setChar", "(Ljava/lang/Object;C)V", jinstance, javaValue.c);
-        break;
-
     case JavaTypeShort:
-        callJNIMethod<void>(jfield, "setShort", "(Ljava/lang/Object;S)V", jinstance, javaValue.s);
-        break;
-
     case JavaTypeInt:
-        callJNIMethod<void>(jfield, "setInt", "(Ljava/lang/Object;I)V", jinstance, javaValue.i);
-        break;
-
     case JavaTypeLong:
-        callJNIMethod<void>(jfield, "setLong", "(Ljava/lang/Object;J)V", jinstance, javaValue.j);
-        break;
-
     case JavaTypeFloat:
-        callJNIMethod<void>(jfield, "setFloat", "(Ljava/lang/Object;F)V", jinstance, javaValue.f);
-        break;
-
     case JavaTypeDouble:
-        callJNIMethod<void>(jfield, "setDouble", "(Ljava/lang/Object;D)V", jinstance, javaValue.d);
+        /*
+         * Field.set / setBoolean / setByte / setChar / setShort / setInt / setLong / setFloat
+         * / setDouble, chosen by m_type on the Java side of the slot rather than by nine
+         * call sites here. The value carries its own type, so the two cannot disagree.
+         */
+        javaFieldSet(jfield, jinstance, m_type, javaValue);
         break;
 
     default:

@@ -42,7 +42,19 @@ public final class SharedBuffer {
     }
 
 
-    private static SharedBuffer fwkCreate(long nativePointer) {
+    /**
+     * Wraps a native {@code WebCore::SharedBuffer} the library already owns, which is the
+     * {@code graphics.create_shared_buffer} callback slot.
+     * <p>
+     * It is public rather than private only because the upcall target that calls it lives in
+     * {@code com.sun.webkit.graphics}, beside the slot's one caller in
+     * {@code graphics/java/FontCustomPlatformData.cpp}. That package is not exported by
+     * {@code javafx.web}, so this stays module internal either way.
+     *
+     * @param nativePointer the {@code WebCore::SharedBuffer*}, must not be zero
+     * @return the wrapper
+     */
+    public static SharedBuffer fwkCreate(long nativePointer) {
         return new SharedBuffer(nativePointer);
     }
 
@@ -108,20 +120,30 @@ public final class SharedBuffer {
         nativePointer = 0;
     }
 
-    private static native long twkCreate();
+    private static long twkCreate() {
+        return SharedBufferNative.create();
+    }
 
-    private static native long twkSize(long nativePointer);
+    private static long twkSize(long nativePointer) {
+        return SharedBufferNative.size(nativePointer);
+    }
 
-    private static native int twkGetSomeData(long nativePointer,
-                                             long position,
-                                             byte[] buffer,
-                                             int offset,
-                                             int length);
+    private static int twkGetSomeData(long nativePointer,
+                                      long position,
+                                      byte[] buffer,
+                                      int offset,
+                                      int length) {
+        return SharedBufferNative.getSomeData(nativePointer, position, buffer, offset, length);
+    }
 
-    private static native void twkAppend(long nativePointer,
-                                         byte[] buffer,
-                                         int offset,
-                                         int length);
+    private static void twkAppend(long nativePointer,
+                                  byte[] buffer,
+                                  int offset,
+                                  int length) {
+        SharedBufferNative.append(nativePointer, buffer, offset, length);
+    }
 
-    private static native void twkDispose(long nativePointer);
+    private static void twkDispose(long nativePointer) {
+        SharedBufferNative.dispose(nativePointer);
+    }
 }

@@ -23,293 +23,154 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * The Java side of the LiveConnect bridge, with no JNI in it.
+ *
+ * Everything this file used to provide - getJNIEnv, getJavaVM, getMethodID, the
+ * callJNIMethod / callJNIMethodV / callJNIStaticMethod templates and their ten JNICaller
+ * specialisations, getJNIField, and the modified-UTF-8 string accessors - existed to invoke
+ * a Java method whose name and signature were only known at run time. The Foreign Function
+ * and Memory API has no expression for that: there is no method id and no reflective invoke.
+ *
+ * So the operations, rather than the mechanism, cross the boundary. Each function below is
+ * one slot of WKJLiveConnectHost (Source/WebKitLegacy/java/api/webkit_java_api_bridge.h),
+ * which Java installs once with wkj_live_connect_init, and each is the direct replacement
+ * for one former callJNIMethod call site. What is gone entirely, with nothing replacing it:
+ *
+ *   getJavaVM / setJavaVM       the last thing in this tree that reached JNI_GetCreatedJavaVMs
+ *                               through dlsym on the JVM framework, which is what made libjvm a
+ *                               link dependency. Nothing here needs a virtual machine pointer.
+ *   getJNIEnv                   an upcall runs on whatever thread called it; there is no
+ *                               environment to fetch and nothing to attach.
+ *   getJNIField                 a JNI field read by name and signature. It had no caller.
+ *   callJNIStaticMethod         likewise: declared, never called.
+ *   getCharactersFromJString    modified UTF-8. The one live consumer was Class.getName, which
+ *                               now arrives as UTF-16 (webkit_java_api_bridge.h, note 2).
+ *
+ * Ownership: every function here that returns a WKJHandle returns one the caller owns. Every
+ * function that takes a wkj_ref borrows it for the duration of the call. A WTF::String result
+ * is null - not empty - where the Java value was null, so that the "<Unknown>" substitutions
+ * the JNI code made on a failed lookup still happen in the same places.
+ */
+
 #pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
-#include <wtf/java/JavaRef.h>
 #include "JavaType.h"
 
-#include <jni.h>
+#include <webkit_java_api_bridge.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/java/WKJHandle.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
 namespace Bindings {
 
-const char* getCharactersFromJString(jstring);
-void releaseCharactersForJString(jstring, const char*);
-
-const char* getCharactersFromJStringInEnv(JNIEnv*, jstring);
-void releaseCharactersForJStringInEnv(JNIEnv*, jstring, const char*);
-const jchar* getUCharactersFromJStringInEnv(JNIEnv*, jstring);
-void releaseUCharactersForJStringInEnv(JNIEnv*, jstring, const jchar*);
-
 JavaType javaTypeFromClassName(const char* name);
 JavaType javaTypeFromPrimitiveType(char type);
 const char* signatureFromJavaType(JavaType);
 
-jvalue getJNIField(jobject, JavaType, const char* name, const char* signature);
-jvalue callJNIMethod(jobject, JavaType returnType, const char* name, const char* signature, jvalue* args);
+/*
+ * A WKJJavaValue with no value in it: the replacement for
+ * memset(&result, 0, sizeof(jvalue)), which every one of these functions did first.
+ */
+WKJJavaValue emptyJavaValue();
 
-jmethodID getMethodID(jobject, const char* name, const char* sig);
-JNIEnv* getJNIEnv();
-JavaVM* getJavaVM();
-void setJavaVM(JavaVM*);
-
-
-template <typename T> struct JNICaller;
-
-template<> struct JNICaller<void> {
-    static void callA(jobject obj, jmethodID mid, jvalue* args)
+/*
+ * Releases the object a WKJJavaValue holds, if it holds one, when the scope ends. The JNI
+ * code relied on the local reference frame that JavaInstance::virtualBegin pushed; ids are
+ * not reclaimed by anything, so each one needs a named owner. Declare one of these beside
+ * every WKJJavaValue that a call filled in.
+ */
+class JavaValueScope {
+    WTF_MAKE_NONCOPYABLE(JavaValueScope);
+public:
+    explicit JavaValueScope(WKJJavaValue& value)
+        : m_value(value)
     {
-        getJNIEnv()->CallVoidMethodA(obj, mid, args);
     }
-    static void callV(jobject obj, jmethodID mid, va_list args)
+
+    ~JavaValueScope()
     {
-        getJNIEnv()->CallVoidMethodV(obj, mid, args);
+        if (m_value.type == WKJ_JT_OBJECT || m_value.type == WKJ_JT_ARRAY)
+            WKJRelease(m_value.l);
+        m_value.l = 0;
     }
+
+    /* Hands the object to the caller; the scope no longer releases it. */
+    [[nodiscard]] wkj_ref leakObject()
+    {
+        wkj_ref ref = m_value.l;
+        m_value.l = 0;
+        return ref;
+    }
+
+private:
+    WKJJavaValue& m_value;
 };
 
-template<> struct JNICaller<jobject> {
-    static jobject callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallObjectMethodA(obj, mid, args);
-    }
-    static jobject callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallObjectMethodV(obj, mid, args);
-    }
-};
+/* --- java.lang.Object and java.lang.Class ------------------------------------------- */
 
-template<> struct JNICaller<jboolean> {
-    static jboolean callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallBooleanMethodA(obj, mid, args);
-    }
-    static jboolean callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallBooleanMethodV(obj, mid, args);
-    }
-    static jboolean callStaticV(jclass cls, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallStaticBooleanMethod(cls, mid, args);
-    }
-};
+WKJHandle javaObjectClass(wkj_ref object);
+WTF::String javaClassName(wkj_ref javaClass);
+bool javaClassIsArray(wkj_ref javaClass);
+WKJHandle javaCreateDummyObject();
 
-template<> struct JNICaller<jbyte> {
-    static jbyte callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallByteMethodA(obj, mid, args);
-    }
-    static jbyte callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallByteMethodV(obj, mid, args);
-    }
-};
+/* --- java.lang.reflect.Method -------------------------------------------------------- */
 
-template<> struct JNICaller<jchar> {
-    static jchar callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallCharMethodA(obj, mid, args);
-    }
-    static jchar callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallCharMethodV(obj, mid, args);
-    }
-};
+/*
+ * The Method that GetMethodID + ToReflectedMethod produced, or a null handle. `signature` is
+ * a JNI descriptor; see the resolve_method slot for why it is still built and passed.
+ */
+WKJHandle javaResolveMethod(wkj_ref object, const WTF::String& name, const WTF::String& signature);
 
-template<> struct JNICaller<jshort> {
-    static jshort callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallShortMethodA(obj, mid, args);
-    }
-    static jshort callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallShortMethodV(obj, mid, args);
-    }
-};
+/*
+ * com.sun.webkit.Utilities.fwkInvokeWithContext. The result is the returned object, and
+ * `exception` receives the Throwable the invocation ended with, if any - which is exactly
+ * what dispatchJNICall returned through ExceptionOccurred + ExceptionClear.
+ */
+WKJHandle javaInvoke(wkj_ref method, wkj_ref instance, const wkj_ref* args, int argumentCount,
+    wkj_ref accessControlContext, WKJHandle& exception);
 
-template<> struct JNICaller<jint> {
-    static jint callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallIntMethodA(obj, mid, args);
-    }
-    static jint callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallIntMethodV(obj, mid, args);
-    }
-};
+WTF::String javaMethodName(wkj_ref method);
+WTF::String javaMethodReturnTypeName(wkj_ref method);
+int javaMethodParameterCount(wkj_ref method);
+WTF::String javaMethodParameterTypeName(wkj_ref method, int index);
+int javaMethodModifiers(wkj_ref method);
 
-template<> struct JNICaller<jlong> {
-    static jlong callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallLongMethodA(obj, mid, args);
-    }
-    static jlong callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallLongMethodV(obj, mid, args);
-    }
-};
+/* --- java.lang.reflect.Field --------------------------------------------------------- */
 
-template<> struct JNICaller<jfloat> {
-    static jfloat callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallFloatMethodA(obj, mid, args);
-    }
-    static jfloat callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallFloatMethodV(obj, mid, args);
-    }
-};
+WTF::String javaFieldName(wkj_ref field);
+WTF::String javaFieldTypeName(wkj_ref field);
+bool javaFieldGet(wkj_ref field, wkj_ref instance, JavaType, WKJJavaValue& result);
+bool javaFieldSet(wkj_ref field, wkj_ref instance, JavaType, const WKJJavaValue&);
 
-template<> struct JNICaller<jdouble> {
-    static jdouble callA(jobject obj, jmethodID mid, jvalue* args)
-    {
-        return getJNIEnv()->CallDoubleMethodA(obj, mid, args);
-    }
-    static jdouble callV(jobject obj, jmethodID mid, va_list args)
-    {
-        return getJNIEnv()->CallDoubleMethodV(obj, mid, args);
-    }
-};
+/* --- Java arrays --------------------------------------------------------------------- */
 
-template<typename T> T callJNIMethodIDA(jobject obj, jmethodID mid, jvalue *args)
-{
-    return JNICaller<T>::callA(obj, mid, args);
-}
+int javaArrayLength(wkj_ref array);
+bool javaArrayGet(wkj_ref array, int index, JavaType, WKJJavaValue& result);
+bool javaArraySet(wkj_ref array, int index, JavaType, const WKJJavaValue&);
 
-template<typename T>
-static T callJNIMethodV(jobject obj, const char* name, const char* sig, va_list args)
-{
-    JavaVM* jvm = getJavaVM();
-    JNIEnv* env = getJNIEnv();
+/* --- boxing, unboxing and strings ---------------------------------------------------- */
 
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+WKJHandle javaBox(const WKJJavaValue&);
+bool javaUnbox(wkj_ref boxed, JavaType, WKJJavaValue& result);
+WKJHandle javaBoxString(const WTF::String&);
+WTF::String javaStringValue(wkj_ref string);
 
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV", (jobject)jlinstance);
-        return 0;
-    }
+/* --- the three LiveConnect objects --------------------------------------------------- */
 
-    if (obj && jvm && env) {
-        jclass cls = env->GetObjectClass(obj);
-        if (cls) {
-            jmethodID mid = env->GetMethodID(cls, name, sig);
-            if (mid) {
-                // Avoids references to cls without popping the local frame.
-                env->DeleteLocalRef(cls);
-                return JNICaller<T>::callV(obj, mid, args);
-            }
-            LOG_ERROR("Could not find method: %s for %p", name, obj);
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            fprintf(stderr, "\n");
+/*
+ * The com.sun.webkit.dom.JSObject.UNDEFINED singleton. One id is kept for the life of the
+ * process, as one global reference was, and every caller gets its own reference to it, so
+ * that the ownership rule is the same here as everywhere else.
+ */
+WKJHandle javaUndefinedObject();
 
-            env->DeleteLocalRef(cls);
-        } else
-            LOG_ERROR("Could not find class for %p", obj);
-    }
-
-    return 0;
-}
-
-template<typename T>
-T callJNIMethod(jobject obj, const char* methodName, const char* methodSignature, ...)
-{
-    va_list args;
-    va_start(args, methodSignature);
-
-    T result = callJNIMethodV<T>(obj, methodName, methodSignature, args);
-
-    va_end(args);
-
-    return result;
-}
-
-#if PLATFORM(JAVA)
-template<>
-inline void callJNIMethodV<void>(jobject obj, const char* name, const char* sig, va_list args)
-{
-    JavaVM* jvm = getJavaVM();
-    JNIEnv* env = getJNIEnv();
-
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV<void>", (jobject)jlinstance);
-        return;
-    }
-
-    if (obj && jvm && env) {
-        jclass cls = env->GetObjectClass(obj);
-        if (cls) {
-            jmethodID mid = env->GetMethodID(cls, name, sig);
-            if (mid) {
-                // Avoids references to cls without popping the local frame.
-                env->DeleteLocalRef(cls);
-                JNICaller<void>::callV(obj, mid, args);
-                return;
-            }
-            LOG_ERROR("Could not find method: %s for %p", name, obj);
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            fprintf(stderr, "\n");
-
-            env->DeleteLocalRef(cls);
-        } else
-            LOG_ERROR("Could not find class for %p", obj);
-    }
-}
-
-template<>
-inline void callJNIMethod<void>(jobject obj, const char* methodName, const char* methodSignature, ...)
-{
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod<void>", (jobject)jlinstance);
-        return;
-    }
-
-    va_list args;
-    va_start(args, methodSignature);
-
-    callJNIMethodV<void>(obj, methodName, methodSignature, args);
-
-    va_end(args);
-}
-#endif // PLATFORM(JAVA)
-
-template<typename T>
-T callJNIStaticMethod(jclass cls, const char* methodName, const char* methodSignature, ...)
-{
-    JavaVM* jvm = getJavaVM();
-    JNIEnv* env = getJNIEnv();
-    va_list args;
-
-    va_start(args, methodSignature);
-
-    T result = 0;
-
-    if (cls && jvm && env) {
-        jmethodID mid = env->GetStaticMethodID(cls, methodName, methodSignature);
-        if (mid)
-            result = JNICaller<T>::callStaticV(cls, mid, args);
-        else {
-            LOG_ERROR("Could not find method: %s for %p", methodName, cls);
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            fprintf(stderr, "\n");
-        }
-    }
-
-    va_end(args);
-
-    return result;
-}
+WKJHandle javaJSObjectCreate(int64_t peer, int32_t peerType);
+WKJHandle javaNodeCachedImpl(int64_t nodePeer);
 
 } // namespace Bindings
 

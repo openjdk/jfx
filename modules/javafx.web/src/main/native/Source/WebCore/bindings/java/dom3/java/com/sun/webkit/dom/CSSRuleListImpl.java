@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class CSSRuleListImpl implements CSSRuleList {
         return (arg == null) ? 0L : ((CSSRuleListImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        CSSRuleListNative.dispose(peer);
+    }
 
     static CSSRuleList getImpl(long peer) {
         return (CSSRuleList)create(peer);
@@ -84,7 +86,9 @@ public class CSSRuleListImpl implements CSSRuleList {
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return CSSRuleListNative.getLength(peer);
+    }
 
 
 // Functions
@@ -94,8 +98,10 @@ public class CSSRuleListImpl implements CSSRuleList {
         return CSSRuleImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return CSSRuleListNative.item(peer, index);
+    }
 
 
 }

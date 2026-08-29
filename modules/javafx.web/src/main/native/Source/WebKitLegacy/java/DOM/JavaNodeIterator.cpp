@@ -34,83 +34,93 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<NodeIterator*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<NodeIterator*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_dispose(JNIEnv*, jclass, jlong peer) {
+WKJ_EXPORT void wkj_dom_NodeIterator_dispose(int64_t peer) {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getRootImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_NodeIterator_getRoot(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->root()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->root()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getWhatToShowImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_NodeIterator_getWhatToShow(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->whatToShow();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getFilterImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_NodeIterator_getFilter(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeFilter>(env, WTF::getPtr(IMPL->filter()));
+    return WKJReturnPeer<NodeFilter>(WTF::getPtr(IMPL->filter()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getExpandEntityReferencesImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_NodeIterator_getExpandEntityReferences(int64_t arg0)
 {
-    return JNI_FALSE;
+    WKJCallScope wkjScope;
+    return 0;
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getReferenceNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_NodeIterator_getReferenceNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->referenceNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->referenceNode()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getPointerBeforeReferenceNodeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_NodeIterator_getPointerBeforeReferenceNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->pointerBeforeReferenceNode();
 }
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_nextNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_NodeIterator_nextNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->nextNode();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_previousNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_NodeIterator_previousNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
 
     auto result = IMPL->previousNode();
     if (result.hasException()) {
         return {};
     }
-    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
+    return WKJReturnPeer<Node>(WTF::getPtr(result.releaseReturnValue()));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_detachImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_NodeIterator_detach(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->detach();
 }

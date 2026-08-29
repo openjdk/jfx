@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,19 +42,25 @@ public class EntityImpl extends NodeImpl implements Entity {
     public String getPublicId() {
         return getPublicIdImpl(getPeer());
     }
-    native static String getPublicIdImpl(long peer);
+    static String getPublicIdImpl(long peer) {
+        return EntityNative.getPublicId(peer);
+    }
 
     @Override
     public String getSystemId() {
         return getSystemIdImpl(getPeer());
     }
-    native static String getSystemIdImpl(long peer);
+    static String getSystemIdImpl(long peer) {
+        return EntityNative.getSystemId(peer);
+    }
 
     @Override
     public String getNotationName() {
         return getNotationNameImpl(getPeer());
     }
-    native static String getNotationNameImpl(long peer);
+    static String getNotationNameImpl(long peer) {
+        return EntityNative.getNotationName(peer);
+    }
 
 
 //stubs

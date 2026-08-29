@@ -58,7 +58,6 @@ typedef struct tagXFORM XFORM;
 #endif
 
 #if PLATFORM(JAVA)
-#include <jni.h>
 const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif

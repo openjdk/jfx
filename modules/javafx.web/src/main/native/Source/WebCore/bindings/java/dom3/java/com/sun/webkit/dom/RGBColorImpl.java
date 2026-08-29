@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class RGBColorImpl implements RGBColor {
         return (arg == null) ? 0L : ((RGBColorImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        RGBColorNative.dispose(peer);
+    }
 
     static RGBColor getImpl(long peer) {
         return (RGBColor)create(peer);
@@ -84,24 +86,32 @@ public class RGBColorImpl implements RGBColor {
     public CSSPrimitiveValue getRed() {
         return CSSPrimitiveValueImpl.getImpl(getRedImpl(getPeer()));
     }
-    native static long getRedImpl(long peer);
+    static long getRedImpl(long peer) {
+        return RGBColorNative.getRed(peer);
+    }
 
     @Override
     public CSSPrimitiveValue getGreen() {
         return CSSPrimitiveValueImpl.getImpl(getGreenImpl(getPeer()));
     }
-    native static long getGreenImpl(long peer);
+    static long getGreenImpl(long peer) {
+        return RGBColorNative.getGreen(peer);
+    }
 
     @Override
     public CSSPrimitiveValue getBlue() {
         return CSSPrimitiveValueImpl.getImpl(getBlueImpl(getPeer()));
     }
-    native static long getBlueImpl(long peer);
+    static long getBlueImpl(long peer) {
+        return RGBColorNative.getBlue(peer);
+    }
 
     public CSSPrimitiveValue getAlpha() {
         return CSSPrimitiveValueImpl.getImpl(getAlphaImpl(getPeer()));
     }
-    native static long getAlphaImpl(long peer);
+    static long getAlphaImpl(long peer) {
+        return RGBColorNative.getAlpha(peer);
+    }
 
 }
 

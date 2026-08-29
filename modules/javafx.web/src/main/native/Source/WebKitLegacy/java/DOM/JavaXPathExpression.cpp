@@ -35,31 +35,30 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<XPathExpression*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<XPathExpression*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathExpressionImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_XPathExpression_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathExpressionImpl_evaluateImpl(JNIEnv* env, jclass, jlong peer
-    , jlong contextNode
-    , jshort type
-    , jlong inResult)
+WKJ_EXPORT int64_t wkj_dom_XPathExpression_evaluate(int64_t peer, int64_t contextNode, int16_t type, int64_t inResult)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(*static_cast<Node*>(jlong_to_ptr(contextNode))
+    return WKJReturnPeer<XPathResult>(WTF::getPtr(raiseOnDOMError(IMPL->evaluate(*static_cast<Node*>(wkj_to_ptr(contextNode))
             , type
-            , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));
+            , static_cast<XPathResult*>(wkj_to_ptr(inResult))))));
 }
 
 

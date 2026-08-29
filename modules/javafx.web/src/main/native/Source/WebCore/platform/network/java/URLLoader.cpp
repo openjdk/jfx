@@ -29,13 +29,14 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
+#include <wkj_constants.h>
+
 #include "FrameNetworkingContext.h"
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
 #include "NetworkingContext.h"
 #include "Page.h"
 #include "PageSupplementJava.h"
-#include "PlatformJavaClasses.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
@@ -44,8 +45,7 @@
 #include "SharedBuffer.h"
 #include "URLLoader.h"
 #include "NetworkLoadMetrics.h"
-#include "com_sun_webkit_LoadListenerClient.h"
-#include "com_sun_webkit_network_URLLoaderBase.h"
+#include "WKJPlatformJava.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
@@ -53,64 +53,6 @@ class Page;
 }
 
 namespace WebCore {
-
-namespace URLLoaderJavaInternal {
-
-static JGClass networkContextClass;
-static jmethodID loadMethod;
-
-static JGClass urlLoaderClass;
-static jmethodID cancelMethod;
-
-static JGClass formDataElementClass;
-static jmethodID createFromFileMethod;
-static jmethodID createFromByteArrayMethod;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!networkContextClass) {
-        networkContextClass = JLClass(env->FindClass(
-                "com/sun/webkit/network/NetworkContext"));
-        ASSERT(networkContextClass);
-
-        loadMethod = env->GetStaticMethodID(
-                networkContextClass,
-                "fwkLoad",
-                "(Lcom/sun/webkit/WebPage;Z"
-                "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
-                "[Lcom/sun/webkit/network/FormDataElement;J)"
-                "Lcom/sun/webkit/network/URLLoaderBase;");
-        ASSERT(loadMethod);
-    }
-    if (!urlLoaderClass) {
-        urlLoaderClass = JLClass(env->FindClass(
-                "com/sun/webkit/network/URLLoaderBase"));
-        ASSERT(urlLoaderClass);
-
-        cancelMethod = env->GetMethodID(urlLoaderClass, "fwkCancel", "()V");
-        ASSERT(cancelMethod);
-    }
-    if (!formDataElementClass) {
-        formDataElementClass = JLClass(env->FindClass(
-                "com/sun/webkit/network/FormDataElement"));
-        ASSERT(formDataElementClass);
-
-        createFromByteArrayMethod = env->GetStaticMethodID(
-                formDataElementClass,
-                "fwkCreateFromByteArray",
-                "([B)Lcom/sun/webkit/network/FormDataElement;");
-        ASSERT(createFromByteArrayMethod);
-
-        createFromFileMethod = env->GetStaticMethodID(
-                formDataElementClass,
-                "fwkCreateFromFile",
-                "(Ljava/lang/String;)"
-                "Lcom/sun/webkit/network/FormDataElement;");
-        ASSERT(createFromFileMethod);
-    }
-}
-
-}
 
 URLLoader::URLLoader()
 {
@@ -127,23 +69,22 @@ std::unique_ptr<URLLoader> URLLoader::loadAsynchronously(NetworkingContext* cont
 {
     std::unique_ptr<URLLoader> result = std::unique_ptr<URLLoader>(new URLLoader());
     result->m_target = std::unique_ptr<AsynchronousTarget>(new AsynchronousTarget(handle));
-    result->m_ref = load(
+    result->m_ref = WKJHandle(load(
             true,
             context,
             request,
-            result->m_target.get());
+            result->m_target.get()));
     return result;
 }
 
 void URLLoader::cancel()
 {
-    using namespace URLLoaderJavaInternal;
     if (m_ref) {
-        JNIEnv* env = WTF::GetJavaEnv();
-        initRefs(env);
-
-        env->CallVoidMethod(m_ref, cancelMethod);
-        WTF::CheckAndClearException(env);
+        const WKJHostNetwork* cb = wkjNetwork();
+        if (cb && cb->url_loader_cancel) {
+            cb->url_loader_cancel(m_ref.get());
+            wkjCheckAndClearException();
+        }
 
         m_ref.clear();
     }
@@ -156,17 +97,23 @@ void URLLoader::loadSynchronously(NetworkingContext* context,
                                   Vector<uint8_t>& data)
 {
     SynchronousTarget target(request, error, response, data);
-    load(false, context, request, &target);
+
+    // The loader the synchronous path creates is dropped on the floor here exactly as it was
+    // before: fwkLoad returned an object the JNI code never stored. Releasing the id keeps
+    // the registry from growing, which the JNI local ref did for free.
+    WKJHandle loader { load(false, context, request, &target) };
 }
 
-JLObject URLLoader::load(bool asynchronous,
-                         NetworkingContext* context,
-                         const ResourceRequest& request,
-                         Target* target)
+/*
+ * Returns a NEW id for the Java URLLoaderBase, owned by the caller.
+ */
+wkj_ref URLLoader::load(bool asynchronous,
+                        NetworkingContext* context,
+                        const ResourceRequest& request,
+                        Target* target)
 {
-    using namespace URLLoaderJavaInternal;
     if (!context) {
-        return nullptr;
+        return 0;
     }
 
     auto pageSupplement = context->isValid() ?
@@ -175,10 +122,10 @@ JLObject URLLoader::load(bool asynchronous,
         // If NetworkingContext is invalid then we are no longer attached
         // to a Page. This must be an attempt to load from an unload handler,
         // so let's just block it.
-        return nullptr;
+        return 0;
     }
 
-    JLObject webPage = pageSupplement->jWebPage();
+    WKJHandle webPage = pageSupplement->jWebPage();
     ASSERT(webPage);
 
     String headerString;
@@ -190,76 +137,82 @@ JLObject URLLoader::load(bool asynchronous,
         headerString.append("\n");*/
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->url_loader_load)
+        return 0;
 
-    JLObject loader = env->CallStaticObjectMethod(
-            networkContextClass,
-            loadMethod,
-            (jobject) webPage,
-            bool_to_jbool(asynchronous),
-            (jstring) request.url().string().toJavaString(env),
-            (jstring) request.httpMethod().toJavaString(env),
-            (jstring) headerString.toJavaString(env),
-            (jobjectArray) toJava(request.httpBody().get()),
-            ptr_to_jlong(target));
-    WTF::CheckAndClearException(env);
+    // The FormDataElement[] is built first and released after the call, which is the scope
+    // the JNI local refs to the array and its elements had.
+    Vector<WKJHandle> elements = toJava(request.httpBody().get());
+    Vector<wkj_ref> elementIds(elements.size());
+    for (size_t i = 0; i < elements.size(); ++i)
+        elementIds[i] = elements[i].get();
+
+    WKJStringArg url(request.url().string());
+    WKJStringArg method(request.httpMethod());
+    WKJStringArg headers(headerString);
+
+    wkj_ref loader = cb->url_loader_load(webPage.get(), asynchronous ? 1 : 0,
+                                         url.data(), url.length(),
+                                         method.data(), method.length(),
+                                         headers.data(), headers.length(),
+                                         elementIds.isEmpty() ? nullptr : elementIds.span().data(),
+                                         static_cast<int32_t>(elementIds.size()),
+                                         wkj_from_ptr(target));
+    wkjCheckAndClearException();
 
     return loader;
 }
 
-JLObjectArray URLLoader::toJava(const FormData* formData)
+/*
+ * The FormDataElement[] the JNI version built with NewObjectArray. Each handle owns one id
+ * and releases it when the vector goes away, which is what the local refs did at the end of
+ * the native frame.
+ */
+Vector<WKJHandle> URLLoader::toJava(const FormData* formData)
 {
-    using namespace URLLoaderJavaInternal;
     if (!formData) {
-        return nullptr;
+        return { };
     }
 
     const Vector<FormDataElement>& elements = formData->elements();
     size_t size = elements.size();
     if (size == 0) {
-        return nullptr;
+        return { };
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb)
+        return { };
 
-    JLObjectArray result = env->NewObjectArray(
-            size,
-            formDataElementClass,
-            nullptr);
+    Vector<WKJHandle> result;
+    result.reserveInitialCapacity(size);
+
     for (size_t i = 0; i < size; i++) {
-        JLObject resultElement;
+        WKJHandle resultElement;
         WTF::switchOn(elements[i].data,
             [&] (const Vector<uint8_t>& data) -> void {
-                JLByteArray byteArray = env->NewByteArray(data.size());
-                env->SetByteArrayRegion(
-                        (jbyteArray) byteArray,
-                        (jsize) 0,
-                        (jsize) data.size(),
-                        (const jbyte*) data.span().data());
-                resultElement = env->CallStaticObjectMethod(
-                        formDataElementClass,
-                        createFromByteArrayMethod,
-                        (jbyteArray) byteArray);
+                if (!cb->form_data_create_from_bytes)
+                    return;
+                resultElement = WKJHandle(cb->form_data_create_from_bytes(
+                        data.span().data(), static_cast<int32_t>(data.size())));
             },
             [&] (const FormDataElement::EncodedFileData& data) -> void {
-                resultElement = env->CallStaticObjectMethod(
-                        formDataElementClass,
-                        createFromFileMethod,
-                        (jstring) data.filename.toJavaString(env));
+                if (!cb->form_data_create_from_file)
+                    return;
+                WKJStringArg filename(data.filename);
+                resultElement = WKJHandle(cb->form_data_create_from_file(
+                        filename.data(), filename.length()));
             },
             [&] (const FormDataElement::EncodedBlobData& data) -> void {
-                resultElement = env->CallStaticObjectMethod(
-                        formDataElementClass,
-                        createFromFileMethod,
-                        (jstring) data.url.string().toJavaString(env));
+                if (!cb->form_data_create_from_file)
+                    return;
+                WKJStringArg blobURL(data.url.string());
+                resultElement = WKJHandle(cb->form_data_create_from_file(
+                        blobURL.data(), blobURL.length()));
             }
         );
-        env->SetObjectArrayElement(
-                (jobjectArray) result,
-                i,
-                (jobject) resultElement);
+        result.append(WTF::move(resultElement));
     }
 
     return result;
@@ -378,15 +331,18 @@ void URLLoader::SynchronousTarget::didFail(const ResourceError& error)
     m_response.setHTTPStatusCode(404);
 }
 
-} // namespace WebCore
+namespace {
 
-static WebCore::ResourceResponse setupResponse(JNIEnv* env,
-                          jint status,
-                          jstring contentType,
-                          jstring contentEncoding,
-                          jlong contentLength,
-                          jstring headers,
-                          jstring url)
+/*
+ * Replaces the six-argument response marshalling of twkWillSendRequest and
+ * twkDidReceiveResponse, unchanged apart from taking (pointer, length) pairs.
+ */
+WebCore::ResourceResponse setupResponse(int32_t status,
+                          const uint16_t* contentType, int32_t contentTypeLen,
+                          const uint16_t* contentEncoding, int32_t contentEncodingLen,
+                          int64_t contentLength,
+                          const uint16_t* headers, int32_t headersLen,
+                          const uint16_t* url, int32_t urlLen)
 {
     using namespace WebCore;
     ResourceResponse response { };
@@ -398,7 +354,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     // Fix for JDK-8113134: If the mime type is not specified,
     // set the mime type to "text/html" as e.g. the CF port
     // does
-    String contentTypeString(env, contentType);
+    String contentTypeString = wkjMakeString(contentType, contentTypeLen);
     if (contentTypeString.isEmpty()) {
         contentTypeString = "text/html"_s;
     }
@@ -406,7 +362,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         response.setMimeType(extractMIMETypeFromMediaType(contentTypeString).convertToASCIILowercase());
     }
 
-    String contentEncodingString(env, contentEncoding);
+    String contentEncodingString = wkjMakeString(contentEncoding, contentEncodingLen);
     if (contentEncodingString.isEmpty() && !contentTypeString.isEmpty()) {
         contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
@@ -419,7 +375,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
                 static_cast<long long>(contentLength));
     }
 
-    String headersString(env, headers);
+    String headersString = wkjMakeString(headers, headersLen);
     int splitPos = headersString.find("\n"_s);
     while (splitPos != -1) {
         String s = headersString.left(splitPos);
@@ -433,7 +389,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         splitPos = headersString.find("\n"_s);
     }
 
-    URL kurl = URL(URL(), String(env, url));
+    URL kurl = URL(URL(), wkjMakeString(url, urlLen));
 
     // Setup mime type for local resources
     if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file"_s)) {
@@ -444,96 +400,113 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     return response;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData
-  (JNIEnv*, jclass, jlong totalBytesSent, jlong totalBytesToBeSent, jlong data)
-{
-    using namespace WebCore;
-    URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
-    ASSERT(target);
-    target->didSendData(totalBytesSent, totalBytesToBeSent);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest
-  (JNIEnv* env, jclass, jint status,
-   jstring contentType, jstring contentEncoding, jlong contentLength,
-   jstring headers, jstring url, jlong data)
+} // namespace WebCore
+
+extern "C" {
+
+WKJ_EXPORT void wkj_url_loader_did_send_data(int64_t target_peer, int64_t total_bytes_sent,
+                                             int64_t total_bytes_to_be_sent)
 {
     using namespace WebCore;
     URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
+    ASSERT(target);
+    target->didSendData(static_cast<long>(total_bytes_sent),
+                        static_cast<long>(total_bytes_to_be_sent));
+}
+
+WKJ_EXPORT void wkj_url_loader_will_send_request(int64_t target_peer, int32_t status,
+                                                 const uint16_t* content_type,
+                                                 int32_t content_type_len,
+                                                 const uint16_t* content_encoding,
+                                                 int32_t content_encoding_len,
+                                                 int64_t content_length,
+                                                 const uint16_t* headers, int32_t headers_len,
+                                                 const uint16_t* url, int32_t url_len)
+{
+    using namespace WebCore;
+    URLLoader::Target* target =
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
     ASSERT(target);
 
     ResourceResponse response = setupResponse(
-            env,
             status,
-            contentType,
-            contentEncoding,
-            contentLength,
-            headers,
-            url);
+            content_type, content_type_len,
+            content_encoding, content_encoding_len,
+            content_length,
+            headers, headers_len,
+            url, url_len);
 
     target->willSendRequest(response);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse
-  (JNIEnv* env, jclass, jint status, jstring contentType,
-   jstring contentEncoding, jlong contentLength, jstring headers,
-   jstring url, jlong data)
+WKJ_EXPORT void wkj_url_loader_did_receive_response(int64_t target_peer, int32_t status,
+                                                    const uint16_t* content_type,
+                                                    int32_t content_type_len,
+                                                    const uint16_t* content_encoding,
+                                                    int32_t content_encoding_len,
+                                                    int64_t content_length,
+                                                    const uint16_t* headers,
+                                                    int32_t headers_len,
+                                                    const uint16_t* url, int32_t url_len)
 {
     using namespace WebCore;
     URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
     ASSERT(target);
 
     ResourceResponse response = setupResponse(
-            env,
             status,
-            contentType,
-            contentEncoding,
-            contentLength,
-            headers,
-            url);
+            content_type, content_type_len,
+            content_encoding, content_encoding_len,
+            content_length,
+            headers, headers_len,
+            url, url_len);
 
     target->didReceiveResponse(response);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData
-  (JNIEnv* env, jclass, jobject byteBuffer, jint position, jint remaining,
-   jlong data)
+WKJ_EXPORT void wkj_url_loader_did_receive_data(int64_t target_peer, const uint8_t* data,
+                                                int32_t position, int32_t remaining)
 {
     using namespace WebCore;
     URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
     ASSERT(target);
-    const uint8_t* address =
-            static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
-    Ref<SharedBuffer> tmp_buf = SharedBuffer::create(std::span<const uint8_t>(address, remaining));
+    // `data` is what GetDirectBufferAddress returned; `position` and `remaining` are
+    // unchanged. NOTE, pre-existing and deliberately left alone: the pointer arithmetic below
+    // advances a SharedBuffer* by `position` OBJECTS, not by `position` bytes, and the buffer
+    // is built from `data` rather than from `data + position`. It is only harmless because
+    // URLLoader.java has always passed a buffer whose position is 0. See the migration report.
+    Ref<SharedBuffer> tmp_buf = SharedBuffer::create(std::span<const uint8_t>(data, remaining));
     target->didReceiveData(tmp_buf->makeContiguous().ptr() + position, remaining);
     //target->didReceiveData((SharedBuffer*)(address) + position, remaining);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading
-  (JNIEnv*, jclass, jlong data)
+WKJ_EXPORT void wkj_url_loader_did_finish_loading(int64_t target_peer)
 {
     using namespace WebCore;
     URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
     ASSERT(target);
     target->didFinishLoading();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFail
-  (JNIEnv* env, jclass, jint errorCode, jstring url, jstring message,
-   jlong data)
+WKJ_EXPORT void wkj_url_loader_did_fail(int64_t target_peer, int32_t error_code,
+                                        const uint16_t* url, int32_t url_len,
+                                        const uint16_t* message, int32_t message_len)
 {
     using namespace WebCore;
     URLLoader::Target* target =
-            static_cast<URLLoader::Target*>(jlong_to_ptr(data));
+            static_cast<URLLoader::Target*>(wkj_to_ptr(target_peer));
     ASSERT(target);
     target->didFail(ResourceError(
             String(),
-            errorCode,
-            URL(env, url),
-            String(env, message)));
+            error_code,
+            URL(URL(), wkjMakeString(url, url_len)),
+            wkjMakeString(message, message_len)));
 }
+
+} // extern "C"

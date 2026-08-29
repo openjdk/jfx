@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,63 +24,43 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "Cursor.h"
 #include "IntPoint.h"
 #include "PlatformJavaClasses.h"
 #include "Image.h"
-#include "com_sun_webkit_CursorManager.h"
+
+#include <stdint.h>
 
 namespace WebCore {
 
-jclass getJCursorManagerClass()
-{
-    static JGClass jCursorManagerClass(
-        WTF::GetJavaEnv()->FindClass("com/sun/webkit/CursorManager"));
-    ASSERT(jCursorManagerClass);
-    return jCursorManagerClass;
-}
-
-JLObject getJCursorManager()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetStaticMethodID(getJCursorManagerClass(), "getCursorManager",
-                                                  "()Lcom/sun/webkit/CursorManager;");
-    ASSERT(mid);
-
-    JLObject jCursorManager(env->CallStaticObjectMethod(getJCursorManagerClass(), mid));
-    WTF::CheckAndClearException(env);
-
-    return jCursorManager;
-}
-
+/*
+ * The CursorManager singleton is resolved on the Java side of these two slots, so the
+ * "no manager installed" case that getJCursorManager() used to detect here is now a NULL
+ * slot or a 0 return - both of which land on the same null cursor as before.
+ */
 Cursor::Cursor(Image* image, const IntPoint& hotspot)
     : m_platformCursor(0)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (!image) {
         return;
     }
 
-    JLObject jCursorManager(getJCursorManager());
-    if (!jCursorManager) {
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->cursor_get_custom_id) {
         return;
     }
-
-    static jmethodID mid = env->GetMethodID(getJCursorManagerClass(), "getCustomCursorID",
-                                            "(Lcom/sun/webkit/graphics/WCImageFrame;II)J");
-    ASSERT(mid);
 
     RefPtr<NativeImage> cursorImageFrame = image->javaImage();
     if (!cursorImageFrame) {
         return;
     }
 
-    m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame->platformImage()->getImage()),
-                                         hotspot.x(), hotspot.y());
-    WTF::CheckAndClearException(env);
+    m_platformCursor = cb->cursor_get_custom_id(
+        wkj_ref(*cursorImageFrame->platformImage()->getImage()),
+        hotspot.x(), hotspot.y());
+    wkjCheckAndClearException();
 }
 
 Cursor::Cursor(PlatformCursor c)
@@ -223,21 +203,15 @@ void Cursor::ensurePlatformCursor() const
     }
 }
 
-const Cursor getPredefinedCursor(jint type)
+const Cursor getPredefinedCursor(int32_t type)
 {
-    JLObject jCursorManager(getJCursorManager());
-    if (!jCursorManager) {
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->cursor_get_predefined_id) {
         return Cursor(0);
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(getJCursorManagerClass(),
-                                            "getPredefinedCursorID", "(I)J");
-    ASSERT(mid);
-
-    jlong cursorID = env->CallLongMethod(jCursorManager, mid, type);
-    WTF::CheckAndClearException(env);
+    int64_t cursorID = cb->cursor_get_predefined_id(type);
+    wkjCheckAndClearException();
 
     return Cursor(cursorID);
 }

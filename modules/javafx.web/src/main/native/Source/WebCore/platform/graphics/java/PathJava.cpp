@@ -28,18 +28,15 @@
 #include "PathJava.h"
 #include "FloatRect.h"
 #include "PlatformContextJava.h"
-#include "PlatformJavaClasses.h"
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"
 #include "RQRef.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "PathStream.h"
+#include "WKJPlatformJava.h"
 
 #include <wtf/text/WTFString.h>
-#include <wtf/java/JavaRef.h>
-
-#include "com_sun_webkit_graphics_WCPathIterator.h"
 
 namespace WebCore {
 
@@ -57,32 +54,36 @@ Ref<PathJava> PathJava::create(std::span<const PathSegment> segments)
     return pathJava;
 }
 
+namespace {
+
+/*
+ * WCGraphicsManager.createWCPath(). The id the slot returns is owned by this frame, so it is
+ * adopted into a WKJHandle and RQRef::create adds its own reference - which is exactly what
+ * the JNI code did: adopt the local ref CallObjectMethod returned, then RQRef::create it.
+ */
+RefPtr<RQRef> createPath()
+{
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->create_path)
+        return nullptr;
+
+    WKJHandle ref { cb->create_path() };
+    ASSERT(ref);
+    wkjCheckAndClearException();
+    return RQRef::create(ref.get());
+}
+
+}
+
 PlatformPathPtr PathJava::emptyPlatformPath()
 {
-       JNIEnv* env = WTF::GetJavaEnv();
-       static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-           "createWCPath", "()Lcom/sun/webkit/graphics/WCPath;");
-       ASSERT(mid);
-
-       JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid));
-       ASSERT(ref);
-       WTF::CheckAndClearException(env);
-       return RQRef::create(ref);
+    return createPath();
 }
 
 RefPtr<RQRef> createEmptyPath()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-        "createWCPath", "()Lcom/sun/webkit/graphics/WCPath;");
-    ASSERT(mid);
-
-    JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid));
-    ASSERT(ref);
-    WTF::CheckAndClearException(env);
-    return RQRef::create(ref);
+    return createPath();
 }
-
 static GraphicsContext& scratchContext()
 {
     ImageBufferFormat format {
@@ -99,18 +100,16 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
     if (!p) {
         return createEmptyPath();
     }
-    JNIEnv* env = WTF::GetJavaEnv();
 
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-        "createWCPath",
-        "(Lcom/sun/webkit/graphics/WCPath;)Lcom/sun/webkit/graphics/WCPath;");
-    ASSERT(mid);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->copy_path)
+        return nullptr;
 
-    JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid, (jobject)*p));
+    WKJHandle ref { cb->copy_path(wkj_ref(*p)) };
     ASSERT(ref);
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
-    return RQRef::create(ref);
+    return RQRef::create(ref.get());
 }
 
 Ref<PathJava> PathJava::create(RefPtr<RQRef>&& platformPath, RefPtr<PathStream>&& elementsStream)
@@ -160,63 +159,58 @@ void PathJava::add(PathContinuousRoundedRect continuousRoundedRect)
     add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, CornerRadii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
 }
 
+
 void PathJava::add(PathMoveTo moveto)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_move_to)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "moveTo",
-        "(DD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid, (jdouble)moveto.point.x(), (jdouble)moveto.point.y());
-    WTF::CheckAndClearException(env);
+    cb->path_move_to(wkj_ref(*m_platformPath), moveto.point.x(), moveto.point.y());
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathLineTo lineTo)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_line_to)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addLineTo",
-        "(DD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid, (jdouble)lineTo.point.x(), (jdouble)lineTo.point.y());
-    WTF::CheckAndClearException(env);
+    cb->path_add_line_to(wkj_ref(*m_platformPath), lineTo.point.x(), lineTo.point.y());
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathQuadCurveTo quadTo)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_quad_curve_to)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addQuadCurveTo",
-                                            "(DDDD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid, (jdouble)quadTo.controlPoint.x(), (jdouble)quadTo.controlPoint.y(), (jdouble)quadTo.endPoint.x(), (jdouble)quadTo.endPoint.y());
-    WTF::CheckAndClearException(env);
+    cb->path_add_quad_curve_to(wkj_ref(*m_platformPath),
+                               quadTo.controlPoint.x(), quadTo.controlPoint.y(),
+                               quadTo.endPoint.x(), quadTo.endPoint.y());
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathBezierCurveTo bezierTo)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_bezier_curve_to)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-        "addBezierCurveTo", "(DDDDDD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid,
-                        (jdouble)bezierTo.controlPoint1.x(), (jdouble)bezierTo.controlPoint1.y(),
-                        (jdouble)bezierTo.controlPoint2.x(), (jdouble)bezierTo.controlPoint2.y(),
-                        (jdouble)bezierTo.endPoint.x(), (jdouble)bezierTo.endPoint.y());
-    WTF::CheckAndClearException(env);
+    cb->path_add_bezier_curve_to(wkj_ref(*m_platformPath),
+                                 bezierTo.controlPoint1.x(), bezierTo.controlPoint1.y(),
+                                 bezierTo.controlPoint2.x(), bezierTo.controlPoint2.y(),
+                                 bezierTo.endPoint.x(), bezierTo.endPoint.y());
+    wkjCheckAndClearException();
 }
 
 static inline float areaOfTriangleFormedByPoints(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& p3)
@@ -228,16 +222,14 @@ void PathJava::add(PathArcTo arcTo)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_arc_to)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addArcTo",
-        "(DDDDD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid,
-                        (jdouble)arcTo.controlPoint1.x(), (jdouble)arcTo.controlPoint1.y(),
-                        (jdouble)arcTo.controlPoint2.x(), (jdouble)arcTo.controlPoint2.y(), (jdouble)arcTo.radius);
-    WTF::CheckAndClearException(env);
+    cb->path_add_arc_to(wkj_ref(*m_platformPath),
+                        arcTo.controlPoint1.x(), arcTo.controlPoint1.y(),
+                        arcTo.controlPoint2.x(), arcTo.controlPoint2.y(), arcTo.radius);
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathArc arc)
@@ -251,16 +243,13 @@ void PathJava::add(PathArc arc)
         clockwise = false;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_arc)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addArc",
-        "(DDDDDZ)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid, (jdouble)arc.center.x(), (jdouble)arc.center.y(),
-        (jdouble)arc.radius, (jdouble)arc.startAngle, (jdouble)arc.endAngle,
-        bool_to_jbool(clockwise));
-    WTF::CheckAndClearException(env);
+    cb->path_add_arc(wkj_ref(*m_platformPath), arc.center.x(), arc.center.y(),
+                     arc.radius, arc.startAngle, arc.endAngle, clockwise ? 1 : 0);
+    wkjCheckAndClearException();
 }
 void PathJava::add(PathClosedArc closedArc)
 {
@@ -276,30 +265,27 @@ void PathJava::add(PathEllipseInRect ellipseInRect)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addEllipse",
-        "(DDDD)V");
-    ASSERT(mid);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_ellipse)
+        return;
 
-    env->CallVoidMethod(*m_platformPath, mid,
-                        (jdouble)ellipseInRect.rect.x(), (jdouble)ellipseInRect.rect.y(),
-                        (jdouble)ellipseInRect.rect.width(), (jdouble)ellipseInRect.rect.height());
-    WTF::CheckAndClearException(env);
+    cb->path_add_ellipse(wkj_ref(*m_platformPath),
+                         ellipseInRect.rect.x(), ellipseInRect.rect.y(),
+                         ellipseInRect.rect.width(), ellipseInRect.rect.height());
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathRect rect)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_add_rect)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addRect",
-        "(DDDD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid, (jdouble)rect.rect.x(), (jdouble)rect.rect.y(),
-                              (jdouble)rect.rect.width(), (jdouble)rect.rect.height());
-    WTF::CheckAndClearException(env);
+    cb->path_add_rect(wkj_ref(*m_platformPath), rect.rect.x(), rect.rect.y(),
+                      rect.rect.width(), rect.rect.height());
+    wkjCheckAndClearException();
 }
 
 void PathJava::add(PathRoundedRect roundedRect)
@@ -312,14 +298,12 @@ void PathJava::add(PathCloseSubpath)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_close_subpath)
+        return;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-        "closeSubpath", "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid);
-    WTF::CheckAndClearException(env);
+    cb->path_close_subpath(wkj_ref(*m_platformPath));
+    wkjCheckAndClearException();
 }
 
 void PathJava::addPath(const PathJava& path, const AffineTransform& transform)
@@ -360,20 +344,19 @@ bool PathJava::applyElements(const PathElementApplier& applier) const
     return true;
 }
 
+
 bool PathJava::isEmpty() const
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_is_empty)
+        return false;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-                                            "isEmpty", "()Z");
-    ASSERT(mid);
+    int32_t res = cb->path_is_empty(wkj_ref(*m_platformPath));
+    wkjCheckAndClearException();
 
-    jboolean res = env->CallBooleanMethod(*m_platformPath, mid);
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(res);
+    return res != 0;
 }
 
 FloatPoint PathJava::currentPoint() const
@@ -387,17 +370,14 @@ bool PathJava::transform(const AffineTransform& transform)
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_transform)
+        return true;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-        "transform", "(DDDDDD)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(*m_platformPath, mid,
-                        (jdouble)transform.a(), (jdouble)transform.b(),
-                        (jdouble)transform.c(), (jdouble)transform.d(),
-                        (jdouble)transform.e(), (jdouble)transform.f());
-    WTF::CheckAndClearException(env);
+    cb->path_transform(wkj_ref(*m_platformPath),
+                       transform.a(), transform.b(), transform.c(),
+                       transform.d(), transform.e(), transform.f());
+    wkjCheckAndClearException();
     return true;
 }
 
@@ -408,17 +388,15 @@ bool PathJava::contains(const FloatPoint &point, WindRule rule) const
 
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_contains)
+        return false;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "contains",
-        "(IDD)Z");
-    ASSERT(mid);
+    int32_t res = cb->path_contains(wkj_ref(*m_platformPath), static_cast<int32_t>(rule),
+                                    point.x(), point.y());
+    wkjCheckAndClearException();
 
-    jboolean res = env->CallBooleanMethod(*m_platformPath, mid, (jint)rule,
-        (jdouble)point.x(), (jdouble)point.y());
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(res);
+    return res != 0;
 }
 
 bool PathJava::strokeContains(const FloatPoint& p, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
@@ -444,24 +422,22 @@ bool PathJava::strokeContains(const FloatPoint& p, const Function<void(GraphicsC
 
     gc.restore();
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_stroke_contains)
+        return false;
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "strokeContains",
-        "(DDDDIID[D)Z");
-
-    ASSERT(mid);
-
+    // A solid stroke passed a zero-length double[]; it now passes a count of 0.
     size_t size = strokeStyle == StrokeStyle::SolidStroke ? 0 : dashes.size();
-    JLocalRef<jdoubleArray> dashArray(env->NewDoubleArray(size));
-    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.span().data());
 
-    jboolean res = env->CallBooleanMethod(*m_platformPath, mid, (jdouble)p.x(),
-        (jdouble)p.y(), (jdouble) thickness, (jdouble) miterLimit,
-        (jint) cap, (jint) join, (jdouble) dashOffset, (jdoubleArray) dashArray);
+    int32_t res = cb->path_stroke_contains(wkj_ref(*m_platformPath), p.x(), p.y(),
+                                           thickness, miterLimit,
+                                           static_cast<int32_t>(cap), static_cast<int32_t>(join),
+                                           dashOffset, dashes.span().data(),
+                                           static_cast<int32_t>(size));
 
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 
-    return jbool_to_bool(res);
+    return res != 0;
 }
 
 FloatRect PathJava::fastBoundingRect() const
@@ -478,30 +454,18 @@ FloatRect PathJava::strokeBoundingRect(const Function<void(GraphicsContext&)>& s
 {
     ASSERT(m_platformPath);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->path_get_bounds)
+        return FloatRect();
 
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "getBounds",
-            "()Lcom/sun/webkit/graphics/WCRectangle;");
-    ASSERT(mid);
+    // The four floats replace a WCRectangle whose x/y/w/h fields the JNI code read back with
+    // GetFieldID; a 0 return is the null-rectangle case that gave an empty FloatRect.
+    float xywh[4] = { 0.f, 0.f, 0.f, 0.f };
+    int32_t haveBounds = cb->path_get_bounds(wkj_ref(*m_platformPath), xywh);
+    wkjCheckAndClearException();
 
-    JLObject rect(env->CallObjectMethod(*m_platformPath, mid));
-    WTF::CheckAndClearException(env);
-    if (rect) {
-        static jfieldID rectxFID = env->GetFieldID(PG_GetRectangleClass(env), "x", "F");
-        ASSERT(rectxFID);
-        static jfieldID rectyFID = env->GetFieldID(PG_GetRectangleClass(env), "y", "F");
-        ASSERT(rectyFID);
-        static jfieldID rectwFID = env->GetFieldID(PG_GetRectangleClass(env), "w", "F");
-        ASSERT(rectwFID);
-        static jfieldID recthFID = env->GetFieldID(PG_GetRectangleClass(env), "h", "F");
-        ASSERT(recthFID);
-
-        FloatRect bounds(
-            float(env->GetFloatField(rect, rectxFID)),
-            float(env->GetFloatField(rect, rectyFID)),
-            float(env->GetFloatField(rect, rectwFID)),
-            float(env->GetFloatField(rect, recthFID)));
-        WTF::CheckAndClearException(env);
+    if (haveBounds) {
+        FloatRect bounds(xywh[0], xywh[1], xywh[2], xywh[3]);
 
         float thickness;
         if (strokeStyleApplier) {

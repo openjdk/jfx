@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,14 +24,16 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
-#include "com_sun_webkit_event_WCMouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "MouseEventTypes.h"
 
+#include <stdint.h>
+
 namespace WebCore {
 
-MouseButton getWebCoreMouseButton(jint javaButton)
+MouseButton getWebCoreMouseButton(int32_t javaButton)
 {
     // This code assumes that we have three-buttons mouse
     // otherwise BUTTON2 is a right button.
@@ -46,7 +48,7 @@ MouseButton getWebCoreMouseButton(jint javaButton)
     }
 }
 
-unsigned short getWebCoreMouseButtons(jint javaButton)
+unsigned short getWebCoreMouseButtons(int32_t javaButton)
 {
     unsigned short buttons = NoButtonMask;
     if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON1) {
@@ -61,7 +63,7 @@ unsigned short getWebCoreMouseButtons(jint javaButton)
     return buttons;
 }
 
-PlatformEvent::Type getWebCoreMouseEventType(jint eventID)
+PlatformEvent::Type getWebCoreMouseEventType(int32_t eventID)
 {
     switch (eventID) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:

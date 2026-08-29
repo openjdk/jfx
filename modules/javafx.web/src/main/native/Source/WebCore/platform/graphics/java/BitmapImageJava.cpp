@@ -29,12 +29,12 @@
 #include "NotImplemented.h"
 #include "GraphicsContext.h"
 #include "ImageObserver.h"
-#include "PlatformJavaClasses.h"
 #include "GraphicsContextJava.h"
 #include "PlatformContextJava.h"
 #include "ImageDecoderJava.h"
 #include "RenderingQueue.h"
 #include "SharedBuffer.h"
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
 
@@ -42,24 +42,19 @@ Ref<Image> BitmapImage::createFromName(const char* name)
 {
     Ref<BitmapImage> img(create());
 
-    WC_GETJAVAENV_CHKRET(env, WTF::move(img));
-
 #if USE(IMAGEIO)
-    static jmethodID midLoadFromResource = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "loadFromResource",
-        "(Ljava/lang/String;)V");
-    ASSERT(midLoadFromResource);
-
+    // This is the branch the build compiles, and it has been inert for a long time: the only
+    // JNI it contained was a method-id lookup for WCImageDecoder.loadFromResource whose call
+    // was commented out below, so createFromName has been returning an empty BitmapImage.
+    // The lookup went out with the id cache; the commented-out call is left exactly as found,
+    // because reviving it is a behaviour change and not this commit's business.
     SharedBufferBuilder bufferBuilder;
     //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
     //img->m_source->ensureDecoderAvailable(dataBuffer.get());
     //img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());    //revisit
-  /*  env->CallVoidMethod(
-        static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
-        midLoadFromResource,
-        (jstring)String::fromLatin1(name).toJavaString(env));
-    WTF::CheckAndClearException(env); */
+  /*  WCImageDecoder.loadFromResource(name), on
+        static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder().
+        There is no host slot for it: nothing live has ever made this call. */
 
     // we have to make this call in order to initialize
     // internal flags that indicates the image readiness
@@ -71,24 +66,21 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     // however it does happen after OOME
 //    ASSERT(isSizeAvailable);
 #else
-    static jmethodID midLoadFromResource = env->GetMethodID(
-       PG_GetGraphicsManagerClass(env),
-       "fwkLoadFromResource",
-       "(Ljava/lang/String;J)V");
-    ASSERT(midLoadFromResource);
+    // Not compiled: USE(IMAGEIO) is unconditionally on. Converted rather than deleted so the
+    // branch stays translatable. NOTE, pre-existing and left alone: `dataBuffer` below is
+    // undeclared - only `bufferBuilder` is - so this branch has not compiled for some time.
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->load_from_resource)
+        return WTF::move(img);
 
     SharedBufferBuilder bufferBuilder;
-    //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
-    JLString resourceName(String::fromLatin1(name).toJavaString(env));
-    ASSERT(resourceName);
+    WKJStringArg resourceName(String::fromLatin1(name));
+    ASSERT(resourceName.data());
 
-    env->CallVoidMethod(
-        PL_GetGraphicsManager(env),
-        midLoadFromResource,
-        (jstring)resourceName,
-        ptr_to_jlong((bufferBuilder.get()).get()));
-    WTF::CheckAndClearException(env);
-    //From the upper call we got a callback [Java_com_sun_webkit_graphics_WCGraphicsManager_append]
+    cb->load_from_resource(resourceName.data(), resourceName.length(),
+                           wkj_from_ptr((bufferBuilder.get()).get()));
+    wkjCheckAndClearException();
+    //From the upper call we got a callback [wkj_shared_buffer_builder_append]
     //that fills the buffer.
     img->setData(WTF::move(dataBuffer), true);
 #endif
@@ -98,19 +90,17 @@ Ref<Image> BitmapImage::createFromName(const char* name)
 
 } // namespace WebCore
 
-using namespace WebCore;
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCGraphicsManager_append
-    (JNIEnv *env, jclass, jlong sharedBufferPtr, jbyteArray jbits, jint count)
+WKJ_EXPORT void wkj_shared_buffer_builder_append(int64_t builder,
+                                                 const uint8_t* data, int32_t count)
 {
-    ASSERT(sharedBufferPtr);
-    SharedBufferBuilder* pBuffer = static_cast<SharedBufferBuilder*>jlong_to_ptr(sharedBufferPtr);
+    using namespace WebCore;
 
-    void *cbits = env->GetPrimitiveArrayCritical(jbits, 0);
-    pBuffer->append(std::span<const uint8_t>(static_cast<const uint8_t*>(cbits), count));
-    env->ReleasePrimitiveArrayCritical(jbits, cbits, JNI_ABORT);
+    ASSERT(builder);
+    SharedBufferBuilder* pBuffer = static_cast<SharedBufferBuilder*>(wkj_to_ptr(builder));
+
+    pBuffer->append(std::span<const uint8_t>(data, count));
 }
 
 }//extern "C"
-

@@ -31,7 +31,6 @@
 #include "JavaRuntimeObject.h"
 #include "JNIUtilityPrivate.h"
 #include "JSDOMBinding.h"
-#include "jni_jsobject.h"
 #include "runtime_method.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
@@ -52,7 +51,7 @@ using namespace JSC::Bindings;
 using namespace JSC;
 using namespace WebCore;
 
-JavaInstance::JavaInstance(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+JavaInstance::JavaInstance(wkj_ref instance, RefPtr<RootObject>&& rootObject, wkj_ref accessControlContext)
     : Instance(WTF::move(rootObject))
 {
     m_instance = JobjectWrapper::create(instance);
@@ -70,22 +69,27 @@ RuntimeObject* JavaInstance::newRuntimeObject(JSGlobalObject* globalObject)
     return JavaRuntimeObject::create(globalObject, this);
 }
 
-#define NUM_LOCAL_REFS 64
-
+/*
+ * These bracketed every Instance operation with PushLocalFrame(64) / PopLocalFrame(0), so
+ * that the local references the JNI calls inside produced were reclaimed in one go.
+ *
+ * There is no local reference table any more, and nothing reclaims a registry id implicitly:
+ * every id has a named owner - a WKJHandle, a JobjectWrapper or a JavaValueScope - which
+ * releases it when the scope ends. That is why they are empty rather than deleted; the
+ * Instance protocol still calls them, and there is nothing left for them to do.
+ */
 void JavaInstance::virtualBegin()
 {
-    getJNIEnv()->PushLocalFrame(NUM_LOCAL_REFS);
 }
 
 void JavaInstance::virtualEnd()
 {
-    getJNIEnv()->PopLocalFrame(0);
 }
 
 Class* JavaInstance::getClass() const
 {
     if (!m_class) {
-        jobject acc = accessControlContext();
+        wkj_ref acc = accessControlContext();
         m_class = new JavaClass(m_instance->instance(), rootObject(), acc);
     }
     return m_class;
@@ -98,26 +102,27 @@ JSValue JavaInstance::stringValue(JSGlobalObject* globalObject) const
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    jobject obj = m_instance->instance();
-    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    wkj_ref obj = m_instance->instance();
+    // Since m_instance->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::stringValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::stringValue", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 
-    jobject acc  = accessControlContext();
+    wkj_ref acc  = accessControlContext();
 
-    jmethodID methodId = getMethodID(obj, "toString", "()Ljava/lang/String;");
-    jvalue result;
-    jthrowable ex = dispatchJNICall(0, rootObject(), obj, false,
-                                    JavaTypeObject, methodId,
-                                    NULL, result, acc);
-    if (ex != 0) {
+    WKJHandle methodId = javaResolveMethod(obj, "toString"_s, "()Ljava/lang/String;"_s);
+    WKJJavaValue result = emptyJavaValue();
+    JavaValueScope resultScope(result);
+    WKJHandle ex = dispatchJavaCall(0, rootObject(), obj,
+                                    JavaTypeObject, methodId.get(),
+                                    nullptr, result, acc);
+    if (ex) {
         // FIXME duplicates code in JavaInstance::invokeMethod
         JSValue exceptionDescription
-            = (JavaInstance::create(ex, rootObject(), accessControlContext())
+            = (JavaInstance::create(ex.get(), rootObject(), accessControlContext())
                ->createRuntimeObject(globalObject));
         throwException(globalObject, scope, createError(globalObject,
                                 (exceptionDescription.toString(globalObject)
@@ -125,77 +130,86 @@ JSValue JavaInstance::stringValue(JSGlobalObject* globalObject) const
         return jsUndefined();
     }
 
-    jstring stringValue = (jstring) result.l;
-    JNIEnv* env = getJNIEnv();
-    const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
-    std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(c), (int)env->GetStringLength(stringValue));
-    String u(createSpan);
-    releaseUCharactersForJStringInEnv(env, stringValue, c);
+    /*
+     * The characters of the java.lang.String toString() returned. The JNI code read them
+     * with GetStringChars and would have dereferenced a null Java string had a toString override
+     * returned null; an empty string is used for that case instead.
+     */
+    String u = javaStringValue(result.l);
+    if (u.isNull())
+        u = emptyString();
     return jsString(vm, u);
 }
 
-static JSValue numberValueForCharacter(jobject obj) {
+static JSValue numberValueForCharacter(wkj_ref obj) {
 
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    // Since obj is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForCharacter", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::numberValueForCharacter", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 
-    return jsNumber((int) callJNIMethod<jchar>(obj, "charValue", "()C"));
+    WKJJavaValue value = emptyJavaValue();
+    javaUnbox(obj, JavaTypeChar, value);
+    return jsNumber(value.i);
 }
 
-static JSValue numberValueForNumber(jobject obj) {
+static JSValue numberValueForNumber(wkj_ref obj) {
 
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    // Since obj is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForNumber", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::numberValueForNumber", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 
-    return jsNumber(callJNIMethod<jdouble>(obj, "doubleValue", "()D"));
+    WKJJavaValue value = emptyJavaValue();
+    javaUnbox(obj, JavaTypeDouble, value);
+    return jsNumber(value.d);
 }
 
 
 JSValue JavaInstance::numberValue(JSGlobalObject*) const
 {
-    jobject obj = m_instance->instance();
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    wkj_ref obj = m_instance->instance();
+    // Since obj is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::numberValue", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     if (aClass->isCharacterClass())
         return numberValueForCharacter(obj);
-    if (aClass->isBooleanClass())
-        return jsNumber((int)
-                        // Replaced the following line to work around possible GCC bug, see JDK-8126601
-                    // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
-                        callJNIMethod(obj, JavaTypeBoolean, "booleanValue", "()Z", 0).z);
+    if (aClass->isBooleanClass()) {
+        // The GCC workaround for JDK-8126601 - calling through the JavaType-taking
+        // callJNIMethod rather than the template - has nothing left to work around: there is
+        // one unbox slot and the type is a value it takes, not a template argument.
+        WKJJavaValue value = emptyJavaValue();
+        javaUnbox(obj, JavaTypeBoolean, value);
+        return jsNumber(value.i);
+    }
     return numberValueForNumber(obj);
 }
 
 JSValue JavaInstance::booleanValue() const
 {
-    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(m_instance->instance(), true);
+    // Since m_instance->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(m_instance->instance());
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::booleanValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::booleanValue", static_cast<unsigned long long>(m_instance->instance()));
         return jsUndefined();
     }
 
-    // Changed the call to work around possible GCC bug, see JDK-8126601
-    jboolean booleanValue = callJNIMethod(m_instance->instance(), JavaTypeBoolean, "booleanValue", "()Z", 0).z;
-    return jsBoolean(booleanValue);
+    WKJJavaValue value = emptyJavaValue();
+    javaUnbox(m_instance->instance(), JavaTypeBoolean, value);
+    return jsBoolean(value.i != 0);
 }
 
 class JavaRuntimeMethod : public RuntimeMethod {
@@ -283,20 +297,20 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
     const JavaMethod* jMethod = static_cast<const JavaMethod*>(method);
     // Since we can't convert java.lang.Character to any JS primitive, we have
     // to handle valueOf method call.
-    jobject obj = m_instance->instance();
+    wkj_ref obj = m_instance->instance();
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     if (aClass->isCharacterClass() && jMethod->name() == "valueOf"_s)
         return numberValueForCharacter(obj);
 
-    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    // Since m_instance->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::invokeMethod", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 #if !PLATFORM(JAVA)
-    LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
+    LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %llu", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), static_cast<unsigned long long>(m_instance->instance()));
 #endif
 
     const int count = callFrame->argumentCount();
@@ -307,20 +321,29 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
         return jsUndefined();
     }
 
-    Vector<jobject> jArgs(count);
+    /*
+     * The arguments, as Java objects. jArgs is what the invocation takes; argOwners holds
+     * the one reference each of them needs to survive the call, which the JNI code got for
+     * free from the local reference frame.
+     */
+    Vector<WKJHandle> argOwners(count);
+    Vector<wkj_ref> jArgs(count);
 
     for (int i = 0; i < count; i++) {
         CString javaClassName = jMethod->parameterAt(i).utf8();
         JavaType jtype = javaTypeFromClassName(javaClassName.data());
-        jvalue jarg = convertValueToJValue(globalObject, m_rootObject.get(),
+        WKJJavaValue jarg = convertValueToJValue(globalObject, m_rootObject.get(),
             callFrame->argument(i), jtype, javaClassName.data());
-        jArgs[i] = jvalueToJObject(jarg, jtype);
+        JavaValueScope jargScope(jarg);
+        argOwners[i] = javaValueToObject(jarg, jtype);
+        jArgs[i] = argOwners[i].get();
 #if !PLATFORM(JAVA)
         LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, callFrame->argument(i).toString(globalObject)->value(globalObject).ascii().data());
 #endif
     }
 
-    jvalue result;
+    WKJJavaValue result = emptyJavaValue();
+    JavaValueScope resultScope(result);
 
     // Try to use the JNI abstraction first, otherwise fall back to
     // normal JNI.  The JNI dispatch abstraction allows the Java plugin
@@ -333,26 +356,33 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
 
     // bool handled = false;
     if (rootObject->nativeHandle()) {
-        jobject obj = m_instance->instance();
-        // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-        JLObject jlinstance(obj, true);
+        wkj_ref obj = m_instance->instance();
+        // Since m_instance->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+        WKJHandle jlinstance = WKJHandle::retained(obj);
 
         if (!jlinstance) {
-            LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", (jobject)jlinstance);
+            LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::invokeMethod", static_cast<unsigned long long>(obj));
             return jsUndefined();
         }
 
         // const char *callingURL = 0; // FIXME, need to propagate calling URL to Java
-        jmethodID methodId = getMethodID(obj, jMethod->name().utf8().data(), jMethod->signature());
+        /*
+         * The method is still looked up by name and JNI descriptor rather than kept from the
+         * enumeration that produced this JavaMethod. That is deliberate: the search has to
+         * land on the same java.lang.reflect.Method that GetMethodID + ToReflectedMethod
+         * produced, because com.sun.webkit.Utilities.fwkInvokeWithContext makes its security
+         * decision on method.getDeclaringClass().
+         */
+        WKJHandle methodId = javaResolveMethod(obj, jMethod->name(),
+            String::fromUTF8(jMethod->signature()));
 
-        jthrowable ex = dispatchJNICall(callFrame->argumentCount(), rootObject,
-                                        obj, jMethod->isStatic(),
-                                        jMethod->returnType(), methodId,
-                                        jArgs.mutableSpan().data(), result,
+        WKJHandle ex = dispatchJavaCall(callFrame->argumentCount(), rootObject,
+                                        obj, jMethod->returnType(), methodId.get(),
+                                        jArgs.span().data(), result,
                                         accessControlContext());
-        if (ex != NULL) {
+        if (ex) {
             JSValue exceptionDescription
-              = (JavaInstance::create(ex, rootObject, accessControlContext())
+              = (JavaInstance::create(ex.get(), rootObject, accessControlContext())
                  ->createRuntimeObject(globalObject));
             throwException(globalObject, scope, exceptionDescription);
             return jsUndefined();
@@ -374,26 +404,25 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
     // to treat it as JS foreign object.
     case JavaTypeChar:
         {
-            JNIEnv* env = getJNIEnv();
-            resultValue = toJS(globalObject, WebCore::Java_Object_to_JSValue(env, toRef(globalObject), rootObject, result.l, accessControlContext()));
+            resultValue = toJS(globalObject, WebCore::Java_Object_to_JSValue(toRef(globalObject), rootObject, result.l, accessControlContext()));
         }
         break;
 
     case JavaTypeBoolean:
         {
-            resultValue = jsBoolean(result.z);
+            resultValue = jsBoolean(result.i != 0);
         }
         break;
 
     case JavaTypeByte:
         {
-            resultValue = jsNumber(result.b);
+            resultValue = jsNumber(result.i);
         }
         break;
 
     case JavaTypeShort:
         {
-            resultValue = jsNumber(result.s);
+            resultValue = jsNumber(result.i);
         }
         break;
 
@@ -405,13 +434,13 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
 
     case JavaTypeLong:
         {
-            resultValue = jsNumber(result.j);
+            resultValue = jsNumber(static_cast<double>(result.j));
         }
         break;
 
     case JavaTypeFloat:
         {
-            resultValue = jsNumber(result.f);
+            resultValue = jsNumber(static_cast<double>(static_cast<float>(result.d)));
         }
         break;
 
@@ -442,12 +471,12 @@ JSValue JavaInstance::defaultValue(JSGlobalObject* globalObject, PreferredPrimit
     if (aClass->isStringClass())
         return stringValue(globalObject);
 
-    jobject obj = m_instance->instance();
-    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+    wkj_ref obj = m_instance->instance();
+    // Since m_instance->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(obj);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::defaultValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaInstance::defaultValue", static_cast<unsigned long long>(obj));
         return jsUndefined();
     }
 

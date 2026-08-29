@@ -1,20 +1,20 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
  * Copyright 2010, The Android Open Source Project
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1. Redistributions of source code must retain the above copyright
+ *  * Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
+ *  * Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -43,7 +43,7 @@ using namespace JSC;
 using namespace JSC::Bindings;
 using namespace WebCore;
 
-JSValue JavaArray::convertJObjectToArray(JSGlobalObject* globalObject, jobject anObject, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+JSValue JavaArray::convertJObjectToArray(JSGlobalObject* globalObject, wkj_ref anObject, const char* type, RefPtr<RootObject>&& rootObject, wkj_ref accessControlContext)
 {
     if (type[0] != '[')
         return jsUndefined();
@@ -51,22 +51,21 @@ JSValue JavaArray::convertJObjectToArray(JSGlobalObject* globalObject, jobject a
     return RuntimeArray::create(globalObject, new JavaArray(anObject, type, WTF::move(rootObject), accessControlContext));
 }
 
-JavaArray::JavaArray(jobject array, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+JavaArray::JavaArray(wkj_ref array, const char* type, RefPtr<RootObject>&& rootObject, wkj_ref accessControlContext)
     : Array(WTF::move(rootObject))
 {
     m_array = JobjectWrapper::create(array);
 
     // Java array are fixed length, so we can cache length.
-    JNIEnv* env = getJNIEnv();
 
-    // Since m_array->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlarrayinstance(m_array->instance(), true);
+    // Since m_array->instance() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlarrayinstance = WKJHandle::retained(m_array->instance());
 
     if (!jlarrayinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray Constructor", (jobject)jlarrayinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaArray Constructor", static_cast<unsigned long long>(m_array->instance()));
         m_length = 0;
     } else {
-        m_length = env->GetArrayLength(static_cast<jarray>(m_array->instance()));
+        m_length = static_cast<unsigned int>(javaArrayLength(m_array->instance()));
     }
 
     m_type = strdup(type);
@@ -85,15 +84,14 @@ RootObject* JavaArray::rootObject() const
 
 bool JavaArray::setValueAt(JSGlobalObject* globalObject, unsigned index, JSValue aValue) const
 {
-    // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(javaArray(), true);
+    // Since javaArray() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(javaArray());
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray::setValueAt", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaArray::setValueAt", static_cast<unsigned long long>(javaArray()));
         return false;
     }
 
-    JNIEnv* env = getJNIEnv();
     char* javaClassName = 0;
 
     JavaType arrayType = javaTypeFromPrimitiveType(m_type[1]);
@@ -104,60 +102,27 @@ bool JavaArray::setValueAt(JSGlobalObject* globalObject, unsigned index, JSValue
         javaClassName = strdup(&m_type[2]);
         javaClassName[strchr(javaClassName, ';')-javaClassName] = 0;
     }
-    jvalue aJValue = convertValueToJValue(globalObject, m_rootObject.get(), aValue, arrayType, javaClassName);
+    WKJJavaValue aJValue = convertValueToJValue(globalObject, m_rootObject.get(), aValue, arrayType, javaClassName);
+    JavaValueScope aJValueScope(aJValue);
 
     switch (arrayType) {
     case JavaTypeObject:
-        {
-            env->SetObjectArrayElement(static_cast<jobjectArray>(javaArray()), index, aJValue.l);
-            break;
-        }
-
     case JavaTypeBoolean:
-        {
-            env->SetBooleanArrayRegion(static_cast<jbooleanArray>(javaArray()), index, 1, &aJValue.z);
-            break;
-        }
-
     case JavaTypeByte:
-        {
-            env->SetByteArrayRegion(static_cast<jbyteArray>(javaArray()), index, 1, &aJValue.b);
-            break;
-        }
-
     case JavaTypeChar:
-        {
-            env->SetCharArrayRegion(static_cast<jcharArray>(javaArray()), index, 1, &aJValue.c);
-            break;
-        }
-
     case JavaTypeShort:
-        {
-            env->SetShortArrayRegion(static_cast<jshortArray>(javaArray()), index, 1, &aJValue.s);
-            break;
-        }
-
     case JavaTypeInt:
-        {
-            env->SetIntArrayRegion(static_cast<jintArray>(javaArray()), index, 1, &aJValue.i);
-            break;
-        }
-
     case JavaTypeLong:
-        {
-            env->SetLongArrayRegion(static_cast<jlongArray>(javaArray()), index, 1, &aJValue.j);
-            break;
-        }
-
     case JavaTypeFloat:
-        {
-            env->SetFloatArrayRegion(static_cast<jfloatArray>(javaArray()), index, 1, &aJValue.f);
-            break;
-        }
-
     case JavaTypeDouble:
         {
-            env->SetDoubleArrayRegion(static_cast<jdoubleArray>(javaArray()), index, 1, &aJValue.d);
+            /*
+             * SetObjectArrayElement and the eight Set<Type>ArrayRegion calls, chosen by
+             * arrayType on the Java side of the slot. The case list is exactly the one the
+             * JNI switch had: an array of arrays still falls through to the default and is
+             * silently not written, which is what this code has always done.
+             */
+            javaArraySet(javaArray(), static_cast<int>(index), arrayType, aJValue);
             break;
         }
     default:
@@ -171,22 +136,23 @@ bool JavaArray::setValueAt(JSGlobalObject* globalObject, unsigned index, JSValue
 
 JSValue JavaArray::valueAt(JSGlobalObject* globalObject, unsigned index) const
 {
-    // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(javaArray(), true);
+    // Since javaArray() is a weak reference, taking a strong one to safeguard instance() from GC
+    WKJHandle jlinstance = WKJHandle::retained(javaArray());
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray::valueAt", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %llu in JavaArray::valueAt", static_cast<unsigned long long>(javaArray()));
         return jsUndefined();
     }
 
-    JNIEnv* env = getJNIEnv();
     JavaType arrayType = javaTypeFromPrimitiveType(m_type[1]);
+    WKJJavaValue element = emptyJavaValue();
+    JavaValueScope elementScope(element);
+
     switch (arrayType) {
     case JavaTypeObject:
         {
-            jobjectArray objectArray = static_cast<jobjectArray>(javaArray());
-            jobject anObject;
-            anObject = env->GetObjectArrayElement(objectArray, index);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeObject, element);
+            wkj_ref anObject = element.l;
 
             // No object?
             if (!anObject)
@@ -203,67 +169,50 @@ JSValue JavaArray::valueAt(JSGlobalObject* globalObject, unsigned index) const
 
     case JavaTypeBoolean:
         {
-            jbooleanArray booleanArray = static_cast<jbooleanArray>(javaArray());
-            jboolean aBoolean;
-            env->GetBooleanArrayRegion(booleanArray, index, 1, &aBoolean);
-            return jsBoolean(aBoolean);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeBoolean, element);
+            return jsBoolean(element.i != 0);
         }
 
     case JavaTypeByte:
         {
-            jbyteArray byteArray = static_cast<jbyteArray>(javaArray());
-            jbyte aByte;
-            env->GetByteArrayRegion(byteArray, index, 1, &aByte);
-            return jsNumber(aByte);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeByte, element);
+            return jsNumber(element.i);
         }
 
     case JavaTypeChar:
         {
-            jcharArray charArray = static_cast<jcharArray>(javaArray());
-            jchar aChar;
-            env->GetCharArrayRegion(charArray, index, 1, &aChar);
-            return jsNumber(aChar);
-            break;
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeChar, element);
+            return jsNumber(element.i);
         }
 
     case JavaTypeShort:
         {
-            jshortArray shortArray = static_cast<jshortArray>(javaArray());
-            jshort aShort;
-            env->GetShortArrayRegion(shortArray, index, 1, &aShort);
-            return jsNumber(aShort);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeShort, element);
+            return jsNumber(element.i);
         }
 
     case JavaTypeInt:
         {
-            jintArray intArray = static_cast<jintArray>(javaArray());
-            jint anInt;
-            env->GetIntArrayRegion(intArray, index, 1, &anInt);
-            return jsNumber(anInt);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeInt, element);
+            return jsNumber(element.i);
         }
 
     case JavaTypeLong:
         {
-            jlongArray longArray = static_cast<jlongArray>(javaArray());
-            jlong aLong;
-            env->GetLongArrayRegion(longArray, index, 1, &aLong);
-            return jsNumber(aLong);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeLong, element);
+            return jsNumber(static_cast<double>(element.j));
         }
 
     case JavaTypeFloat:
         {
-            jfloatArray floatArray = static_cast<jfloatArray>(javaArray());
-            jfloat aFloat;
-            env->GetFloatArrayRegion(floatArray, index, 1, &aFloat);
-            return jsNumber(aFloat);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeFloat, element);
+            return jsNumber(static_cast<double>(static_cast<float>(element.d)));
         }
 
     case JavaTypeDouble:
         {
-            jdoubleArray doubleArray = static_cast<jdoubleArray>(javaArray());
-            jdouble aDouble;
-            env->GetDoubleArrayRegion(doubleArray, index, 1, &aDouble);
-            return jsNumber(aDouble);
+            javaArrayGet(javaArray(), static_cast<int>(index), JavaTypeDouble, element);
+            return jsNumber(element.d);
         }
     default:
         break;

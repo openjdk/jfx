@@ -36,36 +36,50 @@ abstract class URLLoaderBase {
      */
     protected abstract void fwkCancel();
 
-    protected static native void twkDidSendData(long totalBytesSent,
-                                              long totalBytesToBeSent,
-                                              long data);
+    protected static void twkDidSendData(long totalBytesSent,
+                                         long totalBytesToBeSent,
+                                         long data) {
+        URLLoaderNative.didSendData(totalBytesSent, totalBytesToBeSent, data);
+    }
 
-    protected static native void twkWillSendRequest(int status,
-                                                     String contentType,
-                                                     String contentEncoding,
-                                                     long contentLength,
-                                                     String headers,
-                                                     String url,
-                                                     long data);
+    protected static void twkWillSendRequest(int status,
+                                             String contentType,
+                                             String contentEncoding,
+                                             long contentLength,
+                                             String headers,
+                                             String url,
+                                             long data) {
+        URLLoaderNative.willSendRequest(status, contentType, contentEncoding, contentLength,
+                headers, url, data);
+    }
 
-    protected static native void twkDidReceiveResponse(int status,
-                                                     String contentType,
-                                                     String contentEncoding,
-                                                     long contentLength,
-                                                     String headers,
-                                                     String url,
-                                                     long data);
+    protected static void twkDidReceiveResponse(int status,
+                                                String contentType,
+                                                String contentEncoding,
+                                                long contentLength,
+                                                String headers,
+                                                String url,
+                                                long data) {
+        URLLoaderNative.didReceiveResponse(status, contentType, contentEncoding, contentLength,
+                headers, url, data);
+    }
 
-    protected static native void twkDidReceiveData(ByteBuffer byteBuffer,
-                                                 int position,
-                                                 int remaining,
-                                                 long data);
+    protected static void twkDidReceiveData(ByteBuffer byteBuffer,
+                                            int position,
+                                            int remaining,
+                                            long data) {
+        URLLoaderNative.didReceiveData(byteBuffer, position, remaining, data);
+    }
 
-    protected static native void twkDidFinishLoading(long data);
+    protected static void twkDidFinishLoading(long data) {
+        URLLoaderNative.didFinishLoading(data);
+    }
 
-    protected static native void twkDidFail(int errorCode,
-                                          String url,
-                                          String message,
-                                          long data);
+    protected static void twkDidFail(int errorCode,
+                                     String url,
+                                     String message,
+                                     long data) {
+        URLLoaderNative.didFail(errorCode, url, message, data);
+    }
 
 }

@@ -49,7 +49,7 @@ using GlyphBufferAdvance = CGSize;
 using GlyphBufferOrigin = CGPoint;
 using GlyphBufferStringOffset = CFIndex;
 #elif PLATFORM(JAVA)
-using GlyphBufferGlyph = jint;
+using GlyphBufferGlyph = int32_t;
 using GlyphBufferAdvance = FloatSize;
 using GlyphBufferOrigin = FloatPoint;
 using GlyphBufferStringOffset = unsigned;

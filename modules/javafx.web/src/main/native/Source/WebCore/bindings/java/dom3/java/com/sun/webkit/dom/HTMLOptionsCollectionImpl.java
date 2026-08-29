@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,23 +43,31 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     public int getSelectedIndex() {
         return getSelectedIndexImpl(getPeer());
     }
-    native static int getSelectedIndexImpl(long peer);
+    static int getSelectedIndexImpl(long peer) {
+        return HTMLOptionsCollectionNative.getSelectedIndex(peer);
+    }
 
     public void setSelectedIndex(int value) {
         setSelectedIndexImpl(getPeer(), value);
     }
-    native static void setSelectedIndexImpl(long peer, int value);
+    static void setSelectedIndexImpl(long peer, int value) {
+        HTMLOptionsCollectionNative.setSelectedIndex(peer, value);
+    }
 
     @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return HTMLOptionsCollectionNative.getLength(peer);
+    }
 
     public void setLength(int value) throws DOMException {
         setLengthImpl(getPeer(), value);
     }
-    native static void setLengthImpl(long peer, int value);
+    static void setLengthImpl(long peer, int value) {
+        HTMLOptionsCollectionNative.setLength(peer, value);
+    }
 
 
 // Functions
@@ -69,8 +77,10 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
         return NodeImpl.getImpl(namedItemImpl(getPeer()
             , name));
     }
-    native static long namedItemImpl(long peer
-        , String name);
+    static long namedItemImpl(long peer
+        , String name) {
+        return HTMLOptionsCollectionNative.namedItem(peer, name);
+    }
 
 
     public void add(HTMLOptionElement option
@@ -80,9 +90,11 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
             , HTMLOptionElementImpl.getPeer(option)
             , index);
     }
-    native static void addImpl(long peer
+    static void addImpl(long peer
         , long option
-        , int index);
+        , int index) {
+        HTMLOptionsCollectionNative.add(peer, option, index);
+    }
 
 
     @Override
@@ -91,8 +103,10 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
         return NodeImpl.getImpl(itemImpl(getPeer()
             , index));
     }
-    native static long itemImpl(long peer
-        , int index);
+    static long itemImpl(long peer
+        , int index) {
+        return HTMLOptionsCollectionNative.item(peer, index);
+    }
 
 
 }

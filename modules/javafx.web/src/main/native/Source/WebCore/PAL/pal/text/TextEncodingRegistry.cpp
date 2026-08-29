@@ -49,10 +49,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringHash.h>
 
-#if USE(JAVA_UNICODE)
-#include "java/TextCodecJava.h"
-#endif
-
 namespace PAL {
 
 constexpr size_t maxEncodingNameLength = 63;
@@ -288,11 +284,6 @@ static void extendTextCodecMaps() WTF_REQUIRES_LOCK(encodingRegistryLock)
 
     TextCodecSingleByte::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecSingleByte::registerCodecs(addToTextCodecMap);
-
-#if USE(JAVA_UNICODE)
-    TextCodecJava::registerEncodingNames(addToTextEncodingNameMap);
-    TextCodecJava::registerCodecs(addToTextCodecMap);
-#endif
 
     pruneBlocklistedCodecs();
     buildQuirksSets();

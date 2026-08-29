@@ -251,72 +251,72 @@ public abstract class WCMediaPlayer extends Ref {
     /*  Methods called from webkit             */
     /* ======================================= */
 
-    private void fwkLoad(String url, String userAgent) {
+    void fwkLoad(String url, String userAgent) {
         log.fine("fwkLoad, url={0}, userAgent={1}", new Object[] {url, userAgent});
         load(url, userAgent);
     }
 
-    private void fwkCancelLoad() {
+    void fwkCancelLoad() {
         log.fine("fwkCancelLoad");
         cancelLoad();
     }
 
-    private void fwkPrepareToPlay() {
+    void fwkPrepareToPlay() {
         log.fine("fwkPrepareToPlay");
         prepareToPlay();
     }
 
-    private void fwkDispose() {
+    void fwkDispose() {
         log.fine("fwkDispose");
         nPtr = 0;
         cancelLoad();
         disposePlayer();
     }
 
-    private void fwkPlay() {
+    void fwkPlay() {
         log.fine("fwkPlay");
         play();
     }
 
-    private void fwkPause() {
+    void fwkPause() {
         log.fine("fwkPause");
         pause();
     }
 
-    private float fwkGetCurrentTime() {
+    float fwkGetCurrentTime() {
         float res = getCurrentTime();
         log.finer("fwkGetCurrentTime(), return {0}", res);
         return res;
     }
 
-    private void fwkSeek(float time) {
+    void fwkSeek(float time) {
         log.fine("fwkSeek({0})", time);
         seek(time);
     }
 
-    private void fwkSetRate(float rate) {
+    void fwkSetRate(float rate) {
         log.fine("fwkSetRate({0})", rate);
         setRate(rate);
     }
 
-    private void fwkSetVolume(float volume) {
+    void fwkSetVolume(float volume) {
         log.fine("fwkSetVolume({0})", volume);
         setVolume(volume);
     }
 
-    private void fwkSetMute(boolean mute) {
+    void fwkSetMute(boolean mute) {
         log.fine("fwkSetMute({0})", mute);
         setMute(mute);
     }
 
-    private void fwkSetSize(int w, int h) {
+    void fwkSetSize(int w, int h) {
         //log.fine("setSize({0} x {1})", new Object[]{w, h});
         setSize(w, h);
     }
 
     private boolean preserve = true;
 
-    private void fwkSetPreservesPitch(boolean preserve) {
+    void fwkSetPreservesPitch(boolean preserve) {
         log.fine("setPreservesPitch({0})", preserve);
 //        synchronized(renderLock) {
             this.preserve = preserve;
@@ -324,7 +324,7 @@ public abstract class WCMediaPlayer extends Ref {
 //        }
     }
 
-    private void fwkSetPreload(int preload) {
+    void fwkSetPreload(int preload) {
         log.fine("fwkSetPreload({0})",
                 preload == PRELOAD_NONE ? "PRELOAD_NONE"
                 : preload == PRELOAD_METADATA ? "PRELOAD_METADATA"
@@ -340,16 +340,45 @@ public abstract class WCMediaPlayer extends Ref {
     }
 
 
-    /* native methods */
-    private native void notifyNetworkStateChanged(long nPtr, int networkState);
-    private native void notifyReadyStateChanged(long nPtr, int readyState);
-    private native void notifyPaused(long nPtr, boolean paused);
-    private native void notifySeeking(long nPtr, boolean seeking, int readyState);
-    private native void notifyFinished(long nPtr);
-    private native void notifyReady(long nPtr, boolean hasVideo, boolean hasAudio, float duration);
-    private native void notifyDurationChanged(long nPtr, float duration);
-    private native void notifySizeChanged(long nPtr, int width, int height);
-    private native void notifyNewFrame(long nPtr);
-    private native void notifyBufferChanged(long nPtr, float[] ranges, int bytesLoaded);
+    /* the WCMediaPlayerNative facade over the wkj_media_notify_* entry points */
+    private void notifyNetworkStateChanged(long nPtr, int networkState) {
+        WCMediaPlayerNative.notifyNetworkStateChanged(nPtr, networkState);
+    }
+
+    private void notifyReadyStateChanged(long nPtr, int readyState) {
+        WCMediaPlayerNative.notifyReadyStateChanged(nPtr, readyState);
+    }
+
+    private void notifyPaused(long nPtr, boolean paused) {
+        WCMediaPlayerNative.notifyPaused(nPtr, paused);
+    }
+
+    private void notifySeeking(long nPtr, boolean seeking, int readyState) {
+        WCMediaPlayerNative.notifySeeking(nPtr, seeking, readyState);
+    }
+
+    private void notifyFinished(long nPtr) {
+        WCMediaPlayerNative.notifyFinished(nPtr);
+    }
+
+    private void notifyReady(long nPtr, boolean hasVideo, boolean hasAudio, float duration) {
+        WCMediaPlayerNative.notifyReady(nPtr, hasVideo, hasAudio, duration);
+    }
+
+    private void notifyDurationChanged(long nPtr, float duration) {
+        WCMediaPlayerNative.notifyDurationChanged(nPtr, duration);
+    }
+
+    private void notifySizeChanged(long nPtr, int width, int height) {
+        WCMediaPlayerNative.notifySizeChanged(nPtr, width, height);
+    }
+
+    private void notifyNewFrame(long nPtr) {
+        WCMediaPlayerNative.notifyNewFrame(nPtr);
+    }
+
+    private void notifyBufferChanged(long nPtr, float[] ranges, int bytesLoaded) {
+        WCMediaPlayerNative.notifyBufferChanged(nPtr, ranges, bytesLoaded);
+    }
 
 }

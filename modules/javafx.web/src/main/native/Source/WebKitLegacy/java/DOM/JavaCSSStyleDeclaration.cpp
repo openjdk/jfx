@@ -35,113 +35,116 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSStyleDeclaration*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSStyleDeclaration*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_CSSStyleDeclaration_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getCssTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_getCssText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->cssText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->cssText());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_setCssTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_CSSStyleDeclaration_setCssText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setCssText(AtomString {String(env, value)});
+    IMPL->setCssText(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getParentRuleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSStyleDeclaration_getParentRule(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSRule>(env, WTF::getPtr(IMPL->parentRule()));
+    return WKJReturnPeer<CSSRule>(WTF::getPtr(IMPL->parentRule()));
 }
 
 
 // Functions
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPropertyValueImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_getPropertyValue(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyValue(AtomString {String(env, propertyName)}));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getPropertyValue(AtomString {WKJString(propertyName, propertyName_length)}));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPropertyCSSValueImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int64_t wkj_dom_CSSStyleDeclaration_getPropertyCSSValue(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMValue>(env, WTF::getPtr(IMPL->getPropertyCSSValue(AtomString {String(env, propertyName)})));
+    return WKJReturnPeer<DeprecatedCSSOMValue>(WTF::getPtr(IMPL->getPropertyCSSValue(AtomString {WKJString(propertyName, propertyName_length)})));
 }
 
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_removePropertyImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_removeProperty(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->removeProperty(AtomString {String(env, propertyName)})));
+    return WKJReturnString(result_buf, result_cap, result_length, raiseOnDOMError(IMPL->removeProperty(AtomString {WKJString(propertyName, propertyName_length)})));
 }
 
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPropertyPriorityImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_getPropertyPriority(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyPriority(AtomString {String(env, propertyName)}));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getPropertyPriority(AtomString {WKJString(propertyName, propertyName_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_setPropertyImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName
-    , jstring value
-    , jstring priority)
+WKJ_EXPORT void wkj_dom_CSSStyleDeclaration_setProperty(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length, const uint16_t* value, int32_t value_length, const uint16_t* priority, int32_t priority_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setProperty(AtomString {String(env, propertyName)}
-            , AtomString{String(env, value)}
-            , AtomString{String(env, priority)}));
+    raiseOnDOMError(IMPL->setProperty(AtomString {WKJString(propertyName, propertyName_length)}
+            , AtomString{WKJString(value, value_length)}
+            , AtomString{WKJString(priority, priority_length)}));
 }
 
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_item(int64_t peer, int32_t index, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->item(index));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->item(index));
 }
 
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPropertyShorthandImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_getPropertyShorthand(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyShorthand(AtomString{String(env, propertyName)}));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->getPropertyShorthand(AtomString{WKJString(propertyName, propertyName_length)}));
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_isPropertyImplicitImpl(JNIEnv* env, jclass, jlong peer
-    , jstring propertyName)
+WKJ_EXPORT int32_t wkj_dom_CSSStyleDeclaration_isPropertyImplicit(int64_t peer, const uint16_t* propertyName, int32_t propertyName_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->isPropertyImplicit(AtomString{String(env, propertyName)});
+    return IMPL->isPropertyImplicit(AtomString{WKJString(propertyName, propertyName_length)});
 }
 
 

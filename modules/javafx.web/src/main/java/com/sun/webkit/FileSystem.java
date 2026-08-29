@@ -52,11 +52,11 @@ final class FileSystem {
         throw new AssertionError();
     }
 
-    private static boolean fwkFileExists(String path) {
+    static boolean fwkFileExists(String path) {
         return new File(path).exists();
     }
 
-    private static RandomAccessFile fwkOpenFile(String path, String mode) {
+    static RandomAccessFile fwkOpenFile(String path, String mode) {
         try {
             return new RandomAccessFile(path, mode);
         } catch (FileNotFoundException | SecurityException ex) {
@@ -65,7 +65,7 @@ final class FileSystem {
         return null;
     }
 
-    private static void fwkCloseFile(RandomAccessFile raf) {
+    static void fwkCloseFile(RandomAccessFile raf) {
         try {
             raf.close();
         } catch (IOException ex) {
@@ -73,7 +73,7 @@ final class FileSystem {
         }
     }
 
-    private static int fwkReadFromFile(RandomAccessFile raf, ByteBuffer byteBuffer) {
+    static int fwkReadFromFile(RandomAccessFile raf, ByteBuffer byteBuffer) {
         try {
             FileChannel fc = raf.getChannel();
             return fc.read(byteBuffer);
@@ -83,7 +83,7 @@ final class FileSystem {
         return -1;
     }
 
-    private static void fwkSeekFile(RandomAccessFile raf, long pos) {
+    static void fwkSeekFile(RandomAccessFile raf, long pos) {
         try {
             raf.seek(pos);
         } catch (IOException ex) {
@@ -91,7 +91,7 @@ final class FileSystem {
         }
     }
 
-    private static long fwkGetFileSize(String path) {
+    static long fwkGetFileSize(String path) {
         try {
             File file = new File(path);
             if (file.exists()) {
@@ -103,7 +103,7 @@ final class FileSystem {
         return -1;
     }
 
-    private static boolean fwkGetFileMetadata(String path, long[] metadataArray) {
+    static boolean fwkGetFileMetadata(String path, long[] metadataArray) {
         try {
             File file = new File(path);
             if (file.exists()) {
@@ -124,13 +124,13 @@ final class FileSystem {
         return false;
     }
 
-    private static String fwkPathByAppendingComponent(String path,
+    static String fwkPathByAppendingComponent(String path,
                                                       String component)
     {
         return new File(path, component).getPath();
     }
 
-    private static boolean fwkMakeAllDirectories(String path) {
+    static boolean fwkMakeAllDirectories(String path) {
         try {
             Files.createDirectories(Paths.get(path));
             return true;
@@ -140,7 +140,7 @@ final class FileSystem {
         }
     }
 
-    private static String fwkPathGetFileName(String path) {
+    static String fwkPathGetFileName(String path) {
         return new File(path).getName();
     }
 }

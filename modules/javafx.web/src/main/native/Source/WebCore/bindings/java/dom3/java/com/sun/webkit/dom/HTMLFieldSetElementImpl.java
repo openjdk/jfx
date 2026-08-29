@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,43 +42,59 @@ public class HTMLFieldSetElementImpl extends HTMLElementImpl implements HTMLFiel
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
-    native static boolean getDisabledImpl(long peer);
+    static boolean getDisabledImpl(long peer) {
+        return HTMLFieldSetElementNative.getDisabled(peer);
+    }
 
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
-    native static void setDisabledImpl(long peer, boolean value);
+    static void setDisabledImpl(long peer, boolean value) {
+        HTMLFieldSetElementNative.setDisabled(peer, value);
+    }
 
     @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
-    native static long getFormImpl(long peer);
+    static long getFormImpl(long peer) {
+        return HTMLFieldSetElementNative.getForm(peer);
+    }
 
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLFieldSetElementNative.getName(peer);
+    }
 
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLFieldSetElementNative.setName(peer, value);
+    }
 
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return HTMLFieldSetElementNative.getType(peer);
+    }
 
     public boolean getWillValidate() {
         return getWillValidateImpl(getPeer());
     }
-    native static boolean getWillValidateImpl(long peer);
+    static boolean getWillValidateImpl(long peer) {
+        return HTMLFieldSetElementNative.getWillValidate(peer);
+    }
 
     public String getValidationMessage() {
         return getValidationMessageImpl(getPeer());
     }
-    native static String getValidationMessageImpl(long peer);
+    static String getValidationMessageImpl(long peer) {
+        return HTMLFieldSetElementNative.getValidationMessage(peer);
+    }
 
 
 // Functions
@@ -86,7 +102,9 @@ public class HTMLFieldSetElementImpl extends HTMLElementImpl implements HTMLFiel
     {
         return checkValidityImpl(getPeer());
     }
-    native static boolean checkValidityImpl(long peer);
+    static boolean checkValidityImpl(long peer) {
+        return HTMLFieldSetElementNative.checkValidity(peer);
+    }
 
 
     public void setCustomValidity(String error)
@@ -94,8 +112,10 @@ public class HTMLFieldSetElementImpl extends HTMLElementImpl implements HTMLFiel
         setCustomValidityImpl(getPeer()
             , error);
     }
-    native static void setCustomValidityImpl(long peer
-        , String error);
+    static void setCustomValidityImpl(long peer
+        , String error) {
+        HTMLFieldSetElementNative.setCustomValidity(peer, error);
+    }
 
 
 }

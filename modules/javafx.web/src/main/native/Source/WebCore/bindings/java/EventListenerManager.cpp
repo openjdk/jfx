@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ EventListenerManager& EventListenerManager::get_instance()
     return sharedManager;
 }
 
-void EventListenerManager::registerListener(JavaEventListener *listener, const JLObject &listenerObj)
+void EventListenerManager::registerListener(JavaEventListener *listener, wkj_ref listenerObj)
 {
     ListenerJObjectWrapper *temp_ref = new ListenerJObjectWrapper(listenerObj);
     std::pair<JavaEventListener*, ListenerJObjectWrapper*> entry{ listener, temp_ref };
@@ -58,14 +58,14 @@ void EventListenerManager::unregisterListener(JavaEventListener *listener)
      }
 }
 
-JGObject EventListenerManager::getListenerJObject(JavaEventListener *listener)
+wkj_ref EventListenerManager::getListenerJObject(JavaEventListener *listener)
 {
     std::map<JavaEventListener*, ListenerJObjectWrapper*>::iterator it;
     it = listenerJObjectMap.find(listener);
     if (it != listenerJObjectMap.end())
         return it->second->getListenerJObject();
 
-    return nullptr;
+    return 0;
 }
 
 void EventListenerManager::registerDOMWindow(LocalDOMWindow* window, JavaEventListener *listener)

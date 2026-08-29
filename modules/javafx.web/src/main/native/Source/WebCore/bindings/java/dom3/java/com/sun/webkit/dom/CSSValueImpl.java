@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,9 @@ public class CSSValueImpl implements CSSValue {
         return (arg == null) ? 0L : ((CSSValueImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        CSSValueNative.dispose(peer);
+    }
 
     static CSSValue getImpl(long peer) {
         return (CSSValue)create(peer);
@@ -94,19 +96,25 @@ public class CSSValueImpl implements CSSValue {
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
-    native static String getCssTextImpl(long peer);
+    static String getCssTextImpl(long peer) {
+        return CSSValueNative.getCssText(peer);
+    }
 
     @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
-    native static void setCssTextImpl(long peer, String value);
+    static void setCssTextImpl(long peer, String value) {
+        CSSValueNative.setCssText(peer, value);
+    }
 
     @Override
     public short getCssValueType() {
         return getCssValueTypeImpl(getPeer());
     }
-    native static short getCssValueTypeImpl(long peer);
+    static short getCssValueTypeImpl(long peer) {
+        return CSSValueNative.getCssValueType(peer);
+    }
 
 }
 

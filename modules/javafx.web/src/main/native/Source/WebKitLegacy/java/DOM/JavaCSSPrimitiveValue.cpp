@@ -36,78 +36,81 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DeprecatedCSSOMPrimitiveValue*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DeprecatedCSSOMPrimitiveValue*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getPrimitiveTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_CSSPrimitiveValue_getPrimitiveType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->primitiveType();
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_setFloatValueImpl(JNIEnv* env, jclass, jlong peer
-    , jshort unitType
-    , jfloat floatValue)
+WKJ_EXPORT void wkj_dom_CSSPrimitiveValue_setFloatValue(int64_t peer, int16_t unitType, float floatValue)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setFloatValue(unitType
+    raiseOnDOMError(IMPL->setFloatValue(unitType
             , floatValue));
 }
 
 
-JNIEXPORT jfloat JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getFloatValueImpl(JNIEnv* env, jclass, jlong peer
-    , jshort unitType)
+WKJ_EXPORT float wkj_dom_CSSPrimitiveValue_getFloatValue(int64_t peer, int16_t unitType)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->getFloatValue(unitType));
+    return raiseOnDOMError(IMPL->getFloatValue(unitType));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_setStringValueImpl(JNIEnv* env, jclass, jlong peer
-    , jshort stringType
-    , jstring stringValue)
+WKJ_EXPORT void wkj_dom_CSSPrimitiveValue_setStringValue(int64_t peer, int16_t stringType, const uint16_t* stringValue, int32_t stringValue_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setStringValue(stringType
-            , AtomString{String(env, stringValue)}));
+    raiseOnDOMError(IMPL->setStringValue(stringType
+            , AtomString{WKJString(stringValue, stringValue_length)}));
 }
 
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getStringValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSPrimitiveValue_getStringValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->getStringValue()));
+    return WKJReturnString(result_buf, result_cap, result_length, raiseOnDOMError(IMPL->getStringValue()));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getCounterValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSPrimitiveValue_getCounterValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMCounter>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->getCounterValue())));
+    return WKJReturnPeer<DeprecatedCSSOMCounter>(WTF::getPtr(raiseOnDOMError(IMPL->getCounterValue())));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getRectValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSPrimitiveValue_getRectValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMRect>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->getRectValue())));
+    return WKJReturnPeer<DeprecatedCSSOMRect>(WTF::getPtr(raiseOnDOMError(IMPL->getRectValue())));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getRGBColorValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSPrimitiveValue_getRGBColorValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMRGBColor>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->getRGBColorValue())));
+    return WKJReturnPeer<DeprecatedCSSOMRGBColor>(WTF::getPtr(raiseOnDOMError(IMPL->getRGBColorValue())));
 }
 
 

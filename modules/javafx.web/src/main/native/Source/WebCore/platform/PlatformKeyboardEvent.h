@@ -43,9 +43,6 @@ OBJC_CLASS NSEvent;
 OBJC_CLASS WebEvent;
 #endif
 
-#if PLATFORM(JAVA)
-#include <jni.h>
-#endif
 
 namespace WebCore {
 
@@ -134,9 +131,10 @@ namespace WebCore {
 #endif
 
 #if PLATFORM(JAVA)
-        PlatformKeyboardEvent(jint type, jstring text, jstring keyIdentifier,
-                              jint windowsVirtualKeyCode, jboolean shift,
-                              jboolean ctrl, jboolean alt, jboolean meta, jdouble timestamp);
+        PlatformKeyboardEvent(int32_t type, const uint16_t* text, int32_t textLength,
+                              const uint16_t* keyIdentifier, int32_t keyIdentifierLength,
+                              int32_t windowsVirtualKeyCode, int32_t shiftKey,
+                              int32_t ctrlKey, int32_t altKey, int32_t metaKey, double timestamp);
 #endif
 #if USE(LIBWPE)
         static String keyValueForWPEKeyCode(unsigned);

@@ -40,7 +40,7 @@ typedef HICON HCURSOR;
 #include <wtf/RetainPtr.h>
 #endif
 #if PLATFORM(JAVA)
-#include <jni.h>
+#include <stdint.h>
 #endif
 
 #if HAVE(NSCURSOR)
@@ -76,7 +76,7 @@ using PlatformCursor = RefPtr<SharedCursor>;
 #elif HAVE(NSCURSOR)
 using PlatformCursor = NSCursor *;
 #elif PLATFORM(JAVA)
-using PlatformCursor = jlong;
+using PlatformCursor = int64_t;
 #else
 using PlatformCursor = void*;
 #endif

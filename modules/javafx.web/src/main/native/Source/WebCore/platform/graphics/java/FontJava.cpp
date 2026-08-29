@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@
 #include "FontSelector.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
+#include "WKJPlatformJava.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
@@ -42,67 +43,62 @@ namespace WebCore {
 
 void Font::platformInit()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont)
         return;
 
-    static jmethodID getXHeight_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getXHeight", "()F");
-    ASSERT(getXHeight_mID);
-    m_fontMetrics.setXHeight(env->CallFloatMethod(*jFont, getXHeight_mID));
-    WTF::CheckAndClearException(env);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb)
+        return;
 
-    static jmethodID getCapHeight_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getCapHeight", "()F");
-    ASSERT(getCapHeight_mID);
-    m_fontMetrics.setCapHeight(env->CallFloatMethod(*jFont, getCapHeight_mID));
-    WTF::CheckAndClearException(env);
+    wkj_ref font = wkj_ref(*jFont);
 
-    static jmethodID getAscent_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getAscent", "()F");
-    ASSERT(getAscent_mID);
-    m_fontMetrics.setAscent(env->CallFloatMethod(*jFont, getAscent_mID));
-    WTF::CheckAndClearException(env);
+    if (cb->font_get_x_height) {
+        m_fontMetrics.setXHeight(cb->font_get_x_height(font));
+        wkjCheckAndClearException();
+    }
 
-    static jmethodID getDescent_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getDescent", "()F");
-    ASSERT(getDescent_mID);
-    m_fontMetrics.setDescent(env->CallFloatMethod(*jFont, getDescent_mID));
-    WTF::CheckAndClearException(env);
+    if (cb->font_get_cap_height) {
+        m_fontMetrics.setCapHeight(cb->font_get_cap_height(font));
+        wkjCheckAndClearException();
+    }
 
-    static jmethodID getLineSpacing_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getLineSpacing", "()F");
-    ASSERT(getLineSpacing_mID);
-    // Match CoreGraphics metrics.
-    m_fontMetrics.setLineSpacing(lroundf(
-        env->CallFloatMethod(*jFont, getLineSpacing_mID)));
-    WTF::CheckAndClearException(env);
+    if (cb->font_get_ascent) {
+        m_fontMetrics.setAscent(cb->font_get_ascent(font));
+        wkjCheckAndClearException();
+    }
 
-    static jmethodID getLineGap_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getLineGap", "()F");
-    ASSERT(getLineGap_mID);
-    m_fontMetrics.setLineGap(env->CallFloatMethod(*jFont, getLineGap_mID));
-    WTF::CheckAndClearException(env);
+    if (cb->font_get_descent) {
+        m_fontMetrics.setDescent(cb->font_get_descent(font));
+        wkjCheckAndClearException();
+    }
+
+    if (cb->font_get_line_spacing) {
+        // Match CoreGraphics metrics.
+        m_fontMetrics.setLineSpacing(lroundf(cb->font_get_line_spacing(font)));
+        wkjCheckAndClearException();
+    }
+
+    if (cb->font_get_line_gap) {
+        m_fontMetrics.setLineGap(cb->font_get_line_gap(font));
+        wkjCheckAndClearException();
+    }
 }
 
 void Font::determinePitch()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont) {
         m_treatAsFixedPitch = true;
         return;
     }
 
-    static jmethodID hasUniformLineMetrics_mID = env->GetMethodID(
-            PG_GetFontClass(env), "hasUniformLineMetrics", "()Z");
-    ASSERT(hasUniformLineMetrics_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_has_uniform_line_metrics)
+        return;
 
-    m_treatAsFixedPitch = jbool_to_bool(env->CallBooleanMethod(*jFont, hasUniformLineMetrics_mID));
-    WTF::CheckAndClearException(env);
+    m_treatAsFixedPitch = cb->font_has_uniform_line_metrics(wkj_ref(*jFont)) != 0;
+    wkjCheckAndClearException();
 }
 
 void Font::platformCharWidthInit()
@@ -124,40 +120,40 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
 
 float Font::platformWidthForGlyph(Glyph c) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont)
         return 0.0f;
 
-    static jmethodID getGlyphWidth_mID = env->GetMethodID(PG_GetFontClass(env),
-        "getGlyphWidth", "(I)D");
-    ASSERT(getGlyphWidth_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_get_glyph_width)
+        return 0.0f;
 
-    float res = env->CallDoubleMethod(*jFont, getGlyphWidth_mID, (jint)c);
-    WTF::CheckAndClearException(env);
+    float res = static_cast<float>(cb->font_get_glyph_width(wkj_ref(*jFont), static_cast<int32_t>(c)));
+    wkjCheckAndClearException();
 
     return res;
 }
 
 FloatRect Font::platformBoundsForGlyph(Glyph c) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont) {
         return {};
     }
 
-    static jmethodID getGlyphBoundingBox_mID = env->GetMethodID(PG_GetFontClass(env), "getGlyphBoundingBox", "(I)[F");
-    ASSERT(getGlyphBoundingBox_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_get_glyph_bounding_box)
+        return {};
 
-    jfloatArray boundingBox = (jfloatArray)env->CallObjectMethod(*jFont, getGlyphBoundingBox_mID, (jint)c);
-    jfloat *bBox = env->GetFloatArrayElements(boundingBox,0);
-    auto bb = FloatRect { bBox[0], bBox[1], bBox[2], bBox[3] };
-    env->ReleaseFloatArrayElements(boundingBox, bBox, 0);
-    WTF::CheckAndClearException(env);
-    return bb;
+    // The JNI version read the float[4] without testing it for null, so a Java implementation
+    // returning null crashed here. The slot reports that case instead; nothing else changes.
+    float xywh[4] = { 0.f, 0.f, 0.f, 0.f };
+    int32_t haveBox = cb->font_get_glyph_bounding_box(wkj_ref(*jFont), static_cast<int32_t>(c), xywh);
+    wkjCheckAndClearException();
+    if (!haveBox)
+        return {};
+
+    return FloatRect { xywh[0], xywh[1], xywh[2], xywh[3] };
 }
 
 Path Font::platformPathForGlyph(Glyph) const

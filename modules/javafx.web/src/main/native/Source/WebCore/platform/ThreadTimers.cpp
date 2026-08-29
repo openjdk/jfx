@@ -27,7 +27,7 @@
 #include "config.h"
 #include "ThreadTimers.h"
 #if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
+#include <wtf/java/WKJRuntime.h>
 #endif
 #include "MainThreadSharedTimer.h"
 #include "SharedTimer.h"
@@ -73,7 +73,7 @@ void ThreadTimers::setSharedTimer(SharedTimer* sharedTimer)
     m_sharedTimer = sharedTimer;
 
 #if PLATFORM(JAVA)
-    if (sharedTimer && !g_ShuttingDown) {
+    if (sharedTimer && !WTF::wkjIsShuttingDown()) {
 #else
     if (sharedTimer) {
 #endif

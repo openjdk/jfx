@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,54 +47,75 @@ public class KeyboardEventImpl extends UIEventImpl {
     public String getKeyIdentifier() {
         return getKeyIdentifierImpl(getPeer());
     }
-    native static String getKeyIdentifierImpl(long peer);
+    static String getKeyIdentifierImpl(long peer) {
+        return KeyboardEventNative.getKeyIdentifier(peer);
+    }
 
     public int getLocation() {
         return getLocationImpl(getPeer());
     }
-    native static int getLocationImpl(long peer);
+    static int getLocationImpl(long peer) {
+        return KeyboardEventNative.getLocation(peer);
+    }
 
     public int getKeyLocation() {
         return getKeyLocationImpl(getPeer());
     }
-    native static int getKeyLocationImpl(long peer);
+    static int getKeyLocationImpl(long peer) {
+        return KeyboardEventNative.getKeyLocation(peer);
+    }
 
     public boolean getCtrlKey() {
         return getCtrlKeyImpl(getPeer());
     }
-    native static boolean getCtrlKeyImpl(long peer);
+    static boolean getCtrlKeyImpl(long peer) {
+        return KeyboardEventNative.getCtrlKey(peer);
+    }
 
     public boolean getShiftKey() {
         return getShiftKeyImpl(getPeer());
     }
-    native static boolean getShiftKeyImpl(long peer);
+    static boolean getShiftKeyImpl(long peer) {
+        return KeyboardEventNative.getShiftKey(peer);
+    }
 
     public boolean getAltKey() {
         return getAltKeyImpl(getPeer());
     }
-    native static boolean getAltKeyImpl(long peer);
+    static boolean getAltKeyImpl(long peer) {
+        return KeyboardEventNative.getAltKey(peer);
+    }
 
     public boolean getMetaKey() {
         return getMetaKeyImpl(getPeer());
     }
-    native static boolean getMetaKeyImpl(long peer);
+    static boolean getMetaKeyImpl(long peer) {
+        return KeyboardEventNative.getMetaKey(peer);
+    }
 
     public boolean getAltGraphKey() {
         return getAltGraphKeyImpl(getPeer());
     }
-    native static boolean getAltGraphKeyImpl(long peer);
+    static boolean getAltGraphKeyImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.KeyboardEventImpl.getAltGraphKeyImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     @Override
     public int getKeyCode() {
         return getKeyCodeImpl(getPeer());
     }
-    native static int getKeyCodeImpl(long peer);
+    static int getKeyCodeImpl(long peer) {
+        return KeyboardEventNative.getKeyCode(peer);
+    }
 
     @Override
     public int getCharCode() {
         return getCharCodeImpl(getPeer());
     }
-    native static int getCharCodeImpl(long peer);
+    static int getCharCodeImpl(long peer) {
+        return KeyboardEventNative.getCharCode(peer);
+    }
 
 
 // Functions
@@ -103,8 +124,10 @@ public class KeyboardEventImpl extends UIEventImpl {
         return getModifierStateImpl(getPeer()
             , keyIdentifierArg);
     }
-    native static boolean getModifierStateImpl(long peer
-        , String keyIdentifierArg);
+    static boolean getModifierStateImpl(long peer
+        , String keyIdentifierArg) {
+        return KeyboardEventNative.getModifierState(peer, keyIdentifierArg);
+    }
 
 
     public void initKeyboardEvent(String type
@@ -132,7 +155,7 @@ public class KeyboardEventImpl extends UIEventImpl {
             , metaKey
             , altGraphKey);
     }
-    native static void initKeyboardEventImpl(long peer
+    static void initKeyboardEventImpl(long peer
         , String type
         , boolean canBubble
         , boolean cancelable
@@ -143,7 +166,10 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean altKey
         , boolean shiftKey
         , boolean metaKey
-        , boolean altGraphKey);
+        , boolean altGraphKey) {
+        KeyboardEventNative.initKeyboardEvent(peer, type, canBubble, cancelable, view, keyIdentifier, location, ctrlKey,
+                altKey, shiftKey, metaKey, altGraphKey);
+    }
 
 
     public void initKeyboardEventEx(String type
@@ -169,7 +195,7 @@ public class KeyboardEventImpl extends UIEventImpl {
             , shiftKey
             , metaKey);
     }
-    native static void initKeyboardEventExImpl(long peer
+    static void initKeyboardEventExImpl(long peer
         , String type
         , boolean canBubble
         , boolean cancelable
@@ -179,7 +205,10 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey
-        , boolean metaKey);
+        , boolean metaKey) {
+        KeyboardEventNative.initKeyboardEventEx(peer, type, canBubble, cancelable, view, keyIdentifier, location,
+                ctrlKey, altKey, shiftKey, metaKey);
+    }
 
 
 }

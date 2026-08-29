@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,25 +42,34 @@ public class HTMLLIElementImpl extends HTMLElementImpl implements HTMLLIElement 
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return HTMLLIElementNative.getType(peer);
+    }
 
     @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
-    native static void setTypeImpl(long peer, String value);
+    static void setTypeImpl(long peer, String value) {
+        HTMLLIElementNative.setType(peer, value);
+    }
 
     @Override
     public int getValue() {
         return getValueImpl(getPeer());
     }
-    native static int getValueImpl(long peer);
+    static int getValueImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLLIElementImpl.getValueImpl: no wkj_* function exists for"
+                + " it in any jfxwebkit build");
+    }
 
     @Override
     public void setValue(int value) {
         setValueImpl(getPeer(), value);
     }
-    native static void setValueImpl(long peer, int value);
+    static void setValueImpl(long peer, int value) {
+        HTMLLIElementNative.setValue(peer, value);
+    }
 
 }
 

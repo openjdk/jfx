@@ -34,78 +34,87 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<XPathResult*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<XPathResult*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathResultImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_XPathResult_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getResultTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_XPathResult_getResultType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->resultType();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getNumberValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT double wkj_dom_XPathResult_getNumberValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->numberValue());
+    return raiseOnDOMError(IMPL->numberValue());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getStringValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_XPathResult_getStringValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->stringValue()));
+    return WKJReturnString(result_buf, result_cap, result_length, raiseOnDOMError(IMPL->stringValue()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getBooleanValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_XPathResult_getBooleanValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->booleanValue());
+    return raiseOnDOMError(IMPL->booleanValue());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getSingleNodeValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_XPathResult_getSingleNodeValue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->singleNodeValue())));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->singleNodeValue())));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getInvalidIteratorStateImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_XPathResult_getInvalidIteratorState(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->invalidIteratorState();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getSnapshotLengthImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_XPathResult_getSnapshotLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->snapshotLength());
+    return raiseOnDOMError(IMPL->snapshotLength());
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathResultImpl_iterateNextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_XPathResult_iterateNext(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->iterateNext())));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->iterateNext())));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathResultImpl_snapshotItemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_XPathResult_snapshotItem(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->snapshotItem(index))));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->snapshotItem(index))));
 }
 
 

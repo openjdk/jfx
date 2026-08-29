@@ -34,22 +34,24 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLCollection*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLCollection*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLCollection_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLCollection_getCPPType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     if (IMPL->isHTMLOptionsCollection())
         return 1;
     return 0;
@@ -57,27 +59,28 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getCPPTypeImpl
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLCollection_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_HTMLCollection_item(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->item(index)));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->item(index)));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_namedItemImpl(JNIEnv* env, jclass, jlong peer
-    , jstring name)
+WKJ_EXPORT int64_t wkj_dom_HTMLCollection_namedItem(int64_t peer, const uint16_t* name, int32_t name_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(AtomString {String(env, name)})));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->namedItem(AtomString {WKJString(name, name_length)})));
 }
 
 

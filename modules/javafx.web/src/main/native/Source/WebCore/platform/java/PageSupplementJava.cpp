@@ -30,12 +30,12 @@
 #include "Frame.h"
 #include "DocumentPage.h"
 
-#include <wtf/java/JavaEnv.h>
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 
-PageSupplementJava::PageSupplementJava(const JLObject& webPage)
-    : m_webPage(webPage)
+PageSupplementJava::PageSupplementJava(wkj_ref webPage)
+    : m_webPage(WKJHandle::retained(webPage))
 {
 }
 

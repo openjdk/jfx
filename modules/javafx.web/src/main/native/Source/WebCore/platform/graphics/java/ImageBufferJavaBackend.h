@@ -30,6 +30,7 @@
 
 #include "PlatformImage.h"
 #include "RQRef.h"
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ public:
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const ImageBufferCreationContext&);
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const GraphicsContext&);
 
-    JLObject getWCImage() const;
+    wkj_ref getWCImage() const;
     Vector<uint8_t> toDataJava(const String& mimeType, std::optional<double>) override;
     std::pair<void*, size_t> getDataAndSize();
     void update() const;

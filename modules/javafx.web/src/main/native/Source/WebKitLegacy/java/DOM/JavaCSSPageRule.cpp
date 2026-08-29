@@ -33,33 +33,36 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CSSPageRule*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CSSPageRule*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_getSelectorTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSPageRule_getSelectorText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->selectorText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->selectorText());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_setSelectorTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_CSSPageRule_setSelectorText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setSelectorText(AtomString{String(env, value)});
+    IMPL->setSelectorText(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CSSPageRule_getStyle(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSPageDescriptors>(env, WTF::getPtr(IMPL->style()));
+    return WKJReturnPeer<CSSPageDescriptors>(WTF::getPtr(IMPL->style()));
 }
 
 }

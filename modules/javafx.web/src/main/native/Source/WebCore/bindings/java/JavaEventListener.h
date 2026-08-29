@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,13 +31,21 @@
 #include "Node.h"
 
 #include <wtf/Vector.h>
-#include <wtf/java/JavaRef.h>
+
+#include <webkit_java_api.h>
 
 namespace WebCore {
 
 class JavaEventListener final : public EventListener {
 public:
-    JavaEventListener(const JLObject &listener)
+    /*
+     * `listener` is the registry id of the com.sun.webkit.dom.EventListenerImpl this listener
+     * forwards to. It is borrowed: EventListenerManager retains it and owns the retained id
+     * for as long as the entry lives, which is what the NewGlobalRef in ListenerJObjectWrapper
+     * did. The constructor is explicit because a wkj_ref is an integer and an implicit one
+     * would swallow any integer expression.
+     */
+    explicit JavaEventListener(wkj_ref listener)
         : EventListener(NativeEventListenerType)
     {
         relaxAdoptionRequirement();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,200 +42,274 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
     public String getAlt() {
         return getAltImpl(getPeer());
     }
-    native static String getAltImpl(long peer);
+    static String getAltImpl(long peer) {
+        return HTMLAreaElementNative.getAlt(peer);
+    }
 
     @Override
     public void setAlt(String value) {
         setAltImpl(getPeer(), value);
     }
-    native static void setAltImpl(long peer, String value);
+    static void setAltImpl(long peer, String value) {
+        HTMLAreaElementNative.setAlt(peer, value);
+    }
 
     @Override
     public String getCoords() {
         return getCoordsImpl(getPeer());
     }
-    native static String getCoordsImpl(long peer);
+    static String getCoordsImpl(long peer) {
+        return HTMLAreaElementNative.getCoords(peer);
+    }
 
     @Override
     public void setCoords(String value) {
         setCoordsImpl(getPeer(), value);
     }
-    native static void setCoordsImpl(long peer, String value);
+    static void setCoordsImpl(long peer, String value) {
+        HTMLAreaElementNative.setCoords(peer, value);
+    }
 
     @Override
     public boolean getNoHref() {
         return getNoHrefImpl(getPeer());
     }
-    native static boolean getNoHrefImpl(long peer);
+    static boolean getNoHrefImpl(long peer) {
+        return HTMLAreaElementNative.getNoHref(peer);
+    }
 
     @Override
     public void setNoHref(boolean value) {
         setNoHrefImpl(getPeer(), value);
     }
-    native static void setNoHrefImpl(long peer, boolean value);
+    static void setNoHrefImpl(long peer, boolean value) {
+        HTMLAreaElementNative.setNoHref(peer, value);
+    }
 
     public String getPing() {
         return getPingImpl(getPeer());
     }
-    native static String getPingImpl(long peer);
+    static String getPingImpl(long peer) {
+        return HTMLAreaElementNative.getPing(peer);
+    }
 
     public void setPing(String value) {
         setPingImpl(getPeer(), value);
     }
-    native static void setPingImpl(long peer, String value);
+    static void setPingImpl(long peer, String value) {
+        HTMLAreaElementNative.setPing(peer, value);
+    }
 
     public String getRel() {
         return getRelImpl(getPeer());
     }
-    native static String getRelImpl(long peer);
+    static String getRelImpl(long peer) {
+        return HTMLAreaElementNative.getRel(peer);
+    }
 
     public void setRel(String value) {
         setRelImpl(getPeer(), value);
     }
-    native static void setRelImpl(long peer, String value);
+    static void setRelImpl(long peer, String value) {
+        HTMLAreaElementNative.setRel(peer, value);
+    }
 
     @Override
     public String getShape() {
         return getShapeImpl(getPeer());
     }
-    native static String getShapeImpl(long peer);
+    static String getShapeImpl(long peer) {
+        return HTMLAreaElementNative.getShape(peer);
+    }
 
     @Override
     public void setShape(String value) {
         setShapeImpl(getPeer(), value);
     }
-    native static void setShapeImpl(long peer, String value);
+    static void setShapeImpl(long peer, String value) {
+        HTMLAreaElementNative.setShape(peer, value);
+    }
 
     @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
-    native static String getTargetImpl(long peer);
+    static String getTargetImpl(long peer) {
+        return HTMLAreaElementNative.getTarget(peer);
+    }
 
     @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }
-    native static void setTargetImpl(long peer, String value);
+    static void setTargetImpl(long peer, String value) {
+        HTMLAreaElementNative.setTarget(peer, value);
+    }
 
     @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
-    native static String getAccessKeyImpl(long peer);
+    static String getAccessKeyImpl(long peer) {
+        return HTMLAreaElementNative.getAccessKey(peer);
+    }
 
     @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
-    native static void setAccessKeyImpl(long peer, String value);
+    static void setAccessKeyImpl(long peer, String value) {
+        HTMLAreaElementNative.setAccessKey(peer, value);
+    }
 
     @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
-    native static String getHrefImpl(long peer);
+    static String getHrefImpl(long peer) {
+        return HTMLAreaElementNative.getHref(peer);
+    }
 
     @Override
     public void setHref(String value) {
         setHrefImpl(getPeer(), value);
     }
-    native static void setHrefImpl(long peer, String value);
+    static void setHrefImpl(long peer, String value) {
+        HTMLAreaElementNative.setHref(peer, value);
+    }
 
     public String getOrigin() {
         return getOriginImpl(getPeer());
     }
-    native static String getOriginImpl(long peer);
+    static String getOriginImpl(long peer) {
+        return HTMLAreaElementNative.getOrigin(peer);
+    }
 
     public String getProtocol() {
         return getProtocolImpl(getPeer());
     }
-    native static String getProtocolImpl(long peer);
+    static String getProtocolImpl(long peer) {
+        return HTMLAreaElementNative.getProtocol(peer);
+    }
 
     public void setProtocol(String value) {
         setProtocolImpl(getPeer(), value);
     }
-    native static void setProtocolImpl(long peer, String value);
+    static void setProtocolImpl(long peer, String value) {
+        HTMLAreaElementNative.setProtocol(peer, value);
+    }
 
     public String getUsername() {
         return getUsernameImpl(getPeer());
     }
-    native static String getUsernameImpl(long peer);
+    static String getUsernameImpl(long peer) {
+        return HTMLAreaElementNative.getUsername(peer);
+    }
 
     public void setUsername(String value) {
         setUsernameImpl(getPeer(), value);
     }
-    native static void setUsernameImpl(long peer, String value);
+    static void setUsernameImpl(long peer, String value) {
+        HTMLAreaElementNative.setUsername(peer, value);
+    }
 
     public String getPassword() {
         return getPasswordImpl(getPeer());
     }
-    native static String getPasswordImpl(long peer);
+    static String getPasswordImpl(long peer) {
+        return HTMLAreaElementNative.getPassword(peer);
+    }
 
     public void setPassword(String value) {
         setPasswordImpl(getPeer(), value);
     }
-    native static void setPasswordImpl(long peer, String value);
+    static void setPasswordImpl(long peer, String value) {
+        HTMLAreaElementNative.setPassword(peer, value);
+    }
 
     public String getHost() {
         return getHostImpl(getPeer());
     }
-    native static String getHostImpl(long peer);
+    static String getHostImpl(long peer) {
+        return HTMLAreaElementNative.getHost(peer);
+    }
 
     public void setHost(String value) {
         setHostImpl(getPeer(), value);
     }
-    native static void setHostImpl(long peer, String value);
+    static void setHostImpl(long peer, String value) {
+        HTMLAreaElementNative.setHost(peer, value);
+    }
 
     public String getHostname() {
         return getHostnameImpl(getPeer());
     }
-    native static String getHostnameImpl(long peer);
+    static String getHostnameImpl(long peer) {
+        return HTMLAreaElementNative.getHostname(peer);
+    }
 
     public void setHostname(String value) {
         setHostnameImpl(getPeer(), value);
     }
-    native static void setHostnameImpl(long peer, String value);
+    static void setHostnameImpl(long peer, String value) {
+        HTMLAreaElementNative.setHostname(peer, value);
+    }
 
     public String getPort() {
         return getPortImpl(getPeer());
     }
-    native static String getPortImpl(long peer);
+    static String getPortImpl(long peer) {
+        return HTMLAreaElementNative.getPort(peer);
+    }
 
     public void setPort(String value) {
         setPortImpl(getPeer(), value);
     }
-    native static void setPortImpl(long peer, String value);
+    static void setPortImpl(long peer, String value) {
+        HTMLAreaElementNative.setPort(peer, value);
+    }
 
     public String getPathname() {
         return getPathnameImpl(getPeer());
     }
-    native static String getPathnameImpl(long peer);
+    static String getPathnameImpl(long peer) {
+        return HTMLAreaElementNative.getPathname(peer);
+    }
 
     public void setPathname(String value) {
         setPathnameImpl(getPeer(), value);
     }
-    native static void setPathnameImpl(long peer, String value);
+    static void setPathnameImpl(long peer, String value) {
+        HTMLAreaElementNative.setPathname(peer, value);
+    }
 
     public String getSearch() {
         return getSearchImpl(getPeer());
     }
-    native static String getSearchImpl(long peer);
+    static String getSearchImpl(long peer) {
+        return HTMLAreaElementNative.getSearch(peer);
+    }
 
     public void setSearch(String value) {
         setSearchImpl(getPeer(), value);
     }
-    native static void setSearchImpl(long peer, String value);
+    static void setSearchImpl(long peer, String value) {
+        HTMLAreaElementNative.setSearch(peer, value);
+    }
 
     public String getHash() {
         return getHashImpl(getPeer());
     }
-    native static String getHashImpl(long peer);
+    static String getHashImpl(long peer) {
+        return HTMLAreaElementNative.getHash(peer);
+    }
 
     public void setHash(String value) {
         setHashImpl(getPeer(), value);
     }
-    native static void setHashImpl(long peer, String value);
+    static void setHashImpl(long peer, String value) {
+        HTMLAreaElementNative.setHash(peer, value);
+    }
 
 }
 

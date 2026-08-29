@@ -33,31 +33,32 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<NodeFilter*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<NodeFilter*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeFilterImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_NodeFilter_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Functions
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_NodeFilterImpl_acceptNodeImpl(JNIEnv* env, jclass, jlong peer
-    , jlong n)
+WKJ_EXPORT int16_t wkj_dom_NodeFilter_acceptNode(int64_t peer, int64_t n)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (!n) {
-        raiseTypeErrorException(env);
+        raiseTypeErrorException();
         return {};
     }
-    auto result = IMPL->acceptNode(*static_cast<Node*>(jlong_to_ptr(n)));
+    auto result = IMPL->acceptNode(*static_cast<Node*>(wkj_to_ptr(n)));
     return result.type() == CallbackResultType::Success ? result.releaseReturnValue() : NodeFilter::FILTER_REJECT;
 }
 

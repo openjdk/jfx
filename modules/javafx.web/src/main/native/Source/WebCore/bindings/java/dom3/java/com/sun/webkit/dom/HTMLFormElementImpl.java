@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,115 +43,161 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     public String getAcceptCharset() {
         return getAcceptCharsetImpl(getPeer());
     }
-    native static String getAcceptCharsetImpl(long peer);
+    static String getAcceptCharsetImpl(long peer) {
+        return HTMLFormElementNative.getAcceptCharset(peer);
+    }
 
     @Override
     public void setAcceptCharset(String value) {
         setAcceptCharsetImpl(getPeer(), value);
     }
-    native static void setAcceptCharsetImpl(long peer, String value);
+    static void setAcceptCharsetImpl(long peer, String value) {
+        HTMLFormElementNative.setAcceptCharset(peer, value);
+    }
 
     @Override
     public String getAction() {
         return getActionImpl(getPeer());
     }
-    native static String getActionImpl(long peer);
+    static String getActionImpl(long peer) {
+        return HTMLFormElementNative.getAction(peer);
+    }
 
     @Override
     public void setAction(String value) {
         setActionImpl(getPeer(), value);
     }
-    native static void setActionImpl(long peer, String value);
+    static void setActionImpl(long peer, String value) {
+        HTMLFormElementNative.setAction(peer, value);
+    }
 
     public String getAutocomplete() {
         return getAutocompleteImpl(getPeer());
     }
-    native static String getAutocompleteImpl(long peer);
+    static String getAutocompleteImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.getAutocompleteImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     public void setAutocomplete(String value) {
         setAutocompleteImpl(getPeer(), value);
     }
-    native static void setAutocompleteImpl(long peer, String value);
+    static void setAutocompleteImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.setAutocompleteImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     @Override
     public String getEnctype() {
         return getEnctypeImpl(getPeer());
     }
-    native static String getEnctypeImpl(long peer);
+    static String getEnctypeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.getEnctypeImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     @Override
     public void setEnctype(String value) {
         setEnctypeImpl(getPeer(), value);
     }
-    native static void setEnctypeImpl(long peer, String value);
+    static void setEnctypeImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.setEnctypeImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     public String getEncoding() {
         return getEncodingImpl(getPeer());
     }
-    native static String getEncodingImpl(long peer);
+    static String getEncodingImpl(long peer) {
+        return HTMLFormElementNative.getEncoding(peer);
+    }
 
     public void setEncoding(String value) {
         setEncodingImpl(getPeer(), value);
     }
-    native static void setEncodingImpl(long peer, String value);
+    static void setEncodingImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.setEncodingImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     @Override
     public String getMethod() {
         return getMethodImpl(getPeer());
     }
-    native static String getMethodImpl(long peer);
+    static String getMethodImpl(long peer) {
+        return HTMLFormElementNative.getMethod(peer);
+    }
 
     @Override
     public void setMethod(String value) {
         setMethodImpl(getPeer(), value);
     }
-    native static void setMethodImpl(long peer, String value);
+    static void setMethodImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLFormElementImpl.setMethodImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLFormElementNative.getName(peer);
+    }
 
     @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLFormElementNative.setName(peer, value);
+    }
 
     public boolean getNoValidate() {
         return getNoValidateImpl(getPeer());
     }
-    native static boolean getNoValidateImpl(long peer);
+    static boolean getNoValidateImpl(long peer) {
+        return HTMLFormElementNative.getNoValidate(peer);
+    }
 
     public void setNoValidate(boolean value) {
         setNoValidateImpl(getPeer(), value);
     }
-    native static void setNoValidateImpl(long peer, boolean value);
+    static void setNoValidateImpl(long peer, boolean value) {
+        HTMLFormElementNative.setNoValidate(peer, value);
+    }
 
     @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
-    native static String getTargetImpl(long peer);
+    static String getTargetImpl(long peer) {
+        return HTMLFormElementNative.getTarget(peer);
+    }
 
     @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }
-    native static void setTargetImpl(long peer, String value);
+    static void setTargetImpl(long peer, String value) {
+        HTMLFormElementNative.setTarget(peer, value);
+    }
 
     @Override
     public HTMLCollection getElements() {
         return HTMLCollectionImpl.getImpl(getElementsImpl(getPeer()));
     }
-    native static long getElementsImpl(long peer);
+    static long getElementsImpl(long peer) {
+        return HTMLFormElementNative.getElements(peer);
+    }
 
     @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return HTMLFormElementNative.getLength(peer);
+    }
 
 
 // Functions
@@ -160,7 +206,9 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     {
         submitImpl(getPeer());
     }
-    native static void submitImpl(long peer);
+    static void submitImpl(long peer) {
+        HTMLFormElementNative.submit(peer);
+    }
 
 
     @Override
@@ -168,14 +216,18 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     {
         resetImpl(getPeer());
     }
-    native static void resetImpl(long peer);
+    static void resetImpl(long peer) {
+        HTMLFormElementNative.reset(peer);
+    }
 
 
     public boolean checkValidity()
     {
         return checkValidityImpl(getPeer());
     }
-    native static boolean checkValidityImpl(long peer);
+    static boolean checkValidityImpl(long peer) {
+        return HTMLFormElementNative.checkValidity(peer);
+    }
 
 
 }

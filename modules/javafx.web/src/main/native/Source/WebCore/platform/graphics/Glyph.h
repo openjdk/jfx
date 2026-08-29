@@ -30,13 +30,13 @@
 #pragma once
 
 #if PLATFORM(JAVA)
-#include "jni.h"
+#include <stdint.h>
 #endif
 
 namespace WebCore {
 
 #if PLATFORM(JAVA)
-typedef jint Glyph;
+typedef int32_t Glyph;
 #else
 typedef unsigned short Glyph;
 #endif

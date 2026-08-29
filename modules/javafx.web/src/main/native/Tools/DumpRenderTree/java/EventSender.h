@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,14 @@
 #define EventSender_h
 
 #include <JavaScriptCore/JSObjectRef.h>
-#include <wtf/java/JavaRef.h>
 
+#include <drt_java_api.h>
+
+// Attaches the JavaScript `eventSender` object to `windowObject`. `eventSender` is the
+// registry id of the Java com.sun.javafx.webkit.drt.EventSender that the object forwards
+// to; it is retained for the lifetime of the JavaScript wrapper and released in the
+// wrapper's finalizer, which is what the JGObject this parameter used to be did.
 void makeEventSender(JSContextRef context, JSObjectRef windowObject,
-        const JLObject& eventSender, JSValueRef* exception);
+        wkj_ref eventSender, JSValueRef* exception);
 
 #endif // EventSender_h

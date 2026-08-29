@@ -45,7 +45,7 @@ using CocoaImage = UIImage;
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
 #elif PLATFORM(JAVA)
-#include "jni.h"
+#include <webkit_java_api.h>
 #include "RQRef.h"
 #endif
 
@@ -93,7 +93,7 @@ private:
     Icon(HICON);
     HICON m_hIcon;
 #elif PLATFORM(JAVA)
-    Icon(const JLObject &jicon);
+    Icon(wkj_ref jicon);
     RefPtr<RQRef> m_jicon;
 #endif
 };

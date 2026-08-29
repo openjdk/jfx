@@ -40,7 +40,7 @@ final class LocalizedStrings {
     /** Private ctor to avoid unexpected instantiation */
     private LocalizedStrings() {}
 
-    private static String getLocalizedProperty(String propName) {
+    static String getLocalizedProperty(String propName) {
         log.fine("Get property: " + propName);
         String propValue = BUNDLE.getString(propName);
         if ((propValue != null) && (propValue.trim().length() > 0)) {

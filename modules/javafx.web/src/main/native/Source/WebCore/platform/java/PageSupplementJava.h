@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,10 @@
 #pragma once
 
 #include "Supplementable.h"
-#include <wtf/java/JavaRef.h>
-#include <jni.h>
+
+#include <webkit_java_api.h>
+
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 
@@ -37,16 +39,26 @@ class Frame;
 class PageSupplementJava final : public Supplement<WebCore::Page> {
     WTF_MAKE_NONCOPYABLE(PageSupplementJava);
   public:
-    WEBCORE_EXPORT explicit PageSupplementJava(const JLObject& webPage);
+    /*
+     * Adopts nothing: the id is retained here, for the lifetime of the page, which is what
+     * the global reference this member used to hold did.
+     */
+    WEBCORE_EXPORT explicit PageSupplementJava(wkj_ref webPage);
 
-    WEBCORE_EXPORT JLObject jWebPage() const { return m_webPage; }
+    /*
+     * A NEW id for the same Java WebPage, owned by the caller - the exact analogue of the
+     * local reference this returned, which the caller let die at the end of its scope. The
+     * three consumers outside this directory (URLLoader, SocketStreamHandleImplJava and
+     * WebPage::jobjectFromPage) hold it in a WKJHandle.
+     */
+    WEBCORE_EXPORT WKJHandle jWebPage() const { return m_webPage; }
 
     WEBCORE_EXPORT static ASCIILiteral supplementName();
     WEBCORE_EXPORT static PageSupplementJava* from(Frame*);
     WEBCORE_EXPORT static PageSupplementJava* from(Page*);
 
   private:
-    JGObject m_webPage;
+    WKJHandle m_webPage;
 };
 
 }

@@ -33,175 +33,198 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLDocument*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLDocument*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getEmbedsImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLDocument_getEmbeds(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->embeds()));
+    return WKJReturnPeer<HTMLCollection>(WTF::getPtr(IMPL->embeds()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getPluginsImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLDocument_getPlugins(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->embeds()));
+    return WKJReturnPeer<HTMLCollection>(WTF::getPtr(IMPL->embeds()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getScriptsImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLDocument_getScripts(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->scripts()));
+    return WKJReturnPeer<HTMLCollection>(WTF::getPtr(IMPL->scripts()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDirImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getDir(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->dir());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->dir());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setDirImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setDir(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setDir(AtomString {String(env, value)});
+    IMPL->setDir(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDesignModeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getDesignMode(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->designMode());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->designMode());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setDesignModeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setDesignMode(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setDesignMode(AtomString {String(env, value)});
+    IMPL->setDesignMode(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getCompatModeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getCompatMode(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->compatMode());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->compatMode());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getBgColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getBgColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->bgColor());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->bgColor());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setBgColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setBgColor(AtomString {String(env, value)});
+    IMPL->setBgColor(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getFgColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getFgColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->fgColor());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->fgColor());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setFgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setFgColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setFgColor(AtomString {String(env, value)});
+    IMPL->setFgColor(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getAlinkColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getAlinkColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->alinkColor());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->alinkColor());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setAlinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setAlinkColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setAlinkColor(AtomString {String(env, value)});
+    IMPL->setAlinkColor(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getLinkColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getLinkColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->linkColorForBindings());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->linkColorForBindings());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setLinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setLinkColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setLinkColorForBindings(AtomString {String(env, value)});
+    IMPL->setLinkColorForBindings(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getVlinkColorImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDocument_getVlinkColor(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->vlinkColor());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->vlinkColor());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setVlinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_HTMLDocument_setVlinkColor(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setVlinkColor(AtomString {String(env, value)});
+    IMPL->setVlinkColor(AtomString {WKJString(value, value_length)});
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_openImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLDocument_open(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->open();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_closeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLDocument_close(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->close();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl(JNIEnv* env, jclass, jlong peer
-    , jstring text)
+WKJ_EXPORT void wkj_dom_HTMLDocument_write(int64_t peer, const uint16_t* text, int32_t text_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    WTF::FixedVector<String> textVector { String(env, text) };
+    WTF::FixedVector<String> textVector { WKJString(text, text_length) };
     IMPL->write(nullptr, WTF::move(textVector));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl(JNIEnv* env, jclass, jlong peer
-    , jstring text)
+WKJ_EXPORT void wkj_dom_HTMLDocument_writeln(int64_t peer, const uint16_t* text, int32_t text_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    WTF::FixedVector<String> textVector { String(env, text) };
+    WTF::FixedVector<String> textVector { WKJString(text, text_length) };
     IMPL->writeln(nullptr, WTF::move(textVector));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_clearImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLDocument_clear(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->clear();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_captureEventsImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLDocument_captureEvents(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->captureEvents();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_releaseEventsImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_HTMLDocument_releaseEvents(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->releaseEvents();
 }

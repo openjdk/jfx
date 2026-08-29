@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,7 +81,9 @@ public class CSSRuleImpl implements CSSRule {
         return (arg == null) ? 0L : ((CSSRuleImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        CSSRuleNative.dispose(peer);
+    }
 
     static CSSRule getImpl(long peer) {
         return (CSSRule)create(peer);
@@ -108,31 +110,41 @@ public class CSSRuleImpl implements CSSRule {
     public short getType() {
         return getTypeImpl(getPeer());
     }
-    native static short getTypeImpl(long peer);
+    static short getTypeImpl(long peer) {
+        return CSSRuleNative.getType(peer);
+    }
 
     @Override
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
-    native static String getCssTextImpl(long peer);
+    static String getCssTextImpl(long peer) {
+        return CSSRuleNative.getCssText(peer);
+    }
 
     @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
-    native static void setCssTextImpl(long peer, String value);
+    static void setCssTextImpl(long peer, String value) {
+        CSSRuleNative.setCssText(peer, value);
+    }
 
     @Override
     public CSSStyleSheet getParentStyleSheet() {
         return CSSStyleSheetImpl.getImpl(getParentStyleSheetImpl(getPeer()));
     }
-    native static long getParentStyleSheetImpl(long peer);
+    static long getParentStyleSheetImpl(long peer) {
+        return CSSRuleNative.getParentStyleSheet(peer);
+    }
 
     @Override
     public CSSRule getParentRule() {
         return CSSRuleImpl.getImpl(getParentRuleImpl(getPeer()));
     }
-    native static long getParentRuleImpl(long peer);
+    static long getParentRuleImpl(long peer) {
+        return CSSRuleNative.getParentRule(peer);
+    }
 
 }
 

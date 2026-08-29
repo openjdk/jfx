@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,49 +42,65 @@ public class HTMLMetaElementImpl extends HTMLElementImpl implements HTMLMetaElem
     public String getContent() {
         return getContentImpl(getPeer());
     }
-    native static String getContentImpl(long peer);
+    static String getContentImpl(long peer) {
+        return HTMLMetaElementNative.getContent(peer);
+    }
 
     @Override
     public void setContent(String value) {
         setContentImpl(getPeer(), value);
     }
-    native static void setContentImpl(long peer, String value);
+    static void setContentImpl(long peer, String value) {
+        HTMLMetaElementNative.setContent(peer, value);
+    }
 
     @Override
     public String getHttpEquiv() {
         return getHttpEquivImpl(getPeer());
     }
-    native static String getHttpEquivImpl(long peer);
+    static String getHttpEquivImpl(long peer) {
+        return HTMLMetaElementNative.getHttpEquiv(peer);
+    }
 
     @Override
     public void setHttpEquiv(String value) {
         setHttpEquivImpl(getPeer(), value);
     }
-    native static void setHttpEquivImpl(long peer, String value);
+    static void setHttpEquivImpl(long peer, String value) {
+        HTMLMetaElementNative.setHttpEquiv(peer, value);
+    }
 
     @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLMetaElementNative.getName(peer);
+    }
 
     @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLMetaElementNative.setName(peer, value);
+    }
 
     @Override
     public String getScheme() {
         return getSchemeImpl(getPeer());
     }
-    native static String getSchemeImpl(long peer);
+    static String getSchemeImpl(long peer) {
+        return HTMLMetaElementNative.getScheme(peer);
+    }
 
     @Override
     public void setScheme(String value) {
         setSchemeImpl(getPeer(), value);
     }
-    native static void setSchemeImpl(long peer, String value);
+    static void setSchemeImpl(long peer, String value) {
+        HTMLMetaElementNative.setScheme(peer, value);
+    }
 
 }
 

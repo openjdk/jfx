@@ -35,22 +35,24 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<StyleSheet*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<StyleSheet*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_StyleSheet_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_StyleSheet_getCPPType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     if (IMPL->isCSSStyleSheet())
         return 1;
     return 0;
@@ -58,52 +60,60 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getCPPTypeImpl(JNI
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_StyleSheet_getType(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->type());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->type());
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_StyleSheet_getDisabled(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->disabled();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_setDisabledImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_StyleSheet_setDisabled(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setDisabled(value);
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getOwnerNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_StyleSheet_getOwnerNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->ownerNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->ownerNode()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getParentStyleSheetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_StyleSheet_getParentStyleSheet(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<StyleSheet>(env, WTF::getPtr(IMPL->parentStyleSheet()));
+    return WKJReturnPeer<StyleSheet>(WTF::getPtr(IMPL->parentStyleSheet()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_StyleSheet_getHref(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->href());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->href());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getTitleImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_StyleSheet_getTitle(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->title());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->title());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getMediaImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_StyleSheet_getMedia(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<MediaList>(env, WTF::getPtr(IMPL->media()));
+    return WKJReturnPeer<MediaList>(WTF::getPtr(IMPL->media()));
 }
 
 }

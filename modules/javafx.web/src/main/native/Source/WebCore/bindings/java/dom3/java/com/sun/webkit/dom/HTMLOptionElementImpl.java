@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,79 +43,107 @@ public class HTMLOptionElementImpl extends HTMLElementImpl implements HTMLOption
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
-    native static boolean getDisabledImpl(long peer);
+    static boolean getDisabledImpl(long peer) {
+        return HTMLOptionElementNative.getDisabled(peer);
+    }
 
     @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
-    native static void setDisabledImpl(long peer, boolean value);
+    static void setDisabledImpl(long peer, boolean value) {
+        HTMLOptionElementNative.setDisabled(peer, value);
+    }
 
     @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
-    native static long getFormImpl(long peer);
+    static long getFormImpl(long peer) {
+        return HTMLOptionElementNative.getForm(peer);
+    }
 
     @Override
     public String getLabel() {
         return getLabelImpl(getPeer());
     }
-    native static String getLabelImpl(long peer);
+    static String getLabelImpl(long peer) {
+        return HTMLOptionElementNative.getLabel(peer);
+    }
 
     @Override
     public void setLabel(String value) {
         setLabelImpl(getPeer(), value);
     }
-    native static void setLabelImpl(long peer, String value);
+    static void setLabelImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLOptionElementImpl.setLabelImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     @Override
     public boolean getDefaultSelected() {
         return getDefaultSelectedImpl(getPeer());
     }
-    native static boolean getDefaultSelectedImpl(long peer);
+    static boolean getDefaultSelectedImpl(long peer) {
+        return HTMLOptionElementNative.getDefaultSelected(peer);
+    }
 
     @Override
     public void setDefaultSelected(boolean value) {
         setDefaultSelectedImpl(getPeer(), value);
     }
-    native static void setDefaultSelectedImpl(long peer, boolean value);
+    static void setDefaultSelectedImpl(long peer, boolean value) {
+        HTMLOptionElementNative.setDefaultSelected(peer, value);
+    }
 
     @Override
     public boolean getSelected() {
         return getSelectedImpl(getPeer());
     }
-    native static boolean getSelectedImpl(long peer);
+    static boolean getSelectedImpl(long peer) {
+        return HTMLOptionElementNative.getSelected(peer);
+    }
 
     @Override
     public void setSelected(boolean value) {
         setSelectedImpl(getPeer(), value);
     }
-    native static void setSelectedImpl(long peer, boolean value);
+    static void setSelectedImpl(long peer, boolean value) {
+        HTMLOptionElementNative.setSelected(peer, value);
+    }
 
     @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
-    native static String getValueImpl(long peer);
+    static String getValueImpl(long peer) {
+        return HTMLOptionElementNative.getValue(peer);
+    }
 
     @Override
     public void setValue(String value) {
         setValueImpl(getPeer(), value);
     }
-    native static void setValueImpl(long peer, String value);
+    static void setValueImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLOptionElementImpl.setValueImpl: no wkj_* function exists"
+                + " for it in any jfxwebkit build");
+    }
 
     @Override
     public String getText() {
         return getTextImpl(getPeer());
     }
-    native static String getTextImpl(long peer);
+    static String getTextImpl(long peer) {
+        return HTMLOptionElementNative.getText(peer);
+    }
 
     @Override
     public int getIndex() {
         return getIndexImpl(getPeer());
     }
-    native static int getIndexImpl(long peer);
+    static int getIndexImpl(long peer) {
+        return HTMLOptionElementNative.getIndex(peer);
+    }
 
 }
 

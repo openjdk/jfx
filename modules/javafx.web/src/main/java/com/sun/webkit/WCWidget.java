@@ -32,10 +32,6 @@ import com.sun.webkit.graphics.WCRectangle;
 class WCWidget {
     private final static PlatformLogger log = PlatformLogger.getLogger(WCWidget.class.getName());
 
-    static {
-        initIDs();
-    }
-
     private int x;
     private int y;
     private int width;
@@ -69,12 +65,12 @@ class WCWidget {
 
     protected void setVisible(boolean visible) {}
 
-    private void fwkDestroy() {
+    void fwkDestroy() {
         log.finer("destroy");
         destroy();
     }
 
-    private void fwkSetBounds(int x, int y, int w, int h) {
+    void fwkSetBounds(int x, int y, int w, int h) {
         if (log.isLoggable(Level.FINER)) {
             log.finer("setBounds({0}, {1}, {2}, {3})",
                     new Object[] { x, y, w, h });
@@ -82,19 +78,19 @@ class WCWidget {
         setBounds(x, y, w, h);
     }
 
-    private void fwkRequestFocus() {
+    void fwkRequestFocus() {
         log.finer("requestFocus");
         requestFocus();
     }
 
-    private void fwkSetCursor(long cursorID) {
+    void fwkSetCursor(long cursorID) {
         if (log.isLoggable(Level.FINER)) {
             log.finer("setCursor({0})", cursorID);
         }
         setCursor(cursorID);
     }
 
-    private void fwkSetVisible(boolean visible) {
+    void fwkSetVisible(boolean visible) {
         if (log.isLoggable(Level.FINER)) {
             log.finer("setVisible({0})", visible);
         }
@@ -118,6 +114,4 @@ class WCWidget {
                 ? pageClient.getScreenBounds(available)
                 : null;
     }
-
-    private static native void initIDs();
 }

@@ -34,30 +34,33 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLPreElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLPreElement*>(wkj_to_ptr(peer)))
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_setWidthImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLPreElement_setWidth(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setIntegralAttribute(WebCore::HTMLNames::widthAttr, value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_getWrapImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLPreElement_getWrap(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::wrapAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_setWrapImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLPreElement_setWrap(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::wrapAttr, value);
 }

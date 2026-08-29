@@ -35,210 +35,218 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DOMSelection*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DOMSelection*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_dispose(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getAnchorNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DOMSelection_getAnchorNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->anchorNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->anchorNode()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getAnchorOffsetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getAnchorOffset(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->anchorOffset();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getFocusNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DOMSelection_getFocusNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->focusNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->focusNode()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getFocusOffsetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getFocusOffset(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->focusOffset();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getIsCollapsedImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getIsCollapsed(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->isCollapsed();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getRangeCountImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getRangeCount(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->rangeCount();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getBaseNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DOMSelection_getBaseNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->baseNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->baseNode()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getBaseOffsetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getBaseOffset(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->baseOffset();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getExtentNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DOMSelection_getExtentNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->extentNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->extentNode()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getExtentOffsetImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getExtentOffset(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->extentOffset();
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_getType(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->type());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->type());
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_collapseImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node
-    , jint index)
+WKJ_EXPORT void wkj_dom_DOMSelection_collapse(int64_t peer, int64_t node, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->collapse(static_cast<Node*>(jlong_to_ptr(node))
+    raiseOnDOMError(IMPL->collapse(static_cast<Node*>(wkj_to_ptr(node))
             , index));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_collapseToEndImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_collapseToEnd(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->collapseToEnd());
+    raiseOnDOMError(IMPL->collapseToEnd());
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_collapseToStartImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_collapseToStart(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->collapseToStart());
+    raiseOnDOMError(IMPL->collapseToStart());
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_deleteFromDocumentImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_deleteFromDocument(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->deleteFromDocument();
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_containsNodeImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node
-    , jboolean allowPartial)
+WKJ_EXPORT int32_t wkj_dom_DOMSelection_containsNode(int64_t peer, int64_t node, int32_t allowPartial)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->containsNode(static_cast<Node*>(jlong_to_ptr(node))
+    return IMPL->containsNode(static_cast<Node*>(wkj_to_ptr(node))
             , allowPartial);
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_selectAllChildrenImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node)
+WKJ_EXPORT void wkj_dom_DOMSelection_selectAllChildren(int64_t peer, int64_t node)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->selectAllChildren(static_cast<Node*>(jlong_to_ptr(node))));
+    raiseOnDOMError(IMPL->selectAllChildren(static_cast<Node*>(wkj_to_ptr(node))));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_extendImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node
-    , jint offset)
+WKJ_EXPORT void wkj_dom_DOMSelection_extend(int64_t peer, int64_t node, int32_t offset)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->extend(static_cast<Node*>(jlong_to_ptr(node))
+    raiseOnDOMError(IMPL->extend(static_cast<Node*>(wkj_to_ptr(node))
             , offset));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_getRangeAtImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_DOMSelection_getRangeAt(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Range>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->getRangeAt(index))));
+    return WKJReturnPeer<Range>(WTF::getPtr(raiseOnDOMError(IMPL->getRangeAt(index))));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_removeAllRangesImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_removeAllRanges(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->removeAllRanges();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_addRangeImpl(JNIEnv* env, jclass, jlong peer
-    , jlong range)
+WKJ_EXPORT void wkj_dom_DOMSelection_addRange(int64_t peer, int64_t range)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->addRange(static_cast<Range*>(jlong_to_ptr(range)));
+    IMPL->addRange(static_cast<Range*>(wkj_to_ptr(range)));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_modifyImpl(JNIEnv* env, jclass, jlong peer
-    , jstring alter
-    , jstring direction
-    , jstring granularity)
+WKJ_EXPORT void wkj_dom_DOMSelection_modify(int64_t peer, const uint16_t* alter, int32_t alter_length, const uint16_t* direction, int32_t direction_length, const uint16_t* granularity, int32_t granularity_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->modify(AtomString {String(env, alter)}
-            , AtomString {String(env, direction)}
-            , AtomString {String(env, granularity)});
+    IMPL->modify(AtomString {WKJString(alter, alter_length)}
+            , AtomString {WKJString(direction, direction_length)}
+            , AtomString {WKJString(granularity, granularity_length)});
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_setBaseAndExtentImpl(JNIEnv* env, jclass, jlong peer
-    , jlong baseNode
-    , jint baseOffset
-    , jlong extentNode
-    , jint extentOffset)
+WKJ_EXPORT void wkj_dom_DOMSelection_setBaseAndExtent(int64_t peer, int64_t baseNode, int32_t baseOffset, int64_t extentNode, int32_t extentOffset)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setBaseAndExtent(static_cast<Node*>(jlong_to_ptr(baseNode))
+    raiseOnDOMError(IMPL->setBaseAndExtent(static_cast<Node*>(wkj_to_ptr(baseNode))
             , baseOffset
-            , static_cast<Node*>(jlong_to_ptr(extentNode))
+            , static_cast<Node*>(wkj_to_ptr(extentNode))
             , extentOffset));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_setPositionImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node
-    , jint offset)
+WKJ_EXPORT void wkj_dom_DOMSelection_setPosition(int64_t peer, int64_t node, int32_t offset)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setPosition(static_cast<Node*>(jlong_to_ptr(node))
+    raiseOnDOMError(IMPL->setPosition(static_cast<Node*>(wkj_to_ptr(node))
             , offset));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_emptyImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMSelection_empty(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->empty();
 }

@@ -32,7 +32,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import netscape.javascript.JSException;
 
 class JSObject extends netscape.javascript.JSObject {
-    private static final String UNDEFINED = new String("undefined");
+    // Package private, not private: JSObjectNative answers with this instance for a
+    // WKJ_JS_KIND_UNDEFINED result, where the library used to construct the value itself.
+    static final String UNDEFINED = new String("undefined");
     static final int JS_CONTEXT_OBJECT  = 0;
     static final int JS_DOM_NODE_OBJECT  = 1;
     static final int JS_DOM_WINDOW_OBJECT  = 2;
@@ -66,78 +68,109 @@ class JSObject extends netscape.javascript.JSObject {
         return peer;
     }
 
+    /**
+     * The peer type of this object. It exists because {@code JSObjectNative} describes a
+     * {@code JSObject} argument to the library as a peer and a peer type: the two
+     * {@code GetFieldID} reads the C++ used to make are now Java reading its own fields, so the
+     * library needs neither the ids nor the names {@code peer} and {@code peer_type}.
+     *
+     * @return {@link #JS_CONTEXT_OBJECT}, {@link #JS_DOM_NODE_OBJECT} or
+     *         {@link #JS_DOM_WINDOW_OBJECT}
+     */
+    int getPeerType() {
+        return peer_type;
+    }
+
     // for testing purposes only
     static int test_getPeerCount() {
         return peerCount.get();
     }
 
-    private static native void unprotectImpl(long peer, int peer_type);
+    private static void unprotectImpl(long peer, int peer_type) {
+        JSObjectNative.unprotect(peer, peer_type);
+    }
 
     @Override
     public Object eval(String s) throws JSException {
         Invoker.getInvoker().checkEventThread();
         return evalImpl(peer, peer_type, s);
     }
-    private static native Object evalImpl(long peer, int peer_type,
-                                          String name);
+    private static Object evalImpl(long peer, int peer_type,
+                                   String name) {
+        return JSObjectNative.eval(peer, peer_type, name);
+    }
 
     @Override
     public Object getMember(String name) {
         Invoker.getInvoker().checkEventThread();
         return getMemberImpl(peer, peer_type, name);
     }
-    private static native Object getMemberImpl(long peer, int peer_type,
-                                               String name);
+    private static Object getMemberImpl(long peer, int peer_type,
+                                        String name) {
+        return JSObjectNative.getMember(peer, peer_type, name);
+    }
 
     @Override
     public void setMember(String name, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
         setMemberImpl(peer, peer_type, name, value, DUMMY_ACC);
     }
-    private static native void setMemberImpl(long peer, int peer_type,
-                                             String name, Object value,
-                                             Object acc);
+    private static void setMemberImpl(long peer, int peer_type,
+                                      String name, Object value,
+                                      Object acc) {
+        JSObjectNative.setMember(peer, peer_type, name, value, acc);
+    }
 
     @Override
     public void removeMember(String name) throws JSException {
         Invoker.getInvoker().checkEventThread();
         removeMemberImpl(peer, peer_type, name);
     }
-    private static native void removeMemberImpl(long peer, int peer_type,
-                                                String name);
+    private static void removeMemberImpl(long peer, int peer_type,
+                                         String name) {
+        JSObjectNative.removeMember(peer, peer_type, name);
+    }
 
     @Override
     public Object getSlot(int index) throws JSException {
         Invoker.getInvoker().checkEventThread();
         return getSlotImpl(peer, peer_type, index);
     }
-    private static native Object getSlotImpl(long peer, int peer_type,
-                                             int index);
+    private static Object getSlotImpl(long peer, int peer_type,
+                                      int index) {
+        return JSObjectNative.getSlot(peer, peer_type, index);
+    }
 
     @Override
     public void setSlot(int index, Object value) throws JSException {
         Invoker.getInvoker().checkEventThread();
         setSlotImpl(peer, peer_type, index, value, DUMMY_ACC);
     }
-    private static native void setSlotImpl(long peer, int peer_type,
-                                           int index, Object value,
-                                           Object acc);
+    private static void setSlotImpl(long peer, int peer_type,
+                                    int index, Object value,
+                                    Object acc) {
+        JSObjectNative.setSlot(peer, peer_type, index, value, acc);
+    }
 
     @Override
     public Object call(String methodName, Object... args) throws JSException {
         Invoker.getInvoker().checkEventThread();
         return callImpl(peer, peer_type, methodName, args, DUMMY_ACC);
     }
-    private static native Object callImpl(long peer, int peer_type,
-                                          String methodName, Object[] args,
-                                          Object acc);
+    private static Object callImpl(long peer, int peer_type,
+                                   String methodName, Object[] args,
+                                   Object acc) {
+        return JSObjectNative.call(peer, peer_type, methodName, args, acc);
+    }
 
     @Override
     public String toString() {
         Invoker.getInvoker().checkEventThread();
         return toStringImpl(peer, peer_type);
     }
-    private static native String toStringImpl(long peer, int peer_type);
+    private static String toStringImpl(long peer, int peer_type) {
+        return JSObjectNative.stringValue(peer, peer_type);
+    }
 
     @Override
     public boolean equals(Object other) {
@@ -151,7 +184,9 @@ class JSObject extends netscape.javascript.JSObject {
         return (int) (peer ^ (peer >> 17));
     }
 
-    private static JSException fwkMakeException(Object value) {
+    // Package private, not private: JSObjectNative builds the JSException from the described
+    // JavaScript value, where throwJavaException used to reach this method through a cached id.
+    static JSException fwkMakeException(Object value) {
         String msg = value == null ? null : value.toString();
         // Would like to set wrappedException, but can't do that while
         // also setting the message.  Perhaps we should create a subclass.

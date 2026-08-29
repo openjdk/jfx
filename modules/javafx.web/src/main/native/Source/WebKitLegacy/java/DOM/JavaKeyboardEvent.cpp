@@ -34,99 +34,99 @@
 #include <wtf/GetPtr.h>
 
 #include "AbstractViewInternal.h"
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<KeyboardEvent*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<KeyboardEvent*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyIdentifierImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getKeyIdentifier(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->keyIdentifier());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->keyIdentifier());
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getLocationImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getLocation(int64_t peer)
 {
-    WebCore::JSMainThreadNullState state;
-    return IMPL->location();
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyLocationImpl(JNIEnv*, jclass, jlong peer)
-{
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->location();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCtrlKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getKeyLocation(int64_t peer)
 {
+    WKJCallScope wkjScope;
+    WebCore::JSMainThreadNullState state;
+    return IMPL->location();
+}
+
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getCtrlKey(int64_t peer)
+{
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->ctrlKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getShiftKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getShiftKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->shiftKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getAltKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->altKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getMetaKeyImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getMetaKey(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->metaKey();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyCodeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getKeyCode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->keyCode();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCharCodeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getCharCode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->charCode();
 }
 
 
 // Functions
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getModifierStateImpl(JNIEnv* env, jclass, jlong peer
-    , jstring keyIdentifierArg)
+WKJ_EXPORT int32_t wkj_dom_KeyboardEvent_getModifierState(int64_t peer, const uint16_t* keyIdentifierArg, int32_t keyIdentifierArg_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->getModifierState(AtomString {String(env, keyIdentifierArg)});
+    return IMPL->getModifierState(AtomString {WKJString(keyIdentifierArg, keyIdentifierArg_length)});
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEventImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jboolean canBubble
-    , jboolean cancelable
-    , jlong view
-    , jstring keyIdentifier
-    , jint location
-    , jboolean ctrlKey
-    , jboolean altKey
-    , jboolean shiftKey
-    , jboolean metaKey)
+WKJ_EXPORT void wkj_dom_KeyboardEvent_initKeyboardEvent(int64_t peer, const uint16_t* type, int32_t type_length, int32_t canBubble, int32_t cancelable, int64_t view, const uint16_t* keyIdentifier, int32_t keyIdentifier_length, int32_t location, int32_t ctrlKey, int32_t altKey, int32_t shiftKey, int32_t metaKey)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initKeyboardEvent(AtomString {String(env, type)}
+    IMPL->initKeyboardEvent(AtomString {WKJString(type, type_length)}
             , canBubble
             , cancelable
-            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
-            , AtomString {String(env, keyIdentifier)}
+            , toWindowProxy(static_cast<DOMWindow*>(wkj_to_ptr(view)))
+            , AtomString {WKJString(keyIdentifier, keyIdentifier_length)}
             , location
             , ctrlKey
             , altKey
@@ -135,24 +135,15 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEve
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEventExImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jboolean canBubble
-    , jboolean cancelable
-    , jlong view
-    , jstring keyIdentifier
-    , jint location
-    , jboolean ctrlKey
-    , jboolean altKey
-    , jboolean shiftKey
-    , jboolean metaKey)
+WKJ_EXPORT void wkj_dom_KeyboardEvent_initKeyboardEventEx(int64_t peer, const uint16_t* type, int32_t type_length, int32_t canBubble, int32_t cancelable, int64_t view, const uint16_t* keyIdentifier, int32_t keyIdentifier_length, int32_t location, int32_t ctrlKey, int32_t altKey, int32_t shiftKey, int32_t metaKey)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initKeyboardEvent(AtomString {String(env, type)}
+    IMPL->initKeyboardEvent(AtomString {WKJString(type, type_length)}
             , canBubble
             , cancelable
-            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
-            , AtomString{String(env, keyIdentifier)}
+            , toWindowProxy(static_cast<DOMWindow*>(wkj_to_ptr(view)))
+            , AtomString{WKJString(keyIdentifier, keyIdentifier_length)}
             , location
             , ctrlKey
             , altKey

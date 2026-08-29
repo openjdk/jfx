@@ -30,6 +30,7 @@
 #include "FontDescription.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
+#include "WKJPlatformJava.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
@@ -41,24 +42,26 @@ namespace {
 
 RefPtr<RQRef> getJavaFont(const String& family, float size, bool italic, bool bold)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->get_font)
+        return nullptr;
 
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-        "getWCFont", "(Ljava/lang/String;ZZF)Lcom/sun/webkit/graphics/WCFont;");
-    ASSERT(mid);
+    WKJStringArg familyArg(family);
+    WKJHandle wcFont { cb->get_font(familyArg.data(), familyArg.length(),
+                                    bold ? 1 : 0, italic ? 1 : 0, size) };
 
-    JLObject wcFont(env->CallObjectMethod( PL_GetGraphicsManager(env), mid,
-        (jstring)JLString(family.toJavaString(env)),
-        bool_to_jbool(bold),
-        bool_to_jbool(italic),
-        jfloat(size)));
+    wkjCheckAndClearException();
 
-    WTF::CheckAndClearException(env);
-
-    return RQRef::create(wcFont);
+    return RQRef::create(wcFont.get());
 }
 }
 
+/*
+ * m_jFont holds the Java WCFont for the whole lifetime of this FontPlatformData: RQRef owns a
+ * wkj_ref, and the release point is ~FontPlatformData dropping the last RefPtr<RQRef>, which
+ * runs ~RQRef and with it WKJHandle::~WKJHandle -> host->core.release. There is no explicit
+ * dispose call and there never was; this replaces the global reference inside RQRef exactly.
+ */
 FontPlatformData::FontPlatformData(RefPtr<RQRef> font, float size)
     : m_jFont(font)
     , m_size(size)
@@ -81,21 +84,18 @@ std::unique_ptr<FontPlatformData> FontPlatformData::derive(float scaleFactor) co
     ASSERT(m_jFont);
     float size = m_size * scaleFactor;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID createScaledMID = env->GetMethodID(
-        PG_GetFontClass(env), "deriveFont", "(F)Lcom/sun/webkit/graphics/WCFont;");
-    ASSERT(createScaledMID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_derive)
+        return nullptr;
 
-    JLObject wcFont(env->CallObjectMethod(*m_jFont, createScaledMID, size));
-    WTF::CheckAndClearException(env);
+    WKJHandle wcFont { cb->font_derive(wkj_ref(*m_jFont), size) };
+    wkjCheckAndClearException();
 
-    return std::make_unique<FontPlatformData>(RQRef::create(wcFont), size);
+    return std::make_unique<FontPlatformData>(RQRef::create(wcFont.get()), size);
 }
 
 bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (m_jFont == other.m_jFont) {
         return true;
     }
@@ -104,31 +104,30 @@ bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
         return false;
     }
 
-    static jmethodID compare_mID = env->GetMethodID(
-        PG_GetFontClass(env), "equals", "(Ljava/lang/Object;)Z");
-    ASSERT(compare_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_equals)
+        return false;
 
-    jboolean res = env->CallBooleanMethod(*m_jFont, compare_mID, (jobject)(*other.m_jFont));
-    WTF::CheckAndClearException(env);
+    int32_t res = cb->font_equals(wkj_ref(*m_jFont), wkj_ref(*other.m_jFont));
+    wkjCheckAndClearException();
 
-    return bool_to_jbool(res);
+    return res != 0;
 }
 
 unsigned FontPlatformData::hash() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (!m_jFont || isHashTableDeletedValue()) {
         return (unsigned)-1;
     }
 
-    static jmethodID hash_mID = env->GetMethodID(PG_GetFontClass(env), "hashCode", "()I");
-    ASSERT(hash_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_hash_code)
+        return 0;
 
-    jint res = env->CallIntMethod(*m_jFont, hash_mID);
-    WTF::CheckAndClearException(env);
+    int32_t res = cb->font_hash_code(wkj_ref(*m_jFont));
+    wkjCheckAndClearException();
 
-    return res;
+    return static_cast<unsigned>(res);
 }
 
 #ifndef NDEBUG

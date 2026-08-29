@@ -39,9 +39,6 @@ typedef const struct __CFURL* CFURLRef;
 OBJC_CLASS NSURL;
 #endif
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 
 namespace WTF {
 
@@ -243,9 +240,6 @@ public:
     WTF_EXPORT_PRIVATE RetainPtr<NSURL> createNSURL() const;
     WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
 #endif
-
-#if PLATFORM(JAVA)
-    URL(JNIEnv* env, jstring url) : URL(URL(), String(env, url)) {}
 #endif
 
 #if USE(GLIB) && HAVE(GURI)

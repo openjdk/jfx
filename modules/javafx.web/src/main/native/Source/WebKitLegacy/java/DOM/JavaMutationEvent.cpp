@@ -33,67 +33,65 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<MutationEvent*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<MutationEvent*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getRelatedNodeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_MutationEvent_getRelatedNode(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->relatedNode()));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->relatedNode()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getPrevValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MutationEvent_getPrevValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->prevValue());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->prevValue());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getNewValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MutationEvent_getNewValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->newValue());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->newValue());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getAttrNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_MutationEvent_getAttrName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->attrName());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->attrName());
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getAttrChangeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_MutationEvent_getAttrChange(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->attrChange();
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MutationEventImpl_initMutationEventImpl(JNIEnv* env, jclass, jlong peer
-    , jstring type
-    , jboolean canBubble
-    , jboolean cancelable
-    , jlong relatedNode
-    , jstring prevValue
-    , jstring newValue
-    , jstring attrName
-    , jshort attrChange)
+WKJ_EXPORT void wkj_dom_MutationEvent_initMutationEvent(int64_t peer, const uint16_t* type, int32_t type_length, int32_t canBubble, int32_t cancelable, int64_t relatedNode, const uint16_t* prevValue, int32_t prevValue_length, const uint16_t* newValue, int32_t newValue_length, const uint16_t* attrName, int32_t attrName_length, int16_t attrChange)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->initMutationEvent(AtomString{String(env, type)}
+    IMPL->initMutationEvent(AtomString{WKJString(type, type_length)}
             , canBubble
             , cancelable
-            , static_cast<Node*>(jlong_to_ptr(relatedNode))
-            , AtomString{String(env, prevValue)}
-            , AtomString{String(env, newValue)}
-            , AtomString{String(env, attrName)}
+            , static_cast<Node*>(wkj_to_ptr(relatedNode))
+            , AtomString{WKJString(prevValue, prevValue_length)}
+            , AtomString{WKJString(newValue, newValue_length)}
+            , AtomString{WKJString(attrName, attrName_length)}
             , attrChange);
 }
 

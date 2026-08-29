@@ -53,17 +53,17 @@
 
 // some helper methods defined below
 
-// MouseButton getWebKitMouseButton(jint javaButton);
-// MouseEventType getWebKitMouseEventType(jint eventID);
+// MouseButton getWebKitMouseButton(int32_t javaButton);
+// MouseEventType getWebKitMouseEventType(int32_t eventID);
 
 namespace WebCore {
 
-static jmethodID wcWidgetSetBoundsMID;
-static jmethodID wcWidgetRequestFocusMID;
-static jmethodID wcWidgetSetCursorMID;
-static jmethodID wcWidgetSetVisibleMID;
-static jmethodID wcWidgetDestroyMID;
-
+/*
+ * The five cached method ids that used to sit here, and the exported initIDs that filled
+ * them, are gone: they are the widget_ section of WKJHostTheme. See the report and
+ * FFM-AUDIT-wtf-webcore.md 15.5 row 13 - this is one of only two WRAPPER verdicts in the
+ * whole tree that deletes a Java `native` declaration.
+ */
 
 class WidgetPrivate {
 public:
@@ -78,10 +78,17 @@ Widget::Widget(PlatformWidget widget)
 
 Widget::~Widget()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (m_widget && env) {
-        env->CallVoidMethod(m_widget, wcWidgetDestroyMID);
-        WTF::CheckAndClearException(env);
+    /*
+     * The null-table test replaces the null-environment test: the JNI destructor skipped the
+     * call when the VM had gone, and detaching the host table is how the Java side reaches
+     * the same state now. The widget is cleared either way, exactly as before.
+     */
+    const WKJHostTheme* cb = wkjTheme();
+    if (m_widget && cb) {
+        if (cb->widget_destroy) {
+            cb->widget_destroy(m_widget.get());
+            wkjCheckAndClearException();
+        }
         m_widget.clear();
     }
     delete m_data;
@@ -94,8 +101,6 @@ IntRect Widget::frameRect() const
 
 void Widget::setFrameRect(const IntRect &r)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (r == m_data->bounds) {
         return;
     }
@@ -104,14 +109,17 @@ void Widget::setFrameRect(const IntRect &r)
         return;
     }
 
-    env->CallVoidMethod(m_widget, wcWidgetSetBoundsMID, r.x(), r.y(), r.width(), r.height());
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_set_bounds) {
+        return;
+    }
+
+    cb->widget_set_bounds(m_widget.get(), r.x(), r.y(), r.width(), r.height());
+    wkjCheckAndClearException();
 }
 
 void Widget::setFocus(bool focused)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     PlatformWidget j(platformWidget());
     if (!j) {
         j = root()->hostWindow()->platformPageClient();
@@ -120,16 +128,23 @@ void Widget::setFocus(bool focused)
         return;
     }
 
-    if (focused) {
-        env->CallVoidMethod(j, wcWidgetRequestFocusMID);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_request_focus) {
+        return;
     }
-    WTF::CheckAndClearException(env);
+
+    /*
+     * Only a focus gain is reported; losing focus was never sent, and the exception check
+     * ran either way. Both are kept.
+     */
+    if (focused) {
+        cb->widget_request_focus(j.get());
+    }
+    wkjCheckAndClearException();
 }
 
 void Widget::setCursor(const Cursor& cursor)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     PlatformWidget j(platformWidget());
     if (!j) {
         j = root()->hostWindow()->platformPageClient();
@@ -138,34 +153,45 @@ void Widget::setCursor(const Cursor& cursor)
         return;
     }
 
-    env->CallVoidMethod(j, wcWidgetSetCursorMID, cursor.platformCursor());
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_set_cursor) {
+        return;
+    }
+
+    cb->widget_set_cursor(j.get(), cursor.platformCursor());
+    wkjCheckAndClearException();
 }
 
 void Widget::show()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     // do we need to cache the 'visible' value?
     if (!m_widget) {
         return;
     }
 
-    env->CallVoidMethod(m_widget, wcWidgetSetVisibleMID, JNI_TRUE);
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_set_visible) {
+        return;
+    }
+
+    cb->widget_set_visible(m_widget.get(), 1);
+    wkjCheckAndClearException();
 }
 
 void Widget::hide()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     // do we need to cache the 'visible' value?
     if (!m_widget) {
         return;
     }
 
-    env->CallVoidMethod(m_widget, wcWidgetSetVisibleMID, JNI_FALSE);
-    WTF::CheckAndClearException(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->widget_set_visible) {
+        return;
+    }
+
+    cb->widget_set_visible(m_widget.get(), 0);
+    wkjCheckAndClearException();
 }
 
 void Widget::setIsSelected(bool)
@@ -180,8 +206,6 @@ FloatRect convertFromContainingWindowToRoot(const Widget* rootWidget, const Floa
 void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy policy, RegionContext*)
 {
 /*
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (!gc ||
         !gc->platformContext() ||
         gc->paintingDisabled() ||
@@ -220,28 +244,5 @@ void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy p
 */
 }
 
-extern "C" {
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_WCWidget_initIDs
-    (JNIEnv* env, jclass wcWidgetClass)
-{
-    wcWidgetSetBoundsMID = env->GetMethodID(wcWidgetClass, "fwkSetBounds",
-                                             "(IIII)V");
-    ASSERT(wcWidgetSetBoundsMID);
-    wcWidgetRequestFocusMID = env->GetMethodID(wcWidgetClass,
-                                               "fwkRequestFocus", "()V");
-    ASSERT(wcWidgetRequestFocusMID);
-    wcWidgetSetCursorMID = env->GetMethodID(wcWidgetClass, "fwkSetCursor",
-                                            "(J)V");
-    ASSERT(wcWidgetSetCursorMID);
-    wcWidgetSetVisibleMID = env->GetMethodID(wcWidgetClass, "fwkSetVisible",
-                                             "(Z)V");
-    ASSERT(wcWidgetSetVisibleMID);
-    wcWidgetDestroyMID = env->GetMethodID(wcWidgetClass, "fwkDestroy",
-                                             "()V");
-    ASSERT(wcWidgetDestroyMID);
-
-}
-}
 } // namespace WebCore
 

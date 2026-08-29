@@ -53,15 +53,15 @@ public abstract class ContextMenu {
         }
     }
 
-    private static ContextMenu fwkCreateContextMenu() {
+    static ContextMenu fwkCreateContextMenu() {
         return Utilities.getUtilities().createContextMenu();
     }
 
-    private void fwkShow(WebPage webPage, long pData, int x, int y) {
+    void fwkShow(WebPage webPage, long pData, int x, int y) {
         show(new ShowContext(webPage, pData), x, y);
     }
 
-    private void fwkAppendItem(ContextMenuItem item) {
+    void fwkAppendItem(ContextMenuItem item) {
         appendItem(item);
     }
 
@@ -73,5 +73,7 @@ public abstract class ContextMenu {
         return getItemCount();
     }
 
-    private native void twkHandleItemSelected(long menuPData, int itemAction);
+    private void twkHandleItemSelected(long menuPData, int itemAction) {
+        ContextMenuNative.itemSelected(menuPData, itemAction);
+    }
 }

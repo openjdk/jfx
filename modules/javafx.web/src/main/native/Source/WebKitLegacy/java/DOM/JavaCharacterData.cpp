@@ -34,103 +34,104 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<CharacterData*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<CharacterData*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getDataImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CharacterData_getData(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->data());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->data());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_setDataImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_CharacterData_setData(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setData(AtomString {String(env, value)});
+    IMPL->setData(AtomString {WKJString(value, value_length)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CharacterData_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getPreviousElementSiblingImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CharacterData_getPreviousElementSibling(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->previousElementSibling()));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->previousElementSibling()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getNextElementSiblingImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_CharacterData_getNextElementSibling(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->nextElementSibling()));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->nextElementSibling()));
 }
 
 
 // Functions
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_substringDataImpl(JNIEnv* env, jclass, jlong peer
-    , jint offset
-    , jint length)
+WKJ_EXPORT int32_t wkj_dom_CharacterData_substringData(int64_t peer, int32_t offset, int32_t length, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->substringData(offset
+    return WKJReturnString(result_buf, result_cap, result_length, raiseOnDOMError(IMPL->substringData(offset
             , length)));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_appendDataImpl(JNIEnv* env, jclass, jlong peer
-    , jstring data)
+WKJ_EXPORT void wkj_dom_CharacterData_appendData(int64_t peer, const uint16_t* data, int32_t data_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->appendData(AtomString {String(env, data)});
+    IMPL->appendData(AtomString {WKJString(data, data_length)});
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_insertDataImpl(JNIEnv* env, jclass, jlong peer
-    , jint offset
-    , jstring data)
+WKJ_EXPORT void wkj_dom_CharacterData_insertData(int64_t peer, int32_t offset, const uint16_t* data, int32_t data_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->insertData(offset
-            , AtomString {String(env, data)}));
+    raiseOnDOMError(IMPL->insertData(offset
+            , AtomString {WKJString(data, data_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_deleteDataImpl(JNIEnv* env, jclass, jlong peer
-    , jint offset
-    , jint length)
+WKJ_EXPORT void wkj_dom_CharacterData_deleteData(int64_t peer, int32_t offset, int32_t length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteData(offset
+    raiseOnDOMError(IMPL->deleteData(offset
             , length));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_replaceDataImpl(JNIEnv* env, jclass, jlong peer
-    , jint offset
-    , jint length
-    , jstring data)
+WKJ_EXPORT void wkj_dom_CharacterData_replaceData(int64_t peer, int32_t offset, int32_t length, const uint16_t* data, int32_t data_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->replaceData(offset
+    raiseOnDOMError(IMPL->replaceData(offset
             , length
-            , AtomString {String(env, data)}));
+            , AtomString {WKJString(data, data_length)}));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_removeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_CharacterData_remove(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->remove());
+    raiseOnDOMError(IMPL->remove());
 }
 
 

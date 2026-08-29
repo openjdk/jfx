@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,9 @@ public class TextImpl extends CharacterDataImpl implements Text {
     public String getWholeText() {
         return getWholeTextImpl(getPeer());
     }
-    native static String getWholeTextImpl(long peer);
+    static String getWholeTextImpl(long peer) {
+        return TextNative.getWholeText(peer);
+    }
 
 
 // Functions
@@ -53,8 +55,10 @@ public class TextImpl extends CharacterDataImpl implements Text {
         return TextImpl.getImpl(splitTextImpl(getPeer()
             , offset));
     }
-    native static long splitTextImpl(long peer
-        , int offset);
+    static long splitTextImpl(long peer
+        , int offset) {
+        return TextNative.splitText(peer, offset);
+    }
 
 
     @Override
@@ -63,8 +67,10 @@ public class TextImpl extends CharacterDataImpl implements Text {
         return TextImpl.getImpl(replaceWholeTextImpl(getPeer()
             , content));
     }
-    native static long replaceWholeTextImpl(long peer
-        , String content);
+    static long replaceWholeTextImpl(long peer
+        , String content) {
+        return TextNative.replaceWholeText(peer, content);
+    }
 
 
 

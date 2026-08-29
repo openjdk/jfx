@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,103 +42,145 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     public HTMLCollection getEmbeds() {
         return HTMLCollectionImpl.getImpl(getEmbedsImpl(getPeer()));
     }
-    native static long getEmbedsImpl(long peer);
+    static long getEmbedsImpl(long peer) {
+        return HTMLDocumentNative.getEmbeds(peer);
+    }
 
     public HTMLCollection getPlugins() {
         return HTMLCollectionImpl.getImpl(getPluginsImpl(getPeer()));
     }
-    native static long getPluginsImpl(long peer);
+    static long getPluginsImpl(long peer) {
+        return HTMLDocumentNative.getPlugins(peer);
+    }
 
     public HTMLCollection getScripts() {
         return HTMLCollectionImpl.getImpl(getScriptsImpl(getPeer()));
     }
-    native static long getScriptsImpl(long peer);
+    static long getScriptsImpl(long peer) {
+        return HTMLDocumentNative.getScripts(peer);
+    }
 
     public int getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static int getWidthImpl(long peer);
+    static int getWidthImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLDocumentImpl.getWidthImpl: no wkj_* function exists for"
+                + " it in any jfxwebkit build");
+    }
 
     public int getHeight() {
         return getHeightImpl(getPeer());
     }
-    native static int getHeightImpl(long peer);
+    static int getHeightImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLDocumentImpl.getHeightImpl: no wkj_* function exists for"
+                + " it in any jfxwebkit build");
+    }
 
     public String getDir() {
         return getDirImpl(getPeer());
     }
-    native static String getDirImpl(long peer);
+    static String getDirImpl(long peer) {
+        return HTMLDocumentNative.getDir(peer);
+    }
 
     public void setDir(String value) {
         setDirImpl(getPeer(), value);
     }
-    native static void setDirImpl(long peer, String value);
+    static void setDirImpl(long peer, String value) {
+        HTMLDocumentNative.setDir(peer, value);
+    }
 
     public String getDesignMode() {
         return getDesignModeImpl(getPeer());
     }
-    native static String getDesignModeImpl(long peer);
+    static String getDesignModeImpl(long peer) {
+        return HTMLDocumentNative.getDesignMode(peer);
+    }
 
     public void setDesignMode(String value) {
         setDesignModeImpl(getPeer(), value);
     }
-    native static void setDesignModeImpl(long peer, String value);
+    static void setDesignModeImpl(long peer, String value) {
+        HTMLDocumentNative.setDesignMode(peer, value);
+    }
 
     @Override
     public String getCompatMode() {
         return getCompatModeImpl(getPeer());
     }
-    native static String getCompatModeImpl(long peer);
+    static String getCompatModeImpl(long peer) {
+        return HTMLDocumentNative.getCompatMode(peer);
+    }
 
     public String getBgColor() {
         return getBgColorImpl(getPeer());
     }
-    native static String getBgColorImpl(long peer);
+    static String getBgColorImpl(long peer) {
+        return HTMLDocumentNative.getBgColor(peer);
+    }
 
     public void setBgColor(String value) {
         setBgColorImpl(getPeer(), value);
     }
-    native static void setBgColorImpl(long peer, String value);
+    static void setBgColorImpl(long peer, String value) {
+        HTMLDocumentNative.setBgColor(peer, value);
+    }
 
     public String getFgColor() {
         return getFgColorImpl(getPeer());
     }
-    native static String getFgColorImpl(long peer);
+    static String getFgColorImpl(long peer) {
+        return HTMLDocumentNative.getFgColor(peer);
+    }
 
     public void setFgColor(String value) {
         setFgColorImpl(getPeer(), value);
     }
-    native static void setFgColorImpl(long peer, String value);
+    static void setFgColorImpl(long peer, String value) {
+        HTMLDocumentNative.setFgColor(peer, value);
+    }
 
     public String getAlinkColor() {
         return getAlinkColorImpl(getPeer());
     }
-    native static String getAlinkColorImpl(long peer);
+    static String getAlinkColorImpl(long peer) {
+        return HTMLDocumentNative.getAlinkColor(peer);
+    }
 
     public void setAlinkColor(String value) {
         setAlinkColorImpl(getPeer(), value);
     }
-    native static void setAlinkColorImpl(long peer, String value);
+    static void setAlinkColorImpl(long peer, String value) {
+        HTMLDocumentNative.setAlinkColor(peer, value);
+    }
 
     public String getLinkColor() {
         return getLinkColorImpl(getPeer());
     }
-    native static String getLinkColorImpl(long peer);
+    static String getLinkColorImpl(long peer) {
+        return HTMLDocumentNative.getLinkColor(peer);
+    }
 
     public void setLinkColor(String value) {
         setLinkColorImpl(getPeer(), value);
     }
-    native static void setLinkColorImpl(long peer, String value);
+    static void setLinkColorImpl(long peer, String value) {
+        HTMLDocumentNative.setLinkColor(peer, value);
+    }
 
     public String getVlinkColor() {
         return getVlinkColorImpl(getPeer());
     }
-    native static String getVlinkColorImpl(long peer);
+    static String getVlinkColorImpl(long peer) {
+        return HTMLDocumentNative.getVlinkColor(peer);
+    }
 
     public void setVlinkColor(String value) {
         setVlinkColorImpl(getPeer(), value);
     }
-    native static void setVlinkColorImpl(long peer, String value);
+    static void setVlinkColorImpl(long peer, String value) {
+        HTMLDocumentNative.setVlinkColor(peer, value);
+    }
 
 
 // Functions
@@ -147,7 +189,9 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     {
         openImpl(getPeer());
     }
-    native static void openImpl(long peer);
+    static void openImpl(long peer) {
+        HTMLDocumentNative.open(peer);
+    }
 
 
     @Override
@@ -155,7 +199,9 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     {
         closeImpl(getPeer());
     }
-    native static void closeImpl(long peer);
+    static void closeImpl(long peer) {
+        HTMLDocumentNative.close(peer);
+    }
 
 
     @Override
@@ -164,8 +210,10 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
         writeImpl(getPeer()
             , text);
     }
-    native static void writeImpl(long peer
-        , String text);
+    static void writeImpl(long peer
+        , String text) {
+        HTMLDocumentNative.write(peer, text);
+    }
 
 
     @Override
@@ -174,29 +222,37 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
         writelnImpl(getPeer()
             , text);
     }
-    native static void writelnImpl(long peer
-        , String text);
+    static void writelnImpl(long peer
+        , String text) {
+        HTMLDocumentNative.writeln(peer, text);
+    }
 
 
     public void clear()
     {
         clearImpl(getPeer());
     }
-    native static void clearImpl(long peer);
+    static void clearImpl(long peer) {
+        HTMLDocumentNative.clear(peer);
+    }
 
 
     public void captureEvents()
     {
         captureEventsImpl(getPeer());
     }
-    native static void captureEventsImpl(long peer);
+    static void captureEventsImpl(long peer) {
+        HTMLDocumentNative.captureEvents(peer);
+    }
 
 
     public void releaseEvents()
     {
         releaseEventsImpl(getPeer());
     }
-    native static void releaseEventsImpl(long peer);
+    static void releaseEventsImpl(long peer) {
+        HTMLDocumentNative.releaseEvents(peer);
+    }
 
 
 }

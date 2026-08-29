@@ -24,12 +24,12 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include <wtf/CompletionHandler.h>
 #include "NotImplemented.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
-#include "com_sun_webkit_LoadListenerClient.h"
 
 namespace WebCore {
 

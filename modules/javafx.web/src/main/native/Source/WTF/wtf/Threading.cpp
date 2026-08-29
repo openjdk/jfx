@@ -42,9 +42,6 @@
 #include <bmalloc/bmalloc.h>
 #endif
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 #if OS(LINUX)
 #include <wtf/linux/RealTimeThreads.h>
 #endif

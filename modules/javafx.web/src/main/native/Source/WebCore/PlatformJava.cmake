@@ -2,13 +2,6 @@ include(platform/TextureMapper.cmake)
 
 set(WebCore_OUTPUT_NAME WebCore)
 
-# JDK-9 +
-set(JAVA_JNI_GENSRC_PATH "${CMAKE_BINARY_DIR}/../gensrc/headers/javafx.web")
-if (NOT EXISTS ${JAVA_JNI_GENSRC_PATH})
-    # JDK-8
-    set(JAVA_JNI_GENSRC_PATH "${CMAKE_BINARY_DIR}/../generated-src/headers")
-endif ()
-
 list(REMOVE_ITEM  WebCore_PRIVATE_FRAMEWORK_HEADERS
     bridge/objc/WebScriptObject.h
     bridge/objc/WebScriptObjectPrivate.h
@@ -25,13 +18,8 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/page/java"
     "${WEBCORE_DIR}/bridge/jni"
     "${WEBKITLEGACY_DIR}"
-    # JNI headers
-    "${JAVA_JNI_GENSRC_PATH}"
-)
-
-list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${JAVA_INCLUDE_PATH}
-    ${JAVA_INCLUDE_PATH2}
+    # FFM C ABI: webkit_java_api.h (WKJ_EXPORT, wkj_ref, WKJHost)
+    "${WEBKITLEGACY_DIR}/java/api"
 )
 
 if (WIN32)
@@ -75,10 +63,6 @@ set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/java/RenderT
 
 add_definitions(-DIMAGEIO=1)
 
-list(APPEND WebCore_LIBRARIES
-    ${JAVA_JVM_LIBRARY}
-)
-
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
 if (USE_SYSTEM_MALLOC)
@@ -87,10 +71,10 @@ if (USE_SYSTEM_MALLOC)
 endif ()
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-    bindings/java/JavaDOMUtils.h
     bindings/java/JavaEventListener.h
     bindings/java/EventListenerManager.h
-    bindings/java/JavaNodeFilterCondition.h
+    bindings/java/WKJDOMUtils.h
+    platform/graphics/java/WKJPlatformJava.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h
     platform/graphics/java/ImageBufferJavaBackend.h

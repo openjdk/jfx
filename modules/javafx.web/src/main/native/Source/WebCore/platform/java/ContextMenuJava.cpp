@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,42 +24,30 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 #include "ContextMenuJava.h"
 #include "ContextMenu.h"
 #include "ContextMenuController.h"
 #include "ContextMenuItem.h"
 #include "PlatformJavaClasses.h"
-
-#include "com_sun_webkit_ContextMenu.h"
-#include "com_sun_webkit_ContextMenuItem.h"
-
+#include "WKJDOMUtils.h"
 
 namespace WebCore {
 
-static jclass getJContextMenuItemClass()
+static WKJHandle createJavaMenuItem()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static JGClass jContextMenuItemClass = JLClass(env->FindClass("com/sun/webkit/ContextMenuItem"));
-    ASSERT(jContextMenuItemClass);
-    return (jclass)jContextMenuItemClass;
-}
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->context_menu_item_create)
+        return WKJHandle();
 
-static JGObject createJavaMenuItem()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID createContextMenuItemMID = env->GetStaticMethodID(getJContextMenuItemClass(), "fwkCreateContextMenuItem",
-                                                      "()Lcom/sun/webkit/ContextMenuItem;");
-    ASSERT(createContextMenuItemMID);
-
-    JGObject jContextMenuItem(env->CallStaticObjectMethod(getJContextMenuItemClass(), createContextMenuItemMID));
-    WTF::CheckAndClearException(env);
-    return jContextMenuItem;
+    WKJHandle item(cb->context_menu_item_create());
+    wkjCheckAndClearException();
+    return item;
 }
 
 class ContextMenuItemJava {
   private:
-    JGObject m_menuItem;
+    WKJHandle m_menuItem;
   public:
     ContextMenuItemJava()
       : m_menuItem(createJavaMenuItem()) {
@@ -67,118 +55,98 @@ class ContextMenuItemJava {
 
     void setType(ContextMenuItemType type)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_type) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
-        static jmethodID setTypeMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetType", "(I)V");
-        ASSERT(setTypeMID);
 
-        jint jtype = com_sun_webkit_ContextMenuItem_ACTION_TYPE;
+        int32_t jtype = com_sun_webkit_ContextMenuItem_ACTION_TYPE;
         if (ContextMenuItemType::Separator == type) {
             jtype = com_sun_webkit_ContextMenuItem_SEPARATOR_TYPE;
         } else if (ContextMenuItemType::Submenu == type) {
             jtype = com_sun_webkit_ContextMenuItem_SUBMENU_TYPE;
         }
-        env->CallVoidMethod(m_menuItem, setTypeMID, jtype);
-        WTF::CheckAndClearException(env);
+        cb->context_menu_item_set_type(m_menuItem.get(), jtype);
+        wkjCheckAndClearException();
     }
 
     void setAction(ContextMenuAction action)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_action) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
 
-        static jmethodID setActionMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetAction", "(I)V");
-        ASSERT(setActionMID);
-        env->CallVoidMethod(m_menuItem, setActionMID, action);
-        WTF::CheckAndClearException(env);
+        cb->context_menu_item_set_action(m_menuItem.get(), static_cast<int32_t>(action));
+        wkjCheckAndClearException();
     }
 
     void setTitle(const String& title)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_title) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
 
-        static jmethodID setTitleMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetTitle", "(Ljava/lang/String;)V");
-        ASSERT(setTitleMID);
-
-        env->CallVoidMethod(m_menuItem, setTitleMID, title.isEmpty() ? NULL : (jstring)title.toJavaString(env));
-        WTF::CheckAndClearException(env);
+        /*
+         * An EMPTY title is passed as null, not as the empty string: the JNI call read
+         * `title.isEmpty() ? NULL : title.toJavaString(env)`, and isEmpty() is true for the
+         * null String as well. Feeding a null String to WKJStringArg reproduces both cases
+         * with one expression, because it yields (nullptr, 0).
+         */
+        WKJStringArg titleArg(title.isEmpty() ? String() : title);
+        cb->context_menu_item_set_title(m_menuItem.get(), titleArg.data(), titleArg.length());
+        wkjCheckAndClearException();
     }
 
-    void setSubMenu(JGObject obj)
+    void setSubMenu(wkj_ref submenu)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_submenu) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
 
-        static jmethodID setSubmenuMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetSubmenu",
-                                         "(Lcom/sun/webkit/ContextMenu;)V");
-        ASSERT(setSubmenuMID);
-        JLObject submenu(obj);
-        env->CallVoidMethod(m_menuItem, setSubmenuMID, (jobject)submenu);
-        WTF::CheckAndClearException(env);
+        cb->context_menu_item_set_submenu(m_menuItem.get(), submenu);
+        wkjCheckAndClearException();
     }
 
     void setChecked(bool checked)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_checked) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
-        static jmethodID setCheckedMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetChecked", "(Z)V");
-        ASSERT(setCheckedMID);
 
-        env->CallVoidMethod(m_menuItem, setCheckedMID, bool_to_jbool(checked));
-        WTF::CheckAndClearException(env);
+        cb->context_menu_item_set_checked(m_menuItem.get(), checked ? 1 : 0);
+        wkjCheckAndClearException();
     }
 
     void setEnabled(bool enabled)
     {
-        if (!m_menuItem) {
+        const WKJHostTheme* cb = wkjTheme();
+        if (!m_menuItem || !cb || !cb->context_menu_item_set_enabled) {
             return;
         }
-        JNIEnv* env = WTF::GetJavaEnv();
-        static jmethodID setEnabledMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetEnabled", "(Z)V");
-        ASSERT(setEnabledMID);
 
-        env->CallVoidMethod(m_menuItem, setEnabledMID, bool_to_jbool(enabled));
-        WTF::CheckAndClearException(env);
+        cb->context_menu_item_set_enabled(m_menuItem.get(), enabled ? 1 : 0);
+        wkjCheckAndClearException();
     }
 
-    operator jobject() const {
-      return (jobject)m_menuItem;
-    }
+    /* Borrowed: ownership stays with this object, exactly as the cast to a raw ref was. */
+    wkj_ref ref() const { return m_menuItem.get(); }
 };
 
-static jclass getJContextMenuClass()
+static WKJHandle createJavaContextMenu()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static JGClass jContextMenuClass(env->FindClass("com/sun/webkit/ContextMenu"));
-    ASSERT(jContextMenuClass);
-    return (jclass)jContextMenuClass;
-}
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->context_menu_create)
+        return WKJHandle();
 
-static JLObject createJavaContextMenu()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
+    WKJHandle contextMenu(cb->context_menu_create());
+    ASSERT(contextMenu);
+    wkjCheckAndClearException();
 
-    static jmethodID mid = env->GetStaticMethodID(getJContextMenuClass(),
-            "fwkCreateContextMenu",
-            "()Lcom/sun/webkit/ContextMenu;");
-    ASSERT(mid);
-
-    JLObject jContextMenu(env->CallStaticObjectMethod(getJContextMenuClass(), mid));
-    ASSERT(jContextMenu);
-    WTF::CheckAndClearException(env);
-
-    return jContextMenu;
+    return contextMenu;
 }
 
 ContextMenuJava::ContextMenuJava(const Vector<ContextMenuItem>& items)
@@ -188,10 +156,7 @@ ContextMenuJava::ContextMenuJava(const Vector<ContextMenuItem>& items)
         return;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(getJContextMenuClass(),
-        "fwkAppendItem", "(Lcom/sun/webkit/ContextMenuItem;)V");
-    ASSERT(mid);
+    const WKJHostTheme* cb = wkjTheme();
 
     for (const auto& item : items) {
         if (item.isNull() ||
@@ -204,45 +169,40 @@ ContextMenuJava::ContextMenuJava(const Vector<ContextMenuItem>& items)
         menuItem.setTitle(item.title());
         menuItem.setEnabled(item.enabled());
         menuItem.setChecked(item.checked());
-        // Call recursively
-        menuItem.setSubMenu(ContextMenuJava(item.subMenuItems()).m_contextMenu);
-        env->CallVoidMethod(m_contextMenu, mid, (jobject)menuItem);
-        WTF::CheckAndClearException(env);
+        // Call recursively. The temporary submenu lives to the end of the full expression,
+        // which is exactly as long as the borrowed id has to stay valid.
+        menuItem.setSubMenu(ContextMenuJava(item.subMenuItems()).m_contextMenu.get());
+        if (cb && cb->context_menu_append_item) {
+            cb->context_menu_append_item(m_contextMenu.get(), menuItem.ref());
+            wkjCheckAndClearException();
+        }
     }
 }
 
-void ContextMenuJava::show(ContextMenuController* ctrl, jobject page, const IntPoint& loc) const
+void ContextMenuJava::show(ContextMenuController* ctrl, wkj_ref page, const IntPoint& loc) const
 {
     if (!m_contextMenu) {
         return;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(
-            getJContextMenuClass(),
-            "fwkShow",
-            "(Lcom/sun/webkit/WebPage;JII)V");
-    ASSERT(mid);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->context_menu_show) {
+        return;
+    }
 
-    env->CallVoidMethod(
-            m_contextMenu,
-            mid,
-            page,
-            ptr_to_jlong(ctrl),
-            loc.x(),
-            loc.y());
-    WTF::CheckAndClearException(env);
+    cb->context_menu_show(m_contextMenu.get(), page, wkj_from_ptr(ctrl), loc.x(), loc.y());
+    wkjCheckAndClearException();
 }
 
 } // namespace WebCore
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_ContextMenu_twkHandleItemSelected
-    (JNIEnv*, jobject, jlong menuCtrlPData, jint itemAction)
+WKJ_EXPORT void wkj_context_menu_item_selected(int64_t menuCtrlPData, int32_t itemAction)
 {
     using namespace WebCore;
-    ContextMenuController* cmc = static_cast<ContextMenuController*>jlong_to_ptr(menuCtrlPData);
+    WKJCallScope wkjScope;
+    ContextMenuController* cmc = static_cast<ContextMenuController*>(wkj_to_ptr(menuCtrlPData));
     cmc->contextMenuItemSelected((ContextMenuAction)itemAction, "aux"_s);
 }
 

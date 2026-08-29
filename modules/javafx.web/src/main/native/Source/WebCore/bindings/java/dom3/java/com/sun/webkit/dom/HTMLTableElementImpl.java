@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,157 +47,209 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     public HTMLTableCaptionElement getCaption() {
         return HTMLTableCaptionElementImpl.getImpl(getCaptionImpl(getPeer()));
     }
-    native static long getCaptionImpl(long peer);
+    static long getCaptionImpl(long peer) {
+        return HTMLTableElementNative.getCaption(peer);
+    }
 
     @Override
     public void setCaption(HTMLTableCaptionElement value) throws DOMException {
         setCaptionImpl(getPeer(), HTMLTableCaptionElementImpl.getPeer(value));
     }
-    native static void setCaptionImpl(long peer, long value);
+    static void setCaptionImpl(long peer, long value) {
+        HTMLTableElementNative.setCaption(peer, value);
+    }
 
     @Override
     public HTMLTableSectionElement getTHead() {
         return HTMLTableSectionElementImpl.getImpl(getTHeadImpl(getPeer()));
     }
-    native static long getTHeadImpl(long peer);
+    static long getTHeadImpl(long peer) {
+        return HTMLTableElementNative.getTHead(peer);
+    }
 
     @Override
     public void setTHead(HTMLTableSectionElement value) throws DOMException {
         setTHeadImpl(getPeer(), HTMLTableSectionElementImpl.getPeer(value));
     }
-    native static void setTHeadImpl(long peer, long value);
+    static void setTHeadImpl(long peer, long value) {
+        HTMLTableElementNative.setTHead(peer, value);
+    }
 
     @Override
     public HTMLTableSectionElement getTFoot() {
         return HTMLTableSectionElementImpl.getImpl(getTFootImpl(getPeer()));
     }
-    native static long getTFootImpl(long peer);
+    static long getTFootImpl(long peer) {
+        return HTMLTableElementNative.getTFoot(peer);
+    }
 
     @Override
     public void setTFoot(HTMLTableSectionElement value) throws DOMException {
         setTFootImpl(getPeer(), HTMLTableSectionElementImpl.getPeer(value));
     }
-    native static void setTFootImpl(long peer, long value);
+    static void setTFootImpl(long peer, long value) {
+        HTMLTableElementNative.setTFoot(peer, value);
+    }
 
     @Override
     public HTMLCollection getRows() {
         return HTMLCollectionImpl.getImpl(getRowsImpl(getPeer()));
     }
-    native static long getRowsImpl(long peer);
+    static long getRowsImpl(long peer) {
+        return HTMLTableElementNative.getRows(peer);
+    }
 
     @Override
     public HTMLCollection getTBodies() {
         return HTMLCollectionImpl.getImpl(getTBodiesImpl(getPeer()));
     }
-    native static long getTBodiesImpl(long peer);
+    static long getTBodiesImpl(long peer) {
+        return HTMLTableElementNative.getTBodies(peer);
+    }
 
     @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLTableElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLTableElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getBgColor() {
         return getBgColorImpl(getPeer());
     }
-    native static String getBgColorImpl(long peer);
+    static String getBgColorImpl(long peer) {
+        return HTMLTableElementNative.getBgColor(peer);
+    }
 
     @Override
     public void setBgColor(String value) {
         setBgColorImpl(getPeer(), value);
     }
-    native static void setBgColorImpl(long peer, String value);
+    static void setBgColorImpl(long peer, String value) {
+        HTMLTableElementNative.setBgColor(peer, value);
+    }
 
     @Override
     public String getBorder() {
         return getBorderImpl(getPeer());
     }
-    native static String getBorderImpl(long peer);
+    static String getBorderImpl(long peer) {
+        return HTMLTableElementNative.getBorder(peer);
+    }
 
     @Override
     public void setBorder(String value) {
         setBorderImpl(getPeer(), value);
     }
-    native static void setBorderImpl(long peer, String value);
+    static void setBorderImpl(long peer, String value) {
+        HTMLTableElementNative.setBorder(peer, value);
+    }
 
     @Override
     public String getCellPadding() {
         return getCellPaddingImpl(getPeer());
     }
-    native static String getCellPaddingImpl(long peer);
+    static String getCellPaddingImpl(long peer) {
+        return HTMLTableElementNative.getCellPadding(peer);
+    }
 
     @Override
     public void setCellPadding(String value) {
         setCellPaddingImpl(getPeer(), value);
     }
-    native static void setCellPaddingImpl(long peer, String value);
+    static void setCellPaddingImpl(long peer, String value) {
+        HTMLTableElementNative.setCellPadding(peer, value);
+    }
 
     @Override
     public String getCellSpacing() {
         return getCellSpacingImpl(getPeer());
     }
-    native static String getCellSpacingImpl(long peer);
+    static String getCellSpacingImpl(long peer) {
+        return HTMLTableElementNative.getCellSpacing(peer);
+    }
 
     @Override
     public void setCellSpacing(String value) {
         setCellSpacingImpl(getPeer(), value);
     }
-    native static void setCellSpacingImpl(long peer, String value);
+    static void setCellSpacingImpl(long peer, String value) {
+        HTMLTableElementNative.setCellSpacing(peer, value);
+    }
 
     @Override
     public String getFrame() {
         return getFrameImpl(getPeer());
     }
-    native static String getFrameImpl(long peer);
+    static String getFrameImpl(long peer) {
+        return HTMLTableElementNative.getFrame(peer);
+    }
 
     @Override
     public void setFrame(String value) {
         setFrameImpl(getPeer(), value);
     }
-    native static void setFrameImpl(long peer, String value);
+    static void setFrameImpl(long peer, String value) {
+        HTMLTableElementNative.setFrame(peer, value);
+    }
 
     @Override
     public String getRules() {
         return getRulesImpl(getPeer());
     }
-    native static String getRulesImpl(long peer);
+    static String getRulesImpl(long peer) {
+        return HTMLTableElementNative.getRules(peer);
+    }
 
     @Override
     public void setRules(String value) {
         setRulesImpl(getPeer(), value);
     }
-    native static void setRulesImpl(long peer, String value);
+    static void setRulesImpl(long peer, String value) {
+        HTMLTableElementNative.setRules(peer, value);
+    }
 
     @Override
     public String getSummary() {
         return getSummaryImpl(getPeer());
     }
-    native static String getSummaryImpl(long peer);
+    static String getSummaryImpl(long peer) {
+        return HTMLTableElementNative.getSummary(peer);
+    }
 
     @Override
     public void setSummary(String value) {
         setSummaryImpl(getPeer(), value);
     }
-    native static void setSummaryImpl(long peer, String value);
+    static void setSummaryImpl(long peer, String value) {
+        HTMLTableElementNative.setSummary(peer, value);
+    }
 
     @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static String getWidthImpl(long peer);
+    static String getWidthImpl(long peer) {
+        return HTMLTableElementNative.getWidth(peer);
+    }
 
     @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }
-    native static void setWidthImpl(long peer, String value);
+    static void setWidthImpl(long peer, String value) {
+        HTMLTableElementNative.setWidth(peer, value);
+    }
 
 
 // Functions
@@ -206,7 +258,9 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         return HTMLElementImpl.getImpl(createTHeadImpl(getPeer()));
     }
-    native static long createTHeadImpl(long peer);
+    static long createTHeadImpl(long peer) {
+        return HTMLTableElementNative.createTHead(peer);
+    }
 
 
     @Override
@@ -214,7 +268,9 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         deleteTHeadImpl(getPeer());
     }
-    native static void deleteTHeadImpl(long peer);
+    static void deleteTHeadImpl(long peer) {
+        HTMLTableElementNative.deleteTHead(peer);
+    }
 
 
     @Override
@@ -222,7 +278,9 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         return HTMLElementImpl.getImpl(createTFootImpl(getPeer()));
     }
-    native static long createTFootImpl(long peer);
+    static long createTFootImpl(long peer) {
+        return HTMLTableElementNative.createTFoot(peer);
+    }
 
 
     @Override
@@ -230,14 +288,18 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         deleteTFootImpl(getPeer());
     }
-    native static void deleteTFootImpl(long peer);
+    static void deleteTFootImpl(long peer) {
+        HTMLTableElementNative.deleteTFoot(peer);
+    }
 
 
     public HTMLElement createTBody()
     {
         return HTMLElementImpl.getImpl(createTBodyImpl(getPeer()));
     }
-    native static long createTBodyImpl(long peer);
+    static long createTBodyImpl(long peer) {
+        return HTMLTableElementNative.createTBody(peer);
+    }
 
 
     @Override
@@ -245,7 +307,9 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         return HTMLElementImpl.getImpl(createCaptionImpl(getPeer()));
     }
-    native static long createCaptionImpl(long peer);
+    static long createCaptionImpl(long peer) {
+        return HTMLTableElementNative.createCaption(peer);
+    }
 
 
     @Override
@@ -253,7 +317,9 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
     {
         deleteCaptionImpl(getPeer());
     }
-    native static void deleteCaptionImpl(long peer);
+    static void deleteCaptionImpl(long peer) {
+        HTMLTableElementNative.deleteCaption(peer);
+    }
 
 
     @Override
@@ -262,8 +328,10 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
         return HTMLElementImpl.getImpl(insertRowImpl(getPeer()
             , index));
     }
-    native static long insertRowImpl(long peer
-        , int index);
+    static long insertRowImpl(long peer
+        , int index) {
+        return HTMLTableElementNative.insertRow(peer, index);
+    }
 
 
     @Override
@@ -272,8 +340,10 @@ public class HTMLTableElementImpl extends HTMLElementImpl implements HTMLTableEl
         deleteRowImpl(getPeer()
             , index);
     }
-    native static void deleteRowImpl(long peer
-        , int index);
+    static void deleteRowImpl(long peer
+        , int index) {
+        HTMLTableElementNative.deleteRow(peer, index);
+    }
 
 
 }

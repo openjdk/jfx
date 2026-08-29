@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/java/JavaRef.h>
+#include <wtf/java/WKJHandle.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -66,11 +66,11 @@ public:
 private:
     URLLoader();
 
-    static JLObject load(bool asynchronous,
-                         NetworkingContext* context,
-                         const ResourceRequest& request,
-                         Target* target);
-    static JLObjectArray toJava(const FormData* formData);
+    static wkj_ref load(bool asynchronous,
+                        NetworkingContext* context,
+                        const ResourceRequest& request,
+                        Target* target);
+    static Vector<WKJHandle> toJava(const FormData* formData);
 
     class AsynchronousTarget : public Target {
     public:
@@ -106,7 +106,7 @@ private:
         Vector<uint8_t>& m_data;
     };
 
-    JGObject m_ref;
+    WKJHandle m_ref;
     std::unique_ptr<AsynchronousTarget> m_target;
 };
 

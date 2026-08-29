@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,61 @@
 
 #pragma once
 
-#include <jni.h>
-#include "PlatformJavaClasses.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 
+/*
+ * A Java com.sun.webkit.graphics.Ref held by native code.
+ *
+ * Two identifiers name the same object and both are needed, which is worth stating because it
+ * looks redundant:
+ *
+ *   m_ref    a wkj_ref, i.e. a registry id for the Java object itself. It is what gets handed
+ *            back to Java whenever the object - not a token for it - has to cross the
+ *            boundary: CursorJava, PasteboardJava, DragClientJava, PopupMenuJava and
+ *            ImageBufferJavaBackend all pass one on. It replaces the global reference the
+ *            class used to hold, and it keeps the object reachable for the whole lifetime of
+ *            this RQRef.
+ *   m_refID  the int the Java side assigned in WCGraphicsManager.createID(), fetched lazily
+ *            by operator int32_t(). This is what the render-queue command buffer carries, and
+ *            WCGraphicsManager.refMap maps it back to the object - but only between ref() and
+ *            deref(), so it cannot stand in for m_ref: before the first operator int32_t()
+ *            there is no refMap entry at all, and nothing else would keep the Java object
+ *            alive. The two are not interchangeable and neither can be dropped.
+ */
 class RQRef : public RefCounted<RQRef> {
 public:
-    inline static RefPtr<RQRef> create(const JLObject &obj)
+    /* Adds a reference to `obj`; the caller keeps its own, as the global reference did. */
+    inline static RefPtr<RQRef> create(wkj_ref obj)
     {
         return obj ? adoptRef(new RQRef(obj)) : nullptr;
     }
-    operator jint();
-    operator jobject() {return m_ref;}
-    JLObject cloneLocalCopy() const {
-        return m_ref;
-    }
+
+    /* The Java-assigned int id, fetching it and ref()ing the object on first use. */
+    operator int32_t();
+
+    /* The registry id, borrowed: ownership stays with this RQRef. */
+    operator wkj_ref() const { return m_ref.get(); }
+
+    /*
+     * A new id for the same object, owned by the caller. This is what cloneLocalCopy() was:
+     * a fresh reference with a scope of its own, which the WKJHandle destructor releases.
+     */
+    WKJHandle retainedRef() const { return WKJHandle::retained(m_ref.get()); }
+
     ~RQRef();
 
 private:
-    RQRef(const JLObject &obj)
-        : m_ref(obj)
+    explicit RQRef(wkj_ref obj)
+        : m_ref(WKJHandle::retained(obj))
         , m_refID(-1)
     {}
 
-    JGObject m_ref;
-    jint m_refID;
+    WKJHandle m_ref;
+    int32_t m_refID;
 };
 
 }

@@ -40,7 +40,10 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.WebPage;
 
-final class NetworkContext {
+// Public rather than package private because com.sun.webkit.WebPageNative installs
+// WKJNetworkCallbacks::can_handle_url for the process and has to reach canHandleURL below. The
+// javafx.web module does not export this package, so the class is still module internal.
+public final class NetworkContext {
 
     private static final PlatformLogger logger =
             PlatformLogger.getLogger(NetworkContext.class.getName());
@@ -119,7 +122,10 @@ final class NetworkContext {
      * @return <code>true</code> if we can handle the url. <code>false</code>
      *         otherwise.
      */
-    private static boolean canHandleURL(String url) {
+    // Public rather than private because the native side reaches it through
+    // com.sun.webkit.WebPageNative, which installs WKJNetworkCallbacks for the process; this package
+    // is not exported by the javafx.web module, so the method is still module internal.
+    public static boolean canHandleURL(String url) {
         java.net.URL u = null;
         try {
             u = newURL(url);
@@ -131,7 +137,7 @@ final class NetworkContext {
     /**
      * Starts an asynchronous load or executes a synchronous one.
      */
-    private static URLLoaderBase fwkLoad(WebPage webPage,
+    static URLLoaderBase fwkLoad(WebPage webPage,
                                      boolean asynchronous,
                                      String url,
                                      String method,
@@ -208,7 +214,7 @@ final class NetworkContext {
     /**
      * Returns the maximum allowed number of connections per host.
      */
-    private static int fwkGetMaximumHTTPConnectionCountPerHost() {
+    static int fwkGetMaximumHTTPConnectionCountPerHost() {
         // Our implementation employs HttpURLConnection for all
         // HTTP exchanges, so return the value of the "http.maxConnections"
         // system property.

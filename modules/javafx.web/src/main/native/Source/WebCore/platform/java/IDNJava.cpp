@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,29 +24,9 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 #include "IDNJava.h"
-#include <wtf/java/JavaEnv.h>
-#include "com_sun_webkit_network_URLLoaderBase.h"
-
-namespace IDNJavaInternal {
-
-static JGClass idnClass;
-static jmethodID toASCIIMID;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!idnClass) {
-        idnClass = JLClass(env->FindClass("java/net/IDN"));
-        ASSERT(idnClass);
-
-        toASCIIMID = env->GetStaticMethodID(
-                idnClass,
-                "toASCII",
-                "(Ljava/lang/String;I)Ljava/lang/String;");
-        ASSERT(toASCIIMID);
-    }
-}
-}
+#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 
@@ -54,17 +34,25 @@ namespace IDNJava {
 
 String toASCII(const String& hostname)
 {
-    using namespace IDNJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    const WKJHostTheme* cb = wkjTheme();
+    if (!cb || !cb->idn_to_ascii)
+        return emptyString();
 
-    JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
-            idnClass,
-            toASCIIMID,
-            (jstring)hostname.toJavaString(env),
-            com_sun_webkit_network_URLLoaderBase_ALLOW_UNASSIGNED));
-    WTF::CheckAndClearException(env);
-    return String(env, result);
+    WKJStringArg host(hostname);
+    String result = wkjFetchString([&](uint16_t* buffer, int32_t capacity, int32_t* length) {
+        return cb->idn_to_ascii(host.data(), host.length(),
+                                com_sun_webkit_network_URLLoaderBase_ALLOW_UNASSIGNED,
+                                buffer, capacity, length);
+    });
+    wkjCheckAndClearException();
+
+    /*
+     * A null result collapses to the empty string, because the JNI code ended in
+     * String(env, result), whose constructor mapped a null Java string to StringImpl::empty()
+     * (contract 11.1). Returning the null String here instead would change what URL parsing
+     * sees when IDN.toASCII fails.
+     */
+    return result.isNull() ? emptyString() : result;
 }
 
 } // namespace IDNJava

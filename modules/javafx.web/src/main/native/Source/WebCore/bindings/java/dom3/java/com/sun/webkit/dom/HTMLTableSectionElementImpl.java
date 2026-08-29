@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,55 +45,73 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLTableSectionElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLTableSectionElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getCh() {
         return getChImpl(getPeer());
     }
-    native static String getChImpl(long peer);
+    static String getChImpl(long peer) {
+        return HTMLTableSectionElementNative.getCh(peer);
+    }
 
     @Override
     public void setCh(String value) {
         setChImpl(getPeer(), value);
     }
-    native static void setChImpl(long peer, String value);
+    static void setChImpl(long peer, String value) {
+        HTMLTableSectionElementNative.setCh(peer, value);
+    }
 
     @Override
     public String getChOff() {
         return getChOffImpl(getPeer());
     }
-    native static String getChOffImpl(long peer);
+    static String getChOffImpl(long peer) {
+        return HTMLTableSectionElementNative.getChOff(peer);
+    }
 
     @Override
     public void setChOff(String value) {
         setChOffImpl(getPeer(), value);
     }
-    native static void setChOffImpl(long peer, String value);
+    static void setChOffImpl(long peer, String value) {
+        HTMLTableSectionElementNative.setChOff(peer, value);
+    }
 
     @Override
     public String getVAlign() {
         return getVAlignImpl(getPeer());
     }
-    native static String getVAlignImpl(long peer);
+    static String getVAlignImpl(long peer) {
+        return HTMLTableSectionElementNative.getVAlign(peer);
+    }
 
     @Override
     public void setVAlign(String value) {
         setVAlignImpl(getPeer(), value);
     }
-    native static void setVAlignImpl(long peer, String value);
+    static void setVAlignImpl(long peer, String value) {
+        HTMLTableSectionElementNative.setVAlign(peer, value);
+    }
 
     @Override
     public HTMLCollection getRows() {
         return HTMLCollectionImpl.getImpl(getRowsImpl(getPeer()));
     }
-    native static long getRowsImpl(long peer);
+    static long getRowsImpl(long peer) {
+        return HTMLTableSectionElementNative.getRows(peer);
+    }
 
 
 // Functions
@@ -103,8 +121,10 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
         return HTMLElementImpl.getImpl(insertRowImpl(getPeer()
             , index));
     }
-    native static long insertRowImpl(long peer
-        , int index);
+    static long insertRowImpl(long peer
+        , int index) {
+        return HTMLTableSectionElementNative.insertRow(peer, index);
+    }
 
 
     @Override
@@ -113,8 +133,10 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
         deleteRowImpl(getPeer()
             , index);
     }
-    native static void deleteRowImpl(long peer
-        , int index);
+    static void deleteRowImpl(long peer
+        , int index) {
+        HTMLTableSectionElementNative.deleteRow(peer, index);
+    }
 
 
 }

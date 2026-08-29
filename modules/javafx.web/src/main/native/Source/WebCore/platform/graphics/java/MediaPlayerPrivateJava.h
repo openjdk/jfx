@@ -27,7 +27,7 @@
 #define MediaPlayerPrivateJava_h
 
 #include "MediaPlayerPrivate.h"
-#include <jni.h>
+#include <wtf/java/WKJHandle.h>
 #include "TimeRanges.h"
 
 namespace WebCore {
@@ -141,7 +141,7 @@ namespace WebCore {
         //virtual double maximumDurationToCacheMediaTime() const { return 0.5; }
     // implementation
     public:
-        static inline MediaPlayerPrivate* getPlayer(jlong ptr);
+        static inline MediaPlayerPrivate* getPlayer(int64_t ptr);
         void notifyNetworkStateChanged(int networkState);
         void notifyReadyStateChanged(int readyState);
         void notifyPaused(bool paused);

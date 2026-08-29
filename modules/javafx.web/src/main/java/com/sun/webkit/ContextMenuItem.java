@@ -58,11 +58,11 @@ public final class ContextMenuItem {
                 super.toString(), title, action, isEnabled, isChecked, type);
     }
 
-    private static ContextMenuItem fwkCreateContextMenuItem() {
+    static ContextMenuItem fwkCreateContextMenuItem() {
         return new ContextMenuItem();
     }
 
-    private void fwkSetTitle(String title) {
+    void fwkSetTitle(String title) {
         this.title = title;
     }
 
@@ -70,7 +70,7 @@ public final class ContextMenuItem {
         return getTitle();
     }
 
-    private void fwkSetAction(int action) {
+    void fwkSetAction(int action) {
         this.action = action;
     }
 
@@ -78,7 +78,7 @@ public final class ContextMenuItem {
         return getAction();
     }
 
-    private void fwkSetEnabled(boolean isEnabled) {
+    void fwkSetEnabled(boolean isEnabled) {
         this.isEnabled = isEnabled;
     }
 
@@ -86,11 +86,11 @@ public final class ContextMenuItem {
         return isEnabled();
     }
 
-    private void fwkSetChecked(boolean isChecked) {
+    void fwkSetChecked(boolean isChecked) {
         this.isChecked = isChecked;
     }
 
-    private void fwkSetType(int type) {
+    void fwkSetType(int type) {
         this.type = type;
     }
 
@@ -98,7 +98,7 @@ public final class ContextMenuItem {
         return getType();
     }
 
-    private void fwkSetSubmenu(ContextMenu submenu) {
+    void fwkSetSubmenu(ContextMenu submenu) {
         this.submenu = submenu;
     }
 

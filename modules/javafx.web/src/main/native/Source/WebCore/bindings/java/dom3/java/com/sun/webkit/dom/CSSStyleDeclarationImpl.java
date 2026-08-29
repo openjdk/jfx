@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,9 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return (arg == null) ? 0L : ((CSSStyleDeclarationImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        CSSStyleDeclarationNative.dispose(peer);
+    }
 
     static CSSStyleDeclaration getImpl(long peer) {
         return (CSSStyleDeclaration)create(peer);
@@ -86,25 +88,33 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
-    native static String getCssTextImpl(long peer);
+    static String getCssTextImpl(long peer) {
+        return CSSStyleDeclarationNative.getCssText(peer);
+    }
 
     @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
-    native static void setCssTextImpl(long peer, String value);
+    static void setCssTextImpl(long peer, String value) {
+        CSSStyleDeclarationNative.setCssText(peer, value);
+    }
 
     @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
-    native static int getLengthImpl(long peer);
+    static int getLengthImpl(long peer) {
+        return CSSStyleDeclarationNative.getLength(peer);
+    }
 
     @Override
     public CSSRule getParentRule() {
         return CSSRuleImpl.getImpl(getParentRuleImpl(getPeer()));
     }
-    native static long getParentRuleImpl(long peer);
+    static long getParentRuleImpl(long peer) {
+        return CSSStyleDeclarationNative.getParentRule(peer);
+    }
 
 
 // Functions
@@ -114,8 +124,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return getPropertyValueImpl(getPeer()
             , propertyName);
     }
-    native static String getPropertyValueImpl(long peer
-        , String propertyName);
+    static String getPropertyValueImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.getPropertyValue(peer, propertyName);
+    }
 
 
     @Override
@@ -124,8 +136,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return CSSValueImpl.getImpl(getPropertyCSSValueImpl(getPeer()
             , propertyName));
     }
-    native static long getPropertyCSSValueImpl(long peer
-        , String propertyName);
+    static long getPropertyCSSValueImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.getPropertyCSSValue(peer, propertyName);
+    }
 
 
     @Override
@@ -134,8 +148,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return removePropertyImpl(getPeer()
             , propertyName);
     }
-    native static String removePropertyImpl(long peer
-        , String propertyName);
+    static String removePropertyImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.removeProperty(peer, propertyName);
+    }
 
 
     @Override
@@ -144,8 +160,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return getPropertyPriorityImpl(getPeer()
             , propertyName);
     }
-    native static String getPropertyPriorityImpl(long peer
-        , String propertyName);
+    static String getPropertyPriorityImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.getPropertyPriority(peer, propertyName);
+    }
 
 
     @Override
@@ -158,10 +176,12 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
             , value
             , priority);
     }
-    native static void setPropertyImpl(long peer
+    static void setPropertyImpl(long peer
         , String propertyName
         , String value
-        , String priority);
+        , String priority) {
+        CSSStyleDeclarationNative.setProperty(peer, propertyName, value, priority);
+    }
 
 
     @Override
@@ -170,8 +190,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return itemImpl(getPeer()
             , index);
     }
-    native static String itemImpl(long peer
-        , int index);
+    static String itemImpl(long peer
+        , int index) {
+        return CSSStyleDeclarationNative.item(peer, index);
+    }
 
 
     public String getPropertyShorthand(String propertyName)
@@ -179,8 +201,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return getPropertyShorthandImpl(getPeer()
             , propertyName);
     }
-    native static String getPropertyShorthandImpl(long peer
-        , String propertyName);
+    static String getPropertyShorthandImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.getPropertyShorthand(peer, propertyName);
+    }
 
 
     public boolean isPropertyImplicit(String propertyName)
@@ -188,8 +212,10 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         return isPropertyImplicitImpl(getPeer()
             , propertyName);
     }
-    native static boolean isPropertyImplicitImpl(long peer
-        , String propertyName);
+    static boolean isPropertyImplicitImpl(long peer
+        , String propertyName) {
+        return CSSStyleDeclarationNative.isPropertyImplicit(peer, propertyName);
+    }
 
 
 }

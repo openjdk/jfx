@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,15 @@
 
 #include "config.h"
 
-#include <wtf/java/JavaEnv.h>
-#include <wtf/java/JavaRef.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <wtf/java/WKJRuntime.h>
 
 #if OS(UNIX)
 #include <pthread.h>
 #endif
 
 namespace WTF {
-static JGClass jMainThreadCls;
-static jmethodID fwkScheduleDispatchFunctions;
 
 #if OS(UNIX)
 static pthread_t s_mainThread;
@@ -46,48 +43,42 @@ static ThreadIdentifier s_mainThread { 0 };
 
 void scheduleDispatchFunctionsOnMainThread()
 {
-    AttachThreadAsNonDaemonToJavaEnv autoAttach;
-    JNIEnv* env = autoAttach.env();
-    if (env) {
-        env->CallStaticVoidMethod(jMainThreadCls, fwkScheduleDispatchFunctions);
-        WTF::CheckAndClearException(env);
-    }
+    /*
+     * SHUTDOWN GATE. The JNI version opened with AttachThreadAsNonDaemonToJavaEnv and then
+     * "if (env)", and that environment was null in exactly one case: g_ShuttingDown was set,
+     * because AttachThreadToJavaEnv refused to attach once it was (JavaEnv.h:87-99). So the
+     * call was silently skipped during teardown. There is no environment to be null now, so
+     * the test has to be explicit or dispatch requests would start reaching a Java side that
+     * is going away. See THE SHUTDOWN GATE in WKJRuntime.h.
+     */
+    if (wkjIsShuttingDown())
+        return;
+
+    const WKJHostWTF* cb = wkjWTF();
+    if (!cb || !cb->main_thread_schedule_dispatch)
+        return;
+
+    cb->main_thread_schedule_dispatch();
+    wkjCheckAndClearException();
 }
 
 void initializeMainThreadPlatform()
 {
-    // Initialize the class reference and methodids for the MainThread. The
-    // initialization has to be done from a context where the class
-    // com.sun.webkit.MainThread is accessible. When
-    // scheduleDispatchFunctionsOnMainThread is invoked, the system class loader
-    // would be used to locate the class, which fails if the JavaFX modules are
-    // not loaded from the boot module layer.
-    //
-    // initializeMainThreadPlatform is called through the chain:
-    // - com.sun.webkit.WebPage.WebPage
-    // - com.sun.webkit.WebPage.twkCreatePage
-    // - WTF::initializeMainThread
-    // - WTF::initializeMainThreadPlatform
-    //
-    // As we are invoked through JNI from java, the class loader, that loaded
-    // WebPage will be used by FindClass.
-    //
-    // WTF::initializeMainThread has a guard, so that initialization is only run
-    // once
-
-    AttachThreadAsNonDaemonToJavaEnv autoAttach;
-    JNIEnv* env = autoAttach.env();
-
-    static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
-    jMainThreadCls = jMainThreadRef;
-
-    fwkScheduleDispatchFunctions = env->GetStaticMethodID(
-            jMainThreadCls,
-            "fwkScheduleDispatchFunctions",
-            "()V");
-
-    ASSERT(fwkScheduleDispatchFunctions);
-
+    /*
+     * Nothing but recording which thread is the main one.
+     *
+     * The JNI version also resolved com.sun.webkit.MainThread and cached
+     * fwkScheduleDispatchFunctions here, and the comment that used to sit in this function
+     * explained why it had to happen HERE rather than lazily: the call arrives from Java
+     * through WebPage.twkCreatePage, so FindClass would use the class loader that loaded
+     * WebPage, whereas a lookup from a WebKit-spawned thread would use the system loader and
+     * fail when the JavaFX modules are not in the boot layer.
+     *
+     * That reasoning was entirely about JNI class lookup. The dispatch hook is now a function
+     * pointer in WKJHostWTF that Java installs at wkj_init, so there is no class to resolve,
+     * no method id to cache, and no constraint on when this function runs. The guard in
+     * WTF::initializeMainThread that made it run once is unchanged and still does its job.
+     */
 #if OS(UNIX)
     s_mainThread = pthread_self();
 #elif OS(WINDOWS)
@@ -107,30 +98,26 @@ bool isMainThread()
 }
 #endif
 
+} // namespace WTF
+
 extern "C" {
 
-/*
- * Class:     com_sun_webkit_MainThread
- * Method:    twkScheduleDispatchFunctions
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions
-  (JNIEnv*, jobject)
+/* MainThread.twkScheduleDispatchFunctions(); was Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions. */
+void wkj_main_thread_dispatch_functions(void)
 {
-    RunLoop::mainSingleton().dispatchFunctionsFromMainThread();
+    WTF::RunLoop::mainSingleton().dispatchFunctionsFromMainThread();
 }
 
 /*
- * Class:     com_sun_webkit_MainThread
- * Method:    twkSetShutdown
- * Signature: (Z)V
+ * MainThread.twkSetShutdown(boolean); was Java_com_sun_webkit_MainThread_twkSetShutdown.
+ *
+ * The flag it sets is the one every shutdown gate in the library reads, so this is the single
+ * point at which Java tells the library to stop calling back. It is a downcall, not a
+ * callback: the JNI version was a native method too.
  */
-JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkSetShutdown
-  (JNIEnv *, jclass, jboolean isShutdown)
+void wkj_set_shutdown(int32_t shutting_down)
 {
-    g_ShuttingDown = isShutdown;
+    g_ShuttingDown = shutting_down != 0;
 }
 
-}
-
-} // namespace WTF
+} // extern "C"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,23 +42,33 @@ public class HTMLHtmlElementImpl extends HTMLElementImpl implements HTMLHtmlElem
     public String getVersion() {
         return getVersionImpl(getPeer());
     }
-    native static String getVersionImpl(long peer);
+    static String getVersionImpl(long peer) {
+        return HTMLHtmlElementNative.getVersion(peer);
+    }
 
     @Override
     public void setVersion(String value) {
         setVersionImpl(getPeer(), value);
     }
-    native static void setVersionImpl(long peer, String value);
+    static void setVersionImpl(long peer, String value) {
+        HTMLHtmlElementNative.setVersion(peer, value);
+    }
 
     public String getManifest() {
         return getManifestImpl(getPeer());
     }
-    native static String getManifestImpl(long peer);
+    static String getManifestImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLHtmlElementImpl.getManifestImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
     public void setManifest(String value) {
         setManifestImpl(getPeer(), value);
     }
-    native static void setManifestImpl(long peer, String value);
+    static void setManifestImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLHtmlElementImpl.setManifestImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
 }
 

@@ -34,79 +34,90 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLOptionElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLOptionElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getDisabled(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::disabledAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setDisabledImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLOptionElement_setDisabled(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::disabledAttr, value);
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getFormImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_HTMLOptionElement_getForm(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLFormElement>(env, WTF::getPtr(IMPL->form()));
+    return WKJReturnPeer<HTMLFormElement>(WTF::getPtr(IMPL->form()));
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getLabelImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getLabel(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->label());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->label());
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getDefaultSelectedImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getDefaultSelected(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::selectedAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setDefaultSelectedImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLOptionElement_setDefaultSelected(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::selectedAttr, value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getSelectedImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getSelected(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->selected();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setSelectedImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLOptionElement_setSelected(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setSelected(value);
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getValueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getValue(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->value());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->value());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->text());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->text());
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getIndexImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionElement_getIndex(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->index();
 }

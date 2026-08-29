@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,10 @@ public class DOMSelectionImpl {
         return (arg == null) ? 0L : ((DOMSelectionImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.dispose: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
     static DOMSelectionImpl getImpl(long peer) {
         return (DOMSelectionImpl)create(peer);
@@ -84,57 +87,90 @@ public class DOMSelectionImpl {
     public Node getAnchorNode() {
         return NodeImpl.getImpl(getAnchorNodeImpl(getPeer()));
     }
-    native static long getAnchorNodeImpl(long peer);
+    static long getAnchorNodeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getAnchorNodeImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public int getAnchorOffset() {
         return getAnchorOffsetImpl(getPeer());
     }
-    native static int getAnchorOffsetImpl(long peer);
+    static int getAnchorOffsetImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getAnchorOffsetImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
     public Node getFocusNode() {
         return NodeImpl.getImpl(getFocusNodeImpl(getPeer()));
     }
-    native static long getFocusNodeImpl(long peer);
+    static long getFocusNodeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getFocusNodeImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public int getFocusOffset() {
         return getFocusOffsetImpl(getPeer());
     }
-    native static int getFocusOffsetImpl(long peer);
+    static int getFocusOffsetImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getFocusOffsetImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public boolean getIsCollapsed() {
         return getIsCollapsedImpl(getPeer());
     }
-    native static boolean getIsCollapsedImpl(long peer);
+    static boolean getIsCollapsedImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getIsCollapsedImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public int getRangeCount() {
         return getRangeCountImpl(getPeer());
     }
-    native static int getRangeCountImpl(long peer);
+    static int getRangeCountImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getRangeCountImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public Node getBaseNode() {
         return NodeImpl.getImpl(getBaseNodeImpl(getPeer()));
     }
-    native static long getBaseNodeImpl(long peer);
+    static long getBaseNodeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getBaseNodeImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public int getBaseOffset() {
         return getBaseOffsetImpl(getPeer());
     }
-    native static int getBaseOffsetImpl(long peer);
+    static int getBaseOffsetImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getBaseOffsetImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public Node getExtentNode() {
         return NodeImpl.getImpl(getExtentNodeImpl(getPeer()));
     }
-    native static long getExtentNodeImpl(long peer);
+    static long getExtentNodeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getExtentNodeImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
     public int getExtentOffset() {
         return getExtentOffsetImpl(getPeer());
     }
-    native static int getExtentOffsetImpl(long peer);
+    static int getExtentOffsetImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getExtentOffsetImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getTypeImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
 // Functions
@@ -145,30 +181,42 @@ public class DOMSelectionImpl {
             , NodeImpl.getPeer(node)
             , index);
     }
-    native static void collapseImpl(long peer
+    static void collapseImpl(long peer
         , long node
-        , int index);
+        , int index) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.collapseImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
     public void collapseToEnd() throws DOMException
     {
         collapseToEndImpl(getPeer());
     }
-    native static void collapseToEndImpl(long peer);
+    static void collapseToEndImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.collapseToEndImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
 
     public void collapseToStart() throws DOMException
     {
         collapseToStartImpl(getPeer());
     }
-    native static void collapseToStartImpl(long peer);
+    static void collapseToStartImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.collapseToStartImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
 
     public void deleteFromDocument()
     {
         deleteFromDocumentImpl(getPeer());
     }
-    native static void deleteFromDocumentImpl(long peer);
+    static void deleteFromDocumentImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.deleteFromDocumentImpl:"
+                + " JavaDOMSelection.cpp is not compiled into jfxwebkit");
+    }
 
 
     public boolean containsNode(Node node
@@ -178,9 +226,12 @@ public class DOMSelectionImpl {
             , NodeImpl.getPeer(node)
             , allowPartial);
     }
-    native static boolean containsNodeImpl(long peer
+    static boolean containsNodeImpl(long peer
         , long node
-        , boolean allowPartial);
+        , boolean allowPartial) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.containsNodeImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
 
     public void selectAllChildren(Node node) throws DOMException
@@ -188,8 +239,11 @@ public class DOMSelectionImpl {
         selectAllChildrenImpl(getPeer()
             , NodeImpl.getPeer(node));
     }
-    native static void selectAllChildrenImpl(long peer
-        , long node);
+    static void selectAllChildrenImpl(long peer
+        , long node) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.selectAllChildrenImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
 
     public void extend(Node node
@@ -199,9 +253,12 @@ public class DOMSelectionImpl {
             , NodeImpl.getPeer(node)
             , offset);
     }
-    native static void extendImpl(long peer
+    static void extendImpl(long peer
         , long node
-        , int offset);
+        , int offset) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.extendImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
     public Range getRangeAt(int index) throws DOMException
@@ -209,15 +266,21 @@ public class DOMSelectionImpl {
         return RangeImpl.getImpl(getRangeAtImpl(getPeer()
             , index));
     }
-    native static long getRangeAtImpl(long peer
-        , int index);
+    static long getRangeAtImpl(long peer
+        , int index) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.getRangeAtImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
     public void removeAllRanges()
     {
         removeAllRangesImpl(getPeer());
     }
-    native static void removeAllRangesImpl(long peer);
+    static void removeAllRangesImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.removeAllRangesImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
 
     public void addRange(Range range)
@@ -225,8 +288,11 @@ public class DOMSelectionImpl {
         addRangeImpl(getPeer()
             , RangeImpl.getPeer(range));
     }
-    native static void addRangeImpl(long peer
-        , long range);
+    static void addRangeImpl(long peer
+        , long range) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.addRangeImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
     public void modify(String alter
@@ -238,10 +304,13 @@ public class DOMSelectionImpl {
             , direction
             , granularity);
     }
-    native static void modifyImpl(long peer
+    static void modifyImpl(long peer
         , String alter
         , String direction
-        , String granularity);
+        , String granularity) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.modifyImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
     public void setBaseAndExtent(Node baseNode
@@ -255,11 +324,14 @@ public class DOMSelectionImpl {
             , NodeImpl.getPeer(extentNode)
             , extentOffset);
     }
-    native static void setBaseAndExtentImpl(long peer
+    static void setBaseAndExtentImpl(long peer
         , long baseNode
         , int baseOffset
         , long extentNode
-        , int extentOffset);
+        , int extentOffset) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.setBaseAndExtentImpl: JavaDOMSelection.cpp"
+                + " is not compiled into jfxwebkit");
+    }
 
 
     public void setPosition(Node node
@@ -269,16 +341,22 @@ public class DOMSelectionImpl {
             , NodeImpl.getPeer(node)
             , offset);
     }
-    native static void setPositionImpl(long peer
+    static void setPositionImpl(long peer
         , long node
-        , int offset);
+        , int offset) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.setPositionImpl: JavaDOMSelection.cpp is"
+                + " not compiled into jfxwebkit");
+    }
 
 
     public void empty()
     {
         emptyImpl(getPeer());
     }
-    native static void emptyImpl(long peer);
+    static void emptyImpl(long peer) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMSelectionImpl.emptyImpl: JavaDOMSelection.cpp is not"
+                + " compiled into jfxwebkit");
+    }
 
 
 }

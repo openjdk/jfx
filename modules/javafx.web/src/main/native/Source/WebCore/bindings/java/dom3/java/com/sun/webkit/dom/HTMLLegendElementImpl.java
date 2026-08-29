@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,31 +43,41 @@ public class HTMLLegendElementImpl extends HTMLElementImpl implements HTMLLegend
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
-    native static long getFormImpl(long peer);
+    static long getFormImpl(long peer) {
+        return HTMLLegendElementNative.getForm(peer);
+    }
 
     @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
-    native static String getAlignImpl(long peer);
+    static String getAlignImpl(long peer) {
+        return HTMLLegendElementNative.getAlign(peer);
+    }
 
     @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
-    native static void setAlignImpl(long peer, String value);
+    static void setAlignImpl(long peer, String value) {
+        HTMLLegendElementNative.setAlign(peer, value);
+    }
 
     @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
-    native static String getAccessKeyImpl(long peer);
+    static String getAccessKeyImpl(long peer) {
+        return HTMLLegendElementNative.getAccessKey(peer);
+    }
 
     @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
-    native static void setAccessKeyImpl(long peer, String value);
+    static void setAccessKeyImpl(long peer, String value) {
+        HTMLLegendElementNative.setAccessKey(peer, value);
+    }
 
 }
 

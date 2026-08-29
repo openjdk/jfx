@@ -36,64 +36,68 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DocumentFragment*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DocumentFragment*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getChildrenImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_getChildren(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->children()));
+    return WKJReturnPeer<HTMLCollection>(WTF::getPtr(IMPL->children()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getFirstElementChildImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_getFirstElementChild(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->firstElementChild()));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->firstElementChild()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getLastElementChildImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_getLastElementChild(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->lastElementChild()));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->lastElementChild()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getChildElementCountImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DocumentFragment_getChildElementCount(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->childElementCount();
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getElementByIdImpl(JNIEnv* env, jclass, jlong peer
-    , jstring elementId)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_getElementById(int64_t peer, const uint16_t* elementId, int32_t elementId_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->getElementById(AtomString {String(env, elementId)})));
+    return WKJReturnPeer<Element>(WTF::getPtr(IMPL->getElementById(AtomString {WKJString(elementId, elementId_length)})));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorImpl(JNIEnv* env, jclass, jlong peer
-    , jstring selectors)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_querySelector(int64_t peer, const uint16_t* selectors, int32_t selectors_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelector(AtomString {String(env, selectors)}))));
+    return WKJReturnPeer<Element>(WTF::getPtr(raiseOnDOMError(IMPL->querySelector(AtomString {WKJString(selectors, selectors_length)}))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorAllImpl(JNIEnv* env, jclass, jlong peer
-    , jstring selectors)
+WKJ_EXPORT int64_t wkj_dom_DocumentFragment_querySelectorAll(int64_t peer, const uint16_t* selectors, int32_t selectors_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelectorAll(AtomString {String(env, selectors)}))));
+    return WKJReturnPeer<NodeList>(WTF::getPtr(raiseOnDOMError(IMPL->querySelectorAll(AtomString {WKJString(selectors, selectors_length)}))));
 }
 
 

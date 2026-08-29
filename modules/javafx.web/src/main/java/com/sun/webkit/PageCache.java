@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,11 @@ public final class PageCache {
         twkSetCapacity(capacity);
     }
 
-    native private static int twkGetCapacity();
-    native private static void twkSetCapacity(int capacity);
+    private static int twkGetCapacity() {
+        return PageCacheNative.getCapacity();
+    }
+
+    private static void twkSetCapacity(int capacity) {
+        PageCacheNative.setCapacity(capacity);
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,13 +42,17 @@ public class HTMLMenuElementImpl extends HTMLElementImpl implements HTMLMenuElem
     public boolean getCompact() {
         return getCompactImpl(getPeer());
     }
-    native static boolean getCompactImpl(long peer);
+    static boolean getCompactImpl(long peer) {
+        return HTMLMenuElementNative.getCompact(peer);
+    }
 
     @Override
     public void setCompact(boolean value) {
         setCompactImpl(getPeer(), value);
     }
-    native static void setCompactImpl(long peer, boolean value);
+    static void setCompactImpl(long peer, boolean value) {
+        HTMLMenuElementNative.setCompact(peer, value);
+    }
 
 }
 

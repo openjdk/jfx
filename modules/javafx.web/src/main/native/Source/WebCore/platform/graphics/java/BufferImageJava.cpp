@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include <wtf/text/WTFString.h>
 
@@ -31,7 +32,6 @@
 #include "BufferImageJava.h"
 #include "PlatformContextJava.h"
 
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
 namespace WebCore {
 
@@ -65,7 +65,7 @@ void BufferImage::flushImageRQ(GraphicsContext& gc)
 
         // 2. The buffered image's RenderQueue is to be decoded.
         rqScreen.freeSpace(8)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
+        << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DECODERQ
         << rq->getRQRenderingQueue();
     }
 }

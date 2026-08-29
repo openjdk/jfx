@@ -28,143 +28,111 @@
 #include "ComplexTextController.h"
 #include "FloatRect.h"
 #include "FontCascade.h"
+#include "WKJPlatformJava.h"
 
-#include "PlatformJavaClasses.h"
+#include <wtf/Vector.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 namespace {
 
-jclass PG_GetTextRun(JNIEnv* env)
+int32_t runIsLeftToRight(wkj_ref jRun)
 {
-    static JGClass textRunCls(
-        env->FindClass("com/sun/webkit/graphics/WCTextRun"));
-    ASSERT(textRunCls);
-    return textRunCls;
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_is_left_to_right)
+        return 0;
+    return cb->text_run_is_left_to_right(jRun);
 }
 
-bool jIsLTR(jobject jRun)
+unsigned runGlyphCount(wkj_ref jRun)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "isLeftToRight",
-        "()Z");
-    ASSERT(mID);
-
-    return env->CallBooleanMethod(jRun, mID) == JNI_TRUE;
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_glyph_count)
+        return 0;
+    return static_cast<unsigned>(cb->text_run_get_glyph_count(jRun));
 }
 
-unsigned jGetGlyphCount(jobject jRun)
+unsigned runStart(wkj_ref jRun)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getGlyphCount",
-        "()I");
-    ASSERT(mID);
-
-    return env->CallIntMethod(jRun, mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_start)
+        return 0;
+    return static_cast<unsigned>(cb->text_run_get_start(jRun));
 }
 
-unsigned jGetStart(jobject jRun)
+unsigned runEnd(wkj_ref jRun)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getStart",
-        "()I");
-    ASSERT(mID);
-
-    return env->CallIntMethod(jRun, mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_end)
+        return 0;
+    return static_cast<unsigned>(cb->text_run_get_end(jRun));
 }
 
-unsigned jGetEnd(jobject jRun)
+unsigned runCharOffset(wkj_ref jRun, unsigned glyphIndex)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getEnd",
-        "()I");
-    ASSERT(mID);
-
-    return env->CallIntMethod(jRun, mID);
-}
-
-unsigned jGetCharOffset(jobject jRun, unsigned glyphIndex)
-{
-    if (!jGetGlyphCount(jRun)) {
+    if (!runGlyphCount(jRun)) {
         // Return same value as TextRun.getCharOffset() when there is
         // no glyph information available.
         return glyphIndex;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getCharOffset",
-        "(I)I");
-    ASSERT(mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_char_offset)
+        return glyphIndex;
 
-    return env->CallIntMethod(jRun, mID, glyphIndex);
+    return static_cast<unsigned>(cb->text_run_get_char_offset(jRun, static_cast<int32_t>(glyphIndex)));
 }
 
-CGGlyph jGetGlyph(jobject jRun, unsigned glyphIndex)
+CGGlyph runGlyph(wkj_ref jRun, unsigned glyphIndex)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getGlyph",
-        "(I)I");
-    ASSERT(mID);
-
-    return env->CallIntMethod(jRun, mID, glyphIndex);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_glyph)
+        return 0;
+    return cb->text_run_get_glyph(jRun, static_cast<int32_t>(glyphIndex));
 }
 
-FloatRect jGetGlyphPosAndAdvance(jobject jRun, unsigned glyphIndex)
+FloatRect runGlyphPosAndAdvance(wkj_ref jRun, unsigned glyphIndex)
 {
-    if (!jGetGlyphCount(jRun)) {
+    if (!runGlyphCount(jRun)) {
         return { };
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mID = env->GetMethodID(
-        PG_GetTextRun(env),
-        "getGlyphPosAndAdvance",
-        "(I)[F");
-    ASSERT(mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->text_run_get_glyph_pos_and_advance)
+        return { };
 
-    JLocalRef<jfloatArray> jpos = static_cast<jfloatArray> (env->CallObjectMethod(
-                                                              jRun, mID, glyphIndex));
-    WTF::CheckAndClearException(env);
+    // The JNI version read the float[4] without testing it for null; the slot reports that
+    // case instead of dereferencing nothing.
+    float xywh[4] = { 0.f, 0.f, 0.f, 0.f };
+    int32_t havePos = cb->text_run_get_glyph_pos_and_advance(jRun, static_cast<int32_t>(glyphIndex), xywh);
+    wkjCheckAndClearException();
+    if (!havePos)
+        return { };
 
-    jfloat* pos = static_cast<float*>(env->GetPrimitiveArrayCritical(jpos, 0));
-    FloatRect rect = { pos[0], pos[1], pos[2], pos[3] };
-    env->ReleasePrimitiveArrayCritical(jpos, pos, 0);
-    return rect;
+    return FloatRect { xywh[0], xywh[1], xywh[2], xywh[3] };
 }
 
-FloatSize jGetInitialAdvance(JLObject jRun)
+FloatSize runInitialAdvance(wkj_ref jRun)
 {
     // FIXME(arajkumar): There is no way to get initial advance from Prism Font implementation.
     // With trial and error I found that glyph 0's x,y position can be used as an alternative
     // for initial advance.
-    return jGetGlyphPosAndAdvance(jRun, 0).location() - FloatPoint();
+    return runGlyphPosAndAdvance(jRun, 0).location() - FloatPoint();
 }
 
 }
 
-ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength)
-    : m_initialAdvance(jGetInitialAdvance(jRun))
+ComplexTextController::ComplexTextRun::ComplexTextRun(wkj_ref jRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength)
+    : m_initialAdvance(runInitialAdvance(jRun))
     , m_font(font)
     , m_characters(characters, stringLength)
     , m_stringLength(stringLength)
-    , m_indexBegin(jGetStart(jRun))
-    , m_indexEnd(jGetEnd(jRun))
-    , m_glyphCount(jGetGlyphCount(jobject(jRun)))
+    , m_indexBegin(runStart(jRun))
+    , m_indexEnd(runEnd(jRun))
+    , m_glyphCount(runGlyphCount(jRun))
     , m_stringLocation(stringLocation)
-    , m_isLTR(jIsLTR(jobject(jRun)))
+    , m_isLTR(runIsLeftToRight(jRun) != 0)
 {
     // Handle empty string runs (line breaks, etc.)
     if (m_stringLength == 0) {
@@ -195,15 +163,15 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
         // java TextRun will have indicies relative to it's text. So it has to
         // be converted to absolute index w.r.t WebCore String.
         // Refer {CTGlyphLayout, DWGlyphLayout, PangoGlyphLayout}.layout()
-        m_coreTextIndices[i] = m_indexBegin + jGetCharOffset(jRun, i);
+        m_coreTextIndices[i] = m_indexBegin + runCharOffset(jRun, i);
 
-        m_glyphs[i]= jGetGlyph(jRun, i);
+        m_glyphs[i]= runGlyph(jRun, i);
         if (m_font->isZeroWidthSpaceGlyph(m_glyphs[i])) {
             m_baseAdvances[i] = { };
             continue;
         }
 
-        auto glyphBox = jGetGlyphPosAndAdvance(jRun, i);
+        auto glyphBox = runGlyphPosAndAdvance(jRun, i);
         m_baseAdvances[i] = glyphBox.size();
     }
 }
@@ -217,28 +185,42 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         return;
     }
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID getTextRuns_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getTextRuns",
-        "(Ljava/lang/String;)[Lcom/sun/webkit/graphics/WCTextRun;");
-    ASSERT(getTextRuns_mID);
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->font_get_text_runs || !jFont) {
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
+        return;
+    }
 
-    JLocalRef<jobjectArray> jRuns = static_cast<jobjectArray> (env->CallObjectMethod(
-                                                                  *jFont,
-                                                                  getTextRuns_mID,
-                                                                  jstring(makeString(characters, characters.size()).toJavaString(env))));
-    WTF::CheckAndClearException(env);
+    /*
+     * WCFont.getTextRuns(String) returned a WCTextRun[]; the slot writes ids into a buffer and
+     * returns the total, so the buffer is sized first from an upper bound that always holds -
+     * the runs partition the string, so there can never be more of them than there are code
+     * units - and the retry below exists only to honour the contract, not because it fires.
+     * Every id written is owned here and released once its ComplexTextRun has been built,
+     * which is the scope the JNI local refs had.
+     */
+    auto text = makeString(characters, characters.size());
+    WKJStringArg textArg(text);
 
-    if (!jRuns) {
+    Vector<wkj_ref, 32> runIds(characters.size());
+    int32_t total = cb->font_get_text_runs(wkj_ref(*jFont), textArg.data(), textArg.length(),
+                                           runIds.span().data(), static_cast<int32_t>(runIds.size()));
+    if (total > static_cast<int32_t>(runIds.size())) {
+        runIds.grow(static_cast<size_t>(total));
+        total = cb->font_get_text_runs(wkj_ref(*jFont), textArg.data(), textArg.length(),
+                                       runIds.span().data(), total);
+    }
+    wkjCheckAndClearException();
+
+    if (total < 0) {
         // Create a run of missing glyphs from the primary font.
         m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
-    for (auto i = 0; i < env->GetArrayLength(jobjectArray(jRuns)); i++) {
-        auto jRun = env->GetObjectArrayElement(jobjectArray(jRuns), i);
-        m_complexTextRuns.append(ComplexTextRun::create(jRun, *font, characters.data(), stringLocation, characters.size()));
+    for (int32_t i = 0; i < total; i++) {
+        m_complexTextRuns.append(ComplexTextRun::create(runIds[i], *font, characters.data(), stringLocation, characters.size()));
+        WKJRelease(runIds[i]);
     }
 }
 

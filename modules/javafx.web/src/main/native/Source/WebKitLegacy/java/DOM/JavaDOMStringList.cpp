@@ -32,43 +32,45 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DOMStringList*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DOMStringList*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMStringListImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DOMStringList_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DOMStringListImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DOMStringList_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
 
 // Functions
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMStringListImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int32_t wkj_dom_DOMStringList_item(int64_t peer, int32_t index, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->item(index));
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->item(index));
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMStringListImpl_containsImpl(JNIEnv* env, jclass, jlong peer
-    , jstring string)
+WKJ_EXPORT int32_t wkj_dom_DOMStringList_contains(int64_t peer, const uint16_t* string, int32_t string_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return IMPL->contains(AtomString {String(env, string)});
+    return IMPL->contains(AtomString {WKJString(string, string_length)});
 }
 
 

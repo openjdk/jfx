@@ -33,36 +33,40 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DeprecatedCSSOMValue*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DeprecatedCSSOMValue*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSValueImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_CSSValue_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSValueImpl_getCssTextImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_CSSValue_getCssText(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->cssText());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->cssText());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSValueImpl_setCssTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+WKJ_EXPORT void wkj_dom_CSSValue_setCssText(int64_t peer, const uint16_t* value, int32_t value_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    IMPL->setCssText(AtomString{String(env, value)});
+    IMPL->setCssText(AtomString{WKJString(value, value_length)});
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSValueImpl_getCssValueTypeImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int16_t wkj_dom_CSSValue_getCssValueType(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->cssValueType();
 }

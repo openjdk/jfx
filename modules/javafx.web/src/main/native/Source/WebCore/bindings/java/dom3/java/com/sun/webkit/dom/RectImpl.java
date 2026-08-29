@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,9 @@ public class RectImpl implements Rect {
         return (arg == null) ? 0L : ((RectImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        RectNative.dispose(peer);
+    }
 
     static Rect getImpl(long peer) {
         return (Rect)create(peer);
@@ -84,25 +86,33 @@ public class RectImpl implements Rect {
     public CSSPrimitiveValue getTop() {
         return CSSPrimitiveValueImpl.getImpl(getTopImpl(getPeer()));
     }
-    native static long getTopImpl(long peer);
+    static long getTopImpl(long peer) {
+        return RectNative.getTop(peer);
+    }
 
     @Override
     public CSSPrimitiveValue getRight() {
         return CSSPrimitiveValueImpl.getImpl(getRightImpl(getPeer()));
     }
-    native static long getRightImpl(long peer);
+    static long getRightImpl(long peer) {
+        return RectNative.getRight(peer);
+    }
 
     @Override
     public CSSPrimitiveValue getBottom() {
         return CSSPrimitiveValueImpl.getImpl(getBottomImpl(getPeer()));
     }
-    native static long getBottomImpl(long peer);
+    static long getBottomImpl(long peer) {
+        return RectNative.getBottom(peer);
+    }
 
     @Override
     public CSSPrimitiveValue getLeft() {
         return CSSPrimitiveValueImpl.getImpl(getLeftImpl(getPeer()));
     }
-    native static long getLeftImpl(long peer);
+    static long getLeftImpl(long peer) {
+        return RectNative.getLeft(peer);
+    }
 
 }
 

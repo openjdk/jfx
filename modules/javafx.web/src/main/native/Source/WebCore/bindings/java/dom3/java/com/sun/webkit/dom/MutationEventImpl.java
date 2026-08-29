@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,31 +48,41 @@ public class MutationEventImpl extends EventImpl implements MutationEvent {
     public Node getRelatedNode() {
         return NodeImpl.getImpl(getRelatedNodeImpl(getPeer()));
     }
-    native static long getRelatedNodeImpl(long peer);
+    static long getRelatedNodeImpl(long peer) {
+        return MutationEventNative.getRelatedNode(peer);
+    }
 
     @Override
     public String getPrevValue() {
         return getPrevValueImpl(getPeer());
     }
-    native static String getPrevValueImpl(long peer);
+    static String getPrevValueImpl(long peer) {
+        return MutationEventNative.getPrevValue(peer);
+    }
 
     @Override
     public String getNewValue() {
         return getNewValueImpl(getPeer());
     }
-    native static String getNewValueImpl(long peer);
+    static String getNewValueImpl(long peer) {
+        return MutationEventNative.getNewValue(peer);
+    }
 
     @Override
     public String getAttrName() {
         return getAttrNameImpl(getPeer());
     }
-    native static String getAttrNameImpl(long peer);
+    static String getAttrNameImpl(long peer) {
+        return MutationEventNative.getAttrName(peer);
+    }
 
     @Override
     public short getAttrChange() {
         return getAttrChangeImpl(getPeer());
     }
-    native static short getAttrChangeImpl(long peer);
+    static short getAttrChangeImpl(long peer) {
+        return MutationEventNative.getAttrChange(peer);
+    }
 
 
 // Functions
@@ -96,7 +106,7 @@ public class MutationEventImpl extends EventImpl implements MutationEvent {
             , attrName
             , attrChange);
     }
-    native static void initMutationEventImpl(long peer
+    static void initMutationEventImpl(long peer
         , String type
         , boolean canBubble
         , boolean cancelable
@@ -104,7 +114,10 @@ public class MutationEventImpl extends EventImpl implements MutationEvent {
         , String prevValue
         , String newValue
         , String attrName
-        , short attrChange);
+        , short attrChange) {
+        MutationEventNative.initMutationEvent(peer, type, canBubble, cancelable, relatedNode, prevValue, newValue,
+                attrName, attrChange);
+    }
 
 
 }

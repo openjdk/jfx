@@ -35,20 +35,41 @@ namespace JSC {
 
 namespace Bindings {
 
+/*
+ * A reference-counted reference to a Java object, held for as long as a JavaInstance,
+ * JavaArray or JavaField needs it.
+ *
+ * The `useGlobalRef` parameter kept its name and its default. It used to choose between
+ * NewGlobalRef and NewWeakGlobalRef; it now chooses between WKJRetain and WKJRetainWeak,
+ * which is the same choice. Defaulting to false - a WEAK reference - is deliberate and is
+ * the reason WKJHostCore has retain_weak at all: an object an application hands to
+ * JSObject.setMember must stay collectable, and only the access-control context, which is
+ * created once and never collected, is held strongly.
+ *
+ * Every dereference of a weak id therefore has to start with a liveness check, exactly as
+ * the JNI code started every one by making a local reference from the weak one.
+ * WKJHandle::retained does the same: it returns a null handle once the object has gone, and
+ * keeps the object alive for as long as the handle lives.
+ *
+ * The destructor no longer asks which kind of reference it holds. GetObjectRefType existed
+ * because DeleteGlobalRef and DeleteWeakGlobalRef are different calls; WKJHostCore.release
+ * takes either kind, so the branch has nothing left to decide.
+ */
 class JobjectWrapper : public RefCounted<JobjectWrapper> {
 public:
-    static Ref<JobjectWrapper> create(jobject object, bool useGlobalRef = false) { return adoptRef(*new JobjectWrapper(object, useGlobalRef)); }
+    static Ref<JobjectWrapper> create(wkj_ref object, bool useGlobalRef = false)
+    {
+        return adoptRef(*new JobjectWrapper(object, useGlobalRef));
+    }
     ~JobjectWrapper();
 
-
-    jobject instance() const { return m_instance; }
-    void setInstance(jobject instance) { m_instance = instance; }
+    /* Borrowed: this wrapper keeps the reference. Do not release the returned id. */
+    wkj_ref instance() const { return m_instance.get(); }
 
 private:
-    JobjectWrapper(jobject, bool useGlobalRef);
+    JobjectWrapper(wkj_ref, bool useGlobalRef);
 
-    jobject m_instance;
-    JNIEnv* m_env;
+    WKJHandle m_instance;
 };
 
 } // namespace Bindings

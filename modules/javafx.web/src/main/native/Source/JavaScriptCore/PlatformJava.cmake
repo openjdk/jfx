@@ -8,15 +8,6 @@ if (APPLE)
     )
 endif()
 
-list(APPEND JavaScriptCore_LIBRARIES
-    ${JAVA_JVM_LIBRARY}
-)
-
-list(APPEND JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${JAVA_INCLUDE_PATH}
-    ${JAVA_INCLUDE_PATH2}
-)
-
 if (USE_LD_LLD)
     if ("${LD_VERSION}" MATCHES "LLD")
        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-gc-sections")

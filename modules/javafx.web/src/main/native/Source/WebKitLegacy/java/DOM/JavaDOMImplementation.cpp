@@ -41,58 +41,54 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DOMImplementation*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DOMImplementation*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_dispose(JNIEnv*, jclass, jlong peer) {
+WKJ_EXPORT void wkj_dom_DOMImplementation_dispose(int64_t peer) {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createDocumentTypeImpl(JNIEnv* env, jclass, jlong peer
-    , jstring qualifiedName
-    , jstring publicId
-    , jstring systemId)
+WKJ_EXPORT int64_t wkj_dom_DOMImplementation_createDocumentType(int64_t peer, const uint16_t* qualifiedName, int32_t qualifiedName_length, const uint16_t* publicId, int32_t publicId_length, const uint16_t* systemId, int32_t systemId_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DocumentType>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocumentType(AtomString{String(env, qualifiedName)}
-            , AtomString{ String(env, publicId) }
-            , AtomString{ String(env, systemId)} ))));
+    return WKJReturnPeer<DocumentType>(WTF::getPtr(raiseOnDOMError(IMPL->createDocumentType(AtomString{WKJString(qualifiedName, qualifiedName_length)}
+            , AtomString{ WKJString(publicId, publicId_length) }
+            , AtomString{ WKJString(systemId, systemId_length)} ))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createDocumentImpl(JNIEnv* env, jclass, jlong peer
-    , jstring namespaceURI
-    , jstring qualifiedName
-    , jlong doctype)
+WKJ_EXPORT int64_t wkj_dom_DOMImplementation_createDocument(int64_t peer, const uint16_t* namespaceURI, int32_t namespaceURI_length, const uint16_t* qualifiedName, int32_t qualifiedName_length, int64_t doctype)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Document>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocument(AtomString{String(env, namespaceURI)}
-            , AtomString{String(env, qualifiedName)}
-            , static_cast<DocumentType*>(jlong_to_ptr(doctype))))));
+    return WKJReturnPeer<Document>(WTF::getPtr(raiseOnDOMError(IMPL->createDocument(AtomString{WKJString(namespaceURI, namespaceURI_length)}
+            , AtomString{WKJString(qualifiedName, qualifiedName_length)}
+            , static_cast<DocumentType*>(wkj_to_ptr(doctype))))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createCSSStyleSheetImpl(JNIEnv* env, jclass, jlong peer
-    , jstring title
-    , jstring media)
+WKJ_EXPORT int64_t wkj_dom_DOMImplementation_createCSSStyleSheet(int64_t peer, const uint16_t* title, int32_t title_length, const uint16_t* media, int32_t media_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleSheet>(env, WTF::getPtr(IMPL->createCSSStyleSheet(AtomString{String(env, title)}, AtomString{String(env, media)})));
+    return WKJReturnPeer<CSSStyleSheet>(WTF::getPtr(IMPL->createCSSStyleSheet(AtomString{WKJString(title, title_length)}, AtomString{WKJString(media, media_length)})));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createHTMLDocumentImpl(JNIEnv* env, jclass, jlong peer
-    , jstring title)
+WKJ_EXPORT int64_t wkj_dom_DOMImplementation_createHTMLDocument(int64_t peer, const uint16_t* title, int32_t title_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLDocument>(env, WTF::getPtr(IMPL->createHTMLDocument(String(env, title))));
+    return WKJReturnPeer<HTMLDocument>(WTF::getPtr(IMPL->createHTMLDocument(WKJString(title, title_length))));
 }
 
 

@@ -29,9 +29,8 @@
 
 #include "NotImplemented.h"
 #include "SharedBuffer.h"
-#include "SharedBuffer.h"
-#include "PlatformJavaClasses.h"
 #include "Logging.h"
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
 
@@ -60,22 +59,14 @@ ImageDecoderJava::ImageDecoderJava()
     ++ImageDecoderCounter::created;
 #endif
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->get_image_decoder) {
         return;
     }
 
-    static jmethodID midGetImageDecoder = env->GetMethodID(
-        PG_GetGraphicsManagerClass(env),
-        "getImageDecoder",
-        "()Lcom/sun/webkit/graphics/WCImageDecoder;");
-    ASSERT(midGetImageDecoder);
+    m_nativeDecoder = WKJHandle(cb->get_image_decoder());
 
-    m_nativeDecoder = JLObject(env->CallObjectMethod(
-        PL_GetGraphicsManager(env),
-        midGetImageDecoder));
-
-    WTF::CheckAndClearException(env);
+    wkjCheckAndClearException();
 }
 
 ImageDecoderJava::~ImageDecoderJava()
@@ -83,95 +74,77 @@ ImageDecoderJava::~ImageDecoderJava()
 #ifndef NDEBUG
     ++ImageDecoderCounter::deleted;
 #endif
-    JNIEnv* env = WTF::GetJavaEnv();
-    // [env] could be NULL in case of deallocation static BitmapImage objects
-    if (!env || !m_nativeDecoder) {
+    // The host table could be absent here, in case of deallocation of static BitmapImage
+    // objects after the VM has gone; that is what the null environment check meant.
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_destroy || !m_nativeDecoder) {
         return;
     }
 
-    static jmethodID midDestroy = env->GetMethodID(
-            PG_GetGraphicsImageDecoderClass(env),
-            "destroy",
-            "()V");
-    ASSERT(midDestroy);
-
-    env->CallVoidMethod(m_nativeDecoder, midDestroy);
-    WTF::CheckAndClearException(env);
+    cb->image_decoder_destroy(m_nativeDecoder.get());
+    wkjCheckAndClearException();
 }
 
 void ImageDecoderJava::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_add_image_data || !m_nativeDecoder) {
         return;
     }
-
-    static jmethodID midAddImageData = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "addImageData",
-        "([B)V");
-    ASSERT(midAddImageData);
 
     while (m_receivedDataSize < data.size()) {
         const auto& someData = data.getSomeData(m_receivedDataSize);
         unsigned length = someData.size();
-        JLByteArray jArray(env->NewByteArray(length));
-        if (jArray && !WTF::CheckAndClearException(env)) {
-            // not OOME in Java
-            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)someData.span().data());
-            env->CallVoidMethod(m_nativeDecoder, midAddImageData, (jbyteArray)jArray);
-            WTF::CheckAndClearException(env);
-        }
+
+        // The JNI version allocated a byte[] per chunk and skipped the chunk when the
+        // allocation threw; there is no allocation to fail now, so every chunk is delivered.
+        cb->image_decoder_add_image_data(m_nativeDecoder.get(), someData.span().data(),
+                                         static_cast<int32_t>(length));
+        wkjCheckAndClearException();
+
         m_receivedDataSize += length;
     }
 
     if (allDataReceived) {
         m_isAllDataReceived = true;
-        env->CallVoidMethod(m_nativeDecoder, midAddImageData, 0);
-        WTF::CheckAndClearException(env);
+        // The end-of-stream call: a null array before, a null pointer with length 0 now.
+        cb->image_decoder_add_image_data(m_nativeDecoder.get(), nullptr, 0);
+        wkjCheckAndClearException();
     }
 }
 
 bool ImageDecoderJava::isSizeAvailable() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_image_size || !m_nativeDecoder) {
         return { };
     }
 
-    static jmethodID midGetImageSize = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getImageSize",
-        "()[I");
-    ASSERT(midGetImageSize);
+    // The JNI version passed the int[] straight to GetPrimitiveArrayCritical without testing
+    // it for null, so a null return crashed. The slot reports it instead; m_size is then left
+    // untouched, which is the only difference and it replaces undefined behaviour.
+    int32_t wh[2] = { 0, 0 };
+    if (!cb->image_decoder_get_image_size(m_nativeDecoder.get(), wh)) {
+        wkjCheckAndClearException();
+        return m_size.width();
+    }
+    wkjCheckAndClearException();
 
-    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
-                m_nativeDecoder, midGetImageSize));
-    WTF::CheckAndClearException(env);
-
-    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
-    m_size.setWidth(size[0]);
-    m_size.setHeight(size[1]);
-    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+    m_size.setWidth(wh[0]);
+    m_size.setHeight(wh[1]);
 
     return m_size.width();
 }
 
 size_t ImageDecoderJava::frameCount() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_frame_count || !m_nativeDecoder) {
         return { };
     }
 
-    static jmethodID midGetFrameCount = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFrameCount",
-        "()I");
-    ASSERT(midGetFrameCount);
-
-    jint count = env->CallIntMethod(m_nativeDecoder, midGetFrameCount);
-    WTF::CheckAndClearException(env);
+    int32_t count = cb->image_decoder_get_frame_count(m_nativeDecoder.get());
+    wkjCheckAndClearException();
 
     return count < 1
         ? 1
@@ -180,60 +153,36 @@ size_t ImageDecoderJava::frameCount() const
 
 PlatformImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_frame || !m_nativeDecoder) {
         return { };
     }
 
-    static jmethodID midGetFrame = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFrame",
-        "(I)Lcom/sun/webkit/graphics/WCImageFrame;");
-    ASSERT(midGetFrame);
+    WKJHandle frame { cb->image_decoder_get_frame(m_nativeDecoder.get(), static_cast<int32_t>(idx)) };
+    wkjCheckAndClearException();
 
-    JLObject frame(env->CallObjectMethod(
-        m_nativeDecoder,
-        midGetFrame,
-        idx));
-    WTF::CheckAndClearException(env);
-
-    if(!frame)
+    if (!frame)
         return nullptr;
 
-    static jmethodID midGetSize = env->GetMethodID(
-        PG_GetImageFrameClass(env),
-        "getSize",
-        "()[I");
-    ASSERT(midGetSize);
-    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
-                        jobject(frame),
-                        midGetSize));
-    if (!jsize) {
-        return ImageJava::create(RQRef::create(frame), nullptr, 0, 0);
+    int32_t wh[2] = { 0, 0 };
+    if (!cb->image_frame_get_size || !cb->image_frame_get_size(frame.get(), wh)) {
+        return ImageJava::create(RQRef::create(frame.get()), nullptr, 0, 0);
     }
 
-    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
-    IntSize frameSize(size[0], size[1]);
-    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+    IntSize frameSize(wh[0], wh[1]);
 
-    return ImageJava::create(RQRef::create(frame), nullptr, frameSize.width(), frameSize.height());
+    return ImageJava::create(RQRef::create(frame.get()), nullptr, frameSize.width(), frameSize.height());
 }
 
 WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_frame_duration || !m_nativeDecoder) {
         return { };
     }
-    static jmethodID midGetDuration = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFrameDuration",
-        "(I)I");
-    ASSERT(midGetDuration);
-    jint duration = env->CallIntMethod(
-                        m_nativeDecoder,
-                        midGetDuration,
-                        idx);
+
+    int32_t duration = cb->image_decoder_get_frame_duration(m_nativeDecoder.get(),
+                                                            static_cast<int32_t>(idx));
     return WTF::Seconds::fromMilliseconds(duration);
 }
 
@@ -262,29 +211,19 @@ IntSize ImageDecoderJava::size() const
 }
 
 IntSize ImageDecoderJava::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
+IntSize ImageDecoderJava::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_frame_size || !m_nativeDecoder) {
         return { };
     }
-    static jmethodID midGetFrameSize = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFrameSize",
-        "(I)[I");
-    ASSERT(midGetFrameSize);
-    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
-                        m_nativeDecoder,
-                        midGetFrameSize,
-                        idx));
-    if (!jsize) {
+
+    int32_t wh[2] = { 0, 0 };
+    if (!cb->image_decoder_get_frame_size(m_nativeDecoder.get(), static_cast<int32_t>(idx), wh)) {
         return m_size;
     }
 
-    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
-    IntSize frameSize(size[0], size[1]);
-    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
-
-    return frameSize;
+    return IntSize(wh[0], wh[1]);
 }
 
 bool ImageDecoderJava::frameAllowSubsamplingAtIndex(size_t) const
@@ -301,18 +240,13 @@ bool ImageDecoderJava::frameHasAlphaAtIndex(size_t) const
 
 bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_frame_complete || !m_nativeDecoder) {
         return false;
     }
-    static jmethodID midGetFrameIsComplete = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFrameCompleteStatus",
-        "(I)Z");
-    ASSERT(midGetFrameIsComplete);
-    return (bool)env->CallBooleanMethod(m_nativeDecoder,
-            midGetFrameIsComplete,
-            idx);
+
+    return cb->image_decoder_get_frame_complete(m_nativeDecoder.get(),
+                                                static_cast<int32_t>(idx)) != 0;
 }
 
 unsigned ImageDecoderJava::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
@@ -328,23 +262,18 @@ RepetitionCount ImageDecoderJava::repetitionCount() const
 
 String ImageDecoderJava::filenameExtension() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env || !m_nativeDecoder) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->image_decoder_get_filename_extension || !m_nativeDecoder) {
         return { };
     }
 
-    static jmethodID midGetFileExtention = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "getFilenameExtension",
-        "()Ljava/lang/String;");
-    ASSERT(midGetFileExtention);
+    String ext = wkjFetchString([&](uint16_t* buf, int32_t cap, int32_t* length) {
+        return cb->image_decoder_get_filename_extension(m_nativeDecoder.get(), buf, cap, length);
+    });
+    wkjCheckAndClearException();
 
-    JLString ext((jstring)env->CallObjectMethod(
-        m_nativeDecoder,
-        midGetFileExtention));
-    WTF::CheckAndClearException(env);
-
-    return String(env, ext);
+    // The JNI String constructor collapsed a null Java string to the empty String; keep that.
+    return ext.isNull() ? emptyString() : ext;
 }
 
 std::optional<IntPoint> ImageDecoderJava::hotSpot() const

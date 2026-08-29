@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,13 +45,17 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }
-    native static long getMediaImpl(long peer);
+    static long getMediaImpl(long peer) {
+        return CSSMediaRuleNative.getMedia(peer);
+    }
 
     @Override
     public CSSRuleList getCssRules() {
         return CSSRuleListImpl.getImpl(getCssRulesImpl(getPeer()));
     }
-    native static long getCssRulesImpl(long peer);
+    static long getCssRulesImpl(long peer) {
+        return CSSMediaRuleNative.getCssRules(peer);
+    }
 
 
 // Functions
@@ -63,9 +67,11 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
             , rule
             , index);
     }
-    native static int insertRuleImpl(long peer
+    static int insertRuleImpl(long peer
         , String rule
-        , int index);
+        , int index) {
+        return CSSMediaRuleNative.insertRule(peer, rule, index);
+    }
 
 
     @Override
@@ -74,8 +80,10 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
         deleteRuleImpl(getPeer()
             , index);
     }
-    native static void deleteRuleImpl(long peer
-        , int index);
+    static void deleteRuleImpl(long peer
+        , int index) {
+        CSSMediaRuleNative.deleteRule(peer, index);
+    }
 
 
 }

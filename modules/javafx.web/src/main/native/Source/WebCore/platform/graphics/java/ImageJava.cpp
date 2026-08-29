@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "NotImplemented.h"
 
@@ -34,9 +35,8 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "TransformationMatrix.h"
-#include "PlatformJavaClasses.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 #include "GraphicsContextJava.h"
+#include "WKJPlatformJava.h"
 #include "PlatformContextJava.h"
 #include "Logging.h"
 
@@ -60,7 +60,7 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
     gc.setCompositeOperation(compositeOperator);
 
     gc.platformContext()->rq().freeSpace(72)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
+    << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
     << nativeImage->platformImage()->getImage()
     << dstRect.x() << dstRect.y()
     << dstRect.width() << dstRect.height()
@@ -82,34 +82,24 @@ void ImageAdapter::invalidate()
 {
 }
 #if !USE(IMAGEIO)
+// USE(IMAGEIO) is unconditionally on in this port (Source/cmake/OptionsJava.cmake sets
+// USE_IMAGEIO TRUE), so this branch is not compiled. It is converted rather than deleted so
+// that it stays translatable, and so that graphics.create_frame keeps a caller on record.
 NativeImagePtr ImageFrame::asNewNativeImage() const
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID s_createWCImage_mID = env->GetMethodID(
-            PG_GetGraphicsManagerClass(env), "createFrame",
-            "(IILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/WCImageFrame;");
-    ASSERT(s_createWCImage_mID);
-
-    JLObject data(env->NewDirectByteBuffer(
-            m_bytes,
-            width() * height() * sizeof(PixelData)));
-    ASSERT(data);
-    if (!data) {
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb || !cb->create_frame)
         return nullptr;
-    }
 
-    JLObject frame(env->CallObjectMethod(
-        PL_GetGraphicsManager(env),
-        s_createWCImage_mID,
-        width(),
-        height(),
-        (jobject)data));
+    // Java wraps m_bytes without copying, exactly as NewDirectByteBuffer did.
+    WKJHandle frame { cb->create_frame(width(), height(), m_bytes,
+                                       static_cast<int64_t>(width()) * height() * sizeof(PixelData)) };
     ASSERT(frame);
-    if (WTF::CheckAndClearException(env) || !frame) {
+    if (wkjCheckAndClearException() || !frame) {
         return nullptr;
     }
 
-    return RQRef::create(frame);
+    return RQRef::create(frame.get());
 }
 #endif
 } // namespace WebCore

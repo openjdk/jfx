@@ -37,7 +37,7 @@ namespace Bindings {
 
 class JavaClass : public Class {
 public:
-    JavaClass(jobject, RootObject*, jobject accessControlContext);
+    JavaClass(wkj_ref, RootObject*, wkj_ref accessControlContext);
     ~JavaClass();
 
     virtual Method* methodNamed(PropertyName, Instance*) const;
@@ -57,7 +57,7 @@ private:
     struct wpe_renderer_backend_egl* m_backend { nullptr };
 #endif
 #if PLATFORM(JAVA)
-    jobject createDummyObject();
+    static WKJHandle createDummyObject();
     const char* m_name;
         mutable FieldMap m_fields;
         mutable MethodListMap m_methods;

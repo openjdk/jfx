@@ -34,58 +34,65 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DocumentType*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DocumentType*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DocumentType_getName(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->name());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->name());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getEntitiesImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int64_t wkj_dom_DocumentType_getEntities(int64_t arg0)
 {
+    WKJCallScope wkjScope;
     return 0;
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getNotationsImpl(JNIEnv*, jclass, jlong)
+WKJ_EXPORT int64_t wkj_dom_DocumentType_getNotations(int64_t arg0)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return 0;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getPublicIdImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DocumentType_getPublicId(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->publicId());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->publicId());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getSystemIdImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_DocumentType_getSystemId(int64_t peer, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->systemId());
+    return WKJReturnString(result_buf, result_cap, result_length, IMPL->systemId());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getInternalSubsetImpl(JNIEnv* env, jclass, jlong)
+WKJ_EXPORT int32_t wkj_dom_DocumentType_getInternalSubset(int64_t arg0, uint16_t* result_buf, int32_t result_cap, int32_t* result_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, String());
+    return WKJReturnString(result_buf, result_cap, result_length, String());
 }
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_removeImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_DocumentType_remove(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->remove());
+    raiseOnDOMError(IMPL->remove());
 }
 
 

@@ -27,67 +27,58 @@
 #pragma once
 
 #include "JNIUtility.h"
-#include "JSDOMWindowBase.h"
-#include "DOMWindow.h"
 
-#include <JavaScriptCore/JSLock.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringImpl.h>
-
-#include "JavaInstanceJSC.h"
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
 namespace Bindings {
 
+/*
+ * A Java string held for the life of a JavaField or a JavaMethod: the names and type names
+ * that class enumeration produced.
+ *
+ * It used to be built from a Java string, with GetStringChars and a UTF-16 copy. The characters
+ * now arrive as a WTF::String from the host table - see javaClassName, javaFieldName and
+ * javaMethodName - so there is nothing left to convert and the class is only a holder that
+ * caches the UTF-8 form its callers ask for.
+ *
+ * A null String becomes the empty string, which is what the JNI constructor produced for the
+ * "<Unknown>" substitutions its callers made, and keeps length() and utf8() safe on a value
+ * nothing could be read from.
+ */
 class JavaString {
 public:
-    JavaString(JNIEnv* e, jstring s)
-    {
-        init(e, s);
-    }
-
-    JavaString(jstring s)
-    {
-        init(getJNIEnv(), s);
-    }
-
     JavaString()
     {
-        //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
         m_impl = StringImpl::empty();
+    }
+
+    explicit JavaString(const WTF::String& value)
+    {
+        if (value.isNull())
+            m_impl = StringImpl::empty();
+        else
+            m_impl = value.impl();
     }
 
     ~JavaString()
     {
-        //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
         m_impl = nullptr;
     }
 
     const char* utf8() const
     {
-        if (!m_utf8String.data()) {
-            //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
+        if (!m_utf8String.data())
             m_utf8String = String((RefPtr<StringImpl>)m_impl).utf8();
-        }
         return m_utf8String.data();
     }
     int length() const { return m_impl->length(); }
     RefPtr<StringImpl> impl() const { return m_impl; }
 
 private:
-    void init(JNIEnv* e, jstring s)
-    {
-        int size = e->GetStringLength(s);
-        const jchar* uc = getUCharactersFromJStringInEnv(e, s);
-        {
-            //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
-            std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(uc), size);
-            m_impl = StringImpl::create(createSpan);
-        }
-        releaseUCharactersForJStringInEnv(e, s, uc);
-    }
-
     RefPtr<StringImpl> m_impl;
     mutable CString m_utf8String;
 };

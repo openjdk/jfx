@@ -551,13 +551,36 @@ sub GenerateInterface
     my $interface = shift;
     my $defines = shift;
 
-    $codeGenerator->LinkOverloadedFunctions($interface);
+    LinkOverloadedFunctions($codeGenerator, $interface);
 
     # Start actual generation
     # if (!$interface->isCallback) {
     # Start actual generation.
         $object->Generate($interface, $defines);
     # }
+}
+
+# Restores the pre-2016 WebKit CodeGenerator::LinkOverloadedFunctions, which this
+# generator was written against. Upstream renamed it LinkOverloadedOperations when
+# IDLParser dropped domSignature and renamed IDLInterface::functions to ::operations;
+# the overload model itself (an {overloads} arrayref of all same-named operations,
+# self included and in declaration order, plus a 1-based {overloadIndex} into it) is
+# unchanged, so delegate when the modern spelling is available and otherwise apply
+# the original algorithm to the modern accessors.
+sub LinkOverloadedFunctions
+{
+    my ($codeGen, $interface) = @_;
+
+    return $codeGen->LinkOverloadedOperations($interface) if $codeGen->can("LinkOverloadedOperations");
+
+    my %nameToFunctionsMap = ();
+    foreach my $function (@{$interface->operations}) {
+        my $name = $function->name;
+        $nameToFunctionsMap{$name} = [] if !exists $nameToFunctionsMap{$name};
+        push(@{$nameToFunctionsMap{$name}}, $function);
+        $function->{overloads} = $nameToFunctionsMap{$name};
+        $function->{overloadIndex} = @{$nameToFunctionsMap{$name}};
+    }
 }
 
 sub GetTransferTypeName

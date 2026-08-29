@@ -35,47 +35,39 @@
 using namespace JSC;
 using namespace JSC::Bindings;
 
-JavaMethod::JavaMethod(JNIEnv* env, jobject aMethod)
+JavaMethod::JavaMethod(wkj_ref aMethod)
 {
-    // Get return type name
-    jstring returnTypeName = 0;
-    if (jobject returnType = callJNIMethod<jobject>(aMethod, "getReturnType", "()Ljava/lang/Class;")) {
-        returnTypeName = static_cast<jstring>(callJNIMethod<jobject>(returnType, "getName", "()Ljava/lang/String;"));
-        if (!returnTypeName)
-            returnTypeName = env->NewStringUTF("<Unknown>");
-        env->DeleteLocalRef(returnType);
-    }
-    m_returnTypeClassName = JavaString(env, returnTypeName);
+    /*
+     * Get return type name: getReturnType().getName() as one call, since the intermediate
+     * Class was used for nothing else. A null name is the "<Unknown>" the JNI code
+     * substituted - and this now also covers a null return type, which the JNI code passed
+     * on to GetStringLength unchecked.
+     */
+    String returnTypeName = javaMethodReturnTypeName(aMethod);
+    if (returnTypeName.isNull())
+        returnTypeName = "<Unknown>"_s;
+    m_returnTypeClassName = JavaString(returnTypeName);
     m_returnType = javaTypeFromClassName(m_returnTypeClassName.utf8());
-    env->DeleteLocalRef(returnTypeName);
 
     // Get method name
-    jstring methodName = static_cast<jstring>(callJNIMethod<jobject>(aMethod, "getName", "()Ljava/lang/String;"));
-    if (!methodName)
-        methodName = env->NewStringUTF("<Unknown>");
-    m_name = JavaString(env, methodName);
-    env->DeleteLocalRef(methodName);
+    String methodName = javaMethodName(aMethod);
+    if (methodName.isNull())
+        methodName = "<Unknown>"_s;
+    m_name = JavaString(methodName);
 
     // Get parameters
-    if (jarray jparameters = static_cast<jarray>(callJNIMethod<jobject>(aMethod, "getParameterTypes", "()[Ljava/lang/Class;"))) {
-        unsigned int numParams = env->GetArrayLength(jparameters);
-
-        for (unsigned int i = 0; i < numParams; i++) {
-            jobject aParameter = env->GetObjectArrayElement(static_cast<jobjectArray>(jparameters), i);
-            jstring parameterName = static_cast<jstring>(callJNIMethod<jobject>(aParameter, "getName", "()Ljava/lang/String;"));
-            if (!parameterName)
-                parameterName = env->NewStringUTF("<Unknown>");
-            m_parameters.append(JavaString(env, parameterName).impl());
-            env->DeleteLocalRef(aParameter);
-            env->DeleteLocalRef(parameterName);
-        }
-        env->DeleteLocalRef(jparameters);
+    int numParams = javaMethodParameterCount(aMethod);
+    for (int i = 0; i < numParams; i++) {
+        String parameterName = javaMethodParameterTypeName(aMethod, i);
+        if (parameterName.isNull())
+            parameterName = "<Unknown>"_s;
+        m_parameters.append(JavaString(parameterName).impl());
     }
 
     // Created lazily.
     m_signature = 0;
 
-    jint modifiers = callJNIMethod<jint>(aMethod, "getModifiers", "()I");
+    int modifiers = javaMethodModifiers(aMethod);
     m_isStatic = (modifiers & 0x8) != 0;
 }
 

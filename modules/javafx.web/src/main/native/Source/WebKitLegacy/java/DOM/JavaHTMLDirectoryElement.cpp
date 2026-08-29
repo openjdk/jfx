@@ -33,25 +33,27 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLDirectoryElement*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLDirectoryElement*>(wkj_to_ptr(peer)))
 
 
 // Attributes
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLDirectoryElementImpl_getCompactImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLDirectoryElement_getCompact(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::compactAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDirectoryElementImpl_setCompactImpl(JNIEnv*, jclass, jlong peer, jboolean value)
+WKJ_EXPORT void wkj_dom_HTMLDirectoryElement_setCompact(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::compactAttr, value);
 }

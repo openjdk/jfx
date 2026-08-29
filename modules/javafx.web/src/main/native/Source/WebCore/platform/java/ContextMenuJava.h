@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include <wtf/java/JavaRef.h>
+#include <webkit_java_api.h>
+
 #include <wtf/Vector.h>
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 
@@ -36,10 +38,14 @@ class IntPoint;
 
 class ContextMenuJava {
   private:
-    JGObject m_contextMenu;
+    WKJHandle m_contextMenu;
   public:
     ContextMenuJava(const Vector<ContextMenuItem>&);
-    void show(ContextMenuController*, jobject page, const IntPoint& loc) const;
+
+    /*
+     * `page` is the registry id of the Java WebPage, which the caller reads out of
+     * PageSupplementJava. It used to be the same object as a raw Java reference.
+     */
+    void show(ContextMenuController*, wkj_ref page, const IntPoint& loc) const;
 };
 }  // namespace WebCore
-

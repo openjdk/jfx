@@ -39,7 +39,6 @@ set(ICU_LIBRARIES icuuc icudata)
 set(ICU_I18N_LIBRARIES icui18n icuuc icudata)
 set(ICU_DATA_LIBRARIES icudata)
 
-find_package(JNI REQUIRED)
 find_package(Threads REQUIRED)
 # find_package(ZLIB REQUIRED)
 

@@ -35,95 +35,95 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<NamedNodeMap*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<NamedNodeMap*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_NamedNodeMap_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_NamedNodeMap_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_getNamedItemImpl(JNIEnv* env, jclass, jlong peer
-    , jstring name)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_getNamedItem(int64_t peer, const uint16_t* name, int32_t name_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItem(AtomString {String(env, name)})));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->getNamedItem(AtomString {WKJString(name, name_length)})));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_setNamedItemImpl(JNIEnv* env, jclass, jlong peer
-    , jlong node)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_setNamedItem(int64_t peer, int64_t node)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (!node) {
-        raiseTypeErrorException(env);
+        raiseTypeErrorException();
         return 0;
     }
-    auto& coreNode = *static_cast<Node*>(jlong_to_ptr(node));
+    auto& coreNode = *static_cast<Node*>(wkj_to_ptr(node));
     if (!is<WebCore::Attr>(coreNode)) {
-        raiseTypeErrorException(env);
+        raiseTypeErrorException();
         return 0;
     }
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->setNamedItem(downcast<WebCore::Attr>(coreNode)))));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->setNamedItem(downcast<WebCore::Attr>(coreNode)))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_removeNamedItemImpl(JNIEnv* env, jclass, jlong peer
-    , jstring name)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_removeNamedItem(int64_t peer, const uint16_t* name, int32_t name_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItem(AtomString {String(env, name)}))));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->removeNamedItem(AtomString {WKJString(name, name_length)}))));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_item(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->item(index)));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->item(index)));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_getNamedItemNSImpl(JNIEnv* env, jclass, jlong peer
-    , jstring namespaceURI
-    , jstring localName)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_getNamedItemNS(int64_t peer, const uint16_t* namespaceURI, int32_t namespaceURI_length, const uint16_t* localName, int32_t localName_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItemNS(AtomString {String(env, namespaceURI)}
-            , AtomString{String(env, localName)})));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->getNamedItemNS(AtomString {WKJString(namespaceURI, namespaceURI_length)}
+            , AtomString{WKJString(localName, localName_length)})));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_setNamedItemNSImpl(JNIEnv* env, jclass clazz, jlong peer
-    , jlong node)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_setNamedItemNS(int64_t peer, int64_t node)
 {
-    return Java_com_sun_webkit_dom_NamedNodeMapImpl_setNamedItemImpl(env, clazz, peer, node);
+    WKJCallScope wkjScope;
+    return wkj_dom_NamedNodeMap_setNamedItem(peer, node);
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_removeNamedItemNSImpl(JNIEnv* env, jclass, jlong peer
-    , jstring namespaceURI
-    , jstring localName)
+WKJ_EXPORT int64_t wkj_dom_NamedNodeMap_removeNamedItemNS(int64_t peer, const uint16_t* namespaceURI, int32_t namespaceURI_length, const uint16_t* localName, int32_t localName_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItemNS(AtomString {String(env, namespaceURI)}
-            , AtomString{String(env, localName)}))));
+    return WKJReturnPeer<Node>(WTF::getPtr(raiseOnDOMError(IMPL->removeNamedItemNS(AtomString {WKJString(namespaceURI, namespaceURI_length)}
+            , AtomString{WKJString(localName, localName_length)}))));
 }
 
 

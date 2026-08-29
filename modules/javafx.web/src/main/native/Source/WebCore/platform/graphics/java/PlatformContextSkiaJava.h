@@ -34,7 +34,7 @@
 #include "GraphicsContext.h"
 #include "Noncopyable.h"
 #include <wtf/Vector.h>
-#include <jni.h>
+#include "WKJPlatformJava.h"
 #include "PlatformContextJava.h"
 #include "ImageBuffer.h"
 
@@ -68,7 +68,7 @@ class PlatformContextSkiaJava : public PlatformContextJava {
 public:
     // For printing, there shouldn't be any canvas. canvas can be NULL. If you
     // supply a NULL canvas, you can also call setCanvas later.
-    PlatformContextSkiaJava(jobject jgc, int x, int y, int w, int h);
+    PlatformContextSkiaJava(wkj_ref jgc, int x, int y, int w, int h);
     ~PlatformContextSkiaJava();
 
     // Sets the canvas associated with this context. Use when supplying NULL
@@ -167,7 +167,7 @@ private:
     SkCanvas* m_canvas;
     SkBitmap* m_backBuffer;
     SkRect m_bounds;
-    JGObject m_jgc;
+    WKJHandle m_jgc;
 
     // States stack. Enables local drawing state change with save()/restore()
     // calls.

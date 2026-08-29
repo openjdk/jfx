@@ -44,9 +44,6 @@
 #include <wtf/Threading.h>
 #include <wtf/URL.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 
 namespace WebCore {
 
@@ -89,9 +86,6 @@ static void callOnFileThread(Function<void ()>&& function)
 
                 // This can bever be null because we never queue a function that is null.
                 ASSERT(*function);
-#if PLATFORM(JAVA)
-                WTF::AttachThreadAsNonDaemonToJavaEnv autoAttach;
-#endif
                 (*function)();
             }
         });

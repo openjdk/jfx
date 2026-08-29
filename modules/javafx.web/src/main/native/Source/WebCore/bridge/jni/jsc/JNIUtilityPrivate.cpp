@@ -25,11 +25,11 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 #include "JNIUtilityPrivate.h"
 
 #if ENABLE(JAVA_BRIDGE)
 
-#include "jni_jsobject.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
@@ -43,48 +43,43 @@
 #include "JSNode.h"
 #include "Node.h"
 
-#include "com_sun_webkit_dom_JSObject.h"
-#define JSOBJECT_CLASSNAME "com/sun/webkit/dom/JSObject"
-
 namespace JSC {
 
 namespace Bindings {
 
-static jchar toJCharValue(const JSValue& value, JSGlobalObject* globalObject)
+static char16_t toJCharValue(const JSValue& value, JSGlobalObject* globalObject)
 {
     // If JS type is string and target Java type is char, then
     // return the first unicode character.
     if (value.isString()) {
         String stringValue = value.toString(globalObject)->value(globalObject);
-        return (jchar)stringValue[0];
+        return stringValue[0];
     }
-    return (jchar)value.toNumber(globalObject);
+    return static_cast<char16_t>(value.toNumber(globalObject));
 }
 
-jobject convertUndefinedToJObject()
+WKJHandle convertUndefinedToJObject()
 {
-    static JGObject jgoUndefined;
-    if (!jgoUndefined) {
-        JNIEnv* env = getJNIEnv();
-        jclass clazz = env->FindClass(JSOBJECT_CLASSNAME);
-        jgoUndefined = JLObject(env->GetStaticObjectField(
-            clazz,
-            env->GetStaticFieldID(clazz, "UNDEFINED", "Ljava/lang/String;")));
-    }
-    return jgoUndefined;
+    /*
+     * The JSObject.UNDEFINED singleton. The lookup that used to be here - the class lookup,
+     * then the static field id, then the field read, cached in a function-local global
+     * reference - is now one host slot, and the caching lives with it in javaUndefinedObject().
+     */
+    return javaUndefinedObject();
 }
 
-jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
+WKJJavaValue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
 {
     JSLockHolder lock(globalObject);
 
-    jvalue result;
-    memset(&result, 0, sizeof(jvalue));
+    WKJJavaValue result = emptyJavaValue();
 
     switch (javaType) {
     case JavaTypeArray:
     case JavaTypeObject:
         {
+            result.type = static_cast<int32_t>(javaType);
+
             // FIXME: JavaJSObject::convertValueToJObject functionality is almost exactly the same,
             // these functions should use common code.
 
@@ -95,51 +90,41 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
                     JavaRuntimeObject* runtimeObject = static_cast<JavaRuntimeObject*>(object);
                     JavaInstance* instance = runtimeObject->getInternalJavaInstance();
                     if (instance) {
-                        // Since instance->javaInstance() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
-                        JLObject jlinstance(instance->javaInstance(), true);
+                        // Since instance->javaInstance() is a weak reference, taking a strong one to safeguard javaInstance() from GC
+                        WKJHandle jlinstance = WKJHandle::retained(instance->javaInstance());
                         if (!jlinstance) {
-                            LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::convertValueToJValue", (jobject)jlinstance);
+                            LOG_ERROR("Could not get javaInstance for %llu in JNIUtilityPrivate::convertValueToJValue",
+                                static_cast<unsigned long long>(instance->javaInstance()));
                             return result;
                         }
-                        result.l = instance->javaInstance();
+                        // The strong reference taken above is what the caller receives.
+                        result.l = jlinstance.leakRef();
                     }
                 } else if (object->classInfo() == RuntimeArray::info()) {
                     // Input is a JavaScript Array that was originally created from a Java Array
                     RuntimeArray* imp = static_cast<RuntimeArray*>(object);
                     JavaArray* array = static_cast<JavaArray*>(imp->getConcreteArray());
 
-                    // Since array->javaArray() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
-                    JLObject jlinstancearray(array->javaArray(), true);
+                    // Since array->javaArray() is a weak reference, taking a strong one to safeguard javaInstance() from GC
+                    WKJHandle jlinstancearray = WKJHandle::retained(array->javaArray());
                     if (!jlinstancearray) {
-                        LOG_ERROR("Could not get javaArrayInstance for %p in JNIUtilityPrivate::convertValueToJValue", (jobject)jlinstancearray);
+                        LOG_ERROR("Could not get javaArrayInstance for %llu in JNIUtilityPrivate::convertValueToJValue",
+                            static_cast<unsigned long long>(array->javaArray()));
                         return result;
                     }
-                    result.l = array->javaArray();
+                    result.l = jlinstancearray.leakRef();
                 } else if ((!result.l && (!strcmp(javaClassName, "java.lang.Object")))
                            || (!strcmp(javaClassName, "netscape.javascript.JSObject"))) {
                     // Wrap objects in JSObject instances.
-                    JNIEnv* env = getJNIEnv();
                     if (object->inherits(WebCore::JSNode::info())) {
                         WebCore::JSNode* jsnode = static_cast<WebCore::JSNode*>(object);
-                        static JGClass nodeImplClass = env->FindClass("com/sun/webkit/dom/NodeImpl");
-                        static jmethodID getImplID = env->GetStaticMethodID(nodeImplClass, "getCachedImpl",
-                                                                     "(J)Lorg/w3c/dom/Node;");
                         WebCore::Node *peer = &jsnode->wrapped();
                         peer->ref(); //deref is in NodeImpl disposer
-                        result.l = env->CallStaticObjectMethod(
-                            nodeImplClass,
-                            getImplID,
-                            ptr_to_jlong(peer));
+                        result.l = javaNodeCachedImpl(wkj_from_ptr(peer)).leakRef();
                     } else {
-                        static JGClass jsObjectClass = env->FindClass(JSOBJECT_CLASSNAME);
-                        static jmethodID constructorID = env->GetMethodID(jsObjectClass, "<init>", "(JI)V");
-                        if (constructorID) {
-                            rootObject->gcProtect(object);
-                            jlong nativeHandle = ptr_to_jlong(object);
-                            result.l = env->NewObject(jsObjectClass, constructorID,
-                                nativeHandle,
-                                com_sun_webkit_dom_JSObject_JS_CONTEXT_OBJECT);
-                        }
+                        rootObject->gcProtect(object);
+                        result.l = javaJSObjectCreate(wkj_from_ptr(object),
+                            com_sun_webkit_dom_JSObject_JS_CONTEXT_OBJECT).leakRef();
                     }
                 }
             }
@@ -148,38 +133,31 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
             if (!result.l) {
                 if (value.isString() && !strcmp(javaClassName, "java.lang.Object")) {
                     String stringValue = asString(value)->value(globalObject);
-                    JNIEnv* env = getJNIEnv();
-                    jobject javaString = stringValue.toJavaString(env).releaseLocal();
-                    result.l = javaString;
+                    result.l = javaBoxString(stringValue).leakRef();
                 } else if (value.isString() && !strcmp(javaClassName, "java.lang.Character")) {
-                    JNIEnv* env = getJNIEnv();
-                    static JGClass clazz(env->FindClass("java/lang/Character"));
-                    jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(C)Ljava/lang/Character;");
-                    jchar charValue = toJCharValue(value, globalObject);
-                    jobject javaChar = env->CallStaticObjectMethod(clazz, meth, charValue);
-                    result.l = javaChar;
+                    WKJJavaValue charValue = emptyJavaValue();
+                    charValue.type = WKJ_JT_CHAR;
+                    charValue.i = static_cast<int32_t>(toJCharValue(value, globalObject));
+                    result.l = javaBox(charValue).leakRef();
                 } else if (value.isNumber()) {
-                    JNIEnv* env = getJNIEnv();
                     if (value.isInt32() && (!strcmp(javaClassName, "java.lang.Number") || !strcmp(javaClassName, "java.lang.Integer") || !strcmp(javaClassName, "java.lang.Object"))) {
-                        static JGClass clazz(env->FindClass("java/lang/Integer"));
-                        jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(I)Ljava/lang/Integer;");
-                        result.l = env->CallStaticObjectMethod(clazz, meth, (jint) value.asInt32());
+                        WKJJavaValue intValue = emptyJavaValue();
+                        intValue.type = WKJ_JT_INT;
+                        intValue.i = value.asInt32();
+                        result.l = javaBox(intValue).leakRef();
                     } else if (!strcmp(javaClassName, "java.lang.Number") || !strcmp(javaClassName, "java.lang.Double") || !strcmp(javaClassName, "java.lang.Object")) {
-                        jdouble doubleValue = (jdouble) value.asNumber();
-                        static JGClass clazz = env->FindClass("java/lang/Double");
-                        jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(D)Ljava/lang/Double;");
-                        jobject javaDouble = env->CallStaticObjectMethod(clazz, meth, doubleValue);
-                        result.l = javaDouble;
+                        WKJJavaValue doubleValue = emptyJavaValue();
+                        doubleValue.type = WKJ_JT_DOUBLE;
+                        doubleValue.d = value.asNumber();
+                        result.l = javaBox(doubleValue).leakRef();
                     }
                 } else if (value.isBoolean() && (!strcmp(javaClassName, "java.lang.Boolean") || !strcmp(javaClassName, "java.lang.Object"))) {
-                    bool boolValue = value.asBoolean();
-                    JNIEnv* env = getJNIEnv();
-                    static JGClass clazz(env->FindClass("java/lang/Boolean"));
-                    jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(Z)Ljava/lang/Boolean;");
-                    jobject javaBoolean = env->CallStaticObjectMethod(clazz, meth, boolValue);
-                    result.l = javaBoolean;
+                    WKJJavaValue boolValue = emptyJavaValue();
+                    boolValue.type = WKJ_JT_BOOLEAN;
+                    boolValue.i = value.asBoolean() ? 1 : 0;
+                    result.l = javaBox(boolValue).leakRef();
                 } else if (value.isUndefined()) {
-                    result.l = convertUndefinedToJObject();
+                    result.l = convertUndefinedToJObject().leakRef();
                 }
             }
 
@@ -188,9 +166,7 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
             if (!result.l && !strcmp(javaClassName, "java.lang.String")) {
                 if (!value.isNull()) {
                     String stringValue = value.toString(globalObject)->value(globalObject);
-                    JNIEnv* env = getJNIEnv();
-                    jobject javaString = stringValue.toJavaString(env).releaseLocal();
-                    result.l = javaString;
+                    result.l = javaBoxString(stringValue).leakRef();
                 }
             }
         }
@@ -198,49 +174,72 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
 
     case JavaTypeBoolean:
         {
-            result.z = (jboolean)value.toNumber(globalObject);
+            result.type = WKJ_JT_BOOLEAN;
+            /*
+             * PRESERVED DEFECT. This was `result.z = (jboolean) value.toNumber(globalObject)`
+             * and jboolean is unsigned char, so a JS number of 256 arrives in Java as false
+             * and 257 as true. It is the only place in the tree where a value other than 0
+             * or 1 could reach a jboolean, and widening it to int32_t here would silently
+             * change what an application sees.
+             *
+             * The cast to uint8_t is therefore deliberate and is the same conversion the JNI
+             * cast performed. The Java side reads a non-zero value as true, which is what the
+             * JVM did with the jboolean this replaces. Fixing the truncation is a behaviour
+             * change and belongs in its own commit with its own JavaScriptBridgeTest case;
+             * see FFM-ABI-CONTRACT.md section 13.1, finding 7.
+             */
+            result.i = static_cast<int32_t>(static_cast<uint8_t>(value.toNumber(globalObject)));
         }
         break;
 
     case JavaTypeByte:
         {
-            result.b = (jbyte)value.toNumber(globalObject);
+            result.type = WKJ_JT_BYTE;
+            result.i = static_cast<int8_t>(value.toNumber(globalObject));
         }
         break;
 
     case JavaTypeChar:
         {
-            result.c = toJCharValue(value, globalObject);
+            result.type = WKJ_JT_CHAR;
+            result.i = static_cast<int32_t>(toJCharValue(value, globalObject));
         }
         break;
 
     case JavaTypeShort:
         {
-            result.s = (jshort)value.toNumber(globalObject);
+            result.type = WKJ_JT_SHORT;
+            result.i = static_cast<int16_t>(value.toNumber(globalObject));
         }
         break;
 
     case JavaTypeInt:
         {
-            result.i = (jint)value.toNumber(globalObject);
+            result.type = WKJ_JT_INT;
+            result.i = static_cast<int32_t>(value.toNumber(globalObject));
         }
         break;
 
     case JavaTypeLong:
         {
-            result.j = (jlong)value.toNumber(globalObject);
+            result.type = WKJ_JT_LONG;
+            result.j = static_cast<int64_t>(value.toNumber(globalObject));
         }
         break;
 
     case JavaTypeFloat:
         {
-            result.f = (jfloat)value.toNumber(globalObject);
+            result.type = WKJ_JT_FLOAT;
+            /* Narrowed to float exactly as the (jfloat) cast did, then carried as its exact
+               double widening; the Java side narrows it back. */
+            result.d = static_cast<double>(static_cast<float>(value.toNumber(globalObject)));
         }
         break;
 
     case JavaTypeDouble:
         {
-            result.d = (jdouble)value.toNumber(globalObject);
+            result.type = WKJ_JT_DOUBLE;
+            result.d = value.toNumber(globalObject);
         }
         break;
 
@@ -251,86 +250,51 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
     return result;
 }
 
-jobject jvalueToJObject(jvalue value, JavaType jtype) {
-    JNIEnv* env = getJNIEnv();
-    jmethodID meth;
+WKJHandle javaValueToObject(const WKJJavaValue& value, JavaType jtype)
+{
     switch (jtype) {
     case JavaTypeObject:
     case JavaTypeArray:
-        return value.l;
-    case JavaTypeBoolean: {
-      static JGClass clsZ(env->FindClass("java/lang/Boolean"));
-      meth = env->GetStaticMethodID(clsZ, "valueOf", "(Z)Ljava/lang/Boolean;");
-      return env->CallStaticObjectMethod(clsZ, meth, value.z);
-    }
-    case JavaTypeChar: {
-      static JGClass clsC(env->FindClass("java/lang/Character"));
-      meth = env->GetStaticMethodID(clsC, "valueOf",
-                                    "(C)Ljava/lang/Character;");
-      return env->CallStaticObjectMethod(clsC, meth, value.c);
-    }
-    case JavaTypeByte: {
-      static JGClass clsB(env->FindClass("java/lang/Byte"));
-      meth = env->GetStaticMethodID(clsB, "valueOf", "(B)Ljava/lang/Byte;");
-      return env->CallStaticObjectMethod(clsB, meth, value.b);
-    }
-    case JavaTypeShort: {
-      static JGClass clsS(env->FindClass("java/lang/Short"));
-      meth = env->GetStaticMethodID(clsS, "valueOf", "(S)Ljava/lang/Short;");
-      return env->CallStaticObjectMethod(clsS, meth, value.s);
-    }
-    case JavaTypeInt: {
-      static JGClass clsI(env->FindClass("java/lang/Integer"));
-      meth = env->GetStaticMethodID(clsI, "valueOf", "(I)Ljava/lang/Integer;");
-      return env->CallStaticObjectMethod(clsI, meth, value.i);
-    }
-    case JavaTypeLong: {
-      static JGClass clsJ(env->FindClass("java/lang/Long"));
-      meth = env->GetStaticMethodID(clsJ, "valueOf", "(J)Ljava/lang/Long;");
-      return env->CallStaticObjectMethod(clsJ, meth, value.j);
-    }
-    case JavaTypeFloat: {
-      static JGClass clsF(env->FindClass("java/lang/Float"));
-      meth = env->GetStaticMethodID(clsF, "valueOf", "(F)Ljava/lang/Float;");
-      return env->CallStaticObjectMethod(clsF, meth, value.f);
-    }
-    case JavaTypeDouble: {
-      static JGClass clsD(env->FindClass("java/lang/Double"));
-      meth = env->GetStaticMethodID(clsD, "valueOf", "(D)Ljava/lang/Double;");
-      return env->CallStaticObjectMethod(clsD, meth, value.d);
-    }
+        /* Already an object; the caller gets its own reference to it. */
+        return WKJHandle::retained(value.l);
+    case JavaTypeBoolean:
+    case JavaTypeChar:
+    case JavaTypeByte:
+    case JavaTypeShort:
+    case JavaTypeInt:
+    case JavaTypeLong:
+    case JavaTypeFloat:
+    case JavaTypeDouble:
+        /* Boolean.valueOf, Character.valueOf, ... - fourteen upcalls, now one host slot. */
+        return javaBox(value);
     default:
         abort();
     }
 }
 
-jthrowable dispatchJNICall(int count, RootObject*, jobject obj, bool isStatic, JavaType returnType, jmethodID methodId, jobject* args, jvalue& result, jobject accessControlContext) {
-
-    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
+WKJHandle dispatchJavaCall(int count, RootObject*, wkj_ref instance, JavaType returnType,
+    wkj_ref method, const wkj_ref* args, WKJJavaValue& result, wkj_ref accessControlContext)
+{
+    // Since instance is a weak reference, taking a strong one to safeguard it from GC
+    WKJHandle jlinstance = WKJHandle::retained(instance);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::dispatchJNICall", (jobject)jlinstance);
-        return NULL;
+        LOG_ERROR("Could not get javaInstance for %llu in JNIUtilityPrivate::dispatchJavaCall",
+            static_cast<unsigned long long>(instance));
+        return WKJHandle();
     }
 
-    JNIEnv* env = getJNIEnv();
-    jclass objClass = env->GetObjectClass(obj);
-    jobject rmethod = env->ToReflectedMethod(objClass, methodId, isStatic);
-    jclass utilityCls = env->FindClass("com/sun/webkit/Utilities");
-    jclass objectCls = env->FindClass("java/lang/Object");
-    jobjectArray argsArray = env->NewObjectArray(count, objectCls, NULL);
-    for (int i = 0;  i < count; i++)
-      env->SetObjectArrayElement(argsArray, i, args[i]);
-    jmethodID invokeMethod =
-        env->GetStaticMethodID(utilityCls, "fwkInvokeWithContext",
-                               "(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    jobject r = env->CallStaticObjectMethod(utilityCls, invokeMethod,
-                                            rmethod, obj, argsArray,
-                                            accessControlContext);
-
-    jthrowable ex = env->ExceptionOccurred();
-    env->ExceptionClear();
+    /*
+     * com.sun.webkit.Utilities.fwkInvokeWithContext(method, instance, args, acc) - the same
+     * static method the JNI code called, and still the place the actual Method.invoke
+     * happens. What has gone is the machinery around it: GetObjectClass, ToReflectedMethod,
+     * FindClass twice, NewObjectArray and SetObjectArrayElement per argument. Java builds the
+     * Object[] now.
+     */
+    WKJHandle exception;
+    WKJHandle invocationResult = javaInvoke(method, instance, args, count, accessControlContext,
+        exception);
+    wkj_ref r = invocationResult.get();
 
     switch (returnType) {
     case JavaTypeVoid:
@@ -342,42 +306,28 @@ jthrowable dispatchJNICall(int count, RootObject*, jobject obj, bool isStatic, J
     // Since we can't convert java.lang.Character to any JS primitive, we have
     // to treat it as JS foreign object.
     case JavaTypeChar:
-        result.l = r;
+        /* The tag says only that an object is held, which is all a reader of it needs to
+           know; the caller switches on the return type it asked for, as it always did. */
+        result.type = WKJ_JT_OBJECT;
+        result.l = invocationResult.leakRef();
         break;
 
     case JavaTypeBoolean:
-        result.z = callJNIMethod<jboolean>(r, "booleanValue", "()Z");
-        break;
-
     case JavaTypeByte:
-        result.b = callJNIMethod<jbyte>(r, "byteValue", "()B");
-        break;
-
     case JavaTypeShort:
-        result.s = callJNIMethod<jshort>(r, "shortValue", "()S");
-        break;
-
     case JavaTypeInt:
-        result.i = callJNIMethod<jint>(r, "intValue", "()I");
-        break;
-
     case JavaTypeLong:
-        result.j = callJNIMethod<jlong>(r, "longValue", "()J");
-        break;
-
     case JavaTypeFloat:
-        result.f = callJNIMethod<jfloat>(r, "floatValue", "()F");
-        break;
-
     case JavaTypeDouble:
-        result.d = callJNIMethod<jdouble>(r, "doubleValue", "()D");
+        /* booleanValue(), byteValue(), ... on the boxed result, as the JNI code did. */
+        javaUnbox(r, returnType, result);
         break;
 
     case JavaTypeInvalid:
         /* Nothing to do */
         break;
     }
-    return ex;
+    return exception;
 }
 
 } // end of namespace Bindings

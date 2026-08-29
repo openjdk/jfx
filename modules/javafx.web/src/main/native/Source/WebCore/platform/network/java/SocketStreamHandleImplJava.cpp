@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,18 +29,9 @@
 #include "PageSupplementJava.h"
 #include "SocketStreamError.h"
 #include "SocketStreamHandleClient.h"
-#include "com_sun_webkit_network_SocketStreamHandle.h"
-#include <wtf/java/JavaEnv.h>
+#include "WKJPlatformJava.h"
 
 namespace WebCore {
-
-static jclass GetSocketStreamHandleClass(JNIEnv* env)
-{
-    static JGClass socketStreamHandleClass(env->FindClass(
-            "com/sun/webkit/network/SocketStreamHandle"));
-    ASSERT(socketStreamHandleClass);
-    return socketStreamHandleClass;
-}
 
 SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
                                        SocketStreamHandleClient& client, const StorageSessionProvider* provider)
@@ -51,59 +42,41 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
     bool ssl = url.protocolIs("wss"_s);
     int port = url.port().value_or(ssl ? 443 : 80);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->socket_create)
+        return;
 
-    static jmethodID mid = env->GetStaticMethodID(
-            GetSocketStreamHandleClass(env),
-            "fwkCreate",
-            "(Ljava/lang/String;IZLcom/sun/webkit/WebPage;J)"
-            "Lcom/sun/webkit/network/SocketStreamHandle;");
-    ASSERT(mid);
+    WKJStringArg hostArg(host);
+    WKJHandle webPage = PageSupplementJava::from(page)->jWebPage();
 
-    m_ref = JLObject(env->CallStaticObjectMethod(
-            GetSocketStreamHandleClass(env),
-            mid,
-            (jstring) host.toJavaString(env),
-            port,
-            bool_to_jbool(ssl),
-            (jobject) PageSupplementJava::from(page)->jWebPage(),
-            ptr_to_jlong(this)));
-    WTF::CheckAndClearException(env);
+    m_ref = WKJHandle(cb->socket_create(hostArg.data(), hostArg.length(), port,
+                                        ssl ? 1 : 0, webPage.get(), wkj_from_ptr(this)));
+    wkjCheckAndClearException();
 }
 
 SocketStreamHandleImpl::~SocketStreamHandleImpl()
 {
-    WC_GETJAVAENV_CHKRET(env);
+    // The host table can be gone by the time this runs; that is what the null environment
+    // check in the JNI version meant.
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->socket_notify_disposed || !m_ref)
+        return;
 
-    static jmethodID mid = env->GetMethodID(
-            GetSocketStreamHandleClass(env),
-            "fwkNotifyDisposed",
-            "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(m_ref, mid);
-    WTF::CheckAndClearException(env);
+    cb->socket_notify_disposed(m_ref.get());
+    wkjCheckAndClearException();
 }
 
 std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t len)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->socket_send)
+        return { };
 
-    JLByteArray byteArray = env->NewByteArray(len);
-    env->SetByteArrayRegion(
-            (jbyteArray) byteArray,
-            (jsize) 0,
-            (jsize) len,
-            (const jbyte*) data);
+    int32_t res = cb->socket_send(m_ref.get(), data, static_cast<int32_t>(len));
 
-    static jmethodID mid = env->GetMethodID(
-            GetSocketStreamHandleClass(env),
-            "fwkSend",
-            "([B)I");
-    ASSERT(mid);
-
-    jint res = env->CallIntMethod(m_ref, mid, (jbyteArray) byteArray);
-    if (WTF::CheckAndClearException(env)) {
+    // The JNI version distinguished "the upcall threw" from a real result here and returned
+    // nullopt for the former; keep that split exactly.
+    if (wkjCheckAndClearException()) {
         return { };
     }
     return { static_cast<size_t>(res) };
@@ -111,16 +84,12 @@ std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t
 
 void SocketStreamHandleImpl::platformClose()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostNetwork* cb = wkjNetwork();
+    if (!cb || !cb->socket_close)
+        return;
 
-    static jmethodID mid = env->GetMethodID(
-            GetSocketStreamHandleClass(env),
-            "fwkClose",
-            "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(m_ref, mid);
-    WTF::CheckAndClearException(env);
+    cb->socket_close(m_ref.get());
+    wkjCheckAndClearException();
 }
 
 void SocketStreamHandleImpl::didOpen()
@@ -157,47 +126,42 @@ void SocketStreamHandleImpl::didClose()
 
 } // namespace WebCore
 
-
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen
-  (JNIEnv*, jclass, jlong data)
+WKJ_EXPORT void wkj_socket_did_open(int64_t handle_peer)
 {
     using namespace WebCore;
     SocketStreamHandleImpl* handle =
-            static_cast<SocketStreamHandleImpl*>(jlong_to_ptr(data));
+            static_cast<SocketStreamHandleImpl*>(wkj_to_ptr(handle_peer));
     ASSERT(handle);
     handle->didOpen();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData
-  (JNIEnv* env, jclass, jbyteArray buffer, jint len, jlong data)
+WKJ_EXPORT void wkj_socket_did_receive_data(int64_t handle_peer, const uint8_t* data,
+                                            int32_t length)
 {
     using namespace WebCore;
     SocketStreamHandleImpl* handle =
-            static_cast<SocketStreamHandleImpl*>(jlong_to_ptr(data));
+            static_cast<SocketStreamHandleImpl*>(wkj_to_ptr(handle_peer));
     ASSERT(handle);
-    jbyte* p = env->GetByteArrayElements(buffer, NULL);
-    handle->didReceiveData((const uint8_t*) p, len);
-    env->ReleaseByteArrayElements(buffer, p, JNI_ABORT);
+    handle->didReceiveData(data, length);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail
-  (JNIEnv* env, jclass, jint errorCode, jstring errorDescription, jlong data)
+WKJ_EXPORT void wkj_socket_did_fail(int64_t handle_peer, int32_t error_code,
+                                    const uint16_t* description, int32_t description_len)
 {
     using namespace WebCore;
     SocketStreamHandleImpl* handle =
-            static_cast<SocketStreamHandleImpl*>(jlong_to_ptr(data));
+            static_cast<SocketStreamHandleImpl*>(wkj_to_ptr(handle_peer));
     ASSERT(handle);
-    handle->didFail(errorCode, String(env, errorDescription));
+    handle->didFail(error_code, wkjMakeString(description, description_len));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_SocketStreamHandle_twkDidClose
-  (JNIEnv*, jclass, jlong data)
+WKJ_EXPORT void wkj_socket_did_close(int64_t handle_peer)
 {
     using namespace WebCore;
     SocketStreamHandleImpl* handle =
-            static_cast<SocketStreamHandleImpl*>(jlong_to_ptr(data));
+            static_cast<SocketStreamHandleImpl*>(wkj_to_ptr(handle_peer));
     ASSERT(handle);
     handle->didClose();
 }

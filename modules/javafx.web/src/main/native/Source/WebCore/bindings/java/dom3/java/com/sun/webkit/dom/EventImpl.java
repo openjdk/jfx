@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,14 +79,18 @@ public class EventImpl implements Event {
         return (arg == null) ? 0L : ((EventImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        EventNative.dispose(peer);
+    }
 
     private static final int TYPE_WheelEvent = 1;
     private static final int TYPE_MouseEvent = 2;
     private static final int TYPE_KeyboardEvent = 3;
     private static final int TYPE_UIEvent = 4;
     private static final int TYPE_MutationEvent = 5;
-    native private static int getCPPTypeImpl(long peer);
+    private static int getCPPTypeImpl(long peer) {
+        return EventNative.getCPPType(peer);
+    }
 
     static Event getImpl(long peer) {
         return (Event)create(peer);
@@ -120,78 +124,106 @@ public class EventImpl implements Event {
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return EventNative.getType(peer);
+    }
 
     @Override
     public EventTarget getTarget() {
         return (EventTarget)NodeImpl.getImpl(getTargetImpl(getPeer()));
     }
-    native static long getTargetImpl(long peer);
+    static long getTargetImpl(long peer) {
+        return EventNative.getTarget(peer);
+    }
 
     @Override
     public EventTarget getCurrentTarget() {
         return (EventTarget)NodeImpl.getImpl(getCurrentTargetImpl(getPeer()));
     }
-    native static long getCurrentTargetImpl(long peer);
+    static long getCurrentTargetImpl(long peer) {
+        return EventNative.getCurrentTarget(peer);
+    }
 
     @Override
     public short getEventPhase() {
         return getEventPhaseImpl(getPeer());
     }
-    native static short getEventPhaseImpl(long peer);
+    static short getEventPhaseImpl(long peer) {
+        return EventNative.getEventPhase(peer);
+    }
 
     @Override
     public boolean getBubbles() {
         return getBubblesImpl(getPeer());
     }
-    native static boolean getBubblesImpl(long peer);
+    static boolean getBubblesImpl(long peer) {
+        return EventNative.getBubbles(peer);
+    }
 
     @Override
     public boolean getCancelable() {
         return getCancelableImpl(getPeer());
     }
-    native static boolean getCancelableImpl(long peer);
+    static boolean getCancelableImpl(long peer) {
+        return EventNative.getCancelable(peer);
+    }
 
     @Override
     public long getTimeStamp() {
         return getTimeStampImpl(getPeer());
     }
-    native static long getTimeStampImpl(long peer);
+    static long getTimeStampImpl(long peer) {
+        return EventNative.getTimeStamp(peer);
+    }
 
     public boolean getDefaultPrevented() {
         return getDefaultPreventedImpl(getPeer());
     }
-    native static boolean getDefaultPreventedImpl(long peer);
+    static boolean getDefaultPreventedImpl(long peer) {
+        return EventNative.getDefaultPrevented(peer);
+    }
 
     public boolean getIsTrusted() {
         return getIsTrustedImpl(getPeer());
     }
-    native static boolean getIsTrustedImpl(long peer);
+    static boolean getIsTrustedImpl(long peer) {
+        return EventNative.getIsTrusted(peer);
+    }
 
     public EventTarget getSrcElement() {
         return (EventTarget)NodeImpl.getImpl(getSrcElementImpl(getPeer()));
     }
-    native static long getSrcElementImpl(long peer);
+    static long getSrcElementImpl(long peer) {
+        return EventNative.getSrcElement(peer);
+    }
 
     public boolean getReturnValue() {
         return getReturnValueImpl(getPeer());
     }
-    native static boolean getReturnValueImpl(long peer);
+    static boolean getReturnValueImpl(long peer) {
+        return EventNative.getReturnValue(peer);
+    }
 
     public void setReturnValue(boolean value) {
         setReturnValueImpl(getPeer(), value);
     }
-    native static void setReturnValueImpl(long peer, boolean value);
+    static void setReturnValueImpl(long peer, boolean value) {
+        EventNative.setReturnValue(peer, value);
+    }
 
     public boolean getCancelBubble() {
         return getCancelBubbleImpl(getPeer());
     }
-    native static boolean getCancelBubbleImpl(long peer);
+    static boolean getCancelBubbleImpl(long peer) {
+        return EventNative.getCancelBubble(peer);
+    }
 
     public void setCancelBubble(boolean value) {
         setCancelBubbleImpl(getPeer(), value);
     }
-    native static void setCancelBubbleImpl(long peer, boolean value);
+    static void setCancelBubbleImpl(long peer, boolean value) {
+        EventNative.setCancelBubble(peer, value);
+    }
 
 
 // Functions
@@ -200,7 +232,9 @@ public class EventImpl implements Event {
     {
         stopPropagationImpl(getPeer());
     }
-    native static void stopPropagationImpl(long peer);
+    static void stopPropagationImpl(long peer) {
+        EventNative.stopPropagation(peer);
+    }
 
 
     @Override
@@ -208,7 +242,9 @@ public class EventImpl implements Event {
     {
         preventDefaultImpl(getPeer());
     }
-    native static void preventDefaultImpl(long peer);
+    static void preventDefaultImpl(long peer) {
+        EventNative.preventDefault(peer);
+    }
 
 
     @Override
@@ -221,17 +257,21 @@ public class EventImpl implements Event {
             , canBubbleArg
             , cancelableArg);
     }
-    native static void initEventImpl(long peer
+    static void initEventImpl(long peer
         , String eventTypeArg
         , boolean canBubbleArg
-        , boolean cancelableArg);
+        , boolean cancelableArg) {
+        EventNative.initEvent(peer, eventTypeArg, canBubbleArg, cancelableArg);
+    }
 
 
     public void stopImmediatePropagation()
     {
         stopImmediatePropagationImpl(getPeer());
     }
-    native static void stopImmediatePropagationImpl(long peer);
+    static void stopImmediatePropagationImpl(long peer) {
+        EventNative.stopImmediatePropagation(peer);
+    }
 
 
 }

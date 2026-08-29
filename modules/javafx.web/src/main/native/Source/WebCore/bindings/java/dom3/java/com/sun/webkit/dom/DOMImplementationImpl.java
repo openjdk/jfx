@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,9 @@ public class DOMImplementationImpl implements DOMImplementation {
         return (arg == null) ? 0L : ((DOMImplementationImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        DOMImplementationNative.dispose(peer);
+    }
 
     static DOMImplementation getImpl(long peer) {
         return (DOMImplementation)create(peer);
@@ -92,9 +94,12 @@ public class DOMImplementationImpl implements DOMImplementation {
             , feature
             , version);
     }
-    native static boolean hasFeatureImpl(long peer
+    static boolean hasFeatureImpl(long peer
         , String feature
-        , String version);
+        , String version) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.DOMImplementationImpl.hasFeatureImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
 
     @Override
@@ -107,10 +112,12 @@ public class DOMImplementationImpl implements DOMImplementation {
             , publicId
             , systemId));
     }
-    native static long createDocumentTypeImpl(long peer
+    static long createDocumentTypeImpl(long peer
         , String qualifiedName
         , String publicId
-        , String systemId);
+        , String systemId) {
+        return DOMImplementationNative.createDocumentType(peer, qualifiedName, publicId, systemId);
+    }
 
 
     @Override
@@ -123,10 +130,12 @@ public class DOMImplementationImpl implements DOMImplementation {
             , qualifiedName
             , DocumentTypeImpl.getPeer(doctype)));
     }
-    native static long createDocumentImpl(long peer
+    static long createDocumentImpl(long peer
         , String namespaceURI
         , String qualifiedName
-        , long doctype);
+        , long doctype) {
+        return DOMImplementationNative.createDocument(peer, namespaceURI, qualifiedName, doctype);
+    }
 
 
     public CSSStyleSheet createCSSStyleSheet(String title
@@ -136,9 +145,11 @@ public class DOMImplementationImpl implements DOMImplementation {
             , title
             , media));
     }
-    native static long createCSSStyleSheetImpl(long peer
+    static long createCSSStyleSheetImpl(long peer
         , String title
-        , String media);
+        , String media) {
+        return DOMImplementationNative.createCSSStyleSheet(peer, title, media);
+    }
 
 
     public HTMLDocument createHTMLDocument(String title)
@@ -146,8 +157,10 @@ public class DOMImplementationImpl implements DOMImplementation {
         return HTMLDocumentImpl.getImpl(createHTMLDocumentImpl(getPeer()
             , title));
     }
-    native static long createHTMLDocumentImpl(long peer
-        , String title);
+    static long createHTMLDocumentImpl(long peer
+        , String title) {
+        return DOMImplementationNative.createHTMLDocument(peer, title);
+    }
 
 
 

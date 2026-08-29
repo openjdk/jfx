@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,37 +45,49 @@ public class AttrImpl extends NodeImpl implements Attr {
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return AttrNative.getName(peer);
+    }
 
     @Override
     public boolean getSpecified() {
         return getSpecifiedImpl(getPeer());
     }
-    native static boolean getSpecifiedImpl(long peer);
+    static boolean getSpecifiedImpl(long peer) {
+        return AttrNative.getSpecified(peer);
+    }
 
     @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
-    native static String getValueImpl(long peer);
+    static String getValueImpl(long peer) {
+        return AttrNative.getValue(peer);
+    }
 
     @Override
     public void setValue(String value) throws DOMException {
         setValueImpl(getPeer(), value);
     }
-    native static void setValueImpl(long peer, String value);
+    static void setValueImpl(long peer, String value) {
+        AttrNative.setValue(peer, value);
+    }
 
     @Override
     public Element getOwnerElement() {
         return ElementImpl.getImpl(getOwnerElementImpl(getPeer()));
     }
-    native static long getOwnerElementImpl(long peer);
+    static long getOwnerElementImpl(long peer) {
+        return AttrNative.getOwnerElement(peer);
+    }
 
     @Override
     public boolean isId() {
         return isIdImpl(getPeer());
     }
-    native static boolean isIdImpl(long peer);
+    static boolean isIdImpl(long peer) {
+        return AttrNative.isId(peer);
+    }
 
 
 //stubs

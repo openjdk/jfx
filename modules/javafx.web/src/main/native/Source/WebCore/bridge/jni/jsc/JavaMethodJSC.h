@@ -41,7 +41,7 @@ typedef const char* RuntimeType;
 
 class JavaMethod : public Method {
 public:
-    JavaMethod(JNIEnv*, jobject aMethod);
+    explicit JavaMethod(wkj_ref aMethod);
     ~JavaMethod();
 
     const String name() const { return m_name.impl(); }

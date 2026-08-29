@@ -27,13 +27,13 @@
 
 
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<EntityReference*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<EntityReference*>(wkj_to_ptr(peer)))
 
 }

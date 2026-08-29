@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,70 +26,74 @@
 #include "config.h"
 
 #include "CryptoDigest.h"
-#include <jni.h>
-#include <wtf/java/JavaEnv.h>
-#include <wtf/java/JavaRef.h>
+
+#include <webkit_java_api.h>
+
+#include <wtf/java/WKJHandle.h>
+#include <wtf/java/WKJRuntime.h>
 
 namespace PAL {
 
 namespace CryptoDigestInternal {
 
-inline jclass GetMessageDigestClass(JNIEnv* env)
+/*
+ * The installed PAL table, or nullptr before wkj_init has run. It replaces
+ * GetMessageDigestClass(), which cached a global reference to
+ * com.sun.webkit.security.WCMessageDigest purely so that member ids could be resolved on it.
+ */
+inline const WKJHostPAL* wkjPAL()
 {
-    static JGClass messageDigestCls(
-        env->FindClass("com/sun/webkit/security/WCMessageDigest"));
-    ASSERT(messageDigestCls);
-    return messageDigestCls;
+    return wkj_host ? &wkj_host->pal : nullptr;
 }
 
-inline JLObject GetMessageDigestInstance(jstring algorithm)
+struct AlgorithmName {
+    const uint16_t* data;
+    int32_t length;
+};
+
+/*
+ * The java.security.MessageDigest algorithm names, as UTF-16 literals: the same five strings
+ * the JNI version built with NewStringUTF, with no allocation and no encoding conversion on
+ * the way to Java. The mapping stays here, next to the enum that owns it, rather than moving
+ * into the Java forwarder.
+ */
+AlgorithmName toJavaMessageDigestAlgorithm(CryptoDigest::Algorithm algorithm)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!env) {
-        return { };
-    }
+    static const uint16_t sha1[] = { 'S', 'H', 'A', '-', '1' };
+    static const uint16_t sha224[] = { 'S', 'H', 'A', '-', '2', '2', '4' };
+    static const uint16_t sha256[] = { 'S', 'H', 'A', '-', '2', '5', '6' };
+    static const uint16_t sha384[] = { 'S', 'H', 'A', '-', '3', '8', '4' };
+    static const uint16_t sha512[] = { 'S', 'H', 'A', '-', '5', '1', '2' };
+    static const uint16_t empty = 0;
 
-    static jmethodID midGetInstance = env->GetStaticMethodID(
-        GetMessageDigestClass(env),
-        "getInstance",
-        "(Ljava/lang/String;)Lcom/sun/webkit/security/WCMessageDigest;");
-    ASSERT(midGetInstance);
-    JLObject jDigest = env->CallStaticObjectMethod(GetMessageDigestClass(env), midGetInstance, algorithm);
-    if (WTF::CheckAndClearException(env)) {
-        return { };
-    }
-    return jDigest;
-}
-
-jstring toJavaMessageDigestAlgorithm(CryptoDigest::Algorithm algorithm)
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    const char* algorithmStr = "";
     switch (algorithm) {
         case CryptoDigest::Algorithm::SHA_1:
-            algorithmStr = "SHA-1";
-            break;
+            return { sha1, 5 };
         case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
-            algorithmStr = "SHA-224";
-            break;
+            return { sha224, 7 };
         case CryptoDigest::Algorithm::SHA_256:
-            algorithmStr = "SHA-256";
-            break;
+            return { sha256, 7 };
         case CryptoDigest::Algorithm::SHA_384:
-            algorithmStr = "SHA-384";
-            break;
+            return { sha384, 7 };
         case CryptoDigest::Algorithm::SHA_512:
-            algorithmStr = "SHA-512";
-            break;
+            return { sha512, 7 };
     }
-    return env->NewStringUTF(algorithmStr);
+
+    // Unreachable while the switch stays exhaustive. The JNI version defaulted to "", whose
+    // getInstance("") threw and left a null digest; a non-null pointer with length 0 is how
+    // this ABI spells the empty string, so that path is unchanged.
+    return { &empty, 0 };
 }
 
 } // namespace CryptoDigestInternal
 
+/*
+ * jDigest is the named owner of the id that crypto_digest_create minted, and the WKJHandle
+ * destructor is where it is released - exactly the role the JGObject had. Nothing reclaims a
+ * leaked id, so this ownership has to be explicit.
+ */
 struct CryptoDigestContext {
-    JGObject jDigest { };
+    WKJHandle jDigest { };
 };
 
 CryptoDigest::CryptoDigest()
@@ -104,8 +108,19 @@ CryptoDigest::~CryptoDigest()
 std::unique_ptr<CryptoDigest> CryptoDigest::create(CryptoDigest::Algorithm algorithm)
 {
     using namespace CryptoDigestInternal;
+
     auto digest = std::unique_ptr<CryptoDigest>(new CryptoDigest);
-    digest->m_context->jDigest = GetMessageDigestInstance(toJavaMessageDigestAlgorithm(algorithm));
+
+    const WKJHostPAL* cb = wkjPAL();
+    if (!cb || !cb->crypto_digest_create)
+        return digest;
+
+    AlgorithmName name = toJavaMessageDigestAlgorithm(algorithm);
+    // Adopts the new id; a 0 return leaves a null handle, which is what the JNI code produced
+    // when getInstance threw and the exception check turned the result into an empty JLObject.
+    digest->m_context->jDigest = WKJHandle { cb->crypto_digest_create(name.data, name.length) };
+    WTF::wkjCheckAndClearException();
+
     return digest;
 }
 
@@ -113,44 +128,56 @@ void CryptoDigest::addBytes(std::span<const uint8_t> input)
 {
     using namespace CryptoDigestInternal;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!m_context->jDigest || !env) {
+    const WKJHostPAL* cb = wkjPAL();
+    if (!m_context->jDigest || !cb || !cb->crypto_digest_add_bytes)
         return;
-    }
 
-    static jmethodID midUpdate = env->GetMethodID(
-        GetMessageDigestClass(env),
-        "addBytes",
-        "(Ljava/nio/ByteBuffer;)V");
-    ASSERT(midUpdate);
-    env->CallVoidMethod(jobject(m_context->jDigest), midUpdate, env->NewDirectByteBuffer(const_cast<void*>(reinterpret_cast<const void*>(input.data())), input.size()));
+    /*
+     * The bytes are wrapped by Java without copying for the duration of the call, which is
+     * what NewDirectByteBuffer did.
+     *
+     * No exception check here, deliberately: the JNI version had none either (it called
+     * CallVoidMethod and moved on), so adding one would change which call sees a failure.
+     * That omission is a pre-existing defect, not something this migration decides.
+     */
+    cb->crypto_digest_add_bytes(m_context->jDigest.get(), input.data(),
+                                static_cast<int32_t>(input.size()));
 }
 
 Vector<uint8_t> CryptoDigest::computeHash()
 {
     using namespace CryptoDigestInternal;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    if (!m_context->jDigest || !env) {
+    const WKJHostPAL* cb = wkjPAL();
+    if (!m_context->jDigest || !cb || !cb->crypto_digest_compute_hash)
         return { };
-    }
 
-    static jmethodID midDigest = env->GetMethodID(
-        GetMessageDigestClass(env),
-        "computeHash",
-        "()[B");
-    ASSERT(midDigest);
-
-    JLocalRef<jbyteArray> jDigestBytes = static_cast<jbyteArray>(env->CallObjectMethod(jobject(m_context->jDigest), midDigest));
-    void* digest = env->GetPrimitiveArrayCritical(static_cast<jbyteArray>(jDigestBytes), 0);
-    if (!digest) {
+    /*
+     * 64 bytes is SHA-512, the largest of the five algorithms above, so the overflow branch is
+     * unreachable today.
+     *
+     * It deliberately does NOT retry. Everywhere else in this ABI a WKJ_STR_OVERFLOW is
+     * answered by growing the buffer and calling again, but this slot is not idempotent:
+     * java.security.MessageDigest.digest() RESETS the digest, so a second call would return
+     * the hash of nothing. An algorithm wider than 64 bytes must therefore widen this buffer
+     * rather than rely on a retry, and until then an overflow is reported as no hash - the
+     * same empty Vector the JNI version returned when GetPrimitiveArrayCritical failed.
+     *
+     * That critical region is also why this is a copy: contract 13.1 forbids
+     * GetPrimitiveArrayCritical-style pinning on this ABI, and 64 bytes is not worth pinning.
+     *
+     * No exception check, matching the JNI version, which read the returned byte[] without
+     * one.
+     */
+    uint8_t buffer[64];
+    int32_t length = 0;
+    int32_t status = cb->crypto_digest_compute_hash(m_context->jDigest.get(), buffer,
+                                                    static_cast<int32_t>(sizeof(buffer)), &length);
+    if (status != WKJ_STR_OK || length <= 0)
         return { };
-    }
 
     Vector<uint8_t> result;
-    std::span<const uint8_t> createSpan(reinterpret_cast<const uint8_t*>(digest), env->GetArrayLength(jDigestBytes));
-    result.append(createSpan);
-    env->ReleasePrimitiveArrayCritical(jDigestBytes, digest, 0);
+    result.append(std::span<const uint8_t>(buffer, static_cast<size_t>(length)));
     return result;
 }
 

@@ -30,9 +30,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 
 namespace WebCore {
 
@@ -75,9 +72,6 @@ void StorageThread::start()
 
 void StorageThread::threadEntryPoint()
 {
-#if PLATFORM(JAVA)
-    WTF::AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
     ASSERT(!isMainThread());
 
     while (auto function = m_queue.waitForMessage()) {

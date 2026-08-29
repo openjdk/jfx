@@ -71,7 +71,7 @@ public abstract class WCGraphicsManager {
 
     protected abstract WCFont getWCFont(String name, boolean bold, boolean italic, float size);
 
-    private WCFontCustomPlatformData fwkCreateFontCustomPlatformData(
+    WCFontCustomPlatformData fwkCreateFontCustomPlatformData(
             SharedBuffer sharedBuffer)
     {
         try {
@@ -113,7 +113,7 @@ public abstract class WCGraphicsManager {
         }
     }
 
-    private void fwkLoadFromResource(String key, long bufPtr) {
+    void fwkLoadFromResource(String key, long bufPtr) {
         InputStream in = getClass().getResourceAsStream(getResourceName(key));
         if (in == null) {
             return;
@@ -139,7 +139,7 @@ public abstract class WCGraphicsManager {
         return new String[0];
     }
 
-    private WCMediaPlayer fwkCreateMediaPlayer(long nativePointer) {
+    WCMediaPlayer fwkCreateMediaPlayer(long nativePointer) {
         WCMediaPlayer mediaPlayer = createMediaPlayer();
         mediaPlayer.setNativePointer(nativePointer);
         return mediaPlayer;
@@ -163,5 +163,7 @@ public abstract class WCGraphicsManager {
         return refMap.get(id);
     }
 
-    private static native void append(long bufPtr, byte[] data, int count);
+    private static void append(long bufPtr, byte[] data, int count) {
+        WCGraphicsManagerNative.builderAppend(bufPtr, data, count);
+    }
 }

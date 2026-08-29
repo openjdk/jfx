@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,36 +44,48 @@ public class HTMLLabelElementImpl extends HTMLElementImpl implements HTMLLabelEl
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
-    native static long getFormImpl(long peer);
+    static long getFormImpl(long peer) {
+        return HTMLLabelElementNative.getForm(peer);
+    }
 
     @Override
     public String getHtmlFor() {
         return getHtmlForImpl(getPeer());
     }
-    native static String getHtmlForImpl(long peer);
+    static String getHtmlForImpl(long peer) {
+        return HTMLLabelElementNative.getHtmlFor(peer);
+    }
 
     @Override
     public void setHtmlFor(String value) {
         setHtmlForImpl(getPeer(), value);
     }
-    native static void setHtmlForImpl(long peer, String value);
+    static void setHtmlForImpl(long peer, String value) {
+        HTMLLabelElementNative.setHtmlFor(peer, value);
+    }
 
     public HTMLElement getControl() {
         return HTMLElementImpl.getImpl(getControlImpl(getPeer()));
     }
-    native static long getControlImpl(long peer);
+    static long getControlImpl(long peer) {
+        return HTMLLabelElementNative.getControl(peer);
+    }
 
     @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
-    native static String getAccessKeyImpl(long peer);
+    static String getAccessKeyImpl(long peer) {
+        return HTMLLabelElementNative.getAccessKey(peer);
+    }
 
     @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
-    native static void setAccessKeyImpl(long peer, String value);
+    static void setAccessKeyImpl(long peer, String value) {
+        HTMLLabelElementNative.setAccessKey(peer, value);
+    }
 
 }
 

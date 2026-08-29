@@ -90,15 +90,17 @@ public class Timer {
     /**
      * @param fireTime time to wait in seconds
      */
-    private static void fwkSetFireTime(double fireTime) {
+    static void fwkSetFireTime(double fireTime) {
         getTimer().setFireTime((long)Math.ceil(fireTime * 1000));
     }
 
-    private static void fwkStopTimer() {
+    static void fwkStopTimer() {
         getTimer().setFireTime(0);
     }
 
-    private static native void twkFireTimerEvent();
+    private static void twkFireTimerEvent() {
+        TimerNative.fire();
+    }
 }
 
 final class SeparateThreadTimer extends Timer implements Runnable {

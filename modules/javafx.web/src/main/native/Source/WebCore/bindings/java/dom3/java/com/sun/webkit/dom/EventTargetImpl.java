@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,9 @@ public class EventTargetImpl implements EventTarget {
         return (arg == null) ? 0L : ((EventTargetImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        EventTargetNative.dispose(peer);
+    }
 
     static EventTarget getImpl(long peer) {
         return (EventTarget)create(peer);
@@ -92,10 +94,12 @@ public class EventTargetImpl implements EventTarget {
             , EventListenerImpl.getPeer(listener)
             , useCapture);
     }
-    native static void addEventListenerImpl(long peer
+    static void addEventListenerImpl(long peer
         , String type
         , long listener
-        , boolean useCapture);
+        , boolean useCapture) {
+        EventTargetNative.addEventListener(peer, type, listener, useCapture);
+    }
 
 
     @Override
@@ -108,10 +112,12 @@ public class EventTargetImpl implements EventTarget {
             , EventListenerImpl.getPeer(listener)
             , useCapture);
     }
-    native static void removeEventListenerImpl(long peer
+    static void removeEventListenerImpl(long peer
         , String type
         , long listener
-        , boolean useCapture);
+        , boolean useCapture) {
+        EventTargetNative.removeEventListener(peer, type, listener, useCapture);
+    }
 
 
     @Override
@@ -120,8 +126,10 @@ public class EventTargetImpl implements EventTarget {
         return dispatchEventImpl(getPeer()
             , EventImpl.getPeer(event));
     }
-    native static boolean dispatchEventImpl(long peer
-        , long event);
+    static boolean dispatchEventImpl(long peer
+        , long event) {
+        return EventTargetNative.dispatchEvent(peer, event);
+    }
 
 
 }

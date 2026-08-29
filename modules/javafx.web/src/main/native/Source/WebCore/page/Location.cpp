@@ -42,9 +42,6 @@
 #include "SecurityOrigin.h"
 #include "ServiceWorkerContainer.h"
 #include <wtf/TZoneMallocInlines.h>
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 #include <wtf/URL.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>

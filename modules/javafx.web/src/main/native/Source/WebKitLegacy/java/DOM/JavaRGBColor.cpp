@@ -33,44 +33,49 @@
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DeprecatedCSSOMRGBColor*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<DeprecatedCSSOMRGBColor*>(wkj_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RGBColorImpl_dispose(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT void wkj_dom_RGBColor_dispose(int64_t peer)
 {
+    WKJCallScope wkjScope;
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RGBColorImpl_getRedImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_RGBColor_getRed(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->red()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->red()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RGBColorImpl_getGreenImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_RGBColor_getGreen(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->green()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->green()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RGBColorImpl_getBlueImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_RGBColor_getBlue(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->blue()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->blue()));
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RGBColorImpl_getAlphaImpl(JNIEnv* env, jclass, jlong peer)
+WKJ_EXPORT int64_t wkj_dom_RGBColor_getAlpha(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMPrimitiveValue>(env, WTF::getPtr(IMPL->alpha()));
+    return WKJReturnPeer<DeprecatedCSSOMPrimitiveValue>(WTF::getPtr(IMPL->alpha()));
 }
 
 }

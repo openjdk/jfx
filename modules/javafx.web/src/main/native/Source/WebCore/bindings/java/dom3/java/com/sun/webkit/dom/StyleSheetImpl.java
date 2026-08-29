@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,10 +76,14 @@ public class StyleSheetImpl implements StyleSheet {
         return (arg == null) ? 0L : ((StyleSheetImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        StyleSheetNative.dispose(peer);
+    }
 
     private static final int TYPE_CSSStyleSheet = 1;
-    native private static int getCPPTypeImpl(long peer);
+    private static int getCPPTypeImpl(long peer) {
+        return StyleSheetNative.getCPPType(peer);
+    }
 
     static StyleSheet getImpl(long peer) {
         return (StyleSheet)create(peer);
@@ -91,49 +95,65 @@ public class StyleSheetImpl implements StyleSheet {
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return StyleSheetNative.getType(peer);
+    }
 
     @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
-    native static boolean getDisabledImpl(long peer);
+    static boolean getDisabledImpl(long peer) {
+        return StyleSheetNative.getDisabled(peer);
+    }
 
     @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
-    native static void setDisabledImpl(long peer, boolean value);
+    static void setDisabledImpl(long peer, boolean value) {
+        StyleSheetNative.setDisabled(peer, value);
+    }
 
     @Override
     public Node getOwnerNode() {
         return NodeImpl.getImpl(getOwnerNodeImpl(getPeer()));
     }
-    native static long getOwnerNodeImpl(long peer);
+    static long getOwnerNodeImpl(long peer) {
+        return StyleSheetNative.getOwnerNode(peer);
+    }
 
     @Override
     public StyleSheet getParentStyleSheet() {
         return StyleSheetImpl.getImpl(getParentStyleSheetImpl(getPeer()));
     }
-    native static long getParentStyleSheetImpl(long peer);
+    static long getParentStyleSheetImpl(long peer) {
+        return StyleSheetNative.getParentStyleSheet(peer);
+    }
 
     @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
-    native static String getHrefImpl(long peer);
+    static String getHrefImpl(long peer) {
+        return StyleSheetNative.getHref(peer);
+    }
 
     @Override
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
-    native static String getTitleImpl(long peer);
+    static String getTitleImpl(long peer) {
+        return StyleSheetNative.getTitle(peer);
+    }
 
     @Override
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }
-    native static long getMediaImpl(long peer);
+    static long getMediaImpl(long peer) {
+        return StyleSheetNative.getMedia(peer);
+    }
 
 }
 

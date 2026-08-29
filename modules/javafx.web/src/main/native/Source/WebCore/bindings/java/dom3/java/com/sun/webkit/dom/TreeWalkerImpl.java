@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,9 @@ public class TreeWalkerImpl implements TreeWalker {
         return (arg == null) ? 0L : ((TreeWalkerImpl)arg).getPeer();
     }
 
-    native private static void dispose(long peer);
+    private static void dispose(long peer) {
+        TreeWalkerNative.dispose(peer);
+    }
 
     static TreeWalker getImpl(long peer) {
         return (TreeWalker)create(peer);
@@ -86,37 +88,49 @@ public class TreeWalkerImpl implements TreeWalker {
     public Node getRoot() {
         return NodeImpl.getImpl(getRootImpl(getPeer()));
     }
-    native static long getRootImpl(long peer);
+    static long getRootImpl(long peer) {
+        return TreeWalkerNative.getRoot(peer);
+    }
 
     @Override
     public int getWhatToShow() {
         return getWhatToShowImpl(getPeer());
     }
-    native static int getWhatToShowImpl(long peer);
+    static int getWhatToShowImpl(long peer) {
+        return TreeWalkerNative.getWhatToShow(peer);
+    }
 
     @Override
     public NodeFilter getFilter() {
         return NodeFilterImpl.getImpl(getFilterImpl(getPeer()));
     }
-    native static long getFilterImpl(long peer);
+    static long getFilterImpl(long peer) {
+        return TreeWalkerNative.getFilter(peer);
+    }
 
     @Override
     public boolean getExpandEntityReferences() {
         return getExpandEntityReferencesImpl(getPeer());
     }
-    native static boolean getExpandEntityReferencesImpl(long peer);
+    static boolean getExpandEntityReferencesImpl(long peer) {
+        return TreeWalkerNative.getExpandEntityReferences(peer);
+    }
 
     @Override
     public Node getCurrentNode() {
         return NodeImpl.getImpl(getCurrentNodeImpl(getPeer()));
     }
-    native static long getCurrentNodeImpl(long peer);
+    static long getCurrentNodeImpl(long peer) {
+        return TreeWalkerNative.getCurrentNode(peer);
+    }
 
     @Override
     public void setCurrentNode(Node value) throws DOMException {
         setCurrentNodeImpl(getPeer(), NodeImpl.getPeer(value));
     }
-    native static void setCurrentNodeImpl(long peer, long value);
+    static void setCurrentNodeImpl(long peer, long value) {
+        TreeWalkerNative.setCurrentNode(peer, value);
+    }
 
 
 // Functions
@@ -125,7 +139,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(parentNodeImpl(getPeer()));
     }
-    native static long parentNodeImpl(long peer);
+    static long parentNodeImpl(long peer) {
+        return TreeWalkerNative.parentNode(peer);
+    }
 
 
     @Override
@@ -133,7 +149,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(firstChildImpl(getPeer()));
     }
-    native static long firstChildImpl(long peer);
+    static long firstChildImpl(long peer) {
+        return TreeWalkerNative.firstChild(peer);
+    }
 
 
     @Override
@@ -141,7 +159,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(lastChildImpl(getPeer()));
     }
-    native static long lastChildImpl(long peer);
+    static long lastChildImpl(long peer) {
+        return TreeWalkerNative.lastChild(peer);
+    }
 
 
     @Override
@@ -149,7 +169,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(previousSiblingImpl(getPeer()));
     }
-    native static long previousSiblingImpl(long peer);
+    static long previousSiblingImpl(long peer) {
+        return TreeWalkerNative.previousSibling(peer);
+    }
 
 
     @Override
@@ -157,7 +179,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(nextSiblingImpl(getPeer()));
     }
-    native static long nextSiblingImpl(long peer);
+    static long nextSiblingImpl(long peer) {
+        return TreeWalkerNative.nextSibling(peer);
+    }
 
 
     @Override
@@ -165,7 +189,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
     }
-    native static long previousNodeImpl(long peer);
+    static long previousNodeImpl(long peer) {
+        return TreeWalkerNative.previousNode(peer);
+    }
 
 
     @Override
@@ -173,7 +199,9 @@ public class TreeWalkerImpl implements TreeWalker {
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));
     }
-    native static long nextNodeImpl(long peer);
+    static long nextNodeImpl(long peer) {
+        return TreeWalkerNative.nextNode(peer);
+    }
 
 
 }

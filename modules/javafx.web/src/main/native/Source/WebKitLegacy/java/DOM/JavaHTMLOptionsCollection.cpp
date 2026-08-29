@@ -40,68 +40,71 @@
 #include <wtf/URL.h>
 #include <variant>
 
-#include <WebCore/JavaDOMUtils.h>
-#include <wtf/java/JavaEnv.h>
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api.h>
 
 using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<HTMLOptionsCollection*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<HTMLOptionsCollection*>(wkj_to_ptr(peer)))
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_getSelectedIndexImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionsCollection_getSelectedIndex(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->selectedIndex();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_setSelectedIndexImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLOptionsCollection_setSelectedIndex(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectedIndex(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
+WKJ_EXPORT int32_t wkj_dom_HTMLOptionsCollection_getLength(int64_t peer)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_setLengthImpl(JNIEnv*, jclass, jlong peer, jint value)
+WKJ_EXPORT void wkj_dom_HTMLOptionsCollection_setLength(int64_t peer, int32_t value)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     IMPL->setLength(value);
 }
 
 
 // Functions
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_namedItemImpl(JNIEnv* env, jclass, jlong peer
-    , jstring name)
+WKJ_EXPORT int64_t wkj_dom_HTMLOptionsCollection_namedItem(int64_t peer, const uint16_t* name, int32_t name_length)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(AtomString{String(env, name)})));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->namedItem(AtomString{WKJString(name, name_length)})));
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_addImpl(JNIEnv* env, jclass, jlong peer
-    , jlong option
-    , jint index)
+WKJ_EXPORT void wkj_dom_HTMLOptionsCollection_add(int64_t peer, int64_t option, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
     if (!option) {
-        raiseTypeErrorException(env);
+        raiseTypeErrorException();
         return;
     }
-    raiseOnDOMError(env, IMPL->add(static_cast<HTMLOptionElement*>(jlong_to_ptr(option)), std::optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
+    raiseOnDOMError(IMPL->add(static_cast<HTMLOptionElement*>(wkj_to_ptr(option)), std::optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
 }
 
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_itemImpl(JNIEnv* env, jclass, jlong peer
-    , jint index)
+WKJ_EXPORT int64_t wkj_dom_HTMLOptionsCollection_item(int64_t peer, int32_t index)
 {
+    WKJCallScope wkjScope;
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->item(index)));
+    return WKJReturnPeer<Node>(WTF::getPtr(IMPL->item(index)));
 }
 
 

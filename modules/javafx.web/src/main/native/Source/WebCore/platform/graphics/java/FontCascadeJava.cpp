@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wkj_constants.h>
 
 #include "Font.h"
 #include "GlyphBuffer.h"
@@ -32,8 +33,9 @@
 #include "NotImplemented.h"
 #include "PlatformContextJava.h"
 #include "RenderingQueue.h"
+#include "WKJPlatformJava.h"
 
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -44,58 +46,41 @@ const FloatPoint& point, FontSmoothingMode)
     // we need to call freeSpace() before refIntArr() and refFloatArr(), see JDK-8127455.
     RenderingQueue& rq = context.platformContext()->rq().freeSpace(24);
 
-    JNIEnv* env = WTF::GetJavaEnv();
+    const WKJHostGraphics* cb = wkjGraphics();
+    if (!cb)
+        return;
 
-    //prepare Glyphs array
-    JLocalRef<jintArray> jGlyphs(env->NewIntArray(numGlyphs));
-    ASSERT(jGlyphs);
-    {
-        jint *bufArray = (jint*)env->GetPrimitiveArrayCritical(jGlyphs, NULL);
-        ASSERT(bufArray);
-        for (unsigned i = 0; i < numGlyphs; ++i)
-            bufArray[i] = static_cast<jint>(glyphs[i]); // glyphs[i] is a GlyphBufferGlyph
-        env->ReleasePrimitiveArrayCritical(jGlyphs, bufArray, 0);
+    // The two arrays used to be built as Java int[] and float[] objects and handed over as
+    // objects. They are now plain buffers that Java copies out of; the two upcalls, their
+    // order relative to freeSpace(), and the two ids they return are unchanged.
+    Vector<int32_t, 64> glyphBuffer(numGlyphs);
+    for (unsigned i = 0; i < numGlyphs; ++i)
+        glyphBuffer[i] = static_cast<int32_t>(glyphs[i]); // glyphs[i] is a GlyphBufferGlyph
+
+    int32_t sid = 0;
+    if (cb->rq_ref_int_array) {
+        sid = cb->rq_ref_int_array(rq.getWCRenderingQueue(), glyphBuffer.span().data(),
+                                   static_cast<int32_t>(numGlyphs));
+        wkjCheckAndClearException();
     }
-    static jmethodID refIntArr_mID = env->GetMethodID(
-        PG_GetRenderQueueClass(env),
-        "refIntArr",
-        "([I)I");
-    ASSERT(refIntArr_mID);
-    jint sid = env->CallIntMethod(
-        rq.getWCRenderingQueue(),
-        refIntArr_mID,
-        (jintArray)jGlyphs);
-    WTF::CheckAndClearException(env);
 
+    Vector<float, 64> advanceBuffer(numGlyphs);
+    for (unsigned i = 0; i < numGlyphs; ++i)
+        advanceBuffer[i] = static_cast<float>(advances[i].width());
 
-    // Prepare Offsets/Advances array
-    JLocalRef<jfloatArray> jAdvance(env->NewFloatArray(numGlyphs));
-    WTF::CheckAndClearException(env);
-    ASSERT(jAdvance);
-    {
-        jfloat *bufArray = env->GetFloatArrayElements(jAdvance, NULL);
-        ASSERT(bufArray);
-        for (unsigned i = 0; i < numGlyphs; ++i)
-            bufArray[i] = static_cast<jfloat>(advances[i].width());
-        env->ReleaseFloatArrayElements(jAdvance, bufArray, 0);
+    int32_t aid = 0;
+    if (cb->rq_ref_float_array) {
+        aid = cb->rq_ref_float_array(rq.getWCRenderingQueue(), advanceBuffer.span().data(),
+                                     static_cast<int32_t>(numGlyphs));
+        wkjCheckAndClearException();
     }
-    static jmethodID refFloatArr_mID = env->GetMethodID(
-        PG_GetRenderQueueClass(env),
-        "refFloatArr",
-        "([F)I");
-    ASSERT(refFloatArr_mID);
-    jint aid = env->CallIntMethod(
-        rq.getWCRenderingQueue(),
-        refFloatArr_mID,
-        (jfloatArray)jAdvance);
-    WTF::CheckAndClearException(env);
 
-    rq << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
+    rq << (int32_t)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
        << font.platformData().nativeFontData()
        << sid
        << aid
-       << static_cast<jfloat>(point.x())
-       << static_cast<jfloat>(point.y());
+       << static_cast<float>(point.x())
+       << static_cast<float>(point.y());
 }
 
 bool FontCascade::canReturnFallbackFontsForComplexText()

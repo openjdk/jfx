@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,18 +30,44 @@
 #include "FrameDestructionObserverInlines.h"
 #include <JavaScriptCore/JSObjectRef.h>
 
+#include <webkit_java_api_bridge.h>
+
 
 namespace WebCore {
 
-/* Returns a local reference to a fresh Java String. */
-jstring JSValue_to_Java_String(JSValueRef value, JNIEnv* env, JSContextRef ctx);
-jobject JSValue_to_Java_Object(JSValueRef value, JNIEnv* env, JSContextRef ctx, JSC::Bindings::RootObject* rootPeer);
-JSValueRef Java_Object_to_JSValue(JNIEnv *env, JSContextRef ctx, JSC::Bindings::RootObject* rootObject, jobject val, jobject accessControlContext);
-JSStringRef asJSStringRef(JNIEnv *env, jstring str);
+/* A JavaScript string holding the given UTF-16 characters. The caller releases it. */
+JSStringRef asJSStringRef(const uint16_t* s, int32_t length);
+
+/*
+ * A Java value that has already been described - by the Java side of an entry point, or by
+ * the describe_object callback - as a JavaScript value. This is the second half of what
+ * Java_Object_to_JSValue used to do; the first half, deciding what the Java object is, now
+ * happens in Java, where it needs no class lookups and no field ids.
+ */
+JSValueRef WKJValueToJSValue(JSContextRef, JSC::Bindings::RootObject*, const WKJJSValue&,
+    wkj_ref accessControlContext);
+
+/*
+ * An arbitrary Java object as a JavaScript value: asks Java to describe it, then converts
+ * the description. Same name and same meaning as before, one parameter lighter.
+ */
+JSValueRef Java_Object_to_JSValue(JSContextRef, JSC::Bindings::RootObject*, wkj_ref value,
+    wkj_ref accessControlContext);
+
+/*
+ * A JavaScript value described for Java, replacing JSValue_to_Java_Object. `out` carries the
+ * buffer of the caller for a string result; see WKJJSValue for what happens when it does not
+ * fit.
+ */
+void JSValueToWKJValue(JSValueRef, JSContextRef, JSC::Bindings::RootObject*, WKJJSValue* out);
+
 JSGlobalContextRef getGlobalContext(WebCore::ScriptController* sc);
-jobject executeScript(JNIEnv* env,
-                      JSObjectRef object,
+
+/* Evaluates a script and describes its result. Returns one of the WKJ_JS_* status codes. */
+int32_t executeScript(JSObjectRef object,
                       JSContextRef ctx,
                       JSC::Bindings::RootObject* rootPeer,
-                      jstring script);
+                      const uint16_t* script,
+                      int32_t scriptLength,
+                      WKJJSValue* out);
 }  // namespace WebCore

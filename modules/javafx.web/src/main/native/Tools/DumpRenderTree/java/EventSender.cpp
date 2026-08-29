@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,37 +26,29 @@
 #include "config.h"
 #include "EventSender.h"
 
-#include "JavaEnv.h"
+#include <vector>
+
+#include <drt_java_api.h>
 #include <JavaScriptCore/API/JSStringRef.h>
 
-static jmethodID keyDownMID;
-static jmethodID mouseUpDownMID;
-static jmethodID mouseMoveToMID;
-static jmethodID mouseScrollMID;
-static jmethodID leapForwardMID;
-static jmethodID contextClickMID;
-static jmethodID scheduleAsynchronousClickMID;
-static jmethodID touchStartMID;
-static jmethodID touchCancelMID;
-static jmethodID touchMoveMID;
-static jmethodID touchEndMID;
-static jmethodID addTouchPointMID;
-static jmethodID updateTouchPointMID;
-static jmethodID cancelTouchPointMID;
-static jmethodID releaseTouchPointMID;
-static jmethodID clearTouchPointsMID;
-static jmethodID setTouchModifierMID;
-static jmethodID scalePageByMID;
-static jmethodID zoomMID;
-static jmethodID beginDragWithFilesMID;
-static jmethodID getDragModeMID;
-static jmethodID setDragModeMID;
+// Defined in TestRunnerJava.cpp, which is where its JNI predecessor lived. The returned
+// pointer is owned by `ref` and is valid only while `ref` is alive.
+extern const uint16_t* JSStringRef_to_utf16(JSStringRef ref, int32_t* length);
 
-static JGObject* getEventSender(JSObjectRef object)
+// The 21 EventSender slots of the process-wide host table, or nullptr before drt_init.
+// Every slot is optional, so each call site tests its own pointer as well.
+static const WKJEventSenderCallbacks* eventSenderCallbacks()
 {
-    JGObject* result = static_cast<JGObject*>(JSObjectGetPrivate(object));
+    return drt_host ? &drt_host->event_sender : nullptr;
+}
+
+// The registry id of the Java EventSender this JavaScript object forwards to. It is stored
+// in the object's private data, where the JNI implementation stored a JGObject.
+static wkj_ref getEventSender(JSObjectRef object)
+{
+    const wkj_ref* result = static_cast<const wkj_ref*>(JSObjectGetPrivate(object));
     ASSERT(result);
-    return result;
+    return result ? *result : 0;
 }
 
 static double getNumber(JSContextRef context, JSValueRef value, JSValueRef* exception)
@@ -82,21 +74,19 @@ static JSValueRef getValueAt(JSContextRef context, JSObjectRef array, int index,
     return result;
 }
 
-static jstring getJString(JSContextRef context, JSValueRef value, JSValueRef* exception)
+// Replaces getJString(): the UTF-16 code units go straight to the callback, so the copy
+// that env->NewString made is gone. The caller owns the returned JSStringRef and must keep
+// it alive for as long as it uses the characters.
+static JSStringRef copyString(JSContextRef context, JSValueRef value, JSValueRef* exception)
 {
     JSStringRef string = JSValueToStringCopy(context, value, exception);
     ASSERT(!exception || !*exception);
-
-    const JSChar* chars = JSStringGetCharactersPtr(string);
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    jstring result = env->NewString((const jchar*) chars, JSStringGetLength(string));
-    JSStringRelease(string);
-    return result;
+    return string;
 }
 
-static jint getModifier(JSContextRef context, const JSValueRef value, JSValueRef* exception)
+static int32_t getModifier(JSContextRef context, const JSValueRef value, JSValueRef* exception)
 {
-    jint modifier = 0;
+    int32_t modifier = 0;
     JSStringRef string = JSValueToStringCopy(context, value, exception);
     ASSERT(!exception || !*exception);
 
@@ -129,7 +119,7 @@ static jint getModifier(JSContextRef context, const JSValueRef value, JSValueRef
     return modifier;
 }
 
-static jint getModifers(JSContextRef context, const JSValueRef value, JSValueRef* exception)
+static int32_t getModifers(JSContextRef context, const JSValueRef value, JSValueRef* exception)
 {
     // The value may either be a string with a single modifier or an array of modifiers.
     if (JSValueIsString(context, value))
@@ -139,7 +129,7 @@ static jint getModifers(JSContextRef context, const JSValueRef value, JSValueRef
     if (!array)
         return 0;
 
-    jint modifiers = 0;
+    int32_t modifiers = 0;
     int length = (int) getNumber(context, getProperty(context, array, "length", exception), exception);
     for (int i = 0; i < length; i++) {
         modifiers |= getModifier(context, getValueAt(context, array, i, exception), exception);
@@ -147,28 +137,18 @@ static jint getModifers(JSContextRef context, const JSValueRef value, JSValueRef
     return modifiers;
 }
 
-static void call(JSObjectRef object, jmethodID method, ...)
-{
-    JGObject* eventSender = getEventSender(object);
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-
-    va_list args;
-    va_start(args, method);
-    env->CallVoidMethodV(*eventSender, method, args);
-    va_end(args);
-
-    CheckAndClearException(env);
-}
-
 static JSValueRef handleMouseScroll(JSContextRef context, bool continuous,
         JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 1) {
-        call(object, mouseScrollMID,
-                (jfloat) getNumber(context, arguments[0], exception),
-                (jfloat) getNumber(context, arguments[1], exception),
-                bool_to_jbool(continuous));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->mouse_scroll) {
+            cb->mouse_scroll(getEventSender(object),
+                    (float) getNumber(context, arguments[0], exception),
+                    (float) getNumber(context, arguments[1], exception),
+                    continuous ? 1 : 0);
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -177,7 +157,7 @@ static JSValueRef handleMouseUpDown(JSContextRef context, bool pressed,
         JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    jint button = 1; // com.sun.webkit.event.WCMouseEvent.BUTTON1 (left)
+    int32_t button = 1; // com.sun.webkit.event.WCMouseEvent.BUTTON1 (left)
     if (argumentCount > 0) {
         int number = (int) getNumber(context, arguments[0], exception);
         if ((number == 1) || (number == 3)) {
@@ -188,11 +168,13 @@ static JSValueRef handleMouseUpDown(JSContextRef context, bool pressed,
             button = 4; // com.sun.webkit.event.WCMouseEvent.BUTTON3 (right)
         }
     }
-    jint modifiers = pressed ? 16 : 0; // com.sun.javafx.webkit.drt.EventSender.PRESSED
+    int32_t modifiers = pressed ? 16 : 0; // com.sun.javafx.webkit.drt.EventSender.PRESSED
     if (argumentCount > 1) {
         modifiers |= getModifers(context, arguments[1], exception);
     }
-    call(object, mouseUpDownMID, button, modifiers);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->mouse_up_down)
+        cb->mouse_up_down(getEventSender(object), button, modifiers);
     return JSValueMakeUndefined(context);
 }
 
@@ -201,13 +183,18 @@ static JSValueRef keyDownCallback(JSContextRef context, JSObjectRef function,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 0) {
-        jint modifiers = 0;
+        int32_t modifiers = 0;
         if (argumentCount > 1) {
             modifiers |= getModifers(context, arguments[1], exception);
         }
-        call(object, keyDownMID,
-                getJString(context, arguments[0], exception),
-                modifiers);
+        JSStringRef key = copyString(context, arguments[0], exception);
+        int32_t keyLength = 0;
+        const uint16_t* keyCharacters = JSStringRef_to_utf16(key, &keyLength);
+
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->key_down)
+            cb->key_down(getEventSender(object), keyCharacters, keyLength, modifiers);
+        JSStringRelease(key);
     }
     return JSValueMakeUndefined(context);
 }
@@ -233,9 +220,12 @@ static JSValueRef mouseMoveToCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 1) {
-        call(object, mouseMoveToMID,
-                (jint) getNumber(context, arguments[0], exception),
-                (jint) getNumber(context, arguments[1], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->mouse_move_to) {
+            cb->mouse_move_to(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception),
+                    (int32_t) getNumber(context, arguments[1], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -261,8 +251,11 @@ static JSValueRef leapForwardCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 0) {
-        call(object, leapForwardMID,
-                (jint) getNumber(context, arguments[0], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->leap_forward) {
+            cb->leap_forward(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -271,7 +264,9 @@ static JSValueRef contextClickCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, contextClickMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->context_click)
+        cb->context_click(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -279,7 +274,9 @@ static JSValueRef scheduleAsynchronousClickCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, scheduleAsynchronousClickMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->schedule_asynchronous_click)
+        cb->schedule_asynchronous_click(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -287,7 +284,9 @@ static JSValueRef touchStartCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, touchStartMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->touch_start)
+        cb->touch_start(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -295,7 +294,9 @@ static JSValueRef touchCancelCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, touchCancelMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->touch_cancel)
+        cb->touch_cancel(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -303,7 +304,9 @@ static JSValueRef touchMoveCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, touchMoveMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->touch_move)
+        cb->touch_move(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -311,7 +314,9 @@ static JSValueRef touchEndCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, touchEndMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->touch_end)
+        cb->touch_end(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -320,9 +325,12 @@ static JSValueRef addTouchPointCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 1) {
-        call(object, addTouchPointMID,
-                (jint) getNumber(context, arguments[0], exception),
-                (jint) getNumber(context, arguments[1], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->add_touch_point) {
+            cb->add_touch_point(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception),
+                    (int32_t) getNumber(context, arguments[1], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -332,10 +340,13 @@ static JSValueRef updateTouchPointCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 2) {
-        call(object, updateTouchPointMID,
-                (jint) getNumber(context, arguments[0], exception),
-                (jint) getNumber(context, arguments[1], exception),
-                (jint) getNumber(context, arguments[2], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->update_touch_point) {
+            cb->update_touch_point(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception),
+                    (int32_t) getNumber(context, arguments[1], exception),
+                    (int32_t) getNumber(context, arguments[2], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -345,8 +356,11 @@ static JSValueRef cancelTouchPointCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 0) {
-        call(object, cancelTouchPointMID,
-                (jint) getNumber(context, arguments[0], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->cancel_touch_point) {
+            cb->cancel_touch_point(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -356,8 +370,11 @@ static JSValueRef releaseTouchPointCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 0) {
-        call(object, releaseTouchPointMID,
-                (jint) getNumber(context, arguments[0], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->release_touch_point) {
+            cb->release_touch_point(getEventSender(object),
+                    (int32_t) getNumber(context, arguments[0], exception));
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -366,7 +383,9 @@ static JSValueRef clearTouchPointsCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, clearTouchPointsMID);
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->clear_touch_points)
+        cb->clear_touch_points(getEventSender(object));
     return JSValueMakeUndefined(context);
 }
 
@@ -378,7 +397,7 @@ static JSValueRef setTouchModifierCallback(JSContextRef context,
         JSStringRef string = JSValueToStringCopy(context, arguments[0], exception);
         ASSERT(!exception || !*exception);
 
-        jint modifier = 0;
+        int32_t modifier = 0;
         if (JSStringIsEqualToUTF8CString(string, "alt")) {
             modifier = 1; // com.sun.javafx.webkit.drt.EventSender.ALT
         }
@@ -393,9 +412,11 @@ static JSValueRef setTouchModifierCallback(JSContextRef context,
         }
         JSStringRelease(string);
 
-        call(object, setTouchModifierMID,
-                modifier,
-                bool_to_jbool(JSValueToBoolean(context, arguments[1])));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->set_touch_modifier) {
+            cb->set_touch_modifier(getEventSender(object), modifier,
+                    JSValueToBoolean(context, arguments[1]) ? 1 : 0);
+        }
     }
     return JSValueMakeUndefined(context);
 }
@@ -405,19 +426,29 @@ static JSValueRef scalePageByCallback(JSContextRef context,
         const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount > 2) {
-        call(object, scalePageByMID,
-                (jfloat) getNumber(context, arguments[0], exception),
-                (jint) getNumber(context, arguments[1], exception),
-                (jint) getNumber(context, arguments[2], exception));
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->scale_page_by) {
+            cb->scale_page_by(getEventSender(object),
+                    (float) getNumber(context, arguments[0], exception),
+                    (int32_t) getNumber(context, arguments[1], exception),
+                    (int32_t) getNumber(context, arguments[2], exception));
+        }
     }
     return JSValueMakeUndefined(context);
+}
+
+static void callZoom(JSObjectRef object, int32_t in, int32_t textOnly)
+{
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->zoom)
+        cb->zoom(getEventSender(object), in, textOnly);
 }
 
 static JSValueRef zoomPageInCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, zoomMID, JNI_TRUE, JNI_FALSE);
+    callZoom(object, 1, 0);
     return JSValueMakeUndefined(context);
 }
 
@@ -425,7 +456,7 @@ static JSValueRef zoomPageOutCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, zoomMID, JNI_FALSE, JNI_FALSE);
+    callZoom(object, 0, 0);
     return JSValueMakeUndefined(context);
 }
 
@@ -433,7 +464,7 @@ static JSValueRef textZoomInCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, zoomMID, JNI_TRUE, JNI_TRUE);
+    callZoom(object, 1, 1);
     return JSValueMakeUndefined(context);
 }
 
@@ -441,7 +472,7 @@ static JSValueRef textZoomOutCallback(JSContextRef context,
         JSObjectRef function, JSObjectRef object, size_t argumentCount,
         const JSValueRef arguments[], JSValueRef* exception)
 {
-    call(object, zoomMID, JNI_FALSE, JNI_TRUE);
+    callZoom(object, 0, 1);
     return JSValueMakeUndefined(context);
 }
 
@@ -461,18 +492,37 @@ static JSValueRef beginDragWithFilesCallback(JSContextRef context,
         ASSERT(!exception || !*exception);
 
         int length = (int) getNumber(context, getProperty(context, array, "length", exception), exception);
+        // The JNI implementation passed this straight to NewObjectArray, which threw (and
+        // then dereferenced null) for a negative length. Clamping keeps a malformed test
+        // from taking the harness down; a well-formed one never reaches it.
+        if (length < 0)
+            length = 0;
 
-        JNIEnv* env = DumpRenderTree_GetJavaEnv();
-        JGClass stringClass = JLClass(env->FindClass("java/lang/String"));
-        jobjectArray stringArray = (jobjectArray) env->NewObjectArray(length, stringClass, 0);
-        CheckAndClearException(env);
+        std::vector<JSStringRef> strings;
+        std::vector<const uint16_t*> files;
+        std::vector<int32_t> fileLengths;
+        strings.reserve(length);
+        files.reserve(length);
+        fileLengths.reserve(length);
 
         for (int i = 0; i < length; i++) {
-            env->SetObjectArrayElement(stringArray, i, getJString(context,
-                    getValueAt(context, array, i, exception), exception));
+            JSStringRef file = copyString(context,
+                    getValueAt(context, array, i, exception), exception);
+            int32_t fileLength = 0;
+            const uint16_t* characters = JSStringRef_to_utf16(file, &fileLength);
+            strings.push_back(file);
+            files.push_back(characters);
+            fileLengths.push_back(fileLength);
         }
-        call(object, beginDragWithFilesMID, stringArray);
-        env->DeleteLocalRef(stringArray);
+
+        const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+        if (cb && cb->begin_drag_with_files) {
+            cb->begin_drag_with_files(getEventSender(object), files.data(),
+                    fileLengths.data(), (int32_t) length);
+        }
+
+        for (JSStringRef file : strings)
+            JSStringRelease(file);
     }
     return JSValueMakeUndefined(context);
 }
@@ -481,103 +531,38 @@ static JSValueRef getDragModeCallback(JSContextRef context,
         JSObjectRef object, JSStringRef propertyName,
         JSValueRef* exception)
 {
-    JNIEnv* env = DumpRenderTree_GetJavaEnv();
-    JGObject* eventSender = getEventSender(object);
-    return JSValueMakeBoolean(context,
-            jbool_to_bool(env->CallBooleanMethod(*eventSender, getDragModeMID)));
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    const int32_t dragMode = (cb && cb->get_drag_mode)
+            ? cb->get_drag_mode(getEventSender(object)) : 0;
+    return JSValueMakeBoolean(context, dragMode != 0);
 }
 
 static bool setDragModeCallback(JSContextRef context,
         JSObjectRef object, JSStringRef propertyName,
         JSValueRef value, JSValueRef* exception)
 {
-    call(object, setDragModeMID,
-            bool_to_jbool(JSValueToBoolean(context, value)));
+    const WKJEventSenderCallbacks* cb = eventSenderCallbacks();
+    if (cb && cb->set_drag_mode) {
+        cb->set_drag_mode(getEventSender(object),
+                JSValueToBoolean(context, value) ? 1 : 0);
+    }
     return true;
 }
 
 static void finalizeCallback(JSObjectRef object)
 {
-    JGObject* eventSender = getEventSender(object);
+    wkj_ref* eventSender = static_cast<wkj_ref*>(JSObjectGetPrivate(object));
+    if (!eventSender)
+        return;
+    // The counterpart of the DeleteGlobalRef that ~JGObject performed.
+    if (drt_host && drt_host->core.release)
+        drt_host->core.release(*eventSender);
     delete eventSender;
 }
 
 void makeEventSender(JSContextRef context, JSObjectRef windowObject,
-        const JLObject& eventSender, JSValueRef* exception)
+        wkj_ref eventSender, JSValueRef* exception)
 {
-    static JGClass javaClass = 0;
-    if (!javaClass) {
-        JNIEnv* env = DumpRenderTree_GetJavaEnv();
-
-        javaClass = JLClass(env->FindClass("com/sun/javafx/webkit/drt/EventSender"));
-        ASSERT(javaClass);
-
-        keyDownMID = env->GetMethodID(javaClass, "keyDown", "(Ljava/lang/String;I)V");
-        ASSERT(keyDownMID);
-
-        mouseUpDownMID = env->GetMethodID(javaClass, "mouseUpDown", "(II)V");
-        ASSERT(mouseUpDownMID);
-
-        mouseMoveToMID = env->GetMethodID(javaClass, "mouseMoveTo", "(II)V");
-        ASSERT(mouseMoveToMID);
-
-        mouseScrollMID = env->GetMethodID(javaClass, "mouseScroll", "(FFZ)V");
-        ASSERT(mouseScrollMID);
-
-        leapForwardMID = env->GetMethodID(javaClass, "leapForward", "(I)V");
-        ASSERT(leapForwardMID);
-
-        contextClickMID = env->GetMethodID(javaClass, "contextClick", "()V");
-        ASSERT(contextClickMID);
-
-        scheduleAsynchronousClickMID = env->GetMethodID(javaClass, "scheduleAsynchronousClick", "()V");
-        ASSERT(scheduleAsynchronousClickMID);
-
-        touchStartMID = env->GetMethodID(javaClass, "touchStart", "()V");
-        ASSERT(touchStartMID);
-
-        touchCancelMID = env->GetMethodID(javaClass, "touchCancel", "()V");
-        ASSERT(touchCancelMID);
-
-        touchMoveMID = env->GetMethodID(javaClass, "touchMove", "()V");
-        ASSERT(touchMoveMID);
-
-        touchEndMID = env->GetMethodID(javaClass, "touchEnd", "()V");
-        ASSERT(touchEndMID);
-
-        addTouchPointMID = env->GetMethodID(javaClass, "addTouchPoint", "(II)V");
-        ASSERT(addTouchPointMID);
-
-        updateTouchPointMID = env->GetMethodID(javaClass, "updateTouchPoint", "(III)V");
-        ASSERT(updateTouchPointMID);
-
-        cancelTouchPointMID = env->GetMethodID(javaClass, "cancelTouchPoint", "(I)V");
-        ASSERT(cancelTouchPointMID);
-
-        releaseTouchPointMID = env->GetMethodID(javaClass, "releaseTouchPoint", "(I)V");
-        ASSERT(releaseTouchPointMID);
-
-        clearTouchPointsMID = env->GetMethodID(javaClass, "clearTouchPoints", "()V");
-        ASSERT(clearTouchPointsMID);
-
-        setTouchModifierMID = env->GetMethodID(javaClass, "setTouchModifier", "(IZ)V");
-        ASSERT(setTouchModifierMID);
-
-        scalePageByMID = env->GetMethodID(javaClass, "scalePageBy", "(FII)V");
-        ASSERT(scalePageByMID);
-
-        zoomMID = env->GetMethodID(javaClass, "zoom", "(ZZ)V");
-        ASSERT(zoomMID);
-
-        beginDragWithFilesMID = env->GetMethodID(javaClass, "beginDragWithFiles", "([Ljava/lang/String;)V");
-        ASSERT(beginDragWithFilesMID);
-
-        getDragModeMID = env->GetMethodID(javaClass, "getDragMode", "()Z");
-        ASSERT(getDragModeMID);
-
-        setDragModeMID = env->GetMethodID(javaClass, "setDragMode", "(Z)V");
-        ASSERT(setDragModeMID);
-    }
     static JSStaticValue staticValues[] = {
         { "dragMode", getDragModeCallback, setDragModeCallback, kJSPropertyAttributeNone },
         { 0, 0, 0, 0 }
@@ -618,8 +603,16 @@ void makeEventSender(JSContextRef context, JSObjectRef windowObject,
         0, finalizeCallback,
         0, 0, 0, 0, 0, 0, 0, 0, 0
     };
+
+    // The NewGlobalRef that the JGObject constructor used to take. With no retain slot the
+    // id is stored as it arrived, so a host that installs none must keep the EventSender
+    // reachable itself.
+    wkj_ref retained = eventSender;
+    if (drt_host && drt_host->core.retain)
+        retained = drt_host->core.retain(eventSender);
+
     JSClassRef eventSenderClass = JSClassCreate(&classDefinition);
-    JSValueRef jsEventSender = JSObjectMake(context, eventSenderClass, new JGObject(eventSender));
+    JSValueRef jsEventSender = JSObjectMake(context, eventSenderClass, new wkj_ref(retained));
     JSClassRelease(eventSenderClass);
 
     JSStringRef propName = JSStringCreateWithUTF8CString("eventSender");

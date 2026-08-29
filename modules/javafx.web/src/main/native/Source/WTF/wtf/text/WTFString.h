@@ -36,10 +36,6 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
-#endif
-
 #if OS(WINDOWS)
 #include <wtf/text/win/WCharStringExtras.h>
 #endif
@@ -260,12 +256,6 @@ public:
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
     // null string can check isNull explicitly.
     RetainPtr<NSString> createNSString() const;
-#endif
-
-#if PLATFORM(JAVA)
-    WTF_EXPORT_PRIVATE String(JNIEnv*, const JLString &);
-    WTF_EXPORT_PRIVATE JLString toJavaString(JNIEnv*) const;
-    WTF_EXPORT_PRIVATE static String fromJavaString(JNIEnv *, jstring);
 #endif
 
 #if OS(WINDOWS)

@@ -28,7 +28,6 @@
 #include "GraphicsContext.h"
 #include "Image.h"
 #include "IntSize.h"
-#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -290,18 +290,18 @@ public final class DumpRenderTree {
     }
 
     // called from native
-    private static void waitUntilDone() {
+    static void waitUntilDone() {
         mlog("waitUntilDone");
         drt.setWaiting(true); // TODO: handle timeout
     }
 
     // called from native
-    private static void notifyDone() {
+    static void notifyDone() {
         mlog("notifyDone");
         drt.setWaiting(false);
     }
 
-    private static void overridePreference(String key, String value) {
+    static void overridePreference(String key, String value) {
         mlog("overridePreference");
         drt.webPage.overridePreference(key, value);
     }
@@ -385,17 +385,48 @@ public final class DumpRenderTree {
         this.latch.countDown();
     }
 
-    private static native void initDRT();
-    private static native void initTest(String testPath, String pixelsHash);
-    private static native void didClearWindowObject(long pContext,
-            long pWindowObject, EventSender eventSender);
-    private static native void dispose();
+    // Everything below forwards to DumpRenderTreeNative, the FFM facade for the drt_* ABI declared
+    // by Tools/DumpRenderTree/java/api/drt_java_api.h. DumpRenderTreeJava is a separate library
+    // from jfxwebkit with its own ABI version and its own host table, which the facade installs
+    // once from its static initializer - which is why the System.loadLibrary call above has to keep
+    // running before the first of these.
 
-    private static native boolean dumpAsText();
-    private static native boolean dumpChildFramesAsText();
-    private static native boolean dumpBackForwardList();
-    protected static native boolean shouldStayOnPageAfterHandlingBeforeUnload();
-    protected static native String[] openPanelFiles();
+    private static void initDRT() {
+        DumpRenderTreeNative.initDRT();
+    }
+
+    private static void initTest(String testPath, String pixelsHash) {
+        DumpRenderTreeNative.initTest(testPath, pixelsHash);
+    }
+
+    private static void didClearWindowObject(long pContext,
+            long pWindowObject, EventSender eventSender) {
+        DumpRenderTreeNative.didClearWindowObject(pContext, pWindowObject, eventSender);
+    }
+
+    private static void dispose() {
+        DumpRenderTreeNative.dispose();
+    }
+
+    private static boolean dumpAsText() {
+        return DumpRenderTreeNative.dumpAsText();
+    }
+
+    private static boolean dumpChildFramesAsText() {
+        return DumpRenderTreeNative.dumpChildFramesAsText();
+    }
+
+    private static boolean dumpBackForwardList() {
+        return DumpRenderTreeNative.dumpBackForwardList();
+    }
+
+    protected static boolean shouldStayOnPageAfterHandlingBeforeUnload() {
+        return DumpRenderTreeNative.shouldStayOnPageAfterHandlingBeforeUnload();
+    }
+
+    protected static String[] openPanelFiles() {
+        return DumpRenderTreeNative.openPanelFiles();
+    }
 
     private final class DRTLoadListener implements LoadListenerClient {
         @Override
@@ -484,7 +515,7 @@ public final class DumpRenderTree {
     }
 
     // called from native
-    private static String resolveURL(String relativeURL) {
+    static String resolveURL(String relativeURL) {
         String testDir = new File(drt.testPath).getParentFile().getPath();
         File f = new File(testDir, relativeURL);
         String url = "file:///" + f.toString().replace(fileSep, "/");
@@ -493,12 +524,12 @@ public final class DumpRenderTree {
     }
 
     // called from native
-    private static void loadURL(String url) {
+    static void loadURL(String url) {
         drt.webPage.open(drt.webPage.getMainFrame(), url);
     }
 
     // called from native
-    private static void goBackForward(int dist) {
+    static void goBackForward(int dist) {
         // TODO: honor the dist
         if (dist > 0) {
             drt.webPage.goForward();
@@ -508,12 +539,12 @@ public final class DumpRenderTree {
     }
 
     // called from native
-    private static int getBackForwardItemCount() {
+    static int getBackForwardItemCount() {
         return drt.getBackForwardList().size();
     }
 
     // called from native
-    private static void clearBackForwardList() {
+    static void clearBackForwardList() {
         drt.getBackForwardList().clearBackForwardListForDRT();
     }
 
@@ -594,7 +625,9 @@ public final class DumpRenderTree {
         return name == null ? "frame (anonymous)" : "frame " + name;
     }
 
-    private native static boolean didFinishLoad();
+    private static boolean didFinishLoad() {
+        return DumpRenderTreeNative.didFinishLoad();
+    }
 
     private final class WebPageClientImpl implements WebPageClient<Void> {
 

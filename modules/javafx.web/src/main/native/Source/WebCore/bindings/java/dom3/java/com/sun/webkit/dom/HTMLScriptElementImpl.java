@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,105 +42,142 @@ public class HTMLScriptElementImpl extends HTMLElementImpl implements HTMLScript
     public String getText() {
         return getTextImpl(getPeer());
     }
-    native static String getTextImpl(long peer);
+    static String getTextImpl(long peer) {
+        return HTMLScriptElementNative.getText(peer);
+    }
 
     @Override
     public void setText(String value) {
         setTextImpl(getPeer(), value);
     }
-    native static void setTextImpl(long peer, String value);
+    static void setTextImpl(long peer, String value) {
+        HTMLScriptElementNative.setText(peer, value);
+    }
 
     @Override
     public String getHtmlFor() {
         return getHtmlForImpl(getPeer());
     }
-    native static String getHtmlForImpl(long peer);
+    static String getHtmlForImpl(long peer) {
+        return HTMLScriptElementNative.getHtmlFor(peer);
+    }
 
     @Override
     public void setHtmlFor(String value) {
         setHtmlForImpl(getPeer(), value);
     }
-    native static void setHtmlForImpl(long peer, String value);
+    static void setHtmlForImpl(long peer, String value) {
+        HTMLScriptElementNative.setHtmlFor(peer, value);
+    }
 
     @Override
     public String getEvent() {
         return getEventImpl(getPeer());
     }
-    native static String getEventImpl(long peer);
+    static String getEventImpl(long peer) {
+        return HTMLScriptElementNative.getEvent(peer);
+    }
 
     @Override
     public void setEvent(String value) {
         setEventImpl(getPeer(), value);
     }
-    native static void setEventImpl(long peer, String value);
+    static void setEventImpl(long peer, String value) {
+        HTMLScriptElementNative.setEvent(peer, value);
+    }
 
     @Override
     public String getCharset() {
         return getCharsetImpl(getPeer());
     }
-    native static String getCharsetImpl(long peer);
+    static String getCharsetImpl(long peer) {
+        return HTMLScriptElementNative.getCharset(peer);
+    }
 
     @Override
     public void setCharset(String value) {
         setCharsetImpl(getPeer(), value);
     }
-    native static void setCharsetImpl(long peer, String value);
+    static void setCharsetImpl(long peer, String value) {
+        HTMLScriptElementNative.setCharset(peer, value);
+    }
 
     public boolean getAsync() {
         return getAsyncImpl(getPeer());
     }
-    native static boolean getAsyncImpl(long peer);
+    static boolean getAsyncImpl(long peer) {
+        return HTMLScriptElementNative.getAsync(peer);
+    }
 
     public void setAsync(boolean value) {
         setAsyncImpl(getPeer(), value);
     }
-    native static void setAsyncImpl(long peer, boolean value);
+    static void setAsyncImpl(long peer, boolean value) {
+        HTMLScriptElementNative.setAsync(peer, value);
+    }
 
     @Override
     public boolean getDefer() {
         return getDeferImpl(getPeer());
     }
-    native static boolean getDeferImpl(long peer);
+    static boolean getDeferImpl(long peer) {
+        return HTMLScriptElementNative.getDefer(peer);
+    }
 
     @Override
     public void setDefer(boolean value) {
         setDeferImpl(getPeer(), value);
     }
-    native static void setDeferImpl(long peer, boolean value);
+    static void setDeferImpl(long peer, boolean value) {
+        HTMLScriptElementNative.setDefer(peer, value);
+    }
 
     @Override
     public String getSrc() {
         return getSrcImpl(getPeer());
     }
-    native static String getSrcImpl(long peer);
+    static String getSrcImpl(long peer) {
+        return HTMLScriptElementNative.getSrc(peer);
+    }
 
     @Override
     public void setSrc(String value) {
         setSrcImpl(getPeer(), value);
     }
-    native static void setSrcImpl(long peer, String value);
+    static void setSrcImpl(long peer, String value) {
+        HTMLScriptElementNative.setSrc(peer, value);
+    }
 
     @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
-    native static String getTypeImpl(long peer);
+    static String getTypeImpl(long peer) {
+        return HTMLScriptElementNative.getType(peer);
+    }
 
     @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
-    native static void setTypeImpl(long peer, String value);
+    static void setTypeImpl(long peer, String value) {
+        HTMLScriptElementNative.setType(peer, value);
+    }
 
     public String getCrossOrigin() {
         return getCrossOriginImpl(getPeer());
     }
-    native static String getCrossOriginImpl(long peer);
+    static String getCrossOriginImpl(long peer) {
+        return HTMLScriptElementNative.getCrossOrigin(peer);
+    }
 
     public void setCrossOrigin(String value) {
         setCrossOriginImpl(getPeer(), value);
     }
-    native static void setCrossOriginImpl(long peer, String value);
+    static void setCrossOriginImpl(long peer, String value) {
+        throw new UnsatisfiedLinkError("com.sun.webkit.dom.HTMLScriptElementImpl.setCrossOriginImpl: no wkj_* function"
+                + " exists for it in any jfxwebkit build");
+    }
 
 }
 

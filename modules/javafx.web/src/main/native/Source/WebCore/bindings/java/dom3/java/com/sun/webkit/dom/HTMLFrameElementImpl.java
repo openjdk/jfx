@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,128 +44,172 @@ public class HTMLFrameElementImpl extends HTMLElementImpl implements HTMLFrameEl
     public String getFrameBorder() {
         return getFrameBorderImpl(getPeer());
     }
-    native static String getFrameBorderImpl(long peer);
+    static String getFrameBorderImpl(long peer) {
+        return HTMLFrameElementNative.getFrameBorder(peer);
+    }
 
     @Override
     public void setFrameBorder(String value) {
         setFrameBorderImpl(getPeer(), value);
     }
-    native static void setFrameBorderImpl(long peer, String value);
+    static void setFrameBorderImpl(long peer, String value) {
+        HTMLFrameElementNative.setFrameBorder(peer, value);
+    }
 
     @Override
     public String getLongDesc() {
         return getLongDescImpl(getPeer());
     }
-    native static String getLongDescImpl(long peer);
+    static String getLongDescImpl(long peer) {
+        return HTMLFrameElementNative.getLongDesc(peer);
+    }
 
     @Override
     public void setLongDesc(String value) {
         setLongDescImpl(getPeer(), value);
     }
-    native static void setLongDescImpl(long peer, String value);
+    static void setLongDescImpl(long peer, String value) {
+        HTMLFrameElementNative.setLongDesc(peer, value);
+    }
 
     @Override
     public String getMarginHeight() {
         return getMarginHeightImpl(getPeer());
     }
-    native static String getMarginHeightImpl(long peer);
+    static String getMarginHeightImpl(long peer) {
+        return HTMLFrameElementNative.getMarginHeight(peer);
+    }
 
     @Override
     public void setMarginHeight(String value) {
         setMarginHeightImpl(getPeer(), value);
     }
-    native static void setMarginHeightImpl(long peer, String value);
+    static void setMarginHeightImpl(long peer, String value) {
+        HTMLFrameElementNative.setMarginHeight(peer, value);
+    }
 
     @Override
     public String getMarginWidth() {
         return getMarginWidthImpl(getPeer());
     }
-    native static String getMarginWidthImpl(long peer);
+    static String getMarginWidthImpl(long peer) {
+        return HTMLFrameElementNative.getMarginWidth(peer);
+    }
 
     @Override
     public void setMarginWidth(String value) {
         setMarginWidthImpl(getPeer(), value);
     }
-    native static void setMarginWidthImpl(long peer, String value);
+    static void setMarginWidthImpl(long peer, String value) {
+        HTMLFrameElementNative.setMarginWidth(peer, value);
+    }
 
     @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
-    native static String getNameImpl(long peer);
+    static String getNameImpl(long peer) {
+        return HTMLFrameElementNative.getName(peer);
+    }
 
     @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
-    native static void setNameImpl(long peer, String value);
+    static void setNameImpl(long peer, String value) {
+        HTMLFrameElementNative.setName(peer, value);
+    }
 
     @Override
     public boolean getNoResize() {
         return getNoResizeImpl(getPeer());
     }
-    native static boolean getNoResizeImpl(long peer);
+    static boolean getNoResizeImpl(long peer) {
+        return HTMLFrameElementNative.getNoResize(peer);
+    }
 
     @Override
     public void setNoResize(boolean value) {
         setNoResizeImpl(getPeer(), value);
     }
-    native static void setNoResizeImpl(long peer, boolean value);
+    static void setNoResizeImpl(long peer, boolean value) {
+        HTMLFrameElementNative.setNoResize(peer, value);
+    }
 
     @Override
     public String getScrolling() {
         return getScrollingImpl(getPeer());
     }
-    native static String getScrollingImpl(long peer);
+    static String getScrollingImpl(long peer) {
+        return HTMLFrameElementNative.getScrolling(peer);
+    }
 
     @Override
     public void setScrolling(String value) {
         setScrollingImpl(getPeer(), value);
     }
-    native static void setScrollingImpl(long peer, String value);
+    static void setScrollingImpl(long peer, String value) {
+        HTMLFrameElementNative.setScrolling(peer, value);
+    }
 
     @Override
     public String getSrc() {
         return getSrcImpl(getPeer());
     }
-    native static String getSrcImpl(long peer);
+    static String getSrcImpl(long peer) {
+        return HTMLFrameElementNative.getSrc(peer);
+    }
 
     @Override
     public void setSrc(String value) {
         setSrcImpl(getPeer(), value);
     }
-    native static void setSrcImpl(long peer, String value);
+    static void setSrcImpl(long peer, String value) {
+        HTMLFrameElementNative.setSrc(peer, value);
+    }
 
     @Override
     public Document getContentDocument() {
         return DocumentImpl.getImpl(getContentDocumentImpl(getPeer()));
     }
-    native static long getContentDocumentImpl(long peer);
+    static long getContentDocumentImpl(long peer) {
+        return HTMLFrameElementNative.getContentDocument(peer);
+    }
 
     public AbstractView getContentWindow() {
         return DOMWindowImpl.getImpl(getContentWindowImpl(getPeer()));
     }
-    native static long getContentWindowImpl(long peer);
+    static long getContentWindowImpl(long peer) {
+        return HTMLFrameElementNative.getContentWindow(peer);
+    }
 
     public String getLocation() {
         return getLocationImpl(getPeer());
     }
-    native static String getLocationImpl(long peer);
+    static String getLocationImpl(long peer) {
+        return HTMLFrameElementNative.getLocation(peer);
+    }
 
     public void setLocation(String value) {
         setLocationImpl(getPeer(), value);
     }
-    native static void setLocationImpl(long peer, String value);
+    static void setLocationImpl(long peer, String value) {
+        HTMLFrameElementNative.setLocation(peer, value);
+    }
 
     public int getWidth() {
         return getWidthImpl(getPeer());
     }
-    native static int getWidthImpl(long peer);
+    static int getWidthImpl(long peer) {
+        return HTMLFrameElementNative.getWidth(peer);
+    }
 
     public int getHeight() {
         return getHeightImpl(getPeer());
     }
-    native static int getHeightImpl(long peer);
+    static int getHeightImpl(long peer) {
+        return HTMLFrameElementNative.getHeight(peer);
+    }
 
 }
 

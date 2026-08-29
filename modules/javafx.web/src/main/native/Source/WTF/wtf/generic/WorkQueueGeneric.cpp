@@ -32,9 +32,6 @@
 
 #include <wtf/threads/BinarySemaphore.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
 
 namespace WTF {
 
@@ -69,9 +66,6 @@ void WorkQueueBase::platformInvalidate()
 void WorkQueueBase::dispatch(Function<void()>&& function)
 {
     m_runLoop->dispatch([protectedThis = Ref { *this }, function = WTF::move(function)] {
-#if PLATFORM(JAVA)
-        AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
         function();
     });
 }
@@ -92,9 +86,6 @@ void WorkQueueBase::dispatchAfter(Seconds delay, Function<void()>&& function)
         delay += slopAdjustment;
 #endif
     m_runLoop->dispatchAfter(delay, [protectedThis = Ref { *this }, function = WTF::move(function)] {
-#if PLATFORM(JAVA)
-        AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
         function();
     });
 }
