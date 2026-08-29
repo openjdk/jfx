@@ -173,8 +173,8 @@ GstFlowReturn cache_read_buffer_from_position2(Cache* cache, gint64 start_positi
     if (bytes_available == 0)
         return GST_FLOW_FLUSHING;
 
-    if ((guint64)size < bytes_available)
-        size = bytes_available;
+    if ((guint64)size > bytes_available)
+        size = (guint)bytes_available;
 
     return cache_read_buffer_from_position(cache, start_position, size, buffer);
 }

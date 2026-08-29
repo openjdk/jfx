@@ -25,59 +25,50 @@
 
 #include "mfgstbytestream.h"
 #include "mftrace.h"
-
-template <class T> void SafeRelease(T **ppT)
-{
-    if (*ppT)
-    {
-        (*ppT)->Release();
-        *ppT = NULL;
-    }
-}
+#include "mfutils.h"
 
 CMFGSTByteStream::CMFGSTByteStream(QWORD qwLength, GstPad *pSinkPad, BOOL bIsSegmentedStream)
 {
     m_ulRefCount = 0;
 
-    m_bIsSegmentedStream = bIsSegmentedStream;
+    m_qwPosition = 0;
     m_qwLength = qwLength;
+    m_pBytes = NULL;
+    m_cbBytes = 0;
+    m_cbBytesRead = 0;
+    m_pAsyncResult = NULL;
+    m_eStreamState = StreamState::Open;
+    m_eReadState = ReadState::Idle;
+    m_bIsEOS = FALSE;
+    m_bIsEOSEventReceived = FALSE;
+    m_bIsSegmentedStream = bIsSegmentedStream;
     m_pSinkPad = pSinkPad;
-
-    Reset();
 
     InitializeCriticalSection(&m_csLock);
 }
 
 CMFGSTByteStream::~CMFGSTByteStream()
 {
+    SafeRelease(&m_pAsyncResult);
     DeleteCriticalSection(&m_csLock);
-}
-
-void CMFGSTByteStream::Reset()
-{
-    m_pBytes = NULL;
-    m_cbBytes = 0;
-    m_cbBytesRead = 0;
-    m_pAsyncResult = NULL;
-    m_readResult = S_OK;
-    m_qwPosition = 0;
-    m_bWaitForEvent = FALSE;
-    m_bIsAborted = FALSE;
-    m_bIsEOS = FALSE;
-    m_bIsEOSEventReceived = FALSE;
 }
 
 HRESULT CMFGSTByteStream::ReadRangeAvailable()
 {
-    Lock();
-    BOOL bWaitForEvent = m_bWaitForEvent;
-    m_bWaitForEvent = FALSE;
-    Unlock();
+    // Locked section
+    {
+        ByteStreamLock lock(this);
 
-    if (bWaitForEvent)
-        return ReadData();
-    else
-        return S_FALSE;
+        if (m_eStreamState != StreamState::Open)
+            return S_FALSE;
+
+        if (m_eReadState != ReadState::Waiting)
+            return S_FALSE;
+
+        m_eReadState = ReadState::Reading;
+    }
+
+    return ReadData();
 }
 
 void CMFGSTByteStream::SetStreamLength(QWORD qwLength)
@@ -96,24 +87,45 @@ bool CMFGSTByteStream::IsSeekSupported()
     return !m_bIsSegmentedStream;
 }
 
-HRESULT CMFGSTByteStream::CompleteReadData(HRESULT hr)
+HRESULT CMFGSTByteStream::CompleteReadData(HRESULT readResult)
 {
-    m_readResult = hr;
+    IMFAsyncResult *pAsyncResult = NULL;
 
-    if (m_pAsyncResult)
-        return MFInvokeCallback(m_pAsyncResult);
+    // Locked section
+    {
+        ByteStreamLock lock(this);
+
+        // Complete read only if we reading or waiting for data
+        if ((m_eReadState == ReadState::Reading ||
+             m_eReadState == ReadState::Waiting) &&
+             m_pAsyncResult != NULL)
+        {
+            pAsyncResult = m_pAsyncResult;
+            pAsyncResult->AddRef();
+            pAsyncResult->SetStatus(readResult);
+
+            m_eReadState = ReadState::Completed;
+        }
+    }
+
+    if (pAsyncResult)
+    {
+        HRESULT hr = MFInvokeCallback(pAsyncResult);
+        SafeRelease(&pAsyncResult);
+        return hr;
+    }
 
     return S_OK;
 }
 
-HRESULT CMFGSTByteStream::AbortRead(HRESULT hr)
+void CMFGSTByteStream::Lock()
 {
-    Lock();
-    m_bIsAborted = TRUE;
-    m_bWaitForEvent = FALSE;
-    Unlock();
+    EnterCriticalSection(&m_csLock);
+}
 
-    return CompleteReadData(hr);
+void CMFGSTByteStream::Unlock()
+{
+    LeaveCriticalSection(&m_csLock);
 }
 
 void CMFGSTByteStream::SignalEOS()
@@ -133,6 +145,8 @@ void CMFGSTByteStream::ClearEOS()
 
 BOOL CMFGSTByteStream::IsReload()
 {
+    ByteStreamLock lock(this);
+
     bool bIsReload = false;
     if (m_bIsSegmentedStream && !m_bIsEOSEventReceived)
         bIsReload = true;
@@ -151,30 +165,28 @@ HRESULT CMFGSTByteStream::BeginRead(BYTE *pb, ULONG cb, IMFAsyncCallback *pCallb
     if (m_pSinkPad == NULL)
         return E_POINTER;
 
-    Lock();
-    BOOL bIsAborted = m_bIsAborted;
-    Unlock();
+    // Locked section
+    {
+        ByteStreamLock lock(this);
 
-    if (bIsAborted)
-        return MF_E_OPERATION_CANCELLED;
+        if (m_eStreamState == StreamState::Closed)
+            return MF_E_OPERATION_CANCELLED;
 
-    // Reject BeginRead() if we already have pending read
-    if (m_pAsyncResult != NULL)
-        return MF_E_INVALIDREQUEST;
+        if (m_eReadState != ReadState::Idle)
+            return MF_E_INVALIDREQUEST;
 
-    // Do not start new read if old one failed
-    if (m_readResult != S_OK)
-        return m_readResult;
+        // Save read request
+        m_pBytes = pb;
+        m_cbBytes = cb;
+        m_cbBytesRead = 0;
 
-    // Save read request
-    m_pBytes = pb;
-    m_cbBytes = cb;
-    m_cbBytesRead = 0;
+        // Create async result object to signal read completion
+        hr = MFCreateAsyncResult(NULL, pCallback, punkState, &m_pAsyncResult);
+        if (FAILED(hr))
+            return hr;
 
-    // Create async result object to signal read completion
-    hr = MFCreateAsyncResult(NULL, pCallback, punkState, &m_pAsyncResult);
-    if (FAILED(hr))
-        return hr;
+        m_eReadState = ReadState::Reading;
+    }
 
     return ReadData();
 }
@@ -186,27 +198,49 @@ HRESULT CMFGSTByteStream::BeginWrite(const BYTE *pb, ULONG cb, IMFAsyncCallback 
 
 HRESULT CMFGSTByteStream::Close()
 {
-    // Nothing to close
-    return S_OK;
+    {
+        ByteStreamLock lock(this);
+
+        if (m_eStreamState == StreamState::Closed)
+            return S_OK;
+
+        m_eStreamState = StreamState::Closed;
+    }
+
+    return CompleteReadData(MF_E_OPERATION_CANCELLED);
 }
 
 HRESULT CMFGSTByteStream::EndRead(IMFAsyncResult *pResult, ULONG *pcbRead)
 {
-    Lock();
-    m_bWaitForEvent = FALSE;
-    Unlock();
+    HRESULT hr = S_OK;
+    IMFAsyncResult *pAsyncResult = NULL;
 
     if (pResult == NULL || pcbRead == NULL)
         return E_POINTER;
 
-    if (pResult != NULL)
-        pResult->SetStatus(m_readResult);
+    // Locked section
+    {
+        ByteStreamLock lock(this);
 
-    *pcbRead = m_cbBytesRead;
+        if (pResult != m_pAsyncResult)
+            return E_INVALIDARG;
 
-    SafeRelease(&m_pAsyncResult);
+        if (m_eReadState != ReadState::Completed)
+            return E_INVALIDARG;
 
-    return S_OK;
+        hr = pResult->GetStatus();
+        *pcbRead = SUCCEEDED(hr) ? m_cbBytesRead : 0;
+
+        pAsyncResult = m_pAsyncResult;
+        m_pAsyncResult = NULL;
+        m_pBytes = NULL;
+        m_eReadState = ReadState::Idle;
+    }
+
+    // Release outside lock in case if we will get any calls back
+    SafeRelease(&pAsyncResult);
+
+    return hr;
 }
 
 HRESULT CMFGSTByteStream::EndWrite(IMFAsyncResult *pResult, ULONG *pcbWritten)
@@ -216,7 +250,7 @@ HRESULT CMFGSTByteStream::EndWrite(IMFAsyncResult *pResult, ULONG *pcbWritten)
 
 HRESULT CMFGSTByteStream::Flush()
 {
-    return AbortRead(MF_E_OPERATION_CANCELLED);
+    return CompleteReadData(MF_E_OPERATION_CANCELLED);
 }
 
 HRESULT CMFGSTByteStream::GetCapabilities(DWORD *pdwCapabilities)
@@ -232,6 +266,8 @@ HRESULT CMFGSTByteStream::GetCapabilities(DWORD *pdwCapabilities)
 
 HRESULT CMFGSTByteStream::GetCurrentPosition(QWORD *pqwPosition)
 {
+    ByteStreamLock lock(this);
+
     if (pqwPosition == NULL)
         return E_POINTER;
 
@@ -242,6 +278,8 @@ HRESULT CMFGSTByteStream::GetCurrentPosition(QWORD *pqwPosition)
 
 HRESULT CMFGSTByteStream::GetLength(QWORD *pqwLength)
 {
+    ByteStreamLock lock(this);
+
     if (pqwLength == NULL)
         return E_FAIL;
 
@@ -252,6 +290,8 @@ HRESULT CMFGSTByteStream::GetLength(QWORD *pqwLength)
 
 HRESULT CMFGSTByteStream::IsEndOfStream(BOOL *pfEndOfStream)
 {
+    ByteStreamLock lock(this);
+
     if (pfEndOfStream == NULL)
         return E_POINTER;
 
@@ -365,72 +405,102 @@ ULONG CMFGSTByteStream::Release()
 
 HRESULT CMFGSTByteStream::ReadData()
 {
-    HRESULT hr = S_OK;
+    HRESULT completionResult = S_OK;
+    BOOL completeRead = FALSE;
     GstFlowReturn ret = GST_FLOW_ERROR;
     GstBuffer *buf = NULL;
-    guint64 offset = 0;
-    ULONG cbBytes = 0;
 
-    // Read data from upstream
-    do
+    // Locked section
     {
-        // If length known adjust m_cbBytes to make sure we do not read
-        // pass EOS. "progressbuffer" or "hlsprogressbuffer" does not handle
-        // last buffer nicely and will return EOS if we do not read exact
-        // amount of data.
-        Lock();
-        if (m_bIsAborted)
+        ByteStreamLock lock(this);
+
+        // Read data from upstream
+        while (m_eStreamState == StreamState::Open && m_eReadState == ReadState::Reading)
         {
+            if (m_cbBytesRead == m_cbBytes || m_bIsEOS)
+            {
+                completeRead = TRUE;
+                completionResult = S_OK;
+                break; // We done
+            }
+
+            // If length known adjust m_cbBytes to make sure we do not read
+            // pass EOS. "progressbuffer" or "hlsprogressbuffer" does not handle
+            // last buffer nicely and will return EOS if we do not read exact
+            // amount of data.
+            if (m_qwPosition < m_qwLength && (m_qwPosition + m_cbBytes) > m_qwLength)
+                m_cbBytes = (ULONG)(m_qwLength - m_qwPosition);
+
+            if (m_cbBytesRead > m_cbBytes)
+            {
+                completeRead = TRUE;
+                completionResult = E_FAIL;
+                break;
+            }
+
+            ULONG cbBytes = m_cbBytes - m_cbBytesRead;
+            guint64 offset = (guint64)m_qwPosition;
+
+            // Pull data unlocked
             Unlock();
-            return CompleteReadData(MF_E_OPERATION_CANCELLED);
-        }
+            ret = gst_pad_pull_range(m_pSinkPad, offset, (guint)cbBytes, &buf);
+            Lock();
 
-        if (m_qwPosition < m_qwLength && (m_qwPosition + m_cbBytes) > m_qwLength)
-            m_cbBytes = m_qwLength - m_qwPosition;
+            // Recheck after pull. We might get closed.
+            if (m_eStreamState == StreamState::Closed || m_eReadState != ReadState::Reading)
+            {
+                if (buf != NULL)
+                {
+                    gst_buffer_unref(buf);
+                    buf = NULL;
+                }
+                break;
+            }
 
-        if (m_cbBytesRead < m_cbBytes)
-        {
-            cbBytes = m_cbBytes - m_cbBytesRead;
-        }
-        else
-        {
-            Unlock();
-            return CompleteReadData(E_FAIL);
-        }
+            if (ret == GST_FLOW_FLUSHING)
+            {
+                // Wait for FX_EVENT_RANGE_READY. It will be send when data available.
+                m_eReadState = ReadState::Waiting;
+                break;
+            }
 
-        offset = (guint64)m_qwPosition;
+            if (ret == GST_FLOW_EOS)
+            {
+                m_bIsEOS = TRUE;
+                completeRead = TRUE;
+                completionResult = S_OK;
+                break;
+            }
 
-        Unlock();
+            if (ret != GST_FLOW_OK)
+            {
+                completeRead = TRUE;
+                completionResult = E_FAIL;
+                break;
+            }
 
-        ret = gst_pad_pull_range(m_pSinkPad, offset, (guint)cbBytes, &buf);
-        if (ret == GST_FLOW_FLUSHING)
-        {
-            // Wait for FX_EVENT_RANGE_READY. It will be send when data available.
-            return PrepareWaitForData();
-        }
-        else if (ret == GST_FLOW_EOS)
-        {
-            m_bIsEOS = TRUE;
-            return CompleteReadData(S_OK);
-        }
-        else if (ret == GST_FLOW_OK)
-        {
-            hr = PushDataBuffer(buf);
+            HRESULT hr = PushDataBufferLocked(buf);
+            buf = NULL;
+
             if (FAILED(hr))
-                return CompleteReadData(E_FAIL);
-            else if (m_cbBytesRead == m_cbBytes || m_bIsEOS)
-                return CompleteReadData(S_OK);
+            {
+                completeRead = TRUE;
+                completionResult = E_FAIL;
+                break;
+            }
         }
-        else
-        {
-            return CompleteReadData(E_FAIL);
-        }
-    } while (SUCCEEDED(hr) && m_cbBytesRead < m_cbBytes);
+    }
 
-    return hr;
+    if (buf != NULL)
+        gst_buffer_unref(buf);
+
+    if (!completeRead)
+        return S_OK;
+
+    return CompleteReadData(completionResult);
 }
 
-HRESULT CMFGSTByteStream::PushDataBuffer(GstBuffer* pBuffer)
+HRESULT CMFGSTByteStream::PushDataBufferLocked(GstBuffer* pBuffer)
 {
     HRESULT hr = S_OK;
 
@@ -438,10 +508,8 @@ HRESULT CMFGSTByteStream::PushDataBuffer(GstBuffer* pBuffer)
         return E_POINTER;
 
     // Set EOS flag, so we can complete and signal EOS
-    Lock();
     if (m_bIsEOSEventReceived)
         m_bIsEOS = TRUE;
-    Unlock();
 
     GstMapInfo info;
     gboolean unmap = FALSE;
@@ -476,23 +544,4 @@ HRESULT CMFGSTByteStream::PushDataBuffer(GstBuffer* pBuffer)
     gst_buffer_unref(pBuffer);
 
     return hr;
-}
-
-HRESULT CMFGSTByteStream::PrepareWaitForData()
-{
-    Lock();
-    m_bWaitForEvent = TRUE;
-    Unlock();
-
-    return S_OK;
-}
-
-void CMFGSTByteStream::Lock()
-{
-    EnterCriticalSection(&m_csLock);
-}
-
-void CMFGSTByteStream::Unlock()
-{
-    LeaveCriticalSection(&m_csLock);
 }

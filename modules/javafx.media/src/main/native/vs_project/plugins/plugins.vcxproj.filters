@@ -47,6 +47,9 @@
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.h">
       <Filter>mfwrapper</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfutils.h">
+      <Filter>mfwrapper</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.h">
       <Filter>mfwrapper</Filter>
     </ClInclude>

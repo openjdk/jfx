@@ -37,13 +37,26 @@
 static const GUID GUID_NULL =
 { 0x00000000, 0x0000, 0x0000, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
 
+enum class StreamState
+{
+    Open,
+    Closed
+};
+
+enum class ReadState
+{
+    Idle,
+    Reading,
+    Waiting,
+    Completed
+};
+
 class CMFGSTByteStream : public IMFByteStream
 {
 public:
     CMFGSTByteStream(QWORD qwLength, GstPad *pSinkPad, BOOL bIsSegmentedStream);
     ~CMFGSTByteStream();
 
-    void Reset();
     HRESULT ReadRangeAvailable();
     void SetStreamLength(QWORD qwLength);
     bool IsSeekSupported();
@@ -51,7 +64,8 @@ public:
     void SignalEOS();
     void ClearEOS();
     BOOL IsReload();
-    HRESULT AbortRead(HRESULT hr);
+    void Lock();
+    void Unlock();
 
     // IMFByteStream
     HRESULT BeginRead(BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback,
@@ -80,11 +94,8 @@ public:
 
 private:
     HRESULT ReadData();
-    HRESULT PushDataBuffer(GstBuffer *pBuffer);
-    HRESULT PrepareWaitForData();
-
-    void Lock();
-    void Unlock();
+    // Keep lock when calling this function
+    HRESULT PushDataBufferLocked(GstBuffer *pBuffer);
 
     ULONG m_ulRefCount;
 
@@ -99,11 +110,9 @@ private:
     ULONG m_cbBytesRead;
     // Completion result
     IMFAsyncResult *m_pAsyncResult;
-    // Read result
-    HRESULT m_readResult;
 
-    BOOL m_bWaitForEvent;
-    BOOL m_bIsAborted;
+    StreamState m_eStreamState;
+    ReadState m_eReadState;
     BOOL m_bIsEOS;
     BOOL m_bIsEOSEventReceived;
     // Set to true if source is fragmented MP4
@@ -112,6 +121,30 @@ private:
     CRITICAL_SECTION m_csLock;
 
     GstPad *m_pSinkPad;
+};
+
+class ByteStreamLock
+{
+public:
+    ByteStreamLock(CMFGSTByteStream *pByteStream) : m_pByteStream(pByteStream)
+    {
+        if (pByteStream != NULL)
+            m_pByteStream->Lock();
+    }
+
+    ~ByteStreamLock()
+    {
+        if (m_pByteStream != NULL)
+            m_pByteStream->Unlock();
+    }
+
+    ByteStreamLock(const ByteStreamLock&) = delete;
+    ByteStreamLock& operator=(const ByteStreamLock&) = delete;
+    ByteStreamLock(ByteStreamLock&&) = delete;
+    ByteStreamLock& operator=(ByteStreamLock&&) = delete;
+
+private:
+    CMFGSTByteStream *m_pByteStream;
 };
 
 #endif // __MF_GST_BYTESTREAM_H__

@@ -49,6 +49,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbytestream.h" />
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfdemux.h" />
+    <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfutils.h" />
     <ClInclude Include="..\..\gstreamer\plugins\mfwrapper\mfgstbuffer.h" />
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\cache.h" />
     <ClInclude Include="..\..\gstreamer\plugins\progressbuffer\hlsprogressbuffer.h" />

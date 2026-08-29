@@ -34,6 +34,7 @@
 
 #include "mfwrapper.h"
 #include "mftrace.h"
+#include "mfutils.h"
 
 #include <mfidl.h>
 #include <Wmcodecdsp.h>
@@ -117,15 +118,6 @@ static HRESULT mfwrapper_load_decoder_caps(GstMFWrapper *decoder, GstCaps *caps)
 static HRESULT mfwrapper_load_decoder_media_types(GstMFWrapper *decoder, GUID majorType, GUID subType);
 
 static gboolean mfwrapper_is_decoder_by_codec_id_supported(GstMFWrapper *decoder, gint codec_id);
-
-template <class T> void SafeRelease(T **ppT)
-{
-    if (*ppT)
-    {
-        (*ppT)->Release();
-        *ppT = NULL;
-    }
-}
 
 /***********************************************************************************
 * Substitution for
@@ -584,11 +576,16 @@ static gint mfwrapper_process_input(GstMFWrapper *decoder, GstBuffer *buf)
     if (!decoder->pDecoder)
         return PI_FAILED;
 
-    HRESULT hr = mfwrapper_create_sample_from_gst_buffer(&pSample, buf,
-            decoder->force_discontinuity);
+    gboolean forceDiscontinuity = decoder->is_force_discontinuity;
+
+    HRESULT hr = mfwrapper_create_sample_from_gst_buffer(&pSample, buf, forceDiscontinuity);
 
     if (SUCCEEDED(hr))
         hr = decoder->pDecoder->ProcessInput(0, pSample, 0);
+
+    // Reset only if we process sample
+    if (SUCCEEDED(hr) && forceDiscontinuity)
+        decoder->is_force_discontinuity = FALSE;
 
     SafeRelease(&pSample);
 
@@ -1366,11 +1363,11 @@ static GstFlowReturn mfwrapper_deliver_sample(GstMFWrapper *decoder,
 
     hr = pSample->GetSampleTime(&llTimestamp);
     if (SUCCEEDED(hr))
-        GST_BUFFER_TIMESTAMP(pGstBuffer) = llTimestamp * 100;
+        GST_BUFFER_TIMESTAMP(pGstBuffer) = hns_to_gst_time(llTimestamp);
 
     hr = pSample->GetSampleDuration(&llDuration);
     if (SUCCEEDED(hr))
-        GST_BUFFER_DURATION(pGstBuffer) = llDuration * 100;
+        GST_BUFFER_DURATION(pGstBuffer) = hns_to_gst_time(llDuration);
 
     if (SUCCEEDED(hr) && decoder->is_force_output_discontinuity)
     {
@@ -1589,27 +1586,43 @@ static void mfwrapper_drain_output(GstMFWrapper *decoder)
 static gboolean mfwrapper_reload_decoder(GstMFWrapper *decoder)
 {
     HRESULT hr = S_OK;
+    IMFTransform *oldDecoder = NULL;
     IMFMediaType *pOutputType = NULL;
     DWORD dwStatus = 0;
-    GUID majorType;
-    GUID subType;
+    GUID majorType = {};
+    GUID subType = {};
 
     if (decoder == NULL || decoder->pDecoder == NULL || decoder->pDecoderInputType == NULL)
-        return false;
+        return FALSE;
 
-    // Can required information from old decoder
+    // Get required information from old decoder
     hr = decoder->pDecoder->GetOutputCurrentType(0, &pOutputType);
-
-    // Release old decoder. All needed information is cached.
-    SafeRelease(&decoder->pDecoder);
-
     if (SUCCEEDED(hr))
         hr = decoder->pDecoderInputType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
     if (SUCCEEDED(hr))
         hr = decoder->pDecoderInputType->GetGUID(MF_MT_SUBTYPE, &subType);
 
-    // Load decoder based on media types of current one
+    if (FAILED(hr))
+    {
+        SafeRelease(&pOutputType);
+        return FALSE; // Keep old decoder
+    }
+
+    // Load new decoder based on media types of current one
+    // Save old decoder first
+    oldDecoder = decoder->pDecoder;
+    decoder->pDecoder = NULL;
     hr = mfwrapper_load_decoder_media_types(decoder, majorType, subType);
+
+    if (FAILED(hr))
+    {
+        // Keep old decoder
+        decoder->pDecoder = oldDecoder;
+        SafeRelease(&pOutputType);
+        return FALSE;
+    }
+
+    SafeRelease(&oldDecoder);
 
     // Set input type from saved copy so we keep all infromation
     IMFMediaType* pInputType = NULL;
