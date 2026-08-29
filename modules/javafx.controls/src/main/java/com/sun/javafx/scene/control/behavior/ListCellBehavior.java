@@ -51,7 +51,8 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override protected int getItemCount() {
+    @Override
+    protected int getItemCount() {
         if (getCellContainer().getItems() == null) {
             return 0;
         }

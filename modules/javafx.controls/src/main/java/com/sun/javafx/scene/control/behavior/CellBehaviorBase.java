@@ -164,7 +164,7 @@ public abstract class CellBehaviorBase<T extends IndexedCell<?>> extends Behavio
     }
 
     protected int getIndex() {
-        return getNode() != null ? getNode().getIndex() : -1;
+        return getNode().getIndex();
     }
 
     public void mousePressed(MouseEvent e) {

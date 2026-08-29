@@ -53,7 +53,8 @@ public class TableRowBehavior<T> extends TableRowBehaviorBase<TableRow<T>> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override protected int getItemCount() {
+    @Override
+    protected int getItemCount() {
         if (getCellContainer().getItems() == null) {
             return 0;
         }

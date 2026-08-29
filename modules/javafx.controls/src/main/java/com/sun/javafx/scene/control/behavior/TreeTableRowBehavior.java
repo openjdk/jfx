@@ -53,7 +53,8 @@ public class TreeTableRowBehavior<T> extends TableRowBehaviorBase<TreeTableRow<T
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override protected int getItemCount() {
+    @Override
+    protected int getItemCount() {
         return getCellContainer().getExpandedItemCount();
     }
 
