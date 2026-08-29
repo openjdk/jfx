@@ -28,7 +28,7 @@
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/EditorClient.h>
 #include <WebCore/TextCheckerClient.h>
-#include <WebCore/PlatformJavaClasses.h>
+#include <webkit_java_api_page.h>
 
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
@@ -42,7 +42,19 @@ class EditorClientJava final : public EditorClient, public TextCheckerClient {
     WTF_MAKE_NONCOPYABLE(EditorClientJava);
     WTF_MAKE_TZONE_ALLOCATED(EditorClientJava);
 public:
-    EditorClientJava(const JLObject &webPage);
+    EditorClientJava() = default;
+
+    /*
+     * Installs the page this client reports to. Called by wkj_page_set_callbacks, once,
+     * before the page is initialized. `webPage` is borrowed: the WebPage owns the retained
+     * id and outlives this client.
+     */
+    void setJavaPage(wkj_ref webPage, const WKJEditorCallbacks* callbacks)
+    {
+        m_webPage = webPage;
+        m_callbacks = callbacks;
+    }
+
     ~EditorClientJava() override;
 
     bool shouldDeleteRange(const std::optional<SimpleRange>&) override;
@@ -159,9 +171,11 @@ public:
 
 
 protected:
-    JGObject m_webPage;
+    wkj_ref m_webPage { 0 };
+    const WKJEditorCallbacks* m_callbacks { nullptr };
 
-    bool m_isInRedo;
+    /* Was initialized by the constructor the C ABI conversion removed. */
+    bool m_isInRedo { false };
     Deque<Ref<UndoStep>> m_redoStack;
     Deque<Ref<UndoStep>> m_undoStack;
     static const char* interpretKeyEvent(const KeyboardEvent*);

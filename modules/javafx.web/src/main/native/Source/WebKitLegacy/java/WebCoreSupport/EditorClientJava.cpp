@@ -25,6 +25,7 @@
 
 
 #include "EditorClientJava.h"
+#include <wkj_constants.h>
 
 #include <WebCore/NotImplemented.h>
 #include <WebCore/CharacterData.h>
@@ -34,7 +35,6 @@
 #include <WebCore/FocusController.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameView.h>
-#include <WebCore/PlatformJavaClasses.h>
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformKeyboardEvent.h>
@@ -48,7 +48,6 @@
 //#include <wtf/text/ASCIILiteral.h>
 
 
-#include "com_sun_webkit_event_WCKeyEvent.h"
 
 using namespace std;
 
@@ -56,11 +55,6 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(EditorClientJava);
 
-EditorClientJava::EditorClientJava(const JLObject &webPage)
-    : m_webPage(webPage)
-    , m_isInRedo(false)
-{
-}
 
 EditorClientJava::~EditorClientJava()
 {
@@ -608,19 +602,11 @@ bool EditorClientJava::shouldMoveRangeAfterDelete(const SimpleRange&, const Simp
 
 void EditorClientJava::setInputMethodState(Element* element)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    if (!m_callbacks || !m_callbacks->set_input_method_state)
+        return;
 
-    static jmethodID midSetInputMethodState = env->GetMethodID(
-        PG_GetWebPageClass(env),
-        "setInputMethodState",
-        "(Z)V");
-    ASSERT(midSetInputMethodState);
-
-    env->CallVoidMethod(
-        m_webPage,
-        midSetInputMethodState,
-        bool_to_jbool(element && element->shouldUseInputMethod()));
-    WTF::CheckAndClearException(env);
+    m_callbacks->set_input_method_state(m_webPage,
+        (element && element->shouldUseInputMethod()) ? 1 : 0);
 }
 
 void EditorClientJava::handleInputMethodKeydown(KeyboardEvent&)

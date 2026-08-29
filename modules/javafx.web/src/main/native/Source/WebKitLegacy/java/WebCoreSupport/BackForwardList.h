@@ -33,6 +33,7 @@
 #include "HistoryItem.h"
 
 #include <wtf/java/JavaRef.h>
+#include <wtf/java/WKJHandle.h>
 
 typedef Vector<Ref<WebCore::HistoryItem>> HistoryItemVector;
 typedef HashSet<RefPtr<WebCore::HistoryItem>> HistoryItemHashSet;
@@ -73,8 +74,8 @@ public:
     void removeItem(WebCore::HistoryItem&);
     HistoryItemVector& entries();
 
-    JLObject hostObject() const { return m_hostObject; }
-    void setHostObject(const JLObject& hostObject) { m_hostObject = hostObject; }
+    wkj_ref hostObject() const { return m_hostObject.get(); }
+    void setHostObject(WKJHandle&& hostObject) { m_hostObject = WTF::move(hostObject); }
 
 private:
     explicit BackForwardList();
@@ -87,5 +88,6 @@ private:
     bool m_closed;
     bool m_enabled;
 
-    JGObject m_hostObject;
+    /* The Java com.sun.webkit.BackForwardList, retained as the global reference was. */
+    WKJHandle m_hostObject;
 };

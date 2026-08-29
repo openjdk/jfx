@@ -27,7 +27,8 @@
 
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <WebCore/InspectorBackendClient.h>
-#include <WebCore/PlatformJavaClasses.h>
+#include <webkit_java_api_page.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -37,7 +38,18 @@ class InspectorClientJava final
 {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(InspectorClientJava);
 public:
-    InspectorClientJava(const JLObject &webPage);
+    InspectorClientJava() = default;
+
+    /*
+     * Installs the page this client reports to. Called by wkj_page_set_callbacks, once,
+     * before the page is initialized. `webPage` is borrowed: the WebPage owns the retained
+     * id and outlives this client.
+     */
+    void setJavaPage(wkj_ref webPage, const WKJInspectorCallbacks* callbacks)
+    {
+        m_webPage = webPage;
+        m_callbacks = callbacks;
+    }
 
     void inspectedPageDestroyed() override;
 
@@ -51,7 +63,8 @@ public:
     void sendMessageToFrontend(const String& message) override;
 
 private:
-    JGObject m_webPage;
+    wkj_ref m_webPage { 0 };
+    const WKJInspectorCallbacks* m_callbacks { nullptr };
 };
 
 } // namespace WebCore

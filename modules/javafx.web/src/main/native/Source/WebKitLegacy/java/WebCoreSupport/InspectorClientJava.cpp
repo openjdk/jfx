@@ -25,6 +25,7 @@
 
 
 #include "InspectorClientJava.h"
+#include "WKJPageSupport.h"
 #include "WebPage.h"
 
 #include <WebCore/Frame.h>
@@ -32,40 +33,7 @@
 #include <WebCore/Page.h>
 #include <WebCore/RenderObject.h>
 
-namespace InspectorClientJavaInternal {
-
-static JGClass webPageClass;
-static jmethodID repaintAllMethod;
-static jmethodID sendInspectorMessageToFrontendMethod;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!webPageClass) {
-        webPageClass = JLClass(env->FindClass(
-                "com/sun/webkit/WebPage"));
-        ASSERT(webPageClass);
-
-        repaintAllMethod = env->GetMethodID(
-                webPageClass,
-                "fwkRepaintAll",
-                "()V");
-        ASSERT(repaintAllMethod);
-
-        sendInspectorMessageToFrontendMethod = env->GetMethodID(
-                webPageClass,
-                "fwkSendInspectorMessageToFrontend",
-                "(Ljava/lang/String;)Z");
-        ASSERT(sendInspectorMessageToFrontendMethod);
-    }
-}
-}
-
 namespace WebCore {
-
-InspectorClientJava::InspectorClientJava(const JLObject &webPage)
-    : m_webPage(webPage)
-{
-}
 
 void InspectorClientJava::inspectedPageDestroyed()
 {
@@ -85,16 +53,12 @@ void InspectorClientJava::bringFrontendToFront()
 
 void InspectorClientJava::highlight()
 {
-    using namespace InspectorClientJavaInternal;
     // InspectorController::drawHighlight() may want to draw outside any
     // node boundary so our only option here is invalidate the entire page.
     // See also WebPage_twkDrawHighlight.
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    env->CallVoidMethod(m_webPage, repaintAllMethod);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->repaint_all)
+        m_callbacks->repaint_all(m_webPage);
 }
 
 void InspectorClientJava::hideHighlight()
@@ -104,14 +68,15 @@ void InspectorClientJava::hideHighlight()
 
 void InspectorClientJava::sendMessageToFrontend(const String& message)
 {
-    using namespace InspectorClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->send_message_to_frontend)
+        return;
 
-    env->CallBooleanMethod(m_webPage,
-                           sendInspectorMessageToFrontendMethod,
-                           (jstring)message.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    /*
+     * The Java method returns boolean and the JNI code discarded it, so the slot returns
+     * void. It also swallowed any Throwable, which the Java upcall target still does.
+     */
+    WKJStringArg messageArg(message);
+    m_callbacks->send_message_to_frontend(m_webPage, messageArg.data(), messageArg.length());
 }
 
 } // namespace WebCore

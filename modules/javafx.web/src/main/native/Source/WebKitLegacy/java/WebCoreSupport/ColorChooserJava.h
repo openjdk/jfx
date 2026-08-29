@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,16 @@
 #pragma once
 
 #if ENABLE(INPUT_TYPE_COLOR)
-#include <WebCore/PlatformJavaClasses.h>
 #include <WebCore/ColorChooser.h>
+#include <webkit_java_api_page.h>
+#include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
 class ColorChooserClient;
 
 class ColorChooserJava final : public ColorChooser {
 public:
-    ColorChooserJava(JGObject&, ColorChooserClient*, const Color&);
+    ColorChooserJava(wkj_ref webPage, ColorChooserClient*, const Color&);
     ColorChooserClient* getClient() { return m_colorChooserClient; }
 
     ~ColorChooserJava() override { }
@@ -51,7 +52,12 @@ public:
 
 private:
     ColorChooserClient* m_colorChooserClient;
-    JGObject m_colorChooserRef;
+
+    /*
+     * The com.sun.webkit.ColorChooser this chooser drives. Retained, as the global
+     * reference it replaces was, and released by this object's destructor.
+     */
+    WKJHandle m_colorChooserRef;
 };
 
 } // namespace WebCore

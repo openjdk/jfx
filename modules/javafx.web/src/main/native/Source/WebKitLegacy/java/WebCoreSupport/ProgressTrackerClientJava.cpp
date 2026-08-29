@@ -25,6 +25,7 @@
 
 
 #include "ProgressTrackerClientJava.h"
+#include "WKJPageSupport.h"
 #include "WebPage.h"
 
 #include <WebCore/DocumentLoader.h>
@@ -35,33 +36,9 @@
 #include "DocumentPage.h"
 #include <WebCore/ProgressTracker.h>
 
-#include "com_sun_webkit_LoadListenerClient.h"
-
-namespace ProgressTrackerClientJavaInternal {
-static JGClass webPageClass;
-static jmethodID fireLoadEventMID;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!webPageClass) {
-        webPageClass = JLClass(env->FindClass(
-            "com/sun/webkit/WebPage"));
-        ASSERT(webPageClass);
-
-        fireLoadEventMID = env->GetMethodID(webPageClass,
-                                    "fwkFireLoadEvent",
-                                    "(JILjava/lang/String;Ljava/lang/String;DI)V");
-        ASSERT(fireLoadEventMID);
-    }
-}
-}
+#include <wkj_constants.h>
 
 namespace WebCore {
-
-ProgressTrackerClientJava::ProgressTrackerClientJava(const JLObject& webPage)
-    : m_webPage(webPage)
-{
-}
 
 void ProgressTrackerClientJava::progressStarted(LocalFrame&)
 {
@@ -69,30 +46,28 @@ void ProgressTrackerClientJava::progressStarted(LocalFrame&)
 
 void ProgressTrackerClientJava::progressEstimateChanged(LocalFrame& originatingProgressFrame)
 {
-    using namespace ProgressTrackerClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->fire_load_event)
+        return;
 
     double progress = originatingProgressFrame.page()->progress().estimatedProgress();
     // We have a redundant notification from webkit (with progress == 1)
     // after PAGE_FINISHED has already been posted.
     DocumentLoader* documentLoader = originatingProgressFrame.loader().activeDocumentLoader();
     if (documentLoader && progress < 1) {
-        JLString urlJavaString(documentLoader->url().string().toJavaString(env));
-        JLString contentTypeJavaString(documentLoader->responseMIMEType().toJavaString(env));
+        WKJStringArg url(documentLoader->url().string());
+        WKJStringArg contentType(documentLoader->responseMIMEType());
 
         if (documentLoader->mainResourceData()) {
             documentLoader->mainResourceData()->size(); // TODO-java: recheck
         }
         // Second, send a load event
-        env->CallVoidMethod(m_webPage, fireLoadEventMID,
-                            ptr_to_jlong(&originatingProgressFrame),
+        m_callbacks->fire_load_event(m_webPage,
+                            wkj_from_ptr(&originatingProgressFrame),
                             com_sun_webkit_LoadListenerClient_PROGRESS_CHANGED,
-                            (jstring)urlJavaString,
-                            (jstring)contentTypeJavaString,
+                            url.data(), url.length(),
+                            contentType.data(), contentType.length(),
                             progress,
                             0);
-        WTF::CheckAndClearException(env);
     }
 }
 

@@ -27,14 +27,25 @@
 
 #include <WebCore/Frame.h>
 #include <WebCore/ProgressTrackerClient.h>
-#include <WebCore/PlatformJavaClasses.h>
+#include <webkit_java_api_page.h>
 
 namespace WebCore {
 
 class ProgressTrackerClientJava final : public ProgressTrackerClient {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ProgressTrackerClientJava);
 public:
-    ProgressTrackerClientJava(const JLObject &webPage);
+    ProgressTrackerClientJava() = default;
+
+    /*
+     * Installs the page this client reports progress to. Called by wkj_page_set_callbacks,
+     * once, before the page is initialized. `webPage` is borrowed: the WebPage owns the
+     * retained id and outlives this client.
+     */
+    void setJavaPage(wkj_ref webPage, const WKJProgressCallbacks* callbacks)
+    {
+        m_webPage = webPage;
+        m_callbacks = callbacks;
+    }
 
     // ProgressTrackerClient methods
     void progressStarted(LocalFrame& originatingProgressFrame) override;
@@ -42,7 +53,8 @@ public:
     void progressFinished(LocalFrame& originatingProgressFrame) override;
 
 private:
-    JGObject m_webPage;
+    wkj_ref m_webPage { 0 };
+    const WKJProgressCallbacks* m_callbacks { nullptr };
 };
 
 }

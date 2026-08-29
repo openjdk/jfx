@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,55 +29,45 @@
 #include <WebCore/ColorChooserClient.h>
 #include <WebCore/Color.h>
 #include <WebCore/NotImplemented.h>
+#include <WebCore/WKJDOMUtils.h>
 
 namespace WebCore {
 
-// Create ColorChooser JObject and show its dialog
-ColorChooserJava::ColorChooserJava(JGObject& webPage, ColorChooserClient* client, const Color& color)
+namespace {
+
+/*
+ * The process-wide colour chooser callbacks, installed once by
+ * wkj_install_color_chooser_callbacks. A chooser belongs to a page but two of the three
+ * upcalls are made on the com.sun.webkit.ColorChooser the first one returns rather than on
+ * the page, so there is nothing per page to hold.
+ */
+const WKJColorChooserCallbacks* s_wkjColorChooserCallbacks = nullptr;
+
+} // namespace
+
+// Create the Java ColorChooser and show its dialog
+ColorChooserJava::ColorChooserJava(wkj_ref webPage, ColorChooserClient* client, const Color& color)
     : m_colorChooserClient(client)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    jmethodID mid = env->GetStaticMethodID(
-        PG_GetColorChooserClass(env),
-        "fwkCreateAndShowColorChooser",
-        "(Lcom/sun/webkit/WebPage;IIIJ)Lcom/sun/webkit/ColorChooser;");
-    ASSERT(mid);
-
-    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-    m_colorChooserRef = JGObject(env->CallStaticObjectMethod(
-        PG_GetColorChooserClass(env),
-        mid,
-        (jobject) webPage,
-        r,
-        g,
-        b,
-        ptr_to_jlong(this)));
-
     ASSERT(m_colorChooserClient);
 
-    WTF::CheckAndClearException(env);
+    if (!s_wkjColorChooserCallbacks || !s_wkjColorChooserCallbacks->create_and_show)
+        return;
+
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    m_colorChooserRef = WKJHandle(s_wkjColorChooserCallbacks->create_and_show(
+        webPage, r, g, b, wkj_from_ptr(this)));
 }
 
 void ColorChooserJava::reattachColorChooser(const Color& color)
 {
     ASSERT(m_colorChooserClient);
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(
-        PG_GetColorChooserClass(env),
-        "fwkShowColorChooser",
-        "(III)V");
-    ASSERT(mid);
+
+    if (!s_wkjColorChooserCallbacks || !s_wkjColorChooserCallbacks->show)
+        return;
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-
-    env->CallVoidMethod(
-        m_colorChooserRef,
-        mid,
-        r,
-        g,
-        b);
-    WTF::CheckAndClearException(env);
+    s_wkjColorChooserCallbacks->show(m_colorChooserRef.get(), r, g, b);
 }
 
 void ColorChooserJava::setSelectedColor(const Color& color)
@@ -91,30 +81,30 @@ void ColorChooserJava::setSelectedColor(const Color& color)
 
 void ColorChooserJava::endChooser()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(
-        PG_GetColorChooserClass(env),
-        "fwkHideColorChooser",
-        "()V");
-    ASSERT(mid);
+    if (!s_wkjColorChooserCallbacks || !s_wkjColorChooserCallbacks->hide)
+        return;
 
-    env->CallVoidMethod(
-        m_colorChooserRef,
-        mid);
-    WTF::CheckAndClearException(env);
+    s_wkjColorChooserCallbacks->hide(m_colorChooserRef.get());
 }
 
 } // namespace WebCore
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_ColorChooser_twkSetSelectedColor
-    (JNIEnv*, jobject, jlong self, jint r, jint g, jint b)
+WKJ_EXPORT void wkj_install_color_chooser_callbacks(const WKJColorChooserCallbacks* callbacks)
 {
+    WebCore::WKJCallScope wkjScope;
+    WebCore::s_wkjColorChooserCallbacks = callbacks;
+}
+
+WKJ_EXPORT void wkj_color_chooser_set_selected(int64_t chooser, int32_t red, int32_t green,
+                                               int32_t blue)
+{
+    WebCore::WKJCallScope wkjScope;
     using namespace WebCore;
-    ColorChooserJava* cc = static_cast<ColorChooserJava*>jlong_to_ptr(self);
+    ColorChooserJava* cc = static_cast<ColorChooserJava*>(wkj_to_ptr(chooser));
     if (cc) {
-        cc->setSelectedColor(makeFromComponentsClamping<SRGBA<uint8_t>>(r, g, b));
+        cc->setSelectedColor(makeFromComponentsClamping<SRGBA<uint8_t>>(red, green, blue));
     }
 }
 

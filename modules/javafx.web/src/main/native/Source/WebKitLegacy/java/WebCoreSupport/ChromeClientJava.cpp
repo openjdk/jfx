@@ -33,6 +33,7 @@
 #include <WebCore/ContextMenu.h>
 #include "PopupMenuJava.h"
 #include "SearchPopupMenuJava.h"
+#include "WKJPageSupport.h"
 #include "WebPage.h"
 #include "Cursor.h"
 #include <WebCore/DocumentLoader.h>
@@ -52,10 +53,16 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/Widget.h>
 #include <WebCore/WindowFeatures.h>
+#include <span>
 #include <wtf/URL.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace ChromeClientJavaInternal {
+/*
+ * All that is left of this namespace is the one class lookup platformPageClient() still
+ * needs. The 22 cached jmethodIDs and 4 cached jfieldIDs it used to hold are slots in
+ * WKJChromeCallbacks now, and initRefs() has gone with them.
+ */
 //MVM -ready initialization
 #define DECLARE_STATIC_CLASS(getFunctionName, sClassPath) \
 static jclass getFunctionName() { \
@@ -65,49 +72,8 @@ static jclass getFunctionName() { \
 }
 
 DECLARE_STATIC_CLASS(getWebPageCls,   "com/sun/webkit/WebPage")
-DECLARE_STATIC_CLASS(getRectangleCls, "com/sun/webkit/graphics/WCRectangle")
-DECLARE_STATIC_CLASS(getPointCls,     "com/sun/webkit/graphics/WCPoint")
-
-static jfieldID rectxFID = NULL; // Rectangle
-static jfieldID rectyFID = NULL; // Rectangle
-static jfieldID rectwFID = NULL; // Rectangle
-static jfieldID recthFID = NULL; // Rectangle
-
-static jmethodID pointCTOR = NULL; //Point
-static jmethodID pointGetXMID = NULL; //Point
-static jmethodID pointGetYMID = NULL; //Point
 
 static jmethodID getHostWindowMID = NULL; // WebPage
-
-static jmethodID getWindowBoundsMID = NULL; // WebPage
-static jmethodID setWindowBoundsMID = NULL; // WebPage
-static jmethodID getPageBoundsMID = NULL; // WebPage
-static jmethodID setCursorMID = NULL; // WebPage
-static jmethodID setFocusMID = NULL; // WebPage
-static jmethodID transferFocusMID = NULL;
-static jmethodID setTooltipMID = NULL;
-
-static jmethodID createWindowMID = NULL;
-static jmethodID showWindowMID = NULL;
-static jmethodID closeWindowMID = NULL;
-
-static jmethodID setScrollbarsVisibleMID = NULL;
-static jmethodID setStatusbarTextMID = NULL;
-
-static jmethodID alertMID = NULL;
-static jmethodID confirmMID = NULL;
-static jmethodID promptMID = NULL;
-
-static jmethodID addMessageToConsoleMID = NULL; // WebPage
-
-static jmethodID canRunBeforeUnloadConfirmPanelMID = NULL; // WebPage
-static jmethodID runBeforeUnloadConfirmPanelMID = NULL; // WebPage
-
-static jmethodID screenToWindowMID = NULL; // WebPage
-static jmethodID windowToScreenMID = NULL; // WebPage
-
-
-static jmethodID chooseFileMID = NULL; // WebPage
 
 static void initRefs(JNIEnv* env)
 {
@@ -115,91 +81,6 @@ static void initRefs(JNIEnv* env)
         getHostWindowMID = env->GetMethodID(getWebPageCls(), "getHostWindow",
                                             "()Lcom/sun/webkit/WCWidget;");
         ASSERT(getHostWindowMID);
-
-        getWindowBoundsMID = env->GetMethodID(getWebPageCls(), "fwkGetWindowBounds",
-                                              "()Lcom/sun/webkit/graphics/WCRectangle;");
-        ASSERT(getWindowBoundsMID);
-        setWindowBoundsMID = env->GetMethodID(getWebPageCls(), "fwkSetWindowBounds", "(IIII)V");
-        ASSERT(setWindowBoundsMID);
-        getPageBoundsMID = env->GetMethodID(getWebPageCls(), "fwkGetPageBounds",
-                                            "()Lcom/sun/webkit/graphics/WCRectangle;");
-        ASSERT(getPageBoundsMID);
-        setCursorMID = env->GetMethodID(getWebPageCls(), "fwkSetCursor", "(J)V");
-        ASSERT(setCursorMID);
-        setFocusMID = env->GetMethodID(getWebPageCls(), "fwkSetFocus", "(Z)V");
-        ASSERT(setFocusMID);
-        transferFocusMID = env->GetMethodID(getWebPageCls(), "fwkTransferFocus", "(Z)V");
-        ASSERT(transferFocusMID);
-        setTooltipMID = env->GetMethodID(getWebPageCls(), "fwkSetTooltip",
-                                         "(Ljava/lang/String;)V");
-        ASSERT(setTooltipMID);
-
-        createWindowMID = env->GetMethodID(getWebPageCls(), "fwkCreateWindow",
-            "(ZZZZ)Lcom/sun/webkit/WebPage;");
-        ASSERT(createWindowMID);
-        closeWindowMID = env->GetMethodID(getWebPageCls(), "fwkCloseWindow", "()V");
-        ASSERT(closeWindowMID);
-        showWindowMID = env->GetMethodID(getWebPageCls(), "fwkShowWindow", "()V");
-        ASSERT(showWindowMID);
-
-        setScrollbarsVisibleMID = env->GetMethodID(getWebPageCls(), "fwkSetScrollbarsVisible", "(Z)V");
-        ASSERT(setScrollbarsVisibleMID);
-        setStatusbarTextMID = env->GetMethodID(getWebPageCls(), "fwkSetStatusbarText",
-                                               "(Ljava/lang/String;)V");
-        ASSERT(setStatusbarTextMID);
-        alertMID = env->GetMethodID(getWebPageCls(), "fwkAlert", "(Ljava/lang/String;)V");
-        ASSERT(alertMID);
-        confirmMID = env->GetMethodID(getWebPageCls(), "fwkConfirm", "(Ljava/lang/String;)Z");
-        ASSERT(confirmMID);
-        promptMID = env->GetMethodID(getWebPageCls(), "fwkPrompt",
-                                     "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
-        ASSERT(promptMID);
-
-        addMessageToConsoleMID = env->GetMethodID(getWebPageCls(),
-                "fwkAddMessageToConsole",
-                "(Ljava/lang/String;ILjava/lang/String;)V");
-        ASSERT(addMessageToConsoleMID);
-
-
-        canRunBeforeUnloadConfirmPanelMID = env->GetMethodID(getWebPageCls(),
-                "fwkCanRunBeforeUnloadConfirmPanel",
-                "()Z");
-        ASSERT(canRunBeforeUnloadConfirmPanelMID);
-
-        runBeforeUnloadConfirmPanelMID = env->GetMethodID(getWebPageCls(),
-                "fwkRunBeforeUnloadConfirmPanel",
-                "(Ljava/lang/String;)Z");
-        ASSERT(runBeforeUnloadConfirmPanelMID);
-
-        screenToWindowMID = env->GetMethodID(getWebPageCls(), "fwkScreenToWindow",
-            "(Lcom/sun/webkit/graphics/WCPoint;)Lcom/sun/webkit/graphics/WCPoint;");
-        ASSERT(screenToWindowMID);
-
-        windowToScreenMID = env->GetMethodID(getWebPageCls(), "fwkWindowToScreen",
-            "(Lcom/sun/webkit/graphics/WCPoint;)Lcom/sun/webkit/graphics/WCPoint;");
-        ASSERT(windowToScreenMID);
-
-        chooseFileMID = env->GetMethodID(getWebPageCls(), "fwkChooseFile",
-            "(Ljava/lang/String;ZLjava/lang/String;)[Ljava/lang/String;");
-        ASSERT(chooseFileMID);
-    }
-    if (!rectxFID) {
-        rectxFID = env->GetFieldID(getRectangleCls(), "x", "F");
-        ASSERT(rectxFID);
-        rectyFID = env->GetFieldID(getRectangleCls(), "y", "F");
-        ASSERT(rectyFID);
-        rectwFID = env->GetFieldID(getRectangleCls(), "w", "F");
-        ASSERT(rectwFID);
-        recthFID = env->GetFieldID(getRectangleCls(), "h", "F");
-        ASSERT(recthFID);
-    }
-    if (!pointGetXMID) {
-        pointGetXMID = env->GetMethodID(getPointCls(), "getX", "()F");
-        ASSERT(pointGetXMID);
-        pointGetYMID = env->GetMethodID(getPointCls(), "getY", "()F");
-        ASSERT(pointGetYMID);
-        pointCTOR = env->GetMethodID(getPointCls(), "<init>", "(FF)V");
-        ASSERT(pointCTOR);
     }
 }
 }
@@ -218,85 +99,49 @@ void ChromeClientJava::chromeDestroyed()
 #if ENABLE(INPUT_TYPE_COLOR)
 RefPtr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient& client, const Color& initialColor)
 {
-    return adoptRef(new ColorChooserJava(m_webPage, &client, initialColor));
+    return adoptRef(new ColorChooserJava(m_pageRef, &client, initialColor));
 }
 #endif
 
 FloatRect ChromeClientJava::windowRect() const
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    JLObject rect(env->CallObjectMethod(m_webPage, getWindowBoundsMID));
-    WTF::CheckAndClearException(env);
-
-    if (rect) {
-        jfloat x = env->GetFloatField(rect, rectxFID);
-        jfloat y = env->GetFloatField(rect, rectyFID);
-        jfloat width = env->GetFloatField(rect, rectwFID);
-        jfloat height = env->GetFloatField(rect, recthFID);
-        return FloatRect(float(x), float(y), float(width), float(height));
-    } else {
-        return IntRect(0, 0, 0, 0);
+    if (m_callbacks && m_callbacks->get_window_bounds) {
+        float x = 0, y = 0, width = 0, height = 0;
+        if (m_callbacks->get_window_bounds(m_pageRef, &x, &y, &width, &height))
+            return FloatRect(x, y, width, height);
     }
+    return IntRect(0, 0, 0, 0);
 }
 
 void ChromeClientJava::setWindowRect(const FloatRect &r)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->set_window_bounds)
+        return;
 
-    env->CallObjectMethod(m_webPage, setWindowBoundsMID,
+    m_callbacks->set_window_bounds(m_pageRef,
                           (int)(r.x()), (int)(r.y()), (int)(r.width()), (int)(r.height()));
-    WTF::CheckAndClearException(env);
 }
 
 FloatRect ChromeClientJava::pageRect() const
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    ASSERT(m_webPage);
-
-    JLObject rect(env->CallObjectMethod(m_webPage, getPageBoundsMID));
-    WTF::CheckAndClearException(env);
-
-    if (rect) {
-        jfloat x = env->GetFloatField(rect, rectxFID);
-        jfloat y = env->GetFloatField(rect, rectyFID);
-        jfloat width = env->GetFloatField(rect, rectwFID);
-        jfloat height = env->GetFloatField(rect, recthFID);
-        return FloatRect(float(x), float(y), float(width), float(height));
-    } else {
-        return FloatRect(0, 0, 0, 0);
+    if (m_callbacks && m_callbacks->get_page_bounds) {
+        float x = 0, y = 0, width = 0, height = 0;
+        if (m_callbacks->get_page_bounds(m_pageRef, &x, &y, &width, &height))
+            return FloatRect(x, y, width, height);
     }
+    return FloatRect(0, 0, 0, 0);
 }
 
 void ChromeClientJava::focus()
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    ASSERT(m_webPage);
-
-    env->CallVoidMethod(m_webPage, setFocusMID, JNI_TRUE);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->set_focus)
+        m_callbacks->set_focus(m_pageRef, 1);
 }
 
 void ChromeClientJava::unfocus()
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    ASSERT(m_webPage);
-
-    env->CallVoidMethod(m_webPage, setFocusMID, JNI_FALSE);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->set_focus)
+        m_callbacks->set_focus(m_pageRef, 0);
 }
 
 bool ChromeClientJava::canTakeFocus(FocusDirection) const
@@ -306,14 +151,10 @@ bool ChromeClientJava::canTakeFocus(FocusDirection) const
 
 void ChromeClientJava::takeFocus(FocusDirection direction)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->transfer_focus)
+        return;
 
-    ASSERT(m_webPage);
-
-    env->CallVoidMethod(m_webPage, transferFocusMID, direction == FocusDirection::Forward);
-    WTF::CheckAndClearException(env);
+    m_callbacks->transfer_focus(m_pageRef, direction == FocusDirection::Forward ? 1 : 0);
 }
 
 void ChromeClientJava::focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement)
@@ -341,24 +182,25 @@ RefPtr<Page> ChromeClientJava::createWindow(
     const WindowFeatures& features,
     const NavigationAction& na)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->create_window)
+        return nullptr;
 
-    JLObject newWebPage(
-        env->CallObjectMethod(
-            m_webPage, createWindowMID,
-            bool_to_jbool(features.menuBarVisible),
-            bool_to_jbool(features.statusBarVisible),
-            bool_to_jbool(features.toolBarVisible || features.locationBarVisible),
-            bool_to_jbool(features.resizable)));
-    WTF::CheckAndClearException(env);
+    /*
+     * The slot returns the new page handle - the long the Java WebPage holds as pPage -
+     * rather than a registry id for the Java object, because what is needed here is the
+     * WebCore::Page. That is what removes WebPage::pageFromJObject and the getPage upcall.
+     */
+    int64_t newWebPage = m_callbacks->create_window(m_pageRef,
+            features.menuBarVisible ? 1 : 0,
+            features.statusBarVisible ? 1 : 0,
+            (features.toolBarVisible || features.locationBarVisible) ? 1 : 0,
+            features.resizable ? 1 : 0);
 
     if (!newWebPage) {
         return nullptr;
     }
 
-    Page* p = WebPage::pageFromJObject(newWebPage);
+    Page* p = WebPage::pageFromPeer(newWebPage);
     auto localFrame =  dynamicDowncast<LocalFrame>(p->mainFrame());
     //set opened frame name
     if (!openedMainFrameName.isEmpty())
@@ -369,22 +211,14 @@ RefPtr<Page> ChromeClientJava::createWindow(
 
 void ChromeClientJava::closeWindow()
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    env->CallVoidMethod(m_webPage, closeWindowMID);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->close_window)
+        m_callbacks->close_window(m_pageRef);
 }
 
 void ChromeClientJava::show()
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    env->CallVoidMethod(m_webPage, showWindowMID);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->show_window)
+        m_callbacks->show_window(m_pageRef);
 }
 
 bool ChromeClientJava::canRunModal() const
@@ -427,12 +261,8 @@ bool ChromeClientJava::statusbarVisible() const
 
 void ChromeClientJava::setScrollbarsVisible(bool v)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    env->CallVoidMethod(m_webPage, setScrollbarsVisibleMID, bool_to_jbool(v));
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->set_scrollbars_visible)
+        m_callbacks->set_scrollbars_visible(m_pageRef, v ? 1 : 0);
 }
 
 bool ChromeClientJava::scrollbarsVisible() const
@@ -454,24 +284,20 @@ bool ChromeClientJava::menubarVisible() const
 
 void ChromeClientJava::setStatusbarText(const String& text)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->set_statusbar_text)
+        return;
 
-    env->CallVoidMethod(m_webPage, setStatusbarTextMID, (jstring)text.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WKJStringArg textArg(text);
+    m_callbacks->set_statusbar_text(m_pageRef, textArg.data(), textArg.length());
 }
 
 void ChromeClientJava::setCursor(const Cursor& c)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->set_cursor)
+        return;
 
-    ASSERT(m_webPage);
-
-    env->CallVoidMethod(m_webPage, setCursorMID, c.platformCursor());
-    WTF::CheckAndClearException(env);
+    /* PlatformCursor is a jlong for this port (Source/WebCore/platform/Cursor.h:79). */
+    m_callbacks->set_cursor(m_pageRef, static_cast<int64_t>(c.platformCursor()));
 }
 
 void ChromeClientJava::setCursorHiddenUntilMouseMoves(bool)
@@ -481,54 +307,58 @@ void ChromeClientJava::setCursorHiddenUntilMouseMoves(bool)
 
 void ChromeClientJava::runJavaScriptAlert(LocalFrame&, const String& text)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->alert)
+        return;
 
-    env->CallVoidMethod(m_webPage, alertMID, (jstring)text.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WKJStringArg textArg(text);
+    m_callbacks->alert(m_pageRef, textArg.data(), textArg.length());
 }
 
 bool ChromeClientJava::runJavaScriptConfirm(LocalFrame&, const String& text)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->confirm)
+        return false;
 
-    jboolean res = env->CallBooleanMethod(m_webPage, confirmMID, (jstring)text.toJavaString(env));
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(res);
+    WKJStringArg textArg(text);
+    return m_callbacks->confirm(m_pageRef, textArg.data(), textArg.length()) != 0;
 }
 
 bool ChromeClientJava::runJavaScriptPrompt(LocalFrame&, const String& text,
                                            const String& defaultValue, String& result)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->prompt)
+        return false;
 
-    bool resb = false;
+    WKJStringArg textArg(text);
+    WKJStringArg defaultArg(defaultValue);
 
-    JLString resJ(static_cast<jstring>(
-        env->CallObjectMethod(m_webPage, promptMID,
-            (jstring)text.toJavaString(env),
-            (jstring)defaultValue.toJavaString(env))
-    ));
-    WTF::CheckAndClearException(env);
-    if (resJ) {
-        result = String(env, resJ);
-        resb = true;
+    Vector<char16_t, 256> buffer(256);
+    int32_t length = 0;
+    int32_t status = m_callbacks->prompt(m_pageRef, textArg.data(), textArg.length(),
+        defaultArg.data(), defaultArg.length(),
+        reinterpret_cast<uint16_t*>(buffer.data()), static_cast<int32_t>(buffer.size()), &length);
+
+    if (status == WKJ_STR_OVERFLOW) {
+        /* The callee serves the retry from the result it already has; the dialog is modal
+           and must not be shown a second time. */
+        buffer.resize(static_cast<size_t>(length));
+        status = m_callbacks->prompt(m_pageRef, textArg.data(), textArg.length(),
+            defaultArg.data(), defaultArg.length(),
+            reinterpret_cast<uint16_t*>(buffer.data()), static_cast<int32_t>(buffer.size()), &length);
     }
 
-    return resb;
+    /* A cancelled prompt is WKJ_STR_NULL, which is the null jstring the JNI code tested. */
+    if (status != WKJ_STR_OK)
+        return false;
+
+    result = String(std::span<const char16_t>(buffer.data(), static_cast<size_t>(length)));
+    return true;
 }
 
 void ChromeClientJava::runOpenPanel(LocalFrame&, FileChooser& fileChooser)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->choose_file)
+        return;
 
     StringBuilder builder;
     const Vector<String>& acceptTypeList = fileChooser.settings().acceptMIMETypes;
@@ -538,28 +368,58 @@ void ChromeClientJava::runOpenPanel(LocalFrame&, FileChooser& fileChooser)
         builder.append(acceptTypeList[i]);
     }
 
-    JLString initialFilename;
+    String initialFilename;
     const Vector<String> &filenames = fileChooser.settings().selectedFiles;
     if (filenames.size() > 0) {
-        initialFilename = filenames[0].toJavaString(env);
+        initialFilename = filenames[0];
     }
 
     bool multiple = fileChooser.settings().allowsMultipleFiles;
-    JLocalRef<jobjectArray> jfiles(static_cast<jobjectArray>(
-        env->CallObjectMethod(m_webPage, chooseFileMID,
-                              (jstring)initialFilename, multiple,
-                              (jstring)(builder.toString().toJavaString(env)))));
-    WTF::CheckAndClearException(env);
 
-    if (jfiles) {
-        Vector<String> files;
-        jsize length = env->GetArrayLength(jfiles);
-        for (int i = 0; i < length; i++) {
-            JLString f((jstring) env->GetObjectArrayElement(jfiles, i));
-            files.append(String(env, f));
-        }
-        fileChooser.chooseFiles(files);
+    WKJStringArg initialArg(initialFilename);
+    WKJStringArg mimeFiltersArg(builder.toString());
+
+    /*
+     * The chosen paths come back end to end in `chars`, with their lengths in `lengths`.
+     * The first call runs the dialog; if either buffer was too small the callee reports
+     * the sizes it needs and serves the retry from the result it already has, without
+     * showing the modal dialog a second time.
+     */
+    Vector<char16_t> chars(1024);
+    Vector<int32_t> lengths(16);
+    int32_t requiredUnits = 0;
+    int32_t count = m_callbacks->choose_file(m_pageRef,
+        initialArg.data(), initialArg.length(), multiple ? 1 : 0,
+        mimeFiltersArg.data(), mimeFiltersArg.length(),
+        reinterpret_cast<uint16_t*>(chars.data()), static_cast<int32_t>(chars.size()),
+        lengths.data(), static_cast<int32_t>(lengths.size()), &requiredUnits);
+
+    /* A negative count is the null array for which the JNI code skipped chooseFiles. */
+    if (count < 0)
+        return;
+
+    if (count > static_cast<int32_t>(lengths.size())
+            || requiredUnits > static_cast<int32_t>(chars.size())) {
+        chars.resize(static_cast<size_t>(requiredUnits));
+        lengths.resize(static_cast<size_t>(count));
+        count = m_callbacks->choose_file(m_pageRef,
+            initialArg.data(), initialArg.length(), multiple ? 1 : 0,
+            mimeFiltersArg.data(), mimeFiltersArg.length(),
+            reinterpret_cast<uint16_t*>(chars.data()), static_cast<int32_t>(chars.size()),
+            lengths.data(), static_cast<int32_t>(lengths.size()), &requiredUnits);
+        if (count < 0)
+            return;
     }
+
+    Vector<String> files;
+    files.reserveInitialCapacity(static_cast<size_t>(count));
+    size_t offset = 0;
+    for (int32_t i = 0; i < count; i++) {
+        size_t length = static_cast<size_t>(lengths[i]);
+        files.append(String(std::span<const char16_t>(chars.data() + offset, length)));
+        offset += length;
+    }
+    fileChooser.chooseFiles(files);
 }
 
 void ChromeClientJava::loadIconForFiles(const Vector<String>& filenames, FileIconLoader& loader)
@@ -569,38 +429,33 @@ void ChromeClientJava::loadIconForFiles(const Vector<String>& filenames, FileIco
 
 bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->can_run_before_unload)
+        return false;
 
-    auto result = env->CallBooleanMethod(m_webPage, canRunBeforeUnloadConfirmPanelMID);
-    WTF::CheckAndClearException(env);
-    return result;
+    return m_callbacks->can_run_before_unload(m_pageRef) != 0;
 }
 
 bool ChromeClientJava::runBeforeUnloadConfirmPanel(String&& message, LocalFrame&)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->run_before_unload)
+        return false;
 
-    auto result = env->CallBooleanMethod(m_webPage, runBeforeUnloadConfirmPanelMID, (jstring)message.toJavaString(env));
-    WTF::CheckAndClearException(env);
-    return result;
+    WKJStringArg messageArg(message);
+    return m_callbacks->run_before_unload(m_pageRef, messageArg.data(), messageArg.length()) != 0;
 }
 
 void ChromeClientJava::addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String& message,
     unsigned lineNumber, unsigned, const String& sourceID)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->add_message_to_console)
+        return;
 
-    env->CallVoidMethod(m_webPage, addMessageToConsoleMID,
-            (jstring)message.toJavaString(env),
-            (jint)lineNumber,
-            (jstring)sourceID.toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WKJStringArg messageArg(message);
+    WKJStringArg sourceArg(sourceID);
+    m_callbacks->add_message_to_console(m_pageRef,
+            messageArg.data(), messageArg.length(),
+            static_cast<int32_t>(lineNumber),
+            sourceArg.data(), sourceArg.length());
 }
 
 KeyboardUIMode ChromeClientJava::keyboardUIMode()
@@ -630,32 +485,18 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult&, OptionSet<P
 
 void ChromeClientJava::setToolTip(const String& toolTip)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->set_tooltip)
+        return;
 
-    JLString toolTipStr(NULL);
-    if (toolTip.length() > 0) {
-        toolTipStr = toolTip.toJavaString(env);
-    }
-    env->CallVoidMethod(m_webPage, setTooltipMID, (jstring)toolTipStr);
-    WTF::CheckAndClearException(env);
+    /* An empty tooltip was passed as a null jstring, and that is what clears it. */
+    WKJStringArg toolTipArg(toolTip.length() > 0 ? toolTip : String());
+    m_callbacks->set_tooltip(m_pageRef, toolTipArg.data(), toolTipArg.length());
 }
 
 void ChromeClientJava::print(LocalFrame&, const StringWithDirection&)
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
-    static jmethodID mid =  env->GetMethodID(
-        getWebPageCls(),
-        "fwkPrint",
-        "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(m_webPage, mid);
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->print)
+        m_callbacks->print(m_pageRef);
 }
 
 void ChromeClientJava::exceededDatabaseQuota(LocalFrame&, const String&, DatabaseDetails) {
@@ -670,18 +511,17 @@ void ChromeClientJava::reachedMaxAppCacheSize(int64_t)
 
 void ChromeClientJava::attachRootGraphicsLayer(LocalFrame&, GraphicsLayer* layer)
 {
-    WebPage::webPageFromJObject(m_webPage)->setRootChildLayer(layer);
+    m_webPagePeer->setRootChildLayer(layer);
 }
 
 void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
 {
-    WebPage::webPageFromJObject(m_webPage)
-            ->setNeedsOneShotDrawingSynchronization();
+    m_webPagePeer->setNeedsOneShotDrawingSynchronization();
 }
 
 void ChromeClientJava::triggerRenderingUpdate()
 {
-    WebPage::webPageFromJObject(m_webPage)->scheduleRenderingUpdate();
+    m_webPagePeer->scheduleRenderingUpdate();
 }
 
 void ChromeClientJava::attachViewOverlayGraphicsLayer(GraphicsLayer*)
@@ -692,32 +532,21 @@ void ChromeClientJava::attachViewOverlayGraphicsLayer(GraphicsLayer*)
 // HostWindow interface
 void ChromeClientJava::scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
-    WebPage::webPageFromJObject(m_webPage)->scroll(scrollDelta, rectToScroll, clipRect);
+    m_webPagePeer->scroll(scrollDelta, rectToScroll, clipRect);
 }
 
 IntPoint ChromeClientJava::screenToRootView(const IntPoint& p) const
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-    JLObject ptScreen(env->NewObject(
-        getPointCls(),
-        pointCTOR,
-        jfloat(p.x()),
-        jfloat(p.y())
-    ));
-    JLObject ptWindows(env->CallObjectMethod(
-        m_webPage,
-        screenToWindowMID,
-        jobject(ptScreen)));
-    return IntPoint(
-        int(env->CallFloatMethod(
-            ptWindows,
-            pointGetXMID)),
-        int(env->CallFloatMethod(
-            ptWindows,
-            pointGetYMID))
-    );
+    /*
+     * The WCPoint the JNI code allocated for the argument and read back for the result
+     * collapses into two float in-parameters and two out-parameters. An absent slot leaves
+     * the point unchanged, which is the documented default.
+     */
+    float outX = float(p.x());
+    float outY = float(p.y());
+    if (m_callbacks && m_callbacks->screen_to_window)
+        m_callbacks->screen_to_window(m_pageRef, float(p.x()), float(p.y()), &outX, &outY);
+    return IntPoint(int(outX), int(outY));
 }
 
 IntPoint ChromeClientJava::rootViewToScreen(const IntPoint& point) const
@@ -742,26 +571,13 @@ RefPtr<DataListSuggestionPicker> ChromeClientJava::createDataListSuggestionPicke
 
 IntRect ChromeClientJava::rootViewToScreen(const IntRect& r) const
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-    JLObject ptWindow(env->NewObject(
-        getPointCls(),
-        pointCTOR,
-        jfloat(r.x()),
-        jfloat(r.y())
-    ));
-    JLObject ptScreen(env->CallObjectMethod(
-        m_webPage,
-        windowToScreenMID,
-        jobject(ptWindow)));
+    float outX = float(r.x());
+    float outY = float(r.y());
+    if (m_callbacks && m_callbacks->window_to_screen)
+        m_callbacks->window_to_screen(m_pageRef, float(r.x()), float(r.y()), &outX, &outY);
     return IntRect(
-        int(env->CallFloatMethod(
-            ptScreen,
-            pointGetXMID)),
-        int(env->CallFloatMethod(
-            ptScreen,
-            pointGetYMID)),
+        int(outX),
+        int(outY),
         r.width(),
         r.height()
     );
@@ -782,6 +598,13 @@ void ChromeClientJava::intrinsicContentsSizeChanged(const IntSize&) const
     notImplemented();
 }
 
+/*
+ * The one method in this class that is still JNI, and the only reason m_webPage and the
+ * PlatformJavaClasses.h include survive. PlatformPageClient is a JGObject typedef
+ * (Source/WebCore/platform/Widget.h:56,64) and WidgetJava.cpp and PlatformScreenJava.cpp
+ * consume the result as one, so it cannot become a wkj_ref until that slice moves.
+ * WKJChromeCallbacks::get_host_window is the slot waiting for it.
+ */
 PlatformPageClient ChromeClientJava::platformPageClient() const
 {
     using namespace ChromeClientJavaInternal;
@@ -818,7 +641,7 @@ void ChromeClientJava::invalidateContentsForSlowScroll(const IntRect& updateRect
 
 void ChromeClientJava::repaint(const IntRect& r)
 {
-    WebPage::webPageFromJObject(m_webPage)->repaint(r);
+    m_webPagePeer->repaint(r);
 }
 
 bool ChromeClientJava::selectItemWritingDirectionIsNatural()

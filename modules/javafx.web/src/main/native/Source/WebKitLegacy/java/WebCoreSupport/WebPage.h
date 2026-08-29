@@ -36,6 +36,9 @@
 #include "MediaPlayerPrivateJava.h"
 #include "TextureMapperJavaAdapter.h"
 
+#include <webkit_java_api_page.h>
+#include <wtf/java/WKJHandle.h>
+
 #include <jni.h> // todo tav remove when building w/ pch
 
 namespace WebCore {
@@ -62,16 +65,22 @@ public:
         return m_page.get();
     }
 
-    static inline WebPage* webPageFromJLong(jlong p)
+    /* The `long pPage` the Java WebPage holds, as the WebPage it names. */
+    static inline WebPage* webPageFromPeer(int64_t p)
     {
-        return static_cast<WebPage*>(jlong_to_ptr(p));
+        return static_cast<WebPage*>(wkj_to_ptr(p));
     }
 
+    /*
+     * Still JNI. Only DragClientJava::startDrag uses it now, and that client cannot be
+     * converted until Source/WebCore/platform/graphics/java can mint a wkj_ref for the
+     * WCImage or WCImageFrame it passes to fwkStartDrag.
+     */
     static WebPage* webPageFromJObject(const JLObject& obj);
 
-    static inline Page* pageFromJLong(jlong p)
+    static inline Page* pageFromPeer(int64_t p)
     {
-        WebPage* webPage = webPageFromJLong(p);
+        WebPage* webPage = webPageFromPeer(p);
         return webPage ? webPage->page() : NULL;
     }
 
@@ -81,7 +90,24 @@ public:
         return webPage ? webPage->page() : NULL;
     }
 
+    /*
+     * Still JNI: the Java WebPage lives in PageSupplementJava, which
+     * Source/WebCore/platform/java/ScrollbarThemeJava.cpp, the URLLoader, the socket
+     * stream handle and PopupMenuJava all read back as a jobject. It goes when that slice
+     * makes the supplement hold a wkj_ref.
+     */
     static JLObject jobjectFromPage(Page* page);
+
+    /*
+     * The callback tables and the registry id of the Java WebPage, installed once by
+     * wkj_page_set_callbacks. The id is retained here and released when the page is
+     * destroyed or the tables are detached, which is the one retention that replaces the
+     * eight JNI global references the clients used to hold on the same object.
+     */
+    void setCallbacks(const WKJPageCallbacks* callbacks, wkj_ref webPage);
+
+    const WKJPageCallbacks* callbacks() const { return m_callbacks; }
+    wkj_ref javaPage() const { return m_javaPage.get(); }
 
     void setSize(const IntSize&);
     void prePaint();
@@ -130,6 +156,8 @@ private:
     Node* focusedWebCoreNode();
 
     RefPtr<Page> m_page;
+    const WKJPageCallbacks* m_callbacks { nullptr };
+    WKJHandle m_javaPage;
     RefPtr<PrintContext> m_printContext;
     RefPtr<RQRef> m_jRenderTheme;
 

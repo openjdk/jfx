@@ -39,6 +39,8 @@
 #include "BackForwardList.h"
 #include "WebPage.h"
 #include "PlatformJavaClasses.h"
+#include <WebCore/WKJDOMUtils.h>
+#include <webkit_java_api_page.h>
 
 static const unsigned DefaultCapacity = 100;
 static const unsigned NoCurrentItemIndex = UINT_MAX;
@@ -49,19 +51,27 @@ extern "C" {
 
 namespace {
 
-Page* getPage(jlong jpage)
+/*
+ * The process-wide back/forward callbacks, installed once by wkj_bfl_set_callbacks. The
+ * list is created during page creation, before the page exists, so it cannot be reached
+ * through wkj_page_set_callbacks; and list_changed is called with the id
+ * wkj_bfl_set_host was given rather than with the page, so nothing per page is needed.
+ */
+const WKJBackForwardCallbacks* s_wkjBackForwardCallbacks = nullptr;
+
+Page* getPage(int64_t page)
 {
-    return WebPage::pageFromJLong(jpage);
+    return WebPage::pageFromPeer(page);
 }
 
-BackForwardList* getBfl(jlong jpage)
+BackForwardList* getBfl(int64_t page)
 {
-    return &static_cast<BackForwardList&>(getPage(jpage)->backForward().client());
+    return &static_cast<BackForwardList&>(getPage(page)->backForward().client());
 }
 
-HistoryItem* getItem(jlong jitem)
+HistoryItem* getItem(int64_t item)
 {
-    return static_cast<HistoryItem*>(jlong_to_ptr(jitem));
+    return static_cast<HistoryItem*>(wkj_to_ptr(item));
 }
 
 jmethodID initMethod(JNIEnv* env, jclass cls, const char* name, const char* signature)
@@ -88,16 +98,17 @@ jclass getJEntryClass()
     return jEntryClass;
 }
 
-jclass getJBFLClass()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static JGClass jBFLClass(env->FindClass("com/sun/webkit/BackForwardList"));
-    ASSERT(jBFLClass);
-
-    return jBFLClass;
-}
-
+/*
+ * Still JNI, and deliberately so.
+ *
+ * createEntry constructs the Java BackForwardList$Entry and parks it in
+ * HistoryItem::m_hostObject, which is a JGObject in the upstream header
+ * Source/WebCore/history/HistoryItem.h:298. HistoryItem.cpp:78 reads it back from the
+ * destructor to fire notifyItemDestroyed, so entry lifetime cannot move to a wkj_ref
+ * without changing files outside this slice. That is why bflGet and bflItemGetChildren
+ * below, and notifyHistoryItemDestroyed, keep their JNI form while everything else in
+ * this file is wkj_*.
+ */
 static JLObject createEntry(HistoryItem* item, jlong jpage)
 {
 
@@ -128,23 +139,14 @@ HistoryItem* itemAtIndex(BackForwardList* bfl, int index)
 }
 
 // ChangeListener support
-void notifyBackForwardListChanged(const JLObject &host)
+void notifyBackForwardListChanged(wkj_ref host)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     if (!host) {
         return;
     }
 
-    static jmethodID notifyChangedMID = initMethod(
-        env,
-    getJBFLClass(),
-        "notifyChanged",
-        "()V");
-    ASSERT(notifyChangedMID);
-
-    env->CallVoidMethod(host, notifyChangedMID);
-    WTF::CheckAndClearException(env);
+    if (s_wkjBackForwardCallbacks && s_wkjBackForwardCallbacks->list_changed)
+        s_wkjBackForwardCallbacks->list_changed(host);
 }
 } // namespace
 
@@ -160,23 +162,31 @@ void notifyHistoryItemDestroyed(const JLObject &host)
 }
 
 // entry.getURL()
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetURL(JNIEnv* env, jclass, jlong jitem)
+WKJ_EXPORT int32_t wkj_bfl_item_url(int64_t item, uint16_t* result_buf, int32_t result_cap,
+                                    int32_t* result_length)
 {
-    HistoryItem* item = getItem(jitem);
-    String urlString = item->urlString();
-    return urlString.toJavaString(env).releaseLocal();
+    WKJCallScope wkjScope;
+    HistoryItem* historyItem = getItem(item);
+    String urlString = historyItem->urlString();
+    return WKJReturnString(result_buf, result_cap, result_length, urlString);
 }
 
 // entry.getTitle()
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTitle(JNIEnv* env, jclass, jlong jitem)
+WKJ_EXPORT int32_t wkj_bfl_item_title(int64_t item, uint16_t* result_buf, int32_t result_cap,
+                                      int32_t* result_length)
 {
-    HistoryItem* item = getItem(jitem);
-    String title = item->title();
-    return title.toJavaString(env).releaseLocal();
-
+    WKJCallScope wkjScope;
+    HistoryItem* historyItem = getItem(item);
+    String title = historyItem->title();
+    return WKJReturnString(result_buf, result_cap, result_length, title);
 }
 
-// entry.getIcon()
+/*
+ * entry.getIcon() has no wkj_* counterpart on purpose. ENABLE(ICONDATABASE) is never
+ * defined for this port, so the body below is "return nullptr" for every input and the
+ * native-necessity triage rules it PURE with exact parity: it becomes a Java "return null"
+ * in its own, behaviour-affecting commit rather than being re-plumbed through the C ABI.
+ */
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNIEnv*, jclass, jlong)
 {
 /*
@@ -194,27 +204,33 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNI
 }
 
 // entry.isTargetItem()
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_BackForwardList_bflItemIsTargetItem(JNIEnv*, jclass, jlong jitem)
+WKJ_EXPORT int32_t wkj_bfl_item_is_target(int64_t item)
 {
-    HistoryItem* item = getItem(jitem);
-    return (jboolean)item->isTargetItem();
+    WKJCallScope wkjScope;
+    HistoryItem* historyItem = getItem(item);
+    return historyItem->isTargetItem() ? 1 : 0;
 }
 
 // entry.getTarget()
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTarget(JNIEnv* env, jclass, jlong jitem)
+WKJ_EXPORT int32_t wkj_bfl_item_target(int64_t item, uint16_t* result_buf, int32_t result_cap,
+                                       int32_t* result_length)
 {
-    HistoryItem* item = getItem(jitem);
-    String target = item->target();
-    if (!target.isEmpty()) {
-        return target.toJavaString(env).releaseLocal();
-    } else {
-        return nullptr;
+    WKJCallScope wkjScope;
+    HistoryItem* historyItem = getItem(item);
+    String target = historyItem->target();
+    /* An empty target was reported as a null jstring, and stays WKJ_STR_NULL. */
+    if (target.isEmpty()) {
+        if (result_length)
+            *result_length = 0;
+        return WKJ_STR_NULL;
     }
+    return WKJReturnString(result_buf, result_cap, result_length, target);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardListForDRT(JNIEnv*, jclass, jlong jpage)
+WKJ_EXPORT void wkj_bfl_clear_for_drt(int64_t page)
 {
-    BackForwardList* bfl = getBfl(jpage);
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = getBfl(page);
     RefPtr<HistoryItem> current = bfl->currentItem();
     int capacity = bfl->capacity();
     bfl->setCapacity(0);
@@ -223,7 +239,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
     bfl->goToItem(*current);
 }
 
-// entry.getChildren()
+/*
+ * entry.getChildren() keeps its JNI form: it builds Java Entry objects through
+ * createEntry, whose HistoryItem::m_hostObject dependency is described above.
+ */
 JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChildren(JNIEnv* env, jclass, jlong jitem, jlong jpage)
 {
     HistoryItem* item = getItem(jitem);
@@ -236,47 +255,56 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChi
 }
 
 // BackForwardList.size()
-JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflSize(JNIEnv*, jclass, jlong jpage)
+WKJ_EXPORT int32_t wkj_bfl_size(int64_t page)
 {
-    return getSize(getBfl(jpage));
+    WKJCallScope wkjScope;
+    return getSize(getBfl(page));
 }
 
 // BackForwardList.getMaximumSize()
-JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflGetMaximumSize(JNIEnv*, jclass, jlong jpage)
+WKJ_EXPORT int32_t wkj_bfl_get_capacity(int64_t page)
 {
-    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
-    return bfl->capacity();
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(page));
+    return static_cast<int32_t>(bfl->capacity());
 }
 
 // BackForwardList.setMaximumSize()
-JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetMaximumSize(JNIEnv*, jclass, jlong jpage, jint size)
+WKJ_EXPORT void wkj_bfl_set_capacity(int64_t page, int32_t capacity)
 {
-    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
-    bfl->setCapacity(size);
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(page));
+    bfl->setCapacity(capacity);
 }
 
 // BackForwardList.getCurrentIndex()
-JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflGetCurrentIndex(JNIEnv*, jclass, jlong jpage)
+WKJ_EXPORT int32_t wkj_bfl_current_index(int64_t page)
 {
-    BackForwardList* bfl = getBfl(jpage);
-    return bfl->currentItem() ? bfl->backListCount() : -1;
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = getBfl(page);
+    return bfl->currentItem() ? static_cast<int32_t>(bfl->backListCount()) : -1;
 }
 
 // BackForwardList.setEnabled()
-JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetEnabled(JNIEnv*, jclass, jlong jpage, jboolean flag)
+WKJ_EXPORT void wkj_bfl_set_enabled(int64_t page, int32_t enabled)
 {
-    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
-    bfl->setEnabled(flag);
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(page));
+    bfl->setEnabled(enabled);
 }
 
 // BackForwardList.isEnabled()
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_BackForwardList_bflIsEnabled(JNIEnv*, jclass, jlong jpage)
+WKJ_EXPORT int32_t wkj_bfl_is_enabled(int64_t page)
 {
-    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
-    return bfl->enabled();
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(page));
+    return bfl->enabled() ? 1 : 0;
 }
 
-// BackForwardList.get()
+/*
+ * BackForwardList.get() keeps its JNI form for the same reason as bflItemGetChildren: it
+ * hands back the Java Entry cached in HistoryItem::m_hostObject.
+ */
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflGet(JNIEnv*, jclass, jlong jpage, jint index)
 {
     BackForwardList* bfl = getBfl(jpage);
@@ -291,38 +319,52 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflGet(JNIEnv*, jc
 }
 
 // BackForwardList.setCurrentIndex()
-JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflSetCurrentIndex(JNIEnv*, jclass, jlong jpage, jint index)
+WKJ_EXPORT int32_t wkj_bfl_set_current_index(int64_t page, int32_t index)
 {
-    Page* page = getPage(jpage);
-    BackForwardList* bfl = &static_cast<BackForwardList&>(page->backForward().client());
+    WKJCallScope wkjScope;
+    Page* p = getPage(page);
+    BackForwardList* bfl = &static_cast<BackForwardList&>(p->backForward().client());
     if (index < 0 || index >= getSize(bfl))
         return -1;
     int distance = index - bfl->backListCount();
-    page->backForward().goBackOrForward(distance);
+    p->backForward().goBackOrForward(distance);
     return index;
 }
 
 // BackForwardList.get[Last]IndexOf()
-JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflIndexOf(JNIEnv*, jclass, jlong jpage, jlong jitem, jboolean reverse)
+WKJ_EXPORT int32_t wkj_bfl_index_of(int64_t page, int64_t item, int32_t reverse)
 {
-    if (!jitem)
+    WKJCallScope wkjScope;
+    if (!item)
         return -1;
-    BackForwardList* bfl = getBfl(jpage);
+    BackForwardList* bfl = getBfl(page);
     int size = getSize(bfl);
     int start = reverse ? size - 1 : 0;
     int end = reverse ? -1 : size;
     int inc = reverse ? -1 : 1;
-    HistoryItem* item = static_cast<HistoryItem*>(jlong_to_ptr(jitem));
+    HistoryItem* historyItem = static_cast<HistoryItem*>(wkj_to_ptr(item));
     for (int i = start; i != end; i += inc)
-        if (item == itemAtIndex(bfl, i))
+        if (historyItem == itemAtIndex(bfl, i))
             return i;
     return -1;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetHostObject(JNIEnv*, jclass, jlong jpage, jobject host)
+WKJ_EXPORT void wkj_bfl_set_host(int64_t page, wkj_ref back_forward_list)
 {
-    BackForwardList* bfl = getBfl(jpage);
-    bfl->setHostObject(JLObject(host, true));
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = getBfl(page);
+    /*
+     * The JNI version took a global reference to the Java BackForwardList; the handle
+     * retains the id in the same place and releases it when it is replaced or the list
+     * goes away.
+     */
+    bfl->setHostObject(WKJHandle::retained(back_forward_list));
+}
+
+WKJ_EXPORT void wkj_bfl_set_callbacks(const WKJBackForwardCallbacks* callbacks)
+{
+    WKJCallScope wkjScope;
+    s_wkjBackForwardCallbacks = callbacks;
 }
 
 }
@@ -391,7 +433,7 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
     m_entries.insert(m_current + 1, WTF::move(newItem));
     ++m_current;
 
-    notifyBackForwardListChanged(m_hostObject);
+    notifyBackForwardListChanged(m_hostObject.get());
 }
 
 void BackForwardList::goBack()
@@ -423,7 +465,7 @@ void BackForwardList::goToItem(HistoryItem& item)
         m_current = index;
     }
 
-    notifyBackForwardListChanged(m_hostObject);
+    notifyBackForwardListChanged(m_hostObject.get());
 }
 
 RefPtr<HistoryItem> BackForwardList::backItem()
@@ -493,7 +535,7 @@ void BackForwardList::setCapacity(int size)
     }
     m_capacity = size;
 
-    notifyBackForwardListChanged(m_hostObject);
+    notifyBackForwardListChanged(m_hostObject.get());
 }
 
 bool BackForwardList::enabled()
@@ -582,7 +624,7 @@ void BackForwardList::removeItem(HistoryItem& item)
         }
     }
 
-    notifyBackForwardListChanged(m_hostObject);
+    notifyBackForwardListChanged(m_hostObject.get());
 }
 
 bool BackForwardList::containsItem(const HistoryItem& entry) const

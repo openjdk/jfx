@@ -25,6 +25,9 @@
 
 
 #include "FrameLoaderClientJava.h"
+#include "WKJPageSupport.h"
+#include <WebCore/WKJDOMUtils.h>
+#include <wkj_constants.h>
 #include "FrameNetworkingContextJava.h"
 #include "WebPage.h"
 
@@ -54,89 +57,18 @@
 #include "DocumentPage.h"
 #include "FrameDestructionObserverInlines.h"
 
-#include "com_sun_webkit_LoadListenerClient.h"
 
 namespace WebCore {
 
 namespace FrameLoaderClientJavaInternal {
 
-static JGClass webPageClass;
-static JGClass networkContextClass;
+/*
+ * com.sun.webkit.network.NetworkContext.canHandleURL is a static Java method and belongs
+ * to no page, so it is installed once for the process by wkj_install_network_callbacks
+ * rather than travelling in WKJPageCallbacks.
+ */
+static const WKJNetworkCallbacks* s_wkjNetworkCallbacks = nullptr;
 
-static jmethodID setRequestURLMID;
-static jmethodID removeRequestURLMID;
-
-static jmethodID fireLoadEventMID;
-static jmethodID fireResourceLoadEventMID;
-static jmethodID canHandleURLMID;
-
-static jmethodID permitNavigateActionMID;
-static jmethodID permitRedirectActionMID;
-static jmethodID permitAcceptResourceActionMID;
-static jmethodID permitSubmitDataActionMID;
-static jmethodID permitNewWindowActionMID;
-
-static jmethodID didClearWindowObjectMID;
-
-static jmethodID frameCreatedMID;
-static jmethodID frameDestroyedMID;
-
-static void initRefs(JNIEnv* env)
-{
-    if (!webPageClass) {
-        webPageClass = JLClass(env->FindClass(
-            "com/sun/webkit/WebPage"));
-        ASSERT(webPageClass);
-
-        setRequestURLMID = env->GetMethodID(webPageClass, "fwkSetRequestURL", "(JILjava/lang/String;)V");
-        ASSERT(setRequestURLMID);
-        removeRequestURLMID = env->GetMethodID(webPageClass, "fwkRemoveRequestURL", "(JI)V");
-        ASSERT(removeRequestURLMID);
-
-        fireLoadEventMID = env->GetMethodID(webPageClass, "fwkFireLoadEvent",
-                                            "(JILjava/lang/String;Ljava/lang/String;DI)V");
-        ASSERT(fireLoadEventMID);
-        fireResourceLoadEventMID = env->GetMethodID(webPageClass, "fwkFireResourceLoadEvent",
-                                                    "(JIILjava/lang/String;DI)V");
-        ASSERT(fireResourceLoadEventMID);
-
-        permitNavigateActionMID = env->GetMethodID(webPageClass, "fwkPermitNavigateAction",
-                                                   "(JLjava/lang/String;)Z");
-        ASSERT(permitNavigateActionMID);
-
-        permitRedirectActionMID = env->GetMethodID(webPageClass, "fwkPermitRedirectAction",
-                                                   "(JLjava/lang/String;)Z");
-        ASSERT(permitRedirectActionMID);
-
-        permitAcceptResourceActionMID = env->GetMethodID(webPageClass, "fwkPermitAcceptResourceAction",
-                                                         "(JLjava/lang/String;)Z");
-        ASSERT(permitAcceptResourceActionMID);
-
-        permitSubmitDataActionMID = env->GetMethodID(webPageClass, "fwkPermitSubmitDataAction",
-                                                     "(JLjava/lang/String;Ljava/lang/String;Z)Z");
-        ASSERT(permitSubmitDataActionMID);
-
-        permitNewWindowActionMID = env->GetMethodID(webPageClass, "fwkPermitNewWindowAction",
-                                                    "(JLjava/lang/String;)Z");
-        ASSERT(permitNewWindowActionMID);
-
-        didClearWindowObjectMID = env->GetMethodID(webPageClass, "fwkDidClearWindowObject", "(JJ)V");
-        ASSERT(didClearWindowObjectMID);
-
-        frameCreatedMID = env->GetMethodID(webPageClass, "fwkFrameCreated", "(J)V");
-        ASSERT(frameCreatedMID);
-
-        frameDestroyedMID = env->GetMethodID(webPageClass, "fwkFrameDestroyed", "(J)V");
-        ASSERT(frameDestroyedMID);
-    }
-    if (!networkContextClass) {
-        networkContextClass = JLClass(env->FindClass("com/sun/webkit/network/NetworkContext"));
-        ASSERT(networkContextClass);
-
-        canHandleURLMID = env->GetStaticMethodID(networkContextClass, "canHandleURL", "(Ljava/lang/String;)Z");
-        ASSERT(canHandleURLMID);
-    }
-}
 // This was copied from file "WebKit/Source/WebKit/mac/Misc/WebKitErrors.h".
 enum
 {
@@ -197,13 +129,9 @@ FrameLoaderClientJava::FrameLoaderClientJava(FrameLoader& loader, const JLObject
 FrameLoaderClientJava::~FrameLoaderClientJava()
 {
     using namespace FrameLoaderClientJavaInternal;
-    WC_GETJAVAENV_CHKRET(env);
-    initRefs(env);
-
-    ASSERT(m_webPage);
     ASSERT(m_frame);
-    env->CallVoidMethod(m_webPage, frameDestroyedMID, ptr_to_jlong(m_frame));
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->frame_destroyed)
+        m_callbacks->frame_destroyed(m_pageRef, wkj_from_ptr(m_frame));
 }
 
 void FrameLoaderClientJava::dispatchDidNavigateWithinPage()
@@ -215,8 +143,8 @@ void FrameLoaderClientJava::dispatchDidNavigateWithinPage()
                   1.0 /* progress */);
 }
 
-// Called from twkInit to initialize the client. This will ensure that
-// the page field is initialized before any operation that needs it
+// Called from wkj_page_init to initialize the client. wkj_page_set_callbacks has already
+// set the page field, so this only asserts that it did.
 void FrameLoaderClientJava::init()
 {
     (void)page();
@@ -224,10 +152,12 @@ void FrameLoaderClientJava::init()
 
 Page* FrameLoaderClientJava::page()
 {
-    if (!m_page) {
-        m_page = WebPage::pageFromJObject(m_webPage);
-        ASSERT(m_page);
-    }
+    /*
+     * m_page used to be fetched lazily with a WebPage.getPage upcall through
+     * WebPage::pageFromJObject. wkj_page_set_callbacks now hands it over directly, so this
+     * is a plain accessor and init() below has nothing left to prime.
+     */
+    ASSERT(m_page);
     return m_page;
 }
 
@@ -245,22 +175,21 @@ void FrameLoaderClientJava::setFrame(Frame* frame)
 void FrameLoaderClientJava::setRequestURL(Frame* f,ResourceLoaderIdentifier  identifier, String url)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->set_request_url)
+        return;
 
-    JLString urlJavaString(url.toJavaString(env));
-    env->CallVoidMethod(m_webPage, setRequestURLMID, ptr_to_jlong(f), identifier, (jstring)urlJavaString);
-    WTF::CheckAndClearException(env);
+    WKJStringArg urlArg(url);
+    m_callbacks->set_request_url(m_pageRef, wkj_from_ptr(f), static_cast<int32_t>(identifier.toUInt64()),
+        urlArg.data(), urlArg.length());
 }
 
 void FrameLoaderClientJava::removeRequestURL(Frame* f, ResourceLoaderIdentifier identifier)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->remove_request_url)
+        return;
 
-    env->CallVoidMethod(m_webPage, removeRequestURLMID, ptr_to_jlong(f), identifier);
-    WTF::CheckAndClearException(env);
+    m_callbacks->remove_request_url(m_pageRef, wkj_from_ptr(f), static_cast<int32_t>(identifier.toUInt64()));
 }
 
 void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
@@ -268,11 +197,11 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
                                           double progress, int errorCode)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->fire_load_event)
+        return;
 
-    JLString urlJavaString(url.toJavaString(env));
-    JLString contentTypeJavaString(contentType.toJavaString(env));
+    WKJStringArg urlArg(url);
+    WKJStringArg contentTypeArg(contentType);
 
     // First, notify SharedBufferManager, so users can get the full source
     // in CONTENT_RECEIVED handler
@@ -288,10 +217,10 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
     }
 
     // Second, send a load event
-    env->CallVoidMethod(m_webPage, fireLoadEventMID,
-                        ptr_to_jlong(f), state, (jstring)urlJavaString,
-                        (jstring)contentTypeJavaString, progress, errorCode);
-    WTF::CheckAndClearException(env);
+    m_callbacks->fire_load_event(m_pageRef, wkj_from_ptr(f), state,
+                        urlArg.data(), urlArg.length(),
+                        contentTypeArg.data(), contentTypeArg.length(),
+                        progress, errorCode);
 }
 
 void FrameLoaderClientJava::postResourceLoadEvent(Frame* f, int state,
@@ -299,15 +228,14 @@ void FrameLoaderClientJava::postResourceLoadEvent(Frame* f, int state,
                                                   double progress, int errorCode)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->fire_resource_load_event)
+        return;
 
-    JLString contentTypeJavaString(contentType.toJavaString(env));
+    WKJStringArg contentTypeArg(contentType);
     // notification for resource event listeners
-    env->CallVoidMethod(m_webPage, fireResourceLoadEventMID,
-                        ptr_to_jlong(f), state, id,
-                        (jstring)contentTypeJavaString, progress, errorCode);
-    WTF::CheckAndClearException(env);
+    m_callbacks->fire_resource_load_event(m_pageRef, wkj_from_ptr(f), state,
+                        static_cast<int32_t>(id.toUInt64()),
+                        contentTypeArg.data(), contentTypeArg.length(), progress, errorCode);
 }
 
 String FrameLoaderClientJava::userAgent(const URL&) const
@@ -409,18 +337,18 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
                                                                    FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
     ASSERT(frame() && policyFunction);
     if (!frame() || !policyFunction) {
         return;
     }
 
-    JLString urlString(req.url().string().toJavaString(env));
-    bool permit = jbool_to_bool(env->CallBooleanMethod(m_webPage, permitNewWindowActionMID,
-                                                       ptr_to_jlong(frame()), (jstring)urlString));
-    WTF::CheckAndClearException(env);
+    /* A missing slot answers 0, which is the "not permitted" default of the ABI. */
+    bool permit = false;
+    if (m_callbacks && m_callbacks->permit_new_window) {
+        WKJStringArg urlArg(req.url().string());
+        permit = m_callbacks->permit_new_window(m_pageRef, wkj_from_ptr(frame()),
+            urlArg.data(), urlArg.length()) != 0;
+    }
 
     // FIXME: I think Qt version marshals this to another thread so when we
     // have multi-threaded download, we might need to do the same
@@ -442,9 +370,6 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
                                                                     FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
     ASSERT(frame() && policyFunction);
     if (!frame() || !policyFunction) {
         return;
@@ -452,29 +377,29 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
 
     bool permit = true;
 
-    JLString urlJavaString(req.url().string().toJavaString(env));
+    WKJStringArg urlArg(req.url().string());
 
     // 1. Submitting/resubmitting data.
     if (action.type() == NavigationType::FormSubmitted ||
         action.type() == NavigationType::FormResubmitted)
     {
-        JLString httpMethodString(req.httpMethod().toJavaString(env));
-        permit = env->CallBooleanMethod(m_webPage, permitSubmitDataActionMID,
-                                        ptr_to_jlong(frame()), (jstring)urlJavaString,
-                                        (jstring)httpMethodString,
-                                        bool_to_jbool(action.type() == NavigationType::FormSubmitted));
-        WTF::CheckAndClearException(env);
+        WKJStringArg httpMethodArg(req.httpMethod());
+        permit = m_callbacks && m_callbacks->permit_submit_data
+            && m_callbacks->permit_submit_data(m_pageRef, wkj_from_ptr(frame()),
+                                        urlArg.data(), urlArg.length(),
+                                        httpMethodArg.data(), httpMethodArg.length(),
+                                        action.type() == NavigationType::FormSubmitted ? 1 : 0) != 0;
     // 2. Redirecting page.
     } else if (m_isPageRedirected) {
-        permit = env->CallBooleanMethod(m_webPage, permitRedirectActionMID,
-                                        ptr_to_jlong(frame()), (jstring)urlJavaString);
-        WTF::CheckAndClearException(env);
+        permit = m_callbacks && m_callbacks->permit_redirect
+            && m_callbacks->permit_redirect(m_pageRef, wkj_from_ptr(frame()),
+                                        urlArg.data(), urlArg.length()) != 0;
         m_isPageRedirected = false;
     // 3. Loading document.
     } else {
-        permit = env->CallBooleanMethod(m_webPage, permitNavigateActionMID,
-                                        ptr_to_jlong(frame()), (jstring)urlJavaString);
-        WTF::CheckAndClearException(env);
+        permit = m_callbacks && m_callbacks->permit_navigate
+            && m_callbacks->permit_navigate(m_pageRef, wkj_from_ptr(frame()),
+                                        urlArg.data(), urlArg.length()) != 0;
     }
 
     policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
@@ -496,9 +421,6 @@ RefPtr<Widget> FrameLoaderClientJava::createPlugin(HTMLPlugInElement& element,
 RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
     auto* localFrame = dynamicDowncast<LocalFrame>(m_frame);
 
     auto clientCreator = [this](auto& localFrame, WebCore::FrameLoader& loader) -> WTF::UniqueRef<WebCore::LocalFrameLoaderClient> {
@@ -510,13 +432,16 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
     auto policy = ownerElement.referrerPolicy();
     RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, policy, ownerElement,WTF::move(frameTreeSyncData));
 
-    static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
+    auto& childClient = static_cast<FrameLoaderClientJava&>(childFrame->loader().client());
+    childClient.setFrame(childFrame.get());
+    /* The subframe client inherits the page the captured JLObject used to carry. */
+    childClient.setJavaPage(m_pageRef, m_callbacks, m_page);
 
     childFrame->tree().setSpecifiedName(name);
     childFrame->init();
 
-    env->CallVoidMethod(m_webPage, frameCreatedMID, ptr_to_jlong(childFrame.get()));
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->frame_created)
+        m_callbacks->frame_created(m_pageRef, wkj_from_ptr(childFrame.get()));
 
     return childFrame;
 }
@@ -614,9 +539,6 @@ void FrameLoaderClientJava::dispatchDidStartProvisionalLoad()
 void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, ResourceLoaderIdentifier identifier, ResourceRequest& req, const ResourceResponse& res)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
     Frame* f = l->frame();
     if (!f) {
         f = frame();
@@ -642,10 +564,12 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, ResourceL
                       progress);
     } else {
         // Check resource policy.
-        JLString urlJavaString(req.url().string().toJavaString(env));
-        bool permit = jbool_to_bool(env->CallBooleanMethod(m_webPage, permitAcceptResourceActionMID,
-                                                           ptr_to_jlong(f), (jstring)urlJavaString));
-        WTF::CheckAndClearException(env);
+        bool permit = false;
+        if (m_callbacks && m_callbacks->permit_accept_resource) {
+            WKJStringArg urlArg(req.url().string());
+            permit = m_callbacks->permit_accept_resource(m_pageRef, wkj_from_ptr(f),
+                urlArg.data(), urlArg.length()) != 0;
+        }
         if (!permit) {
 /*
             req.setURL(NULL); // will cancel loading
@@ -904,14 +828,11 @@ void FrameLoaderClientJava::didChangeTitle(DocumentLoader *l) { setTitle(l->titl
 bool FrameLoaderClientJava::canHandleRequest(const ResourceRequest& req) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!s_wkjNetworkCallbacks || !s_wkjNetworkCallbacks->can_handle_url)
+        return false;
 
-    JLString urlJavaString(req.url().string().toJavaString(env));
-    jboolean ret = env->CallStaticBooleanMethod(networkContextClass, canHandleURLMID, (jstring)urlJavaString);
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(ret);
+    WKJStringArg urlArg(req.url().string());
+    return s_wkjNetworkCallbacks->can_handle_url(urlArg.data(), urlArg.length()) != 0;
 }
 
 bool FrameLoaderClientJava::canShowMIMEType(const String& mimeType) const
@@ -1037,9 +958,6 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     DOMWrapperWorld& world)
 {
     using namespace FrameLoaderClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
-
     if (&world != &mainThreadNormalWorldSingleton()) {
         return;
     }
@@ -1050,9 +968,10 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
             mainThreadNormalWorldSingleton()));
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
 
-    env->CallVoidMethod(m_webPage, didClearWindowObjectMID,
-            ptr_to_jlong(context), ptr_to_jlong(windowObject));
-    WTF::CheckAndClearException(env);
+    if (m_callbacks && m_callbacks->did_clear_window_object) {
+        m_callbacks->did_clear_window_object(m_pageRef, wkj_from_ptr(f),
+            static_cast<void*>(context), static_cast<void*>(windowObject));
+    }
 }
 
 void FrameLoaderClientJava::registerForIconNotification()
@@ -1126,6 +1045,20 @@ bool FrameLoaderClientJava::supportsAsyncShouldGoToHistoryItem() const
 
 void FrameLoaderClientJava::setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize)
 {
+}
+
+}
+
+extern "C" {
+
+/*
+ * NetworkContext.canHandleURL is a static Java method, so it belongs to no page and is
+ * installed once for the process rather than through wkj_page_set_callbacks.
+ */
+WKJ_EXPORT void wkj_install_network_callbacks(const WKJNetworkCallbacks* callbacks)
+{
+    WebCore::WKJCallScope wkjScope;
+    WebCore::FrameLoaderClientJavaInternal::s_wkjNetworkCallbacks = callbacks;
 }
 
 }
