@@ -32,7 +32,6 @@
 #include <wtf/Vector.h>
 #include "HistoryItem.h"
 
-#include <wtf/java/JavaRef.h>
 #include <wtf/java/WKJHandle.h>
 
 typedef Vector<Ref<WebCore::HistoryItem>> HistoryItemVector;

@@ -26,7 +26,6 @@
 #pragma once
 
 #include <WebCore/ChromeClient.h>
-#include <WebCore/PlatformJavaClasses.h>
 #include <webkit_java_api_page.h>
 
 namespace WebCore {
@@ -36,7 +35,7 @@ class WebPage;
 class ChromeClientJava final : public ChromeClient {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ChromeClientJava);
 public:
-    ChromeClientJava(const JLObject &webPage);
+    ChromeClientJava() = default;
 
     /*
      * Installs the page this client drives. Called by wkj_page_set_callbacks, once,
@@ -207,17 +206,6 @@ public:
 
 private:
     void repaint(const IntRect&);
-
-    /*
-     * The Java WebPage as a JNI global reference. This is the last JNI in this class and
-     * it exists for exactly one caller: platformPageClient(), whose return type
-     * PlatformPageClient is a JGObject typedef (Source/WebCore/platform/Widget.h:56,64)
-     * that WidgetJava.cpp and PlatformScreenJava.cpp consume as one. It goes when the
-     * WebCore/platform/java slice makes PlatformWidget a wkj_ref, at which point
-     * WKJChromeCallbacks::get_host_window starts being used and this field, the
-     * constructor argument and the PlatformJavaClasses.h include all come out together.
-     */
-    JGObject m_webPage;
 
     wkj_ref m_pageRef { 0 };
     const WKJChromeCallbacks* m_callbacks { nullptr };

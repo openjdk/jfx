@@ -27,6 +27,8 @@
 #include "DragClientJava.h"
 #include "WebPage.h"
 
+#include <WebCore/PlatformJavaClasses.h>
+
 #include <WebCore/DataTransfer.h>
 #include <WebCore/Frame.h>
 #include "LocalFrameInlines.h"
@@ -38,11 +40,6 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DragClientJava);
-
-DragClientJava::DragClientJava(const JLObject &webPage)
-    : m_webPage(webPage)
-{
-}
 
 DragClientJava::~DragClientJava()
 {
@@ -78,21 +75,8 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     auto eventPos = item.eventPositionInContentCoordinates;
     auto dragSourceAction = item.sourceAction;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID mid = env->GetMethodID(
-        PG_GetWebPageClass(env),
-        "fwkStartDrag", "("
-        "Ljava/lang/Object;"
-        "II"
-        "II"
-        "[Ljava/lang/String;"
-        "[Ljava/lang/Object;"
-        "Z"
-        ")V");
-    ASSERT(mid);
-
-    static JGClass clsString(env->FindClass("java/lang/String"));
-    static JGClass clsObject(env->FindClass("java/lang/Object"));
+    if (!m_callbacks || !m_callbacks->start_drag || !m_page)
+        return;
 
     // we are temporary changing dataTransfer security context
     // for transfer-to-Java purposes.
@@ -100,48 +84,56 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     dataTransfer.setStoreMode(DataTransfer::StoreMode::Readonly);
     auto& localFrameRef = downcast<LocalFrame>(localFrame);
     Vector<String> mimeTypes(dataTransfer.types(*localFrameRef.document()));
-    JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
-    JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
-    WTF::CheckAndClearException(env); // OOME
 
-    auto document = (dynamicDowncast<LocalFrame>(WebPage::pageFromJObject(m_webPage)->mainFrame()))->document();
+    /*
+     * The two Java arrays the JNI code allocated become two arrays of (pointer, length)
+     * that live for the duration of the call. Each WKJStringArg owns its characters, so
+     * they are held in vectors rather than built as temporaries.
+     */
+    Vector<std::unique_ptr<WKJStringArg>> mimeArgs;
+    Vector<std::unique_ptr<WKJStringArg>> valueArgs;
+    Vector<const uint16_t*> mimePtrs;
+    Vector<int32_t> mimeLengths;
+    Vector<const uint16_t*> valuePtrs;
+    Vector<int32_t> valueLengths;
+
+    auto document = (dynamicDowncast<LocalFrame>(m_page->mainFrame()))->document();
     if (document) {
-        int index = 0;
         for(const auto& mime : mimeTypes) {
             String value = dataTransfer.getData(*document, mime);
 
-            env->SetObjectArrayElement(
-                jmimeTypes,
-                index,
-                (jstring)mime.toJavaString(env));
-
-            env->SetObjectArrayElement(
-                jvalues,
-                index,
-                (jstring)value.toJavaString(env));
-            index++;
+            mimeArgs.append(makeUnique<WKJStringArg>(mime));
+            valueArgs.append(makeUnique<WKJStringArg>(value));
+            mimePtrs.append(mimeArgs.last()->data());
+            mimeLengths.append(mimeArgs.last()->length());
+            valuePtrs.append(valueArgs.last()->data());
+            valueLengths.append(valueArgs.last()->length());
         }
     }
     // restore the original store mode
     dataTransfer.setStoreMode(actualStoreMode);
 
-    // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.
-    // The nature of raster is too different to make a conversion inside the native code.
-    jobject jimage = (dragImage.get() && dragImage.get()->javaImage()
-        && dragImage.get()->javaImage()->platformImage()->getImage()) ?
-        jobject(*(dragImage.get()->javaImage()->platformImage()->getImage())) : nullptr;
+    // Attention! [image] can be the instance of WCImage or WCImageFrame class.
+    // The nature of raster is too different to make a conversion inside the native code,
+    // so Java still receives one object of one of two classes and decides which.
+    wkj_ref image = 0;
+    if (dragImage.get() && dragImage.get()->javaImage()) {
+        RefPtr<RQRef> rqImage = dragImage.get()->javaImage()->platformImage()->getImage();
+        if (rqImage)
+            image = static_cast<wkj_ref>(*rqImage);
+    }
 
     bool isImageSource = dragSourceAction && (*dragSourceAction == DragSourceAction::Image);
 
-    env->CallVoidMethod(m_webPage, mid, jimage,
+    m_callbacks->start_drag(m_pageRef, image,
         eventPos.x() - dragImageOrigin.x(),
         eventPos.y() - dragImageOrigin.y(),
         eventPos.x(),
         eventPos.y(),
-        jobjectArray(jmimeTypes),
-        jobjectArray(jvalues),
-        bool_to_jbool(isImageSource));
-    WTF::CheckAndClearException(env);
+        mimePtrs.span().data(), mimeLengths.span().data(),
+        valuePtrs.span().data(), valueLengths.span().data(),
+        static_cast<int32_t>(mimePtrs.size()),
+        isImageSource ? 1 : 0);
 }
 
 } // namespace WebCore

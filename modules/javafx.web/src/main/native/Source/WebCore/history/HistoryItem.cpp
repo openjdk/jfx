@@ -56,7 +56,7 @@ int64_t HistoryItem::generateSequenceNumber()
 
 #if PLATFORM(JAVA)
 extern "C" {
-extern void notifyHistoryItemDestroyed(const JLObject&);
+extern void notifyHistoryItemDestroyed(wkj_ref);
 }
 #endif
 HistoryItem::HistoryItem(Client& client, const String& urlString, const String& title, const String& alternateTitle, std::optional<BackForwardItemIdentifier> itemID, std::optional<BackForwardFrameItemIdentifier> frameItemID)
@@ -75,7 +75,7 @@ HistoryItem::~HistoryItem()
 {
 #if PLATFORM(JAVA)
     if (m_hostObject) {
-        notifyHistoryItemDestroyed(m_hostObject);
+        notifyHistoryItemDestroyed(m_hostObject.get());
     }
 #endif
 }
@@ -437,14 +437,14 @@ void HistoryItem::notifyChanged()
 }
 
 #if PLATFORM(JAVA)
-JLObject HistoryItem::hostObject()
+wkj_ref HistoryItem::hostObject() const
 {
-    return m_hostObject;
+    return m_hostObject.get();
 }
 
-void HistoryItem::setHostObject(const JLObject& host)
+void HistoryItem::setHostObject(WKJHandle&& host)
 {
-    m_hostObject = host;
+    m_hostObject = WTF::move(host);
 }
 #endif
 

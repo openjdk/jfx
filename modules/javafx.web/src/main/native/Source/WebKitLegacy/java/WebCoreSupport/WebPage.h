@@ -26,7 +26,6 @@
 #pragma once
 
 #include <wtf/OptionSet.h>
-#include <wtf/java/JavaRef.h>
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PrintContext.h>
@@ -38,8 +37,6 @@
 
 #include <webkit_java_api_page.h>
 #include <wtf/java/WKJHandle.h>
-
-#include <jni.h> // todo tav remove when building w/ pch
 
 namespace WebCore {
 
@@ -71,38 +68,24 @@ public:
         return static_cast<WebPage*>(wkj_to_ptr(p));
     }
 
-    /*
-     * Still JNI. Only DragClientJava::startDrag uses it now, and that client cannot be
-     * converted until Source/WebCore/platform/graphics/java can mint a wkj_ref for the
-     * WCImage or WCImageFrame it passes to fwkStartDrag.
-     */
-    static WebPage* webPageFromJObject(const JLObject& obj);
-
     static inline Page* pageFromPeer(int64_t p)
     {
         WebPage* webPage = webPageFromPeer(p);
         return webPage ? webPage->page() : NULL;
     }
 
-    static inline Page* pageFromJObject(const JLObject& obj)
-    {
-        WebPage* webPage = webPageFromJObject(obj);
-        return webPage ? webPage->page() : NULL;
-    }
-
     /*
-     * Still JNI: the Java WebPage lives in PageSupplementJava, which
-     * Source/WebCore/platform/java/ScrollbarThemeJava.cpp, the URLLoader, the socket
-     * stream handle and PopupMenuJava all read back as a jobject. It goes when that slice
-     * makes the supplement hold a wkj_ref.
+     * A NEW id for the Java WebPage of `page`, owned by the caller - which is what the
+     * local reference this used to return was. It comes from PageSupplementJava, which is
+     * also where ScrollbarThemeJava, the URLLoader and the socket stream handle read it.
      */
-    static JLObject jobjectFromPage(Page* page);
+    static WKJHandle jobjectFromPage(Page* page);
 
     /*
      * The callback tables and the registry id of the Java WebPage, installed once by
-     * wkj_page_set_callbacks. The id is retained here and released when the page is
-     * destroyed or the tables are detached, which is the one retention that replaces the
-     * eight JNI global references the clients used to hold on the same object.
+     * wkj_page_create. The id is retained here and released when the page is destroyed or
+     * the tables are detached, which is the one retention that replaces the eight JNI
+     * global references the clients used to hold on the same object.
      */
     void setCallbacks(const WKJPageCallbacks* callbacks, wkj_ref webPage);
 
@@ -111,8 +94,9 @@ public:
 
     void setSize(const IntSize&);
     void prePaint();
-    void paint(jobject, jint, jint, jint, jint);
-    void postPaint(jobject, jint, jint, jint, jint);
+    /* `renderQueue` is a com.sun.webkit.graphics.WCRenderQueue registry id. */
+    void paint(wkj_ref renderQueue, int32_t, int32_t, int32_t, int32_t);
+    void postPaint(wkj_ref renderQueue, int32_t, int32_t, int32_t, int32_t);
     bool processKeyEvent(const PlatformKeyboardEvent& event);
 
     void scroll(const IntSize& scrollDelta, const IntRect& rectToScroll,

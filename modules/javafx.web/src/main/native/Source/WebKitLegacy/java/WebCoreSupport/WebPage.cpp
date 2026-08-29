@@ -30,7 +30,6 @@
 
 #include "WebPage.h"
 
-#include "WKJPageSupport.h"
 #include <WebCore/WKJDOMUtils.h>
 #include <wkj_constants.h>
 
@@ -59,7 +58,6 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include <JavaScriptCore/Options.h>
 #include <WebCore/BackForwardController.h>
-#include <WebCore/BridgeUtils.h>
 #include <WebCore/CharacterData.h>
 #include <WebCore/Chrome.h>
 #include <WebCore/ColorTypes.h>
@@ -96,7 +94,6 @@
 #include <WebCore/PlatformJavaClasses.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
-#include <WebCore/PlatformTouchEvent.h>
 #include <WebCore/PlatformWheelEvent.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/RenderTreeAsText.h>
@@ -114,7 +111,6 @@
 #include <WebCore/platform/graphics/java/GraphicsContextJava.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>
-#include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -158,24 +154,10 @@ WebPage::~WebPage()
     debugEnded();
 }
 
-WebPage* WebPage::webPageFromJObject(const JLObject& oWebPage)
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID midGetPageMethod = env->GetMethodID(
-        PG_GetWebPageClass(env),
-        "getPage",
-        "()J");
-    ASSERT(midGetPageMethod);
-
-    jlong p = env->CallLongMethod(oWebPage, midGetPageMethod);
-    WTF::CheckAndClearException(env);
-
-    return webPageFromPeer(p);
-}
-
 /*
- * Installs the per-page callback tables and retains the id of the Java WebPage.
+ * Installs the per-page callback tables and retains the id of the Java WebPage. Called by
+ * wkj_page_create as the last step of building a page, and by wkj_page_set_callbacks to
+ * detach or re-attach one.
  *
  * The clients are handed borrowed copies: the id lives here, in one place, for the life
  * of the page. That is the whole replacement for the eight JNI global references that
@@ -186,8 +168,8 @@ WebPage* WebPage::webPageFromJObject(const JLObject& oWebPage)
  *
  * Passing a null table detaches the page: no callback is made afterwards, which is what
  * the Java dispose path does before closing the arena that owns the upcall stubs. It is
- * also what preserves the WC_GETJAVAENV_CHKRET early-out the frame loader client's
- * destructor used to rely on during JVM shutdown.
+ * also what preserves the shutdown early-out the frame loader client destructor used to
+ * rely on when the JVM was going away.
  */
 void WebPage::setCallbacks(const WKJPageCallbacks* callbacks, wkj_ref webPage)
 {
@@ -204,6 +186,9 @@ void WebPage::setCallbacks(const WKJPageCallbacks* callbacks, wkj_ref webPage)
     static_cast<EditorClientJava&>(page->editorClient()).setJavaPage(
         webPage, callbacks ? callbacks->editor : nullptr);
 
+    static_cast<DragClientJava&>(page->dragController().client()).setJavaPage(
+        webPage, callbacks ? callbacks->drag : nullptr, page);
+
     if (auto* inspectorClient = static_cast<InspectorClientJava*>(
             page->inspectorController().inspectorBackendClient())) {
         inspectorClient->setJavaPage(webPage, callbacks ? callbacks->inspector : nullptr);
@@ -218,13 +203,13 @@ void WebPage::setCallbacks(const WKJPageCallbacks* callbacks, wkj_ref webPage)
     }
 }
 
-JLObject WebPage::jobjectFromPage(Page* page)
+WKJHandle WebPage::jobjectFromPage(Page* page)
 {
     if (!page)
-        return nullptr;
+        return WKJHandle();
 
     auto pageSupplement = PageSupplementJava::from(page);
-    return pageSupplement ? pageSupplement->jWebPage() : nullptr;
+    return pageSupplement ? pageSupplement->jWebPage() : WKJHandle();
 }
 
 void WebPage::setSize(const IntSize& size)
@@ -295,13 +280,13 @@ void WebPage::prePaint() {
 RefPtr<RQRef> WebPage::jRenderTheme()
 {
     if (!m_jRenderTheme) {
-        JNIEnv* env = WTF::GetJavaEnv();
-        m_jRenderTheme = RQRef::create(PG_GetRenderThemeObjectFromPage(env, jobjectFromPage(m_page.get())));
+        WKJHandle theme = wkjRenderThemeForPage(jobjectFromPage(m_page.get()).get());
+        m_jRenderTheme = RQRef::create(theme.get());
     }
     return m_jRenderTheme;
 }
 
-void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
+void WebPage::paint(wkj_ref rq, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     if (m_rootLayer) {
         return;
@@ -333,7 +318,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
     gc.platformContext()->rq().flushBuffer();
 }
 
-void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
+void WebPage::postPaint(wkj_ref rq, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     if (!m_page->inspectorController().highlightedNode()
             && !m_rootLayer
@@ -850,7 +835,7 @@ void WebPage::disableWatchdog() {
 using namespace WebCore;
 using namespace WTF;
 
-extern "C" JNIEXPORT void WebPage_doJSCGarbageCollection()
+extern "C" WKJ_EXPORT void WebPage_doJSCGarbageCollection()
 {
     WebCore::GarbageCollectionController::singleton().garbageCollectNow();
 }
@@ -929,23 +914,15 @@ WKJ_EXPORT void wkj_set_startup_options(int32_t useJIT, int32_t useDFGJIT, int32
 }
 
 /*
- * Page creation is the one WebPage entry point that is still JNI, and it is not an
- * oversight.
- *
- * The Java WebPage object it receives is stored in PageSupplementJava, and four consumers
- * outside this slice read it straight back out as a jobject:
- * Source/WebCore/platform/java/ScrollbarThemeJava.cpp,
- * Source/WebCore/platform/network/java/URLLoader.cpp and
- * SocketStreamHandleImplJava.cpp, and PopupMenuJava here. ChromeClientJava also still
- * needs it for platformPageClient(), and FrameLoaderClientJava for createPlugin().
- *
- * Everything else about the page is installed by wkj_page_set_callbacks below, which Java
- * calls immediately afterwards and before wkj_page_init. When PageSupplementJava holds a
- * wkj_ref, this function and that one become one wkj_page_create.
+ * Was twkCreatePage, which took the Java WebPage as a raw Java reference and stored it in
+ * PageSupplementJava. The supplement holds a wkj_ref now, so the id is all that crosses,
+ * and installing the callback tables became the tail of this function rather than a
+ * separate call.
  */
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
-    (JNIEnv* env, jobject self, jboolean editable)
+WKJ_EXPORT int64_t wkj_page_create(int32_t editable, const WKJPageCallbacks* callbacks,
+                                   wkj_ref web_page)
 {
+    WKJCallScope wkjScope;
     // FIXME-java(JDK-8169950): Refactor the following WebCore module
     // initialization flow.
     JSC::initialize();
@@ -971,17 +948,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
         JSC::Options::useDFGJIT() = s_useJIT && s_useDFGJIT;
     });
 
-    JLObject jlself(self, true);
-
     //utaTODO: history agent implementation
     auto identifier = PageIdentifier::generate();
     auto pc = pageConfigurationWithEmptyClients(identifier, PAL::SessionID::defaultSessionID());
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
-    pc.chromeClient = makeUniqueRef<ChromeClientJava>(jlself);
+    pc.chromeClient = makeUniqueRef<ChromeClientJava>();
     pc.contextMenuClient = makeUniqueRef<ContextMenuClientJava>();
     pc.editorClient = makeUniqueRef<EditorClientJava>();
-    pc.dragClient = makeUnique<DragClientJava>(jlself);
+    pc.dragClient = makeUnique<DragClientJava>();
     pc.inspectorBackendClient = makeUnique<InspectorClientJava>();
     pc.databaseProvider = &WebDatabaseProvider::singleton();
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
@@ -989,8 +964,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
     pc.mainFrameCreationParameters = PageConfiguration::LocalMainFrameCreationParameters {
         CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>(
-            [jlself](LocalFrame& frame, FrameLoader& loader) -> UniqueRef<LocalFrameLoaderClient> {
-                return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader, jlself);
+            [](LocalFrame& frame, FrameLoader& loader) -> UniqueRef<LocalFrameLoaderClient> {
+                return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader);
             }
         ),
         SandboxFlags { }
@@ -1002,24 +977,21 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     auto page = Page::create(WTF::move(pc));
 
     // Associate PageSupplementJava instance which has WebPage java object.
-    page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(self));
+    page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(web_page));
     pageStorageSessionProvider->setPage(page);
 #if ENABLE(GEOLOCATION)
     WebCore::provideGeolocationTo(&page.get(), GeolocationClientMock::create());
 #endif
-    return wkj_from_ptr(new WebPage(WTF::move(page)));
+    WebPage* webPage = new WebPage(WTF::move(page));
+    webPage->setCallbacks(callbacks, web_page);
+    return wkj_from_ptr(webPage);
 }
 
 /*
- * Installs the callback tables and the registry id of the Java WebPage on a page that
- * twkCreatePage has just returned. Java calls it exactly once per page, before
- * wkj_page_init, because the frame loader client reads the WebCore::Page out of it during
- * initialization.
- *
- * Passing a null table detaches the page: no callback is made afterwards. That is what a
- * Java dispose does before closing the arena holding the upcall stubs, and it is also
- * what replaces the WC_GETJAVAENV_CHKRET guard the frame loader client's destructor used
- * during JVM shutdown.
+ * Detaches or re-attaches the tables of a live page. Passing a null table stops every
+ * callback, which is what a Java dispose does before closing the arena holding the upcall
+ * stubs; it is also what replaces the shutdown guard the frame loader client destructor
+ * relied on when the JVM was going away.
  */
 WKJ_EXPORT void wkj_page_set_callbacks(int64_t pPage, const WKJPageCallbacks* callbacks,
                                        wkj_ref web_page)
@@ -1255,20 +1227,12 @@ WKJ_EXPORT int32_t wkj_frame_title(int64_t pFrame, uint16_t* result_buf, int32_t
     return WKJReturnString(result_buf, result_cap, result_length, frame->document()->title());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetIconURL
-    (JNIEnv* env, jobject self, jlong pFrame)
-{
-    Frame* mainFrame = static_cast<Frame*>(wkj_to_ptr(pFrame));
-        auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
-    if (!frame) {
-        return 0;
-    }
-#if ENABLE(ICONDATABASE)
-    return frame->loader()->icon()->url().string().toJavaString(env).releaseLocal();
-#else
-    return 0;
-#endif
-}
+/*
+ * twkGetIconURL is gone rather than converted. ENABLE(ICONDATABASE) is never defined for
+ * this port, so its body was a plain 0 for every input, and the native-necessity triage
+ * rules it PURE with exact parity: the Java side returns null directly. WebPage.getIcon
+ * and its native declaration go with it.
+ */
 
 WKJ_EXPORT void wkj_frame_open(int64_t pFrame, const uint16_t* url, int32_t url_length)
 {
@@ -1649,24 +1613,6 @@ WKJ_EXPORT void wkj_frame_set_zoom(int64_t pFrame, float zoomFactor, int32_t tex
     }
 }
 
-JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkExecuteScript
-    (JNIEnv* env, jobject self, jlong pFrame, jstring script)
-{
-    Frame* mainFrame = static_cast<Frame*>(wkj_to_ptr(pFrame));
-        auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
-    if (!frame) {
-        return nullptr;
-    }
-    JSGlobalContextRef globalContext = getGlobalContext(&frame->script());
-    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script().createRootObject(frame));
-    return WebCore::executeScript(
-        env,
-        nullptr,
-        globalContext,
-        rootObject.get(),
-        script);
-}
-
 WKJ_EXPORT void wkj_frame_clear_name(int64_t pFrame)
 {
     WKJCallScope wkjScope;
@@ -1691,9 +1637,9 @@ WKJ_EXPORT void wkj_page_end_printing(int64_t pPage)
     return WebPage::webPageFromPeer(pPage)->endPrinting();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
-    (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint pageIndex, jfloat width)
+WKJ_EXPORT void wkj_page_print(int64_t pPage, wkj_ref rq, int32_t pageIndex, float width)
 {
+    WKJCallScope wkjScope;
     auto webPage = WebPage::webPageFromPeer(pPage);
     PlatformContextJava* ppgc = new PlatformContextJava(rq, webPage->jRenderTheme());
     GraphicsContextJava gc(ppgc);
@@ -1816,9 +1762,10 @@ WKJ_EXPORT void wkj_page_pre_paint(int64_t pPage)
     WebPage::webPageFromPeer(pPage)->prePaint();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateContent
-    (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint x, jint y, jint w, jint h)
+WKJ_EXPORT void wkj_page_update_content(int64_t pPage, wkj_ref rq, int32_t x, int32_t y,
+                                       int32_t w, int32_t h)
 {
+    WKJCallScope wkjScope;
     WebPage::webPageFromPeer(pPage)->paint(rq, x, y, w, h);
 }
 
@@ -1828,9 +1775,10 @@ WKJ_EXPORT void wkj_page_update_rendering(int64_t pPage)
     WebPage::pageFromPeer(pPage)->isolatedUpdateRendering();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPostPaint
-  (JNIEnv*, jobject, jlong pPage, jobject rq, jint x, jint y, jint w, jint h)
+WKJ_EXPORT void wkj_page_post_paint(int64_t pPage, wkj_ref rq, int32_t x, int32_t y,
+                                   int32_t w, int32_t h)
 {
+    WKJCallScope wkjScope;
     WebPage::webPageFromPeer(pPage)->postPaint(rq, x, y, w, h);
 }
 
@@ -1897,14 +1845,19 @@ WKJ_EXPORT void wkj_page_focus_event(int64_t pPage, int32_t id, int32_t directio
     }
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessKeyEvent
-    (JNIEnv* env, jobject self, jlong pPage,
-     jint type, jstring text, jstring keyIdentifier, jint windowsVirtualKeyCode,
-     jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jdouble timestamp)
+WKJ_EXPORT int32_t wkj_page_key_event(int64_t pPage, int32_t type,
+                                      const uint16_t* text, int32_t text_length,
+                                      const uint16_t* keyIdentifier,
+                                      int32_t keyIdentifier_length,
+                                      int32_t windowsVirtualKeyCode,
+                                      int32_t shift, int32_t ctrl, int32_t alt,
+                                      int32_t meta, double timestamp)
 {
+    WKJCallScope wkjScope;
     WebPage* webPage = WebPage::webPageFromPeer(pPage);
 
-    PlatformKeyboardEvent event(type, text, keyIdentifier,
+    PlatformKeyboardEvent event(type, text, text_length,
+                                keyIdentifier, keyIdentifier_length,
                                 windowsVirtualKeyCode,
                                 shift, ctrl, alt, meta, timestamp);
 
@@ -1983,12 +1936,12 @@ WKJ_EXPORT int32_t wkj_page_mouse_event(int64_t pPage, int32_t id, int32_t butto
         // we do not want to show context menu for frameset (see 6648628)
         if (frame && !frame->document()->isFrameSet()) {
             /*
-             * ContextMenuJava::show takes the Java WebPage as a jobject. It is part of
-             * the Source/WebCore/platform/java slice, so the object comes from
-             * PageSupplementJava here instead of from the removed `self` parameter. Same
-             * object, same call; it becomes a wkj_ref with that slice.
+             * The Java WebPage the context menu belongs to comes from PageSupplementJava
+             * rather than from the `self` parameter twkProcessMouseEvent used to have.
+             * Same object, same call.
              */
-            ContextMenuJava(contextMenu->items()).show(&cmc, WebPage::jobjectFromPage(page), loc);
+            WKJHandle menuPage = WebPage::jobjectFromPage(page);
+            ContextMenuJava(contextMenu->items()).show(&cmc, menuPage.get(), loc);
         }
         return 1;
     }
@@ -2650,10 +2603,11 @@ WKJ_EXPORT int32_t wkj_worker_thread_count(void)
     return WorkerThread::workerThreadCount();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
-  (JNIEnv*, jclass)
-{
-    WebPage_doJSCGarbageCollection();
-}
+/*
+ * twkDoJSCGarbageCollection is gone rather than converted: its whole body was a call to
+ * WebPage_doJSCGarbageCollection above, which is already an exported plain-C zero
+ * argument function. The triage rules it WRAPPER, so Java binds that symbol directly
+ * with FunctionDescriptor.ofVoid() instead of going through a second one.
+ */
 
 }

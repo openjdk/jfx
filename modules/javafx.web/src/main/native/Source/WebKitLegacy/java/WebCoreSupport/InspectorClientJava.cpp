@@ -25,7 +25,7 @@
 
 
 #include "InspectorClientJava.h"
-#include "WKJPageSupport.h"
+#include <WebCore/PlatformJavaClasses.h>
 #include "WebPage.h"
 
 #include <WebCore/Frame.h>

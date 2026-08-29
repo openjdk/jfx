@@ -43,7 +43,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
+#include <wtf/java/WKJHandle.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -180,8 +180,13 @@ public:
     WEBCORE_EXPORT void setViewState(id);
 #endif
 #if PLATFORM(JAVA)
-    JLObject hostObject();
-    void setHostObject(const JLObject&);
+    /*
+     * The com.sun.webkit.BackForwardList$Entry that mirrors this item, as a registry id.
+     * It was a JNI global reference; the handle below owns one id with the same lifetime,
+     * and the destructor still tells Java when the item goes away.
+     */
+    wkj_ref hostObject() const;
+    void setHostObject(WKJHandle&&);
 #endif
 
 #ifndef NDEBUG
@@ -295,7 +300,7 @@ private:
 #endif
 
 #if PLATFORM(JAVA)
-    JGObject m_hostObject { nullptr };
+    WKJHandle m_hostObject;
 #endif
 
 #if PLATFORM(COCOA)

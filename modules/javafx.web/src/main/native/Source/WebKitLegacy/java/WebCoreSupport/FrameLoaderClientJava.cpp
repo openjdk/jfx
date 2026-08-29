@@ -25,7 +25,7 @@
 
 
 #include "FrameLoaderClientJava.h"
-#include "WKJPageSupport.h"
+#include <WebCore/PlatformJavaClasses.h>
 #include <WebCore/WKJDOMUtils.h>
 #include <wkj_constants.h>
 #include "FrameNetworkingContextJava.h"
@@ -114,7 +114,7 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
 }
 } // namespace
 
-FrameLoaderClientJava::FrameLoaderClientJava(FrameLoader& loader, const JLObject &webPage)
+FrameLoaderClientJava::FrameLoaderClientJava(FrameLoader& loader)
     : LocalFrameLoaderClient(loader)
     , m_page(nullptr)
     , m_frame(nullptr)
@@ -122,7 +122,6 @@ FrameLoaderClientJava::FrameLoaderClientJava(FrameLoader& loader, const JLObject
     , m_mainResourceRequestIDSet(false)
     , m_isPageRedirected(false)
     , m_hasRepresentation(false)
-    , m_webPage(webPage)
 {
 }
 
@@ -409,8 +408,9 @@ RefPtr<Widget> FrameLoaderClientJava::createPlugin(HTMLPlugInElement& element,
                                      const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
 
 {
+    /* PluginWidgetJava takes the registry id of the Java WebPage now, not the object. */
     return adoptRef(new PluginWidgetJava(
-        m_webPage,
+        m_pageRef,
         &element,
         url.string(),
         mimeType,
@@ -424,7 +424,7 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
     auto* localFrame = dynamicDowncast<LocalFrame>(m_frame);
 
     auto clientCreator = [this](auto& localFrame, WebCore::FrameLoader& loader) -> WTF::UniqueRef<WebCore::LocalFrameLoaderClient> {
-        return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader, m_webPage);  // Use only m_webPage
+        return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader);
     };
 
     SandboxFlags sandboxFlags = ownerElement.sandboxFlags();
@@ -434,7 +434,7 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
 
     auto& childClient = static_cast<FrameLoaderClientJava&>(childFrame->loader().client());
     childClient.setFrame(childFrame.get());
-    /* The subframe client inherits the page the captured JLObject used to carry. */
+    /* The subframe client inherits the page the captured Java reference used to carry. */
     childClient.setJavaPage(m_pageRef, m_callbacks, m_page);
 
     childFrame->tree().setSpecifiedName(name);

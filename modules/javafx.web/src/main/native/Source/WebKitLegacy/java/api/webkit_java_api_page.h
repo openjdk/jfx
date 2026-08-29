@@ -89,34 +89,8 @@
  *
  * WHAT IS DELIBERATELY NOT HERE
  *
- *   Six WebPage entry points and two clients keep their JNI form for now because they
- *   carry a Java object that only another slice can turn into a wkj_ref. Each one is
- *   listed with the file that has to change first; none of them is a design gap here.
- *
- *     twkCreatePage           builds PageSupplementJava from the Java WebPage object;
- *                             ScrollbarThemeJava, URLLoader, SocketStreamHandleImplJava
- *                             and PopupMenuJava all read it back with jWebPage().
- *                             Blocked on Source/WebCore/platform/java/PageSupplementJava.h.
- *     twkProcessKeyEvent      PlatformKeyboardEvent has a (jint, jstring, jstring, ...)
- *                             constructor at
- *                             Source/WebCore/platform/PlatformKeyboardEvent.h:137,
- *                             implemented in
- *                             Source/WebCore/platform/java/KeyboardEventJava.cpp.
- *     twkUpdateContent        take a com.sun.webkit.graphics.WCRenderQueue and hand it to
- *     twkPostPaint            PlatformContextJava / RenderingQueue.
- *     twkPrint                Blocked on Source/WebCore/platform/graphics/java.
- *     twkExecuteScript        returns a Java object built by the LiveConnect bridge.
- *                             Blocked on Source/WebCore/bridge/jni.
- *
- *     DragClientJava          fwkStartDrag passes a WCImage or a WCImageFrame straight
- *                             out of the graphics layer, with a comment saying the
- *                             rasters cannot be converted in native code. Blocked on the
- *                             graphics slice, so there is no WKJDragCallbacks here.
- *     PopupMenuJava           fwkAppendItem passes a WCFont taken from nativeFontData().
- *                             Same blocker, so there is no WKJPopupCallbacks here.
- *
- *   Three more are absent because the native-necessity triage says they should be deleted
- *   rather than given a facade (FFM-AUDIT-core.md sections 9.2 and 5.1):
+ *   Three entry points are absent because the native-necessity triage says they should be
+ *   deleted rather than given a facade (FFM-AUDIT-core.md sections 9.2 and 5.1):
  *
  *     twkGetIconURL           PURE, PARITY exact: ENABLE(ICONDATABASE) is never defined
  *     bflItemGetIcon          for this port, so both are "return null" for every input.
@@ -126,12 +100,17 @@
  *                             plain-C WebPage_doJSCGarbageCollection(), which Java binds
  *                             directly with FunctionDescriptor.ofVoid().
  *
- *   Two BackForwardList entry points are absent for the same kind of reason as
- *   twkCreatePage: bflGet and bflItemGetChildren construct com.sun.webkit.BackForwardList
- *   $Entry objects and cache them in HistoryItem::m_hostObject, which
- *   Source/WebCore/history/HistoryItem.cpp:78 reads back to fire notifyItemDestroyed.
- *   That field is a JGObject in an upstream WebKit header, so the entry lifetime cannot
- *   move to a wkj_ref from this slice.
+ *   Those three keep their JNI form in WebPage.cpp and BackForwardList.cpp, and they are
+ *   the only reason those two files still include jni.h. Deleting them is behaviour
+ *   affecting - WebPage.getIcon() and BackForwardList.Entry.getIcon() become an
+ *   unconditional null - so it needs the Java side and a commit of its own.
+ *
+ *   Two BackForwardList entry points are absent for a different reason: bflGet and
+ *   bflItemGetChildren construct com.sun.webkit.BackForwardList$Entry objects and cache
+ *   them in HistoryItem::m_hostObject, which Source/WebCore/history/HistoryItem.cpp:78
+ *   reads back to fire notifyItemDestroyed. That field is a JGObject in an upstream
+ *   WebKit header outside every java/ directory, so entry lifetime cannot move to a
+ *   wkj_ref without touching a file this migration keeps its hands off.
  *
  *   Finally, the WKJHostWebPage, WKJHostFrameLoader, WKJHostChrome, WKJHostEditor,
  *   WKJHostContextMenu, WKJHostInspector and WKJHostDrag placeholders in
@@ -180,7 +159,7 @@ extern "C" {
  * The four WCRectangle field reads collapse into the out parameters of get_window_bounds
  * and get_page_bounds, and the two WCPoint constructions plus four getX/getY calls of
  * screenToRootView and rootViewToScreen collapse into screen_to_window and
- * window_to_screen. That is 22 upcalls and 10 JNI field or accessor calls turned into 21
+ * window_to_screen. That is 22 upcalls and 10 JNI field or accessor calls turned into 23
  * slots.
  *
  * alert, confirm, prompt, run_before_unload and choose_file open modal UI and block. The
@@ -192,11 +171,8 @@ typedef struct WKJChromeCallbacks {
      * The Java WCWidget the page is hosted in, as a registry id, for
      * ChromeClient::platformPageClient(). Default when NULL: 0.
      *
-     * NOTE: nothing calls this slot yet. PlatformPageClient is a JGObject typedef
-     * (Source/WebCore/platform/Widget.h:56,64) and WidgetJava.cpp and PlatformScreenJava.cpp
-     * consume it as one, so ChromeClientJava::platformPageClient() still makes the JNI
-     * call. The slot is declared now so that the Java side is built once, and it starts
-     * being used the moment PlatformWidget becomes a wkj_ref.
+     * PlatformPageClient is a WKJHandle typedef now (Source/WebCore/platform/Widget.h), so
+     * this is what WidgetJava.cpp and PlatformScreenJava.cpp end up holding.
      */
     wkj_ref (*get_host_window)(wkj_ref page);
 
@@ -412,19 +388,26 @@ typedef struct WKJPageNotifyCallbacks {
 } WKJPageNotifyCallbacks;
 
 /*
- * WKJBackForwardCallbacks - BackForwardList.notifyChanged().
+ * WKJBackForwardCallbacks - the three live upcalls of BackForwardList.cpp.
  *
  * There is no item_changed slot: historyItemChangedImpl had no live caller and was
- * removed in the deletion commit. There is no item_destroyed slot either, although the
- * audit proposed one: HistoryItem::m_hostObject is a JGObject in the upstream header
- * Source/WebCore/history/HistoryItem.h:298 and Source/WebCore/history/HistoryItem.cpp:78
- * calls notifyHistoryItemDestroyed with it, so entry lifetime cannot move to a wkj_ref
- * without changing files outside this slice.
+ * removed in the deletion commit that opened this migration.
  *
- * The id is the one BackForwardList::setHostObject was given, not the page's.
+ * list_changed takes the id wkj_bfl_set_host was given. create_entry and item_destroyed
+ * are about one history entry: create_entry builds the
+ * com.sun.webkit.BackForwardList$Entry that mirrors a HistoryItem, and the library parks
+ * the id it returns in HistoryItem::m_hostObject for the life of the item, so the entry
+ * is created once and handed back on every later lookup. item_destroyed is called from
+ * the HistoryItem destructor with that same id, which is the last use of it.
  */
 typedef struct WKJBackForwardCallbacks {
     void (*list_changed)(wkj_ref back_forward_list);
+
+    /* -> BackForwardList.Entry(long item, long page). Returns the new id, or 0. */
+    wkj_ref (*create_entry)(int64_t item, int64_t page);
+
+    /* -> BackForwardList.Entry.notifyItemDestroyed(). */
+    void (*item_destroyed)(wkj_ref entry);
 } WKJBackForwardCallbacks;
 
 /*
@@ -445,14 +428,57 @@ typedef struct WKJColorChooserCallbacks {
 } WKJColorChooserCallbacks;
 
 /*
+ * WKJDragCallbacks - replaces the single cached method id of DragClientJava.
+ *
+ * `image` is the com.sun.webkit.graphics.WCImage or WCImageFrame the drag is drawn from,
+ * as a registry id, 0 when there is none. The JNI code passed whichever of the two the
+ * graphics layer produced, with a comment that the rasters are too different to convert
+ * in native code; the id keeps that undisturbed - Java still receives one object of one of
+ * two classes and decides which.
+ *
+ * The mime types and their values are two parallel arrays of `count` UTF-16 strings.
+ */
+typedef struct WKJDragCallbacks {
+    void (*start_drag)(wkj_ref page, wkj_ref image,
+                       int32_t offset_x, int32_t offset_y,
+                       int32_t event_x, int32_t event_y,
+                       const uint16_t* const* mime_types, const int32_t* mime_type_lengths,
+                       const uint16_t* const* values, const int32_t* value_lengths,
+                       int32_t count, int32_t is_image_source);
+} WKJDragCallbacks;
+
+/*
+ * WKJPopupCallbacks - replaces the 6 cached method ids of PopupMenuJava.
+ *
+ * Installed once for the process: `create` is a static Java method and the other five are
+ * made on the com.sun.webkit.PopupMenu it returns, so nothing here is addressed by page.
+ *
+ * append_item's `font` is a com.sun.webkit.graphics.WCFont registry id, taken from
+ * nativeFontData(); the colours are 0xAARRGGBB, packed exactly as the JNI code packed
+ * them. show's `page` is the Java WebPage the menu belongs to.
+ */
+typedef struct WKJPopupCallbacks {
+    /* -> PopupMenu.fwkCreatePopupMenu(long). Returns the new PopupMenu id, or 0. */
+    wkj_ref (*create)(int64_t popup);
+    void    (*append_item)(wkj_ref popup, const uint16_t* text, int32_t text_length,
+                           int32_t is_label, int32_t is_separator, int32_t is_enabled,
+                           int32_t background_argb, int32_t foreground_argb, wkj_ref font);
+    void    (*set_selected_item)(wkj_ref popup, int32_t index);
+    void    (*show)(wkj_ref popup, wkj_ref page, int32_t x, int32_t y, int32_t width);
+    void    (*hide)(wkj_ref popup);
+    void    (*destroy)(wkj_ref popup);
+} WKJPopupCallbacks;
+
+/*
  * The per-page aggregate. A NULL sub-table means the same as a table of NULL slots.
  * WKJDragCallbacks and WKJPopupCallbacks are absent for the reason given at the top of
- * this file; they join this struct when the graphics slice lands, with an ABI bump.
+ * this file.
  *
- * WKJBackForwardCallbacks and WKJColorChooserCallbacks are not here either, and that is
- * not an omission: the back/forward list is created before its page and the colour
- * chooser callbacks are made on a ColorChooser rather than on a page, so both are
- * installed once for the process by their own functions below.
+ * WKJBackForwardCallbacks, WKJColorChooserCallbacks and WKJPopupCallbacks are not here,
+ * and that is not an omission: the back/forward list is created before its page, and the
+ * colour chooser and popup menu callbacks are made on the Java object the first slot
+ * returns rather than on a page, so all three are installed once for the process by their
+ * own functions below.
  */
 typedef struct WKJPageCallbacks {
     const WKJChromeCallbacks*      chrome;
@@ -461,6 +487,7 @@ typedef struct WKJPageCallbacks {
     const WKJInspectorCallbacks*   inspector;
     const WKJProgressCallbacks*    progress;
     const WKJPageNotifyCallbacks*  notify;
+    const WKJDragCallbacks*        drag;
 } WKJPageCallbacks;
 
 /* ------------------------------------------------------------------------------------- */
@@ -478,20 +505,28 @@ WKJ_EXPORT void wkj_set_startup_options(int32_t use_jit, int32_t use_dfg_jit,
                                         int32_t use_css3d);
 
 /*
- * Installs the callback tables on `page` and tells the library which registry id names
- * the Java WebPage that owns it. Call it exactly once per page, immediately after the
- * page has been created and before wkj_page_init: the frame loader client reads the page
- * handle out of it during initialization.
+ * Creates a page. Was twkCreatePage, which took the Java WebPage as a jobject; it takes
+ * the registry id now, because PageSupplementJava holds a wkj_ref.
+ *
+ * `web_page` is retained for the life of the page and lent to the seven clients, which is
+ * the one retention that replaces the eight JNI global references that used to pin the
+ * same Java object.
  *
  * `callbacks` and every sub-table it points at must stay alive and unchanged until
- * wkj_page_destroy has returned. Passing NULL detaches the page, after which no callback
- * is made; that is what a Java-side dispose does before closing its arena.
+ * wkj_page_destroy has returned; the library keeps the pointer. Only `web_page` is per
+ * page - build one process-wide WKJPageCallbacks in one Arena.ofShared() and pass the
+ * same pointer every time.
  *
- * This is the transitional shape of the wkj_page_create the audit proposed. Page creation
- * itself is still Java_com_sun_webkit_WebPage_twkCreatePage, because it has to store the
- * Java WebPage object in PageSupplementJava for four consumers outside this slice; see
- * the note at the top of this file. When PageSupplementJava holds a wkj_ref, these two
- * become one function.
+ * Returns the page handle, or 0. Call wkj_page_init next.
+ */
+WKJ_EXPORT int64_t wkj_page_create(int32_t editable, const WKJPageCallbacks* callbacks,
+                                   wkj_ref web_page);
+
+/*
+ * Detaches or re-attaches the callback tables of a live page. Passing a null table stops
+ * every callback, which is what a Java dispose does before closing the arena that owns
+ * the upcall stubs; it is also what replaces the WC_GETJAVAENV_CHKRET guard the frame
+ * loader client's destructor relied on during JVM shutdown.
  */
 WKJ_EXPORT void wkj_page_set_callbacks(int64_t page, const WKJPageCallbacks* callbacks,
                                        wkj_ref web_page);
@@ -590,6 +625,12 @@ WKJ_EXPORT int32_t wkj_page_go_back_forward(int64_t page, int32_t distance);
 /* Was twkReset: FrameTree::clearName(). */
 WKJ_EXPORT void wkj_frame_clear_name(int64_t frame);
 
+/*
+ * twkExecuteScript has no counterpart here: everything it did after finding the frame was
+ * LiveConnect work, so it became wkj_frame_execute_script, declared in
+ * webkit_java_api_bridge.h and implemented in Source/WebCore/bridge/jni/jsc/BridgeUtils.cpp.
+ */
+
 /* ------------------------------------------------------------------------------------- */
 /* Find, zoom, preferences                                                                */
 /* ------------------------------------------------------------------------------------- */
@@ -649,9 +690,24 @@ WKJ_EXPORT void wkj_frame_set_background_color(int64_t frame, int32_t argb);
 WKJ_EXPORT void wkj_page_pre_paint(int64_t page);
 WKJ_EXPORT void wkj_page_update_rendering(int64_t page);
 
+/*
+ * Was twkUpdateContent / twkPostPaint. `render_queue` is the registry id of the
+ * com.sun.webkit.graphics.WCRenderQueue the drawing commands are encoded into; the JNI
+ * versions took the same object as a jobject. The library does not retain it beyond the
+ * call - the RenderingQueue it builds takes its own reference.
+ */
+WKJ_EXPORT void wkj_page_update_content(int64_t page, wkj_ref render_queue,
+                                        int32_t x, int32_t y, int32_t width, int32_t height);
+WKJ_EXPORT void wkj_page_post_paint(int64_t page, wkj_ref render_queue,
+                                    int32_t x, int32_t y, int32_t width, int32_t height);
+
 /* Was twkBeginPrinting / twkEndPrinting. Returns the page count. */
 WKJ_EXPORT int32_t wkj_page_begin_printing(int64_t page, float width, float height);
 WKJ_EXPORT void    wkj_page_end_printing(int64_t page);
+
+/* Was twkPrint. Renders one page into `render_queue`, as wkj_page_update_content does. */
+WKJ_EXPORT void wkj_page_print(int64_t page, wkj_ref render_queue, int32_t page_index,
+                               float width);
 
 /* ------------------------------------------------------------------------------------- */
 /* Encoding                                                                               */
@@ -672,6 +728,22 @@ WKJ_EXPORT void wkj_page_set_encoding(int64_t page, const uint16_t* encoding,
  * constants.
  */
 WKJ_EXPORT void wkj_page_focus_event(int64_t page, int32_t id, int32_t direction);
+
+/*
+ * Was twkProcessKeyEvent. `type` and `windows_virtual_key_code` are
+ * com.sun.webkit.event.WCKeyEvent constants. The four modifier flags stay four int32_t
+ * parameters for the same reason as the mouse event below: the JNI parameter list is
+ * reproduced one for one, and no bitmask encoding has to be agreed between the two sides.
+ *
+ * Returns 1 when WebKit consumed the event.
+ */
+WKJ_EXPORT int32_t wkj_page_key_event(int64_t page, int32_t type,
+                                      const uint16_t* text, int32_t text_length,
+                                      const uint16_t* key_identifier,
+                                      int32_t key_identifier_length,
+                                      int32_t windows_virtual_key_code,
+                                      int32_t shift, int32_t ctrl, int32_t alt,
+                                      int32_t meta, double timestamp);
 
 /*
  * Was twkProcessMouseEvent. id, button and button_mask are
@@ -836,6 +908,21 @@ WKJ_EXPORT int32_t wkj_bfl_item_target(int64_t item, uint16_t* result_buf, int32
 /* Was bflItemIsTargetItem. */
 WKJ_EXPORT int32_t wkj_bfl_item_is_target(int64_t item);
 
+/*
+ * Was bflGet: the BackForwardList entry at `index`, or 0 when there is no item there.
+ * The id is borrowed - the library keeps the entry alive in HistoryItem::m_hostObject -
+ * so the caller must not release it. The JNI version returned the same Java object.
+ */
+WKJ_EXPORT wkj_ref wkj_bfl_item_at(int64_t page, int32_t index);
+
+/*
+ * Was bflItemGetChildren: writes up to out_cap child entry ids into out and returns how
+ * many there are; call it with out == NULL and out_cap == 0 to get the count first. The
+ * ids are borrowed, as for wkj_bfl_item_at.
+ */
+WKJ_EXPORT int32_t wkj_bfl_item_children(int64_t item, int64_t page, wkj_ref* out,
+                                         int32_t out_cap);
+
 /* Was bflSize / bflGetMaximumSize / bflSetMaximumSize / bflGetCurrentIndex. */
 WKJ_EXPORT int32_t wkj_bfl_size(int64_t page);
 WKJ_EXPORT int32_t wkj_bfl_get_capacity(int64_t page);
@@ -896,6 +983,20 @@ WKJ_EXPORT void wkj_install_color_chooser_callbacks(const WKJColorChooserCallbac
  */
 WKJ_EXPORT void wkj_color_chooser_set_selected(int64_t chooser, int32_t red, int32_t green,
                                                int32_t blue);
+
+/* ------------------------------------------------------------------------------------- */
+/* Popup menu (com.sun.webkit.PopupMenu)                                                   */
+/* ------------------------------------------------------------------------------------- */
+
+/* Installs the popup menu callbacks for the process; see WKJPopupCallbacks. */
+WKJ_EXPORT void wkj_install_popup_callbacks(const WKJPopupCallbacks* callbacks);
+
+/*
+ * Was twkSelectionCommited and twkPopupClosed. `popup` is the handle create was given -
+ * a PopupMenuJava, which is what the Java PopupMenu holds as `pdata`.
+ */
+WKJ_EXPORT void wkj_popup_selection_committed(int64_t popup, int32_t index);
+WKJ_EXPORT void wkj_popup_closed(int64_t popup);
 
 /* ------------------------------------------------------------------------------------- */
 /* Process-wide callbacks that belong to no page                                          */

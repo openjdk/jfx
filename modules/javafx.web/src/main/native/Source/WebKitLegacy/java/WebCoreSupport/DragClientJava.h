@@ -26,12 +26,13 @@
 #pragma once
 
 #include <WebCore/DragClient.h>
-#include <WebCore/PlatformJavaClasses.h>
+#include <webkit_java_api_page.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class DataTransfer;
+class Page;
 class DragData;
 class Frame;
 class Image;
@@ -40,8 +41,20 @@ class HTMLImageElement;
 class DragClientJava final : public DragClient {
     WTF_MAKE_TZONE_ALLOCATED(DragClientJava);
 public:
-    DragClientJava(const JLObject &webPage);
+    DragClientJava() = default;
     ~DragClientJava() override;
+
+    /*
+     * Installs the page this client drags for. Called by wkj_page_create, once.
+     * `pageRef` is borrowed: the WebPage owns the retained id and outlives this client,
+     * and `page` is the WebCore::Page whose main frame document supplies the drag data.
+     */
+    void setJavaPage(wkj_ref pageRef, const WKJDragCallbacks* callbacks, Page* page)
+    {
+        m_pageRef = pageRef;
+        m_callbacks = callbacks;
+        m_page = page;
+    }
 
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) override;
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer& clipboard) override;
@@ -50,7 +63,9 @@ public:
 
     void startDrag(DragItem, DataTransfer&, Frame&, const std::optional<NodeIdentifier>& nodeIdentifier) override;
 private:
-    JGObject m_webPage;
+    wkj_ref m_pageRef { 0 };
+    const WKJDragCallbacks* m_callbacks { nullptr };
+    Page* m_page { nullptr };
 };
 
 } // namespace WebCore

@@ -33,7 +33,7 @@
 #include <WebCore/ContextMenu.h>
 #include "PopupMenuJava.h"
 #include "SearchPopupMenuJava.h"
-#include "WKJPageSupport.h"
+#include <WebCore/PlatformJavaClasses.h>
 #include "WebPage.h"
 #include "Cursor.h"
 #include <WebCore/DocumentLoader.h>
@@ -57,40 +57,7 @@
 #include <wtf/URL.h>
 #include <wtf/text/StringBuilder.h>
 
-namespace ChromeClientJavaInternal {
-/*
- * All that is left of this namespace is the one class lookup platformPageClient() still
- * needs. The 22 cached jmethodIDs and 4 cached jfieldIDs it used to hold are slots in
- * WKJChromeCallbacks now, and initRefs() has gone with them.
- */
-//MVM -ready initialization
-#define DECLARE_STATIC_CLASS(getFunctionName, sClassPath) \
-static jclass getFunctionName() { \
-    static JGClass cls(WTF::GetJavaEnv()->FindClass(sClassPath)); \
-    ASSERT(cls); \
-    return cls; \
-}
-
-DECLARE_STATIC_CLASS(getWebPageCls,   "com/sun/webkit/WebPage")
-
-static jmethodID getHostWindowMID = NULL; // WebPage
-
-static void initRefs(JNIEnv* env)
-{
-    if (!getHostWindowMID) {
-        getHostWindowMID = env->GetMethodID(getWebPageCls(), "getHostWindow",
-                                            "()Lcom/sun/webkit/WCWidget;");
-        ASSERT(getHostWindowMID);
-    }
-}
-}
-
 namespace WebCore {
-
-ChromeClientJava::ChromeClientJava(const JLObject &webPage)
-    : m_webPage(webPage)
-{
-}
 
 void ChromeClientJava::chromeDestroyed()
 {
@@ -347,7 +314,7 @@ bool ChromeClientJava::runJavaScriptPrompt(LocalFrame&, const String& text,
             reinterpret_cast<uint16_t*>(buffer.data()), static_cast<int32_t>(buffer.size()), &length);
     }
 
-    /* A cancelled prompt is WKJ_STR_NULL, which is the null jstring the JNI code tested. */
+    /* A cancelled prompt is WKJ_STR_NULL, which is the null string the JNI code tested. */
     if (status != WKJ_STR_OK)
         return false;
 
@@ -488,7 +455,7 @@ void ChromeClientJava::setToolTip(const String& toolTip)
     if (!m_callbacks || !m_callbacks->set_tooltip)
         return;
 
-    /* An empty tooltip was passed as a null jstring, and that is what clears it. */
+    /* An empty tooltip was passed as a null string, and that is what clears it. */
     WKJStringArg toolTipArg(toolTip.length() > 0 ? toolTip : String());
     m_callbacks->set_tooltip(m_pageRef, toolTipArg.data(), toolTipArg.length());
 }
@@ -599,22 +566,17 @@ void ChromeClientJava::intrinsicContentsSizeChanged(const IntSize&) const
 }
 
 /*
- * The one method in this class that is still JNI, and the only reason m_webPage and the
- * PlatformJavaClasses.h include survive. PlatformPageClient is a JGObject typedef
- * (Source/WebCore/platform/Widget.h:56,64) and WidgetJava.cpp and PlatformScreenJava.cpp
- * consume the result as one, so it cannot become a wkj_ref until that slice moves.
- * WKJChromeCallbacks::get_host_window is the slot waiting for it.
+ * PlatformPageClient is a WKJHandle now (Source/WebCore/platform/Widget.h), so the last
+ * JNI in this class is gone: get_host_window returns a new id for the WCWidget and the
+ * handle owns it, which is what the local reference this used to return did.
  */
 PlatformPageClient ChromeClientJava::platformPageClient() const
 {
-    using namespace ChromeClientJavaInternal;
-    JNIEnv* env = WTF::GetJavaEnv();
-    initRefs(env);
+    if (!m_callbacks || !m_callbacks->get_host_window)
+        return PlatformPageClient();
 
-    JLObject hostWindow(env->CallObjectMethod(m_webPage, getHostWindowMID));
+    PlatformPageClient hostWindow { m_callbacks->get_host_window(m_pageRef) };
     ASSERT(hostWindow);
-    WTF::CheckAndClearException(env);
-
     return hostWindow;
 }
 

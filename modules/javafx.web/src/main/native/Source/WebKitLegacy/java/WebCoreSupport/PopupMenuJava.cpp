@@ -36,35 +36,31 @@
 #include <WebCore/Page.h>
 #include <WebCore/PlatformJavaClasses.h>
 #include <WebCore/PopupMenuClient.h>
+#include <WebCore/WKJDOMUtils.h>
 
 #include <wtf/text/WTFString.h>
 
-#include "com_sun_webkit_PopupMenu.h"
-
-static jclass getJPopupMenuClass()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-    static JGClass jPopupMenuClass(env->FindClass("com/sun/webkit/PopupMenu"));
-    ASSERT(jPopupMenuClass);
-    return (jclass)jPopupMenuClass;
-}
-
-static void setSelectedItem(jobject popup, jint index)
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID setSelectedItemMID = env->GetMethodID(
-        getJPopupMenuClass(), "fwkSetSelectedItem", "(I)V");
-    ASSERT(setSelectedItemMID);
-
-    env->CallVoidMethod(popup, setSelectedItemMID, index);
-    WTF::CheckAndClearException(env);
-}
-
 namespace WebCore {
 
+namespace {
+
+/*
+ * The process-wide popup menu callbacks, installed once by wkj_install_popup_callbacks.
+ * `create` is a static Java method and the other five are made on the PopupMenu it returns,
+ * so nothing here is addressed by page and there is nothing per page to hold.
+ */
+const WKJPopupCallbacks* s_wkjPopupCallbacks = nullptr;
+
+void setSelectedItem(wkj_ref popup, int32_t index)
+{
+    if (s_wkjPopupCallbacks && s_wkjPopupCallbacks->set_selected_item)
+        s_wkjPopupCallbacks->set_selected_item(popup, index);
+}
+
+} // namespace
+
 PopupMenuJava::PopupMenuJava(PopupMenuClient* client)
-    : m_popupClient(client),
-      m_popup(0)
+    : m_popupClient(client)
 {
 }
 
@@ -73,95 +69,77 @@ PopupMenuJava::~PopupMenuJava()
     if (!m_popup)
         return;
 
-    WC_GETJAVAENV_CHKRET(env);
-
-    static jmethodID mid = env->GetMethodID(getJPopupMenuClass(),
-        "fwkDestroy", "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(m_popup, mid);
-    WTF::CheckAndClearException(env);
+    if (s_wkjPopupCallbacks && s_wkjPopupCallbacks->destroy)
+        s_wkjPopupCallbacks->destroy(m_popup.get());
 }
 
 void PopupMenuJava::createPopupMenuJava(Page*)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    if (!s_wkjPopupCallbacks || !s_wkjPopupCallbacks->create)
+        return;
 
-    static jmethodID mid = env->GetStaticMethodID(getJPopupMenuClass(),
-        "fwkCreatePopupMenu", "(J)Lcom/sun/webkit/PopupMenu;");
-    ASSERT(mid);
-
-    JLObject jPopupMenu(env->CallStaticObjectMethod(getJPopupMenuClass(), mid, ptr_to_jlong(this)));
-    ASSERT(jPopupMenu);
-    WTF::CheckAndClearException(env);
-
-    m_popup = jPopupMenu;
+    /* The id is retained here, as the global reference the JNI code took was. */
+    m_popup = WKJHandle(s_wkjPopupCallbacks->create(wkj_from_ptr(this)));
+    ASSERT(m_popup);
 }
 
 void PopupMenuJava::populate()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(getJPopupMenuClass(),
-        "fwkAppendItem", "(Ljava/lang/String;ZZZIILcom/sun/webkit/graphics/WCFont;)V");
-    ASSERT(mid);
+    if (!s_wkjPopupCallbacks || !s_wkjPopupCallbacks->append_item)
+        return;
 
     for (int i = 0; i < client()->listSize(); i++) {
         String itemText = client()->itemText(i);
-        JLString itemTextJ(itemText.toJavaString(env));
-        ASSERT(itemTextJ);
+        WKJStringArg itemTextArg(itemText);
         PopupMenuStyle style = client()->itemStyle(i);
         auto [r1, g1, b1, a1] = style.backgroundColor().toColorTypeLossy<SRGBA<uint8_t>>().resolved();
         auto [r2, g2, b2, a2] = style.foregroundColor().toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-        env->CallVoidMethod(m_popup, mid, (jstring)itemTextJ,
-                            bool_to_jbool(client()->itemIsLabel(i)),
-                            bool_to_jbool(client()->itemIsSeparator(i)),
-                            bool_to_jbool(client()->itemIsEnabled(i)),
-                            (jint)(a1 << 24 | r1 << 16 | g1 << 8 | b1),
-                            (jint)(a2 << 24 | r2 << 16 | g2 << 8 | b2),
-                            (jobject)*style.font().primaryFont().get().platformData().nativeFontData());
-        WTF::CheckAndClearException(env);
+
+        /*
+         * The WCFont the JNI code passed as a raw Java reference straight out of nativeFontData() is
+         * the same object, now named by its registry id.
+         */
+        RefPtr<RQRef> fontData = style.font().primaryFont().get().platformData().nativeFontData();
+        wkj_ref font = fontData ? static_cast<wkj_ref>(*fontData) : 0;
+
+        s_wkjPopupCallbacks->append_item(m_popup.get(),
+                            itemTextArg.data(), itemTextArg.length(),
+                            client()->itemIsLabel(i) ? 1 : 0,
+                            client()->itemIsSeparator(i) ? 1 : 0,
+                            client()->itemIsEnabled(i) ? 1 : 0,
+                            (int32_t)(a1 << 24 | r1 << 16 | g1 << 8 | b1),
+                            (int32_t)(a2 << 24 | r2 << 16 | g2 << 8 | b2),
+                            font);
     }
 }
 
 void PopupMenuJava::show(const IntRect& r,  LocalFrameView& frameView, int selectedIndex)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
     ASSERT(frameView.frame().page());
 
     createPopupMenuJava(frameView.frame().page());
     populate();
-    setSelectedItem(m_popup, selectedIndex);
+    setSelectedItem(m_popup.get(), selectedIndex);
 
     // r is in contents coordinates, while popup menu expects window coordinates
     IntRect wr = frameView.contentsToWindow(r);
 
-    static jmethodID mid = env->GetMethodID(
-            getJPopupMenuClass(),
-            "fwkShow",
-            "(Lcom/sun/webkit/WebPage;III)V");
-    ASSERT(mid);
+    if (!s_wkjPopupCallbacks || !s_wkjPopupCallbacks->show)
+        return;
 
-    env->CallVoidMethod(
-            m_popup,
-            mid,
-            (jobject) WebPage::jobjectFromPage(frameView.frame().page()),
+    WKJHandle page = WebPage::jobjectFromPage(frameView.frame().page());
+    s_wkjPopupCallbacks->show(
+            m_popup.get(),
+            page.get(),
             wr.x(),
             wr.y() + wr.height(),
             wr.width());
-    WTF::CheckAndClearException(env);
 }
 
 void PopupMenuJava::hide()
 {
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(getJPopupMenuClass(), "fwkHide", "()V");
-    ASSERT(mid);
-
-    env->CallVoidMethod((jobject)m_popup, mid);
-    WTF::CheckAndClearException(env);
+    if (s_wkjPopupCallbacks && s_wkjPopupCallbacks->hide)
+        s_wkjPopupCallbacks->hide(m_popup.get());
 }
 
 void PopupMenuJava::updateFromElement()
@@ -170,7 +148,7 @@ void PopupMenuJava::updateFromElement()
     if (!m_popup) {
         return;
     }
-    setSelectedItem(m_popup, client()->popupSelectedIndex());
+    setSelectedItem(m_popup.get(), client()->popupSelectedIndex());
 }
 
 void PopupMenuJava::disconnectClient()
@@ -180,15 +158,23 @@ void PopupMenuJava::disconnectClient()
 
 } // namespace WebCore
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
-    (JNIEnv*, jobject, jlong pdata, jint index)
+extern "C" {
+
+WKJ_EXPORT void wkj_install_popup_callbacks(const WKJPopupCallbacks* callbacks)
 {
+    WebCore::WKJCallScope wkjScope;
+    WebCore::s_wkjPopupCallbacks = callbacks;
+}
+
+WKJ_EXPORT void wkj_popup_selection_committed(int64_t popup, int32_t index)
+{
+    WebCore::WKJCallScope wkjScope;
     using namespace WebCore;
-    if (!pdata) {
+    if (!popup) {
         return;
     }
 
-    PopupMenuJava* pPopupMenu = static_cast<PopupMenuJava*>(jlong_to_ptr(pdata));
+    PopupMenuJava* pPopupMenu = static_cast<PopupMenuJava*>(wkj_to_ptr(popup));
     ASSERT(pPopupMenu);
 
     if (pPopupMenu->client()) {
@@ -196,18 +182,20 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
     }
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkPopupClosed
-    (JNIEnv*, jobject, jlong pdata)
+WKJ_EXPORT void wkj_popup_closed(int64_t popup)
 {
+    WebCore::WKJCallScope wkjScope;
     using namespace WebCore;
-    if (!pdata) {
+    if (!popup) {
         return;
     }
 
-    PopupMenuJava* pPopupMenu = static_cast<PopupMenuJava*>(jlong_to_ptr(pdata));
+    PopupMenuJava* pPopupMenu = static_cast<PopupMenuJava*>(wkj_to_ptr(popup));
     ASSERT(pPopupMenu);
 
     if (pPopupMenu->client()) {
         pPopupMenu->client()->popupDidHide();
     }
+}
+
 }

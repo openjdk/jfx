@@ -74,53 +74,22 @@ HistoryItem* getItem(int64_t item)
     return static_cast<HistoryItem*>(wkj_to_ptr(item));
 }
 
-jmethodID initMethod(JNIEnv* env, jclass cls, const char* name, const char* signature)
-{
-    jmethodID mid = env->GetMethodID(cls, name, signature);
-    ASSERT(mid);
-    return mid;
-}
-
-jmethodID initCtor(JNIEnv* env, jclass cls, const char* signature)
-{
-    return initMethod(env, cls, "<init>", signature);
-}
-
 // ENTRY-RELATED METHODS
 
-jclass getJEntryClass()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static JGClass jEntryClass(env->FindClass("com/sun/webkit/BackForwardList$Entry"));
-    ASSERT(jEntryClass);
-
-    return jEntryClass;
-}
-
 /*
- * Still JNI, and deliberately so.
- *
- * createEntry constructs the Java BackForwardList$Entry and parks it in
- * HistoryItem::m_hostObject, which is a JGObject in the upstream header
- * Source/WebCore/history/HistoryItem.h:298. HistoryItem.cpp:78 reads it back from the
- * destructor to fire notifyItemDestroyed, so entry lifetime cannot move to a wkj_ref
- * without changing files outside this slice. That is why bflGet and bflItemGetChildren
- * below, and notifyHistoryItemDestroyed, keep their JNI form while everything else in
- * this file is wkj_*.
+ * The com.sun.webkit.BackForwardList Entry that mirrors `item`, created on first use and
+ * parked in HistoryItem::m_hostObject for the life of the item. The handle owns the id;
+ * the destructor of HistoryItem releases it after telling Java the item has gone.
  */
-static JLObject createEntry(HistoryItem* item, jlong jpage)
+wkj_ref createEntry(HistoryItem* item, int64_t page)
 {
+    if (!s_wkjBackForwardCallbacks || !s_wkjBackForwardCallbacks->create_entry)
+        return 0;
 
-    JNIEnv* env = WTF::GetJavaEnv();
-    static jmethodID entryCtorMID = initCtor(env, getJEntryClass(), "(JJ)V");
+    wkj_ref entry = s_wkjBackForwardCallbacks->create_entry(wkj_from_ptr(item), page);
+    item->setHostObject(WKJHandle(entry));
 
-    JLObject jEntry(env->NewObject(getJEntryClass(), entryCtorMID, ptr_to_jlong(item), jpage));
-    WTF::CheckAndClearException(env);
-
-    item->setHostObject(jEntry);
-
-    return jEntry;
+    return entry;
 }
 
 // BACKFORWARDLIST METHODS
@@ -150,15 +119,14 @@ void notifyBackForwardListChanged(wkj_ref host)
 }
 } // namespace
 
-void notifyHistoryItemDestroyed(const JLObject &host)
+/*
+ * Called from the HistoryItem destructor, which is why it is not static: the declaration
+ * lives in Source/WebCore/history/HistoryItem.cpp.
+ */
+void notifyHistoryItemDestroyed(wkj_ref host)
 {
-    WC_GETJAVAENV_CHKRET(env);
-    static jmethodID notifyItemDestroyedMID =
-            initMethod(env, getJEntryClass(), "notifyItemDestroyed", "()V");
-    if (host) {
-        env->CallVoidMethod(host, notifyItemDestroyedMID);
-        WTF::CheckAndClearException(env);
-    }
+    if (host && s_wkjBackForwardCallbacks && s_wkjBackForwardCallbacks->item_destroyed)
+        s_wkjBackForwardCallbacks->item_destroyed(host);
 }
 
 // entry.getURL()
@@ -182,26 +150,11 @@ WKJ_EXPORT int32_t wkj_bfl_item_title(int64_t item, uint16_t* result_buf, int32_
 }
 
 /*
- * entry.getIcon() has no wkj_* counterpart on purpose. ENABLE(ICONDATABASE) is never
- * defined for this port, so the body below is "return nullptr" for every input and the
- * native-necessity triage rules it PURE with exact parity: it becomes a Java "return null"
- * in its own, behaviour-affecting commit rather than being re-plumbed through the C ABI.
+ * entry.getIcon() is gone rather than converted. ENABLE(ICONDATABASE) is never defined
+ * for this port, so its body was a plain nullptr for every input, and the
+ * native-necessity triage rules it PURE with exact parity: the Java side returns null
+ * directly. BackForwardList.Entry.getIcon() and its native declaration go with it.
  */
-JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNIEnv*, jclass, jlong)
-{
-/*
-    HistoryItem* item = getItem(jitem);
-    if (item != nullptr) {
-    // TODO: crashes with DRT
-        return *WebCore::iconDatabase().synchronousIconForPageURL(item->url(), WebCore::IntSize(16, 16))->nativeImageForCurrentFrame();
-        Image* icon = item->icon();
-        if (icon != nullptr) {
-            return *icon->javaImage();
-        }
-    }
-*/
-    return nullptr;
-}
 
 // entry.isTargetItem()
 WKJ_EXPORT int32_t wkj_bfl_item_is_target(int64_t item)
@@ -218,7 +171,7 @@ WKJ_EXPORT int32_t wkj_bfl_item_target(int64_t item, uint16_t* result_buf, int32
     WKJCallScope wkjScope;
     HistoryItem* historyItem = getItem(item);
     String target = historyItem->target();
-    /* An empty target was reported as a null jstring, and stays WKJ_STR_NULL. */
+    /* An empty target was reported as a null string, and stays WKJ_STR_NULL. */
     if (target.isEmpty()) {
         if (result_length)
             *result_length = 0;
@@ -240,18 +193,25 @@ WKJ_EXPORT void wkj_bfl_clear_for_drt(int64_t page)
 }
 
 /*
- * entry.getChildren() keeps its JNI form: it builds Java Entry objects through
- * createEntry, whose HistoryItem::m_hostObject dependency is described above.
+ * entry.getChildren(). Writes up to out_cap child entry ids and returns the count, so
+ * that Java builds the array rather than the library building a Java array. The ids are
+ * the ones HistoryItem::m_hostObject holds, so they are borrowed, not owned.
  */
-JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChildren(JNIEnv* env, jclass, jlong jitem, jlong jpage)
+WKJ_EXPORT int32_t wkj_bfl_item_children(int64_t item, int64_t page, wkj_ref* out,
+                                         int32_t out_cap)
 {
-    HistoryItem* item = getItem(jitem);
-    jobjectArray children = env->NewObjectArray(item->children().size(), getJEntryClass(), nullptr);
-    int i = 0;
-    for (const auto& it : item->children()) {
-        env->SetObjectArrayElement(children, i++, (jobject)createEntry(&it.get(), jpage));
+    WKJCallScope wkjScope;
+    HistoryItem* historyItem = getItem(item);
+    int32_t count = 0;
+    for (const auto& it : historyItem->children()) {
+        wkj_ref entry = it.get().hostObject();
+        if (!entry)
+            entry = createEntry(&it.get(), page);
+        if (out && count < out_cap)
+            out[count] = entry;
+        count++;
     }
-    return children;
+    return count;
 }
 
 // BackForwardList.size()
@@ -302,20 +262,21 @@ WKJ_EXPORT int32_t wkj_bfl_is_enabled(int64_t page)
 }
 
 /*
- * BackForwardList.get() keeps its JNI form for the same reason as bflItemGetChildren: it
- * hands back the Java Entry cached in HistoryItem::m_hostObject.
+ * BackForwardList.get(). Hands back the entry cached in HistoryItem::m_hostObject,
+ * creating it on first use, exactly as the JNI version did with a Java reference.
  */
-JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflGet(JNIEnv*, jclass, jlong jpage, jint index)
+WKJ_EXPORT wkj_ref wkj_bfl_item_at(int64_t page, int32_t index)
 {
-    BackForwardList* bfl = getBfl(jpage);
+    WKJCallScope wkjScope;
+    BackForwardList* bfl = getBfl(page);
     HistoryItem* item = itemAtIndex(bfl, index);
     if (!item)
         return 0;
-    JLObject host(item->hostObject());
+    wkj_ref host = item->hostObject();
     if (!host) {
-        host = createEntry(item, jpage);
+        host = createEntry(item, page);
     }
-    return host.releaseLocal();
+    return host;
 }
 
 // BackForwardList.setCurrentIndex()

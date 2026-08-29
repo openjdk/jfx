@@ -34,7 +34,6 @@
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLFrameOwnerElement.h>
-#include <WebCore/PlatformJavaClasses.h>
 #include <webkit_java_api_page.h>
 #include <WebCore/ProgressTrackerClient.h>
 #include <WebCore/ResourceRequest.h>
@@ -46,13 +45,13 @@ namespace WebCore {
 
 class FrameLoaderClientJava : public LocalFrameLoaderClient {
 public:
-    FrameLoaderClientJava(FrameLoader& loader, const JLObject &webPage);
+    explicit FrameLoaderClientJava(FrameLoader& loader);
     ~FrameLoaderClientJava();
 
     /*
      * Installs the page this client reports to. wkj_page_set_callbacks calls it on the
      * main frame's client; createFrame() passes the same three values on to every
-     * subframe client it makes, which is what the captured JLObject used to do.
+     * subframe client it makes, which is what the captured Java reference used to do.
      *
      * `pageRef` is borrowed - the WebPage owns the retained id and outlives the frame -
      * and `page` is the WebCore::Page that page() used to fetch with a getPage upcall
@@ -213,14 +212,6 @@ private:
     bool m_mainResourceRequestIDSet { false };
     bool m_isPageRedirected;
     bool m_hasRepresentation;
-
-    /*
-     * The Java WebPage as a JNI global reference. Only createPlugin() still needs it: it
-     * hands the object to PluginWidgetJava, which is part of the
-     * Source/WebCore/platform/java slice and takes a JLObject. It comes out with that
-     * slice, together with the constructor argument and the PlatformJavaClasses.h include.
-     */
-    JGObject m_webPage;
 
     wkj_ref m_pageRef { 0 };
     const WKJFrameLoaderCallbacks* m_callbacks { nullptr };
