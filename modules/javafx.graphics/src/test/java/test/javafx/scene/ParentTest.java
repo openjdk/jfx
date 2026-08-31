@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -365,6 +366,27 @@ public class ParentTest {
 
         assertEquals(150, g.prefWidth(-1), 1e-100);
         assertEquals(250, g.prefHeight(-1), 1e-100);
+    }
+
+    @Test
+    public void testPrefWidthCacheInvalidatedWhenRenderScaleChanges() {
+        Region region = new Region() {
+            @Override
+            protected double computePrefWidth(double height) {
+                return snapSizeX(10.2);
+            }
+        };
+
+        stage.setScene(new Scene(region));
+        stage.setRenderScaleX(1.0);
+
+        assertEquals(11.0, region.prefWidth(-1), 0.0);
+
+        stage.setRenderScaleX(1.5);
+        double expected = region.snapSizeX(10.2);
+
+        assertEquals(10.666666666666666, expected, 0.0);
+        assertEquals(expected, region.prefWidth(-1), 0.0);
     }
 
     @Test
