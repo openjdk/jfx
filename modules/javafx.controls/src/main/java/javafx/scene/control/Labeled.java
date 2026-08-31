@@ -805,12 +805,32 @@ public abstract class Labeled extends Control {
 
 
     /**
-     * MnemonicParsing property to enable/disable text parsing.
-     * If this is set to true, then the Label text will be
-     * parsed to see if it contains the mnemonic parsing character '_'.
-     * When a mnemonic is detected the key combination will
-     * be determined based on the succeeding character, and the mnemonic
-     * added.
+     * Determines whether the mnemonic character in the label text will be parsed.
+     * <p>
+     * The parsing recognizes two formats:
+     * <ul>
+     * <li>
+     * <p>
+     * <b>Simple mnemonic</b>: the first character preceded by the first {@code _}
+     * character will be treated as the mnemonic. For example, "E_xit" will cause
+     * the text to become "Exit" and the mnemonic will be "x". This is the most
+     * common designation of a mnemonic, which will typically be visualized with an underline.
+     * To prevent {@code _} from being
+     * treated as the mnemonic prefix character, repeat it twice in a row.
+     * </p>
+     * </li>
+     * <li>
+     * <p>
+     * <b>Extended mnemonic</b>: an optional representation of a mnemonic is
+     * {@code _(c)}, where {@code c} is the mnemonic character. For example,
+     * "Exit_(q)" will cause the text to become "Exit" and the
+     * mnemonic will be "q". This is typically provided in
+     * translated strings to support mnemonics where the main text does not have any
+     * characters that map to keyboard keys. In these cases, the skin for the
+     * control will typically present the mnemonic surrounded by parentheses.
+     * The extended mnemonic might be hidden on certain platforms and only displayed
+     * then the mnemonic modifier key is pressed.
+     * </ul>
      *
      * @defaultValue {@code false}; {@code true} for some {@code Control}s.
      */
