@@ -191,16 +191,6 @@ void loadLocalProperties(String sourceFileName) {
 }
 
 /**
- * Struct used to contain some information passed to the closure
- * passed to compileTargets.
- */
-class CompileTarget {
-    String name;
-    String upper;
-    String capital;
-}
-
-/**
  * Iterates over each of the compile targets, passing the given closure
  * a CompileTarget instance.
  *
