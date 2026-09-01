@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "Gradient.h"
+#include <WebCore/Color.h>
+#include <WebCore/Gradient.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
@@ -89,7 +89,7 @@ public:
 
     FontPaletteValues(std::optional<FontPaletteIndex> basePalette, Vector<OverriddenColor>&& overrideColors)
         : m_basePalette(basePalette)
-        , m_overrideColors(WTFMove(overrideColors))
+        , m_overrideColors(WTF::move(overrideColors))
     {
     }
 
@@ -112,6 +112,7 @@ public:
     {
         return m_basePalette == other.m_basePalette && m_overrideColors == other.m_overrideColors;
     }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
 private:
     std::optional<FontPaletteIndex> m_basePalette;
@@ -125,13 +126,3 @@ inline void add(Hasher& hasher, const FontPaletteValues& fontPaletteValues)
 }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct DefaultHash<WebCore::FontPaletteValues> {
-    static unsigned hash(const WebCore::FontPaletteValues& key) { return computeHash(key); }
-    static bool equal(const WebCore::FontPaletteValues& a, const WebCore::FontPaletteValues& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
-}

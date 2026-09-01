@@ -26,7 +26,8 @@
 // https://w3c.github.io/picture-in-picture/#documentorshadowroot-extension
 [
     Conditional=PICTURE_IN_PICTURE_API,
-    EnabledBySetting=PictureInPictureAPIEnabled
+    EnabledBySetting=PictureInPictureAPIEnabled,
+    ImplementedBy=DocumentOrShadowRootPictureInPicture
 ] partial interface mixin DocumentOrShadowRoot {
     readonly attribute Element? pictureInPictureElement;
 };

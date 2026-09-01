@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "CSSValue.h"
+#include <WebCore/CSSValue.h>
 
 namespace WebCore {
 
@@ -44,13 +44,13 @@ protected:
         : m_top(value)
         , m_right(value)
         , m_bottom(value)
-        , m_left(WTFMove(value))
+        , m_left(WTF::move(value))
     { }
     RectBase(Ref<CSSValue> top, Ref<CSSValue> right, Ref<CSSValue> bottom, Ref<CSSValue> left)
-        : m_top(WTFMove(top))
-        , m_right(WTFMove(right))
-        , m_bottom(WTFMove(bottom))
-        , m_left(WTFMove(left))
+        : m_top(WTF::move(top))
+        , m_right(WTF::move(right))
+        , m_bottom(WTF::move(bottom))
+        , m_left(WTF::move(left))
     { }
     ~RectBase() = default;
 

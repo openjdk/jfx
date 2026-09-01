@@ -25,9 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_OMGJIT)
+#include <wtf/Platform.h>
 
-#include "WasmFormat.h"
+#if ENABLE(WEBASSEMBLY)
+
+#include <JavaScriptCore/WasmFormat.h>
 
 #include <wtf/ForbidHeapAllocation.h>
 
@@ -65,7 +67,9 @@ public:
         packedData = (static_cast<uint64_t>(opcode) << 40) | (static_cast<uint64_t>(prefix) << 32) | offset;
     }
 
+#if ENABLE(WEBASSEMBLY_OMGJIT)
     OpcodeOrigin(B3::Origin);
+#endif
 
     OpType opcode() const
     {
@@ -97,7 +101,11 @@ public:
         return static_cast<uint32_t>(packedData);
     }
 
+    ASCIILiteral opcodeString() const;
+
+#if ENABLE(WEBASSEMBLY_OMGJIT)
     B3::Origin asB3Origin();
+#endif
 
 private:
     uint64_t packedData { 0 };

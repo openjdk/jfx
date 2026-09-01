@@ -26,16 +26,7 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class MediaKeySystemClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaKeySystemClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -43,10 +34,8 @@ class Document;
 class Page;
 class MediaKeySystemRequest;
 
-class MediaKeySystemClient : public CanMakeWeakPtr<MediaKeySystemClient> {
+class MediaKeySystemClient : public AbstractRefCountedAndCanMakeWeakPtr<MediaKeySystemClient> {
 public:
-    virtual void pageDestroyed() = 0;
-
     virtual void requestMediaKeySystem(MediaKeySystemRequest&) = 0;
     virtual void cancelMediaKeySystemRequest(MediaKeySystemRequest&) = 0;
 
@@ -54,7 +43,7 @@ protected:
     virtual ~MediaKeySystemClient() = default;
 };
 
-WEBCORE_EXPORT void provideMediaKeySystemTo(Page&, MediaKeySystemClient&);
+WEBCORE_EXPORT void provideMediaKeySystemTo(Page&, Ref<MediaKeySystemClient>&&);
 
 } // namespace WebCore
 

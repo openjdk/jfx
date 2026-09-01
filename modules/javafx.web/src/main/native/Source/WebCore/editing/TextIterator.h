@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "CharacterRange.h"
-#include "FindOptions.h"
-#include "InlineIteratorLogicalOrderTraversal.h"
-#include "InlineIteratorTextBox.h"
-#include "SimpleRange.h"
-#include "TextIteratorBehavior.h"
+#include <WebCore/CharacterRange.h>
+#include <WebCore/FindOptions.h>
+#include <WebCore/InlineIteratorLogicalOrderTraversal.h>
+#include <WebCore/InlineIteratorTextBox.h>
+#include <WebCore/SimpleRange.h>
+#include <WebCore/TextIteratorBehavior.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringCommon.h>
@@ -56,6 +56,7 @@ WEBCORE_EXPORT String plainTextReplacingNoBreakSpace(const SimpleRange&, TextIte
 // Find within the document, based on the text from the text iterator.
 WEBCORE_EXPORT SimpleRange findPlainText(const SimpleRange&, const String&, FindOptions);
 WEBCORE_EXPORT SimpleRange findClosestPlainText(const SimpleRange&, const String&, FindOptions, uint64_t targetCharacterOffset);
+WEBCORE_EXPORT Vector<SimpleRange> findAllPlainText(const SimpleRange&, const String&, FindOptions, unsigned limit);
 WEBCORE_EXPORT bool containsPlainText(const String& document, const String&, FindOptions); // Lets us use the search algorithm on a string.
 WEBCORE_EXPORT String foldQuoteMarks(const String&);
 

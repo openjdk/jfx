@@ -26,6 +26,7 @@
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackConstraints : MediaTrackConstraintSet {
     sequence<MediaTrackConstraintSet> advanced;
 };
@@ -34,7 +35,8 @@
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=MediaTrackConstraintSet
+    ImplementedAs=MediaTrackConstraintSet,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackConstraintSet {
     ConstrainLong width;
     ConstrainLong height;
@@ -85,7 +87,8 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=ConstrainBooleanParameters
+    ImplementedAs=ConstrainBooleanParameters,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainBooleanParameters {
     boolean exact;
     boolean ideal;
@@ -95,7 +98,8 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=ConstrainDOMStringParameters
+    ImplementedAs=ConstrainDOMStringParameters,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainDOMStringParameters {
     (DOMString or sequence<DOMString>) exact;
     (DOMString or sequence<DOMString>) ideal;
@@ -105,7 +109,8 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=ConstrainDoubleRange
+    ImplementedAs=ConstrainDoubleRange,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainDoubleRange : DoubleRange {
     double exact;
     double ideal;
@@ -115,7 +120,8 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=ConstrainLongRange
+    ImplementedAs=ConstrainLongRange,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainLongRange : LongRange {
     long exact;
     long ideal;

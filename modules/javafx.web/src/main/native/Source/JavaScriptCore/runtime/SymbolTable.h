@@ -28,15 +28,15 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "ConstantMode.h"
-#include "InferredValue.h"
-#include "JSObject.h"
-#include "ScopedArgumentsTable.h"
-#include "TypeLocation.h"
-#include "VarOffset.h"
-#include "VariableEnvironment.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/ConstantMode.h>
+#include <JavaScriptCore/InferredValue.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/ScopedArgumentsTable.h>
+#include <JavaScriptCore/TypeLocation.h>
+#include <JavaScriptCore/VarOffset.h>
+#include <JavaScriptCore/VariableEnvironment.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <memory>
 #include <wtf/HashTraits.h>
 #include <wtf/text/SymbolImpl.h>

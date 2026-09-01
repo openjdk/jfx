@@ -22,21 +22,21 @@
 
 #pragma once
 
-#include "CallData.h"
-#include "CellState.h"
-#include "ConstructData.h"
-#include "DestructionMode.h"
-#include "EnumerationMode.h"
-#include "Heap.h"
-#include "HeapCell.h"
-#include "IndexingType.h"
-#include "JSLock.h"
-#include "JSTypeInfo.h"
-#include "SlotVisitor.h"
-#include "SlotVisitorMacros.h"
-#include "SubspaceAccess.h"
-#include "TypedArrayType.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/CallData.h>
+#include <JavaScriptCore/CellState.h>
+#include <JavaScriptCore/ConstructData.h>
+#include <JavaScriptCore/DestructionMode.h>
+#include <JavaScriptCore/EnumerationMode.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/HeapCell.h>
+#include <JavaScriptCore/IndexingType.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/JSTypeInfo.h>
+#include <JavaScriptCore/SlotVisitor.h>
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <JavaScriptCore/SubspaceAccess.h>
+#include <JavaScriptCore/TypedArrayType.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 namespace JSC {
 
@@ -51,7 +51,7 @@ class JSGlobalObject;
 class LLIntOffsetsExtractor;
 class PropertyDescriptor;
 class PropertyName;
-class PropertyNameArray;
+class PropertyNameArrayBuilder;
 class Structure;
 class JSCellLock;
 
@@ -115,7 +115,7 @@ public:
     enum CreatingEarlyCellTag { CreatingEarlyCell };
     JSCell(CreatingEarlyCellTag);
     enum CreatingWellDefinedBuiltinCellTag { CreatingWellDefinedBuiltinCell };
-    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, int32_t typeInfoBlob);
+    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, uint32_t typeInfoBlob);
 
     JS_EXPORT_PRIVATE static void destroy(JSCell*);
 
@@ -268,8 +268,8 @@ protected:
     void finishCreation(VM&, Structure*, CreatingEarlyCellTag);
 
     // Dummy implementations of override-able static functions for classes to put in their MethodTable
-    static NO_RETURN_DUE_TO_CRASH void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    static NO_RETURN_DUE_TO_CRASH void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static NO_RETURN_DUE_TO_CRASH void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    static NO_RETURN_DUE_TO_CRASH void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static NO_RETURN_DUE_TO_CRASH bool preventExtensions(JSObject*, JSGlobalObject*);
     static NO_RETURN_DUE_TO_CRASH bool isExtensible(JSObject*, JSGlobalObject*);
@@ -288,10 +288,15 @@ private:
     JS_EXPORT_PRIVATE JSObject* toObjectSlow(JSGlobalObject*) const;
 
     StructureID m_structureID;
+    union {
+        uint32_t m_blob;
+        struct {
     IndexingType m_indexingTypeAndMisc; // DO NOT store to this field. Always CAS.
     JSType m_type;
     TypeInfo::InlineTypeFlags m_flags;
     CellState m_cellState;
+        };
+    };
 };
 
 class JSCellLock : public JSCell {

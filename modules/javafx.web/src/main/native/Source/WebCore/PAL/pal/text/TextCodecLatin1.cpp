@@ -100,7 +100,7 @@ void TextCodecLatin1::registerCodecs(TextCodecRegistrar registrar)
 
 String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool& sawException)
 {
-    std::span<LChar> characters;
+    std::span<Latin1Character> characters;
     if (bytes.empty())
         return emptyString();
     if (bytes.size() > std::numeric_limits<unsigned>::max()) [[unlikely]] {
@@ -121,7 +121,7 @@ String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool&
                 while (source.data() < alignedEnd) {
                     auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
 
-                    if (!WTF::containsOnlyASCII<LChar>(chunk))
+                    if (!WTF::containsOnlyASCII<Latin1Character>(chunk))
                         goto useLookupTable;
 
                     copyASCIIMachineWord(destination, source);
@@ -172,7 +172,7 @@ upConvertTo16Bit:
                 while (source.data() < alignedEnd) {
                     auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
 
-                    if (!WTF::containsOnlyASCII<LChar>(chunk))
+                    if (!WTF::containsOnlyASCII<Latin1Character>(chunk))
                         goto useLookupTable16;
 
                     copyASCIIMachineWord(destination16, source);

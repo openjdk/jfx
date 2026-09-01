@@ -40,7 +40,8 @@ class MultiChannelResampler;
 class WebAudioSourceProvider;
 
 class MediaStreamAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamAudioSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(MediaStreamAudioSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaStreamAudioSourceNode);
 public:
     static ExceptionOr<Ref<MediaStreamAudioSourceNode>> create(BaseAudioContext&, MediaStreamAudioSourceOptions&&);
 
@@ -48,8 +49,11 @@ public:
 
     MediaStream& mediaStream() { return m_mediaStream; }
 
+    void ref() const final { AudioNode::ref(); }
+    void deref() const final { AudioNode::deref(); }
+
 private:
-    MediaStreamAudioSourceNode(BaseAudioContext&, MediaStream&, Ref<WebAudioSourceProvider>&&);
+    MediaStreamAudioSourceNode(BaseAudioContext&, Ref<MediaStream>&&, Ref<WebAudioSourceProvider>&&);
 
     // AudioNode
     void process(size_t framesToProcess) final;
@@ -76,5 +80,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(MediaStreamAudioSourceNode, NodeTypeMediaStreamAudioSource);
 
 #endif // ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM)

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,20 +25,20 @@
 
 #pragma once
 
-#include "CSSBoxShadow.h"
-#include "CSSPrimitiveNumeric.h"
-#include "StyleColor.h"
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleShadow.h"
+#include <WebCore/CSSBoxShadow.h>
+#include <WebCore/CSSPrimitiveNumeric.h>
+#include <WebCore/StyleColor.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
+#include <WebCore/StyleShadow.h>
 
 namespace WebCore {
 namespace Style {
 
 struct BoxShadow {
     Color color;
-    SpaceSeparatedPoint<Length<>> location;
-    Length<CSS::Nonnegative> blur;
-    Length<> spread;
+    SpaceSeparatedPoint<Length<CSS::AllUnzoomed>> location;
+    Length<CSS::NonnegativeUnzoomed> blur;
+    Length<CSS::AllUnzoomed> spread;
     std::optional<CSS::Keyword::Inset> inset;
     bool isWebkitBoxShadow;
 
@@ -84,6 +85,12 @@ template<> struct Blending<BoxShadow> {
     auto blend(const BoxShadow&, const BoxShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> BoxShadow;
 };
 
+template<> struct Blending<BoxShadows> {
+    auto canBlend(const BoxShadows&, const BoxShadows&, CompositeOperation) -> bool;
+    constexpr auto requiresInterpolationForAccumulativeIteration(const BoxShadows&, const BoxShadows&) -> bool { return true; }
+    auto blend(const BoxShadows&, const BoxShadows&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> BoxShadows;
+};
+
 // MARK: - Shadow-specific Interfaces
 
 inline ShadowStyle shadowStyle(const BoxShadow& shadow)
@@ -96,9 +103,9 @@ inline bool isInset(const BoxShadow& shadow)
     return shadow.inset.has_value();
 }
 
-inline LayoutUnit paintingSpread(const BoxShadow& shadow)
+inline LayoutUnit paintingSpread(const BoxShadow& shadow, const Style::ZoomFactor& zoomFactor)
 {
-    return LayoutUnit { shadow.spread.value };
+    return LayoutUnit { shadow.spread.resolveZoom(zoomFactor) };
 }
 
 } // namespace Style

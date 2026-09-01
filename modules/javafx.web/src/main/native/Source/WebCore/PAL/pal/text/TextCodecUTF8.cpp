@@ -187,7 +187,7 @@ void TextCodecUTF8::consumePartialSequenceByte()
     memmoveSpan(std::span { m_partialSequence }, std::span { m_partialSequence }.subspan(1, m_partialSequenceSize));
 }
 
-bool TextCodecUTF8::handlePartialSequence(std::span<LChar>& destination, std::span<const uint8_t>& source, bool flush)
+bool TextCodecUTF8::handlePartialSequence(std::span<Latin1Character>& destination, std::span<const uint8_t>& source, bool flush)
 {
     ASSERT(m_partialSequenceSize);
     do {
@@ -311,7 +311,7 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
         sawError = true;
         return { };
     }
-    StringBuffer<LChar> buffer(bufferSize);
+    StringBuffer<Latin1Character> buffer(bufferSize);
 
     auto source = bytes;
     auto* alignedEnd = WTF::alignToMachineWord(std::to_address(source.end()));
@@ -337,7 +337,7 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
                         auto chunk = reinterpretCastSpanStartTo<const WTF::MachineWord>(source);
-                        if (!WTF::containsOnlyASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<Latin1Character>(chunk))
                             break;
                         copyASCIIMachineWord(destination, source);
                         skip(source, sizeof(WTF::MachineWord));
@@ -390,7 +390,7 @@ String TextCodecUTF8::decode(std::span<const uint8_t> bytes, bool flush, bool st
         sawError = true;
         return { };
     }
-    return String::adopt(WTFMove(buffer));
+    return String::adopt(WTF::move(buffer));
 
 upConvertTo16Bit:
     StringBuffer<char16_t> buffer16(bufferSize);
@@ -422,7 +422,7 @@ upConvertTo16Bit:
                 if (WTF::isAlignedToMachineWord(source.data())) {
                     while (source.data() < alignedEnd) {
                         auto chunk = reinterpretCastSpanStartTo<const WTF::MachineWord>(source);
-                        if (!WTF::containsOnlyASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<Latin1Character>(chunk))
                             break;
                         copyASCIIMachineWord(destination16, source);
                         skip(source, sizeof(WTF::MachineWord));
@@ -475,7 +475,7 @@ upConvertTo16Bit:
         sawError = true;
         return { };
     }
-    return String::adopt(WTFMove(buffer16));
+    return String::adopt(WTF::move(buffer16));
 }
 
 Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string)

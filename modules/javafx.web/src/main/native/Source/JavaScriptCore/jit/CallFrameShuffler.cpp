@@ -590,7 +590,7 @@ bool CallFrameShuffler::performSafeWrites()
                 if (!tryWrites(*cachedRecovery))
                     stillFailing.append(failed);
             }
-            failures = WTFMove(stillFailing);
+            failures = WTF::move(stillFailing);
         }
         if (verbose && firstSafe != dangerFrontier() + 1)
             dataLog("  We freed up danger slots!\n");

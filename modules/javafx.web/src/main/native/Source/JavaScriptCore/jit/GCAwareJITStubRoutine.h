@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "DFGCodeOriginPool.h"
-#include "JITStubRoutine.h"
-#include "JSObject.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/DFGCodeOriginPool.h>
+#include <JavaScriptCore/JITStubRoutine.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Hasher.h>
 #include <wtf/Vector.h>
@@ -58,6 +58,7 @@ class GCAwareJITStubRoutine : public JITStubRoutine {
 public:
     using Base = JITStubRoutine;
     friend class JITStubRoutine;
+    friend class JSDollarVMHelper;
     GCAwareJITStubRoutine(Type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, JSCell* owner, bool isCodeImmutable);
 
     static Ref<JITStubRoutine> create(VM& vm, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, JSCell* owner, bool isCodeImmutable)

@@ -27,11 +27,14 @@
 #include <wtf/ParallelHelperPool.h>
 
 #include <wtf/AutomaticThread.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WTF {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ParallelHelperPool);
+
 ParallelHelperClient::ParallelHelperClient(RefPtr<ParallelHelperPool>&& pool)
-    : m_pool(WTFMove(pool))
+    : m_pool(WTF::move(pool))
 {
     Locker locker { *m_pool->m_lock };
     RELEASE_ASSERT(!m_pool->m_isDying);
@@ -56,7 +59,7 @@ void ParallelHelperClient::setTask(RefPtr<SharedTask<void ()>>&& task)
 {
     Locker locker { *m_pool->m_lock };
     RELEASE_ASSERT(!m_task);
-    m_task = WTFMove(task);
+    m_task = WTF::move(task);
     m_pool->didMakeWorkAvailable(locker);
 }
 
@@ -81,7 +84,7 @@ void ParallelHelperClient::doSomeHelping()
 
 void ParallelHelperClient::runTaskInParallel(RefPtr<SharedTask<void ()>>&& task)
 {
-    setTask(WTFMove(task));
+    setTask(WTF::move(task));
     doSomeHelping();
     finish();
 }
@@ -119,6 +122,11 @@ void ParallelHelperClient::runTask(const RefPtr<SharedTask<void ()>>& task)
         if (!m_numActive)
             m_pool->m_workCompleteCondition.notifyAll();
     }
+}
+
+Ref<ParallelHelperPool> ParallelHelperPool::create(ASCIILiteral threadName)
+{
+    return adoptRef(*new ParallelHelperPool(threadName));
 }
 
 ParallelHelperPool::ParallelHelperPool(ASCIILiteral threadName)
@@ -169,6 +177,8 @@ void ParallelHelperPool::doSomeHelping()
 }
 
 class ParallelHelperPool::Thread final : public AutomaticThread {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(Thread);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Thread);
 public:
     Thread(const AbstractLocker& locker, ParallelHelperPool& pool)
         : AutomaticThread(locker, pool.m_lock, pool.m_workAvailableCondition.copyRef())
@@ -178,16 +188,16 @@ public:
 
     ASCIILiteral name() const final
     {
-        return m_pool.m_threadName;
+        return m_pool->m_threadName;
     }
 
 private:
     PollResult poll(const AbstractLocker&) final
     {
-        if (m_pool.m_isDying)
+        if (m_pool->m_isDying)
             return PollResult::Stop;
-        assertIsHeld(*m_pool.m_lock);
-        m_client = m_pool.getClientWithTask();
+        assertIsHeld(*m_pool->m_lock);
+        m_client = m_pool->getClientWithTask();
         if (m_client) {
             assertIsHeld(*m_client->m_pool->m_lock);
             m_task = m_client->claimTask();
@@ -204,7 +214,7 @@ private:
         return WorkResult::Continue;
     }
 
-    ParallelHelperPool& m_pool;
+    const CheckedRef<ParallelHelperPool> m_pool;
     ParallelHelperClient* m_client { nullptr };
     RefPtr<SharedTask<void ()>> m_task;
 };

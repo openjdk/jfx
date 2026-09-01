@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "HTTPHeaderNames.h"
-#include "ReferrerPolicy.h"
-#include "ResourceResponse.h"
-#include "StoredCredentialsPolicy.h"
+#include <WebCore/HTTPHeaderNames.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/StoredCredentialsPolicy.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>

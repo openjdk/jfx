@@ -72,7 +72,7 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
     description.setComputedSize(fontSize);
     // FIXME: Why doesn't this pass in any meaningful data for the last few arguments?
     auto platformData = CachedFont::platformDataFromCustomData(*customFontData, description, syntheticBold, syntheticItalic, { });
-    return Font::create(WTFMove(platformData), origin);
+    return Font::create(WTF::move(platformData), origin);
 }
 
 Ref<Font> Font::create(FontInternalAttributes&& attributes, FontPlatformData&& platformData)
@@ -561,7 +561,7 @@ const OpenTypeMathData* Font::mathData() const
     if (!m_mathData) {
         Ref mathData = OpenTypeMathData::create(m_platformData);
         if (mathData->hasMathData())
-            m_mathData = WTFMove(mathData);
+            m_mathData = WTF::move(mathData);
     }
     return m_mathData.get();
 }
@@ -703,7 +703,7 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const GlyphBuffer& glyphBuffer)
         ts << ", font: " <<  &font;
         ts << ", advance: width:" <<  width(advance) << " height:" << height(advance);
         ts << ", string index: "  << glyphBuffer.uncheckedStringOffsetAt(index);
-        ts << ", origin: " << glyphBuffer.originAt(index);
+        ts << ", origin: " << DoublePoint(glyphBuffer.originAt(index));
         ts << ", glyph bounds: " << bounds;
     }
     return ts;

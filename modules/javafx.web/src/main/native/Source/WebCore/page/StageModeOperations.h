@@ -25,7 +25,8 @@
 
 #pragma once
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
+
 namespace WebCore {
 
 enum class StageModeOperation : bool {
@@ -34,4 +35,5 @@ enum class StageModeOperation : bool {
 };
 
 } // namespace WebCore
+
 #endif

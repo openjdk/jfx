@@ -46,6 +46,7 @@ typedef (MediaDeviceInfo or InputDeviceInfo) DeviceInfo;
 
 [
     Conditional=MEDIA_STREAM,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary DisplayMediaStreamConstraints {
     (boolean or MediaTrackConstraints) video = true;
     (boolean or MediaTrackConstraints) audio = false;
@@ -53,6 +54,7 @@ typedef (MediaDeviceInfo or InputDeviceInfo) DeviceInfo;
 
 [
     Conditional=MEDIA_STREAM,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaStreamConstraints {
     (boolean or MediaTrackConstraints) video = false;
     (boolean or MediaTrackConstraints) audio = false;

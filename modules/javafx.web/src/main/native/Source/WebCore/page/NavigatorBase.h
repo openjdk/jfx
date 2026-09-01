@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
+#include <WebCore/ContextDestructionObserver.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -44,11 +44,15 @@ class WebCoreOpaqueRoot;
 class WebLockManager;
 template<typename> class ExceptionOr;
 
-class NavigatorBase : public RefCountedAndCanMakeWeakPtr<NavigatorBase>, public ContextDestructionObserver, public CanMakeCheckedPtr<NavigatorBase> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigatorBase);
+class NavigatorBase : public RefCounted<NavigatorBase>, public ContextDestructionObserver, public CanMakeCheckedPtr<NavigatorBase> {
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorBase);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NavigatorBase);
 public:
     virtual ~NavigatorBase();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     static String appName();
     String appVersion() const;

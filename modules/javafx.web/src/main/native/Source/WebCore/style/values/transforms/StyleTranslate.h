@@ -24,10 +24,8 @@
 
 #pragma once
 
-#include "StylePrimitiveNumericAdaptors.h"
-#include "StyleTransformOperationWrapper.h"
-#include "TranslateTransformOperation.h"
-#include <wtf/PointerComparison.h>
+#include <WebCore/StyleTransformFunctionWrapper.h>
+#include <WebCore/StyleTranslateTransformFunction.h>
 
 namespace WebCore {
 namespace Style {
@@ -35,23 +33,25 @@ namespace Style {
 // <'translate'> = none | <length-percentage> [ <length-percentage> <length>? ]?
 // https://drafts.csswg.org/css-transforms-2/#propdef-translate
 struct Translate {
-    using Platform = TranslateTransformOperation;
-    struct Operation : TransformOperationWrapper<Platform> {
-        using TransformOperationWrapper<Platform>::TransformOperationWrapper;
+    struct Function : TransformFunctionWrapper<TranslateTransformFunction> {
+        using TransformFunctionWrapper<TranslateTransformFunction>::TransformFunctionWrapper;
 
         template<typename... F> decltype(auto) switchOn(F&&...) const;
     };
 
     Translate(CSS::Keyword::None) : value { nullptr } { }
-    Translate(Operation&& value) : value { WTFMove(value.value) } { }
+    Translate(Function&& value) : value { WTF::move(value.value) } { }
+    Translate(Ref<const TranslateTransformFunction>&& value) : value { WTF::move(value) } { }
 
     bool isRepresentableIn2D() const { return !value || value->isRepresentableIn2D(); }
     bool is3DOperation() const { return value && value->is3DOperation(); }
 
-    bool apply(TransformationMatrix&, const FloatSize&) const;
+    TransformFunctionSizeDependencies computeSizeDependencies() const;
+
+    void apply(TransformationMatrix&, const FloatSize&) const;
 
     bool isNone() const { return !value; }
-    bool isOperation() const { return !!value; }
+    bool isFunction() const { return !!value; }
 
     template<typename> bool holdsAlternative() const;
     template<typename... F> decltype(auto) switchOn(F&&...) const;
@@ -65,21 +65,21 @@ private:
     friend struct Blending<Translate>;
     friend struct ToPlatform<Translate>;
 
-    RefPtr<Platform> value;
+    RefPtr<const TranslateTransformFunction> value;
 };
 
 // MARK: Translate Operation
 
-template<typename... F> decltype(auto) Translate::Operation::switchOn(F&&... f) const
+template<typename... F> decltype(auto) Translate::Function::switchOn(F&&... f) const
 {
     auto visitor = WTF::makeVisitor(std::forward<F>(f)...);
 
     Ref protectedValue = value;
     if (!protectedValue->z().isZero())
-        return visitor(SpaceSeparatedTuple { LengthPercentageAdaptor<> { protectedValue->x() }, LengthPercentageAdaptor<> { protectedValue->y() }, LengthAdaptor<> { protectedValue->z() } });
-    if (!protectedValue->y().isZero() || protectedValue->y().isPercent())
-        return visitor(SpaceSeparatedTuple { LengthPercentageAdaptor<> { protectedValue->x() }, LengthPercentageAdaptor<> { protectedValue->y() } });
-    return visitor(SpaceSeparatedTuple { LengthPercentageAdaptor<> { protectedValue->x() } });
+        return visitor(SpaceSeparatedTuple { protectedValue->x(), protectedValue->y(), protectedValue->z() });
+    if (!protectedValue->y().isKnownZero() || protectedValue->y().isPercent())
+        return visitor(SpaceSeparatedTuple { protectedValue->x(), protectedValue->y() });
+    return visitor(SpaceSeparatedTuple { protectedValue->x() });
 }
 
 // MARK: Translate
@@ -87,7 +87,7 @@ template<typename... F> decltype(auto) Translate::Operation::switchOn(F&&... f) 
 template<typename T> bool Translate::holdsAlternative() const
 {
          if constexpr (std::same_as<T, CSS::Keyword::None>) return isNone();
-    else if constexpr (std::same_as<T, Operation>)          return isOperation();
+    else if constexpr (std::same_as<T, Function>)           return isFunction();
 }
 
 template<typename... F> decltype(auto) Translate::switchOn(F&&... f) const
@@ -96,7 +96,7 @@ template<typename... F> decltype(auto) Translate::switchOn(F&&... f) const
 
     if (!value)
         return visitor(CSS::Keyword::None { });
-    return visitor(Operation { *value });
+    return visitor(Function { *value });
 }
 
 // MARK: - Conversion
@@ -111,10 +111,10 @@ template<> struct Blending<Translate> {
 
 // MARK: - Platform
 
-template<> struct ToPlatform<Translate> { auto operator()(const Translate&) -> RefPtr<Translate::Platform>; };
+template<> struct ToPlatform<Translate> { auto operator()(const Translate&, const FloatSize&) -> RefPtr<TransformOperation>; };
 
 } // namespace Style
 } // namespace WebCore
 
-DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Translate::Operation)
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Translate::Function)
 DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::Translate)

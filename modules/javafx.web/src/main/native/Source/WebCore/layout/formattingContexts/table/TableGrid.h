@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +29,11 @@
 #include "FormattingContext.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutUnits.h"
+#include "StylePrimitiveNumericTypes.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-namespace Layout {
-class TableGridCell;
-}
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::Layout::TableGridCell> : std::true_type { };
-}
 
 namespace WebCore {
 namespace Layout {
@@ -49,8 +41,9 @@ class Box;
 class ElementBox;
 
 // Cell represents a <td> or <th>. It can span multiple slots in the grid.
-class TableGridCell : public CanMakeWeakPtr<TableGridCell> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TableGridCell);
+class TableGridCell final : public CanMakeWeakPtr<TableGridCell>, public CanMakeCheckedPtr<TableGridCell> {
+    WTF_MAKE_TZONE_ALLOCATED(TableGridCell);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TableGridCell);
 public:
     TableGridCell(const ElementBox&, SlotPosition, CellSpan);
 
@@ -79,7 +72,7 @@ private:
 };
 
 class TableGrid {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TableGrid);
+    WTF_MAKE_TZONE_ALLOCATED(TableGrid);
 public:
     TableGrid();
 
@@ -103,6 +96,8 @@ public:
     // Column represents a vertical set of slots in the grid. A column has horizontal position and width.
     class Column {
     public:
+        using ComputedLogicalWidth = Variant<CSS::Keyword::Auto, Style::Length<CSS::Nonnegative, float>, Style::Percentage<CSS::Nonnegative, float>>;
+
         Column(const ElementBox*);
 
         void setUsedLogicalLeft(LayoutUnit);
@@ -111,15 +106,15 @@ public:
         void setUsedLogicalWidth(LayoutUnit);
         LayoutUnit usedLogicalWidth() const;
 
-        void setComputedLogicalWidth(Length&&);
-        const Length& computedLogicalWidth() const { return m_computedLogicalWidth; }
+        void setComputedLogicalWidth(ComputedLogicalWidth&&);
+        const ComputedLogicalWidth& computedLogicalWidth() const { return m_computedLogicalWidth; }
 
         const ElementBox* box() const { return m_layoutBox.get(); }
 
     private:
         LayoutUnit m_usedLogicalWidth;
         LayoutUnit m_usedLogicalLeft;
-        Length m_computedLogicalWidth;
+        ComputedLogicalWidth m_computedLogicalWidth;
         CheckedPtr<const ElementBox> m_layoutBox;
 
 #if ASSERT_ENABLED
@@ -238,10 +233,9 @@ private:
     std::optional<BoxGeometry::Edges> m_collapsedBorder;
 };
 
-inline void TableGrid::Column::setComputedLogicalWidth(Length&& computedLogicalWidth)
+inline void TableGrid::Column::setComputedLogicalWidth(TableGrid::Column::ComputedLogicalWidth&& computedLogicalWidth)
 {
-    ASSERT(computedLogicalWidth.type() == LengthType::Fixed || computedLogicalWidth.type() == LengthType::Percent || computedLogicalWidth.type() == LengthType::Relative);
-    m_computedLogicalWidth = WTFMove(computedLogicalWidth);
+    m_computedLogicalWidth = WTF::move(computedLogicalWidth);
 }
 
 inline void TableGrid::Column::setUsedLogicalWidth(LayoutUnit usedLogicalWidth)

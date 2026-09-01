@@ -32,7 +32,6 @@ namespace JSC {
 class VM;
 }
 
-
 namespace WebCore {
 
 class JSHeapData;

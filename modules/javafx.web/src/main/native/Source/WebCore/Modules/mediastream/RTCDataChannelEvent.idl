@@ -33,6 +33,8 @@
     readonly attribute RTCDataChannel channel;
 };
 
-dictionary RTCDataChannelEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCDataChannelEventInit : EventInit {
     required RTCDataChannel channel;
 };

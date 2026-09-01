@@ -27,8 +27,8 @@
 
 #if ENABLE(VIDEO)
 
-#include "PolicyChecker.h"
-#include "SharedBuffer.h"
+#include <WebCore/PolicyChecker.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
 #include <wtf/Lock.h>
@@ -52,7 +52,7 @@ public:
 
     // Those methods must be called on PlatformMediaResourceLoader::targetDispatcher()
     virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&& completionHandler) { completionHandler(ShouldContinuePolicyCheck::Yes); }
-    virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
+    virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTF::move(request)); }
     virtual bool shouldCacheResponse(PlatformMediaResource&, const ResourceResponse&) { return true; }
     virtual void dataSent(PlatformMediaResource&, unsigned long long, unsigned long long) { }
     virtual void dataReceived(PlatformMediaResource&, const SharedBuffer&) { RELEASE_ASSERT_NOT_REACHED(); }
@@ -102,7 +102,7 @@ public:
     void setClient(RefPtr<PlatformMediaResourceClient>&& client)
     {
         Locker locker { m_lock };
-        m_client = WTFMove(client);
+        m_client = WTF::move(client);
     }
     RefPtr<PlatformMediaResourceClient> client() const
     {

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "InstructionStream.h"
+#include <JavaScriptCore/InstructionStream.h>
 #include <wtf/HashSet.h>
 
 namespace JSC {
@@ -35,7 +35,7 @@ class StaticPropertyAnalysis : public RefCounted<StaticPropertyAnalysis> {
 public:
     static Ref<StaticPropertyAnalysis> create(JSInstructionStream::MutableRef&& instructionRef)
     {
-        return adoptRef(*new StaticPropertyAnalysis(WTFMove(instructionRef)));
+        return adoptRef(*new StaticPropertyAnalysis(WTF::move(instructionRef)));
     }
 
     void addPropertyIndex(unsigned propertyIndex) { m_propertyIndexes.add(propertyIndex); }
@@ -46,7 +46,7 @@ public:
 
 private:
     StaticPropertyAnalysis(JSInstructionStream::MutableRef&& instructionRef)
-        : m_instructionRef(WTFMove(instructionRef))
+        : m_instructionRef(WTF::move(instructionRef))
     {
     }
 

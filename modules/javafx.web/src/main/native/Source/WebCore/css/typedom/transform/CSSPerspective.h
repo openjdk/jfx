@@ -28,6 +28,8 @@
 #include "CSSKeywordValue.h"
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertNullable.h"
 
 namespace WebCore {
 
@@ -37,13 +39,12 @@ using CSSPerspectiveValue = Variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSK
 class Document;
 
 class CSSPerspective : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSPerspective);
+    WTF_MAKE_TZONE_ALLOCATED(CSSPerspective);
 public:
     static ExceptionOr<Ref<CSSPerspective>> create(CSSPerspectiveValue);
     static ExceptionOr<Ref<CSSPerspective>> create(Ref<const CSSFunctionValue>, Document&);
 
     virtual ~CSSPerspective();
-
 
     const CSSPerspectiveValue& length() const { return m_length; }
     ExceptionOr<void> setLength(CSSPerspectiveValue);
@@ -51,12 +52,12 @@ public:
     void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
-    CSSTransformType getType() const final { return CSSTransformType::Perspective; }
+    CSSTransformType transformType() const final { return CSSTransformType::Perspective; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
 private:
-    CSSPerspective(CSSPerspectiveValue);
+    explicit CSSPerspective(CSSPerspectiveValue);
 
     void setIs2D(bool);
 
@@ -66,5 +67,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSPerspective)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Perspective; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::Perspective; }
 SPECIALIZE_TYPE_TRAITS_END()

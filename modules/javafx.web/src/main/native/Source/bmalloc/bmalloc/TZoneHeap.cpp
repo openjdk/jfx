@@ -55,7 +55,8 @@ void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification
             return tzoneAllocateNonCompactSlow(requestedSize, spec);
         }
 
-        RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
+        RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc
+            || tzoneMallocFallback == TZoneMallocFallback::ForceFastMalloc);
         return api::malloc(requestedSize, CompactAllocationMode::NonCompact);
     }
 
@@ -79,7 +80,8 @@ void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& s
             return tzoneAllocateCompactSlow(requestedSize, spec);
         }
 
-        RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc);
+        RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::ForceDebugMalloc
+            || tzoneMallocFallback == TZoneMallocFallback::ForceFastMalloc);
         return api::malloc(requestedSize, CompactAllocationMode::Compact);
     }
 
@@ -108,18 +110,6 @@ void tzoneFree(void* p)
 {
     bmalloc_deallocate_inline(p);
 }
-
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-
-bool shouldDynamicallyCompactImpl(const TZoneSpecification& spec)
-{
-    BASSERT(TZoneHeapManager::singleton().tzoneDynamicCompactModeEnabled());
-    uint64_t key = spec.dynamicCompactionKey;
-    uint64_t signature = __builtin_popcountll(key & TZoneHeapManager::singleton().dynamicCompactionSalt());
-    return signature & 0x1;
-}
-
-#endif
 
 #undef TO_PAS_HEAPREF
 

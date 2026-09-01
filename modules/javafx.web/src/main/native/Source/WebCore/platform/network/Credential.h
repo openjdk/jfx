@@ -26,15 +26,15 @@
 #ifndef Credential_h
 #define Credential_h
 
-#include <wtf/Platform.h>
 
+#include <wtf/Platform.h>
 #if PLATFORM(COCOA)
-#include "CredentialCocoa.h"
+#include <WebCore/CredentialCocoa.h>
 #elif USE(SOUP)
 #include "CredentialSoup.h"
 #else
 
-#include "CredentialBase.h"
+#include <WebCore/CredentialBase.h>
 
 namespace WebCore {
 

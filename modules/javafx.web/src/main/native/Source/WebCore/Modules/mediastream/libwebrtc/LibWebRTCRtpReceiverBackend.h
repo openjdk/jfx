@@ -47,6 +47,8 @@ public:
     Ref<RealtimeMediaSource> createSource(Document&);
 
 private:
+    bool isLibWebRTCRtpReceiverBackend() const final { return true; }
+
     RTCRtpParameters getParameters() final;
     Vector<RTCRtpContributingSource> getContributingSources() const final;
     Vector<RTCRtpSynchronizationSource> getSynchronizationSources() const final;
@@ -58,5 +60,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LibWebRTCRtpReceiverBackend)
+    static bool isType(const WebCore::RTCRtpReceiverBackend& backend) { return backend.isLibWebRTCRtpReceiverBackend(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

@@ -34,7 +34,7 @@
 #include "PathOperation.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -53,7 +53,7 @@ bool DateTimeNumericFieldElement::Range::isInRange(int value) const
     return value >= minimum && value <= maximum;
 }
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeNumericFieldElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DateTimeNumericFieldElement);
 
 DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner, const Range& range, int placeholder)
     : DateTimeFieldElement(document, fieldOwner)
@@ -81,7 +81,7 @@ void DateTimeNumericFieldElement::adjustMinInlineSize(RenderStyle& style) const
         inlineSize = std::max(inlineSize, font->width(RenderBlock::constructTextRun(numberString, style)));
     }
 
-    style.setLogicalMinWidth(Style::MinimumSize::Fixed { inlineSize });
+    style.setLogicalMinWidth(Style::MinimumSize::Fixed { inlineSize / style.usedZoomForLength().value });
 }
 
 int DateTimeNumericFieldElement::maximum() const

@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "CSSPrimitiveKeywordList.h"
-#include "CSSPrimitiveNumericConcepts.h"
-#include "CSSPrimitiveNumericRaw.h"
-#include "CSSUnevaluatedCalc.h"
+#include <WebCore/CSSPrimitiveKeywordList.h>
+#include <WebCore/CSSPrimitiveNumericConcepts.h>
+#include <WebCore/CSSPrimitiveNumericRaw.h>
+#include <WebCore/CSSUnevaluatedCalc.h>
 #include <limits>
 #include <type_traits>
 #include <wtf/EnumTraits.h>
@@ -219,14 +219,14 @@ template<Numeric N, PrimitiveKeyword... Ks> struct PrimitiveDataIndex {
 
 union PrimitiveDataPayload {
     double number;
-    CSSCalcValue* calc;
+    CSSCalc::Value* calc;
 
     PrimitiveDataPayload(double number)
         : number { number }
     {
     }
 
-    PrimitiveDataPayload(CSSCalcValue* calc)
+    PrimitiveDataPayload(CSSCalc::Value* calc)
         : calc { calc }
     {
     }

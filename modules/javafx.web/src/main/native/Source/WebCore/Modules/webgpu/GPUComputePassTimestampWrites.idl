@@ -29,9 +29,9 @@
 typedef [EnforceRange] unsigned long GPUSize32;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUComputePassTimestampWrites {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUComputePassTimestampWrites {
     required GPUQuerySet querySet;
     GPUSize32 beginningOfPassWriteIndex;
     GPUSize32 endOfPassWriteIndex;

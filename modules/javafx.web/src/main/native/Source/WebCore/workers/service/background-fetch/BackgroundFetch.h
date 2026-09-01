@@ -25,17 +25,17 @@
 
 #pragma once
 
-#include "BackgroundFetchFailureReason.h"
-#include "BackgroundFetchOptions.h"
-#include "BackgroundFetchRecordIdentifier.h"
-#include "BackgroundFetchRecordLoader.h"
-#include "BackgroundFetchRequest.h"
-#include "BackgroundFetchResult.h"
-#include "BackgroundFetchStore.h"
-#include "ClientOrigin.h"
-#include "ResourceResponse.h"
-#include "ServiceWorkerRegistrationKey.h"
-#include "ServiceWorkerTypes.h"
+#include <WebCore/BackgroundFetchFailureReason.h>
+#include <WebCore/BackgroundFetchOptions.h>
+#include <WebCore/BackgroundFetchRecordIdentifier.h>
+#include <WebCore/BackgroundFetchRecordLoader.h>
+#include <WebCore/BackgroundFetchRequest.h>
+#include <WebCore/BackgroundFetchResult.h>
+#include <WebCore/BackgroundFetchStore.h>
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/ServiceWorkerRegistrationKey.h>
+#include <WebCore/ServiceWorkerTypes.h>
 #include <wtf/Identified.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -56,12 +56,12 @@ public:
 
     static Ref<BackgroundFetch> create(SWServerRegistration& sWServerRegistration, const String& identifier, Vector<BackgroundFetchRequest>&& requests, BackgroundFetchOptions&& options, Ref<BackgroundFetchStore>&& store, NotificationCallback&& notificationCallback)
     {
-        return adoptRef(*new BackgroundFetch(sWServerRegistration, identifier, WTFMove(requests), WTFMove(options), WTFMove(store), WTFMove(notificationCallback)));
+        return adoptRef(*new BackgroundFetch(sWServerRegistration, identifier, WTF::move(requests), WTF::move(options), WTF::move(store), WTF::move(notificationCallback)));
     }
 
     static Ref<BackgroundFetch> create(SWServerRegistration& swServerRegistration, String&& identifier, BackgroundFetchOptions&& options, Ref<BackgroundFetchStore>&& store, NotificationCallback&& notificationCallback, bool pausedFlag)
     {
-        return adoptRef(*new BackgroundFetch(swServerRegistration, WTFMove(identifier), WTFMove(options), WTFMove(store), WTFMove(notificationCallback), pausedFlag));
+        return adoptRef(*new BackgroundFetch(swServerRegistration, WTF::move(identifier), WTF::move(options), WTF::move(store), WTF::move(notificationCallback), pausedFlag));
     }
 
     ~BackgroundFetch();
@@ -87,7 +87,7 @@ public:
         void ref() const final { RefCounted::ref(); }
         void deref() const final { RefCounted::deref(); }
 
-        static Ref<Record> create(BackgroundFetch& fetch, BackgroundFetchRequest&& request, size_t size) { return adoptRef(*new Record(fetch, WTFMove(request), size)); }
+        static Ref<Record> create(BackgroundFetch& fetch, BackgroundFetchRequest&& request, size_t size) { return adoptRef(*new Record(fetch, WTF::move(request), size)); }
         ~Record();
 
         void complete(const CreateLoaderCallback&);

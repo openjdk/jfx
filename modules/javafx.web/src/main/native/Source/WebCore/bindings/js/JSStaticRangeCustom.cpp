@@ -27,7 +27,6 @@
 #include "JSStaticRange.h"
 
 #include "StaticRange.h"
-#include <JavaScriptCore/StructureInlines.h>
 
 namespace WebCore {
 

@@ -38,6 +38,8 @@
 #include <mach-o/dyld.h>
 #include <uuid/uuid.h>
 #include <wtf/spi/darwin/dyldSPI.h>
+#elif OS(QNX)
+#include <sys/link.h>
 #else
 #include <link.h>
 #endif

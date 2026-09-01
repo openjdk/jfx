@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "SimpleRange.h"
-#include "TextChecking.h"
+#include <WebCore/SimpleRange.h>
+#include <WebCore/TextChecking.h>
 
 namespace WebCore {
 
@@ -109,7 +109,9 @@ private:
     bool unifiedTextCheckerEnabled() const;
     int findUngrammaticalPhrases(Operation, const Vector<GrammarDetail>&, uint64_t badGrammarPhraseLocation, uint64_t startOffset, uint64_t endOffset) const;
 
-    EditorClient& m_client;
+    CheckedRef<EditorClient> checkedClient() const;
+
+    WeakRef<EditorClient> m_client;
     SimpleRange m_range;
 };
 

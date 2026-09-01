@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "JSCPtrTag.h"
+#include <JavaScriptCore/JSCPtrTag.h>
 
 namespace JSC {
 class VM;

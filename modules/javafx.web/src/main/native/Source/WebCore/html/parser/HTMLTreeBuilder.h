@@ -27,6 +27,7 @@
 #pragma once
 
 #include "HTMLConstructionSite.h"
+#include "HTMLDocumentParser.h"
 #include "HTMLParserOptions.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringBuilder.h>
@@ -73,7 +74,7 @@ public:
     const ScriptElement* scriptToProcess() const { return m_scriptToProcess.get(); }
     RefPtr<const ScriptElement> protectedScriptToProcess() const;
 
-    std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTFMove(m_customElementToConstruct); }
+    std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTF::move(m_customElementToConstruct); }
     void didCreateCustomOrFallbackElement(Ref<Element>&&, CustomElementConstructionData&);
 
     // Done, close any open tags, etc.
@@ -200,11 +201,11 @@ private:
         HTMLStackItem& contextElementStackItem();
 
     private:
-        DocumentFragment* m_fragment { nullptr };
+        WeakPtr<DocumentFragment, WeakPtrImplWithEventTargetData> m_fragment;
         HTMLStackItem m_contextElementStackItem;
     };
 
-    HTMLDocumentParser& m_parser;
+    WeakRef<HTMLDocumentParser> m_parser;
     const HTMLParserOptions m_options;
     FragmentParsingContext m_fragmentContext;
 
@@ -263,7 +264,7 @@ inline bool HTMLTreeBuilder::hasParserBlockingScriptWork() const
 
 inline DocumentFragment* HTMLTreeBuilder::FragmentParsingContext::fragment() const
 {
-    return m_fragment;
+    return m_fragment.get();
 }
 
 } // namespace WebCore

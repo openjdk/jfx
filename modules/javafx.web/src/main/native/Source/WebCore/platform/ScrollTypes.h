@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatSize.h"
-#include "ProcessQualified.h"
-#include "RectEdges.h"
-#include "ScrollbarMode.h"
-#include "ScrollingNodeID.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/ScrollbarMode.h>
+#include <WebCore/ScrollingNodeID.h>
 
 namespace WTF {
 class TextStream;
@@ -184,6 +185,11 @@ enum class NativeScrollbarVisibility : uint8_t {
 enum class ScrollEventAxis : uint8_t {
     Horizontal,
     Vertical
+};
+
+enum class ScrollEventType : bool {
+    Scroll,
+    Scrollend
 };
 
 inline constexpr ScrollEventAxis axisFromDirection(ScrollDirection direction)
@@ -380,6 +386,12 @@ struct ScrollPositionChangeOptions {
     {
         return { ScrollType::Programmatic, ScrollClamping::Unclamped };
     }
+};
+
+struct ScrollbarColor {
+    Color thumbColor;
+    Color trackColor;
+    friend bool operator==(const ScrollbarColor&, const ScrollbarColor&) = default;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);

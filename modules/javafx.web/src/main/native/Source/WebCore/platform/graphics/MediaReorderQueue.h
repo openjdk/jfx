@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "MediaSample.h"
+#include <WebCore/MediaSample.h>
 #include <wtf/Compiler.h>
 #include <wtf/Deque.h>
 

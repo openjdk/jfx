@@ -152,9 +152,9 @@ ALWAYS_INLINE unsigned ObjectAllocationProfileBase<Derived>::possibleDefaultProp
         return 0;
 
     size_t count = 0;
-    PropertyNameArray propertyNameArray(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
-    prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArray, DontEnumPropertiesMode::Include);
-    PropertyNameArrayData::PropertyNameVector& propertyNameVector = propertyNameArray.data()->propertyNameVector();
+    PropertyNameArrayBuilder propertyNameArrayBuilder(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
+    prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArrayBuilder, DontEnumPropertiesMode::Include);
+    PropertyNameArray::PropertyNameVector& propertyNameVector = propertyNameArrayBuilder.data()->propertyNameVector();
     for (size_t i = 0; i < propertyNameVector.size(); ++i) {
         JSValue value = prototype->getDirect(vm, propertyNameVector[i]);
 

@@ -54,7 +54,7 @@ class GPUCommandEncoder : public RefCounted<GPUCommandEncoder> {
 public:
     static Ref<GPUCommandEncoder> create(Ref<WebGPU::CommandEncoder>&& backing, WebGPU::Device& device)
     {
-        return adoptRef(*new GPUCommandEncoder(WTFMove(backing), device));
+        return adoptRef(*new GPUCommandEncoder(WTF::move(backing), device));
     }
 
     String label() const;
@@ -121,6 +121,7 @@ private:
 
     Ref<WebGPU::CommandEncoder> m_backing;
     WeakPtr<WebGPU::Device> m_device;
+    std::optional<String> m_overrideLabel;
 };
 
 }

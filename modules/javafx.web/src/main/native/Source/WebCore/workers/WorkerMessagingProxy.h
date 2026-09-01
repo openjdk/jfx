@@ -34,10 +34,12 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DedicatedWorkerThread;
+class WeakPtrImplWithEventTargetData;
 class WorkerInspectorProxy;
 class WorkerUserGestureForwarder;
 
@@ -48,10 +50,11 @@ public:
     explicit WorkerMessagingProxy(Worker&);
     virtual ~WorkerMessagingProxy();
 
-    uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCount(); }
-    uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCountWithoutThreadCheck(); }
-    void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::incrementCheckedPtrCount(); }
-    void decrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::decrementCheckedPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::setDidBeginCheckedPtrDeletion(); }
 
 private:
     // Implementations of WorkerGlobalScopeProxy.
@@ -93,16 +96,17 @@ private:
     bool askedToTerminate() const final { return m_askedToTerminate; }
 
     void workerGlobalScopeDestroyedInternal();
-    Worker* workerObject() const { return m_workerObject; }
+    Worker* workerObject() const;
 
     // WorkerBadgeProxy
     void setAppBadge(std::optional<uint64_t>) final;
 
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
+    Markable<ScriptExecutionContextIdentifier> m_scriptExecutionContextIdentifier;
     ScriptExecutionContextIdentifier m_loaderContextIdentifier;
     const Ref<WorkerInspectorProxy> m_inspectorProxy;
     RefPtr<WorkerUserGestureForwarder> m_userGestureForwarder;
-    Worker* m_workerObject;
+    WeakPtr<Worker, WeakPtrImplWithEventTargetData> m_workerObject;
     bool m_mayBeDestroyed { false };
     RefPtr<DedicatedWorkerThread> m_workerThread;
     URL m_scriptURL;

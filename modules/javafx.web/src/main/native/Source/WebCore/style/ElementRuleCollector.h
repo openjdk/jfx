@@ -37,7 +37,7 @@ namespace WebCore::Style {
 class ScopeRuleSets;
 struct MatchRequest;
 struct SelectorMatchingState;
-enum class CascadeLevel : uint8_t;
+enum class DeclarationOrigin : uint8_t;
 
 struct MatchedRule {
     const RuleData* ruleData { nullptr };
@@ -49,8 +49,8 @@ struct MatchedRule {
 
 class ElementRuleCollector {
 public:
-    ElementRuleCollector(const Element&, const ScopeRuleSets&, SelectorMatchingState*);
-    ElementRuleCollector(const Element&, const RuleSet& authorStyle, SelectorMatchingState*);
+    ElementRuleCollector(const Element&, const ScopeRuleSets&, SelectorMatchingState*, SelectorChecker::Mode = SelectorChecker::Mode::ResolvingStyle);
+    ElementRuleCollector(const Element&, const RuleSet& authorStyle, SelectorMatchingState*, SelectorChecker::Mode = SelectorChecker::Mode::ResolvingStyle);
 
     void setIncludeEmptyRules(bool value) { m_shouldIncludeEmptyRules = value; }
 
@@ -60,9 +60,6 @@ public:
     void matchUserRules();
 
     bool matchesAnyAuthorRules();
-    bool matchesAnyRules(const RuleSet&);
-
-    void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
 
     void setPseudoElementRequest(const std::optional<PseudoElementRequest>& request) { m_pseudoElementRequest = request; }
     void setMedium(const MQ::MediaQueryEvaluator& medium) { m_isPrintStyle = medium.isPrintMedia(); }
@@ -71,11 +68,11 @@ public:
     const MatchResult& matchResult() const;
     Ref<MatchResult> releaseMatchResult();
 
-    const Vector<RefPtr<const StyleRule>>& matchedRuleList() const;
+    const Vector<Ref<const StyleRule>>& matchedRuleList() const;
 
     void clearMatchedRules();
 
-    const PseudoIdSet& matchedPseudoElementIds() const { return m_matchedPseudoElementIds; }
+    EnumSet<PseudoElementType> matchedPseudoElements() const { return m_matchedPseudoElements; }
     const Relations& styleRelations() const { return m_styleRelations; }
 
     void addAuthorKeyframeRules(const StyleRuleKeyframe&);
@@ -87,29 +84,30 @@ private:
 
     void addElementInlineStyleProperties(bool includeSMILProperties);
 
-    void matchUserAgentPartRules(CascadeLevel);
-    void matchHostPseudoClassRules(CascadeLevel);
-    void matchSlottedPseudoElementRules(CascadeLevel);
-    void matchPartPseudoElementRules(CascadeLevel);
-    void matchPartPseudoElementRulesForScope(const Element& partMatchingElement, CascadeLevel);
+    void matchUserAgentPartRules(DeclarationOrigin);
+    void matchHostPseudoClassRules(DeclarationOrigin);
+    void matchSlottedPseudoElementRules(DeclarationOrigin);
+    void matchPartPseudoElementRules(DeclarationOrigin);
+    void matchPartPseudoElementRulesForScope(const Element& partMatchingElement, DeclarationOrigin);
 
     void collectMatchingUserAgentPartRules(const MatchRequest&);
 
-    void collectMatchingRules(CascadeLevel);
+    void collectMatchingRules(DeclarationOrigin);
     void collectMatchingRules(const MatchRequest&);
     void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&);
+    void collectMatchingRulesForListSlow(const RuleSet::RuleDataVector&, const MatchRequest&);
     bool isFirstMatchModeAndHasMatchedAnyRules() const;
-    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal, const ContainerNode* scopingRoot = nullptr);
-    bool containerQueriesMatch(const RuleData&, const MatchRequest&);
     struct ScopingRootWithDistance {
         RefPtr<const ContainerNode> scopingRoot;
         unsigned distance { std::numeric_limits<unsigned>::max() };
+        bool matchesVisited { false };
     };
+    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal, std::optional<ScopingRootWithDistance> scopingRoot = { });
+    bool containerQueriesMatch(const RuleData&, const MatchRequest&);
     std::pair<bool, std::optional<Vector<ScopingRootWithDistance>>> scopeRulesMatch(const RuleData&, const MatchRequest&);
 
     void sortMatchedRules();
 
-    enum class DeclarationOrigin { UserAgent, User, Author };
     Vector<MatchedProperties>& declarationsForOrigin(DeclarationOrigin);
     void sortAndTransferMatchedRules(DeclarationOrigin);
     void transferMatchedRules(DeclarationOrigin, std::optional<ScopeOrdinal> forScope = { });
@@ -128,19 +126,24 @@ private:
 
     bool m_shouldIncludeEmptyRules { false };
     bool m_isPrintStyle { false };
-    // FIXME: This should be a SelectorChecker::Mode.
-    bool m_firstMatchMode { false };
     std::optional<PseudoElementRequest> m_pseudoElementRequest { };
-    SelectorChecker::Mode m_mode { SelectorChecker::Mode::ResolvingStyle };
+    const SelectorChecker::Mode m_mode { SelectorChecker::Mode::ResolvingStyle };
 
     Vector<MatchedRule, 64> m_matchedRules;
     size_t m_matchedRuleTransferIndex { 0 };
 
     // Output.
-    Vector<RefPtr<const StyleRule>> m_matchedRuleList;
+    Vector<Ref<const StyleRule>> m_matchedRuleList;
     Ref<MatchResult> m_result;
     Relations m_styleRelations;
-    PseudoIdSet m_matchedPseudoElementIds;
+    EnumSet<PseudoElementType> m_matchedPseudoElements;
 };
+
+ALWAYS_INLINE void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVector* rules, const MatchRequest& matchRequest)
+{
+    if (!rules || rules->isEmpty())
+        return;
+    collectMatchingRulesForListSlow(*rules, matchRequest);
+}
 
 }

@@ -36,10 +36,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderViewTransitionCapture);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderViewTransitionCapture);
 
 RenderViewTransitionCapture::RenderViewTransitionCapture(Type type, Document& document, RenderStyle&& style, bool isRootElement)
-    : RenderReplaced(type, document, WTFMove(style), { }, ReplacedFlag::IsViewTransitionCapture)
+    : RenderReplaced(type, document, WTF::move(style), { }, ReplacedFlag::IsViewTransitionCapture)
     , m_isRootElementCapture(isRootElement)
 {
 }
@@ -112,11 +112,11 @@ void RenderViewTransitionCapture::updateFromStyle()
     // The ::view-transition-new(root) capture should hold exactly the snapshot containing
     // block without overflow, but can host layers that extend outside this area. Force overflow
     // clipping.
-    if (effectiveOverflowX() != Overflow::Visible || effectiveOverflowY() != Overflow::Visible || (m_isRootElementCapture && style().pseudoElementType() == PseudoId::ViewTransitionNew))
+    if (effectiveOverflowX() != Overflow::Visible || effectiveOverflowY() != Overflow::Visible || (m_isRootElementCapture && style().pseudoElementType() == PseudoElementType::ViewTransitionNew))
         setHasNonVisibleOverflow();
 }
 
-void RenderViewTransitionCapture::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderViewTransitionCapture::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderReplaced::styleDidChange(diff, oldStyle);
 
@@ -139,7 +139,7 @@ Node* RenderViewTransitionCapture::nodeForHitTest() const
 
 bool RenderViewTransitionCapture::paintsContent() const
 {
-    if (style().pseudoElementType() == PseudoId::ViewTransitionOld)
+    if (style().pseudoElementType() == PseudoElementType::ViewTransitionOld)
         return true;
     return !canUseExistingLayers();
 }
@@ -150,7 +150,7 @@ String RenderViewTransitionCapture::debugDescription() const
 
     builder.append(renderName(), " 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
 
-    builder.append(" ::view-transition-"_s, style().pseudoElementType() == PseudoId::ViewTransitionNew ? "new("_s : "old("_s);
+    builder.append(" ::view-transition-"_s, style().pseudoElementType() == PseudoElementType::ViewTransitionNew ? "new("_s : "old("_s);
     builder.append(style().pseudoElementNameArgument(), ')');
     return builder.toString();
 }

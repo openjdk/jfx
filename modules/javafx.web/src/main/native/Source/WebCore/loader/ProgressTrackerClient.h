@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LoaderMalloc.h"
+#include <WebCore/LoaderMalloc.h>
 
 namespace WebCore {
 

@@ -24,16 +24,12 @@
 
 #pragma once
 
-#include "CSSPosition.h"
-#include "FloatPoint.h"
-#include "StyleLengthWrapper.h"
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/CSSPosition.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/StyleLengthWrapper.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
-
-struct Length;
-struct LengthPoint;
-
 namespace Style {
 
 struct PositionX : LengthWrapperBase<LengthPercentage<>> {
@@ -63,8 +59,8 @@ struct Position  {
     Y y;
 
     Position(X&& x, Y&& y)
-        : x { WTFMove(x) }
-        , y { WTFMove(y) }
+        : x { WTF::move(x) }
+        , y { WTF::move(y) }
     {
     }
 
@@ -75,8 +71,8 @@ struct Position  {
     }
 
     Position(TwoComponentPositionHorizontal&& x, TwoComponentPositionVertical&& y)
-        : x { WTFMove(x.offset) }
-        , y { WTFMove(y.offset) }
+        : x { WTF::move(x.offset) }
+        , y { WTF::move(y.offset) }
     {
     }
 
@@ -103,8 +99,6 @@ struct Position  {
         , y { literalY }
     {
     }
-
-    Position(const WebCore::LengthPoint&);
 
     bool operator==(const Position&) const = default;
 };
@@ -139,11 +133,9 @@ template<> struct CSSValueConversion<PositionY> { auto operator()(BuilderState&,
 
 // MARK: - Evaluation
 
-template<> struct Evaluation<Position> { auto operator()(const Position&, FloatSize) -> FloatPoint; };
-
-// MARK: - Platform
-
-template<> struct ToPlatform<Position> { auto operator()(const Position&) -> WebCore::LengthPoint; };
+template<> struct Evaluation<Position, FloatPoint> {
+    auto operator()(const Position&, FloatSize, ZoomNeeded) -> FloatPoint;
+};
 
 } // namespace Style
 } // namespace WebCore

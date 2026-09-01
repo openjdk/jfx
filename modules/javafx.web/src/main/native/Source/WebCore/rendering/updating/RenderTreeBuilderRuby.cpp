@@ -32,6 +32,7 @@
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
 #include "RenderTreeBuilderInline.h"
+#include "RenderStyle+SettersInlines.h"
 #include "UnicodeBidi.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -58,7 +59,7 @@ RenderStyle createAnonymousStyleForRuby(const RenderStyle& parentStyle, DisplayT
 static RenderPtr<RenderElement> createAnonymousRendererForRuby(RenderElement& parent, DisplayType display)
 {
     auto style = createAnonymousStyleForRuby(parent.style(), display);
-    auto ruby = createRenderer<RenderInline>(RenderObject::Type::Inline, parent.document(), WTFMove(style));
+    auto ruby = createRenderer<RenderInline>(RenderObject::Type::Inline, parent.document(), WTF::move(style));
     ruby->initializeStyle();
     return ruby;
 }
@@ -67,7 +68,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
 {
     RenderElement* beforeChildAncestor = &parent;
     if (auto* rubyInline = dynamicDowncast<RenderInline>(parent); rubyInline && rubyInline->continuation())
-        beforeChildAncestor = &RenderTreeBuilder::Inline::parentCandidateInContinuation(*rubyInline, beforeChild);
+        beforeChildAncestor = RenderTreeBuilder::Inline::parentCandidateInContinuation(*rubyInline, beforeChild).ptr();
     else if (auto* rubyBlock = dynamicDowncast<RenderBlock>(parent); rubyBlock && rubyBlock->continuation())
         beforeChildAncestor = RenderTreeBuilder::Block::continuationBefore(*rubyBlock, beforeChild);
 
@@ -94,7 +95,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
     if (beforeChildAncestor->style().display() != DisplayType::Ruby) {
         auto rubyContainer = createAnonymousRendererForRuby(*beforeChildAncestor, DisplayType::Ruby);
         WeakPtr newParent = rubyContainer.get();
-        m_builder.attach(parent, WTFMove(rubyContainer), beforeChild);
+        m_builder.attach(parent, WTF::move(rubyContainer), beforeChild);
         beforeChild = nullptr;
         return *newParent;
     }
@@ -114,7 +115,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
     auto rubyBase = createAnonymousRendererForRuby(*beforeChildAncestor, DisplayType::RubyBase);
     rubyBase->initializeStyle();
     WeakPtr newParent = rubyBase.get();
-    m_builder.inlineBuilder().attach(downcast<RenderInline>(parent), WTFMove(rubyBase), beforeChild);
+    m_builder.inlineBuilder().attach(downcast<RenderInline>(parent), WTF::move(rubyBase), beforeChild);
     beforeChild = nullptr;
     return *newParent;
 }
@@ -123,7 +124,7 @@ void RenderTreeBuilder::Ruby::attachForStyleBasedRuby(RenderElement& parent, Ren
 {
     if (parent.style().display() == DisplayType::RubyBlock) {
         ASSERT(child->style().display() == DisplayType::Ruby);
-        m_builder.attachToRenderElementInternal(parent, WTFMove(child), beforeChild);
+        m_builder.attachToRenderElementInternal(parent, WTF::move(child), beforeChild);
         return;
     }
     ASSERT(parent.style().display() == DisplayType::Ruby);
@@ -137,10 +138,10 @@ void RenderTreeBuilder::Ruby::attachForStyleBasedRuby(RenderElement& parent, Ren
         WeakPtr previous = beforeChild ? beforeChild->previousSibling() : parent.lastChild();
         if (!previous || previous->style().display() != DisplayType::RubyBase) {
             auto rubyBase = createAnonymousRendererForRuby(parent, DisplayType::RubyBase);
-            m_builder.attachToRenderElementInternal(parent, WTFMove(rubyBase), beforeChild);
+            m_builder.attachToRenderElementInternal(parent, WTF::move(rubyBase), beforeChild);
         }
     }
-    m_builder.attachToRenderElementInternal(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElementInternal(parent, WTF::move(child), beforeChild);
 }
 
 }

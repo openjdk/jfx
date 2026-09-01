@@ -49,7 +49,7 @@ void SmallStrings::initializeCommonStrings(VM& vm)
 
     for (unsigned i = 0; i < singleCharacterStringCount; ++i) {
         ASSERT(!m_singleCharacterStrings[i]);
-        std::array<const LChar, 1> string = { static_cast<LChar>(i) };
+        std::array<const Latin1Character, 1> string = { static_cast<Latin1Character>(i) };
         m_singleCharacterStrings[i] = JSString::createHasOtherOwner(vm, AtomStringImpl::add(string).releaseNonNull());
         ASSERT(m_needsToBeVisited);
     }
@@ -75,6 +75,8 @@ void SmallStrings::initializeCommonStrings(VM& vm)
     initialize(&vm, m_timedOutString, "timed-out"_s);
     initialize(&vm, m_okString, "ok"_s);
     initialize(&vm, m_sentinelString, "$"_s);
+    initialize(&vm, m_fulfilledString, "fulfilled"_s);
+    initialize(&vm, m_rejectedString, "rejected"_s);
 
     setIsInitialized(true);
 }
@@ -107,6 +109,8 @@ void SmallStrings::visitStrongReferences(Visitor& visitor)
     visitor.appendUnbarriered(m_timedOutString);
     visitor.appendUnbarriered(m_okString);
     visitor.appendUnbarriered(m_sentinelString);
+    visitor.appendUnbarriered(m_fulfilledString);
+    visitor.appendUnbarriered(m_rejectedString);
 }
 
 template void SmallStrings::visitStrongReferences(AbstractSlotVisitor&);
@@ -118,7 +122,7 @@ Ref<AtomStringImpl> SmallStrings::singleCharacterStringRep(unsigned char charact
 {
     if (m_isInitialized) [[likely]]
         return *static_cast<AtomStringImpl*>(const_cast<StringImpl*>(m_singleCharacterStrings[character]->tryGetValueImpl()));
-    std::array<const LChar, 1> string = { static_cast<LChar>(character) };
+    std::array<const Latin1Character, 1> string = { static_cast<Latin1Character>(character) };
     return AtomStringImpl::add(string).releaseNonNull();
 }
 

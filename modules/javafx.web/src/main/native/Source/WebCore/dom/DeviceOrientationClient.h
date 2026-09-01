@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "DeviceClient.h"
+#include <WebCore/DeviceClient.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 
@@ -40,6 +40,7 @@ class Page;
 class DeviceOrientationClient : public DeviceClient {
     WTF_MAKE_TZONE_ALLOCATED(DeviceOrientationClient);
     WTF_MAKE_NONCOPYABLE(DeviceOrientationClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceOrientationClient);
 public:
     DeviceOrientationClient() = default;
     virtual ~DeviceOrientationClient() = default;

@@ -13,6 +13,7 @@ SUNWprivate_1.0 {
                _ZN3WTF6StringC1ESt4spanIKDsLm18446744073709551615EE;
                _ZN3WTF6StringC1EPKDsj;
                _ZN3WTF7RunLoop13mainSingletonEv;
+               _ZN3WTF12isMainThreadEv;
                _ZN3WTF6Config25disableFreezingForTestingEv;
                _ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE;
                _ZN3WTF8fastFreeEPv;
@@ -134,6 +135,7 @@ SUNWprivate_1.0 {
                _ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE;
                _ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb;
                _ZN18WebCoreTestSupport23allowsAnySSLCertificateEv;
+               WebPage_doJSCGarbageCollection;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;

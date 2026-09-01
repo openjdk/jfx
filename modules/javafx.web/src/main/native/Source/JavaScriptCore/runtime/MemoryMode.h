@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <cstdint>
+
 namespace JSC {
 
 // FIXME: We should support other modes. see: https://bugs.webkit.org/show_bug.cgi?id=162693

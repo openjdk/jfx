@@ -19,7 +19,7 @@
 namespace WTF {
 
 template<typename OutputCharacterType, typename InputCharacterType>
-ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharacterType>& output, std::span<const InputCharacterType> input)
+ALWAYS_INLINE static bool appendEscapedJSONStringContent(std::span<OutputCharacterType>& output, std::span<const InputCharacterType> input)
 {
     for (; !input.empty(); skip(input, 1)) {
         auto character = input.front();
@@ -42,6 +42,11 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
             }
             continue;
         }
+
+        // We can end up calling appendEscapedJSONStringContent if we've already proven the string has only Latin1 characters when stringifying JSONs.
+        // This optimization prevents us from bailing out mid-stream just because we saw e.g. a UTF-16 substring that was actually Latin1.
+        if constexpr (std::same_as<OutputCharacterType, Latin1Character>)
+            return false;
 
         if (!U16_IS_SURROGATE(character)) [[likely]] {
             consume(output) = character;
@@ -70,6 +75,8 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
         output[5] = lowerNibbleToLowercaseASCIIHexDigit(lower);
         skip(output, 6);
     }
+
+    return true;
 }
 
 } // namespace WTF

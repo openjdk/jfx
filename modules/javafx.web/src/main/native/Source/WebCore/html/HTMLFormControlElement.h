@@ -23,20 +23,22 @@
 
 #pragma once
 
-#include "Autofill.h"
-#include "HTMLElement.h"
-#include "ValidatedFormListedElement.h"
+#include <WebCore/Autofill.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ValidatedFormListedElement.h>
 
 #if ENABLE(AUTOCAPITALIZE)
-#include "Autocapitalize.h"
+#include <WebCore/Autocapitalize.h>
 #endif
 
 namespace WebCore {
 
 class HTMLFormControlElement : public HTMLElement, public ValidatedFormListedElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFormControlElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormControlElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     virtual ~HTMLFormControlElement();
 
     bool isValidatedFormListedElement() const final { return true; }
@@ -60,6 +62,7 @@ public:
 
     bool wasChangedSinceLastFormControlChangeEvent() const { return m_wasChangedSinceLastFormControlChangeEvent; }
     void setChangedSinceLastFormControlChangeEvent(bool);
+    bool wasCreatedByTaintedScript() const { return m_wasCreatedByTaintedScript; }
 
     virtual void dispatchFormControlChangeEvent();
     void dispatchChangeEvent();
@@ -143,6 +146,7 @@ private:
     unsigned m_isRequired : 1;
     unsigned m_valueMatchesRenderer : 1;
     unsigned m_wasChangedSinceLastFormControlChangeEvent : 1;
+    unsigned m_wasCreatedByTaintedScript : 1;
 };
 
 } // namespace WebCore

@@ -29,6 +29,8 @@
 #include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
+#include "DocumentMarkers.h"
+#include "DocumentView.h"
 #include "EditingInlines.h"
 #include "Editor.h"
 #include "EditorClient.h"
@@ -114,10 +116,8 @@ static RefPtr<HTMLElement> firstInSpecialElement(const Position& position)
             continue;
         VisiblePosition visiblePosition = position;
         VisiblePosition firstInElement = firstPositionInOrBeforeNode(node.get());
-        if ((isRenderedTable(node.get()) && visiblePosition == firstInElement.next()) || visiblePosition == firstInElement) {
-            RELEASE_ASSERT(is<HTMLElement>(node));
-            return static_pointer_cast<HTMLElement>(WTFMove(node));
-        }
+        if ((isRenderedTable(node.get()) && visiblePosition == firstInElement.next()) || visiblePosition == firstInElement)
+            return downcast<HTMLElement>(WTF::move(node));
     }
     return nullptr;
 }
@@ -130,10 +130,8 @@ static RefPtr<HTMLElement> lastInSpecialElement(const Position& position)
             continue;
         VisiblePosition visiblePosition = position;
         VisiblePosition lastInElement = lastPositionInOrAfterNode(node.get());
-        if ((isRenderedTable(node.get()) && visiblePosition == lastInElement.previous()) || visiblePosition == lastInElement) {
-            RELEASE_ASSERT(is<HTMLElement>(node));
-            return static_pointer_cast<HTMLElement>(WTFMove(node));
-        }
+        if ((isRenderedTable(node.get()) && visiblePosition == lastInElement.previous()) || visiblePosition == lastInElement)
+            return downcast<HTMLElement>(WTF::move(node));
     }
     return nullptr;
 }
@@ -146,7 +144,7 @@ static std::pair<Position, RefPtr<HTMLElement>> positionBeforeContainingSpecialE
     auto result = positionInParentBeforeNode(element.get());
     if (result.isNull() || result.containerNode()->rootEditableElement() != position.containerNode()->rootEditableElement())
         return { position, nullptr };
-    return { result, WTFMove(element) };
+    return { result, WTF::move(element) };
 }
 
 static std::pair<Position, RefPtr<HTMLElement>> positionAfterContainingSpecialElement(const Position& position)
@@ -157,11 +155,11 @@ static std::pair<Position, RefPtr<HTMLElement>> positionAfterContainingSpecialEl
     auto result = positionInParentAfterNode(element.get());
     if (result.isNull() || result.deprecatedNode()->rootEditableElement() != position.containerNode()->rootEditableElement())
         return { position, nullptr };
-    return { result, WTFMove(element) };
+    return { result, WTF::move(element) };
 }
 
 DeleteSelectionCommand::DeleteSelectionCommand(Ref<Document>&& document, bool smartDelete, bool mergeBlocksAfterDelete, bool replace, bool expandForSpecialElements, bool sanitizeMarkup, EditAction editingAction)
-    : CompositeEditCommand(WTFMove(document), editingAction)
+    : CompositeEditCommand(WTF::move(document), editingAction)
     , m_hasSelectionToDelete(false)
     , m_smartDelete(smartDelete)
     , m_mergeBlocksAfterDelete(mergeBlocksAfterDelete)
@@ -507,6 +505,7 @@ void DeleteSelectionCommand::removeNodeUpdatingStates(Node& node, ShouldAssumeCo
         if (!next.isNull() && !isStartOfBlock(next))
         m_needPlaceholder = true;
     }
+
     // FIXME: Update the endpoints of the range being deleted.
     updatePositionForNodeRemoval(m_endingPosition, node);
     updatePositionForNodeRemoval(m_leadingWhitespace, node);
@@ -540,7 +539,7 @@ void DeleteSelectionCommand::removeNode(Node& node, ShouldAssumeContentIsAlwaysE
                 // Bail if nextChild is no longer node's child.
                 if (nextChild && nextChild->parentNode() != &node)
                     return;
-                child = WTFMove(nextChild);
+                child = WTF::move(nextChild);
             }
 
             // Don't remove editable regions that are inside non-editable ones, just clear them.
@@ -559,18 +558,18 @@ void DeleteSelectionCommand::removeNode(Node& node, ShouldAssumeContentIsAlwaysE
             }
             RefPtr nextChild { NodeTraversal::nextSkippingChildren(*child, protectedNode.ptr()) };
             removeNodeUpdatingStates(*child, shouldAssumeContentIsAlwaysEditable);
-            child = WTFMove(nextChild);
+            child = WTF::move(nextChild);
         }
 
         ASSERT(is<Element>(node));
-        auto element = downcast<Element>(WTFMove(protectedNode));
+        auto element = downcast<Element>(WTF::move(protectedNode));
         document().updateLayoutIgnorePendingStylesheets();
         // Check if we need to insert a placeholder for descendant table cells.
         RefPtr descendant { ElementTraversal::next(element, element.ptr()) };
         while (descendant) {
             RefPtr nextDescendant { ElementTraversal::next(*descendant, element.ptr()) };
             insertBlockPlaceholderForTableCellIfNeeded(*descendant);
-            descendant = WTFMove(nextDescendant);
+            descendant = WTF::move(nextDescendant);
         }
         insertBlockPlaceholderForTableCellIfNeeded(element);
         return;
@@ -612,7 +611,7 @@ void DeleteSelectionCommand::makeStylingElementsDirectChildrenOfEditableRootToPr
         auto shouldMove = is<HTMLLinkElement>(node) || is<HTMLStyleElement>(node);
         if (shouldMove) {
             nodes.advanceSkippingChildren();
-            stylingElements.append(downcast<HTMLElement>(WTFMove(node)));
+            stylingElements.append(downcast<HTMLElement>(WTF::move(node)));
         } else
             nodes.advance();
         }
@@ -879,7 +878,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
             RefPtr previousRow { row->previousSibling() };
             if (isTableRowEmpty(*row))
                 removeNodeUpdatingStates(*row, DoNotAssumeContentIsAlwaysEditable);
-            row = WTFMove(previousRow);
+            row = WTF::move(previousRow);
         }
     }
 
@@ -890,7 +889,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
             RefPtr nextRow { row->nextSibling() };
             if (isTableRowEmpty(*row))
                 removeNodeUpdatingStates(*row, DoNotAssumeContentIsAlwaysEditable);
-            row = WTFMove(nextRow);
+            row = WTF::move(nextRow);
         }
     }
 

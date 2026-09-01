@@ -27,25 +27,43 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "MediaPlaybackTargetContext.h"
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
-class MediaPlaybackTarget : public ThreadSafeRefCounted<MediaPlaybackTarget> {
-public:
-    virtual ~MediaPlaybackTarget() = default;
-
-    enum class TargetType : uint8_t { AVFoundation, Mock, Serialized };
-    virtual TargetType targetType() const = 0;
-    virtual const MediaPlaybackTargetContext& targetContext() const = 0;
-
-    bool hasActiveRoute() const { return targetContext().hasActiveRoute(); }
-    String deviceName() const { return targetContext().deviceName(); }
-    bool supportsRemoteVideoPlayback() { return targetContext().supportsRemoteVideoPlayback(); }
+enum class MediaPlaybackTargetType : uint8_t {
+    None = 0,
+    AVOutputContext = 1 << 0,
+    Mock = 1 << 1,
+    WirelessPlayback = 1 << 2,
+    Serialized = 1 << 3,
 };
 
-}
+class MediaPlaybackTarget : public ThreadSafeRefCounted<MediaPlaybackTarget> {
+public:
+    using Type = MediaPlaybackTargetType;
+
+    virtual ~MediaPlaybackTarget() = default;
+
+    Type type() const { return m_type; }
+    virtual Type targetType() const { return type(); }
+
+    virtual bool hasActiveRoute() const = 0;
+    virtual String deviceName() const = 0;
+    virtual bool supportsRemoteVideoPlayback() const = 0;
+
+protected:
+    MediaPlaybackTarget(Type type)
+        : m_type { type }
+    {
+    }
+
+private:
+    // This should be const, however IPC's Decoder's handling doesn't allow for const member.
+    Type m_type;
+};
+
+} // namespace WebCore
 
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET)

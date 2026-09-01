@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CanvasActivityRecord.h"
-#include "RegistrableDomain.h"
+#include <WebCore/CanvasActivityRecord.h>
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
@@ -132,7 +132,7 @@ struct ResourceLoadStatistics {
     OptionSet<NavigatorAPIsAccessed> navigatorFunctionsAccessed;
     OptionSet<ScreenAPIsAccessed> screenFunctionsAccessed;
 #endif
-    friend struct IPC::ArgumentCoder<ResourceLoadStatistics, void>;
+    friend struct IPC::ArgumentCoder<ResourceLoadStatistics>;
 };
 
 } // namespace WebCore

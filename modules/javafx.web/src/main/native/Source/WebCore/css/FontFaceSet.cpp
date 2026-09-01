@@ -26,24 +26,27 @@
 #include "config.h"
 #include "FontFaceSet.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPromiseProxy.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
+#include "DocumentView.h"
 #include "EventLoop.h"
+#include "EventNames.h"
 #include "FontFace.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "JSDOMBinding.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertSequences.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFontFace.h"
 #include "JSFontFaceSet.h"
-#include "Quirks.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FontFaceSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontFaceSet);
 
 Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, const Vector<Ref<FontFace>>& initialFaces)
 {
@@ -96,11 +99,11 @@ RefPtr<FontFace> FontFaceSet::Iterator::next()
 {
     if (m_index >= m_target->size())
         return nullptr;
-    return m_target->backing()[m_index++].wrapper(m_target->scriptExecutionContext());
+    return m_target->backing()[m_index++].wrapper(m_target->protectedScriptExecutionContext().get());
 }
 
 FontFaceSet::PendingPromise::PendingPromise(LoadPromise&& promise)
-    : promise(makeUniqueRef<LoadPromise>(WTFMove(promise)))
+    : promise(makeUniqueRef<LoadPromise>(WTF::move(promise)))
 {
 }
 
@@ -163,11 +166,11 @@ void FontFaceSet::load(ScriptExecutionContext& context, const String& font, cons
         return;
     }
 
-    for (auto& face : matchingFaces)
-        face.get().load();
+    for (Ref face : matchingFaces)
+        face->load();
 
-    auto* document = dynamicDowncast<Document>(scriptExecutionContext());
-    if (document && document->quirks().shouldEnableFontLoadingAPIQuirk()) {
+    if (auto document = dynamicDowncast<Document>(scriptExecutionContext())) {
+        if (document->quirks().shouldEnableFontLoadingAPIQuirk()) {
         // HBOMax.com expects that loading fonts will succeed, and will totally break when it doesn't. But when lockdown mode is enabled, fonts
         // fail to load, because that's the whole point of lockdown mode.
         //
@@ -177,37 +180,38 @@ void FontFaceSet::load(ScriptExecutionContext& context, const String& font, cons
         // See also: https://github.com/w3c/csswg-drafts/issues/7680
 
         bool hasSource = false;
-        for (auto& face : matchingFaces) {
-            if (face.get().sourceCount()) {
+            for (Ref face : matchingFaces) {
+                if (face->sourceCount()) {
                 hasSource = true;
                 break;
             }
         }
         if (!hasSource) {
-            promise.resolve(matchingFaces.map([scriptExecutionContext = scriptExecutionContext()] (const auto& matchingFace) {
-                return matchingFace.get().wrapper(scriptExecutionContext);
+                promise.resolve(matchingFaces.map([scriptExecutionContext = CheckedPtr { scriptExecutionContext() }] (const auto& matchingFace) {
+                    return matchingFace->wrapper(scriptExecutionContext.get());
             }));
             return;
         }
     }
+    }
 
-    for (auto& face : matchingFaces) {
-        if (face.get().status() == CSSFontFace::Status::Failure) {
+    for (Ref face : matchingFaces) {
+        if (face->status() == CSSFontFace::Status::Failure) {
             promise.reject(ExceptionCode::NetworkError);
             return;
         }
     }
 
-    auto pendingPromise = PendingPromise::create(WTFMove(promise));
+    auto pendingPromise = PendingPromise::create(WTF::move(promise));
     bool waiting = false;
 
-    for (auto& face : matchingFaces) {
-        pendingPromise->faces.append(face.get().wrapper(scriptExecutionContext()));
-        if (face.get().status() == CSSFontFace::Status::Success)
+    for (Ref face : matchingFaces) {
+        pendingPromise->faces.append(face.get().wrapper(protectedScriptExecutionContext().get()));
+        if (face->status() == CSSFontFace::Status::Success)
             continue;
         waiting = true;
-        ASSERT(face.get().existingWrapper());
-        m_pendingPromises.add(face.get().existingWrapper(), Vector<Ref<PendingPromise>>()).iterator->value.append(pendingPromise.copyRef());
+        ASSERT(face->existingWrapper());
+        m_pendingPromises.add(face->existingWrapper(), Vector<Ref<PendingPromise>>()).iterator->value.append(pendingPromise.copyRef());
     }
 
     if (!waiting)
@@ -261,7 +265,9 @@ void FontFaceSet::faceFinished(CSSFontFace& face, CSSFontFace::Status newStatus)
 
 void FontFaceSet::startedLoading()
 {
-    // FIXME: Fire a "loading" event asynchronously.
+    if (m_readyPromise->isFulfilled())
+        m_readyPromise = makeUniqueRef<ReadyPromise>(*this, &FontFaceSet::readyPromiseResolve);
+    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().loadingEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void FontFaceSet::documentDidFinishLoading()
@@ -281,5 +287,11 @@ FontFaceSet& FontFaceSet::readyPromiseResolve()
 {
     return *this;
 }
+
+ScriptExecutionContext* FontFaceSet::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 
 }

@@ -62,7 +62,7 @@ public:
     // to compensate for the algorithmic overhead compared to simple brute force.
     static constexpr int bmMinPatternLength = 7;
 
-    static constexpr bool exceedsOneByte(LChar) { return false; }
+    static constexpr bool exceedsOneByte(Latin1Character) { return false; }
     static constexpr bool exceedsOneByte(char16_t c) { return c > 0xff; }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

@@ -27,7 +27,7 @@
 
 #include "InlineFormattingContext.h"
 #include "InlineLineBuilder.h"
-#include "LayoutUnits.h"
+#include <WebCore/LayoutUnits.h>
 #include <wtf/Range.h>
 
 namespace WebCore {
@@ -56,6 +56,7 @@ private:
     void appendSoftLineBreakDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
     void appendHardLineBreakDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
     void appendAtomicInlineLevelDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
+    void appendBlockLevelDisplayBox(const Line::Run&, const InlineRect&, InlineDisplay::Boxes&);
     void appendRootInlineBoxDisplayBox(const InlineRect&, bool lineHasContent, InlineDisplay::Boxes&);
     void appendInlineBoxDisplayBox(const Line::Run&, const InlineLevelBox&, const InlineRect&, InlineDisplay::Boxes&);
     void appendInlineDisplayBoxAtBidiBoundary(const Box&, InlineDisplay::Boxes&);
@@ -78,6 +79,8 @@ private:
     void setGeometryForBlockLevelOutOfFlowBoxes(const Vector<size_t>& indexList, const Line::RunList&, const Vector<int32_t>& visualOrderList = { });
 
     bool isLineFullyTruncatedInBlockDirection() const { return m_lineIsFullyTruncatedInBlockDirection; }
+
+    bool isFirstFormattedLine() const { return lineBox().isFirstFormattedLine(); }
 
     const LineBox& lineBox() const { return m_lineBox; }
     size_t lineIndex() const { return lineBox().lineIndex(); }

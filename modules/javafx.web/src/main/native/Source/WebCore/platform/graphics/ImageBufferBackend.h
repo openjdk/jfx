@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "CopyImageOptions.h"
-#include "DestinationColorSpace.h"
-#include "FloatRect.h"
-#include "GraphicsLayerContentsDisplayDelegate.h"
-#include "GraphicsTypesGL.h"
-#include "ImageBufferAllocator.h"
-#include "ImageBufferBackendParameters.h"
-#include "ImagePaintingOptions.h"
-#include "IntRect.h"
-#include "PixelBufferFormat.h"
-#include "PlatformLayer.h"
-#include "RenderingMode.h"
+#include <WebCore/CopyImageOptions.h>
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/GraphicsLayerContentsDisplayDelegate.h>
+#include <WebCore/GraphicsTypesGL.h>
+#include <WebCore/ImageBufferAllocator.h>
+#include <WebCore/ImageBufferBackendParameters.h>
+#include <WebCore/ImagePaintingOptions.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PixelBufferFormat.h>
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/RenderingMode.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -47,7 +47,7 @@
 #endif
 
 #if HAVE(IOSURFACE)
-#include "IOSurface.h"
+#include <WebCore/IOSurface.h>
 #endif
 
 #if USE(SKIA)
@@ -190,7 +190,7 @@ protected:
     IntSize size() const { return m_parameters.backendSize; };
     float resolutionScale() const { return m_parameters.resolutionScale; }
     const DestinationColorSpace& colorSpace() const { return m_parameters.colorSpace; }
-    ImageBufferPixelFormat pixelFormat() const { return m_parameters.bufferFormat.pixelFormat; }
+    PixelFormat pixelFormat() const { return m_parameters.bufferFormat.pixelFormat; }
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
     void convertToLuminanceMaskFloat16();

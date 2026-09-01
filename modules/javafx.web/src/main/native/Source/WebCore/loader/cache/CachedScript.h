@@ -74,4 +74,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedScript, CachedResource::Type::Script)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CachedScript) \
+    static bool isType(const WebCore::CachedResource& resource) { return resource.type() == WebCore::CachedResource::Type::Script || resource.type() == WebCore::CachedResource::Type::JSON; } \
+SPECIALIZE_TYPE_TRAITS_END()

@@ -66,6 +66,7 @@ private:
     bool didDeflateFinishAppleCompressionFramework(int);
     ExceptionOr<Ref<JSC::ArrayBuffer>> compressAppleCompressionFramework(std::span<const uint8_t>);
 #endif
+
     explicit CompressionStreamEncoder(Formats::CompressionFormat format)
         : m_format(format)
     {
@@ -80,6 +81,7 @@ private:
     bool m_didFinish { false };
     const Formats::CompressionFormat m_format;
 
+    // TODO: convert to using variant
     CompressionStream m_compressionStream;
 #if !PLATFORM(JAVA)
     ZStream m_zstream;

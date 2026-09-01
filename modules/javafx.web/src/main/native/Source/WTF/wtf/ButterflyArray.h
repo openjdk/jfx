@@ -78,22 +78,22 @@ public:
         return WTF::roundUpToMultipleOf<alignof(Derived)>(sizeof(LeadingType) * leadingSize);
     }
 
-    std::span<LeadingType> leadingSpan()
+    std::span<LeadingType> leadingSpan() LIFETIME_BOUND
     {
         return std::span { leadingData(), m_leadingSize };
     }
 
-    std::span<const LeadingType> leadingSpan() const
+    std::span<const LeadingType> leadingSpan() const LIFETIME_BOUND
     {
         return std::span { leadingData(), m_leadingSize };
     }
 
-    std::span<TrailingType> trailingSpan()
+    std::span<TrailingType> trailingSpan() LIFETIME_BOUND
     {
         return std::span { trailingData(), m_trailingSize };
     }
 
-    std::span<const TrailingType> trailingSpan() const
+    std::span<const TrailingType> trailingSpan() const LIFETIME_BOUND
     {
         return std::span { trailingData(), m_trailingSize };
     }

@@ -28,11 +28,13 @@
 #include "Supplementable.h"
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class PushManager;
 class ServiceWorkerRegistration;
+class WeakPtrImplWithEventTargetData;
 
 class ServiceWorkerRegistrationPushAPI : public Supplement<ServiceWorkerRegistration> {
     WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerRegistrationPushAPI);
@@ -45,10 +47,15 @@ public:
 
 private:
     static ServiceWorkerRegistrationPushAPI* from(ServiceWorkerRegistration&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "ServiceWorkerRegistrationPushAPI"_s; }
+    bool isServiceWorkerRegistrationPushAPI() const final { return true; }
 
-    ServiceWorkerRegistration& m_serviceWorkerRegistration;
+    WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData> m_serviceWorkerRegistration;
     const std::unique_ptr<PushManager> m_pushManager;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerRegistrationPushAPI)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isServiceWorkerRegistrationPushAPI(); }
+SPECIALIZE_TYPE_TRAITS_END()

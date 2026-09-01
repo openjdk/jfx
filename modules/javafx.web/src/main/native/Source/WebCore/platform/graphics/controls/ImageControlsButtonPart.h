@@ -27,8 +27,8 @@
 
 #if ENABLE(SERVICE_CONTROLS)
 
-#include "ControlFactory.h"
-#include "ControlPart.h"
+#include <WebCore/ControlFactory.h>
+#include <WebCore/ControlPart.h>
 
 namespace WebCore {
 

@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "AXLoggerBase.h"
 #include "AccessibilityRenderObject.h"
 #include <wtf/WeakPtr.h>
 
@@ -35,6 +36,7 @@ namespace WebCore {
 class AccessibilitySVGObject : public AccessibilityRenderObject {
 public:
     static Ref<AccessibilitySVGObject> create(AXID, RenderObject&, AXObjectCache&, bool isSVGRoot = false);
+    static Ref<AccessibilitySVGObject> create(AXID, Element&, AXObjectCache&, bool isSVGRoot = false);
     virtual ~AccessibilitySVGObject();
 
     AccessibilityObject* parentObject() const override;
@@ -46,6 +48,7 @@ public:
 
 protected:
     explicit AccessibilitySVGObject(AXID, RenderObject&, AXObjectCache&, bool isSVGRoot);
+    explicit AccessibilitySVGObject(AXID, Element&, AXObjectCache&, bool isSVGRoot);
     AccessibilityRole determineAriaRoleAttribute() const final;
 
 private:
@@ -69,7 +72,7 @@ private:
 
 inline void AccessibilitySVGObject::setParent(AccessibilityRenderObject* parent)
 {
-    ASSERT(m_isSVGRoot);
+    AX_ASSERT(m_isSVGRoot);
     m_parent = parent;
 }
 

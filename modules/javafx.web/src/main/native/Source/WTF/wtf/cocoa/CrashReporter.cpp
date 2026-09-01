@@ -24,7 +24,7 @@
 */
 
 #include "config.h"
-#include "CrashReporter.h"
+#include <wtf/cocoa/CrashReporter.h>
 
 #include <wtf/NeverDestroyed.h>
 #include <wtf/spi/cocoa/CrashReporterClientSPI.h>
@@ -50,6 +50,6 @@ void setCrashLogMessage(const char* message)
 
     // Delete the message from last time, so we don't keep leaking messages.
     static NeverDestroyed<CString> previousCopiedCrashLogMessage;
-    previousCopiedCrashLogMessage.get() = WTFMove(copiedMessage);
+    previousCopiedCrashLogMessage.get() = WTF::move(copiedMessage);
 }
 }

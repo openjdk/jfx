@@ -28,8 +28,8 @@
 #include "StyleFilterImage.h"
 
 #include "BitmapImage.h"
-#include "CSSFilter.h"
 #include "CSSFilterImageValue.h"
+#include "CSSFilterRenderer.h"
 #include "CSSValuePool.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
@@ -39,17 +39,18 @@
 #include "ReferenceFilterOperation.h"
 #include "RenderElement.h"
 #include "RenderObjectInlines.h"
-#include "StyleFilterProperty.h"
+#include "Settings.h"
+#include "StyleFilter.h"
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
 
 // MARK: - StyleFilterImage
 
-StyleFilterImage::StyleFilterImage(RefPtr<StyleImage>&& image, FilterOperations&& filterOperations)
+StyleFilterImage::StyleFilterImage(RefPtr<StyleImage>&& image, Style::Filter&& filter)
     : StyleGeneratedImage { Type::FilterImage, StyleFilterImage::isFixedSize }
-    , m_image { WTFMove(image) }
-    , m_filterOperations { WTFMove(filterOperations) }
+    , m_image { WTF::move(image) }
+    , m_filter { WTF::move(filter) }
     , m_inputImageIsReady { false }
 {
 }
@@ -68,7 +69,7 @@ bool StyleFilterImage::operator==(const StyleImage& other) const
 
 bool StyleFilterImage::equals(const StyleFilterImage& other) const
 {
-    return equalInputImages(other) && m_filterOperations == other.m_filterOperations;
+    return equalInputImages(other) && m_filter == other.m_filter;
 }
 
 bool StyleFilterImage::equalInputImages(const StyleFilterImage& other) const
@@ -80,8 +81,8 @@ Ref<CSSValue> StyleFilterImage::computedStyleValue(const RenderStyle& style) con
 {
     RefPtr image = m_image;
     return CSSFilterImageValue::create(
-        image ? image->computedStyleValue(style) : static_reference_cast<CSSValue>(CSSPrimitiveValue::create(CSSValueNone)),
-        Style::toCSSFilterProperty(m_filterOperations, style)
+        image ? image->computedStyleValue(style) : upcast<CSSValue>(CSSPrimitiveValue::create(CSSValueNone)),
+        Style::toCSS(m_filter, style)
     );
 }
 
@@ -108,16 +109,18 @@ void StyleFilterImage::load(CachedResourceLoader& cachedResourceLoader, const Re
             m_cachedImage->addClient(*this);
     }
 
-    for (auto& filterOperation : m_filterOperations) {
-        if (RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(filterOperation))
+    for (auto& value : m_filter) {
+        Ref operation = value.value;
+        if (RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operation))
             referenceFilterOperation->loadExternalDocumentIfNeeded(cachedResourceLoader, options);
     }
 
     m_inputImageIsReady = true;
 }
 
-RefPtr<Image> StyleFilterImage::image(const RenderElement* renderer, const FloatSize& size, bool isForFirstLine) const
+RefPtr<Image> StyleFilterImage::image(const RenderElement* renderElement, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
 {
+    CheckedPtr renderer = renderElement;
     if (!renderer)
         return &Image::nullImage();
 
@@ -128,20 +131,24 @@ RefPtr<Image> StyleFilterImage::image(const RenderElement* renderer, const Float
     if (!styleImage)
         return &Image::nullImage();
 
-    auto image = styleImage->image(renderer, size, isForFirstLine);
+    auto image = styleImage->image(renderer.get(), size, destinationContext, isForFirstLine);
     if (!image || image->isNull())
         return &Image::nullImage();
 
-    auto preferredFilterRenderingModes = renderer->protectedPage()->preferredFilterRenderingModes();
+    auto preferredFilterRenderingModes = renderer->protectedPage()->preferredFilterRenderingModes(destinationContext);
     auto sourceImageRect = FloatRect { { }, size };
 
-    auto cssFilter = CSSFilter::create(const_cast<RenderElement&>(*renderer), m_filterOperations, preferredFilterRenderingModes, FloatSize { 1, 1 }, sourceImageRect, NullGraphicsContext());
+    auto cssFilter = CSSFilterRenderer::create(const_cast<RenderElement&>(*renderer), m_filter, {
+            .referenceBox = sourceImageRect,
+            .filterRegion = sourceImageRect,
+            .scale = { 1, 1 },
+        }, preferredFilterRenderingModes, Ref { renderer->settings() }->showDebugBorders(), NullGraphicsContext());
     if (!cssFilter)
         return &Image::nullImage();
 
     cssFilter->setFilterRegion(sourceImageRect);
 
-    auto sourceImage = ImageBuffer::create(size, cssFilter->renderingMode(), RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, renderer->hostWindow());
+    auto sourceImage = ImageBuffer::create(size, destinationContext.renderingMode(), RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, renderer->hostWindow());
     if (!sourceImage)
         return &Image::nullImage();
 
@@ -150,7 +157,7 @@ RefPtr<Image> StyleFilterImage::image(const RenderElement* renderer, const Float
     });
     if (!filteredImage)
         return &Image::nullImage();
-    return BitmapImage::create(WTFMove(filteredImage));
+    return BitmapImage::create(WTF::move(filteredImage));
 }
 
 bool StyleFilterImage::knownToBeOpaque(const RenderElement&) const

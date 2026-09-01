@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AdvancedPrivacyProtections.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerData.h"
+#include <WebCore/AdvancedPrivacyProtections.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerData.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>

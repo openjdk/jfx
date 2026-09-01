@@ -28,6 +28,9 @@
 
 #include "InternalWritableStream.h"
 #include "JSBlob.h"
+#include "JSDOMConvertBufferSource.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertStrings.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFileSystemWritableFileStream.h"
@@ -37,7 +40,7 @@ namespace WebCore {
 
 ExceptionOr<Ref<FileSystemWritableFileStream>> FileSystemWritableFileStream::create(JSDOMGlobalObject& globalObject, Ref<WritableStreamSink>&& sink)
 {
-    auto result = createInternalWritableStream(globalObject, WTFMove(sink));
+    auto result = createInternalWritableStream(globalObject, WTF::move(sink));
     if (result.hasException())
         return result.releaseException();
 
@@ -45,7 +48,7 @@ ExceptionOr<Ref<FileSystemWritableFileStream>> FileSystemWritableFileStream::cre
 }
 
 FileSystemWritableFileStream::FileSystemWritableFileStream(Ref<InternalWritableStream>&& internalStream)
-    : WritableStream(WTFMove(internalStream))
+    : WritableStream(WTF::move(internalStream))
 {
 }
 
@@ -89,30 +92,25 @@ void FileSystemWritableFileStream::write(JSC::JSGlobalObject& lexicalGlobalObjec
         return promise.reject(Exception { ExceptionCode::UnknownError, "Failed to complete write operation"_s });
 
     Ref domPromise = DOMPromise::create(*globalObject, *jsPromise);
-    domPromise->whenSettled([domPromise, promise = WTFMove(promise)]() mutable {
-        switch (domPromise->status()) {
-        case DOMPromise::Status::Fulfilled:
+    domPromise->whenSettledWithResult([promise = WTF::move(promise)](auto*, bool isFulfilled, auto result) mutable {
+        if (isFulfilled)
             return promise.resolve();
-        case DOMPromise::Status::Rejected:
-            return promise.rejectWithCallback([&](auto&) {
-                return domPromise->result();
+        return promise.rejectWithCallback([&result](auto&) {
+            return result;
             });
-        case DOMPromise::Status::Pending:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
     });
 }
 
 void FileSystemWritableFileStream::seek(JSC::JSGlobalObject& lexicalGlobalObject, uint64_t position, DOMPromiseDeferred<void>&& promise)
 {
     WriteParams params { WriteCommandType::Seek, std::nullopt, position, std::nullopt };
-    write(lexicalGlobalObject, params, WTFMove(promise));
+    write(lexicalGlobalObject, params, WTF::move(promise));
 }
 
 void FileSystemWritableFileStream::truncate(JSC::JSGlobalObject& lexicalGlobalObject, uint64_t size, DOMPromiseDeferred<void>&& promise)
 {
     WriteParams params { WriteCommandType::Truncate, size, std::nullopt, std::nullopt };
-    write(lexicalGlobalObject, params, WTFMove(promise));
+    write(lexicalGlobalObject, params, WTF::move(promise));
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,9 +55,9 @@ static std::optional<CSS::TextShadow> consumeSingleUnresolvedTextShadow(CSSParse
     auto rangeCopy = range;
 
     std::optional<CSS::Color> color;
-    std::optional<CSS::Length<>> x;
-    std::optional<CSS::Length<>> y;
-    std::optional<CSS::Length<CSS::Nonnegative>> blur;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> x;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> y;
+    std::optional<CSS::Length<CSS::NonnegativeUnzoomed>> blur;
 
     auto consumeOptionalColor = [&] -> bool {
         if (color)
@@ -65,21 +65,21 @@ static std::optional<CSS::TextShadow> consumeSingleUnresolvedTextShadow(CSSParse
         auto maybeColor = consumeUnresolvedColor(rangeCopy, state);
         if (!maybeColor)
             return false;
-        color = CSS::Color(WTFMove(*maybeColor));
+        color = CSS::Color(WTF::move(*maybeColor));
         return !!color;
     };
 
     auto consumeLengths = [&] -> bool {
         if (x)
             return false;
-        x = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
+        x = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(rangeCopy, state);
         if (!x)
             return false;
-        y = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
+        y = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(rangeCopy, state);
         if (!y)
             return false;
 
-        blur = MetaConsumer<CSS::Length<CSS::Nonnegative>>::consume(rangeCopy, state);
+        blur = MetaConsumer<CSS::Length<CSS::NonnegativeUnzoomed>>::consume(rangeCopy, state);
         return true;
     };
 
@@ -95,9 +95,9 @@ static std::optional<CSS::TextShadow> consumeSingleUnresolvedTextShadow(CSSParse
     range = rangeCopy;
 
     return CSS::TextShadow {
-        .color = WTFMove(color),
-        .location = { WTFMove(*x), WTFMove(*y) },
-        .blur = WTFMove(blur)
+        .color = WTF::move(color),
+        .location = { WTF::move(*x), WTF::move(*y) },
+        .blur = WTF::move(blur)
     };
 }
 
@@ -111,7 +111,7 @@ static std::optional<CSS::TextShadowProperty::List> consumeUnresolvedTextShadowL
         auto shadow = consumeSingleUnresolvedTextShadow(rangeCopy, state);
         if (!shadow)
             return { };
-        list.value.append(WTFMove(*shadow));
+        list.value.append(WTF::move(*shadow));
     } while (consumeCommaIncludingWhitespace(rangeCopy));
 
     range = rangeCopy;
@@ -126,7 +126,7 @@ static std::optional<CSS::TextShadowProperty> consumeUnresolvedTextShadow(CSSPar
         return CSS::TextShadowProperty { CSS::Keyword::None { } };
     }
     if (auto textShadowList = consumeUnresolvedTextShadowList(range, state))
-        return CSS::TextShadowProperty { WTFMove(*textShadowList) };
+        return CSS::TextShadowProperty { WTF::move(*textShadowList) };
     return { };
 }
 
@@ -136,7 +136,7 @@ RefPtr<CSSValue> consumeTextShadow(CSSParserTokenRange& range, CSS::PropertyPars
     // https://drafts.csswg.org/css-text-decor-3/#propdef-text-shadow
 
     if (auto property = consumeUnresolvedTextShadow(range, state))
-        return CSSTextShadowPropertyValue::create({ WTFMove(*property) });
+        return CSSTextShadowPropertyValue::create({ WTF::move(*property) });
     return nullptr;
 }
 

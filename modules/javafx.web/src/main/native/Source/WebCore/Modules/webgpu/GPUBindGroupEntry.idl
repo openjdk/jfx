@@ -28,12 +28,12 @@
 // https://bugs.webkit.org/show_bug.cgi?id=232548 This shouldn't need to be here.
 typedef [EnforceRange] unsigned long GPUIndex32;
 
-typedef (GPUSampler or GPUTextureView or GPUBufferBinding or GPUExternalTexture) GPUBindingResource;
+typedef (GPUSampler or GPUTexture or GPUTextureView or GPUBuffer or GPUBufferBinding or GPUExternalTexture) GPUBindingResource;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUBindGroupEntry {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUBindGroupEntry {
     required GPUIndex32 binding;
     required GPUBindingResource resource;
 };

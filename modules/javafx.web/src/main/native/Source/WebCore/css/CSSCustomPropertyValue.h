@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "CSSValue.h"
-#include "CSSVariableData.h"
-#include "CSSVariableReferenceValue.h"
-#include "CSSWideKeyword.h"
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSVariableData.h>
+#include <WebCore/CSSVariableReferenceValue.h>
+#include <WebCore/CSSWideKeyword.h>
 
 namespace WebCore {
 
@@ -69,7 +69,7 @@ private:
     CSSCustomPropertyValue(const AtomString& name, VariantValue&& value)
         : CSSValue(ClassType::CustomProperty)
         , m_name(name)
-        , m_value(WTFMove(value))
+        , m_value(WTF::move(value))
     {
     }
 

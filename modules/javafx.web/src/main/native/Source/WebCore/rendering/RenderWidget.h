@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "HTMLFrameOwnerElement.h"
-#include "OverlapTestRequestClient.h"
-#include "RenderReplaced.h"
-#include "Widget.h"
+#include <WebCore/HTMLFrameOwnerElement.h>
+#include <WebCore/OverlapTestRequestClient.h>
+#include <WebCore/RenderReplaced.h>
+#include <WebCore/Widget.h>
 
 namespace WebCore {
 
@@ -48,7 +48,7 @@ public:
     static void scheduleWidgetToMove(Widget&, LocalFrameView*);
 
 private:
-    using WidgetToParentMap = HashMap<RefPtr<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
+    using WidgetToParentMap = HashMap<Ref<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
     static WidgetToParentMap& widgetNewParentMap();
 
     WEBCORE_EXPORT void moveWidgets();
@@ -57,7 +57,7 @@ private:
 };
 
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderWidget);
+    WTF_MAKE_TZONE_ALLOCATED(RenderWidget);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderWidget);
 public:
     virtual ~RenderWidget();
@@ -72,7 +72,7 @@ public:
     static RenderWidget* find(const Widget&);
 
     enum class ChildWidgetState { Valid, Destroyed };
-    ChildWidgetState updateWidgetPosition() WARN_UNUSED_RETURN;
+    [[nodiscard]] ChildWidgetState updateWidgetPosition();
     WEBCORE_EXPORT IntRect windowClipRect() const;
 
     virtual bool requiresAcceleratedCompositing() const;
@@ -83,7 +83,7 @@ protected:
     RenderWidget(Type, HTMLFrameOwnerElement&, RenderStyle&&);
 
     void willBeDestroyed() override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
     void layout() override;
     void paint(PaintInfo&, const LayoutPoint&) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;

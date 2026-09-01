@@ -73,6 +73,12 @@ public:
     void winNotificationReceived(PlatformUIElement, const std::string& eventName);
 #endif
 
+#if PLATFORM(MAC)
+    void printTrees();
+#else
+    void printTrees() { }
+#endif
+
 private:
     static JSRetainPtr<JSClassRef> createJSClass();
 

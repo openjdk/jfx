@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Attribute.h"
-#include "SpaceSplitString.h"
+#include <WebCore/Attribute.h>
+#include <WebCore/SpaceSplitString.h>
 #include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeCasts.h>
@@ -50,7 +50,7 @@ public:
 
     static const unsigned attributeNotFound = static_cast<unsigned>(-1);
 
-    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTFMove(classNames); }
+    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTF::move(classNames); }
     const SpaceSplitString& classNames() const { return m_classNames; }
     static constexpr ptrdiff_t classNamesMemoryOffset() { return OBJECT_OFFSETOF(ElementData, m_classNames); }
 
@@ -217,7 +217,7 @@ inline const ImmutableStyleProperties* ElementData::presentationalHintStyle() co
         return nullptr;
 }
 
-inline std::span<const Attribute> ElementData::attributes() const
+inline std::span<const Attribute> ElementData::attributes() const LIFETIME_BOUND
 {
     if (isUnique())
         return uncheckedDowncast<UniqueElementData>(*this).attributes();

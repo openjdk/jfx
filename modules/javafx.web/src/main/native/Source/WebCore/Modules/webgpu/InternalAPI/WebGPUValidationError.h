@@ -35,7 +35,7 @@ class ValidationError final : public RefCounted<ValidationError> {
 public:
     static Ref<ValidationError> create(String&& message)
     {
-        return adoptRef(*new ValidationError(WTFMove(message)));
+        return adoptRef(*new ValidationError(WTF::move(message)));
     }
 
     static Ref<ValidationError> create(const String& message)
@@ -47,7 +47,7 @@ public:
 
 private:
     ValidationError(String&& message)
-        : m_message(WTFMove(message))
+        : m_message(WTF::move(message))
     {
     }
 

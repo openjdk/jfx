@@ -31,7 +31,7 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-class ImageBuffer;
+class NativeImage;
 }
 
 namespace WebCore::ShapeDetection {
@@ -43,7 +43,7 @@ class BarcodeDetector : public RefCounted<BarcodeDetector> {
 public:
     virtual ~BarcodeDetector() = default;
 
-    virtual void detect(Ref<ImageBuffer>&&, CompletionHandler<void(Vector<DetectedBarcode>&&)>&&) = 0;
+    virtual void detect(const NativeImage&, CompletionHandler<void(Vector<DetectedBarcode>&&)>&&) = 0;
 
 protected:
     BarcodeDetector() = default;

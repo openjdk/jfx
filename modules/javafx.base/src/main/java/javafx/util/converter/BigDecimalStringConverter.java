@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,43 +26,28 @@
 package javafx.util.converter;
 
 import java.math.BigDecimal;
-import javafx.util.StringConverter;
 
-/**
- * <p>{@link StringConverter} implementation for {@link BigDecimal} values.</p>
- * @since JavaFX 2.1
- */
-public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
+/// A `StringConverter` implementation for [BigDecimal] values.
+///
+/// @since JavaFX 2.1
+public class BigDecimalStringConverter extends BaseStringConverter<BigDecimal> {
 
-    /**
-     * Creates a default {@code BigDecimalStringConverter}.
-     */
+    /// Creates a default `BigDecimalStringConverter`.
     public BigDecimalStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public BigDecimal fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return new BigDecimal(value);
+    @Override
+    public BigDecimal fromString(String value) {
+        return super.fromString(value);
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(BigDecimal value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
+    @Override
+    BigDecimal fromNonEmptyString(String string) {
+        return new BigDecimal(string);
+    }
 
-        return value.toString();
+    @Override
+    public String toString(BigDecimal value) {
+        return super.toString(value);
     }
 }

@@ -38,7 +38,9 @@
     readonly attribute USVString reason;
 };
 
-dictionary CloseEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CloseEventInit : EventInit {
     boolean wasClean = false;
     unsigned short code = 0;
     USVString reason = "";

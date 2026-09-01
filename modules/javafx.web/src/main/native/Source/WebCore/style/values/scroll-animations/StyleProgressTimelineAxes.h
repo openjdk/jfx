@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "ScrollAxis.h"
-#include "StyleValueTypes.h"
+#include <WebCore/ScrollAxis.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {

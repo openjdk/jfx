@@ -52,7 +52,7 @@
 #include "HTMLStyleElement.h"
 #include "HTTPParsers.h"
 #include "Image.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MarkupAccumulator.h"
 #include "Page.h"
 #include "RenderElement.h"
@@ -106,7 +106,7 @@ public:
 
 private:
     PageSerializer& m_serializer;
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     void appendText(StringBuilder&, const Text&) override;
     void appendStartTag(StringBuilder&, const Element&, Namespaces*) override;
@@ -115,13 +115,13 @@ private:
 };
 
 PageSerializer::SerializerMarkupAccumulator::SerializerMarkupAccumulator(PageSerializer& serializer, Document& document, Vector<Ref<Node>>* nodes)
-    : MarkupAccumulator(nodes, ResolveURLs::Yes, MarkupAccumulator::serializationSyntax(document))
+    : MarkupAccumulator(nodes, ResolveURLs::YesExcludingURLsForPrivacy, MarkupAccumulator::serializationSyntax(document))
     , m_serializer(serializer)
     , m_document(document)
 {
     // MarkupAccumulator does not serialize the <?xml ... line, so we add it explicitly to ensure the right encoding is specified.
-    if (m_document.isXMLDocument() || m_document.xmlStandalone())
-        append("<?xml version=\""_s, m_document.xmlVersion(), "\" encoding=\""_s, m_document.charset(), "\"?>"_s);
+    if (m_document->isXMLDocument() || m_document->xmlStandalone())
+        append("<?xml version=\""_s, m_document->xmlVersion(), "\" encoding=\""_s, m_document->charset(), "\"?>"_s);
 }
 
 void PageSerializer::SerializerMarkupAccumulator::appendText(StringBuilder& out, const Text& text)
@@ -137,7 +137,7 @@ void PageSerializer::SerializerMarkupAccumulator::appendStartTag(StringBuilder& 
         MarkupAccumulator::appendStartTag(out, element, namespaces);
 
     if (element.hasTagName(HTMLNames::headTag))
-        out.append("<meta charset=\""_s, m_document.charset(), "\">"_s);
+        out.append("<meta charset=\""_s, m_document->charset(), "\">"_s);
 
     // FIXME: For object (plugins) tags and video tag we could replace them by an image of their current contents.
 }
@@ -206,8 +206,8 @@ void PageSerializer::serializeFrame(LocalFrame* frame)
     m_resources.append({ url, document->suggestedMIMEType(), SharedBuffer::create(textEncoding.encode(text, PAL::UnencodableHandling::Entities)) });
     m_resourceURLs.add(url);
 
-    for (auto&& node : WTFMove(serializedNodes)) {
-        RefPtr element = dynamicDowncast<Element>(WTFMove(node));
+    for (auto&& node : WTF::move(serializedNodes)) {
+        RefPtr element = dynamicDowncast<Element>(WTF::move(node));
         if (!element)
             continue;
         // We have to process in-line style as it might contain some resources (typically background images).

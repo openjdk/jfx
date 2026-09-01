@@ -43,6 +43,11 @@ public:
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size));
     }
 
+    static Ref<RefCountedFixedVectorBase> create(std::initializer_list<T> initializerList)
+    {
+        return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(initializerList.size()))) RefCountedFixedVectorBase(initializerList));
+    }
+
     template<typename InputIterator>
     static Ref<RefCountedFixedVectorBase> create(InputIterator first, InputIterator last)
     {
@@ -60,7 +65,7 @@ public:
     template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
     static Ref<RefCountedFixedVectorBase> createFromVector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        auto container = WTFMove(other);
+        auto container = WTF::move(other);
         unsigned size = Checked<uint32_t> { container.size() }.value();
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::move_iterator { container.begin() }, std::move_iterator { container.end() }));
     }
@@ -94,6 +99,11 @@ public:
 private:
     explicit RefCountedFixedVectorBase(unsigned size)
         : Base(size)
+    {
+    }
+
+    explicit RefCountedFixedVectorBase(std::initializer_list<T> initializerList)
+        : Base(initializerList)
     {
     }
 

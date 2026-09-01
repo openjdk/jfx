@@ -41,12 +41,19 @@ class ScriptExecutionContext;
 class WebXRRigidTransform;
 
 class WebXRSpace : public EventTarget, public ContextDestructionObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRSpace);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRSpace);
 public:
     virtual ~WebXRSpace();
 
+    using ContextDestructionObserver::ref;
+    using ContextDestructionObserver::deref;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     virtual WebXRSession* session() const = 0;
     virtual std::optional<TransformationMatrix> nativeOrigin() const = 0;
+#if ENABLE(WEBXR_HIT_TEST)
+    virtual std::optional<PlatformXR::NativeOriginInformation> nativeOriginInformation() const { return std::nullopt; }
+#endif
     std::optional<TransformationMatrix> effectiveOrigin() const;
     virtual std::optional<bool> isPositionEmulated() const;
 
@@ -71,34 +78,9 @@ private:
     const Ref<WebXRRigidTransform> m_originOffset;
 };
 
-// https://immersive-web.github.io/webxr/#xrsession-viewer-reference-space
-// This is a helper class to implement the viewer space owned by a WebXRSession.
-// It avoids a circular reference between the session and the reference space.
-class WebXRViewerSpace : public RefCounted<WebXRViewerSpace>, public WebXRSpace {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRViewerSpace);
-public:
-    static Ref< WebXRViewerSpace> create(Document& document, WebXRSession& session)
-    {
-        return adoptRef(*new WebXRViewerSpace(document, session));
-    }
-    virtual ~WebXRViewerSpace();
-
-    using RefCounted::ref;
-    using RefCounted::deref;
-
-private:
-    WebXRViewerSpace(Document&, WebXRSession&);
-
-    WebXRSession* session() const final { return m_session.get(); }
-    std::optional<TransformationMatrix> nativeOrigin() const final;
-
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-
-    WeakPtr<WebXRSession> m_session;
-};
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebXRSpace)
 
 #define SPECIALIZE_TYPE_TRAITS_WEBXRSPACE(ToValueTypeName, predicate) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \

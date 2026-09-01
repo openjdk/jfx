@@ -26,6 +26,7 @@
 
 #include "StyleBuilderChecking.h"
 #include "StyleLengthWrapper.h"
+#include "StylePrimitiveNumericTypes+Conversions.h"
 
 namespace WebCore {
 namespace Style {
@@ -33,14 +34,58 @@ namespace Style {
 // MARK: - Conversion
 
 template<LengthWrapperBaseDerived T> struct CSSValueConversion<T> {
+    template<typename K>
+    static auto processKeyword(const K& keyword, CSSValueID valueID, std::optional<T>& result) -> bool
+    {
+        if (valueID == keyword.value) {
+            result = T { keyword };
+            return true;
+        }
+
+        // A few keywords have alternative spellings.
+        // FIXME: Find a generic solution to this problem.
+        if constexpr (std::same_as<K, CSS::Keyword::MinContent>) {
+            if (valueID == CSSValueWebkitMinContent) {
+                result = T { keyword };
+                return true;
+            }
+        } else if constexpr (std::same_as<K, CSS::Keyword::MaxContent>) {
+            if (valueID == CSSValueWebkitMaxContent) {
+                result = T { keyword };
+                return true;
+            }
+        } else if constexpr (std::same_as<K, CSS::Keyword::FitContent>) {
+            if (valueID == CSSValueWebkitFitContent) {
+                result = T { keyword };
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static auto selectConversionData(BuilderState& builderState) -> CSSToLengthConversionData
+    {
+        if constexpr (T::Fixed::range.zoomOptions == CSS::RangeZoomOptions::Default) {
+            return builderState.useSVGZoomRulesForLength()
+                ? builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
+                : builderState.cssToLengthConversionData();
+        } else if constexpr (T::Fixed::range.zoomOptions == CSS::RangeZoomOptions::Unzoomed) {
+            if (evaluationTimeZoomEnabled(builderState))
+                return builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f, T::Fixed::range.zoomOptions);
+
+            return builderState.useSVGZoomRulesForLength()
+                ? builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
+                : builderState.cssToLengthConversionData();
+        }
+    }
+
     auto operator()(BuilderState& state, const CSSPrimitiveValue& primitiveValue) -> T
     {
         using namespace CSS::Literals;
 
         auto convertLengthPercentage = [&] -> T {
-            auto conversionData = state.useSVGZoomRulesForLength()
-                ? state.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
-                : state.cssToLengthConversionData();
+            auto conversionData = selectConversionData(state);
 
             if (primitiveValue.isLength()) {
                 return T {
@@ -75,67 +120,21 @@ template<LengthWrapperBaseDerived T> struct CSSValueConversion<T> {
         if constexpr (!T::Keywords::count)
             return convertLengthPercentage();
         else {
-            switch (primitiveValue.valueID()) {
-            case CSSValueInvalid:
+            auto valueID = primitiveValue.valueID();
+            if (valueID == CSSValueInvalid)
                 return convertLengthPercentage();
-            case CSSValueIntrinsic:
-                if constexpr (T::SupportsIntrinsic)
-                    return CSS::Keyword::Intrinsic { };
-                else
-                    break;
-            case CSSValueMinIntrinsic:
-                if constexpr (T::SupportsMinIntrinsic)
-                    return CSS::Keyword::MinIntrinsic { };
-                else
-                    break;
-            case CSSValueMinContent:
-            case CSSValueWebkitMinContent:
-                if constexpr (T::SupportsMinContent)
-                    return CSS::Keyword::MinContent { };
-                else
-                    break;
-            case CSSValueMaxContent:
-            case CSSValueWebkitMaxContent:
-                if constexpr (T::SupportsMaxContent)
-                    return CSS::Keyword::MaxContent { };
-                else
-                    break;
-            case CSSValueWebkitFillAvailable:
-                if constexpr (T::SupportsWebkitFillAvailable)
-                    return CSS::Keyword::WebkitFillAvailable { };
-                else
-                    break;
-            case CSSValueFitContent:
-            case CSSValueWebkitFitContent:
-                if constexpr (T::SupportsFitContent)
-                    return CSS::Keyword::FitContent { };
-                else
-                    break;
-            case CSSValueAuto:
-                if constexpr (T::SupportsAuto)
-                    return CSS::Keyword::Auto { };
-                else
-                    break;
-            case CSSValueContent:
-                if constexpr (T::SupportsContent)
-                    return CSS::Keyword::Content { };
-                else
-                    break;
-            case CSSValueNormal:
-                if constexpr (T::SupportsNormal)
-                    return CSS::Keyword::Normal { };
-                else
-                    break;
-            case CSSValueNone:
-                if constexpr (T::SupportsNone)
-                    return CSS::Keyword::None { };
-                else
-                    break;
-            default:
-                break;
-            }
 
-            ASSERT_NOT_REACHED();
+            constexpr auto keywordsTuple = T::Keywords::tuple;
+
+            auto result = std::apply([&](const auto& ...keyword) {
+                std::optional<T> result;
+                (processKeyword(keyword, valueID, result) || ...);
+                return result;
+            }, keywordsTuple);
+
+            if (result)
+                return *result;
+
             state.setCurrentPropertyInvalidAtComputedValueTime();
             return 0_css_px;
         }

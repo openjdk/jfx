@@ -23,7 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ValidityStateFlags {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ValidityStateFlags {
     boolean valueMissing = false;
     boolean typeMismatch = false;
     boolean patternMismatch = false;

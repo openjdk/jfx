@@ -93,7 +93,7 @@ public:
                 data.m_scope = bytecode.m_scope;
                 data.m_symbolTable = bytecode.m_symbolTable;
                 data.m_initialValue = bytecode.m_initialValue;
-                m_generatorFrameData = WTFMove(data);
+                m_generatorFrameData = WTF::move(data);
                 break;
             }
 
@@ -220,7 +220,7 @@ void BytecodeGeneratorification::run()
         auto& jumpTable = m_codeBlock->addUnlinkedSwitchJumpTable();
         jumpTable.m_min = 0;
         jumpTable.m_branchOffsets = FixedVector<int32_t>(m_yields.size() + 1);
-        std::fill(jumpTable.m_branchOffsets.begin(), jumpTable.m_branchOffsets.end(), 0);
+        std::ranges::fill(jumpTable.m_branchOffsets, 0);
         jumpTable.add(0, nextToEnterPoint.offset());
         for (unsigned i = 0; i < m_yields.size(); ++i)
             jumpTable.add(i + 1, m_yields[i].point);

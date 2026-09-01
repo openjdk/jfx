@@ -25,31 +25,30 @@
 
 #pragma once
 
-#include "AnimationEffect.h"
-#include "AnimationEffectPhase.h"
-#include "RenderStyleConstants.h"
-#include "Styleable.h"
-#include "WebAnimation.h"
+#include <WebCore/AnimationEffect.h>
+#include <WebCore/AnimationEffectPhase.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/Styleable.h>
+#include <WebCore/WebAnimation.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Animation;
 class StyleOriginatedAnimationEvent;
 class Element;
 class RenderStyle;
 
 class StyleOriginatedAnimation : public WebAnimation {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyleOriginatedAnimation);
+    WTF_MAKE_TZONE_ALLOCATED(StyleOriginatedAnimation);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyleOriginatedAnimation);
 public:
     ~StyleOriginatedAnimation();
 
     bool isStyleOriginatedAnimation() const final { return true; }
 
     const std::optional<const Styleable> owningElement() const;
-    const Animation& backingAnimation() const { return m_backingAnimation; }
-    void setBackingAnimation(const Animation&);
+
     void cancelFromStyle(WebAnimation::Silently = WebAnimation::Silently::No);
 
     std::optional<WebAnimationTime> bindingsStartTime() const final;
@@ -71,8 +70,11 @@ public:
 
     void flushPendingStyleChanges() const;
 
+    virtual AnimationPlayState backingAnimationPlayState() const = 0;
+    virtual TimingFunction* backingAnimationTimingFunction() const = 0;
+
 protected:
-    StyleOriginatedAnimation(const Styleable&, const Animation&);
+    StyleOriginatedAnimation(const Styleable&);
 
     void initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     virtual void syncPropertiesWithBackingAnimation();
@@ -85,6 +87,7 @@ private:
     void invalidateDOMEvents(WebAnimationTime cancelationTime = 0_s);
     void enqueueDOMEvent(const AtomString&, WebAnimationTime elapsedTime, WebAnimationTime scheduledEffectTime);
 
+    WebAnimationTime computeCancelationTime() const;
     WebAnimationTime effectTimeAtStart() const;
     WebAnimationTime effectTimeAtIteration(double) const;
     WebAnimationTime effectTimeAtEnd() const;
@@ -94,7 +97,6 @@ private:
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_owningElement;
     std::optional<Style::PseudoElementIdentifier> m_owningPseudoElementIdentifier;
-    Ref<Animation> m_backingAnimation;
     double m_previousIteration;
 };
 

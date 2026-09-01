@@ -126,6 +126,15 @@ Ref<JSON::Object> TimelineRecordFactory::createTimeStampData(const String& messa
     return data;
 }
 
+Ref<JSON::Object> TimelineRecordFactory::createLargestContentfulPaintData(Inspector::Protocol::DOM::NodeId nodeId, unsigned area)
+{
+    Ref<JSON::Object> data = JSON::Object::create();
+    data->setInteger("area"_s, area);
+    if (nodeId)
+        data->setInteger("nodeId"_s, nodeId);
+    return data;
+}
+
 Ref<JSON::Object> TimelineRecordFactory::createAnimationFrameData(int callbackId)
 {
     Ref<JSON::Object> data = JSON::Object::create();

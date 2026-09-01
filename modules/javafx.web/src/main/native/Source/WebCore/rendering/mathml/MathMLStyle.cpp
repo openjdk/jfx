@@ -79,7 +79,7 @@ RenderObject* MathMLStyle::getMathMLParentNode(RenderObject* renderer)
     return parentRenderer;
 }
 
-void MathMLStyle::updateStyleIfNeeded(RenderObject* renderer, MathMLElement::MathVariant oldMathVariant)
+void MathMLStyle::updateStyleIfNeeded(RenderObject* renderer, MathVariant oldMathVariant)
 {
     // RenderMathMLFencedOperator does not support mathvariant transforms.
     // See https://bugs.webkit.org/show_bug.cgi?id=160509#c1.
@@ -94,12 +94,12 @@ void MathMLStyle::resolveMathMLStyle(RenderObject* renderer)
 {
     ASSERT(renderer);
 
-    MathMLElement::MathVariant oldMathVariant = m_mathVariant;
+    auto oldMathVariant = m_mathVariant;
     auto* parentRenderer = getMathMLParentNode(renderer);
     const MathMLStyle* parentStyle = getMathMLStyle(parentRenderer);
 
     // By default, we just inherit the style from our parent.
-    m_mathVariant = MathMLElement::MathVariant::None;
+    m_mathVariant = MathVariant::None;
     if (parentStyle) {
         setMathVariant(parentStyle->mathVariant());
     }
@@ -112,7 +112,7 @@ void MathMLStyle::resolveMathMLStyle(RenderObject* renderer)
 
     // The mathvariant attributes override the default behavior.
     if (auto* element = dynamicDowncast<MathMLElement>(downcast<RenderElement>(renderer)->element())) {
-        std::optional<MathMLElement::MathVariant> mathVariant = element->specifiedMathVariant();
+        auto mathVariant = element->specifiedMathVariant();
         if (mathVariant)
             m_mathVariant = mathVariant.value();
     }

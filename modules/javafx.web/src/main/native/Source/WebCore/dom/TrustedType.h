@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "TrustedHTML.h"
-#include "TrustedScript.h"
-#include "TrustedScriptURL.h"
+#include <WebCore/TrustedHTML.h>
+#include <WebCore/TrustedScript.h>
+#include <WebCore/TrustedScriptURL.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
@@ -43,6 +44,8 @@ class Exception;
 class ScriptExecutionContext;
 class QualifiedName;
 template<typename> class ExceptionOr;
+
+using TrustedTypeOrString = Variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
 
 enum class TrustedType : int8_t {
     TrustedHTML,
@@ -76,5 +79,7 @@ WEBCORE_EXPORT AttributeTypeAndSink trustedTypeForAttribute(const String& elemen
 ExceptionOr<bool> canCompile(ScriptExecutionContext&, JSC::CompilationType, String codeString, const JSC::ArgList& args);
 
 bool isEventHandlerAttribute(const QualifiedName& attributeName);
+
+ExceptionOr<AtomString> trustedTypesCompliantAttributeValue(ScriptExecutionContext&, const String& attributeType, const TrustedTypeOrString& value, const String& sink);
 
 } // namespace WebCore

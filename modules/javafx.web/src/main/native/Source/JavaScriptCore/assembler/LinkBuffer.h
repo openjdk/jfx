@@ -35,9 +35,9 @@
 #define GLOBAL_THUNK_ID reinterpret_cast<void*>(static_cast<intptr_t>(-1))
 #define CSS_CODE_ID reinterpret_cast<void*>(static_cast<intptr_t>(-2))
 
-#include "JITCompilationEffort.h"
-#include "MacroAssembler.h"
-#include "MacroAssemblerCodeRef.h"
+#include <JavaScriptCore/JITCompilationEffort.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
 #include <wtf/DataLog.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -158,7 +158,8 @@ public:
 
     // These methods are used to link or set values at code generation time.
 
-    template<PtrTag tag, typename Func, typename = std::enable_if_t<std::is_function<typename std::remove_pointer<Func>::type>::value>>
+    template<PtrTag tag, typename Func>
+        requires (std::is_function_v<typename std::remove_pointer_t<Func>>)
     void link(Call call, Func funcName)
     {
         CodePtr<tag> function(funcName);
@@ -411,8 +412,8 @@ private:
     bool m_isRewriting { false };
     Profile m_profile { Profile::Uncategorized };
     CodePtr<LinkBufferPtrTag> m_code;
-    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
-    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
+    Vector<Ref<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
+    Vector<Ref<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
 
     static size_t s_profileCummulativeLinkedSizes[numberOfProfiles];
     static size_t s_profileCummulativeLinkedCounts[numberOfProfiles];
@@ -426,7 +427,7 @@ private:
     }())
 
 #define FINALIZE_CODE_FOR(codeBlock, linkBufferReference, resultPtrTag, simpleName, ...)  \
-    FINALIZE_CODE_IF((shouldDumpDisassemblyFor(codeBlock) || Options::asyncDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
+    FINALIZE_CODE_IF((shouldDumpDisassemblyFor(codeBlock)), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
 
 // Use this to finalize code, like so:
 //
@@ -445,19 +446,19 @@ private:
 // is true, so you can hide expensive disassembly-only computations inside there.
 
 #define FINALIZE_CODE(linkBufferReference, resultPtrTag, simpleName, ...)  \
-    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
+    FINALIZE_CODE_IF(JSC::Options::dumpDisassembly(), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
 
 #define FINALIZE_BASELINE_CODE(linkBufferReference, resultPtrTag, ...)  \
-    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpBaselineDisassembly()), linkBufferReference, resultPtrTag, nullptr, __VA_ARGS__)
+    FINALIZE_CODE_IF((JSC::Options::dumpDisassembly() || Options::dumpBaselineDisassembly()), linkBufferReference, resultPtrTag, nullptr, __VA_ARGS__)
 
 #define FINALIZE_DFG_CODE(linkBufferReference, resultPtrTag, ...)  \
-    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpDFGDisassembly()), linkBufferReference, resultPtrTag, nullptr, __VA_ARGS__)
+    FINALIZE_CODE_IF((JSC::Options::dumpDisassembly() || Options::dumpDFGDisassembly()), linkBufferReference, resultPtrTag, nullptr, __VA_ARGS__)
 
 #define FINALIZE_REGEXP_CODE(linkBufferReference, resultPtrTag, simpleName, dataLogFArgumentsForHeading)  \
-    FINALIZE_CODE_IF(JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpRegExpDisassembly(), linkBufferReference, resultPtrTag, simpleName, dataLogFArgumentsForHeading)
+    FINALIZE_CODE_IF(JSC::Options::dumpDisassembly() || Options::dumpRegExpDisassembly(), linkBufferReference, resultPtrTag, simpleName, dataLogFArgumentsForHeading)
 
 #define FINALIZE_WASM_CODE(linkBufferReference, resultPtrTag, simpleName, ...)  \
-    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpWasmDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
+    FINALIZE_CODE_IF((JSC::Options::dumpDisassembly() || Options::dumpWasmDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
 
 #define FINALIZE_WASM_CODE_FOR_MODE(mode, linkBufferReference, resultPtrTag, simpleName, ...)  \
     FINALIZE_CODE_IF(shouldDumpDisassemblyFor(mode), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)

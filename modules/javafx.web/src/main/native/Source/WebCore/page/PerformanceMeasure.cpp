@@ -28,17 +28,18 @@
 
 #include "ExceptionOr.h"
 #include "SerializedScriptValue.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 
 namespace WebCore {
 
 ExceptionOr<Ref<PerformanceMeasure>> PerformanceMeasure::create(const String& name, double startTime, double endTime, Ref<SerializedScriptValue>&& serializedDetail)
 {
-    return adoptRef(*new PerformanceMeasure(name, startTime, endTime, WTFMove(serializedDetail)));
+    return adoptRef(*new PerformanceMeasure(name, startTime, endTime, WTF::move(serializedDetail)));
 }
 
 PerformanceMeasure::PerformanceMeasure(const String& name, double startTime, double endTime, Ref<SerializedScriptValue>&& serializedDetail)
     : PerformanceEntry(name, startTime, endTime)
-    , m_serializedDetail(WTFMove(serializedDetail))
+    , m_serializedDetail(WTF::move(serializedDetail))
 {
 }
 
@@ -50,3 +51,4 @@ JSC::JSValue PerformanceMeasure::detail(JSC::JSGlobalObject& globalObject)
 }
 
 }
+

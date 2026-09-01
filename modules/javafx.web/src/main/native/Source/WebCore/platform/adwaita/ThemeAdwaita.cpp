@@ -32,7 +32,6 @@
 #include "Adwaita.h"
 #include "Color.h"
 #include "FontCascade.h"
-#include "LengthSize.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(GTK) || PLATFORM(WPE)

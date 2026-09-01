@@ -34,13 +34,14 @@
 #include "HTMLNames.h"
 #include "MouseEvent.h"
 #include "SelectionRestorationMode.h"
+#include "Settings.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLabelElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLLabelElement);
 
 using namespace HTMLNames;
 
@@ -75,16 +76,16 @@ RefPtr<HTMLElement> HTMLLabelElement::control() const
 {
     if (!hasAttributeWithoutSynchronization(forAttr)) {
         // https://html.spec.whatwg.org/multipage/forms.html#labeled-control
-        for (auto& descendant : descendantsOfType<HTMLElement>(*this)) {
+        for (Ref descendant : descendantsOfType<HTMLElement>(*this)) {
             if (document().settings().shadowRootReferenceTargetEnabled()) {
-                RefPtr referenceTarget = dynamicDowncast<HTMLElement>(descendant.resolveReferenceTarget());
+                RefPtr referenceTarget = dynamicDowncast<HTMLElement>(descendant->resolveReferenceTarget());
                 if (referenceTarget && referenceTarget->isLabelable())
                     return referenceTarget.get();
                 continue;
             }
 
-            if (descendant.isLabelable())
-                return const_cast<HTMLElement*>(&descendant);
+            if (descendant->isLabelable())
+                return const_cast<HTMLElement*>(descendant.ptr());
         }
         return nullptr;
     }
@@ -98,17 +99,17 @@ RefPtr<HTMLElement> HTMLLabelElement::controlForBindings() const
 
 HTMLFormElement* HTMLLabelElement::form() const
 {
-    if (auto element = control()) {
-        if (auto* listedElement = element->asValidatedFormListedElement())
+    if (RefPtr element = control()) {
+        if (RefPtr listedElement = element->asValidatedFormListedElement())
             return listedElement->form();
     }
         return nullptr;
 }
 
-HTMLFormElement* HTMLLabelElement::formForBindings() const
+RefPtr<HTMLFormElement> HTMLLabelElement::formForBindings() const
 {
     // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
-    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form())).get();
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form()));
 }
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)
@@ -146,8 +147,8 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
     if (!isShadowIncludingInclusiveAncestorOf(node.get()))
         return false;
 
-    for (const auto* it = node.get(); it && it != this; it = it->parentElementInComposedTree()) {
-        auto* element = dynamicDowncast<HTMLElement>(*it);
+    for (RefPtr it = node; it && it != this; it = it->parentElementInComposedTree()) {
+        RefPtr element = dynamicDowncast<HTMLElement>(*it);
         if (element && element->isInteractiveContent())
             return true;
     }
@@ -161,8 +162,8 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
 
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
-        auto* eventTarget = dynamicDowncast<Node>(event.target());
-        if (!control || (eventTarget && control->isShadowIncludingInclusiveAncestorOf(eventTarget))) {
+        RefPtr eventTarget = dynamicDowncast<Node>(event.target());
+        if (!control || (eventTarget && control->isShadowIncludingInclusiveAncestorOf(eventTarget.get()))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }
@@ -227,8 +228,8 @@ auto HTMLLabelElement::insertedIntoAncestor(InsertionType insertionType, Contain
     auto result = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
     if (parentOfInsertedTree.isInTreeScope() && insertionType.treeScopeChanged) {
-        auto& newScope = parentOfInsertedTree.treeScope();
-        if (newScope.shouldCacheLabelsByForAttribute())
+        Ref newScope = parentOfInsertedTree.treeScope();
+        if (newScope->shouldCacheLabelsByForAttribute())
             updateLabel(newScope, nullAtom(), attributeWithoutSynchronization(forAttr));
     }
 
@@ -252,8 +253,8 @@ void HTMLLabelElement::updateLabel(TreeScope& scope, const AtomString& oldForAtt
 void HTMLLabelElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (oldParentOfRemovedTree.isInTreeScope() && removalType.treeScopeChanged) {
-        auto& oldScope = oldParentOfRemovedTree.treeScope();
-        if (oldScope.shouldCacheLabelsByForAttribute())
+        Ref oldScope = oldParentOfRemovedTree.treeScope();
+        if (oldScope->shouldCacheLabelsByForAttribute())
             updateLabel(oldScope, attributeWithoutSynchronization(forAttr), nullAtom());
     }
 

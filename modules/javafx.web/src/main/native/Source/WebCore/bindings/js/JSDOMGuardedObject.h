@@ -25,18 +25,22 @@
 
 #pragma once
 
-#include "ActiveDOMCallback.h"
-#include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCell.h>
 #include <JavaScriptCore/SlotVisitorInlines.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/JSDOMGlobalObject.h>
 
 namespace WebCore {
 
 class WEBCORE_EXPORT DOMGuardedObject : public RefCounted<DOMGuardedObject>, public ActiveDOMCallback {
 public:
     ~DOMGuardedObject();
+
+    // ActiveDOMCallback.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     bool isSuspended() const { return !m_guarded || !canInvokeCallback(); } // The wrapper world has gone away or active DOM objects have been suspended.
 

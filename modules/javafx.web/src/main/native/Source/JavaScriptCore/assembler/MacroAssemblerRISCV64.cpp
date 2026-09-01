@@ -264,7 +264,7 @@ static_assert(offsetof(RARestorationRecord, ra) == RA_RESTORATION_RA_OFFSET);
 static_assert(sizeof(RARestorationRecord) == RA_RESTORATION_SIZE);
 static_assert(!(RA_RESTORATION_SIZE & 0xf));
 
-asm(
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(ctiMasmProbeTrampoline) "\n"
     ".attribute arch, \"rv64gc\"" "\n"
@@ -499,7 +499,7 @@ asm(
 
     "ret" "\n");
 
-void MacroAssembler::probe(Probe::Function function, void* arg, SavedFPWidth)
+void MacroAssembler::probe(Probe::Function function, void* arg)
 {
     sub64(TrustedImm32(sizeof(IncomingProbeRecord)), sp);
     store64(ra, Address(sp, offsetof(IncomingProbeRecord, x1)));

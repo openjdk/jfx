@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 #if !BUSE(LIBPAS)
 
@@ -39,3 +43,5 @@ enum class IsoPageTrigger {
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

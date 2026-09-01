@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "KeyboardScroll.h"
-#include "ScrollTypes.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/KeyboardScroll.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -89,6 +89,7 @@ struct ScrollableAreaParameters {
     NativeScrollbarVisibility verticalNativeScrollbarVisibility { NativeScrollbarVisibility::Visible };
 
     ScrollbarWidth scrollbarWidthStyle { ScrollbarWidth::Auto };
+    std::optional<ScrollbarColor> scrollbarColorStyle;
 
     friend bool operator==(const ScrollableAreaParameters&, const ScrollableAreaParameters&) = default;
 };

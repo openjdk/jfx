@@ -32,6 +32,7 @@
 #include "StyleInterpolation.h"
 
 #include "CSSRegisteredCustomProperty.h"
+#include "RenderStyle+SettersInlines.h"
 #include "StyleCustomProperty.h"
 #include "StyleCustomPropertyRegistry.h"
 #include "StyleInterpolationClient.h"
@@ -42,7 +43,7 @@
 
 namespace WebCore::Style::Interpolation {
 
-DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Animation);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInterpolationWrapperBase);
 // MARK: - Standard property interpolation support
 
 static void interpolateStandardProperty(CSSPropertyID property, RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, double progress, CompositeOperation compositeOperation, IterationCompositeOperation iterationCompositeOperation, double currentIteration, const Client& client)
@@ -65,38 +66,32 @@ static void interpolateStandardProperty(CSSPropertyID property, RenderStyle& des
 
 // MARK: - Custom property interpolation support
 
-static CustomProperty::Numeric blendFunc(const CustomProperty::Numeric& from, const CustomProperty::Numeric& to, const Context& context)
-{
-    ASSERT(from.unitType == to.unitType);
-    return { blendFunc(from.value, to.value, context), from.unitType };
-}
-
 static std::optional<CustomProperty::Value> interpolateSyntaxValues(const RenderStyle& fromStyle, const RenderStyle& toStyle, const CustomProperty::Value& from, const CustomProperty::Value& to, const Context& context)
 {
-    if (std::holds_alternative<WebCore::Length>(from) && std::holds_alternative<WebCore::Length>(to))
-        return blendFunc(std::get<WebCore::Length>(from), std::get<WebCore::Length>(to), context);
+    if (from.index() != to.index())
+        return { };
 
-    if (std::holds_alternative<Style::Color>(from) && std::holds_alternative<Style::Color>(to)) {
-        auto& fromStyleColor = std::get<Style::Color>(from);
-        auto& toStyleColor = std::get<Style::Color>(to);
-        if (!fromStyleColor.isCurrentColor() || !toStyleColor.isCurrentColor())
-            return blendFunc(fromStyle.colorResolvingCurrentColor(fromStyleColor), toStyle.colorResolvingCurrentColor(toStyleColor), context);
-    }
+    return WTF::switchOn(from,
+        [&]<Numeric T>(const T& fromNumeric) -> std::optional<CustomProperty::Value> {
+            return blend(fromNumeric, std::get<T>(to), context);
+        },
+        [&](const Color& fromStyleColor) -> std::optional<CustomProperty::Value> {
+            auto& toStyleColor = std::get<Color>(to);
+            if (!fromStyleColor.isCurrentColor() || !toStyleColor.isCurrentColor()) {
+                ColorResolver fromColorResolver { fromStyle };
+                ColorResolver toColorResolver { toStyle };
 
-    if (std::holds_alternative<CustomProperty::Numeric>(from) && std::holds_alternative<CustomProperty::Numeric>(to)) {
-        auto& fromNumeric = std::get<CustomProperty::Numeric>(from);
-        auto& toNumeric = std::get<CustomProperty::Numeric>(to);
-        if (fromNumeric.unitType == toNumeric.unitType)
-            return blendFunc(fromNumeric, toNumeric, context);
-    }
-
-    if (std::holds_alternative<CustomProperty::Transform>(from) && std::holds_alternative<CustomProperty::Transform>(to)) {
-        auto& fromTransformOperation = std::get<CustomProperty::Transform>(from).operation;
-        auto& toTransformOperation = std::get<CustomProperty::Transform>(to).operation;
-        return CustomProperty::Transform { blendFunc(fromTransformOperation, toTransformOperation, context) };
-    }
-
-    return std::nullopt;
+                return blendFunc(fromColorResolver.colorResolvingCurrentColor(fromStyleColor), toColorResolver.colorResolvingCurrentColor(toStyleColor), context);
+            }
+            return { };
+        },
+        [&](const TransformFunction& fromTransform) -> std::optional<CustomProperty::Value> {
+            return blend(fromTransform, std::get<TransformFunction>(to), context);
+        },
+        [&](const auto&) -> std::optional<CustomProperty::Value> {
+            return { };
+        }
+    );
 }
 
 static std::optional<CustomProperty::Value> firstValueInSyntaxValueLists(const CustomProperty::ValueList& a, const CustomProperty::ValueList& b)
@@ -122,25 +117,25 @@ static std::optional<CustomProperty::ValueList> interpolateSyntaxValueLists(cons
         return std::nullopt;
 
     // <transform-function> lists are special in that they don't require matching numbers of items.
-    if (std::holds_alternative<CustomProperty::Transform>(*firstValue)) {
-        auto transformOperationsFromSyntaxValueList = [](const CustomProperty::ValueList& list) {
-            return TransformOperations {
-                list.values.map([](auto& syntaxValue) {
-                    ASSERT(std::holds_alternative<CustomProperty::Transform>(syntaxValue));
-                    return std::get<CustomProperty::Transform>(syntaxValue).operation.copyRef();
+    if (std::holds_alternative<TransformFunction>(*firstValue)) {
+        auto transformListFromSyntaxValueList = [](const CustomProperty::ValueList& list) {
+            return TransformList {
+                TransformList::Container::map(list.values, [&](auto& syntaxValue) {
+                    ASSERT(std::holds_alternative<TransformFunction>(syntaxValue));
+                    return std::get<TransformFunction>(syntaxValue);
                 })
             };
         };
 
-        auto fromTransformOperations = transformOperationsFromSyntaxValueList(from);
-        auto toTransformOperations = transformOperationsFromSyntaxValueList(to);
-        auto interpolatedTransformOperations = blendFunc(fromTransformOperations, toTransformOperations, context);
+        auto fromTransformList = transformListFromSyntaxValueList(from);
+        auto toTransformList = transformListFromSyntaxValueList(to);
+        auto interpolatedTransformList = blend(fromTransformList, toTransformList, context);
 
-        auto interpolatedSyntaxValues = WTF::map(interpolatedTransformOperations, [](auto& transformOperation) -> CustomProperty::Value {
-            return CustomProperty::Transform { transformOperation.copyRef() };
+        auto interpolatedSyntaxValues = WTF::map(interpolatedTransformList, [](auto& transformFunction) -> CustomProperty::Value {
+            return transformFunction;
         });
 
-        return CustomProperty::ValueList { WTFMove(interpolatedSyntaxValues), from.separator };
+        return CustomProperty::ValueList { WTF::move(interpolatedSyntaxValues), from.separator };
     }
 
     // Other lists must have matching sizes.
@@ -165,14 +160,14 @@ static Ref<const CustomProperty> interpolatedCustomProperty(const RenderStyle& f
         auto& fromSyntaxValue = std::get<CustomProperty::Value>(from.value());
         auto& toSyntaxValue = std::get<CustomProperty::Value>(to.value());
         if (auto interpolatedSyntaxValue = interpolateSyntaxValues(fromStyle, toStyle, fromSyntaxValue, toSyntaxValue, context))
-            return CustomProperty::createForValue(from.name(), WTFMove(*interpolatedSyntaxValue));
+            return CustomProperty::createForValue(from.name(), WTF::move(*interpolatedSyntaxValue));
     }
 
     if (std::holds_alternative<CustomProperty::ValueList>(from.value()) && std::holds_alternative<CustomProperty::ValueList>(to.value())) {
         auto& fromSyntaxValueList = std::get<CustomProperty::ValueList>(from.value());
         auto& toSyntaxValueList = std::get<CustomProperty::ValueList>(to.value());
         if (auto interpolatedSyntaxValueList = interpolateSyntaxValueLists(fromStyle, toStyle, fromSyntaxValueList, toSyntaxValueList, context))
-            return CustomProperty::createForValueList(from.name(), WTFMove(*interpolatedSyntaxValueList));
+            return CustomProperty::createForValueList(from.name(), WTF::move(*interpolatedSyntaxValueList));
     }
 
     // Use a discrete interpolation for all other cases.
@@ -199,14 +194,14 @@ static void interpolateCustomProperty(const AtomString& customProperty, RenderSt
 static bool syntaxValuesRequireInterpolationForAccumulativeIteration(const CustomProperty::Value& a, const CustomProperty::Value& b, bool isList)
 {
     return WTF::switchOn(a,
-        [b, isList](const WebCore::Length& aLength) {
-            ASSERT(std::holds_alternative<WebCore::Length>(b));
-            return !isList && lengthsRequireInterpolationForAccumulativeIteration(aLength, std::get<WebCore::Length>(b));
+        [b, isList](const LengthPercentage<>& aLengthPercentage) {
+            ASSERT(std::holds_alternative<LengthPercentage<>>(b));
+            return !isList && Style::requiresInterpolationForAccumulativeIteration(aLengthPercentage, std::get<LengthPercentage<>>(b));
         },
         [](const RefPtr<TransformOperation>&) {
             return true;
         },
-        [](const Style::Color&) {
+        [](const Color&) {
             return true;
         },
         [](auto&) {
@@ -218,23 +213,26 @@ static bool syntaxValuesRequireInterpolationForAccumulativeIteration(const Custo
 static bool typeOfSyntaxValueCanBeInterpolated(const CustomProperty::Value& syntaxValue)
 {
     return WTF::switchOn(syntaxValue,
-        [](const WebCore::Length&) {
+        []<Numeric T>(const T&) {
             return true;
+        },
+        [](const ImageWrapper&) {
+            return false;
         },
         [](const Color&) {
             return true;
         },
-        [](CustomProperty::Numeric) {
-            return true;
-        },
-        [](const CustomProperty::Transform&) {
-            return true;
-        },
-        [](RefPtr<StyleImage>) {
+        [](const URL&) {
             return false;
         },
-        [](auto&) {
+        [](const CustomIdentifier&) {
             return false;
+        },
+        [](const String&) {
+            return false;
+        },
+        [](const TransformFunction&) {
+            return true;
         }
     );
 }
@@ -318,7 +316,7 @@ bool canInterpolate(const AnimatableCSSProperty& property, const RenderStyle& a,
                         return false;
                     if (auto firstValue = firstValueInSyntaxValueLists(aValueList, bValueList)) {
                         // List sizes must match except for transform lists.
-                        if (!std::holds_alternative<CustomProperty::Transform>(*firstValue)
+                        if (!std::holds_alternative<TransformFunction>(*firstValue)
                             && aValueList.values.size() != bValueList.values.size()) {
                             return false;
                         }

@@ -27,22 +27,13 @@
 
 #if ENABLE(VIDEO)
 
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class VideoTrackClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::VideoTrackClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class VideoTrack;
 
-class VideoTrackClient : public CanMakeWeakPtr<VideoTrackClient> {
+class VideoTrackClient : public AbstractRefCountedAndCanMakeWeakPtr<VideoTrackClient> {
 public:
     virtual ~VideoTrackClient() = default;
     virtual void videoTrackIdChanged(VideoTrack&) { }

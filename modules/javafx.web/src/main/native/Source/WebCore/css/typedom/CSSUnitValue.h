@@ -34,7 +34,7 @@ namespace WebCore {
 enum class CSSUnitType : uint8_t;
 
 class CSSUnitValue final : public CSSNumericValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSUnitValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSUnitValue);
 public:
     static ExceptionOr<Ref<CSSUnitValue>> create(double value, const String& unit);
     static Ref<CSSUnitValue> create(double value, CSSUnitType unit) { return adoptRef(*new CSSUnitValue(value, unit)); }
@@ -57,7 +57,7 @@ public:
 private:
     CSSUnitValue(double, CSSUnitType);
 
-    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSUnitValue; }
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSUnitValue; }
     std::optional<SumValue> toSumValue() const final;
     bool equals(const CSSNumericValue&) const final;
 
@@ -68,5 +68,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSUnitValue)
-static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSUnitValue; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.styleValueType() == WebCore::CSSStyleValueType::CSSUnitValue; }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -28,10 +28,12 @@
 
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
+#include "InlineIteratorLineBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderElementInlines.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderObjectDocument.h"
 #include "RenderView.h"
+#include "Settings.h"
 
 namespace WebCore {
 
@@ -65,36 +67,61 @@ static bool shouldIgnoreAsFirstLastFormattedLineContainer(const RenderBlockFlow&
     return false;
 }
 
-static inline RenderBlockFlow* firstFormattedLineRoot(const RenderBlockFlow& enclosingBlockContainer)
+static inline CheckedPtr<RenderBlockFlow> firstFormattedLineRoot(const RenderBlockFlow& enclosingBlockContainer)
 {
     for (auto* child = enclosingBlockContainer.firstChild(); child; child = child->nextSibling()) {
         CheckedPtr blockContainer = dynamicDowncast<RenderBlockFlow>(*child);
-        if (!blockContainer || blockContainer->createsNewFormattingContext())
+        if (!blockContainer || blockContainer->createsNewFormattingContext() || blockContainer->isFirstLetter())
             continue;
-        if (blockContainer->hasLines())
-            return blockContainer.get();
-        if (auto* descendantRoot = firstFormattedLineRoot(*blockContainer))
+        if (blockContainer->hasContentfulInlineOrBlockLine())
+            return blockContainer;
+        if (CheckedPtr descendantRoot = firstFormattedLineRoot(*blockContainer))
             return descendantRoot;
         if (!shouldIgnoreAsFirstLastFormattedLineContainer(*blockContainer))
-            return nullptr;
+            return { };
     }
-    return nullptr;
+    return { };
 }
 
-static RenderBlockFlow* lastFormattedLineRoot(const RenderBlockFlow& enclosingBlockContainer)
+static CheckedPtr<RenderBlockFlow> lastFormattedLineRoot(const RenderBlockFlow& enclosingBlockContainer)
 {
+    if (enclosingBlockContainer.hasContentfulInlineOrBlockLine()) {
+        // With blocks-in-inline, the last formatted line may be a block sitting on the last line.
+        auto firstBoxOnLastFormattedLineWithContent = [&]() -> InlineIterator::LeafBoxIterator {
+            for (auto lineBox = InlineIterator::lastLineBoxFor(enclosingBlockContainer); lineBox; --lineBox) {
+                if (auto box = lineBox->logicalLeftmostLeafBox())
+                    return box;
+            }
+            return { };
+        };
+        if (auto box = firstBoxOnLastFormattedLineWithContent(); box && box->isBlockLevelBox()) {
+            ASSERT(box->renderer().settings().blocksInInlineLayoutEnabled());
+            ASSERT(is<RenderBlockFlow>(box->renderer()));
+            if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(const_cast<RenderObject&>(box->renderer()))) {
+                if (CheckedPtr candidate = lastFormattedLineRoot(*blockFlow))
+                    return candidate;
+                // This block itself might be the enclosing block on the last formatted line.
+                if (blockFlow->hasContentfulInlineLine())
+                    return blockFlow;
+            }
+        }
+    }
+
     for (auto* child = enclosingBlockContainer.lastChild(); child; child = child->previousSibling()) {
         CheckedPtr blockContainer = dynamicDowncast<RenderBlockFlow>(*child);
-        if (!blockContainer || blockContainer->createsNewFormattingContext())
+        if (!blockContainer || blockContainer->createsNewFormattingContext() || blockContainer->isFirstLetter())
             continue;
-        if (blockContainer->hasLines())
-            return blockContainer.get();
-        if (auto* descendantRoot = lastFormattedLineRoot(*blockContainer))
+        if (blockContainer->hasContentfulInlineOrBlockLine()) {
+            if (CheckedPtr candidate = lastFormattedLineRoot(*blockContainer))
+                return candidate;
+            return blockContainer;
+        }
+        if (CheckedPtr descendantRoot = lastFormattedLineRoot(*blockContainer))
             return descendantRoot;
         if (!shouldIgnoreAsFirstLastFormattedLineContainer(*blockContainer))
-            return nullptr;
+            return { };
     }
-    return nullptr;
+    return { };
 }
 
 TextBoxTrimmer::TextBoxTrimmer(const RenderBlockFlow& blockContainer)
@@ -114,16 +141,17 @@ TextBoxTrimmer::~TextBoxTrimmer()
         adjustTextBoxTrimStatusAfterLayout();
 }
 
-RenderBlockFlow* TextBoxTrimmer::lastInlineFormattingContextRootForTrimEnd(const RenderBlockFlow& blockContainer)
+CheckedPtr<RenderBlockFlow> TextBoxTrimmer::lastInlineFormattingContextRootForTrimEnd(const RenderBlockFlow& blockContainer)
 {
     auto textBoxTrimValue = textBoxTrim(blockContainer);
     auto hasTextBoxTrimEnd = textBoxTrimValue == TextBoxTrim::TrimEnd || textBoxTrimValue == TextBoxTrim::TrimBoth;
     if (!hasTextBoxTrimEnd)
         return { };
-    // If the last block container has border/padding end, trimming should not happen.
-    if (auto* candidateForLastBlockContainer = lastFormattedLineRoot(blockContainer); candidateForLastBlockContainer && !candidateForLastBlockContainer->borderAndPaddingEnd())
-        return candidateForLastBlockContainer;
+    CheckedPtr candidateForLastBlockContainer = lastFormattedLineRoot(blockContainer);
+    if (!candidateForLastBlockContainer || candidateForLastBlockContainer == &blockContainer)
     return { };
+    // If the nested (last) block container has border/padding end, trimming should not happen.
+    return !candidateForLastBlockContainer->borderAndPaddingEnd() ? candidateForLastBlockContainer : nullptr;
 }
 
 void TextBoxTrimmer::adjustTextBoxTrimStatusBeforeLayout(const RenderBlockFlow* lastFormattedLineRoot)
@@ -191,6 +219,24 @@ void TextBoxTrimmer::handleTextBoxTrimNoneBeforeLayout()
         // We've got this far with no start trimming and now border/padding prevent trimming.
         removeTextBoxTrimStart(layoutContext);
     }
+}
+
+TextBoxTrimStartDisabler::TextBoxTrimStartDisabler(const RenderBox& renderBox)
+    : m_renderBox(renderBox)
+{
+    auto& layoutContext = m_renderBox->view().frameView().layoutContext();
+    m_previousTextBoxTrimStatus = layoutContext.textBoxTrim();
+    if (m_previousTextBoxTrimStatus)
+        layoutContext.setTextBoxTrim(LocalFrameViewLayoutContext::TextBoxTrim { false, m_previousTextBoxTrimStatus->lastFormattedLineRoot });
+}
+
+TextBoxTrimStartDisabler::~TextBoxTrimStartDisabler()
+{
+    if (!m_renderBox) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+    m_renderBox->view().frameView().layoutContext().setTextBoxTrim(m_previousTextBoxTrimStatus);
 }
 
 } // namespace WebCore

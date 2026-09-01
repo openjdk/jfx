@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "UserStyleSheet.h"
+#include <WebCore/UserStyleSheet.h>
 #include <memory>
 #include <wtf/CheckedRef.h>
 #include <wtf/RefPtr.h>
@@ -38,7 +38,7 @@
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
-#include "ContentExtensionStyleSheet.h"
+#include <WebCore/ContentExtensionStyleSheet.h>
 #endif
 
 namespace WebCore {
@@ -59,10 +59,10 @@ public:
     ~ExtensionStyleSheets();
 
     CSSStyleSheet* pageUserSheet();
-    const Vector<RefPtr<CSSStyleSheet>>& documentUserStyleSheets() const { return m_userStyleSheets; }
-    const Vector<RefPtr<CSSStyleSheet>>& injectedUserStyleSheets() const;
-    const Vector<RefPtr<CSSStyleSheet>>& injectedAuthorStyleSheets() const;
-    const Vector<RefPtr<CSSStyleSheet>>& authorStyleSheetsForTesting() const { return m_authorStyleSheetsForTesting; }
+    const Vector<Ref<CSSStyleSheet>>& documentUserStyleSheets() const { return m_userStyleSheets; }
+    const Vector<Ref<CSSStyleSheet>>& injectedUserStyleSheets() const;
+    const Vector<Ref<CSSStyleSheet>>& injectedAuthorStyleSheets() const;
+    const Vector<Ref<CSSStyleSheet>>& authorStyleSheetsForTesting() const { return m_authorStyleSheetsForTesting; }
 
     bool hasCachedInjectedStyleSheets() const;
 
@@ -83,7 +83,7 @@ public:
     void injectPageSpecificUserStyleSheet(const UserStyleSheet&);
     void removePageSpecificUserStyleSheet(const UserStyleSheet&);
 
-    String contentForInjectedStyleSheet(const RefPtr<CSSStyleSheet>&) const;
+    String contentForInjectedStyleSheet(CSSStyleSheet&) const;
 
     void detachFromDocument();
 
@@ -94,17 +94,17 @@ private:
 
     RefPtr<CSSStyleSheet> m_pageUserSheet;
 
-    mutable Vector<RefPtr<CSSStyleSheet>> m_injectedUserStyleSheets;
-    mutable Vector<RefPtr<CSSStyleSheet>> m_injectedAuthorStyleSheets;
+    mutable Vector<Ref<CSSStyleSheet>> m_injectedUserStyleSheets;
+    mutable Vector<Ref<CSSStyleSheet>> m_injectedAuthorStyleSheets;
     mutable HashMap<Ref<CSSStyleSheet>, String> m_injectedStyleSheetToSource;
     mutable bool m_injectedStyleSheetCacheValid { false };
 
-    Vector<RefPtr<CSSStyleSheet>> m_userStyleSheets;
-    Vector<RefPtr<CSSStyleSheet>> m_authorStyleSheetsForTesting;
+    Vector<Ref<CSSStyleSheet>> m_userStyleSheets;
+    Vector<Ref<CSSStyleSheet>> m_authorStyleSheetsForTesting;
     Vector<UserStyleSheet> m_pageSpecificStyleSheets;
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    MemoryCompactRobinHoodHashMap<String, RefPtr<CSSStyleSheet>> m_contentExtensionSheets;
+    MemoryCompactRobinHoodHashMap<String, Ref<CSSStyleSheet>> m_contentExtensionSheets;
     MemoryCompactRobinHoodHashMap<String, RefPtr<ContentExtensions::ContentExtensionStyleSheet>> m_contentExtensionSelectorSheets;
 #endif
 };

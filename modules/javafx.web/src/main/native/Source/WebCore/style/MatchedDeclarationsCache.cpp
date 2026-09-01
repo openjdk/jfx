@@ -31,10 +31,11 @@
 #include "MatchedDeclarationsCache.h"
 
 #include "CSSFontSelector.h"
-#include "Document.h"
 #include "DocumentInlines.h"
 #include "FontCascade.h"
-#include "RenderStyleInlines.h"
+#include "NodeDocument.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StyleComputedStyle+InitialInlines.h"
 #include "StyleLengthResolution.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -71,17 +72,17 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     if (&element == element.document().documentElement())
         return false;
     // FIXME: Without the following early return we hit the final assert in
-    // Element::resolvePseudoElementStyle(). Making matchedPseudoElementIds
+    // Element::resolvePseudoElementStyle(). Making matchedPseudoElements
     // PseudoElementIdentifier-aware might be a possible solution.
     if (!style.pseudoElementNameArgument().isNull())
         return false;
     // content:attr() value depends on the element it is being applied to.
-    if (style.hasAttrContent() || (style.pseudoElementType() != PseudoId::None && parentStyle.hasAttrContent()))
+    if (style.hasAttrContent() || (style.pseudoElementType() && parentStyle.hasAttrContent()))
         return false;
-    if (style.zoom() != RenderStyle::initialZoom())
+    if (style.zoom() != Style::ComputedStyle::initialZoom())
         return false;
-    if (style.writingMode().computedWritingMode() != RenderStyle::initialWritingMode()
-        || style.writingMode().computedTextDirection() != RenderStyle::initialDirection())
+    if (style.writingMode().computedWritingMode() != Style::ComputedStyle::initialWritingMode()
+        || style.writingMode().computedTextDirection() != Style::ComputedStyle::initialDirection())
         return false;
     if (style.usesContainerUnits())
         return false;
@@ -92,10 +93,10 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
 
     // Getting computed style after a font environment change but before full style resolution may involve styles with non-current fonts.
     // Avoid caching them.
-    auto& fontSelector = element.document().fontSelector();
-    if (!style.fontCascade().isCurrent(fontSelector))
+    Ref fontSelector = element.document().fontSelector();
+    if (!style.fontCascade().isCurrent(fontSelector.get()))
         return false;
-    if (!parentStyle.fontCascade().isCurrent(fontSelector))
+    if (!parentStyle.fontCascade().isCurrent(fontSelector.get()))
         return false;
 
     if (element.hasRandomCachingKeyMap())
@@ -180,6 +181,11 @@ void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& 
     });
     if (addResult.iterator->value.size() < maxEntriesPerHash)
         addResult.iterator->value.append(Entry { &matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle) });
+
+    // Protect against unlimited growth.
+    constexpr size_t maximumSize = 16 * 1024;
+    if (m_entries.size() > maximumSize)
+        m_entries.remove(m_entries.random());
 }
 
 void MatchedDeclarationsCache::remove(unsigned hash)

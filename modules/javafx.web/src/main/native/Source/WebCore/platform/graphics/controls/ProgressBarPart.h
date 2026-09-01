@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ControlPart.h"
+#include <WebCore/ControlPart.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {

@@ -24,9 +24,9 @@
 #include "AXObjectCache.h"
 #include "AccessibilityAtspiEnums.h"
 #include "AccessibilityAtspiInterfaces.h"
-#include "Document.h"
+#include "DocumentView.h"
 #include "FocusController.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Page.h"
 #include <glib/gi18n-lib.h>
@@ -159,7 +159,7 @@ void AccessibilityRootAtspi::registerObject(CompletionHandler<void(const String&
     interfaces.append({ const_cast<GDBusInterfaceInfo*>(&webkit_accessible_interface), &s_accessibleFunctions });
     interfaces.append({ const_cast<GDBusInterfaceInfo*>(&webkit_socket_interface), &s_socketFunctions });
     interfaces.append({ const_cast<GDBusInterfaceInfo*>(&webkit_component_interface), &s_componentFunctions });
-    AccessibilityAtspi::singleton().registerRoot(*this, WTFMove(interfaces), WTFMove(completionHandler));
+    AccessibilityAtspi::singleton().registerRoot(*this, WTF::move(interfaces), WTF::move(completionHandler));
 }
 
 void AccessibilityRootAtspi::unregisterObject()
@@ -172,7 +172,7 @@ void AccessibilityRootAtspi::unregisterObject()
 
 void AccessibilityRootAtspi::setPath(String&& path)
 {
-    m_path = WTFMove(path);
+    m_path = WTF::move(path);
 }
 
 void AccessibilityRootAtspi::embedded(const char* parentUniqueName, const char* parentPath)

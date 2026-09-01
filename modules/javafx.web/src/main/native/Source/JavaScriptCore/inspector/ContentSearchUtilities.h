@@ -28,14 +28,18 @@
 
 #pragma once
 
-#include "InspectorProtocolObjects.h"
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/Forward.h>
+#include <wtf/Variant.h>
 
 namespace JSC { namespace Yarr {
 class RegularExpression;
 } }
 
 namespace Inspector {
+namespace Protocol { namespace GenericTypes {
+class SearchMatch;
+} }
 
 namespace ContentSearchUtilities {
 

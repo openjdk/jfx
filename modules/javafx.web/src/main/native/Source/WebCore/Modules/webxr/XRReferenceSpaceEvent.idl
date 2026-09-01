@@ -27,6 +27,7 @@
 [
     Conditional=WEBXR,
     EnabledBySetting=WebXREnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRReferenceSpaceEventInit : EventInit {
     required WebXRReferenceSpace referenceSpace;
     WebXRRigidTransform? transform;

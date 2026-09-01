@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "BExport.h"
@@ -88,3 +92,5 @@ BEXPORT bool tryFree(
 } } // namespace bmalloc::IsoMallocFallback
 
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

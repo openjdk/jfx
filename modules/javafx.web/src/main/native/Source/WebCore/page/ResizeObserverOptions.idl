@@ -24,6 +24,8 @@
  */
 
 // https://drafts.csswg.org/resize-observer/#dictdef-resizeobserveroptions
-dictionary ResizeObserverOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ResizeObserverOptions {
     ResizeObserverBoxOptions box = "content-box";
 };

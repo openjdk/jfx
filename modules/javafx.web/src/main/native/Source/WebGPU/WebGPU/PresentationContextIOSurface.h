@@ -59,6 +59,8 @@ private:
     void renderBuffersWereRecreated(NSArray<IOSurface *> *renderBuffers);
     void onSubmittedWorkScheduled(Function<void()>&&);
     RetainPtr<CGImageRef> getTextureAsNativeImage(uint32_t bufferIndex, bool& isIOSurfaceSupportedFormat) final;
+    void copyTextureToTexture(id<MTLTexture> destination, id<MTLTexture> source, id<MTLCommandBuffer>);
+    id<MTLComputePipelineState> resizeComputePipelineState();
 
     NSArray<IOSurface *> *m_ioSurfaces { nil };
     struct RenderBuffer {
@@ -66,10 +68,12 @@ private:
         RefPtr<Texture> luminanceClampTexture;
     };
     Vector<RenderBuffer> m_renderBuffers;
+    Vector<RenderBuffer> m_existingRenderBuffers;
     RefPtr<Device> m_device;
     RefPtr<Texture> m_invalidTexture;
     id<MTLFunction> m_luminanceClampFunction;
     id<MTLComputePipelineState> m_computePipelineState;
+    id<MTLComputePipelineState> m_resizeComputePipelineState;
 #if HAVE(IOSURFACE_SET_OWNERSHIP_IDENTITY) && HAVE(TASK_IDENTITY_TOKEN)
     std::optional<const MachSendRight> m_webProcessID;
 #endif

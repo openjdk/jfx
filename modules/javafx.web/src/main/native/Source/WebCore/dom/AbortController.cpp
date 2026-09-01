@@ -28,11 +28,12 @@
 
 #include "AbortSignal.h"
 #include "JSAbortController.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AbortController);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AbortController);
 
 Ref<AbortController> AbortController::create(ScriptExecutionContext& context)
 {

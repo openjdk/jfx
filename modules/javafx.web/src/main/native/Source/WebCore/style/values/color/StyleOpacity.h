@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "StylePrimitiveNumeric.h"
-#include "StyleValueTypes.h"
+#include <WebCore/AcceleratedEffectOpacity.h>
+#include <WebCore/StylePrimitiveNumeric.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -53,6 +54,13 @@ struct Opacity {
     {
     }
 
+#if ENABLE(THREADED_ANIMATIONS)
+    constexpr explicit Opacity(AcceleratedEffectOpacity opacity)
+        : value { opacity.value }
+    {
+    }
+#endif
+
     constexpr bool isZero() const { return value == 0; }
 
     constexpr bool isTransparent() const { return value == 0; }
@@ -66,6 +74,19 @@ DEFINE_TYPE_WRAPPER_GET(Opacity, value);
 // MARK: - Conversion
 
 template<> struct CSSValueConversion<Opacity> { auto operator()(BuilderState&, const CSSValue&) -> Opacity; };
+
+// MARK: - Evaluation
+
+#if ENABLE(THREADED_ANIMATIONS)
+
+template<> struct Evaluation<Opacity, AcceleratedEffectOpacity> {
+    auto operator()(const Opacity& value) -> AcceleratedEffectOpacity
+    {
+        return { .value = value.value.value };
+    }
+};
+
+#endif
 
 } // namespace Style
 } // namespace WebCore

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ImageTypes.h"
+#include <WebCore/ImageTypes.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
@@ -60,6 +60,7 @@ public:
 
     virtual bool allowsAnimation(const Image&) const { return true; }
     virtual const Settings* settings() { return nullptr; }
+    virtual bool useSystemDarkAppearance() const { return false; }
 
 protected:
     ImageObserver() = default;

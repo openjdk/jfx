@@ -44,7 +44,7 @@ struct BackgroundFetchRecordInformation;
 struct CacheQueryOptions;
 
 class BackgroundFetchRegistration final : public RefCounted<BackgroundFetchRegistration>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BackgroundFetchRegistration);
+    WTF_MAKE_TZONE_ALLOCATED(BackgroundFetchRegistration);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -90,3 +90,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(BackgroundFetchRegistration)

@@ -28,16 +28,17 @@
 
 #include "ContainerNodeInlines.h"
 #include "ContentVisibilityAutoStateChangeEvent.h"
-#include "DocumentInlines.h"
 #include "DocumentTimeline.h"
 #include "EventNames.h"
 #include "FrameSelection.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "Logging.h"
+#include "NodeDocument.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
 #include "SimpleRange.h"
 #include "StyleOriginatedAnimation.h"
 #include "VisibleSelection.h"
@@ -105,7 +106,7 @@ IntersectionObserver* ContentVisibilityDocumentState::intersectionObserver(Docum
         auto callback = ContentVisibilityIntersectionObserverCallback::create(document);
         IntersectionObserver::Init options { &document, { }, { }, { } };
         auto includeObscuredInsets = document.settings().contentInsetBackgroundFillEnabled() ? IncludeObscuredInsets::Yes : IncludeObscuredInsets::No;
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options), includeObscuredInsets);
+        auto observer = IntersectionObserver::create(document, WTF::move(callback), WTF::move(options), includeObscuredInsets);
         if (observer.hasException())
             return nullptr;
         m_observer = observer.releaseReturnValue();
@@ -258,8 +259,8 @@ void ContentVisibilityDocumentState::updateAnimations(const Element& element, Is
 {
     if (wasSkipped == IsSkippedContent::No || becomesSkipped == IsSkippedContent::Yes)
         return;
-    for (RefPtr animation : WebAnimation::instances()) {
-        RefPtr styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation.releaseNonNull());
+    for (auto& animation : WebAnimation::instances()) {
+        RefPtr styleOriginatedAnimation = dynamicDowncast<StyleOriginatedAnimation>(animation.get());
         if (!styleOriginatedAnimation)
             continue;
         auto owningElement = styleOriginatedAnimation->owningElement();

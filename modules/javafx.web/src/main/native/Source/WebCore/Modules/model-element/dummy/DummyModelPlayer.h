@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +26,11 @@
 
 #pragma once
 
-#include "ModelPlayer.h"
-#include "ModelPlayerClient.h"
+#include <WebCore/ModelPlayer.h>
+#include <WebCore/ModelPlayerClient.h>
+#include <WebCore/ModelPlayerIdentifier.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -41,13 +44,10 @@ private:
     DummyModelPlayer(ModelPlayerClient&);
 
     // ModelPlayer overrides.
-#if ENABLE(MODEL_PROCESS)
     ModelPlayerIdentifier identifier() const final { return m_id; }
-#endif
     void load(Model&, LayoutSize) override;
+    void configureGraphicsLayer(GraphicsLayer&, ModelPlayerGraphicsLayerConfiguration&&) override;
     void sizeDidChange(LayoutSize) override;
-    PlatformLayer* layer() override;
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() override;
     void enterFullscreen() override;
     void handleMouseDown(const LayoutPoint&, MonotonicTime) override;
     void handleMouseMove(const LayoutPoint&, MonotonicTime) override;
@@ -64,14 +64,12 @@ private:
     void hasAudio(CompletionHandler<void(std::optional<bool>&&)>&&) override;
     void isMuted(CompletionHandler<void(std::optional<bool>&&)>&&) override;
     void setIsMuted(bool, CompletionHandler<void(bool success)>&&) override;
-#if PLATFORM(COCOA)
-    Vector<RetainPtr<id>> accessibilityChildren() override;
+#if ENABLE(MODEL_ELEMENT_ACCESSIBILITY)
+    ModelPlayerAccessibilityChildren accessibilityChildren() override;
 #endif
 
     WeakPtr<ModelPlayerClient> m_client;
-#if ENABLE(MODEL_PROCESS)
     ModelPlayerIdentifier m_id;
-#endif
 };
 
 }

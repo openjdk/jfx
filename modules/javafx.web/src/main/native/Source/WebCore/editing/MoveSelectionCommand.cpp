@@ -28,13 +28,14 @@
 
 #include "DeleteSelectionCommand.h"
 #include "DocumentFragment.h"
+#include "NodeDocument.h"
 #include "ReplaceSelectionCommand.h"
 
 namespace WebCore {
 
 MoveSelectionCommand::MoveSelectionCommand(Ref<DocumentFragment>&& fragment, const Position& position, bool smartInsert, bool smartDelete)
     : CompositeEditCommand(position.anchorNode()->document())
-    , m_fragment(WTFMove(fragment))
+    , m_fragment(WTF::move(fragment))
     , m_position(position)
     , m_smartInsert(smartInsert)
     , m_smartDelete(smartDelete)
@@ -64,7 +65,7 @@ void MoveSelectionCommand::doApply()
         auto deleteSelection = DeleteSelectionCommand::create(document(), m_smartDelete, true, false, true, true, EditAction::DeleteByDrag);
         deleteSelection->setParent(this);
         deleteSelection->apply();
-        m_commands.append(WTFMove(deleteSelection));
+        m_commands.append(WTF::move(deleteSelection));
     }
 
     // If the node for the destination has been removed as a result of the deletion,
@@ -90,7 +91,7 @@ void MoveSelectionCommand::doApply()
         auto replaceSelection = ReplaceSelectionCommand::create(document(), m_fragment.copyRef(), options, EditAction::InsertFromDrop);
         replaceSelection->setParent(this);
         replaceSelection->apply();
-        m_commands.append(WTFMove(replaceSelection));
+        m_commands.append(WTF::move(replaceSelection));
     }
 }
 

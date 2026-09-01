@@ -29,6 +29,7 @@
 
 #include "CSSOffsetRotateValue.h"
 #include "StyleBuilderState.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/text/TextStream.h>
@@ -96,6 +97,17 @@ auto Blending<OffsetRotate>::blend(const OffsetRotate& from, const OffsetRotate&
     ASSERT(canBlend(from, to));
     return OffsetRotate { from.autoKeyword(), WebCore::Style::blend(from.angle(), to.angle(), context) };
 }
+
+// MARK: - Evaluation
+
+#if ENABLE(THREADED_ANIMATIONS)
+
+auto Evaluation<OffsetRotate, AcceleratedEffectOffsetRotate>::operator()(const OffsetRotate& value) -> AcceleratedEffectOffsetRotate
+{
+    return { .hasAuto = value.hasAuto(), .angle = value.angle().value };
+}
+
+#endif
 
 // MARK: - Logging
 

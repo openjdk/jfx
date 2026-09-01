@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FloatRoundedRect.h"
-#include "PathElement.h"
-#include "PathSegment.h"
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/PathElement.h>
+#include <WebCore/PathSegment.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
@@ -92,9 +92,9 @@ protected:
 
 inline void PathImpl::addSegment(PathSegment segment)
 {
-    WTF::switchOn(WTFMove(segment).data(),
+    WTF::switchOn(WTF::move(segment).data(),
         [&](auto&& segment) {
-            add(WTFMove(segment));
+            add(WTF::move(segment));
         },
         [&](PathDataLine segment) {
             add(PathMoveTo { segment.start() });

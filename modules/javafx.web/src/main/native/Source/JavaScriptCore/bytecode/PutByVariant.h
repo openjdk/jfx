@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "CacheableIdentifier.h"
+#include <JavaScriptCore/CacheableIdentifier.h>
 #include "CallLinkStatus.h"
-#include "ObjectPropertyConditionSet.h"
-#include "PropertyOffset.h"
-#include "StructureSet.h"
+#include <JavaScriptCore/ObjectPropertyConditionSet.h>
+#include <JavaScriptCore/PropertyOffset.h>
+#include <JavaScriptCore/StructureSet.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -50,7 +50,7 @@ public:
         : m_kind(NotSet)
         , m_offset(invalidOffset)
         , m_newStructure(nullptr)
-        , m_identifier(WTFMove(identifier))
+        , m_identifier(WTF::move(identifier))
     {
     }
 

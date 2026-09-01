@@ -39,19 +39,20 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGTextPositioningElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGTextPositioningElement);
 
 SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
-    : SVGTextContentElement(tagName, document, WTFMove(propertyRegistry))
+    : SVGTextContentElement(tagName, document, WTF::move(propertyRegistry))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGTextPositioningElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGTextPositioningElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::dxAttr, &SVGTextPositioningElement::m_dx>();
         PropertyRegistry::registerProperty<SVGNames::dyAttr, &SVGTextPositioningElement::m_dy>();
         PropertyRegistry::registerProperty<SVGNames::rotateAttr, &SVGTextPositioningElement::m_rotate>();
-    });
+    }
 }
 
 void SVGTextPositioningElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -120,7 +121,7 @@ RefPtr<SVGTextPositioningElement> SVGTextPositioningElement::elementFromRenderer
 
     ASSERT(renderer.element());
     RefPtr element = downcast<SVGElement>(renderer.element());
-    return dynamicDowncast<SVGTextPositioningElement>(WTFMove(element));
+    return dynamicDowncast<SVGTextPositioningElement>(WTF::move(element));
 }
 
 }

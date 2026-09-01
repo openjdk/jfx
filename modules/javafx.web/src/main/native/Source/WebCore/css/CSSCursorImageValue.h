@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "CSSURL.h"
-#include "CSSValue.h"
-#include "CSSValuePair.h"
-#include "IntPoint.h"
+#include <WebCore/CSSURL.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSValuePair.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {

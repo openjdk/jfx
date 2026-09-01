@@ -34,6 +34,7 @@
 #include "pas_immortal_heap.h"
 #include "pas_large_heap_physical_page_sharing_cache.h"
 #include "pas_megapage_cache.h"
+#include "pas_mte.h"
 #include "pas_reserved_memory_provider.h"
 #include "pas_segregated_shared_page_directory.h"
 
@@ -79,6 +80,7 @@ static pas_allocation_result allocate_from_megapages(
     heap_config = pas_heap_config_kind_get_config(heap->config_kind);
 
     PAS_PROFILE(MEGAPAGES_ALLOCATION, heap, size, alignment.alignment, heap_config, cache_size);
+    PAS_MTE_HANDLE(MEGAPAGES_ALLOCATION, heap, size, alignment.alignment, heap_config);
 
     return pas_large_heap_try_allocate_and_forget(
         &heap->megapage_large_heap, size, alignment.alignment, pas_non_compact_allocation_mode,

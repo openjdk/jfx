@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentType);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DocumentType);
 
 DocumentType::DocumentType(Document& document, const String& name, const String& publicId, const String& systemId)
     : Node(document, DOCUMENT_TYPE_NODE, { })

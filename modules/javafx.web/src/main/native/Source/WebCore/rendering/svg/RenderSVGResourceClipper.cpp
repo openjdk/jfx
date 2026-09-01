@@ -38,7 +38,6 @@
 #include "RenderView.h"
 #include "SVGClipPathElement.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGRenderStyle.h"
 #include "SVGUseElement.h"
 #include "SVGVisitedRendererTracking.h"
 #include <wtf/SetForScope.h>
@@ -46,10 +45,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceClipper);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGResourceClipper);
 
 RenderSVGResourceClipper::RenderSVGResourceClipper(SVGClipPathElement& element, RenderStyle&& style)
-    : RenderSVGResourceContainer(Type::SVGResourceClipper, element, WTFMove(style))
+    : RenderSVGResourceContainer(Type::SVGResourceClipper, element, WTF::move(style))
 {
     ASSERT(isRenderSVGResourceClipper());
 }
@@ -111,7 +110,7 @@ void RenderSVGResourceClipper::applyPathClipping(GraphicsContext& context, const
         clipPathTransform.multiply(layer()->transform()->toAffineTransform());
 
     const auto& clipPath = clipRenderer.computeClipPath(clipPathTransform);
-    auto windRule = clipRenderer.style().svgStyle().clipRule();
+    auto windRule = clipRenderer.style().clipRule();
 
     // The SVG specification wants us to clip everything, if clip-path doesn't have a child.
     if (clipPath.isEmpty())
@@ -239,7 +238,7 @@ void RenderSVGResourceClipper::updateFromStyle()
     updateHasSVGTransformFlags();
 }
 
-void RenderSVGResourceClipper::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderSVGResourceClipper::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption> options) const
 {
     ASSERT(document().settings().layerBasedSVGEngineEnabled());
     applySVGTransform(transform, protectedClipPathElement(), style, boundingBox, std::nullopt, std::nullopt, options);
@@ -250,7 +249,7 @@ bool RenderSVGResourceClipper::needsHasSVGTransformFlags() const
     return protectedClipPathElement()->hasTransformRelatedAttributes();
 }
 
-void RenderSVGResourceClipper::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGResourceClipper::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
 

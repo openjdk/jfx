@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "Structure.h"
-#include "TemplateObjectDescriptor.h"
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/TemplateObjectDescriptor.h>
 
 namespace JSC {
 

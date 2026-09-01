@@ -32,9 +32,9 @@
 
 #pragma once
 
-#include "StyleGridPositionSide.h"
-#include "StylePrimitiveNumeric.h"
-#include "StyleValueTypes.h"
+#include <WebCore/StyleGridPositionSide.h>
+#include <WebCore/StylePrimitiveNumeric.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -130,6 +130,8 @@ struct GridPosition {
     WEBCORE_EXPORT static void setMaxPositionForTesting(unsigned);
 
 private:
+    friend void add(Hasher&, const GridPosition&);
+
     enum class GridPositionType : uint8_t {
         Auto,
         Explicit,

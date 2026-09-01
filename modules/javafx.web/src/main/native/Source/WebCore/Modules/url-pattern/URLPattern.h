@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "URLPatternComponent.h"
-#include "URLPatternInit.h"
+#include <WebCore/URLPatternComponent.h>
+#include <WebCore/URLPatternInit.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -47,7 +47,7 @@ class URLPatternComponent;
 }
 
 class URLPattern final : public RefCounted<URLPattern> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(URLPattern);
+    WTF_MAKE_TZONE_ALLOCATED(URLPattern);
 public:
     using URLPatternInput = Variant<String, URLPatternInit>;
 
@@ -73,12 +73,18 @@ public:
     const String& hash() const { return m_hashComponent.patternString(); }
 
     bool hasRegExpGroups() const;
+    bool shouldIgnoreCase() const { return m_shouldIgnoreCase; }
 
 private:
-    URLPattern();
-    ExceptionOr<void> compileAllComponents(ScriptExecutionContext&, URLPatternInit&&, const URLPatternOptions&);
+    explicit URLPattern(bool shouldIgnoreCase)
+        : m_shouldIgnoreCase(shouldIgnoreCase)
+    {
+    }
+
+    ExceptionOr<void> compileAllComponents(ScriptExecutionContext&, URLPatternInit&&);
     ExceptionOr<std::optional<URLPatternResult>> match(ScriptExecutionContext&, Variant<URL, URLPatternInput>&&, String&& baseURLString) const;
 
+    const bool m_shouldIgnoreCase;
     URLPatternUtilities::URLPatternComponent m_protocolComponent;
     URLPatternUtilities::URLPatternComponent m_usernameComponent;
     URLPatternUtilities::URLPatternComponent m_passwordComponent;

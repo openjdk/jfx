@@ -67,7 +67,7 @@ public:
 
     virtual void setFromAndToValues(SVGElement&, const String&, const String&) { }
     virtual void setFromAndByValues(SVGElement&, const String&, const String&) { }
-    virtual void setToAtEndOfDurationValue(const String&) { }
+    virtual void setToAtEndOfDurationValue(SVGElement&, const String&) { }
 
     virtual void start(SVGElement&) = 0;
     virtual void animate(SVGElement&, float progress, unsigned repeatCount) = 0;

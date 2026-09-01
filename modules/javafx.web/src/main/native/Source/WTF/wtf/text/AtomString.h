@@ -30,13 +30,13 @@ class AtomString final {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(AtomString);
 public:
     AtomString();
-    AtomString(std::span<const LChar>);
+    AtomString(std::span<const Latin1Character>);
     AtomString(std::span<const char16_t>);
 
     AtomString(AtomStringImpl*);
     AtomString(RefPtr<AtomStringImpl>&&);
     AtomString(Ref<AtomStringImpl>&&);
-    AtomString(const StaticStringImpl*);
+    AtomString(const StaticStringImpl&);
     AtomString(StringImpl*);
     explicit AtomString(const String&);
     explicit AtomString(String&&);
@@ -55,16 +55,16 @@ public:
 
     unsigned existingHash() const { return isNull() ? 0 : impl()->existingHash(); }
 
-    operator const String&() const { return m_string; }
-    const String& string() const { return m_string; }
-    String releaseString() { return WTFMove(m_string); }
+    operator const String&() const LIFETIME_BOUND { return m_string; }
+    const String& string() const LIFETIME_BOUND { return m_string; }
+    String releaseString() { return WTF::move(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
     AtomStringImpl* impl() const LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
-    RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
+    RefPtr<AtomStringImpl> releaseImpl() { return uncheckedDowncast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
-    std::span<const LChar> span8() const LIFETIME_BOUND { return m_string.span8(); }
+    std::span<const Latin1Character> span8() const LIFETIME_BOUND { return m_string.span8(); }
     std::span<const char16_t> span16() const LIFETIME_BOUND { return m_string.span16(); }
     unsigned length() const { return m_string.length(); }
 
@@ -165,7 +165,7 @@ inline AtomString::AtomString()
 {
 }
 
-inline AtomString::AtomString(std::span<const LChar> string)
+inline AtomString::AtomString(std::span<const Latin1Character> string)
     : m_string(AtomStringImpl::add(string))
 {
 }
@@ -181,12 +181,12 @@ inline AtomString::AtomString(AtomStringImpl* string)
 }
 
 inline AtomString::AtomString(RefPtr<AtomStringImpl>&& string)
-    : m_string(WTFMove(string))
+    : m_string(WTF::move(string))
 {
 }
 
 inline AtomString::AtomString(Ref<AtomStringImpl>&& string)
-    : m_string(WTFMove(string))
+    : m_string(WTF::move(string))
 {
 }
 
@@ -195,7 +195,7 @@ inline AtomString::AtomString(StringImpl* string)
 {
 }
 
-inline AtomString::AtomString(const StaticStringImpl* string)
+inline AtomString::AtomString(const StaticStringImpl& string)
     : m_string(AtomStringImpl::add(string))
 {
 }
@@ -254,7 +254,7 @@ inline const AtomString& nullAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinte
 inline const AtomString& emptyAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const AtomString*>(&emptyAtomData); }
 
 inline AtomString::AtomString(ASCIILiteral literal)
-    : m_string(literal.length() ? AtomStringImpl::add(literal.span8()) : Ref { *emptyAtom().impl() })
+    : m_string(literal.isNull() ? RefPtr<AtomStringImpl> { } : literal.length() ? AtomStringImpl::add(literal) : Ref { *emptyAtom().impl() })
 {
 }
 
@@ -324,7 +324,7 @@ inline std::strong_ordering codePointCompare(const AtomString& a, const AtomStri
     return codePointCompare(a.string(), b.string());
 }
 
-ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const AtomString& string, char16_t target, char16_t replacement)
+[[nodiscard]] ALWAYS_INLINE String makeStringByReplacingAll(const AtomString& string, char16_t target, char16_t replacement)
 {
     return makeStringByReplacingAll(string.string(), target, replacement);
 }
@@ -332,7 +332,7 @@ ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const AtomStrin
 template<> struct IntegerToStringConversionTrait<AtomString> {
     using ReturnType = AtomString;
     using AdditionalArgumentType = void;
-    static AtomString flush(std::span<const LChar> characters, void*) { return characters; }
+    static AtomString flush(std::span<const Latin1Character> characters, void*) { return characters; }
 };
 
 template<> struct MarkableTraits<AtomString> {

@@ -35,10 +35,10 @@ public:
     using Base = SVGAnimationDiscreteFunction<bool>;
     using Base::Base;
 
-    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) override
     {
-        m_from = SVGPropertyTraits<bool>::fromString(from);
-        m_to = SVGPropertyTraits<bool>::fromString(to);
+        m_from = SVGPropertyTraits<bool>::fromString(targetElement, from);
+        m_to = SVGPropertyTraits<bool>::fromString(targetElement, to);
     }
 };
 
@@ -51,10 +51,10 @@ class SVGAnimationEnumerationFunction : public SVGAnimationDiscreteFunction<Enum
 public:
     using Base::Base;
 
-    void setFromAndToValues(SVGElement&, const String& from, const String& to) override
+    void setFromAndToValues(SVGElement& targetElement, const String& from, const String& to) override
     {
-        m_from = SVGPropertyTraits<EnumType>::fromString(from);
-        m_to = SVGPropertyTraits<EnumType>::fromString(to);
+        m_from = SVGPropertyTraits<EnumType>::fromString(targetElement, from);
+        m_to = SVGPropertyTraits<EnumType>::fromString(targetElement, to);
     }
 };
 

@@ -31,8 +31,8 @@
 
 #pragma once
 
-#include "GridSpan.h"
-#include "StyleGridTrackSizingDirection.h"
+#include <WebCore/GridSpan.h>
+#include <WebCore/StyleGridTrackSizingDirection.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

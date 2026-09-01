@@ -45,7 +45,7 @@ static constexpr bool verbose = false;
 }
 
 EntryPlan::EntryPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(vm, WTFMove(info), WTFMove(task))
+    : Base(vm, WTF::move(info), WTF::move(task))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Validated)
     , m_compilerMode(compilerMode)
@@ -53,8 +53,8 @@ EntryPlan::EntryPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerM
 }
 
 EntryPlan::EntryPlan(VM& vm, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(vm, WTFMove(task))
-    , m_source(WTFMove(source))
+    : Base(vm, WTF::move(task))
+    , m_source(WTF::move(source))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Initial)
     , m_compilerMode(compilerMode)
@@ -229,9 +229,9 @@ void EntryPlan::compileFunctions()
         for (uint32_t index = functionIndex; index < functionIndexEnd; ++index)
         compileFunction(FunctionCodeIndex(index));
 
-    if (m_moduleInformation->m_usesModernExceptions.loadRelaxed() && m_moduleInformation->m_usesLegacyExceptions.loadRelaxed()) {
+    {
         Locker locker { m_lock };
-        fail(makeString("Module uses both legacy exceptions and try_table"_s));
+        if (failIfMixedExceptionHandlingProposals())
         return;
     }
 
@@ -265,6 +265,16 @@ void EntryPlan::complete()
         moveToState(State::Completed);
         runCompletionTasks();
     }
+}
+
+bool EntryPlan::failIfMixedExceptionHandlingProposals()
+{
+    if (m_moduleInformation->m_usesModernExceptions.loadRelaxed()
+        && m_moduleInformation->m_usesLegacyExceptions.loadRelaxed()) {
+        fail(makeString("Module uses both legacy exceptions and try_table"_s));
+        return true;
+    }
+    return false;
 }
 
 bool EntryPlan::completeSyncIfPossible()
@@ -320,10 +330,7 @@ bool EntryPlan::generateWasmToWasmStubs()
         }
 #endif // ENABLE(JIT)
 
-            if (Options::useWasmIPInt())
                 m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_ipint_wrapper_entry);
-        else
-            m_wasmToWasmExitStubs[importFunctionIndex++] = LLInt::getCodeRef<WasmEntryPtrTag>(wasm_to_wasm_wrapper_entry);
     }
     ASSERT(importFunctionIndex == m_wasmToWasmExitStubs.size());
     return true;

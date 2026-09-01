@@ -31,8 +31,10 @@ namespace WebCore {
 
 class DOMTokenList;
 
+enum class Relation : uint8_t;
+
 class SVGAElement final : public SVGGraphicsElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGAElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAElement);
 public:
     static Ref<SVGAElement> create(const QualifiedName&, Document&);
@@ -60,6 +62,8 @@ private:
     String title() const final;
     void defaultEventHandler(Event&) final;
 
+    bool hasRel(Relation) const;
+
     bool supportsFocus() const final;
     bool isMouseFocusable() const final;
     bool isKeyboardFocusable(const FocusEventData&) const final;
@@ -70,6 +74,8 @@ private:
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     Ref<SVGAnimatedString> m_target { SVGAnimatedString::create(this) };
+
+    OptionSet<Relation> m_linkRelations;
 
     // This is computed only once and must not be affected by subsequent URL changes.
     mutable std::optional<SharedStringHash> m_storedVisitedLinkHash;

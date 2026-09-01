@@ -38,13 +38,13 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MainThreadPermissionObserver);
 
 MainThreadPermissionObserver::MainThreadPermissionObserver(ThreadSafeWeakPtr<PermissionStatus>&& permissionStatus, ScriptExecutionContextIdentifier contextIdentifier, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page, ClientOrigin&& origin)
-    : m_permissionStatus(WTFMove(permissionStatus))
+    : m_permissionStatus(WTF::move(permissionStatus))
     , m_contextIdentifier(contextIdentifier)
     , m_state(state)
     , m_descriptor(descriptor)
     , m_source(source)
-    , m_page(WTFMove(page))
-    , m_origin(WTFMove(origin))
+    , m_page(WTF::move(page))
+    , m_origin(WTF::move(origin))
 {
     ASSERT(isMainThread());
     PermissionController::singleton().addObserver(*this);
@@ -64,6 +64,18 @@ void MainThreadPermissionObserver::stateChanged(PermissionState newPermissionSta
         if (RefPtr permissionStatus = weakPermissionStatus.get())
             permissionStatus->stateChanged(newPermissionState);
     });
+}
+
+void MainThreadPermissionObserver::addChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain)
+{
+    ASSERT(isMainThread());
+    PermissionController::singleton().addChangeListener(m_descriptor.name, topFrameDomain, subFrameDomain);
+}
+
+void MainThreadPermissionObserver::removeChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain)
+{
+    ASSERT(isMainThread());
+    PermissionController::singleton().removeChangeListener(m_descriptor.name, topFrameDomain, subFrameDomain);
 }
 
 }

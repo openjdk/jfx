@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RegistrableDomain.h"
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore::PCM {
@@ -37,12 +37,12 @@ struct SourceSite {
     }
 
     explicit SourceSite(RegistrableDomain&& domain)
-        : registrableDomain { WTFMove(domain) }
+        : registrableDomain { WTF::move(domain) }
     {
     }
 
     SourceSite isolatedCopy() const & { return SourceSite { registrableDomain.isolatedCopy() }; }
-    SourceSite isolatedCopy() && { return SourceSite { WTFMove(registrableDomain).isolatedCopy() }; }
+    SourceSite isolatedCopy() && { return SourceSite { WTF::move(registrableDomain).isolatedCopy() }; }
 
     friend bool operator==(const SourceSite&, const SourceSite&) = default;
 
@@ -76,12 +76,12 @@ struct AttributionDestinationSite {
     }
 
     explicit AttributionDestinationSite(RegistrableDomain&& domain)
-        : registrableDomain { WTFMove(domain) }
+        : registrableDomain { WTF::move(domain) }
     {
     }
 
     AttributionDestinationSite isolatedCopy() const & { return AttributionDestinationSite { registrableDomain.isolatedCopy() }; }
-    AttributionDestinationSite isolatedCopy() && { return AttributionDestinationSite { WTFMove(registrableDomain).isolatedCopy() }; }
+    AttributionDestinationSite isolatedCopy() && { return AttributionDestinationSite { WTF::move(registrableDomain).isolatedCopy() }; }
 
     friend bool operator==(const AttributionDestinationSite&, const AttributionDestinationSite&) = default;
 

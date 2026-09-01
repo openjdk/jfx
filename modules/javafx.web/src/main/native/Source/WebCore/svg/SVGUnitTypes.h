@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "SVGPropertyTraits.h"
+#include <WebCore/SVGPropertyTraits.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -55,7 +55,7 @@ struct SVGPropertyTraits<SVGUnitTypes::SVGUnitType> {
         return emptyString();
     }
 
-    static SVGUnitTypes::SVGUnitType fromString(const String& value)
+    static SVGUnitTypes::SVGUnitType fromString(SVGElement&, const String& value)
     {
         if (value == "userSpaceOnUse"_s)
             return SVGUnitTypes::SVG_UNIT_TYPE_USERSPACEONUSE;

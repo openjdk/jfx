@@ -31,6 +31,7 @@
 
 #include "config.h"
 #include "ValidationMessage.h"
+#include "DocumentPage.h"
 
 #include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
@@ -115,20 +116,20 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
     }
 
     m_element = element;
-    setMessage(WTFMove(updatedMessage));
+    setMessage(WTF::move(updatedMessage));
 }
 
 void ValidationMessage::setMessage(String&& message)
 {
     if (ValidationMessageClient* client = validationMessageClient()) {
-        client->showValidationMessage(*m_element, WTFMove(message));
+        client->showValidationMessage(*m_element, WTF::move(message));
         return;
     }
 
     // Don't modify the DOM tree in this context.
     // If so, an assertion in Element::isFocusable() fails.
     ASSERT(!message.isEmpty());
-    m_message = WTFMove(message);
+    m_message = WTF::move(message);
     if (!m_bubble)
         m_timer = makeUnique<Timer>(*this, &ValidationMessage::buildBubbleTree);
     else

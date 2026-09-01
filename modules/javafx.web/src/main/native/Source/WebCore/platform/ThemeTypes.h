@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "StyleAppearance.h"
+#include <WebCore/StyleAppearance.h>
 
 namespace WTF {
 class TextStream;

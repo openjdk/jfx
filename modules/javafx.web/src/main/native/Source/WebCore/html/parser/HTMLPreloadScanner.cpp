@@ -60,7 +60,7 @@ using namespace HTMLNames;
 
 TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVector& data)
 {
-    static constexpr std::pair<PackedASCIILiteral<uint64_t>, TokenPreloadScanner::TagId> mappings[] = {
+    static constexpr SortedArrayMap map { std::to_array<std::pair<PackedASCIILiteral<uint64_t>, TokenPreloadScanner::TagId>>({
         { "base"_s, TagId::Base },
         { "img"_s, TagId::Img },
         { "input"_s, TagId::Input },
@@ -72,8 +72,7 @@ TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVe
         { "style"_s, TagId::Style },
         { "template"_s, TagId::Template },
         { "video"_s, TagId::Video },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    }) };
     return map.get(data.span(), TagId::Unknown);
 }
 
@@ -131,7 +130,7 @@ public:
         }
 
         if (m_tagId == TagId::Source && !pictureState.isEmpty() && !pictureState.last() && m_mediaMatched && m_typeMatched && !m_srcSetAttribute.isEmpty()) {
-            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).effectiveSize();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, AtomString { m_urlToLoad }, m_srcSetAttribute, sourceSize);
             if (!imageCandidate.isEmpty()) {
                 pictureState.last() = true;
@@ -141,7 +140,7 @@ public:
 
         // Resolve between src and srcSet if we have them and the tag is img.
         if (m_tagId == TagId::Img && !m_srcSetAttribute.isEmpty()) {
-            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).effectiveSize();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, AtomString { m_urlToLoad }, m_srcSetAttribute, sourceSize);
             setURLToLoadAllowingReplacement(imageCandidate.string.view);
         }
@@ -181,6 +180,7 @@ public:
         auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, scriptType.value_or(ScriptType::Classic), m_referrerPolicy, m_fetchPriority);
         request->setCrossOriginMode(m_crossOriginMode);
         request->setNonce(m_nonceAttribute);
+        request->setIntegrity(m_integrityAttribute);
         request->setScriptIsAsync(m_scriptIsAsync);
 
         // According to the spec, the module tag ignores the "charset" attribute as the same to the worker's
@@ -282,6 +282,9 @@ private:
                 break;
             } else if (match(attributeName, nonceAttr)) {
                 m_nonceAttribute = attributeValue.toString();
+                break;
+            } else if (match(attributeName, integrityAttr)) {
+                m_integrityAttribute = attributeValue.toString();
                 break;
             } else if (match(attributeName, referrerpolicyAttr)) {
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
@@ -440,6 +443,7 @@ private:
     String m_asAttribute;
     String m_typeAttribute;
     String m_languageAttribute;
+    String m_integrityAttribute;
     String m_lazyloadAttribute;
     bool m_metaIsViewport;
     bool m_metaIsDisabledAdaptations;
@@ -489,8 +493,8 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
         TagId tagId = tagIdFor(token.name());
         if (tagId == TagId::Template) {
             bool isDeclarativeShadowRoot = false;
-            static constexpr char16_t shadowRootAsUChar[] = { 's', 'h', 'a', 'd', 'o', 'w', 'r', 'o', 'o', 't', 'm', 'o', 'd', 'e' };
-            const auto* shadowRootModeAttribute = findAttribute(token.attributes(), shadowRootAsUChar);
+            static constexpr auto shadowRootAsUTF16 = std::to_array<char16_t>({ 's', 'h', 'a', 'd', 'o', 'w', 'r', 'o', 'o', 't', 'm', 'o', 'd', 'e' });
+            const auto* shadowRootModeAttribute = findAttribute(token.attributes(), shadowRootAsUTF16);
             if (shadowRootModeAttribute) {
                 String shadowRootValue(shadowRootModeAttribute->value);
                 isDeclarativeShadowRoot = equalIgnoringASCIICase(shadowRootValue, "open"_s) || equalIgnoringASCIICase(shadowRootValue, "closed"_s);
@@ -523,7 +527,7 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
         StartTagScanner scanner(document, tagId, m_deviceScaleFactor);
         scanner.processAttributes(token.attributes(), m_pictureSourceState);
         if (auto request = scanner.createPreloadRequest(m_predictedBaseElementURL))
-            requests.append(WTFMove(request));
+            requests.append(WTF::move(request));
         return;
     }
 
@@ -535,13 +539,13 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
 void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token, bool shouldRestrictBaseURLSchemes)
 {
     ASSERT(m_predictedBaseElementURL.isEmpty());
-    static constexpr char16_t hrefAsUChar[] = { 'h', 'r', 'e', 'f' };
-    auto* hrefAttribute = findAttribute(token.attributes(), hrefAsUChar);
+    static constexpr auto hrefAsUTF16 = std::to_array<char16_t>({ 'h', 'r', 'e', 'f' });
+    auto* hrefAttribute = findAttribute(token.attributes(), hrefAsUTF16);
     if (!hrefAttribute)
         return;
     URL temp { m_documentURL, StringImpl::create8BitIfPossible(hrefAttribute->value) };
     if (!shouldRestrictBaseURLSchemes || SecurityPolicy::isBaseURLSchemeAllowed(temp))
-        m_predictedBaseElementURL = WTFMove(temp).isValid() ? WTFMove(temp).isolatedCopy() : URL();
+        m_predictedBaseElementURL = WTF::move(temp).isValid() ? WTF::move(temp).isolatedCopy() : URL();
 }
 
 HTMLPreloadScanner::HTMLPreloadScanner(const HTMLParserOptions& options, const URL& documentURL, float deviceScaleFactor)
@@ -573,7 +577,7 @@ void HTMLPreloadScanner::scan(HTMLResourcePreloader& preloader, Document& docume
         m_scanner.scan(*token, requests, document);
     }
 
-    preloader.preload(WTFMove(requests));
+    preloader.preload(WTF::move(requests));
 }
 
 bool testPreloadScannerViewportSupport(Document* document)
@@ -581,10 +585,10 @@ bool testPreloadScannerViewportSupport(Document* document)
     ASSERT(document);
     HTMLParserOptions options(*document);
     HTMLPreloadScanner scanner(options, document->url());
-    HTMLResourcePreloader preloader(*document);
+    Ref preloader = HTMLResourcePreloader::create(*document);
     scanner.appendToEnd(String("<meta name=viewport content='width=400'>"_s));
     scanner.scan(preloader, *document);
-    return (document->viewportArguments().width == 400);
+    return document->viewportArguments().width == 400;
 }
 
 }

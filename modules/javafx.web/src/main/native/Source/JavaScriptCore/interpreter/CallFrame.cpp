@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -288,7 +288,7 @@ void CallFrame::dump(PrintStream& out) const
         switch (nativeCallee->category()) {
         case NativeCallee::Category::Wasm: {
 #if ENABLE(WEBASSEMBLY)
-            auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
+            auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(nativeCallee);
             out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", wasmCallee->compilationMode(), " ", RawPointer(callee().rawPtr()), "]");
             out.print("(JSWebAssemblyInstance: ", RawPointer(wasmInstance()), ")");
 #else
@@ -361,7 +361,7 @@ const char* CallFrame::describeFrame()
     return buffer;
 }
 
-void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound)
+void CallFrame::convertToZombieFrame(VM& vm, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound)
 {
     ASSERT(!isEmptyTopLevelCallFrameForDebugger());
     ASSERT(codeBlockToKeepAliveUntilFrameIsUnwound->inherits<CodeBlock>());
@@ -377,10 +377,10 @@ void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAl
         globalObject = throwOriginFrame->jsCallee()->globalObject();
     else
         globalObject = vm.entryScope->globalObject();
-    JSObject* partiallyInitializedFrameCallee = globalObject->partiallyInitializedFrameCallee();
+    JSObject* zombieFrameCallee = globalObject->zombieFrameCallee();
 
     setCodeBlock(codeBlockToKeepAliveUntilFrameIsUnwound);
-    setCallee(partiallyInitializedFrameCallee);
+    setCallee(zombieFrameCallee);
     setArgumentCountIncludingThis(0);
 }
 

@@ -27,7 +27,7 @@
 
 #if ENABLE(APP_HIGHLIGHTS)
 
-#include "SharedBuffer.h"
+#include <WebCore/SharedBuffer.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/WTFString.h>
 

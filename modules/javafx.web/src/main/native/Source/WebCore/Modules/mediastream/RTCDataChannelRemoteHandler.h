@@ -26,22 +26,13 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCDataChannelHandler.h"
-#include "RTCDataChannelIdentifier.h"
-#include "RTCDataChannelState.h"
+#include <WebCore/RTCDataChannelHandler.h>
+#include <WebCore/RTCDataChannelIdentifier.h>
+#include <WebCore/RTCDataChannelState.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class RTCDataChannelRemoteHandler;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCDataChannelRemoteHandler> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -50,8 +41,9 @@ class RTCDataChannelRemoteHandlerConnection;
 class RTCError;
 class FragmentedSharedBuffer;
 
-class RTCDataChannelRemoteHandler final : public RTCDataChannelHandler, public CanMakeWeakPtr<RTCDataChannelRemoteHandler> {
+class RTCDataChannelRemoteHandler final : public RTCDataChannelHandler, public CanMakeWeakPtr<RTCDataChannelRemoteHandler>, public CanMakeCheckedPtr<RTCDataChannelRemoteHandler> {
     WTF_MAKE_TZONE_ALLOCATED(RTCDataChannelRemoteHandler);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RTCDataChannelRemoteHandler);
 public:
     static std::unique_ptr<RTCDataChannelRemoteHandler> create(RTCDataChannelIdentifier, RefPtr<RTCDataChannelRemoteHandlerConnection>&&);
     RTCDataChannelRemoteHandler(RTCDataChannelIdentifier, Ref<RTCDataChannelRemoteHandlerConnection>&&);
@@ -77,7 +69,7 @@ private:
     RTCDataChannelIdentifier m_remoteIdentifier;
     Markable<RTCDataChannelIdentifier> m_localIdentifier;
 
-    RTCDataChannelHandlerClient* m_client { nullptr };
+    WeakPtr<RTCDataChannelHandlerClient> m_client;
     const Ref<RTCDataChannelRemoteHandlerConnection> m_connection;
 
     struct Message {

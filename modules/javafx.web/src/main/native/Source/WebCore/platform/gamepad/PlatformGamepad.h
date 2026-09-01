@@ -27,8 +27,9 @@
 
 #if ENABLE(GAMEPAD)
 
-#include "GamepadHapticEffectType.h"
-#include "SharedGamepadValue.h"
+#include <WebCore/GamepadHapticEffectType.h>
+#include <WebCore/SharedGamepadValue.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
@@ -39,20 +40,12 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class PlatformGamepad;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PlatformGamepad> : std::true_type { };
-}
-
-namespace WebCore {
 
 struct GamepadEffectParameters;
 
-class PlatformGamepad : public CanMakeWeakPtr<PlatformGamepad> {
+class PlatformGamepad : public CanMakeWeakPtr<PlatformGamepad>, public CanMakeCheckedPtr<PlatformGamepad> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformGamepad);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlatformGamepad);
 public:
     virtual ~PlatformGamepad() = default;
 

@@ -32,10 +32,87 @@
 #include "AirCode.h"
 #include "AirPhaseScope.h"
 #include <wtf/BubbleSort.h>
+#include <wtf/Deque.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
 namespace {
+
+class ChainWorklist {
+public:
+    ChainWorklist()
+        : startNewChain(false)
+    {
+    }
+
+    bool isEmpty() const
+    {
+        return blocks.isEmpty();
+    }
+
+    size_t size() const
+    {
+        return blocks.size();
+    }
+
+    BasicBlock* pop(IndexSet<BasicBlock*>& done)
+    {
+        if (startNewChain) {
+            startNewChain = false;
+            return popNewChain(done);
+        }
+
+        return popChain(done);
+    }
+
+    void markStartNewChain()
+    {
+        startNewChain = true;
+    }
+
+    void append(BasicBlock* block)
+    {
+        blocks.append(block);
+    }
+
+    BasicBlock* popChain(IndexSet<BasicBlock*>& done)
+    {
+        // Take the last added successor to continue the chain.
+        // This transforms a jump into a fallthrough.
+        while (!blocks.isEmpty()) {
+            BasicBlock* block = blocks.takeLast();
+            if (done.contains(block))
+                continue;
+
+            return block;
+        }
+        return nullptr;
+    }
+
+    BasicBlock* popNewChain(IndexSet<BasicBlock*>& done)
+    {
+        // Take the oldest added successor to start a new chain.
+        // We prefer this,
+        // - because that keeps earlier blocks earlier
+        // - earlier blocks can still have longer chains
+        // - better locality, instead of iterating further and
+        //   having to backtrack these left-over early blocks
+        while (!blocks.isEmpty()) {
+            BasicBlock* block = blocks.takeFirst();
+            if (done.contains(block))
+                continue;
+
+            return block;
+        }
+        return nullptr;
+    }
+
+private:
+
+    bool startNewChain;
+    Deque<BasicBlock*, 16> blocks;
+};
+
 
 class SortedSuccessors {
 public:
@@ -50,13 +127,7 @@ public:
 
     void process(BlockWorklist& worklist)
     {
-        // We prefer a stable sort, and we don't want it to go off the rails if we see NaN. Also, the number
-        // of successors is bounded. In fact, it currently cannot be more than 2. :-)
-        bubbleSort(
-            m_successors.begin(), m_successors.end(),
-            [] (BasicBlock* left, BasicBlock* right) {
-                return left->frequency() < right->frequency();
-            });
+        sort();
 
         // Pushing the successors in ascending order of frequency ensures that the very next block we visit
         // is our highest-frequency successor (unless that successor has already been visited).
@@ -66,19 +137,185 @@ public:
         m_successors.shrink(0);
     }
 
+    void process(ChainWorklist& worklist)
+    {
+        sort();
+
+        // Pushing the successors in ascending order of frequency ensures that the very next block we visit
+        // is our highest-frequency successor (unless that successor has already been visited).
+        for (unsigned i = 0; i < m_successors.size(); ++i)
+            worklist.append(m_successors[i]);
+
+        m_successors.shrink(0);
+    }
+
 private:
+    void sort()
+    {
+        // We prefer a stable sort, and we don't want it to go off the rails if we see NaN. Also, the number
+        // of successors is bounded. In fact, it currently cannot be more than 2. :-)
+        bubbleSort(
+            m_successors.mutableSpan(),
+            [] (BasicBlock* left, BasicBlock* right) {
+                return left->frequency() < right->frequency();
+            });
+    }
+
     Vector<BasicBlock*, 2> m_successors;
 };
 
 } // anonymous namespace
 
+static bool detectTriangleStructure(BasicBlock* blockA, ChainWorklist& worklist, IndexSet<BasicBlock*>& done)
+{
+    // A*
+    // |-----.
+    // |      |
+    // |      C
+    // |      |
+    // |-----'
+    // B
+
+    // Since we don't have actual frequencies,
+    // it is better to schedule C before B
+
+    if (blockA->numSuccessors() != 2)
+        return false;
+
+    if (blockA->successor(0).isRare())
+        return false;
+
+    if (blockA->successor(1).isRare())
+        return false;
+
+    auto attemptToDetect = [&](BasicBlock* blockB, BasicBlock* blockC) {
+        if ((blockC->numSuccessors() >= 1 && blockC->successor(0).block() == blockB)
+            || (blockC->numSuccessors() >= 2 && blockC->successor(1).block() == blockB)) {
+            if (!done.contains(blockB))
+                worklist.append(blockB);
+            if (!done.contains(blockC))
+                worklist.append(blockC);
+            return true;
+        }
+        return false;
+    };
+
+    auto* block0 = blockA->successor(0).block();
+    auto* block1 = blockA->successor(1).block();
+    return attemptToDetect(block0, block1)
+        || attemptToDetect(block1, block0);
+}
+
+static bool detectDiamondStructure(BasicBlock* blockB, ChainWorklist& worklist, IndexSet<BasicBlock*>& done)
+{
+    //     A
+    //  .--'--.
+    // |       |
+    // B*      C
+    // |       |
+    //  '--.--'
+    //     D
+
+    // B* is the block we are currently looking at.
+
+    // Since we don't have actual frequencies,
+    // it is better to not decide which branch (B,C) is best and
+    // assume both have equal chance.
+    // With a small penalty we better organize it as:
+    // A B C D
+    // That way we have one small jump for case B and for case C,
+    // instead of having no jumps for B and two long jumps for C.
+
+    if (blockB->numSuccessors() != 1)
+        return false;
+
+    if (blockB->numPredecessors() != 1)
+        return false;
+
+    if (blockB->successor(0).isRare())
+        return false;
+
+    BasicBlock* blockD = blockB->successor(0).block();
+    BasicBlock* blockA = blockB->predecessor(0);
+
+    if (blockA->numSuccessors() != 2)
+        return false;
+
+    BasicBlock* blockC;
+    if (blockA->successor(0).block() == blockB) {
+        if (blockA->successor(1).isRare())
+            return false;
+        blockC = blockA->successor(1).block();
+    } else if (blockA->successor(1).block() == blockB) {
+        if (blockA->successor(0).isRare())
+            return false;
+        blockC = blockA->successor(0).block();
+    } else
+        return false;
+
+    if (blockC->numSuccessors() != 1)
+        return false;
+
+    if (blockC->numPredecessors() != 1)
+        return false;
+
+    if (blockC->successor(0).block() != blockD)
+        return false;
+
+    if (!done.contains(blockD))
+        worklist.append(blockD);
+    if (!done.contains(blockC))
+        worklist.append(blockC);
+    return true;
+}
+
+static bool detectExclusiveSuccessor(BasicBlock* blockA, ChainWorklist& worklist, IndexSet<BasicBlock*>& done)
+{
+    //     A*       D
+    //  .--'--.     |
+    // |       |.---'
+    // B       C
+
+    // A* is the block we are currently looking at.
+
+    // It's better to use successor B as the fallthrough block,
+    // because C can still become the fallthrough block from the other predecessors.
+
+    if (blockA->numSuccessors() != 2)
+        return false;
+    if (blockA->successor(0).isRare())
+        return false;
+    if (blockA->successor(1).isRare())
+        return false;
+    if (blockA->successor(0).block()->frequency() != blockA->successor(1).block()->frequency())
+        return false;
+
+    BasicBlock* blockB = blockA->successor(0).block();
+    BasicBlock* blockC = blockA->successor(1).block();
+    if (blockB->numPredecessors() == 1
+        && blockC->numPredecessors() > 1) {
+        // Same frequency, with succ[0] having only one predecessor.
+        // and succ[1] having multiple predecessors.
+        // It is better to add succ[0] as last to get a fallthrough.
+        // Since except here there is no chance succ[0] can fallthrough, but succ[1] still can.
+        if (!done.contains(blockC))
+            worklist.append(blockC);
+        if (!done.contains(blockB))
+            worklist.append(blockB);
+        return true;
+    }
+
+    return false;
+}
+
 Vector<BasicBlock*> blocksInOptimizedOrder(Code& code)
 {
     Vector<BasicBlock*> blocksInOrder;
 
-    BlockWorklist fastWorklist;
-    SortedSuccessors sortedSuccessors;
     SortedSuccessors sortedSlowSuccessors;
+    SortedSuccessors sortedSuccessors;
+    ChainWorklist chainWorklist;
+    IndexSet<BasicBlock*> done;
 
     // We expect entrypoint lowering to have already happened.
     RELEASE_ASSERT(code.numEntrypoints());
@@ -96,13 +333,30 @@ Vector<BasicBlock*> blocksInOptimizedOrder(Code& code)
         appendSuccessor(code.entrypoint(i));
 
     // Always push the primary successor last so that it gets highest priority.
-    fastWorklist.push(code.entrypoint(0).block());
+    chainWorklist.append(code.entrypoint(0).block());
 
-    while (BasicBlock* block = fastWorklist.pop()) {
+    while (BasicBlock* block = chainWorklist.pop(done)) {
+        ASSERT(!done.contains(block));
+
+        done.add(block);
         blocksInOrder.append(block);
-        for (FrequentedBlock& successor : block->successors())
+
+        size_t size = chainWorklist.size();
+
+        if (!detectTriangleStructure(block, chainWorklist, done)
+            && !detectDiamondStructure(block, chainWorklist, done)
+            && !detectExclusiveSuccessor(block, chainWorklist, done)) {
+
+            for (FrequentedBlock& successor : block->successors()) {
+                if (!done.contains(successor.block()))
             appendSuccessor(successor);
-        sortedSuccessors.process(fastWorklist);
+            }
+        }
+        sortedSuccessors.process(chainWorklist);
+
+        // Detect if we added a successor. If not decide for a good candidate.
+        if (size == chainWorklist.size())
+            chainWorklist.markStartNewChain();
     }
 
     BlockWorklist slowWorklist;
@@ -110,16 +364,18 @@ Vector<BasicBlock*> blocksInOptimizedOrder(Code& code)
 
     while (BasicBlock* block = slowWorklist.pop()) {
         // We might have already processed this block.
-        if (fastWorklist.saw(block))
+        if (done.contains(block))
             continue;
+
+        done.add(block);
 
         blocksInOrder.append(block);
         for (BasicBlock* successor : block->successorBlocks())
-            sortedSuccessors.append(successor);
-        sortedSuccessors.process(slowWorklist);
+            sortedSlowSuccessors.append(successor);
+        sortedSlowSuccessors.process(slowWorklist);
     }
 
-    ASSERT(fastWorklist.isEmpty());
+    ASSERT(chainWorklist.isEmpty());
     ASSERT(slowWorklist.isEmpty());
 
     return blocksInOrder;
@@ -160,6 +416,7 @@ void optimizeBlockOrder(Code& code)
         // certainly won't cause any correctness issues.
 
         switch (branch.kind.opcode) {
+        case BranchOnFlags:
         case Branch8:
         case Branch32:
         case Branch64:

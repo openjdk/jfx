@@ -28,6 +28,7 @@
 #include "Event.h"
 #include "GPUError.h"
 #include "GPUUncapturedErrorEventInit.h"
+#include "JSDOMConvertNullable.h"
 #include "WebGPUUncapturedErrorEvent.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -36,13 +37,13 @@
 namespace WebCore {
 
 class GPUUncapturedErrorEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUUncapturedErrorEvent);
+    WTF_MAKE_TZONE_ALLOCATED(GPUUncapturedErrorEvent);
 public:
     virtual ~GPUUncapturedErrorEvent() = default;
 
     static Ref<GPUUncapturedErrorEvent> create(const AtomString& type, GPUUncapturedErrorEventInit&& gpuUncapturedErrorEventInitDict)
     {
-        return adoptRef(*new GPUUncapturedErrorEvent(type, WTFMove(gpuUncapturedErrorEventInitDict)));
+        return adoptRef(*new GPUUncapturedErrorEvent(type, WTF::move(gpuUncapturedErrorEventInitDict)));
     }
 
     GPUError error() const;

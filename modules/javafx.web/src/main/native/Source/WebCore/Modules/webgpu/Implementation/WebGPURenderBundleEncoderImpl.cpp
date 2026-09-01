@@ -41,7 +41,7 @@ namespace WebCore::WebGPU {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBundleEncoderImpl);
 
 RenderBundleEncoderImpl::RenderBundleEncoderImpl(WebGPUPtr<WGPURenderBundleEncoder>&& renderBundleEncoder, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(renderBundleEncoder))
+    : m_backing(WTF::move(renderBundleEncoder))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -91,7 +91,7 @@ void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindG
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
     auto backingOffsets = valueOrDefault(dynamicOffsets);
-    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTFMove(dynamicOffsets));
+    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTF::move(dynamicOffsets));
 }
 
 void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup*,
@@ -122,8 +122,7 @@ RefPtr<RenderBundle> RenderBundleEncoderImpl::finish(const RenderBundleDescripto
     auto label = descriptor.label.utf8();
 
     WGPURenderBundleDescriptor backingDescriptor {
-        nullptr,
-        label.data(),
+        .label = label.data(),
     };
 
     return RenderBundleImpl::create(adoptWebGPU(wgpuRenderBundleEncoderFinish(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);

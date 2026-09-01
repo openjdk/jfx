@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "PlatformLayerIdentifier.h"
-#include "Position.h"
-#include "TextIteratorBehavior.h"
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/Position.h>
+#include <WebCore/TextIteratorBehavior.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -116,7 +116,7 @@ bool positionBeforeOrAfterNodeIsCandidate(Node&);
 // -------------------------------------------------------------------------
 
 PositionRange positionsForRange(const SimpleRange&);
-WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange&);
+WEBCORE_EXPORT HashSet<Ref<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange&);
 WEBCORE_EXPORT SimpleRange adjustToVisuallyContiguousRange(const SimpleRange&);
 
 struct EnclosingLayerInfomation {
@@ -203,7 +203,7 @@ Ref<Element> createTabSpanElement(Document&, String&& tabText);
 Ref<Element> createBlockPlaceholderElement(Document&);
 
 Element* editableRootForPosition(const Position&, EditableType = ContentIsEditable);
-Element* unsplittableElementForPosition(const Position&);
+RefPtr<Element> unsplittableElementForPosition(const Position&);
 
 bool canMergeLists(Element* firstList, Element* secondList);
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +28,10 @@
 
 #if HAVE(SCENEKIT)
 
-#include "Model.h"
-#include "ModelPlayer.h"
-#include "ModelPlayerClient.h"
-#include "SceneKitModelLoaderClient.h"
+#include <WebCore/Model.h>
+#include <WebCore/ModelPlayer.h>
+#include <WebCore/ModelPlayerClient.h>
+#include <WebCore/SceneKitModelLoaderClient.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
@@ -40,7 +41,6 @@ OBJC_CLASS SCNMetalLayer;
 
 namespace WebCore {
 
-class ModelPlayerClient;
 class SceneKitModel;
 class SceneKitModelLoader;
 
@@ -49,19 +49,16 @@ public:
     static Ref<SceneKitModelPlayer> create(ModelPlayerClient&);
     virtual ~SceneKitModelPlayer();
 
-#if ENABLE(MODEL_PROCESS)
-    WebCore::ModelPlayerIdentifier identifier() const final;
-#endif
 private:
     SceneKitModelPlayer(ModelPlayerClient&);
 
     void updateScene();
 
     // ModelPlayer overrides.
+    ModelPlayerIdentifier identifier() const override;
     void load(Model&, LayoutSize) override;
+    void configureGraphicsLayer(GraphicsLayer&, ModelPlayerGraphicsLayerConfiguration&&) override;
     void sizeDidChange(LayoutSize) override;
-    CALayer *layer() override;
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() override;
     void enterFullscreen() override;
     void handleMouseDown(const LayoutPoint&, MonotonicTime) override;
     void handleMouseMove(const LayoutPoint&, MonotonicTime) override;
@@ -78,7 +75,7 @@ private:
     void hasAudio(CompletionHandler<void(std::optional<bool>&&)>&&) override;
     void isMuted(CompletionHandler<void(std::optional<bool>&&)>&&) override;
     void setIsMuted(bool, CompletionHandler<void(bool success)>&&) override;
-    Vector<RetainPtr<id>> accessibilityChildren() override;
+    ModelPlayerAccessibilityChildren accessibilityChildren() override;
 
     // SceneKitModelLoaderClient overrides.
     virtual void didFinishLoading(SceneKitModelLoader&, Ref<SceneKitModel>) override;
@@ -90,9 +87,7 @@ private:
     RefPtr<SceneKitModel> m_model;
 
     RetainPtr<SCNMetalLayer> m_layer;
-#if ENABLE(MODEL_PROCESS)
-    WebCore::ModelPlayerIdentifier m_id;
-#endif
+    ModelPlayerIdentifier m_id;
 };
 
 }

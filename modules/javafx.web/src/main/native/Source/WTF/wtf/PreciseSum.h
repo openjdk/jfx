@@ -37,7 +37,6 @@ struct SmallAccumulator final {
         Vector<int64_t> &&chunk, const int addsUntilPropagate, const int64_t inf,
         const int64_t nan, const size_t sizeCount, const bool hasPosNumber
     );
-    ~SmallAccumulator() = default;
 
     Vector<int64_t> chunk; // Chunks making up small accumulator
     int addsUntilPropagate; // Number of remaining adds before carry
@@ -47,7 +46,7 @@ struct SmallAccumulator final {
     bool hasPosNumber; // check if added values have at least one positive number
 
     int carryPropagate();
-    void addInfNan(int64_t ivalue);
+    COLD void addInfNan(int64_t ivalue);
     inline void add1NoCarry(double value);
     ALWAYS_INLINE void incrementWhenValueAdded(double value);
 };
@@ -60,10 +59,9 @@ struct LargeAccumulator final {
     SmallAccumulator sacc; // The small accumulator to condense into
 
     explicit LargeAccumulator();
-    ~LargeAccumulator() = default;
 
     void addLchunkToSmall(int_fast16_t ix);
-    void largeAddValueInfNan(int_fast16_t ix, uint64_t uintv);
+    COLD void largeAddValueInfNan(int_fast16_t ix, uint64_t uintv);
     void transferToSmall();
 };
 
@@ -80,7 +78,6 @@ class XsumSmall final : public XsumInterface {
 public:
     explicit XsumSmall();
     explicit XsumSmall(SmallAccumulator sacc);
-    ~XsumSmall() = default;
 
     void addList(const std::span<const double> vec) override;
     void add(double value) override;
@@ -93,7 +90,6 @@ private:
 class XsumLarge final : public XsumInterface {
 public:
     explicit XsumLarge();
-    ~XsumLarge() = default;
 
     void addList(const std::span<const double> vec) override;
     void add(double value) override;
@@ -115,7 +111,6 @@ class PreciseSum final {
 public:
     explicit PreciseSum()
         : m_xsum { T { } } { }
-    ~PreciseSum() = default;
 
     void addList(const std::span<const double> vec)
     {

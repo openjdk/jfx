@@ -105,24 +105,24 @@ WebVTTParser::WebVTTParser(WebVTTParserClient& client, Document& document)
 
 Vector<Ref<WebVTTCueData>> WebVTTParser::takeCues()
 {
-    return WTFMove(m_cuelist);
+    return WTF::move(m_cuelist);
 }
 
 Vector<Ref<VTTRegion>> WebVTTParser::takeRegions()
 {
-    return WTFMove(m_regionList);
+    return WTF::move(m_regionList);
 }
 
 Vector<String> WebVTTParser::takeStyleSheets()
 {
-    return WTFMove(m_styleSheets);
+    return WTF::move(m_styleSheets);
 }
 
 void WebVTTParser::parseFileHeader(String&& data)
 {
     m_state = Initial;
     m_lineReader.reset();
-    m_lineReader.append(WTFMove(data));
+    m_lineReader.append(WTF::move(data));
     parse();
     if (!m_regionList.isEmpty())
         m_client.newRegionsParsed();
@@ -152,7 +152,7 @@ void WebVTTParser::parseCueData(const ISOWebVTTCue& data)
     if (WebVTTParser::collectTimeStamp(data.originalStartTime(), originalStartTime))
         cue->setOriginalStartTime(originalStartTime);
 
-    m_cuelist.append(WTFMove(cue));
+    m_cuelist.append(WTF::move(cue));
     m_client.newCuesParsed();
 }
 
@@ -236,7 +236,7 @@ void WebVTTParser::parse()
 void WebVTTParser::fileFinished()
 {
     ASSERT(m_state != Finished);
-    parseBytes("\n\n"_span8);
+    parseBytes(byteCast<uint8_t>("\n\n"_span));
     m_state = Finished;
 }
 
@@ -288,7 +288,7 @@ WebVTTParser::ParseState WebVTTParser::collectWebVTTBlock(const String& line)
         if (!m_styleSheets.isEmpty())
             m_client.newStyleSheetsParsed();
         if (!m_previousLine.isEmpty() && !m_previousLine.contains("-->"_s))
-            m_currentId = AtomString { m_previousLine };
+            m_currentId = m_previousLine;
 
         return state;
     }
@@ -399,10 +399,10 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
             return true;
 
         const auto& selectorList = styleRule->selectorList();
-        if (selectorList.listSize() != 1)
+        if (selectorList.size() != 1)
             return true;
-        auto selector = selectorList.selectorAt(0);
-        auto selectorText = selector->selectorText();
+        auto& selector = selectorList.selectorAt(0);
+        auto selectorText = selector.selectorText();
 
         bool isCue = selectorText == "::cue"_s || selectorText.startsWith("::cue("_s);
         if (!isCue)
@@ -430,7 +430,7 @@ WebVTTParser::ParseState WebVTTParser::collectCueId(const String& line)
 {
     if (line.contains("-->"_s))
         return collectTimingsAndSettings(line);
-    m_currentId = AtomString { line };
+    m_currentId = line;
     return TimingsAndSettings;
 }
 
@@ -567,13 +567,13 @@ void WebVTTParser::createNewCue()
     cue->setId(m_currentId);
     cue->setSettings(m_currentSettings);
 
-    m_cuelist.append(WTFMove(cue));
+    m_cuelist.append(WTF::move(cue));
     m_client.newCuesParsed();
 }
 
 void WebVTTParser::resetCueValues()
 {
-    m_currentId = emptyAtom();
+    m_currentId = emptyString();
     m_currentSettings = emptyString();
     m_currentStartTime = MediaTime::zeroTime();
     m_currentEndTime = MediaTime::zeroTime();
@@ -724,7 +724,7 @@ void WebVTTTreeBuilder::constructTreeFromToken(Document& document)
             child->setAttributeWithoutSynchronization(WebVTTElement::langAttributeName(), m_languageStack.last());
         }
         protectedCurrentNode()->parserAppendChild(child);
-        m_currentNode = WTFMove(child);
+        m_currentNode = WTF::move(child);
         m_typeStack.append(nodeType);
         break;
     }

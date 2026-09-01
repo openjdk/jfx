@@ -27,15 +27,16 @@
 #include "config.h"
 #include "HTMLParserScheduler.h"
 
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "ElementInlines.h"
 #include "HTMLDocumentParser.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "Page.h"
 #include "ScriptController.h"
 #include "ScriptElement.h"
 #include <wtf/TZoneMallocInlines.h>
+#include "FrameDestructionObserverInlines.h"
 
 namespace WebCore {
 

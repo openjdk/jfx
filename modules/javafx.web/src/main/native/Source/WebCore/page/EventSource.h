@@ -43,22 +43,23 @@
 namespace WebCore {
 
 class MessageEvent;
+class SecurityOrigin;
 class TextResourceDecoder;
 class ThreadableLoader;
 template<typename> class ExceptionOr;
 
 class EventSource final : public RefCounted<EventSource>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventSource);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventSource);
+    WTF_MAKE_TZONE_ALLOCATED(EventSource);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     struct Init {
         bool withCredentials;
     };
     static ExceptionOr<Ref<EventSource>> create(ScriptExecutionContext&, const String& url, const Init&);
     virtual ~EventSource();
+
+    // EventTarget, ThreadableLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     USING_CAN_MAKE_WEAKPTR(EventTarget);
 
@@ -78,7 +79,8 @@ private:
     EventSource(ScriptExecutionContext&, const URL&, const Init&);
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::EventSource; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -130,7 +132,7 @@ private:
     String m_currentlyParsedEventId;
     String m_lastEventId;
     uint64_t m_reconnectDelay { defaultReconnectDelay };
-    String m_eventStreamOrigin;
+    RefPtr<SecurityOrigin> m_eventStreamOrigin;
 };
 
 inline const String& EventSource::url() const
@@ -149,3 +151,5 @@ inline EventSource::State EventSource::readyState() const
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(EventSource)

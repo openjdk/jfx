@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "TextManipulationItemIdentifier.h"
-#include "TextManipulationToken.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/TextManipulationItemIdentifier.h>
+#include <WebCore/TextManipulationToken.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 

@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "CollectionIndexCacheInlines.h"
-#include "LiveNodeList.h"
-#include "TreeScopeInlines.h"
+#include <WebCore/CollectionIndexCacheInlines.h>
+#include <WebCore/LiveNodeList.h>
+#include <WebCore/NodeInlines.h>
+#include <WebCore/TreeScopeInlines.h>
 
 namespace WebCore {
 
@@ -55,10 +56,25 @@ ALWAYS_INLINE bool shouldInvalidateTypeOnAttributeChange(NodeListInvalidationTyp
     return false;
 }
 
+inline void LiveNodeList::invalidateCache() const
+{
+    invalidateCacheForDocument(protectedDocument().get());
+}
+
 ALWAYS_INLINE void LiveNodeList::invalidateCacheForAttribute(const QualifiedName& attributeName) const
 {
     if (shouldInvalidateTypeOnAttributeChange(m_invalidationType, attributeName))
         invalidateCache();
+}
+
+inline Document& LiveNodeList::document() const
+{
+    return m_ownerNode->document();
+}
+
+inline Ref<Document> LiveNodeList::protectedDocument() const
+{
+    return document();
 }
 
 inline ContainerNode& LiveNodeList::rootNode() const
@@ -68,56 +84,69 @@ inline ContainerNode& LiveNodeList::rootNode() const
     return m_ownerNode;
 }
 
-template <class NodeListType>
-unsigned CachedLiveNodeList<NodeListType>::length() const
+template <class NodeListType, CollectionTraversalType traversalType>
+CachedLiveNodeList<NodeListType, traversalType>::CachedLiveNodeList(ContainerNode& ownerNode, NodeListInvalidationType invalidationType)
+    : LiveNodeList(ownerNode, invalidationType)
+{
+}
+
+template <class NodeListType, CollectionTraversalType traversalType>
+CachedLiveNodeList<NodeListType, traversalType>::~CachedLiveNodeList()
+{
+    if (m_indexCache.hasValidCache())
+        protectedDocument()->unregisterNodeListForInvalidation(*this);
+}
+
+template <class NodeListType, CollectionTraversalType traversalType>
+unsigned CachedLiveNodeList<NodeListType, traversalType>::length() const
 {
     return m_indexCache.nodeCount(nodeList());
 }
 
-template <class NodeListType>
-Node* CachedLiveNodeList<NodeListType>::item(unsigned offset) const
+template <class NodeListType, CollectionTraversalType traversalType>
+Node* CachedLiveNodeList<NodeListType, traversalType>::item(unsigned offset) const
 {
     return m_indexCache.nodeAt(nodeList(), offset);
 }
 
-template <class NodeListType>
-auto CachedLiveNodeList<NodeListType>::collectionBegin() const -> Iterator
+template <class NodeListType, CollectionTraversalType traversalType>
+auto CachedLiveNodeList<NodeListType, traversalType>::collectionBegin() const -> Iterator
 {
     return Traversal::begin(nodeList(), rootNode());
 }
 
-template <class NodeListType>
-auto CachedLiveNodeList<NodeListType>::collectionLast() const -> Iterator
+template <class NodeListType, CollectionTraversalType traversalType>
+auto CachedLiveNodeList<NodeListType, traversalType>::collectionLast() const -> Iterator
 {
     return Traversal::last(nodeList(), rootNode());
 }
 
-template <class NodeListType>
-void CachedLiveNodeList<NodeListType>::collectionTraverseForward(Iterator& current, unsigned count, unsigned& traversedCount) const
+template <class NodeListType, CollectionTraversalType traversalType>
+void CachedLiveNodeList<NodeListType, traversalType>::collectionTraverseForward(Iterator& current, unsigned count, unsigned& traversedCount) const
 {
     Traversal::traverseForward(nodeList(), current, count, traversedCount);
 }
 
-template <class NodeListType>
-void CachedLiveNodeList<NodeListType>::collectionTraverseBackward(Iterator& current, unsigned count) const
+template <class NodeListType, CollectionTraversalType traversalType>
+void CachedLiveNodeList<NodeListType, traversalType>::collectionTraverseBackward(Iterator& current, unsigned count) const
 {
     Traversal::traverseBackward(nodeList(), current, count);
 }
 
-template <class NodeListType>
-bool CachedLiveNodeList<NodeListType>::collectionCanTraverseBackward() const
+template <class NodeListType, CollectionTraversalType traversalType>
+bool CachedLiveNodeList<NodeListType, traversalType>::collectionCanTraverseBackward() const
 {
     return true;
 }
 
-template <class NodeListType>
-void CachedLiveNodeList<NodeListType>::willValidateIndexCache() const
+template <class NodeListType, CollectionTraversalType traversalType>
+void CachedLiveNodeList<NodeListType, traversalType>::willValidateIndexCache() const
 {
     protectedDocument()->registerNodeListForInvalidation(const_cast<CachedLiveNodeList&>(*this));
 }
 
-template <class NodeListType>
-void CachedLiveNodeList<NodeListType>::invalidateCacheForDocument(Document& document) const
+template <class NodeListType, CollectionTraversalType traversalType>
+void CachedLiveNodeList<NodeListType, traversalType>::invalidateCacheForDocument(Document& document) const
 {
     if (m_indexCache.hasValidCache()) {
         document.unregisterNodeListForInvalidation(const_cast<NodeListType&>(nodeList()));

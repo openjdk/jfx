@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
 #include "ReadableStreamSource.h"
+#include <WebCore/ActiveDOMObject.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -35,14 +35,40 @@ class ArrayBuffer;
 
 namespace WebCore {
 
+class DOMPromise;
 class FetchBodyOwner;
+class ReadableByteStreamController;
 
-class FetchBodySource final : public RefCountedReadableStreamSource {
+class FetchBodySource final : public RefCounted<FetchBodySource> {
 public:
-    FetchBodySource(FetchBodyOwner&);
-    virtual ~FetchBodySource();
+    static std::pair<Ref<FetchBodySource>, Ref<RefCountedReadableStreamSource>> createNonByteSource(FetchBodyOwner&);
+    static Ref<FetchBodySource> createByteSource(FetchBodyOwner&);
 
-    bool enqueue(RefPtr<JSC::ArrayBuffer>&& chunk) { return controller().enqueue(WTFMove(chunk)); }
+    ~FetchBodySource();
+
+    bool enqueue(RefPtr<JSC::ArrayBuffer>&&);
+    void close();
+    void error(const Exception&);
+
+    bool isPulling() const;
+    bool isCancelling() const;
+
+    void resolvePullPromise();
+    void detach();
+
+    void setByteController(ReadableByteStreamController&);
+    Ref<DOMPromise> pull(JSDOMGlobalObject&, ReadableByteStreamController&);
+    Ref<DOMPromise> cancel(JSDOMGlobalObject&, ReadableByteStreamController&, std::optional<JSC::JSValue>&&);
+
+private:
+    class NonByteSource;
+    FetchBodySource(FetchBodyOwner&, RefPtr<NonByteSource>&& = { });
+
+    class NonByteSource : public RefCountedReadableStreamSource {
+    public:
+        static Ref<NonByteSource> create(FetchBodyOwner& owner) { return adoptRef(*new NonByteSource(owner)); }
+
+        bool enqueue(RefPtr<JSC::ArrayBuffer>&& chunk) { return controller().enqueue(WTF::move(chunk)); }
     void close();
     void error(const Exception&);
 
@@ -51,10 +77,12 @@ public:
     void resolvePullPromise() { pullFinished(); }
     void detach() { m_bodyOwner = nullptr; }
 
-private:
+    private:
+        explicit NonByteSource(FetchBodyOwner&);
+
     void doStart() final;
     void doPull() final;
-    void doCancel() final;
+        void doCancel(JSC::JSValue) final;
     void setActive() final;
     void setInactive() final;
 
@@ -65,6 +93,16 @@ private:
     bool m_isClosed { false };
 #endif
     RefPtr<ActiveDOMObject::PendingActivity<FetchBodyOwner>> m_pendingActivity;
+    };
+
+    WeakPtr<FetchBodyOwner> m_bodyOwner;
+    bool m_isCancelling { false };
+    bool m_isPulling { false };
+
+    const RefPtr<NonByteSource> m_nonByteSource;
+
+    WeakPtr<ReadableByteStreamController> m_byteController;
+    RefPtr<DeferredPromise> m_pullPromise;
 };
 
 } // namespace WebCore

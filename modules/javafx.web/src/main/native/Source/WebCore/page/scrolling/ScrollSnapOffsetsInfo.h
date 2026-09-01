@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "LayoutRect.h"
-#include "LayoutUnit.h"
-#include "NodeIdentifier.h"
-#include "ScrollTypes.h"
-#include "StyleScrollSnapPoints.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/LayoutUnit.h>
+#include <WebCore/NodeIdentifier.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/ScrollTypes.h>
 #include <utility>
 #include <wtf/Vector.h>
 
@@ -54,7 +54,7 @@ struct SnapOffset {
 template <typename UnitType, typename RectType>
 struct ScrollSnapOffsetsInfo {
     WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ScrollSnapOffsetsInfo);
-    ScrollSnapStrictness strictness { ScrollSnapStrictness::None };
+    std::optional<ScrollSnapStrictness> strictness { };
     Vector<SnapOffset<UnitType>> horizontalSnapOffsets;
     Vector<SnapOffset<UnitType>> verticalSnapOffsets;
     Vector<RectType> snapAreas;
@@ -103,6 +103,7 @@ WEBCORE_EXPORT std::pair<LayoutUnit, std::optional<unsigned>> LayoutScrollSnapOf
 // Update the snap offsets for this scrollable area, given the RenderBox of the scroll container, the RenderStyle
 // which defines the scroll-snap properties, and the viewport rectangle with the origin at the top left of
 // the scrolling container's border box.
+bool hasScrollSnappedBoxes(const RenderBox& scrollingElementBox);
 void updateSnapOffsetsForScrollableArea(ScrollableArea&, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode, Element*);
 
 template <typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, SnapOffset<T> offset)

@@ -41,8 +41,13 @@ public:
     static NavigatorWebDriver* from(Navigator*);
     static bool webdriver(const Navigator&);
 private:
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorWebDriver"_s; }
+    bool isNavigatorWebDriver() const final { return true; }
     static bool isControlledByAutomation(const Navigator&);
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorWebDriver)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorWebDriver(); }
+SPECIALIZE_TYPE_TRAITS_END()

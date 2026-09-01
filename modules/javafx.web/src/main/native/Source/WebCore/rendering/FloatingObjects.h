@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "LegacyRootInlineBox.h"
+#include <WebCore/LegacyRootInlineBox.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -52,7 +52,7 @@ public:
     FloatingObject(RenderBox&, Type, const LayoutRect&, const LayoutSize&, bool shouldPaint, bool isDescendant, bool overflowClipped);
 
     Type type() const { return static_cast<Type>(m_type); }
-    RenderBox& renderer() const { ASSERT(m_renderer); return *m_renderer; }
+    RenderBox* renderer() const { ASSERT(m_renderer); return m_renderer.get(); }
 #if ENABLE(TREE_DEBUGGING)
     bool hasRenderer() const { return !!m_renderer; }
 #endif
@@ -127,8 +127,8 @@ struct FloatingObjectHashFunctions {
     using T = std::unique_ptr<FloatingObject>;
     using PtrType = FloatingObject*;
 
-    static unsigned hash(const FloatingObject* key) { return PtrHash<RenderBox*>::hash(&key->renderer()); }
-    static bool equal(const FloatingObject* a, const FloatingObject* b) { return &a->renderer() == &b->renderer(); }
+    static unsigned hash(const FloatingObject* key) { return PtrHash<RenderBox*>::hash(key->renderer()); }
+    static bool equal(const FloatingObject* a, const FloatingObject* b) { return a->renderer() == b->renderer(); }
     static const bool safeToCompareToEmptyOrDeleted = true;
 
     static unsigned hash(const T& key) { return hash(WTF::getPtr(key)); }
@@ -138,7 +138,7 @@ struct FloatingObjectHashFunctions {
 };
 struct FloatingObjectHashTranslator {
     static unsigned hash(const RenderBox& key) { return PtrHash<const RenderBox*>::hash(&key); }
-    static bool equal(const std::unique_ptr<FloatingObject>& a, const RenderBox& b) { return &a->renderer() == &b; }
+    static bool equal(const std::unique_ptr<FloatingObject>& a, const RenderBox& b) { return a->renderer() == &b; }
 };
 
 typedef ListHashSet<std::unique_ptr<FloatingObject>, FloatingObjectHashFunctions> FloatingObjectSet;

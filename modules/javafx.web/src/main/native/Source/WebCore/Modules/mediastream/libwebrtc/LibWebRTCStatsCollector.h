@@ -49,7 +49,7 @@ void initializeRTCStatsReportBackingMap(RTCStatsReport&);
 class LibWebRTCStatsCollector : public webrtc::RTCStatsCollectorCallback {
 public:
     using CollectorCallback = CompletionHandler<void(const webrtc::scoped_refptr<const webrtc::RTCStatsReport>&)>;
-    static webrtc::scoped_refptr<LibWebRTCStatsCollector> create(CollectorCallback&& callback) { return webrtc::make_ref_counted<LibWebRTCStatsCollector>(WTFMove(callback)); }
+    static webrtc::scoped_refptr<LibWebRTCStatsCollector> create(CollectorCallback&& callback) { return webrtc::make_ref_counted<LibWebRTCStatsCollector>(WTF::move(callback)); }
 
     static Ref<RTCStatsReport> createReport(const webrtc::scoped_refptr<const webrtc::RTCStatsReport>&);
 

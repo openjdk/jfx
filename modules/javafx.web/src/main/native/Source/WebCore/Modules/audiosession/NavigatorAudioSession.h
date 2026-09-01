@@ -42,15 +42,20 @@ public:
     NavigatorAudioSession();
     ~NavigatorAudioSession();
 
-    static RefPtr<DOMAudioSession> audioSession(Navigator&);
+    static Ref<DOMAudioSession> audioSession(Navigator&);
 
 private:
     static NavigatorAudioSession* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorAudioSession"_s; }
+    bool isNavigatorAudioSession() const final { return true; }
 
-    RefPtr<DOMAudioSession> m_audioSession;
+    const RefPtr<DOMAudioSession> m_audioSession;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorAudioSession)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorAudioSession(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(DOM_AUDIO_SESSION)

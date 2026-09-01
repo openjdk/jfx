@@ -24,18 +24,19 @@
 
 #pragma once
 
-#include "StyleLengthWrapper.h"
+#include <WebCore/StyleLengthWrapper.h>
 
 namespace WebCore {
 namespace Style {
 
 // <'text-underline-offset'> = auto | <length-percentage>
 // https://drafts.csswg.org/css-text-decor-4/#propdef-text-underline-offset
-struct TextUnderlineOffset : LengthWrapperBase<LengthPercentage<>, CSS::Keyword::Auto> {
+struct TextUnderlineOffset : LengthWrapperBase<LengthPercentage<CSS::AllUnzoomed>, CSS::Keyword::Auto> {
     using Base::Base;
 
+    ALWAYS_INLINE bool isAuto() const { return holdsAlternative<CSS::Keyword::Auto>(); }
+
     float resolve(const RenderStyle&, float autoValue = 0.0f) const;
-    float resolve(float fontSize, float autoValue = 0.0f) const;
 };
 
 // MARK: - Blending

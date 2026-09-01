@@ -163,7 +163,7 @@ void GeolocationController::activityStateDidChange(OptionSet<ActivityState> oldA
     if (!m_page->isVisible())
         return;
 
-    auto pendedPermissionRequests = WTFMove(m_pendingPermissionRequest);
+    auto pendedPermissionRequests = WTF::move(m_pendingPermissionRequest);
     Ref client = this->client();
     for (auto& permissionRequest : pendedPermissionRequests)
         client->requestPermission(permissionRequest.get());

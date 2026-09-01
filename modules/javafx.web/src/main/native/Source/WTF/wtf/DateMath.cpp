@@ -73,6 +73,7 @@
 #include <wtf/DateMath.h>
 
 #include <algorithm>
+#include <charconv>
 #include <limits>
 #include <stdint.h>
 #include <time.h>
@@ -133,8 +134,8 @@ static void appendTwoDigitNumber(StringBuilder& builder, int number)
 {
     ASSERT(number >= 0);
     ASSERT(number < 100);
-    builder.append(static_cast<LChar>('0' + number / 10));
-    builder.append(static_cast<LChar>('0' + number % 10));
+    builder.append(static_cast<Latin1Character>('0' + number / 10));
+    builder.append(static_cast<Latin1Character>('0' + number % 10));
 }
 
 static inline double msToMilliseconds(double ms)
@@ -371,10 +372,11 @@ static inline double ymdhmsToMilliseconds(int year, long mon, long day, long hou
 
 // We follow the recommendation of RFC 2822 to consider all
 // obsolete time zones not listed here equivalent to "-0000".
-static constexpr struct KnownZone {
+struct KnownZone {
     ASCIILiteral tzName;
     int tzOffset;
-} knownZones[] = {
+};
+static constexpr auto knownZones = std::to_array<KnownZone>({
     { "ut"_s, 0 },
     { "gmt"_s, 0 },
     { "est"_s, -300 },
@@ -385,9 +387,9 @@ static constexpr struct KnownZone {
     { "mdt"_s, -360 },
     { "pst"_s, -480 },
     { "pdt"_s, -420 }
-};
+});
 
-inline static void skipSpacesAndComments(std::span<const LChar>& s)
+inline static void skipSpacesAndComments(std::span<const Latin1Character>& s)
 {
     int nesting = 0;
     while (!s.empty()) {
@@ -405,12 +407,12 @@ inline static void skipSpacesAndComments(std::span<const LChar>& s)
 }
 
 // returns 0-11 (Jan-Dec); -1 on failure
-static int findMonth(std::span<const LChar> monthStr)
+static int findMonth(std::span<const Latin1Character> monthStr)
 {
     if (monthStr.size() < 3)
             return -1;
 
-    std::array<LChar, 3> needle;
+    std::array<Latin1Character, 3> needle;
     for (unsigned i = 0; i < 3; ++i)
         needle[i] = toASCIILower(monthStr[i]);
     constexpr auto haystack = "janfebmaraprmayjunjulaugsepoctnovdec"_span;
@@ -421,37 +423,41 @@ static int findMonth(std::span<const LChar> monthStr)
     return -1;
 }
 
-static bool parseInt(std::span<const LChar>& string, int base, int* result)
+template<typename T, typename ValidateLongLambda>
+static bool safeStringToInteger(std::span<const Latin1Character>& string, int base, const ValidateLongLambda& validateResult, T* result)
 {
-    char* stopPosition;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    long longResult = strtol(byteCast<char>(string.data()), &stopPosition, base);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    // Avoid the use of errno as it is not available on Windows CE
-    if (byteCast<char>(string.data()) == stopPosition || longResult <= std::numeric_limits<int>::min() || longResult >= std::numeric_limits<int>::max())
+    auto charSpan = byteCast<char>(string);
+    // strtol() skips leading whitespace ('\t', '\n', '\v', '\f', '\r', ' ') while std::from_chars() does not.
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(charSpan);
+    // strtol() skips leading '+' sign.
+    skipExactly(charSpan, '+');
+    long value;
+    auto [ptr, ec] = std::from_chars(std::to_address(charSpan.begin()), std::to_address(charSpan.end()), value, base);
+    if (ec != std::errc { } || !validateResult(value))
         return false;
-    skip(string, stopPosition - byteCast<char>(string.data()));
-    *result = longResult;
+    string = byteCast<Latin1Character>(charSpan.subspan(ptr - std::to_address(charSpan.begin())));
+    *result = static_cast<T>(value);
     return true;
 }
 
-static bool parseLong(std::span<const LChar>& string, int base, long* result)
+static bool parseInt(std::span<const Latin1Character>& string, int base, int* result)
 {
-    char* stopPosition;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    *result = strtol(byteCast<char>(string.data()), &stopPosition, base);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    // Avoid the use of errno as it is not available on Windows CE
-    if (byteCast<char>(string.data()) == stopPosition || *result == std::numeric_limits<long>::min() || *result == std::numeric_limits<long>::max())
-        return false;
-    skip(string, stopPosition - byteCast<char>(string.data()));
-    return true;
+    return safeStringToInteger(string, base, [](long value) {
+        return value > std::numeric_limits<int>::min() && value < std::numeric_limits<int>::max();
+    }, result);
+}
+
+static bool parseLong(std::span<const Latin1Character>& string, int base, long* result)
+{
+    return safeStringToInteger(string, base, [](long value) {
+        return value != std::numeric_limits<long>::min() && value != std::numeric_limits<long>::max();
+    }, result);
 }
 
 // Parses a date with the format YYYY[-MM[-DD]].
 // Year parsing is lenient, allows any number of digits, and +/-.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& year, long& month, long& day, bool& isSingleDigit)
+static bool parseES5DatePortion(std::span<const Latin1Character>& currentPosition, int& year, long& month, long& day, bool& isSingleDigit)
 {
     // This is a bit more lenient on the year string than ES5 specifies:
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
@@ -497,7 +503,7 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
 // Parses a time with the format HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)].
 // Fractional seconds parsing is lenient, allows any number of digits.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds, bool hasTSymbol)
+static bool parseES5TimePortion(std::span<const Latin1Character>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds, bool hasTSymbol)
 {
     isLocalTime = false;
 
@@ -613,7 +619,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     return true;
 }
 
-double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
+double parseES5Date(std::span<const Latin1Character> dateString, bool& isLocalTime)
 {
     isLocalTime = false;
 
@@ -655,6 +661,9 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
     if (!dateString.empty())
         return std::numeric_limits<double>::quiet_NaN();
 
+    if (isSingleDigit)
+        isLocalTime = true;
+
     // A few of these checks could be done inline above, but since many of them are interrelated
     // we would be sacrificing readability to "optimize" the (presumably less common) failure path.
     if (month < 1 || month > 12)
@@ -680,7 +689,7 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
 }
 
 // Odd case where 'exec' is allowed to be 0, to accomodate a caller in WebCore.
-double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
+double parseDate(std::span<const Latin1Character> dateString, bool& isLocalTime)
 {
     isLocalTime = true;
     int offset = 0;
@@ -968,10 +977,13 @@ double parseDate(std::span<const LChar> dateString, bool& isLocalTime)
     }
     ASSERT(year);
 
+    if (day <= 0 || day > 31)
+        return std::numeric_limits<double>::quiet_NaN();
+
     return ymdhmsToMilliseconds(year.value(), month + 1, day, hour, minute, second, 0) - offset * (secondsPerMinute * msPerSecond);
 }
 
-double parseDate(std::span<const LChar> dateString)
+double parseDate(std::span<const Latin1Character> dateString)
 {
     bool isLocalTime;
     double value = parseDate(dateString, isLocalTime);
@@ -1033,7 +1045,7 @@ bool setTimeZoneOverride(StringView timeZone)
 
     {
         Locker locker { innerTimeZoneOverrideLock };
-        innerTimeZoneOverride() = WTFMove(*canonicalBuffer);
+        innerTimeZoneOverride() = WTF::move(*canonicalBuffer);
     }
     return true;
 }

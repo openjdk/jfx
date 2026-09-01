@@ -34,7 +34,6 @@
 #include <mach/task.h>
 #include <mach/task_info.h>
 #endif
-#include "pas_log.h"
 
 #if PAS_OS(DARWIN)
 /* This is copied from dyld_process_info_internal.h

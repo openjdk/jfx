@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ScrollTimelineOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ScrollTimelineOptions {
     Element? source;
     ScrollAxis axis = "block";
 };

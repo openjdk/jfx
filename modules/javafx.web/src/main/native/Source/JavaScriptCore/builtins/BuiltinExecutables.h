@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "ExecutableInfo.h"
-#include "JSCBuiltins.h"
-#include "ParserModes.h"
-#include "SourceCode.h"
-#include "Weak.h"
-#include "WeakHandleOwner.h"
+#include <JavaScriptCore/ExecutableInfo.h>
+#include <JavaScriptCore/JSCBuiltins.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/SourceCode.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakHandleOwner.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {

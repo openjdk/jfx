@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "LegacyInlineFlowBox.h"
-#include "RenderObject.h"
+#include <WebCore/LegacyInlineFlowBox.h>
+#include <WebCore/RenderObject.h>
 
 namespace WebCore {
 

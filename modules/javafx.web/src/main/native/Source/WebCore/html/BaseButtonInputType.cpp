@@ -32,8 +32,10 @@
 #include "config.h"
 #include "BaseButtonInputType.h"
 
+#include "AXObjectCache.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "NodeDocument.h"
 #include "RenderButton.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -58,7 +60,7 @@ RenderPtr<RenderElement> BaseButtonInputType::createInputRenderer(RenderStyle&& 
 {
     ASSERT(element());
     // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
-    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderButton>(*protectedElement(), WTFMove(style));
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderButton>(*protectedElement(), WTF::move(style));
 }
 
 bool BaseButtonInputType::storesValueSeparateFromAttribute()
@@ -68,8 +70,12 @@ bool BaseButtonInputType::storesValueSeparateFromAttribute()
 
 void BaseButtonInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
-    ASSERT(element());
-    protectedElement()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+    RefPtr element = this->element();
+    ASSERT(element);
+    element->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+
+    if (CheckedPtr cache = element->protectedDocument()->existingAXObjectCache())
+        cache->valueChanged(*element);
 }
 
 bool BaseButtonInputType::dirAutoUsesValue() const

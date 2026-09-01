@@ -21,16 +21,16 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "MatchResult.h"
-#include "RegExpKey.h"
-#include "Structure.h"
-#include "Yarr.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/MatchResult.h>
+#include <JavaScriptCore/RegExpKey.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/Yarr.h>
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(YARR_JIT)
-#include "YarrJIT.h"
+#include <JavaScriptCore/YarrJIT.h>
 #endif
 
 namespace JSC {

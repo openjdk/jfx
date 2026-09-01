@@ -24,8 +24,8 @@
  */
 #pragma once
 
-#include "DeferredWorkTimer.h"
-#include "JSPromise.h"
+#include <JavaScriptCore/DeferredWorkTimer.h>
+#include <JavaScriptCore/JSPromise.h>
 #include <wtf/Condition.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
@@ -54,13 +54,19 @@ public:
         return m_vm;
     }
 
+    JSGlobalObject* globalObject() const
+    {
+        ASSERT(m_isAsync);
+        return m_globalObject;
+    }
+
     Condition& condition()
     {
         ASSERT(!m_isAsync);
         return m_condition;
     }
 
-    RefPtr<DeferredWorkTimer::TicketData> ticket(const AbstractLocker&) const
+    RefPtr<DeferredWorkTimer::Ticket> ticket(const AbstractLocker&) const
     {
         ASSERT(m_isAsync);
         return m_ticket.get();
@@ -75,7 +81,7 @@ public:
     void setTimer(const AbstractLocker&, Ref<RunLoop::DispatchTimer>&& timer)
     {
         ASSERT(m_isAsync);
-        m_timer = WTFMove(timer);
+        m_timer = WTF::move(timer);
     }
 
     bool hasTimer(const AbstractLocker&)
@@ -101,7 +107,12 @@ public:
 
 private:
     VM* m_vm { nullptr };
-    ThreadSafeWeakPtr<DeferredWorkTimer::TicketData> m_ticket { nullptr };
+    // Cached at construction to avoid a cross-VM race: unregister(JSGlobalObject*) runs on
+    // one VM's sweep thread; reading ticket->target()->globalObject() would race with another
+    // VM's GC End phase freeing m_dependencies via cancelAndClear(). Written before the Waiter
+    // is added to any list, so readers acquiring list->lock always see the completed write.
+    JSGlobalObject* m_globalObject { nullptr };
+    ThreadSafeWeakPtr<DeferredWorkTimer::Ticket> m_ticket { nullptr };
     RefPtr<RunLoop::DispatchTimer> m_timer { nullptr };
     Condition m_condition;
     bool m_isAsync { false };

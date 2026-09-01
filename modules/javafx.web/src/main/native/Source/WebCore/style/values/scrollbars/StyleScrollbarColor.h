@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "StyleColor.h"
+#include <WebCore/StyleColor.h>
 #include <wtf/Markable.h>
 
 namespace WebCore {

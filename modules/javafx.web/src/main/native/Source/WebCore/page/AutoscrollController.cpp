@@ -151,10 +151,10 @@ void AutoscrollController::updateAutoscrollRenderer()
     m_autoscrollRenderer = WeakPtr { downcast<RenderBox>(*renderer) };
 }
 
-void AutoscrollController::updateDragAndDrop(Node* dropTargetNode, const IntPoint& eventPosition, WallTime eventTime)
+void AutoscrollController::updateDragAndDrop(Node* dropTargetNode, const IntPoint& eventPosition, MonotonicTime eventTime)
 {
     IntSize offset;
-    auto findDragAndDropScroller = [&]() -> RenderBox* {
+    auto findDragAndDropScroller = [&]() -> CheckedPtr<RenderBox> {
         if (!dropTargetNode)
             return nullptr;
 
@@ -170,7 +170,7 @@ void AutoscrollController::updateDragAndDrop(Node* dropTargetNode, const IntPoin
         if (offset.isZero())
             return nullptr;
 
-        return scrollable.get();
+        return scrollable;
     };
 
     CheckedPtr scrollable = findDragAndDropScroller();
@@ -256,7 +256,7 @@ void AutoscrollController::autoscrollTimerFired()
     Ref frame = m_autoscrollRenderer->frame();
     switch (m_autoscrollType) {
     case AutoscrollType::DragAndDrop:
-        if (WallTime::now() - m_dragAndDropAutoscrollStartTime > autoscrollDelay)
+        if (MonotonicTime::now() - m_dragAndDropAutoscrollStartTime > autoscrollDelay)
             CheckedRef { *m_autoscrollRenderer }->autoscroll(m_dragAndDropAutoscrollReferencePosition);
         break;
     case AutoscrollType::Selection: {
@@ -283,7 +283,7 @@ void AutoscrollController::autoscrollTimerFired()
             }
         }
         if (RefPtr view = frame->view())
-            updatePanScrollState(view.get(), frame->eventHandler().lastKnownMousePosition());
+            updatePanScrollState(view.get(), flooredIntPoint(frame->eventHandler().lastKnownMousePosition()));
         CheckedRef { *m_autoscrollRenderer }->panScroll(m_panScrollStartPos);
         break;
 #endif

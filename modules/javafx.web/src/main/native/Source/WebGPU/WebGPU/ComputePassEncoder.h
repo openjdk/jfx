@@ -25,9 +25,10 @@
 
 #pragma once
 
+#import "CommandEncoder.h"
 #import "CommandsMixin.h"
-#import "WebGPU.h"
-#import "WebGPUExt.h"
+#import <WebGPU/WebGPU.h>
+#import <WebGPU/WebGPUExt.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/Ref.h>
@@ -44,7 +45,6 @@ namespace WebGPU {
 
 class BindGroup;
 class Buffer;
-class CommandEncoder;
 class ComputePipeline;
 class Device;
 class QuerySet;
@@ -107,22 +107,21 @@ private:
     const Ref<CommandEncoder> m_parentEncoder;
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
     HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
-    HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    HashMap<uint32_t, Ref<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
     std::array<uint32_t, 32> m_maxDynamicOffsetAtIndex;
     NSString *m_lastErrorString { nil };
     bool m_passEnded { false };
-// FIXME: remove @safe once rdar://151039766 lands
-} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);
+} SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);
 
 
 } // namespace WebGPU
 
 inline void refComputePassEncoder(WebGPU::ComputePassEncoder* obj)
 {
-    ref(obj);
+    WTF::ref(obj);
 }
 
 inline void derefComputePassEncoder(WebGPU::ComputePassEncoder* obj)
 {
-    deref(obj);
+    WTF::deref(obj);
 }

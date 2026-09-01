@@ -52,7 +52,8 @@ class BaseAudioContext;
 // All of these effects follow the OpenAL specification very closely.
 
 class PannerNode final : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PannerNode);
+    WTF_MAKE_TZONE_ALLOCATED(PannerNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PannerNode);
 public:
     static ExceptionOr<Ref<PannerNode>> create(BaseAudioContext&, const PannerOptions& = { });
 
@@ -162,5 +163,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(PannerNode, NodeTypePanner);
 
 #endif

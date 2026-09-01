@@ -52,11 +52,11 @@ ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, String&& mess
     VM& vm = globalObject->vm();
     Structure* structure = globalObject->errorStructure(errorType);
     ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm)) ErrorInstance(vm, structure, errorType);
-    instance->finishCreation(vm, WTFMove(message), lineColumn, WTFMove(sourceURL), WTFMove(stackString), WTFMove(cause));
+    instance->finishCreation(vm, WTF::move(message), lineColumn, WTF::move(sourceURL), WTF::move(stackString), WTF::move(cause));
     return instance;
 }
 
-ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* structure, JSValue message, JSValue options, SourceAppender appender, RuntimeType type, ErrorType errorType, bool useCurrentFrame)
+ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* structure, JSValue message, JSValue options, SourceAppender appender, RuntimeType type, ErrorType errorType, bool useCurrentFrame, JSCell* subclassCaller)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -71,7 +71,7 @@ ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* st
         RETURN_IF_EXCEPTION(scope, nullptr);
     }
 
-    return create(vm, structure, messageString, cause, appender, type, errorType, useCurrentFrame);
+    return create(vm, structure, messageString, cause, appender, type, errorType, useCurrentFrame, subclassCaller);
 }
 
 String appendSourceToErrorMessage(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex, const String& message, RuntimeType type, ErrorInstance::SourceAppender appender)
@@ -88,7 +88,7 @@ String appendSourceToErrorMessage(CodeBlock* codeBlock, BytecodeIndex bytecodeIn
         return message;
 
     if (expressionStart < expressionStop)
-        return appender(message, codeBlock->source().provider()->getRange(expressionStart, expressionStop), type, ErrorInstance::FoundExactSource);
+        return appender(message, codeBlock->source().provider()->getRange(expressionStart, expressionStop), type, ErrorInstance::SourceTextWhereErrorOccurred::FoundExactSource);
 
     // No range information, so give a few characters of context.
     int dataLength = sourceString.length();
@@ -104,10 +104,10 @@ String appendSourceToErrorMessage(CodeBlock* codeBlock, BytecodeIndex bytecodeIn
         stop++;
     while (stop > expressionStart && isStrWhiteSpace(sourceString[stop - 1]))
         stop--;
-    return appender(message, codeBlock->source().provider()->getRange(start, stop), type, ErrorInstance::FoundApproximateSource);
+    return appender(message, codeBlock->source().provider()->getRange(start, stop), type, ErrorInstance::SourceTextWhereErrorOccurred::FoundApproximateSource);
 }
 
-void ErrorInstance::finishCreation(VM& vm, const String& message, JSValue cause, SourceAppender appender, RuntimeType type, bool useCurrentFrame)
+void ErrorInstance::finishCreation(VM& vm, const String& message, JSValue cause, SourceAppender appender, RuntimeType type, bool useCurrentFrame, JSCell* subclassCaller)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
@@ -115,10 +115,10 @@ void ErrorInstance::finishCreation(VM& vm, const String& message, JSValue cause,
     m_sourceAppender = appender;
     m_runtimeTypeForCause = type;
 
-    std::unique_ptr<Vector<StackFrame>> stackTrace = getStackTrace(vm, this, useCurrentFrame);
+    std::unique_ptr<Vector<StackFrame>> stackTrace = getStackTrace(vm, this, useCurrentFrame, nullptr, nullptr, subclassCaller);
     {
         Locker locker { cellLock() };
-        m_stackTrace = WTFMove(stackTrace);
+        m_stackTrace = WTF::move(stackTrace);
     }
     vm.writeBarrier(this);
 
@@ -135,7 +135,7 @@ void ErrorInstance::finishCreation(VM& vm, const String& message, JSValue cause,
     }
 
     if (!messageWithSource.isNull())
-        putDirect(vm, vm.propertyNames->message, jsString(vm, WTFMove(messageWithSource)), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirect(vm, vm.propertyNames->message, jsString(vm, WTF::move(messageWithSource)), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
     if (!cause.isEmpty())
         putDirect(vm, vm.propertyNames->cause, cause, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -149,7 +149,7 @@ void ErrorInstance::finishCreation(VM& vm, const String& message, JSValue cause,
     std::unique_ptr<Vector<StackFrame>> stackTrace = getStackTrace(vm, this, /* useCurrentFrame */ true, owner, callLinkInfo);
     {
         Locker locker { cellLock() };
-        m_stackTrace = WTFMove(stackTrace);
+        m_stackTrace = WTF::move(stackTrace);
     }
     vm.writeBarrier(this);
     if (!message.isNull())
@@ -165,12 +165,12 @@ void ErrorInstance::finishCreation(VM& vm, String&& message, LineColumn lineColu
     ASSERT(inherits(info()));
 
     m_lineColumn = lineColumn;
-    m_sourceURL = WTFMove(sourceURL);
-    m_stackString = WTFMove(stackString);
+    m_sourceURL = WTF::move(sourceURL);
+    m_stackString = WTF::move(stackString);
     if (!message.isNull())
-        putDirect(vm, vm.propertyNames->message, jsString(vm, WTFMove(message)), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirect(vm, vm.propertyNames->message, jsString(vm, WTF::move(message)), static_cast<unsigned>(PropertyAttribute::DontEnum));
     if (!cause.isNull())
-        putDirect(vm, vm.propertyNames->cause, jsString(vm, WTFMove(cause)), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirect(vm, vm.propertyNames->cause, jsString(vm, WTF::move(cause)), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // Based on ErrorPrototype's errorProtoFuncToString(), but is modified to
@@ -299,9 +299,9 @@ bool ErrorInstance::materializeErrorInfoIfNeeded(VM& vm)
         putDirect(vm, vm.propertyNames->line, jsNumber(m_lineColumn.line), attributes);
         putDirect(vm, vm.propertyNames->column, jsNumber(m_lineColumn.column), attributes);
         if (!m_sourceURL.isEmpty())
-            putDirect(vm, vm.propertyNames->sourceURL, jsString(vm, WTFMove(m_sourceURL)), attributes);
+            putDirect(vm, vm.propertyNames->sourceURL, jsString(vm, WTF::move(m_sourceURL)), attributes);
 
-        putDirect(vm, vm.propertyNames->stack, jsString(vm, WTFMove(m_stackString)), attributes);
+        putDirect(vm, vm.propertyNames->stack, jsString(vm, WTF::move(m_stackString)), attributes);
     }
 
     m_errorInfoMaterialized = true;
@@ -326,7 +326,7 @@ bool ErrorInstance::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalO
     return Base::getOwnPropertySlot(thisObject, globalObject, propertyName, slot);
 }
 
-void ErrorInstance::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray&, DontEnumPropertiesMode mode)
+void ErrorInstance::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder&, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     ErrorInstance* thisObject = jsCast<ErrorInstance*>(object);

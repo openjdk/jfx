@@ -83,6 +83,7 @@ std::optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, Refer
     case ReferrerPolicySource::MetaTag:
         return parseReferrerPolicyToken(policyString, ShouldParseLegacyKeywords::Yes);
     case ReferrerPolicySource::ReferrerPolicyAttribute:
+    case ReferrerPolicySource::SpeculationRules:
         return parseReferrerPolicyToken(policyString, ShouldParseLegacyKeywords::No);
     }
     ASSERT_NOT_REACHED();

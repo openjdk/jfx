@@ -71,6 +71,8 @@ public class SettingsWindow extends Stage {
 
         setScene(scene);
         setTitle("Settings");
+        setMinHeight(300);
+        setMinWidth(400);
         centerOnScreen();
     }
 

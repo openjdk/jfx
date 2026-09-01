@@ -51,6 +51,7 @@
 
 namespace WebCore {
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage")
 static float cpuPeriod()
 {
     FILE* file = fopen("/proc/stat", "r");
@@ -60,9 +61,7 @@ static float cpuPeriod()
     static const unsigned statMaxLineLength = 512;
     std::array<char, statMaxLineLength + 1> buffer;
     std::span bufferSpan { buffer };
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     char* line = fgets(bufferSpan.data(), statMaxLineLength, file);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (!line) {
         fclose(file);
@@ -102,6 +101,7 @@ static float cpuPeriod()
     previousTotalTime = totalTime;
     return static_cast<float>(period) / cpuCount;
 }
+IGNORE_CLANG_WARNINGS_END
 
 void ResourceUsageThread::platformSaveStateBeforeStarting()
 {
@@ -127,14 +127,11 @@ struct ThreadInfo {
 
 static HashMap<pid_t, ThreadInfo>& threadInfoMap()
 {
-    static LazyNeverDestroyed<HashMap<pid_t, ThreadInfo>> map;
-    static std::once_flag flag;
-    std::call_once(flag, [&] {
-        map.construct();
-    });
+    static NeverDestroyed<HashMap<pid_t, ThreadInfo>> map;
     return map;
 }
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
 static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
 {
     String path = makeString("/proc/self/task/"_s, id, "/stat"_s);
@@ -180,7 +177,6 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
         name++;
         info.name = String::fromUTF8({ name, position });
     }
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     // Move after state.
     position += 4;
@@ -192,6 +188,7 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
             position++;
         position++;
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     unsigned long long utime = strtoull(position, &position, 10);
     unsigned long long stime = strtoull(position, &position, 10);
@@ -202,6 +199,7 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
     info.cpuUsage = clampTo<float>(usage, 0, 100);
     return true;
 }
+IGNORE_CLANG_WARNINGS_END
 
 static void collectCPUUsage(float period)
 {
@@ -249,9 +247,8 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashSet<pid_t> knownWebKitThreads;
     {
-        Locker locker { Thread::allThreadsLock() };
-        for (auto* thread : Thread::allThreads()) {
-            if (auto id = thread->id())
+        for (auto& thread : Thread::allThreads()) {
+            if (auto id = thread.id())
                 knownWebKitThreads.add(id);
         }
     }

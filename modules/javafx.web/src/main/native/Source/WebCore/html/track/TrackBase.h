@@ -27,8 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
+#include <atomic>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -38,6 +39,7 @@ namespace WebCore {
 
 class SourceBuffer;
 class TrackListBase;
+class TrackOpaqueRoot;
 class TrackPrivateBase;
 class TrackPrivateBaseClient;
 using TrackID = uint64_t;
@@ -53,6 +55,10 @@ class TrackBase
 public:
     virtual ~TrackBase();
 
+    // ContextDestructionObserver.
+    void ref() const override { RefCounted::ref(); }
+    void deref() const override { RefCounted::deref(); }
+
     virtual void didMoveToNewDocument(Document&);
 
     enum Type { BaseTrack, TextTrack, AudioTrack, VideoTrack };
@@ -67,13 +73,15 @@ public:
     virtual int uniqueId() const { return m_uniqueId; }
 
 #if ENABLE(MEDIA_SOURCE)
-    SourceBuffer* sourceBuffer() const { return m_sourceBuffer; }
-    void setSourceBuffer(SourceBuffer* buffer) { m_sourceBuffer = buffer; }
+    SourceBuffer* sourceBuffer() const;
+    void setSourceBuffer(SourceBuffer*);
 #endif
 
     void setTrackList(TrackListBase&);
     void clearTrackList();
     TrackListBase* trackList() const;
+
+    void setOpaqueRoot(TrackOpaqueRoot&);
     WebCoreOpaqueRoot opaqueRoot();
 
     virtual bool enabled() const = 0;
@@ -81,6 +89,7 @@ public:
 #if !RELEASE_LOG_DISABLED
     virtual void setLogger(const Logger&, uint64_t);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
+    Ref<const Logger> protectedLogger() const { return logger(); }
     uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -97,7 +106,7 @@ protected:
     virtual void setLanguage(const AtomString&);
 
 #if ENABLE(MEDIA_SOURCE)
-    SourceBuffer* m_sourceBuffer { nullptr };
+    WeakPtr<SourceBuffer> m_sourceBuffer;
 #endif
 
     void addClientToTrackPrivateBase(TrackPrivateBaseClient&, TrackPrivateBase&);
@@ -116,6 +125,7 @@ private:
     uint64_t m_logIdentifier { 0 };
 #endif
     WeakPtr<TrackListBase, WeakPtrImplWithEventTargetData> m_trackList;
+    RefPtr<TrackOpaqueRoot> m_trackOpaqueRoot;
     size_t m_clientRegistrationId;
 };
 
@@ -126,7 +136,7 @@ public:
     virtual void setKind(const AtomString&);
 
 protected:
-    MediaTrackBase(ScriptExecutionContext*, Type, const std::optional<AtomString>& id, TrackID, const AtomString& label, const AtomString& language);
+    MediaTrackBase(ScriptExecutionContext*, Type, const std::optional<String>& id, TrackID, const String& label, const String& language);
 
     void setKindInternal(const AtomString&);
 

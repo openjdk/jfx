@@ -26,9 +26,9 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpuimagecopytexturetagged
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUImageCopyTextureTagged : GPUImageCopyTexture {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUImageCopyTextureTagged : GPUImageCopyTexture {
     GPUPredefinedColorSpace colorSpace = "srgb";
     boolean premultipliedAlpha = false;
 };

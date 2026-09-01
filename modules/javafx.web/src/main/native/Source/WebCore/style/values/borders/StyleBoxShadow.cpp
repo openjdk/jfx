@@ -27,12 +27,15 @@
 
 #include "CSSBoxShadowPropertyValue.h"
 #include "ColorBlending.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleBuilderChecking.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "StylePrimitiveNumericTypes+Serialization.h"
+#include "StyleShadowInterpolation.h"
+#include <ranges>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 namespace Style {
@@ -67,10 +70,10 @@ Ref<CSSValue> CSSValueCreation<BoxShadowList>::operator()(CSSValuePool&, const R
 {
     CSS::BoxShadowProperty::List list;
 
-    for (const auto& shadow : makeReversedRange(value))
+    for (const auto& shadow : value | std::views::reverse)
         list.value.append(toCSS(shadow, style));
 
-    return CSSBoxShadowPropertyValue::create(CSS::BoxShadowProperty { WTFMove(list) });
+    return CSSBoxShadowPropertyValue::create(CSS::BoxShadowProperty { WTF::move(list) });
 }
 
 auto CSSValueConversion<BoxShadows>::operator()(BuilderState& state, const CSSValue& value) -> BoxShadows
@@ -87,7 +90,7 @@ auto CSSValueConversion<BoxShadows>::operator()(BuilderState& state, const CSSVa
             return CSS::Keyword::None { };
         },
         [&](const typename CSS::BoxShadowProperty::List& list) -> BoxShadows {
-            return BoxShadows::List::map(makeReversedRange(list), [&](const CSS::BoxShadow& element) {
+            return BoxShadows::List::map(list | std::views::reverse, [&](const CSS::BoxShadow& element) {
                 return toStyle(element, state);
             });
         }
@@ -98,7 +101,7 @@ auto CSSValueConversion<BoxShadows>::operator()(BuilderState& state, const CSSVa
 
 void Serialize<BoxShadowList>::operator()(StringBuilder& builder, const CSS::SerializationContext& context, const RenderStyle& style, const BoxShadowList& value)
 {
-    serializationForCSSOnRangeLike(builder, context, style, makeReversedRange(value), SerializationSeparatorString<BoxShadowList>);
+    serializationForCSSOnRangeLike(builder, context, style, value | std::views::reverse, SerializationSeparatorString<BoxShadowList>);
 }
 
 // MARK: - Blending
@@ -117,14 +120,78 @@ static inline std::optional<CSS::Keyword::Inset> blendInset(std::optional<CSS::K
 
 auto Blending<BoxShadow>::blend(const BoxShadow& a, const BoxShadow& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> BoxShadow
 {
+    ColorResolver aColorResolver { aStyle };
+    ColorResolver bColorResolver { bStyle };
+
     return {
-        .color = WebCore::blend(aStyle.colorResolvingCurrentColor(a.color), bStyle.colorResolvingCurrentColor(b.color), context),
+        .color = WebCore::blend(aColorResolver.colorResolvingCurrentColor(a.color), bColorResolver.colorResolvingCurrentColor(b.color), context),
         .location = WebCore::Style::blend(a.location, b.location, context),
         .blur = WebCore::Style::blend(a.blur, b.blur, context),
         .spread = WebCore::Style::blend(a.spread, b.spread, context),
         .inset = blendInset(a.inset, b.inset, context),
         .isWebkitBoxShadow = b.isWebkitBoxShadow
     };
+}
+
+struct MatchingBoxShadows {
+    static const BoxShadow& shadowForInterpolation(const BoxShadow& shadowToMatch)
+    {
+        static NeverDestroyed<const BoxShadow> defaultShadowData {
+            BoxShadow {
+                .color = { WebCore::Color::transparentBlack },
+                .location = { { 0 }, { 0 } },
+                .blur = { 0 },
+                .spread = { 0 },
+                .inset = std::nullopt,
+                .isWebkitBoxShadow = false
+            }
+        };
+        static NeverDestroyed<const BoxShadow> defaultInsetShadowData {
+            BoxShadow {
+                .color = { WebCore::Color::transparentBlack },
+                .location = { { 0 }, { 0 } },
+                .blur = { 0 },
+                .spread = { 0 },
+                .inset = CSS::Keyword::Inset { },
+                .isWebkitBoxShadow = false
+            }
+        };
+        static NeverDestroyed<const BoxShadow> defaultWebKitBoxShadowData {
+            BoxShadow {
+                .color = { WebCore::Color::transparentBlack },
+                .location = { { 0 }, { 0 } },
+                .blur = { 0 },
+                .spread = { 0 },
+                .inset = std::nullopt,
+                .isWebkitBoxShadow = true
+            }
+        };
+        static NeverDestroyed<const BoxShadow> defaultInsetWebKitBoxShadowData {
+            BoxShadow {
+                .color = { WebCore::Color::transparentBlack },
+                .location = { { 0 }, { 0 } },
+                .blur = { 0 },
+                .spread = { 0 },
+                .inset = CSS::Keyword::Inset { },
+                .isWebkitBoxShadow = true
+            }
+        };
+
+        if (isInset(shadowToMatch))
+            return shadowToMatch.isWebkitBoxShadow ? defaultInsetWebKitBoxShadowData.get() : defaultInsetShadowData.get();
+        else
+            return shadowToMatch.isWebkitBoxShadow ? defaultWebKitBoxShadowData.get() : defaultShadowData.get();
+    }
+};
+
+auto Blending<BoxShadows>::canBlend(const BoxShadows& from, const BoxShadows& to, CompositeOperation compositeOperation) -> bool
+{
+    return ShadowInterpolation<BoxShadows, MatchingBoxShadows>::canInterpolate(from, to, compositeOperation);
+}
+
+auto Blending<BoxShadows>::blend(const BoxShadows& from, const BoxShadows& to, const RenderStyle& fromStyle, const RenderStyle& toStyle, const BlendingContext& context) -> BoxShadows
+{
+    return ShadowInterpolation<BoxShadows, MatchingBoxShadows>::interpolate(from, to, fromStyle, toStyle, context);
 }
 
 } // namespace Style

@@ -1,7 +1,4 @@
 /*
-<<<<<<< HEAD
-* Copyright (C) 2025 Apple Inc. All rights reserved.
-=======
  * Copyright (C) 2025 Apple Inc. All rights reserved.
 >>>>>>> bb34e112b85b (Use after free in NavigateEvent())
  *
@@ -42,6 +39,7 @@ void JSNavigation::visitAdditionalChildren(Visitor& visitor)
     // We cannot ref the event on the GC thread.
     SUPPRESS_UNCOUNTED_ARG if (auto* event = wrapped().ongoingNavigateEvent())
         addWebCoreOpaqueRoot(visitor, event);
+    SUPPRESS_UNCOUNTED_ARG wrapped().visitAdditionalChildren(visitor);
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSNavigation);

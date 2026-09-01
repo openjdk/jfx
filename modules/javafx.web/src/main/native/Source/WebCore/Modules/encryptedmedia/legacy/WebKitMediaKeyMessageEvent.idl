@@ -34,7 +34,9 @@
     readonly attribute DOMString destinationURL;
 };
 
-dictionary WebKitMediaKeyMessageEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary WebKitMediaKeyMessageEventInit : EventInit {
     Uint8Array? message = null;
     DOMString destinationURL = "";
 };

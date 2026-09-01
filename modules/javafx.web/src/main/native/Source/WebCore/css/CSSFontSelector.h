@@ -51,16 +51,14 @@ class ScriptExecutionContext;
 
 class CSSFontSelector final : public FontSelector, public CSSFontFaceClient, public ActiveDOMObject {
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
-    USING_CAN_MAKE_WEAKPTR(FontSelector);
-
-    using FontSelector::ref;
-    using FontSelector::deref;
-
     static Ref<CSSFontSelector> create(ScriptExecutionContext&);
     virtual ~CSSFontSelector();
+
+    // ActiveDOMObject, CSSFontFaceClient.
+    void ref() const final { FontSelector::ref(); }
+    void deref() const final { FontSelector::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(FontSelector);
 
     unsigned version() const final { return m_version; }
     unsigned uniqueId() const final { return m_uniqueId; }
@@ -149,7 +147,7 @@ private:
     HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
     HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
 
-    CSSFontFaceSet::FontModifiedObserver m_fontModifiedObserver;
+    const Ref<CSSFontFaceSet::FontModifiedObserver> m_fontModifiedObserver;
 
     unsigned m_uniqueId;
     unsigned m_version;

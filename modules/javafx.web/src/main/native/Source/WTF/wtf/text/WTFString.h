@@ -24,7 +24,10 @@
 // This file would be called String.h, but that conflicts with <string.h>
 // on systems without case-sensitive file systems.
 
+#include <span>
+
 #include <wtf/Compiler.h>
+#include <wtf/SwiftBridging.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringImpl.h>
 
@@ -45,11 +48,11 @@ namespace WTF {
 
 // Declarations of string operations
 
-WTF_EXPORT_PRIVATE double charactersToDouble(std::span<const LChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE double charactersToDouble(std::span<const Latin1Character>, bool* ok = nullptr);
 WTF_EXPORT_PRIVATE double charactersToDouble(std::span<const char16_t>, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const LChar>, bool* ok = nullptr);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const Latin1Character>, bool* ok = nullptr);
 WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const char16_t>, bool* ok = nullptr);
-WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const LChar>, size_t& parsedLength);
+WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const Latin1Character>, size_t& parsedLength);
 WTF_EXPORT_PRIVATE float charactersToFloat(std::span<const char16_t>, size_t& parsedLength);
 
 template<bool isSpecialCharacter(char16_t), typename CharacterType, std::size_t Extent> bool containsOnly(std::span<const CharacterType, Extent>);
@@ -66,9 +69,12 @@ public:
     WTF_EXPORT_PRIVATE String(std::span<const char16_t> characters);
 
     // Construct a string with Latin-1 data.
-    WTF_EXPORT_PRIVATE String(std::span<const LChar> characters);
+    WTF_EXPORT_PRIVATE String(std::span<const Latin1Character> characters);
     WTF_EXPORT_PRIVATE String(std::span<const char> characters);
     ALWAYS_INLINE static String fromLatin1(const char* characters) { return String { characters }; }
+
+    // Construct a string with UTF-8 data, null string if it contains invalid UTF-8 sequences.
+    WTF_EXPORT_PRIVATE String(std::span<const char8_t>);
 
     // Construct a string referencing an existing StringImpl.
     String(StringImpl&);
@@ -94,19 +100,19 @@ public:
 
     void swap(String& o) { m_impl.swap(o.m_impl); }
 
-    static String adopt(StringBuffer<LChar>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
-    static String adopt(StringBuffer<char16_t>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
+    static String adopt(StringBuffer<Latin1Character>&& buffer) { return StringImpl::adopt(WTF::move(buffer)); }
+    static String adopt(StringBuffer<char16_t>&& buffer) { return StringImpl::adopt(WTF::move(buffer)); }
     template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
-    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector) { return StringImpl::adopt(WTFMove(vector)); }
+    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector) { return StringImpl::adopt(WTF::move(vector)); }
 
     bool isNull() const { return !m_impl; }
     bool isEmpty() const { return !m_impl || m_impl->isEmpty(); }
 
     StringImpl* impl() const LIFETIME_BOUND { return m_impl.get(); }
-    RefPtr<StringImpl> releaseImpl() { return WTFMove(m_impl); }
+    RefPtr<StringImpl> releaseImpl() { return WTF::move(m_impl); }
 
     unsigned length() const { return m_impl ? m_impl->length() : 0; }
-    std::span<const LChar> span8() const LIFETIME_BOUND { return m_impl ? m_impl->span8() : std::span<const LChar>(); }
+    std::span<const Latin1Character> span8() const LIFETIME_BOUND { return m_impl ? m_impl->span8() : std::span<const Latin1Character>(); }
     std::span<const char16_t> span16() const LIFETIME_BOUND { return m_impl ? m_impl->span16() : std::span<const char16_t>(); }
 
     // Return span8() or span16() depending on CharacterType.
@@ -114,7 +120,7 @@ public:
 
     bool is8Bit() const { return !m_impl || m_impl->is8Bit(); }
 
-    unsigned sizeInBytes() const { return m_impl ? m_impl->length() * (is8Bit() ? sizeof(LChar) : sizeof(char16_t)) : 0; }
+    unsigned sizeInBytes() const { return m_impl ? m_impl->length() * (is8Bit() ? sizeof(Latin1Character) : sizeof(char16_t)) : 0; }
 
     WTF_EXPORT_PRIVATE CString ascii() const;
     WTF_EXPORT_PRIVATE CString latin1() const;
@@ -146,7 +152,7 @@ public:
 
     // Find a single character or string, also with match function & latin1 forms.
     size_t find(char16_t character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
-    size_t find(LChar character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
+    size_t find(Latin1Character character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
     size_t find(char character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
 
     size_t find(StringView) const;
@@ -154,7 +160,8 @@ public:
     size_t findIgnoringASCIICase(StringView) const;
     size_t findIgnoringASCIICase(StringView, unsigned start) const;
 
-    template<typename CodeUnitMatchFunction, std::enable_if_t<std::is_invocable_r_v<bool, CodeUnitMatchFunction, char16_t>>* = nullptr>
+    template<typename CodeUnitMatchFunction>
+        requires (std::is_invocable_r_v<bool, CodeUnitMatchFunction, char16_t>)
     size_t find(CodeUnitMatchFunction matchFunction, unsigned start = 0) const { return m_impl ? m_impl->find(matchFunction, start) : notFound; }
     size_t find(ASCIILiteral literal, unsigned start = 0) const { return m_impl ? m_impl->find(literal, start) : notFound; }
 
@@ -171,7 +178,8 @@ public:
     bool contains(char16_t character) const { return find(character) != notFound; }
     bool contains(ASCIILiteral literal) const { return find(literal) != notFound; }
     bool contains(StringView) const;
-    template<typename CodeUnitMatchFunction, std::enable_if_t<std::is_invocable_r_v<bool, CodeUnitMatchFunction, char16_t>>* = nullptr>
+    template<typename CodeUnitMatchFunction>
+        requires (std::is_invocable_r_v<bool, CodeUnitMatchFunction, char16_t>)
     bool contains(CodeUnitMatchFunction matchFunction) const { return find(matchFunction, 0) != notFound; }
     bool containsIgnoringASCIICase(StringView) const;
     bool containsIgnoringASCIICase(StringView, unsigned start) const;
@@ -187,48 +195,48 @@ public:
     bool endsWith(char character) const { return endsWith(static_cast<char16_t>(character)); }
     bool hasInfixEndingAt(StringView suffix, unsigned end) const;
 
-    String WARN_UNUSED_RETURN substring(unsigned position, unsigned length = MaxLength) const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN substringSharingImpl(unsigned position, unsigned length = MaxLength) const;
-    String WARN_UNUSED_RETURN left(unsigned length) const { return substring(0, length); }
-    String WARN_UNUSED_RETURN right(unsigned length) const { return substring(this->length() - length, length); }
+    [[nodiscard]] String substring(unsigned position, unsigned length = MaxLength) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String substringSharingImpl(unsigned position, unsigned length = MaxLength) const;
+    [[nodiscard]] String left(unsigned length) const { return substring(0, length); }
+    [[nodiscard]] String right(unsigned length) const { return substring(this->length() - length, length); }
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToASCIILowercase() const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToASCIIUppercase() const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToLowercaseWithoutLocale() const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(unsigned) const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToUppercaseWithoutLocale() const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToLowercaseWithLocale(const AtomString& localeIdentifier) const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToUppercaseWithLocale(const AtomString& localeIdentifier) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToASCIILowercase() const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToASCIIUppercase() const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToLowercaseWithoutLocale() const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(unsigned) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToUppercaseWithoutLocale() const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToLowercaseWithLocale(const AtomString& localeIdentifier) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String convertToUppercaseWithLocale(const AtomString& localeIdentifier) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN simplifyWhiteSpace(CodeUnitMatchFunction) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String simplifyWhiteSpace(CodeUnitMatchFunction) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN trim(CodeUnitMatchFunction) const;
-    template<typename Predicate> String WARN_UNUSED_RETURN removeCharacters(const Predicate&) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String trim(CodeUnitMatchFunction) const;
+    template<typename Predicate> [[nodiscard]] String removeCharacters(const Predicate&) const;
 
     // Returns the string with case folded for case insensitive comparison.
     // Use convertToASCIILowercase instead if ASCII case insensitive comparison is desired.
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN foldCase() const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String foldCase() const;
 
     // Returns an uninitialized string. The characters needs to be written
     // into the buffer returned in data before the returned string is used.
     static String createUninitialized(unsigned length, std::span<char16_t>& data) { return StringImpl::createUninitialized(length, data); }
-    static String createUninitialized(unsigned length, std::span<LChar>& data) { return StringImpl::createUninitialized(length, data); }
+    static String createUninitialized(unsigned length, std::span<Latin1Character>& data) { return StringImpl::createUninitialized(length, data); }
 
     using SplitFunctor = WTF::Function<void(StringView)>;
 
     WTF_EXPORT_PRIVATE void split(char16_t separator, NOESCAPE const SplitFunctor&) const;
-    WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN split(char16_t separator) const;
-    WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN split(StringView separator) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE Vector<String> split(char16_t separator) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE Vector<String> split(StringView separator) const;
 
     WTF_EXPORT_PRIVATE void splitAllowingEmptyEntries(char16_t separator, NOESCAPE const SplitFunctor&) const;
-    WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN splitAllowingEmptyEntries(char16_t separator) const;
-    WTF_EXPORT_PRIVATE Vector<String> WARN_UNUSED_RETURN splitAllowingEmptyEntries(StringView separator) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE Vector<String> splitAllowingEmptyEntries(char16_t separator) const;
+    [[nodiscard]] WTF_EXPORT_PRIVATE Vector<String> splitAllowingEmptyEntries(StringView separator) const;
 
     WTF_EXPORT_PRIVATE double toDouble(bool* ok = nullptr) const;
     WTF_EXPORT_PRIVATE float toFloat(bool* ok = nullptr) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN isolatedCopy() const &;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN isolatedCopy() &&;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String isolatedCopy() const &;
+    [[nodiscard]] WTF_EXPORT_PRIVATE String isolatedCopy() &&;
 
     WTF_EXPORT_PRIVATE bool isSafeToSendToAnotherThread() const;
 
@@ -274,16 +282,20 @@ public:
     WTF_EXPORT_PRIVATE void convertTo16Bit();
 
     // String::fromUTF8 will return a null string if the input data contains invalid UTF-8 sequences.
+    // FIXME: Deprecated: Use constructor that takes span<const char8_t>.
     WTF_EXPORT_PRIVATE static String fromUTF8(std::span<const char8_t>);
-    static String fromUTF8(std::span<const LChar> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
-    static String fromUTF8(std::span<const char> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
-    static String fromUTF8(const char* string) { return fromUTF8(unsafeSpan8(string)); }
+    static String fromUTF8(std::span<const Latin1Character> characters) { return byteCast<char8_t>(characters); }
+    static String fromUTF8(std::span<const char> characters) { return byteCast<char8_t>(characters); }
+    static String fromUTF8(const char* string) { return byteCast<char8_t>(unsafeSpan(string)); }
+
+    // Convert each invalid UTF-8 sequence into a replacement character.
     static String fromUTF8ReplacingInvalidSequences(std::span<const char8_t>);
-    static String fromUTF8ReplacingInvalidSequences(std::span<const LChar> characters) { return fromUTF8ReplacingInvalidSequences(byteCast<char8_t>(characters)); }
+    static String fromUTF8ReplacingInvalidSequences(std::span<const Latin1Character> characters) { return fromUTF8ReplacingInvalidSequences(byteCast<char8_t>(characters)); }
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
+    // FIXME: Deprecated: Use fromUTF8ReplacingInvalidSequences.
     WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(std::span<const char8_t>);
-    static String fromUTF8WithLatin1Fallback(std::span<const LChar> characters) { return fromUTF8WithLatin1Fallback(byteCast<char8_t>(characters)); }
+    static String fromUTF8WithLatin1Fallback(std::span<const Latin1Character> characters) { return fromUTF8WithLatin1Fallback(byteCast<char8_t>(characters)); }
     static String fromUTF8WithLatin1Fallback(std::span<const char> characters) { return fromUTF8WithLatin1Fallback(byteCast<char8_t>(characters)); }
 
     WTF_EXPORT_PRIVATE static String fromCodePoint(char32_t codePoint);
@@ -321,7 +333,7 @@ private:
     WTF_EXPORT_PRIVATE explicit String(const char* characters);
 
     RefPtr<StringImpl> m_impl;
-};
+} SWIFT_ESCAPABLE;
 
 static_assert(sizeof(String) == sizeof(void*), "String should effectively be a pointer to a StringImpl, and efficient to pass by value");
 
@@ -345,10 +357,10 @@ inline void swap(String& a, String& b) { a.swap(b); }
 #ifdef __OBJC__
 
 // Used in a small number of places where the long standing behavior has been "nil if empty".
-NSString * nsStringNilIfEmpty(const String&);
+RetainPtr<NSString> nsStringNilIfEmpty(const String&);
 
 // Used in a small number of places where null strings should be converted to nil but empty strings should be maintained.
-NSString * nsStringNilIfNull(const String&);
+RetainPtr<NSString> nsStringNilIfNull(const String&);
 
 #endif
 
@@ -381,7 +393,7 @@ template<> struct VectorTraits<String> : VectorTraitsBase<false, void> {
 template<> struct IntegerToStringConversionTrait<String> {
     using ReturnType = String;
     using AdditionalArgumentType = void;
-    static String flush(std::span<const LChar> characters, void*) { return characters; }
+    static String flush(std::span<const Latin1Character> characters, void*) { return characters; }
 };
 
 template<> struct MarkableTraits<String> {
@@ -412,22 +424,22 @@ inline String::String(StringImpl* string)
 }
 
 inline String::String(Ref<StringImpl>&& string)
-    : m_impl(WTFMove(string))
+    : m_impl(WTF::move(string))
 {
 }
 
 inline String::String(RefPtr<StringImpl>&& string)
-    : m_impl(WTFMove(string))
+    : m_impl(WTF::move(string))
 {
 }
 
 inline String::String(Ref<AtomStringImpl>&& string)
-    : m_impl(WTFMove(string))
+    : m_impl(WTF::move(string))
 {
 }
 
 inline String::String(RefPtr<AtomStringImpl>&& string)
-    : m_impl(WTFMove(string))
+    : m_impl(WTF::move(string))
 {
 }
 
@@ -446,12 +458,12 @@ inline String::String(ASCIILiteral characters)
 {
 }
 
-template<> inline std::span<const LChar> String::span<LChar>() const
+template<> inline std::span<const Latin1Character> String::span<Latin1Character>() const LIFETIME_BOUND
 {
     return span8();
 }
 
-template<> inline std::span<const char16_t> String::span<char16_t>() const
+template<> inline std::span<const char16_t> String::span<char16_t>() const LIFETIME_BOUND
 {
     return span16();
 }
@@ -463,21 +475,21 @@ inline char16_t String::characterAt(unsigned index) const
     return m_impl->at(index);
 }
 
-inline String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, char16_t target, char16_t replacement)
+[[nodiscard]] inline String makeStringByReplacingAll(const String& string, char16_t target, char16_t replacement)
 {
     if (auto impl = string.impl())
         return String { impl->replace(target, replacement) };
     return string;
 }
 
-ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, char16_t target, ASCIILiteral literal)
+[[nodiscard]] ALWAYS_INLINE String makeStringByReplacingAll(const String& string, char16_t target, ASCIILiteral literal)
 {
     if (auto impl = string.impl())
         return String { impl->replace(target, literal.span8()) };
     return string;
 }
 
-WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN makeStringByRemoving(const String&, unsigned position, unsigned lengthToRemove);
+[[nodiscard]] WTF_EXPORT_PRIVATE String makeStringByRemoving(const String&, unsigned position, unsigned lengthToRemove);
 
 WTF_EXPORT_PRIVATE String makeStringByJoining(std::span<const String> strings, const String& separator);
 
@@ -522,18 +534,18 @@ inline RetainPtr<NSString> String::createNSString() const
         return @"";
 }
 
-inline NSString * nsStringNilIfEmpty(const String& string)
+inline RetainPtr<NSString> nsStringNilIfEmpty(const String& string)
 {
     if (string.isEmpty())
         return nil;
-    return *string.impl();
+    return string.impl()->createNSString();
 }
 
-inline NSString * nsStringNilIfNull(const String& string)
+inline RetainPtr<NSString> nsStringNilIfNull(const String& string)
 {
     if (string.isNull())
         return nil;
-    return *string.impl();
+    return string.impl()->createNSString();
 }
 
 #endif

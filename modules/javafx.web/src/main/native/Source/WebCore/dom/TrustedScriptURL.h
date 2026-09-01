@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include "ScriptWrappable.h"
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class TrustedScriptURL : public ScriptWrappable, public RefCounted<TrustedScriptURL> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(TrustedScriptURL, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TrustedScriptURL, WEBCORE_EXPORT);
 public:
     static Ref<TrustedScriptURL> create(const String& data);
-    ~TrustedScriptURL() = default;
+    ~TrustedScriptURL();
 
     String toString() const { return m_data; }
     String toJSON() const { return toString(); }

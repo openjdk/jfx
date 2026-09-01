@@ -35,7 +35,8 @@ class AudioBuffer;
 class Reverb;
 
 class ConvolverNode final : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ConvolverNode);
+    WTF_MAKE_TZONE_ALLOCATED(ConvolverNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ConvolverNode);
 public:
     static ExceptionOr<Ref<ConvolverNode>> create(BaseAudioContext&, ConvolverOptions&& = { });
 
@@ -71,3 +72,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(ConvolverNode, NodeTypeConvolver);

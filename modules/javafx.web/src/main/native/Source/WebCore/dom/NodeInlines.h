@@ -20,18 +20,38 @@
 
 #pragma once
 
-#include "CharacterData.h"
-#include "Document.h"
-#include "Element.h"
-#include "InspectorInstrumentationPublic.h"
-#include "LayoutRect.h"
-#include "Node.h"
-#include "PseudoElement.h"
-#include "RenderBox.h"
-#include "TreeScopeInlines.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/CharacterData.h>
+#include <WebCore/Document.h>
+#include <WebCore/Element.h>
+#include <WebCore/InspectorInstrumentationPublic.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/Node.h>
+#include <WebCore/PseudoElement.h>
+#include <WebCore/RenderBox.h>
+#include <WebCore/ShadowRoot.h>
+#include <WebCore/TreeScopeInlines.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 
 namespace WebCore {
+
+inline bool Node::isUserAgentShadowRoot() const
+{
+    auto* shadowRoot = dynamicDowncast<ShadowRoot>(*this);
+    return shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent;
+}
+
+inline ContainerNode* Node::parentOrShadowHostNode() const
+{
+    ASSERT(isMainThreadOrGCThread());
+    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(*this))
+        return shadowRoot->host();
+    return parentNode();
+}
+
+inline RefPtr<ContainerNode> Node::protectedParentOrShadowHostNode() const
+{
+    return parentOrShadowHostNode();
+}
 
 inline RefPtr<ScriptExecutionContext> Node::protectedScriptExecutionContext() const
 {
@@ -40,22 +60,7 @@ inline RefPtr<ScriptExecutionContext> Node::protectedScriptExecutionContext() co
 
 inline WebCoreOpaqueRoot Node::opaqueRoot() const
 {
-    if (isConnected()) {
-        Locker locker { TreeScope::treeScopeMutationLock() };
-        return WebCoreOpaqueRoot { &treeScope().documentScope() };
-    }
-    // FIXME: Possible race?
-    return traverseToOpaqueRoot();
-}
-
-inline Document& Node::document() const
-{
-    return treeScope().documentScope();
-}
-
-inline Ref<Document> Node::protectedDocument() const
-{
-    return document();
+    return WebCoreOpaqueRoot { m_shadowIncludingRoot };
 }
 
 inline Ref<TreeScope> Node::protectedTreeScope() const
@@ -66,6 +71,11 @@ inline Ref<TreeScope> Node::protectedTreeScope() const
 inline RenderBox* Node::renderBox() const
 {
     return dynamicDowncast<RenderBox>(renderer());
+}
+
+inline CheckedPtr<RenderBox> Node::checkedRenderBox() const
+{
+    return renderBox();
 }
 
 inline RenderBoxModelObject* Node::renderBoxModelObject() const
@@ -111,19 +121,28 @@ inline RefPtr<Element> Node::protectedParentElement() const
 
 bool Node::isBeforePseudoElement() const
 {
-    return pseudoId() == PseudoId::Before;
+    auto* pseudoElement = dynamicDowncast<PseudoElement>(*this);
+    return pseudoElement && pseudoElement->pseudoElementType() == PseudoElementType::Before;
 }
 
 bool Node::isAfterPseudoElement() const
 {
-    return pseudoId() == PseudoId::After;
+    auto* pseudoElement = dynamicDowncast<PseudoElement>(*this);
+    return pseudoElement && pseudoElement->pseudoElementType() == PseudoElementType::After;
 }
 
-PseudoId Node::pseudoId() const
+std::optional<PseudoElementType> Node::pseudoElementType() const
 {
     if (auto* pseudoElement = dynamicDowncast<PseudoElement>(*this))
-        return pseudoElement->pseudoId();
-    return PseudoId::None;
+        return pseudoElement->pseudoElementType();
+    return { };
+}
+
+std::optional<Style::PseudoElementIdentifier> Node::pseudoElementIdentifier() const
+{
+    if (auto type = pseudoElementType())
+        return Style::PseudoElementIdentifier { *type };
+    return { };
 }
 
 inline void Node::setTabIndexState(TabIndexState state)
@@ -183,7 +202,12 @@ inline Node& Node::rootNode() const
 {
     if (isInTreeScope())
         return treeScope().rootNode();
-    return traverseToRootNode();
+    return *m_shadowIncludingRoot;
+}
+
+inline Ref<Node> Node::protectedRootNode() const
+{
+    return rootNode();
 }
 
 inline void Node::setParentNode(ContainerNode* parent)

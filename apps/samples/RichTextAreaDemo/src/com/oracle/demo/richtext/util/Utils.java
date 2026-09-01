@@ -43,6 +43,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Miscellaneous utilities.
@@ -120,5 +121,19 @@ public class Utils {
             s.setX(x);
             s.setY(y);
         }
+    }
+
+    public static TextPos leading(TextPos p) {
+        if (!p.isLeading()) {
+            return new TextPos(p.index(), p.offset() - 1, p.charIndex(), true);
+        }
+        return p;
+    }
+
+    public static TextPos trailing(TextPos p) {
+        if (p.isLeading()) {
+            return new TextPos(p.index(), p.offset() + 1, p.charIndex(), false);
+        }
+        return p;
     }
 }

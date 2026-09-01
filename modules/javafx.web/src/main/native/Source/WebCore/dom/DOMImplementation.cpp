@@ -28,11 +28,10 @@
 #include "CSSStyleSheet.h"
 #include "ContentType.h"
 #include "DeprecatedGlobalSettings.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "DocumentType.h"
 #include "Element.h"
 #include "FTPDirectoryDocument.h"
-#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLHeadElement.h"
@@ -46,12 +45,12 @@
 #include "MediaPlayer.h"
 #include "MediaQueryParser.h"
 #include "PDFDocument.h"
-#include "Page.h"
 #include "ParserContentPolicy.h"
 #include "PluginData.h"
 #include "PluginDocument.h"
 #include "SVGDocument.h"
 #include "SVGNames.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
@@ -70,7 +69,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMImplementation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMImplementation);
 
 Ref<Document> DOMImplementation::protectedDocument()
 {
@@ -146,7 +145,7 @@ Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
     document->write(nullptr, FixedVector<String> { "<!doctype html><html><head></head><body></body></html>"_s });
     if (!title.isNull()) {
         auto titleElement = HTMLTitleElement::create(titleTag, document);
-        titleElement->appendChild(document->createTextNode(WTFMove(title)));
+        titleElement->appendChild(document->createTextNode(WTF::move(title)));
         ASSERT(document->head());
         document->protectedHead()->appendChild(titleElement);
     }
@@ -183,10 +182,7 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
         return ImageDocument::create(*frame, url);
 
 #if ENABLE(VIDEO)
-    MediaEngineSupportParameters parameters;
-    parameters.type = ContentType { contentType };
-    parameters.url = url;
-    if (MediaPlayer::supportsType(parameters) != MediaPlayer::SupportsType::IsNotSupported)
+    if (MIMETypeRegistry::isSupportedMediaMIMEType(contentType))
         return MediaDocument::create(frame, settings, url);
 #endif
 
@@ -202,7 +198,7 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
 
     // The following is the relatively costly lookup that requires initializing the plug-in database.
     if (frame && frame->page()) {
-        if (frame->page()->protectedPluginData()->supportsWebVisibleMimeType(contentType, PluginData::OnlyApplicationPlugins))
+        if (frame->protectedPage()->protectedPluginData()->supportsWebVisibleMimeType(contentType, PluginData::OnlyApplicationPlugins))
             return PluginDocument::create(*frame, url);
     }
 

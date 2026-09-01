@@ -26,54 +26,58 @@
 #include "config.h"
 #include "AcceleratedEffectStackUpdater.h"
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 
-#include "Document.h"
-#include "LocalDOMWindow.h"
-#include "Page.h"
-#include "Performance.h"
+#include "AcceleratedTimeline.h"
+#include "AcceleratedTimelinesUpdater.h"
+#include "DocumentPage.h"
+#include "KeyframeEffectStack.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerModelObject.h"
 #include "RenderStyleConstants.h"
+#include "ScrollTimeline.h"
 #include "Styleable.h"
-#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
-AcceleratedEffectStackUpdater::AcceleratedEffectStackUpdater(Document& document)
+void AcceleratedEffectStackUpdater::update()
 {
-    auto now = MonotonicTime::now();
-    m_timeOrigin = now.secondsSinceEpoch();
-    if (RefPtr window = document.window())
-        m_timeOrigin -= Seconds::fromMilliseconds(window->performance().relativeTimeFromTimeOriginInReducedResolution(now));
-}
+    if (!hasTargetsPendingUpdate())
+        return;
 
-void AcceleratedEffectStackUpdater::updateEffectStacks()
-{
+    RefPtr<Page> page;
+    HashSet<Ref<AcceleratedTimeline>> timelinesInUpdate;
+
     auto targetsPendingUpdate = std::exchange(m_targetsPendingUpdate, { });
-    for (auto [element, pseudoElementIdentifier] : targetsPendingUpdate) {
-        if (!element)
+    for (auto weakTarget : targetsPendingUpdate) {
+        auto target = weakTarget.styleable();
+        if (!target)
             continue;
 
-        Styleable target { *element, pseudoElementIdentifier };
+        if (!page)
+            page = element->protectedDocument(target->element.document())->page();
 
-        auto* renderer = dynamicDowncast<RenderLayerModelObject>(target.renderer());
+        CheckedPtr renderer = dynamicDowncast<RenderLayerModelObject>(target->renderer());
         if (!renderer || !renderer->isComposited())
             continue;
 
-        auto* renderLayer = renderer->layer();
+        CheckedPtr renderLayer = renderer->layer();
         ASSERT(renderLayer && renderLayer->backing());
-        renderLayer->backing()->updateAcceleratedEffectsAndBaseValues();
+        renderLayer->backing()->updateAcceleratedEffectsAndBaseValues(timelinesInUpdate);
     }
+
+    if (page && !timelinesInUpdate.isEmpty())
+        page->ensureAcceleratedTimelinesUpdater().processTimelinesSeenDuringEffectStacksUpdate(WTF::move(timelinesInUpdate));
 }
 
-void AcceleratedEffectStackUpdater::updateEffectStackForTarget(const Styleable& target)
+void AcceleratedEffectStackUpdater::scheduleUpdateForTarget(const Styleable& target)
 {
-    m_targetsPendingUpdate.add({ &target.element, target.pseudoElementIdentifier });
+    m_targetsPendingUpdate.add({ target });
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(THREADED_ANIMATIONS)

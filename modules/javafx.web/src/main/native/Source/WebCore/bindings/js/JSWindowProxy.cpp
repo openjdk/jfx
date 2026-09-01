@@ -33,7 +33,7 @@
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoaderTypes.h"
-#include "GCController.h"
+#include "GarbageCollectionController.h"
 #include "JSDOMWindow.h"
 #include "JSDOMWindowProperties.h"
 #include "JSEventTarget.h"
@@ -51,8 +51,8 @@
 #endif
 
 namespace WebCore {
-using namespace JSC;
 
+using namespace JSC;
 
 const ClassInfo JSWindowProxy::s_info = { "JSWindowProxy"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWindowProxy) };
 
@@ -81,14 +81,15 @@ JSWindowProxy& JSWindowProxy::create(VM& vm, DOMWindow& window, DOMWrapperWorld&
 
 void JSWindowProxy::destroy(JSCell* cell)
 {
-    static_cast<JSWindowProxy*>(cell)->JSWindowProxy::~JSWindowProxy();
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSWindowProxy*>(cell)->JSWindowProxy::~JSWindowProxy();
 }
 
 void JSWindowProxy::setWindow(VM& vm, JSDOMGlobalObject& window)
 {
     ASSERT(window.classInfo() == JSDOMWindow::info());
     setTarget(vm, &window);
-    GCController::singleton().garbageCollectSoon();
+    GarbageCollectionController::singleton().garbageCollectSoon();
 }
 
 void JSWindowProxy::setWindow(DOMWindow& domWindow)
@@ -208,7 +209,7 @@ static std::optional<FrameInfo> frameInfo(JSGlobalObject* globalObject)
         return std::nullopt;
 
     Ref mainFrame { frame->mainFrame() };
-    return FrameInfo { frame.releaseNonNull(), WTFMove(mainFrame) };
+    return FrameInfo { frame.releaseNonNull(), WTF::move(mainFrame) };
 }
 
 static bool hasSameMainFrame(const Frame* a, const FrameInfo& b)

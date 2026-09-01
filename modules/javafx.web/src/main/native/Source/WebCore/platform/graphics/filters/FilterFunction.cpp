@@ -40,15 +40,15 @@ FilterFunction::FilterFunction(Type filterType, std::optional<RenderingResourceI
 
 FilterFunction::~FilterFunction()
 {
-    for (auto& observer : m_observers)
-        observer.willDestroyFilter(renderingResourceIdentifier());
+    for (CheckedRef observer : m_observers)
+        observer->willDestroyFilter(renderingResourceIdentifier());
 }
 
 AtomString FilterFunction::filterName(Type filterType)
 {
-    static constexpr std::pair<FilterFunction::Type, ASCIILiteral> namesArray[] = {
-        { FilterFunction::Type::CSSFilter,           "CSSFilter"_s           },
-        { FilterFunction::Type::SVGFilter,           "SVGFilter"_s           },
+    static constexpr SortedArrayMap namesMap { std::to_array<std::pair<FilterFunction::Type, ASCIILiteral>>({
+        { FilterFunction::Type::CSSFilterRenderer,   "CSSFilterRenderer"_s   },
+        { FilterFunction::Type::SVGFilterRenderer,   "SVGFilterRenderer"_s   },
 
         { FilterFunction::Type::FEBlend,             "FEBlend"_s             },
         { FilterFunction::Type::FEColorMatrix,       "FEColorMatrix"_s       },
@@ -70,9 +70,7 @@ AtomString FilterFunction::filterName(Type filterType)
 
         { FilterFunction::Type::SourceAlpha,         "SourceAlpha"_s         },
         { FilterFunction::Type::SourceGraphic,       "SourceGraphic"_s       }
-    };
-
-    static constexpr SortedArrayMap namesMap { namesArray };
+    }) };
 
     ASSERT(namesMap.tryGet(filterType));
     return namesMap.get(filterType, ""_s);

@@ -27,8 +27,6 @@
 
 #include <wtf/WTFConfig.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
 
 inline uintptr_t lowestAccessibleAddress()
@@ -45,5 +43,3 @@ inline uintptr_t highestAccessibleAddress()
 
 using WTF::lowestAccessibleAddress;
 using WTF::highestAccessibleAddress;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

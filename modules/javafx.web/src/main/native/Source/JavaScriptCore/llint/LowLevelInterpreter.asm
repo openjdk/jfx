@@ -154,6 +154,8 @@ nop
 
 const PtrSize = constexpr (sizeof(void*))
 const MachineRegisterSize = constexpr (sizeof(CPURegister))
+const FPRRegisterSize = 8
+const VectorRegisterSize = 16
 const SlotSize = constexpr (sizeof(Register))
 const SeenMultipleCalleeObjects = 1
 
@@ -262,6 +264,7 @@ const JSEntryPtrTag = constexpr JSEntryPtrTag
 const HostFunctionPtrTag = constexpr HostFunctionPtrTag
 const JSEntrySlowPathPtrTag = constexpr JSEntrySlowPathPtrTag
 const NativeToJITGatePtrTag = constexpr NativeToJITGatePtrTag
+const VMEntryToJITGatePtrTag = constexpr VMEntryToJITGatePtrTag
 const ExceptionHandlerPtrTag = constexpr ExceptionHandlerPtrTag
 const YarrEntryPtrTag = constexpr YarrEntryPtrTag
 const CSSSelectorPtrTag = constexpr CSSSelectorPtrTag
@@ -270,6 +273,141 @@ const NoPtrTag = constexpr NoPtrTag
  
 # VMTraps data
 const VMTrapsAsyncEvents = constexpr VMTraps::AsyncEvents
+
+# VM offsets
+const VMTrapAwareSoftStackLimitOffset = VM::m_threadContext + VMThreadContext::m_traps + VMTraps::m_stack + StackManager::m_trapAwareSoftStackLimit
+const VMCLoopStackLimitOffset = VM::m_threadContext + VMThreadContext::m_traps + VMTraps::m_stack + StackManager::m_cloopStackLimit
+const VMSoftStackLimitOffset = VM::m_threadContext + VMThreadContext::m_traps + VMTraps::m_stack + StackManager::m_softStackLimit
+
+# Registers
+
+if ARMv7
+    const a0 = t0
+    const a1 = t1
+    const a2 = t2
+    const a3 = t3
+    const a4 = invalidGPR
+    const a5 = invalidGPR
+    const a6 = invalidGPR
+    const a7 = invalidGPR
+
+    const wa0 = a0
+    const wa1 = a1
+    const wa2 = a2
+    const wa3 = a3
+    const wa4 = invalidGPR
+    const wa5 = invalidGPR
+    const wa6 = invalidGPR
+    const wa7 = invalidGPR
+
+    const ws0 = t5 # ws0 must be a non-argument/non-return GPR
+    const ws1 = t6
+    const ws2 = csr0
+    const ws3 = csr1
+
+    const r0 = a0
+    const r1 = a1
+
+    const fa0 = ft0
+    const fa1 = ft1
+    const fa2 = ft2
+    const fa3 = ft3
+
+    const wfa0 = fa0
+    const wfa1 = fa1
+    const wfa2 = fa2
+    const wfa3 = fa3
+    const wfa4 = ft4
+    const wfa5 = ft5
+    const wfa6 = ft6
+    const wfa7 = ft7
+
+    const fr = fa0
+elsif X86_64
+    const a0 = t6
+    const a1 = t1
+    const a2 = t2
+    const a3 = t3
+    const a4 = t4
+    const a5 = t7
+    const a6 = invalidGPR
+    const a7 = invalidGPR
+
+    const wa0 = a0
+    const wa1 = a1
+    const wa2 = a2
+    const wa3 = a3
+    const wa4 = a4
+    const wa5 = a5
+    const wa6 = a6
+    const wa7 = a7
+
+    const ws0 = t0
+    const ws1 = t5
+    const ws2 = invalidGPR
+    const ws3 = invalidGPR
+
+    const r0 = t0
+    const r1 = t2
+
+    const fa0 = ft0
+    const fa1 = ft1
+    const fa2 = ft2
+    const fa3 = ft3
+
+    const wfa0 = fa0
+    const wfa1 = fa1
+    const wfa2 = fa2
+    const wfa3 = fa3
+    const wfa4 = ft4
+    const wfa5 = ft5
+    const wfa6 = ft6
+    const wfa7 = ft7
+
+    const fr = fa0
+else
+    const a0 = t0
+    const a1 = t1
+    const a2 = t2
+    const a3 = t3
+    const a4 = t4
+    const a5 = t5
+    const a6 = t6
+    const a7 = t7
+
+    const wa0 = a0
+    const wa1 = a1
+    const wa2 = a2
+    const wa3 = a3
+    const wa4 = a4
+    const wa5 = a5
+    const wa6 = a6
+    const wa7 = a7
+
+    const ws0 = t9 # ws0 must be a non-argument/non-return GPR
+    const ws1 = t10
+    const ws2 = t11
+    const ws3 = t12
+
+    const r0 = a0
+    const r1 = a1
+
+    const fa0 = ft0
+    const fa1 = ft1
+    const fa2 = ft2
+    const fa3 = ft3
+
+    const wfa0 = fa0
+    const wfa1 = fa1
+    const wfa2 = fa2
+    const wfa3 = fa3
+    const wfa4 = ft4
+    const wfa5 = ft5
+    const wfa6 = ft6
+    const wfa7 = ft7
+
+    const fr = fa0
+end
 
 # Some register conventions.
 # - We use a pair of registers to represent the PC: one register for the
@@ -332,22 +470,29 @@ macro loadBoolJSCOption(name, reg)
     loadb JSCConfigOffset + JSC::Config::options + OptionsStorage::%name%[reg], reg
 end
 
+macro validateOpcodeConfig(scratchReg)
+    if ARM64E
+        leap _os_script_config_storage, scratchReg
+        loadp [scratchReg], scratchReg
+    end
+end
+
 macro nextInstruction()
     loadb [PB, PC, 1], t0
-    leap _g_opcodeMap, t1
-    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
+    leap _os_script_config_storage, t1
+    jmp JSC::LLInt::OpcodeConfig::opcodeMap[t1, t0, PtrSize]
 end
 
 macro nextInstructionWide16()
     loadb OpcodeIDNarrowSize[PB, PC, 1], t0
-    leap _g_opcodeMapWide16, t1
-    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
+    leap _os_script_config_storage, t1
+    jmp JSC::LLInt::OpcodeConfig::opcodeMapWide16[t1, t0, PtrSize]
 end
 
 macro nextInstructionWide32()
     loadb OpcodeIDNarrowSize[PB, PC, 1], t0
-    leap _g_opcodeMapWide32, t1
-    jmp [t1, t0, PtrSize], BytecodePtrTag, AddressDiversified
+    leap _os_script_config_storage, t1
+    jmp JSC::LLInt::OpcodeConfig::opcodeMapWide32[t1, t0, PtrSize]
 end
 
 macro dispatch(advanceReg)
@@ -1072,11 +1217,11 @@ end
 macro restoreStackPointerAfterCall()
     loadp CodeBlock[cfr], t2
     getFrameRegisterSizeForCodeBlock(t2, t2)
-    if ARMv7
+    if ARM64 or ARM64E
+        subp cfr, t2, sp
+    else
         subp cfr, t2, t2
         move t2, sp
-    else
-        subp cfr, t2, sp
     end
 end
 
@@ -1545,17 +1690,21 @@ if not ADDRESS64
     bpa t0, cfr, .needStackCheck
 end
     loadp CodeBlock::m_vm[t1], t2
-    if C_LOOP
-        bplteq VM::m_cloopStackLimit[t2], t0, .stackHeightOK
-    else
-        bplteq VM::m_softStackLimit[t2], t0, .stackHeightOK
-    end
+    bpbeq VMTrapAwareSoftStackLimitOffset[t2], t0, .stackHeightOK
 
 .needStackCheck:
     # Stack height check failed - need to call a slow_path.
     # Set up temporary stack pointer for call including callee saves
     subp maxFrameExtentForSlowPathCall, sp
-    callSlowPath(_llint_stack_check)
+
+    # Do the equivalent of callSlowPath() except with 3 arguments.
+    prepareStateForCCall()
+    move t0, a2
+    move cfr, a0
+    move PC, a1
+    cCall3(_llint_check_stack_and_vm_traps)
+    restoreStateAfterCCall()
+
     bpeq r1, 0, .stackHeightOKGetCodeBlock
 
     # We're throwing before the frame is fully set up. This frame will be
@@ -1706,25 +1855,20 @@ end
 
 if (ARM64E or ARM64) and ADDRESS64
     macro vmEntryToJavaScriptSetup()
-        if ASSERT_ENABLED
-            frameForCalleeSaveVerification()
-        end
         functionPrologue()
         pushCalleeSaves()
         vmEntryRecord(cfr, sp)
-        storep a1, VMEntryRecord::m_vm[sp]
+        storepairq a1, a5, VMEntryRecord::m_vm[sp]
         loadpairq VM::topCallFrame[a1], t8, t9 # topCallFrame and topEntryFrame
         storepairq t8, t9, VMEntryRecord::m_prevTopCallFrame[sp]
     end
 
-    # EncodedJSValue vmEntryToJavaScriptWith0Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue)
-    # entry, vm, codeBlock, callee, thisValue
+    #  versions - these include a context parameter (JSCell*)
+    # EncodedJSValue vmEntryToJavaScriptWith0Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*)
+    # entry, vm, codeBlock, callee, thisValue, context
     global _vmEntryToJavaScriptWith0Arguments
     _vmEntryToJavaScriptWith0Arguments:
         # entry must be a0
-        if ASSERT_ENABLED
-            frameForCalleeSaveVerification()
-        end
         vmEntryToJavaScriptSetup()
         move 1, t8 # argumentCountIncludingThis
         subp ((CallFrameHeaderSize + 1 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
@@ -1734,57 +1878,105 @@ if (ARM64E or ARM64) and ADDRESS64
         storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
         jmp _llint_call_javascript
 
-    # EncodedJSValue vmEntryToJavaScriptWith1Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue, JSValue)
-    # entry, vm, codeBlock, callee, thisValue, arg0
+    # EncodedJSValue vmEntryToJavaScriptWith1Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0
     global _vmEntryToJavaScriptWith1Arguments
     _vmEntryToJavaScriptWith1Arguments:
         # entry must be a0
-        if ASSERT_ENABLED
-            frameForCalleeSaveVerification()
-        end
         vmEntryToJavaScriptSetup()
         move 2, t8 # argumentCountIncludingThis
         subp ((CallFrameHeaderSize + 2 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
         storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
         storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
-        storepairq a5, a5, CodeBlock + (SlotSize * 4)[sp]
+        storepairq a6, a6, CodeBlock + (SlotSize * 4)[sp]
         move sp, t8
         storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
         jmp _llint_call_javascript
 
-    # EncodedJSValue vmEntryToJavaScriptWith2Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue, JSValue)
-    # entry, vm, codeBlock, callee, thisValue, arg0, arg1
+
+    # EncodedJSValue vmEntryToJavaScriptWith2Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0, arg1
     global _vmEntryToJavaScriptWith2Arguments
     _vmEntryToJavaScriptWith2Arguments:
         # entry must be a0
-        if ASSERT_ENABLED
-            frameForCalleeSaveVerification()
-        end
         vmEntryToJavaScriptSetup()
         move 3, t8 # argumentCountIncludingThis
         subp ((CallFrameHeaderSize + 3 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
         storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
         storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
-        storepairq a5, a6, CodeBlock + (SlotSize * 4)[sp]
+        storepairq a6, a7, CodeBlock + (SlotSize * 4)[sp]
         move sp, t8
         storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
         jmp _llint_call_javascript
 
-    # EncodedJSValue vmEntryToJavaScriptWith3Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue, JSValue, JSValue)
-    # entry, vm, codeBlock, callee, thisValue, arg0, arg1, arg2
+    # EncodedJSValue vmEntryToJavaScriptWith3Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0, arg1, arg2
     global _vmEntryToJavaScriptWith3Arguments
     _vmEntryToJavaScriptWith3Arguments:
         # entry must be a0
-        if ASSERT_ENABLED
-            frameForCalleeSaveVerification()
-        end
         vmEntryToJavaScriptSetup()
         move 4, t8 # argumentCountIncludingThis
         subp ((CallFrameHeaderSize + 4 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
+        loadq 16[cfr], t9 # Load arg2 from stack
         storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
         storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
-        storepairq a5, a6, CodeBlock + (SlotSize * 4)[sp]
-        storepairq a7, a7, CodeBlock + (SlotSize * 6)[sp]
+        storepairq a6, a7, CodeBlock + (SlotSize * 4)[sp]
+        storepairq t9, t9, CodeBlock + (SlotSize * 6)[sp]
+        move sp, t8
+        storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
+        jmp _llint_call_javascript
+
+    # EncodedJSValue vmEntryToJavaScriptWith4Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0, arg1, arg2, arg3
+    global _vmEntryToJavaScriptWith4Arguments
+    _vmEntryToJavaScriptWith4Arguments:
+        # entry must be a0
+        vmEntryToJavaScriptSetup()
+        move 5, t8 # argumentCountIncludingThis
+        subp ((CallFrameHeaderSize + 5 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
+        loadpairq 16[cfr], t9, t10
+        storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
+        storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
+        storepairq a6, a7, CodeBlock + (SlotSize * 4)[sp]
+        storepairq t9, t10, CodeBlock + (SlotSize * 6)[sp]
+        move sp, t8
+        storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
+        jmp _llint_call_javascript
+
+    # EncodedJSValue vmEntryToJavaScriptWith5Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0, arg1, arg2, arg3, arg4
+    global _vmEntryToJavaScriptWith5Arguments
+    _vmEntryToJavaScriptWith5Arguments:
+        # entry must be a0
+        vmEntryToJavaScriptSetup()
+        move 6, t8 # argumentCountIncludingThis
+        subp ((CallFrameHeaderSize + 6 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
+        loadpairq 16[cfr], t9, t10
+        loadq 32[cfr], t11
+        storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
+        storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
+        storepairq a6, a7, CodeBlock + (SlotSize * 4)[sp]
+        storepairq t9, t10, CodeBlock + (SlotSize * 6)[sp]
+        storepairq t11, t11, CodeBlock + (SlotSize * 8)[sp]
+        move sp, t8
+        storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
+        jmp _llint_call_javascript
+
+    # EncodedJSValue vmEntryToJavaScriptWith6Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue, JSValue, JSValue)
+    # entry, vm, codeBlock, callee, thisValue, context, arg0, arg1, arg2, arg3, arg4, arg5
+    global _vmEntryToJavaScriptWith6Arguments
+    _vmEntryToJavaScriptWith6Arguments:
+        # entry must be a0
+        vmEntryToJavaScriptSetup()
+        move 7, t8 # argumentCountIncludingThis
+        subp ((CallFrameHeaderSize + 7 * SlotSize + StackAlignment - 1) & ~StackAlignmentMask), sp
+        loadpairq 16[cfr], t9, t10
+        loadpairq 32[cfr], t11, t12 # Load arg4 and arg5 from stack
+        storepairq a2, a3, CodeBlock + (SlotSize * 0)[sp]
+        storepairq t8, a4, CodeBlock + (SlotSize * 2)[sp]
+        storepairq a6, a7, CodeBlock + (SlotSize * 4)[sp]
+        storepairq t9, t10, CodeBlock + (SlotSize * 6)[sp]
+        storepairq t11, t12, CodeBlock + (SlotSize * 8)[sp]
         move sp, t8
         storepairq t8, cfr, VM::topCallFrame[a1] # topCallFrame and topEntryFrame
         jmp _llint_call_javascript
@@ -1807,6 +1999,7 @@ if ARM64E
     jmp t5, YarrEntryPtrTag
     _vmEntryToYarrJITAfter:
 end
+    move cfr, sp
     functionEpilogue()
     ret
 
@@ -2362,7 +2555,7 @@ end)
 macro checkTraps(dispatch)
     loadp CodeBlock[cfr], t1
     loadp CodeBlock::m_vm[t1], t1
-    loadi VM::m_traps+VMTraps::m_trapBits[t1], t0
+    loadi VM::m_threadContext+VMThreadContext::m_traps+VMTraps::m_trapBits[t1], t0
     andi VMTrapsAsyncEvents, t0
     btpnz t0, .handleTraps
 .afterHandlingTraps:
@@ -2856,33 +3049,24 @@ end
 
 if WEBASSEMBLY
 
-entry(wasm, macro()
-    include InitWasm
-end)
-
 macro wasmScope()
     # Wrap the script in a macro since it overwrites some of the LLInt macros,
     # but we don't want to interfere with the LLInt opcodes
-    include WebAssembly
     include InPlaceInterpreter
 end
 
-global _wasmLLIntPCRangeStart
-_wasmLLIntPCRangeStart:
+global _wasmIPIntPCRangeStart
+_wasmIPIntPCRangeStart:
     break # FIXME: rdar://96556827
 wasmScope()
-global _wasmLLIntPCRangeEnd
-_wasmLLIntPCRangeEnd:
+global _wasmIPIntPCRangeEnd
+_wasmIPIntPCRangeEnd:
     break # FIXME: rdar://96556827
 
 else
 
 # These need to be defined even when WebAssembly is disabled
 op(js_to_wasm_wrapper_entry, macro ()
-    crash()
-end)
-
-op(wasm_to_wasm_wrapper_entry, macro ()
     crash()
 end)
 
@@ -2894,35 +3078,11 @@ op(wasm_to_js_wrapper_entry, macro ()
     crash()
 end)
 
-op(wasm_function_prologue_trampoline, macro ()
-    crash()
-end)
-
-op(wasm_function_prologue, macro ()
-    crash()
-end)
-
-op(wasm_function_prologue_simd_trampoline, macro ()
-    crash()
-end)
-
-op(wasm_function_prologue_simd, macro ()
-    crash()
-end)
-
 op(ipint_trampoline, macro ()
     crash()
 end)
 
 op(ipint_entry, macro ()
-    crash()
-end)
-
-op(ipint_function_prologue_simd_trampoline, macro ()
-    crash()
-end)
-
-op(ipint_function_prologue_simd, macro ()
     crash()
 end)
 
@@ -2950,24 +3110,12 @@ op(ipint_table_catch_allref_entry, macro()
     crash()
 end)
 
-_wasm_trampoline_wasm_call:
-_wasm_trampoline_wasm_call_indirect:
-_wasm_trampoline_wasm_call_ref:
-_wasm_trampoline_wasm_call_wide16:
-_wasm_trampoline_wasm_call_indirect_wide16:
-_wasm_trampoline_wasm_call_ref_wide16:
-_wasm_trampoline_wasm_call_wide32:
-_wasm_trampoline_wasm_call_indirect_wide32:
-_wasm_trampoline_wasm_call_ref_wide32:
-_wasm_trampoline_wasm_tail_call:
-_wasm_trampoline_wasm_tail_call_indirect:
-_wasm_trampoline_wasm_tail_call_ref:
-_wasm_trampoline_wasm_tail_call_wide16:
-_wasm_trampoline_wasm_tail_call_indirect_wide16:
-_wasm_trampoline_wasm_tail_call_ref_wide16:
-_wasm_trampoline_wasm_tail_call_wide32:
-_wasm_trampoline_wasm_tail_call_indirect_wide32:
-_wasm_trampoline_wasm_tail_call_ref_wide32:
+op(wasm_throw_from_slow_path_trampoline, macro ()
+end)
+
+op(wasm_throw_from_fault_handler_trampoline_reg_instance, macro ()
+end)
+
 _wasm_trampoline_wasm_ipint_call:
 _wasm_trampoline_wasm_ipint_call_wide16:
 _wasm_trampoline_wasm_ipint_call_wide32:

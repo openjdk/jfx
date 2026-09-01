@@ -30,15 +30,14 @@
 #include "BackForwardCache.h"
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"
-#include "CachedResourceLoader.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonVM.h"
 #include "CookieJar.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentView.h"
 #include "FontCache.h"
-#include "GCController.h"
+#include "GarbageCollectionController.h"
 #include "HRTFElevation.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNameCache.h"
@@ -52,6 +51,7 @@
 #include "Page.h"
 #include "PerformanceLogging.h"
 #include "PluginDocument.h"
+#include "RenderObjectInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "SVGPathElement.h"
@@ -153,9 +153,9 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
     }
 
     if (synchronous == Synchronous::Yes)
-        GCController::singleton().deleteAllCode(JSC::PreventCollectionAndDeleteAllCode);
+        GarbageCollectionController::singleton().deleteAllCode(JSC::PreventCollectionAndDeleteAllCode);
     else
-    GCController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
+        GarbageCollectionController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
 
 #if ENABLE(VIDEO)
     for (auto& mediaElement : HTMLMediaElement::allMediaElements())
@@ -163,12 +163,12 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
 #endif
 
     if (synchronous == Synchronous::Yes) {
-        GCController::singleton().garbageCollectNow();
+        GarbageCollectionController::singleton().garbageCollectNow();
     } else {
 #if PLATFORM(IOS_FAMILY)
-        GCController::singleton().garbageCollectNowIfNotDoneRecently();
+        GarbageCollectionController::singleton().garbageCollectNowIfNotDoneRecently();
 #else
-        GCController::singleton().garbageCollectSoon();
+        GarbageCollectionController::singleton().garbageCollectSoon();
 #endif
     }
 
@@ -181,7 +181,7 @@ void releaseMemory(Critical critical, Synchronous synchronous, MaintainBackForwa
 
 #if PLATFORM(IOS_FAMILY)
     if (critical == Critical::No)
-        GCController::singleton().garbageCollectNowIfNotDoneRecently();
+        GarbageCollectionController::singleton().garbageCollectNowIfNotDoneRecently();
 #endif
 
     if (critical == Critical::Yes) {

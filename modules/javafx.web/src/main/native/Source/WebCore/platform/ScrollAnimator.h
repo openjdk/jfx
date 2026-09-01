@@ -31,12 +31,13 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "PlatformWheelEvent.h"
-#include "ScrollingEffectsController.h"
-#include "Timer.h"
-#include "WheelEventTestMonitor.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/ScrollingEffectsController.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WheelEventTestMonitor.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -61,7 +62,8 @@ public:
     explicit ScrollAnimator(ScrollableArea&);
     virtual ~ScrollAnimator();
 
-    ScrollableArea& scrollableArea() const { return m_scrollableArea; }
+    ScrollableArea& scrollableArea() const { return m_scrollableArea.get(); }
+    CheckedRef<ScrollableArea> checkedScrollableArea() const { return scrollableArea(); }
 
     KeyboardScrollingAnimator *keyboardScrollingAnimator() const final { return m_keyboardScrollingAnimator.ptr(); }
 
@@ -169,7 +171,7 @@ private:
 #endif
 
 protected:
-    ScrollableArea& m_scrollableArea;
+    WeakRef<ScrollableArea> m_scrollableArea;
     RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
     ScrollingEffectsController m_scrollController;
     FloatPoint m_currentPosition;

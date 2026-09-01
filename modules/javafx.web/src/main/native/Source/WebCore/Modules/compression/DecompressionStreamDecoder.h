@@ -77,9 +77,6 @@ private:
     const size_t maxAllocationSize = 1073741824; // 1GB
 
     bool m_didFinish { false };
-
-
-
     const Formats::CompressionFormat m_format;
 
     CompressionStream m_compressionStream;

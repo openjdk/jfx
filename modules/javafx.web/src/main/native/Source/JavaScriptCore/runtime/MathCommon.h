@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "CPU.h"
-#include "JITOperationValidation.h"
-#include "OperationResult.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/OperationResult.h>
 #include <climits>
 #include <cmath>
 #include <optional>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -240,21 +241,6 @@ inline std::optional<double> safeReciprocalForDivByConst(double constant)
     return reciprocal;
 }
 
-ALWAYS_INLINE bool canBeStrictInt32(double value)
-{
-    if (std::isinf(value) || std::isnan(value))
-        return false;
-    const int32_t asInt32 = static_cast<int32_t>(value);
-    return !(asInt32 != value || (!asInt32 && std::signbit(value))); // true for -0.0
-}
-
-ALWAYS_INLINE bool canBeInt32(double value)
-{
-    if (std::isinf(value) || std::isnan(value))
-        return false;
-    return static_cast<int32_t>(value) == value;
-}
-
 extern "C" {
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double));
 }
@@ -319,7 +305,7 @@ ALWAYS_INLINE double jsMaxDouble(double lhs, double rhs)
     // Intentionally using fmax, not fmaxnm since fmax is aligned to JS Math.max semantics.
     // fmaxnm returns non-NaN number when either lhs or rhs is NaN. But Math.max returns NaN.
     double result;
-    asm (
+    __asm__(
         "fmax %d[result], %d[lhs], %d[rhs]"
         : [result] "=w"(result)
         : [lhs] "w"(lhs), [rhs] "w"(rhs)
@@ -337,7 +323,7 @@ ALWAYS_INLINE double jsMinDouble(double lhs, double rhs)
     // Intentionally using fmin, not fminnm since fmin is aligned to JS Math.min semantics.
     // fminnm returns non-NaN number when either lhs or rhs is NaN. But Math.min returns NaN.
     double result;
-    asm (
+    __asm__(
         "fmin %d[result], %d[lhs], %d[rhs]"
         : [result] "=w"(result)
         : [lhs] "w"(lhs), [rhs] "w"(rhs)
@@ -366,6 +352,7 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundDouble, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRoundDouble, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundFloat, float, (float));
 
+// FIXME: Remote them. These functions were only used in 32bit wasm.
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_nearest, float, (float));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_nearest, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_roundeven, float, (float));

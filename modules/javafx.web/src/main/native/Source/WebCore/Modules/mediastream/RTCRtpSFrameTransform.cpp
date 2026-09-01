@@ -52,7 +52,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpSFrameTransform);
 
 Ref<RTCRtpSFrameTransform> RTCRtpSFrameTransform::create(ScriptExecutionContext& context, Options options)
 {
@@ -126,7 +126,7 @@ static std::optional<Vector<uint8_t>> processFrame(std::span<const uint8_t> data
 {
     auto result = transformer.transform(data);
     if (!result.has_value()) {
-        auto errorInformation = WTFMove(result.error());
+        auto errorInformation = WTF::move(result.error());
         errorInformation.message = { };
         RELEASE_LOG_ERROR(WebRTC, "RTCRtpSFrameTransform failed transforming a frame with error %hhu", enumToUnderlyingType(errorInformation.error));
         // Call the error event handler.
@@ -140,7 +140,7 @@ static std::optional<Vector<uint8_t>> processFrame(std::span<const uint8_t> data
         });
         return { };
     }
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 bool RTCRtpSFrameTransform::hasKey(uint64_t keyID) const
@@ -198,7 +198,7 @@ void RTCRtpSFrameTransform::willClearBackend(RTCRtpTransformBackend& backend)
 static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
     auto result = processFrame(data, transformer, identifier, weakTransform);
-    auto buffer = result ? SharedBuffer::create(WTFMove(*result)) : SharedBuffer::create();
+    auto buffer = result ? SharedBuffer::create(WTF::move(*result)) : SharedBuffer::create();
     source.enqueue(toJS(&globalObject, &globalObject, buffer->tryCreateArrayBuffer().get()));
 }
 
@@ -218,7 +218,7 @@ void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameT
 
 ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
 {
-    auto* globalObject = scriptExecutionContext() ? JSC::jsCast<JSDOMGlobalObject*>(scriptExecutionContext()->globalObject()) : nullptr;
+    auto* globalObject = scriptExecutionContext() ? JSC::jsCast<JSDOMGlobalObject*>(protectedScriptExecutionContext()->globalObject()) : nullptr;
     if (!globalObject)
         return Exception { ExceptionCode::InvalidStateError };
 
@@ -262,17 +262,17 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
     return { };
 }
 
-ExceptionOr<RefPtr<ReadableStream>> RTCRtpSFrameTransform::readable()
+ExceptionOr<Ref<ReadableStream>> RTCRtpSFrameTransform::readable()
 {
     if (!m_readable) {
         auto result = createStreams();
         if (result.hasException())
             return result.releaseException();
     }
-    return m_readable.copyRef();
+    return m_readable.releaseNonNull();
 }
 
-ExceptionOr<RefPtr<WritableStream>> RTCRtpSFrameTransform::writable()
+ExceptionOr<Ref<WritableStream>> RTCRtpSFrameTransform::writable()
 {
     if (!m_writable) {
         auto result = createStreams();
@@ -281,7 +281,7 @@ ExceptionOr<RefPtr<WritableStream>> RTCRtpSFrameTransform::writable()
     }
 
     m_hasWritable = true;
-    return m_writable.copyRef();
+    return m_writable.releaseNonNull();
 }
 
 bool RTCRtpSFrameTransform::virtualHasPendingActivity() const

@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
-#include "RenderStyleConstants.h"
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/RenderStyleConstants.h>
 
 namespace WebCore {
 
@@ -44,7 +44,7 @@ public:
 
     static Ref<CSSViewValue> create(RefPtr<CSSValue>&& axis, RefPtr<CSSValue>&& startInset, RefPtr<CSSValue>&& endInset)
     {
-        return adoptRef(*new CSSViewValue(WTFMove(axis), WTFMove(startInset), WTFMove(endInset)));
+        return adoptRef(*new CSSViewValue(WTF::move(axis), WTF::move(startInset), WTF::move(endInset)));
     }
 
     String customCSSText(const CSS::SerializationContext&) const;
@@ -76,9 +76,9 @@ public:
 private:
     CSSViewValue(RefPtr<CSSValue>&& axis, RefPtr<CSSValue>&& startInset, RefPtr<CSSValue>&& endInset)
         : CSSValue(ClassType::View)
-        , m_axis(WTFMove(axis))
-        , m_startInset(WTFMove(startInset))
-        , m_endInset(WTFMove(endInset))
+        , m_axis(WTF::move(axis))
+        , m_startInset(WTF::move(startInset))
+        , m_endInset(WTF::move(endInset))
     {
     }
 

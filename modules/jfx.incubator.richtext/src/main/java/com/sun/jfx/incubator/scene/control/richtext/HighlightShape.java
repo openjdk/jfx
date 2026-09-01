@@ -48,7 +48,7 @@ import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 public class HighlightShape extends Path {
     public enum Type {
         HIGHLIGHT,
-        SQUIGGLY,
+        WAVY_UNDERLINE,
     }
 
     private final Type type;
@@ -65,7 +65,7 @@ public class HighlightShape extends Path {
         switch (type) {
         case HIGHLIGHT:
             return f.getRangeShape(start, end, true);
-        case SQUIGGLY:
+        case WAVY_UNDERLINE:
             PathElement[] pe = f.getUnderlineShape(start, end);
             return generateSquiggly(pe);
         default:

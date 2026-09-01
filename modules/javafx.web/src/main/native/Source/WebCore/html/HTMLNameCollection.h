@@ -33,7 +33,7 @@ class Document;
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 class HTMLNameCollection : public CachedHTMLCollection<HTMLCollectionClass, traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_NON_HEAP_ALLOCATABLE(HTMLNameCollection);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(HTMLNameCollection);
 public:
     virtual ~HTMLNameCollection();
 
@@ -53,7 +53,7 @@ HTMLNameCollection<HTMLCollectionClass, traversalType>::HTMLNameCollection(Docum
 }
 
 class WindowNameCollection final : public HTMLNameCollection<WindowNameCollection, CollectionTraversalType::Descendants> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WindowNameCollection);
+    WTF_MAKE_TZONE_ALLOCATED(WindowNameCollection);
 public:
     static Ref<WindowNameCollection> create(Document& document, CollectionType type, const AtomString& name)
     {
@@ -76,7 +76,7 @@ private:
 };
 
 class DocumentNameCollection final : public HTMLNameCollection<DocumentNameCollection, CollectionTraversalType::Descendants> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DocumentNameCollection);
+    WTF_MAKE_TZONE_ALLOCATED(DocumentNameCollection);
 public:
     static Ref<DocumentNameCollection> create(Document& document, CollectionType type, const AtomString& name)
     {

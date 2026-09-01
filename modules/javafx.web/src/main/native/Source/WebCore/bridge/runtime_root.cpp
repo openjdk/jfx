@@ -37,7 +37,7 @@
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
 
-namespace JSC { namespace Bindings {
+namespace JSC::Bindings {
 
 // This code attempts to solve two problems: (1) plug-ins leaking references to
 // JS and the DOM; (2) plug-ins holding stale references to JS and the DOM. Previous
@@ -195,11 +195,12 @@ void RootObject::removeRuntimeObject(RuntimeObject* object)
 
 void RootObject::finalize(JSC::Handle<JSC::Unknown> handle, void*)
 {
-    RuntimeObject* object = static_cast<RuntimeObject*>(handle.slot()->asCell());
+    // Cannot call jsCast() during weak reference finalization.
+    SUPPRESS_MEMORY_UNSAFE_CAST auto* object = static_cast<RuntimeObject*>(handle.slot()->asCell());
 
     Ref<RootObject> protectedThis(*this);
     object->invalidate();
     weakRemove(m_runtimeObjects, object, object);
 }
 
-} } // namespace JSC::Bindings
+} // namespace JSC::Bindings

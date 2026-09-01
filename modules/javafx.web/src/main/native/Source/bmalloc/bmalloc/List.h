@@ -25,9 +25,13 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 
 #if !BUSE(LIBPAS)
+
+#include <type_traits>
 
 namespace bmalloc {
 
@@ -57,8 +61,6 @@ class List {
     };
 
 public:
-    List() { }
-
     bool isEmpty() { return m_root.next == &m_root; }
 
     T* head() { return static_cast<T*>(m_root.next); }
@@ -124,3 +126,5 @@ private:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary RTCPeerConnectionIceErrorEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCPeerConnectionIceErrorEventInit : EventInit {
     DOMString? address;
     unsigned short? port;
     DOMString url;

@@ -50,7 +50,7 @@ struct ConversionResultStorage {
 
     ConversionResultStorage(ConversionResultException token) : value(makeUnexpected(token)) { }
     ConversionResultStorage(const Type& value) : value(value) { }
-    ConversionResultStorage(Type&& value) : value(WTFMove(value)) { }
+    ConversionResultStorage(Type&& value) : value(WTF::move(value)) { }
 
     template<typename U>
     ConversionResultStorage(ConversionResultStorage<U>&& other)
@@ -94,7 +94,7 @@ struct ConversionResultStorage {
     ReturnType releaseReturnValue()
     {
         ASSERT(!std::exchange(wasReleased, true));
-        return WTFMove(value.value());
+        return WTF::move(value.value());
     }
 
     Expected<Type, ConversionResultException> value;
@@ -141,7 +141,7 @@ struct ConversionResultStorage<T&> {
     Type& releaseReturnValue()
     {
         ASSERT(!std::exchange(wasReleased, true));
-        return WTFMove(value.value()).get();
+        return WTF::move(value.value()).get();
     }
 
     Expected<std::reference_wrapper<Type>, ConversionResultException> value;
@@ -152,9 +152,10 @@ struct ConversionResultStorage<T&> {
 
 } // namespace Detail
 
-template<typename IDL>
+template<typename T>
 class ConversionResult {
 public:
+    using IDL = T;
     using ReturnType = typename Converter<IDL>::ReturnType;
 
     static ConversionResult exception() { return ConversionResult(ConversionResultException()); }
@@ -171,7 +172,7 @@ public:
     }
 
     ConversionResult(ReturnType&& returnValue) requires (!std::is_lvalue_reference_v<ReturnType>)
-        : m_storage { WTFMove(returnValue) }
+        : m_storage { WTF::move(returnValue) }
     {
     }
 
@@ -182,7 +183,7 @@ public:
 
     template<typename OtherIDL>
     ConversionResult(ConversionResult<OtherIDL>&& other)
-        : m_storage { WTFMove(other.m_storage) }
+        : m_storage { WTF::move(other.m_storage) }
     {
     }
 

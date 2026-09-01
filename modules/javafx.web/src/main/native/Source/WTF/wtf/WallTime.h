@@ -48,6 +48,11 @@ public:
 
     WTF_EXPORT_PRIVATE static WallTime now();
 
+#if !PLATFORM(JAVA)
+    WTF_EXPORT_PRIVATE static WallTime fromSecondsSinceEpoch(Seconds);
+    WTF_EXPORT_PRIVATE Seconds secondsSinceEpoch() const;
+#endif
+
     WallTime approximateWallTime() const { return *this; }
     WTF_EXPORT_PRIVATE MonotonicTime approximateMonotonicTime() const;
 

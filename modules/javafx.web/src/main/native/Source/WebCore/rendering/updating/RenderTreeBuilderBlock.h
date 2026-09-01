@@ -42,13 +42,13 @@ public:
     void attach(RenderBlock& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);
     void attachIgnoringContinuation(RenderBlock& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);
 
-    RenderPtr<RenderObject> detach(RenderBlock& parent, RenderObject& oldChild, RenderTreeBuilder::WillBeDestroyed, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes) WARN_UNUSED_RETURN;
-    RenderPtr<RenderObject> detach(RenderBlockFlow& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes) WARN_UNUSED_RETURN;
+    [[nodiscard]] RenderPtr<RenderObject> detach(RenderBlock& parent, RenderObject& oldChild, RenderTreeBuilder::WillBeDestroyed, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes);
+    [[nodiscard]] RenderPtr<RenderObject> detach(RenderBlockFlow& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes);
 
     void dropAnonymousBoxChild(RenderBlock& parent, RenderBlock& child);
     void childBecameNonInline(RenderBlock& parent, RenderElement& child);
 
-    static RenderPtr<RenderBlock> createAnonymousBlockWithStyle(Document&, const RenderStyle&);
+    static RenderPtr<RenderBlockFlow> createAnonymousBlockWithStyle(Document&, const RenderStyle&);
 
 private:
     void insertChildToContinuation(RenderBlock& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);

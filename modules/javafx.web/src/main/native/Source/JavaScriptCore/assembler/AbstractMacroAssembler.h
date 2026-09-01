@@ -25,19 +25,20 @@
 
 #pragma once
 
-#include "ARM64Assembler.h"
-#include "AbortReason.h"
-#include "AssemblerBuffer.h"
-#include "AssemblerCommon.h"
-#include "AssemblyComments.h"
-#include "CPU.h"
-#include "CodeLocation.h"
-#include "JSCJSValue.h"
-#include "JSCPtrTag.h"
-#include "MacroAssemblerCodeRef.h"
-#include "MacroAssemblerHelpers.h"
-#include "Options.h"
+#include <JavaScriptCore/ARM64Assembler.h>
+#include <JavaScriptCore/AbortReason.h>
+#include <JavaScriptCore/AssemblerBuffer.h>
+#include <JavaScriptCore/AssemblerCommon.h>
+#include <JavaScriptCore/AssemblyComments.h>
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/CodeLocation.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCPtrTag.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/MacroAssemblerHelpers.h>
+#include <JavaScriptCore/Options.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SharedTask.h>
 #include <wtf/StringPrintStream.h>
@@ -1085,16 +1086,17 @@ public:
 
     void emitNops(size_t memoryToFillWithNopsInBytes)
     {
-#if CPU(ARM64)
-        RELEASE_ASSERT(memoryToFillWithNopsInBytes % 4 == 0);
-        for (unsigned i = 0; i < memoryToFillWithNopsInBytes / 4; ++i)
+#if CPU(ARM64) || CPU(ARM)
+        constexpr size_t nopSize = is32Bit() ? 2 : 4;
+        RELEASE_ASSERT(memoryToFillWithNopsInBytes % nopSize == 0);
+        for (unsigned i = 0; i < memoryToFillWithNopsInBytes / nopSize; ++i)
             m_assembler.nop();
 #else
         AssemblerBuffer& buffer = m_assembler.buffer();
         size_t startCodeSize = buffer.codeSize();
         size_t targetCodeSize = startCodeSize + memoryToFillWithNopsInBytes;
         buffer.ensureSpace(memoryToFillWithNopsInBytes);
-        AssemblerType::template fillNops<MachineCodeCopyMode::Memcpy>(static_cast<char*>(buffer.data()) + startCodeSize, memoryToFillWithNopsInBytes);
+        AssemblerType::fillNops(static_cast<char*>(buffer.data()) + startCodeSize, memoryToFillWithNopsInBytes);
         buffer.setCodeSize(targetCodeSize);
 #endif
     }
@@ -1169,7 +1171,7 @@ protected:
 
         ALWAYS_INLINE RegisterID registerIDNoInvalidate() { return m_registerID; }
 
-        WARN_UNUSED_RETURN bool value(intptr_t& value)
+        [[nodiscard]] bool value(intptr_t& value)
         {
             value = m_value;
             return m_masm->isTempRegisterValid(m_validBit);
@@ -1210,7 +1212,7 @@ protected:
         m_tempRegistersValidBits |= registerMask;
     }
 
-    void commentImpl(String&& str) { m_comments.append({ labelIgnoringWatchpoints(), WTFMove(str) }); }
+    void commentImpl(String&& str) { m_comments.append({ labelIgnoringWatchpoints(), WTF::move(str) }); }
 
     friend class AllowMacroScratchRegisterUsage;
     friend class AllowMacroScratchRegisterUsageIf;
@@ -1220,8 +1222,8 @@ protected:
 
     Vector<std::pair<Label, String>> m_comments;
 
-    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
-    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
+    Vector<Ref<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
+    Vector<Ref<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;
 
     friend class LinkBuffer;
 }; // class AbstractMacroAssembler
@@ -1250,4 +1252,3 @@ void printInternal(PrintStream& out, JSC::AbstractMacroAssemblerBase::StatusCond
 } // namespace WTF
 
 #endif // ENABLE(ASSEMBLER)
-

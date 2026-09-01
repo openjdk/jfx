@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
 import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -50,8 +51,8 @@ import test.jfx.incubator.scene.control.richtext.support.RTUtil;
  */
 public class TestRichTextModel {
 
-    /** RichTextModel version string */
-    public static final String VERSION = "{@RichText-v2-incubator}";
+    /** RichTextModel version segment */
+    public static final String VERSION = "{@" + Params.VERSION_3 + "}";
     /** standard document properties */
     public static final String DOC_PROPS = "{#tabs|0.0}";
 

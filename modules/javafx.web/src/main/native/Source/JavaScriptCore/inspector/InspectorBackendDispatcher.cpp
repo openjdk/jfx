@@ -45,7 +45,7 @@ SupplementalBackendDispatcher::SupplementalBackendDispatcher(BackendDispatcher& 
 SupplementalBackendDispatcher::~SupplementalBackendDispatcher() = default;
 
 BackendDispatcher::CallbackBase::CallbackBase(Ref<BackendDispatcher>&& backendDispatcher, long requestId)
-    : m_backendDispatcher(WTFMove(backendDispatcher))
+    : m_backendDispatcher(WTF::move(backendDispatcher))
     , m_requestId(requestId)
 {
 }
@@ -75,17 +75,18 @@ void BackendDispatcher::CallbackBase::sendSuccess(Ref<JSON::Object>&& partialMes
         return;
 
     m_alreadySent = true;
-    m_backendDispatcher->sendResponse(m_requestId, WTFMove(partialMessage), false);
+    m_backendDispatcher->sendResponse(m_requestId, WTF::move(partialMessage), false);
 }
 
-BackendDispatcher::BackendDispatcher(Ref<FrontendRouter>&& router)
-    : m_frontendRouter(WTFMove(router))
+BackendDispatcher::BackendDispatcher(Ref<FrontendRouter>&& router, BackendDispatcher* fallback)
+    : m_frontendRouter(WTF::move(router))
+    , m_fallbackDispatcher(fallback)
 {
 }
 
-Ref<BackendDispatcher> BackendDispatcher::create(Ref<FrontendRouter>&& router)
+Ref<BackendDispatcher> BackendDispatcher::create(Ref<FrontendRouter>&& router, BackendDispatcher* fallback)
 {
-    return adoptRef(*new BackendDispatcher(WTFMove(router)));
+    return adoptRef(*new BackendDispatcher(WTF::move(router), fallback));
 }
 
 bool BackendDispatcher::isActive() const
@@ -173,8 +174,13 @@ void BackendDispatcher::dispatch(const String& message)
         }
 
         String domain = domainAndMethod[0];
-        SupplementalBackendDispatcher* domainDispatcher = m_dispatchers.get(domain);
+        RefPtr domainDispatcher = m_dispatchers.get(domain);
         if (!domainDispatcher) {
+            if (RefPtr fallback = m_fallbackDispatcher.get()) {
+                fallback->dispatch(message);
+                return;
+            }
+
             reportProtocolError(MethodNotFound, makeString('\'', domain, "' domain was not found"_s));
             sendPendingErrors();
             return;
@@ -205,7 +211,7 @@ void BackendDispatcher::sendResponse(long requestId, RefPtr<JSON::Object>&& resu
 // FIXME: <http://webkit.org/b/179847> remove this function when legacy InspectorObject symbols are no longer needed.
 void BackendDispatcher::sendResponse(long requestId, Ref<JSON::Object>&& result)
 {
-    sendResponse(requestId, WTFMove(result), false);
+    sendResponse(requestId, WTF::move(result), false);
 }
 
 void BackendDispatcher::sendResponse(long requestId, Ref<JSON::Object>&& result, bool)
@@ -215,7 +221,7 @@ void BackendDispatcher::sendResponse(long requestId, Ref<JSON::Object>&& result,
     // The JSON-RPC 2.0 specification requires that the "error" member have the value 'null'
     // if no error occurred during an invocation, but we do not include it at all.
     Ref<JSON::Object> responseMessage = JSON::Object::create();
-    responseMessage->setObject("result"_s, WTFMove(result));
+    responseMessage->setObject("result"_s, WTF::move(result));
     responseMessage->setInteger("id"_s, requestId);
     m_frontendRouter->sendResponse(responseMessage->toJSONString());
 }
@@ -249,16 +255,16 @@ void BackendDispatcher::sendPendingErrors()
         Ref<JSON::Object> error = JSON::Object::create();
         error->setInteger("code"_s, errorCodes[errorCode]);
         error->setString("message"_s, errorMessage);
-        payload->pushObject(WTFMove(error));
+        payload->pushObject(WTF::move(error));
     }
 
     Ref<JSON::Object> topLevelError = JSON::Object::create();
     topLevelError->setInteger("code"_s, errorCodes[errorCode]);
     topLevelError->setString("message"_s, errorMessage);
-    topLevelError->setArray("data"_s, WTFMove(payload));
+    topLevelError->setArray("data"_s, WTF::move(payload));
 
     Ref<JSON::Object> message = JSON::Object::create();
-    message->setObject("error"_s, WTFMove(topLevelError));
+    message->setObject("error"_s, WTF::move(topLevelError));
     if (m_currentRequestId)
         message->setInteger("id"_s, m_currentRequestId.value());
     else {
@@ -336,7 +342,7 @@ std::optional<double> BackendDispatcher::getDouble(JSON::Object* params, const S
 String BackendDispatcher::getString(JSON::Object* params, const String& name, bool required)
 {
     // FIXME: <http://webkit.org/b/179847> simplify this when legacy InspectorObject symbols are no longer needed.
-    String (JSON::Value::*asString)() const = &JSON::Value::asString;
+    const String& (JSON::Value::*asString)() const = &JSON::Value::asString;
     return getPropertyValue<String>(params, name, required, asString, "String"_s);
 }
 

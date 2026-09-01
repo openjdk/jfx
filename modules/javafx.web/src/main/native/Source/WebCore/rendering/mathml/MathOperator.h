@@ -53,7 +53,7 @@ public:
 
     void stretchTo(const RenderStyle&, LayoutUnit width);
 
-    void paint(const RenderStyle&, PaintInfo&, const LayoutPoint&);
+    void paint(const RenderStyle&, PaintInfo&, const LayoutPoint&, float deviceScaleFactor);
 
 private:
     struct GlyphAssemblyData {

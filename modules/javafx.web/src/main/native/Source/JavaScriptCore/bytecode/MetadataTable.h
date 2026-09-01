@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Instruction.h"
-#include "Opcode.h"
-#include "UnlinkedMetadataTable.h"
-#include "ValueProfile.h"
+#include <JavaScriptCore/Instruction.h>
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/UnlinkedMetadataTable.h>
+#include <JavaScriptCore/ValueProfile.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -129,7 +129,7 @@ public:
 
     void validate() const;
 
-    RefPtr<UnlinkedMetadataTable> unlinkedMetadata() const { return static_reference_cast<UnlinkedMetadataTable>(linkingData().unlinkedMetadata); }
+    RefPtr<UnlinkedMetadataTable> unlinkedMetadata() const { return linkingData().unlinkedMetadata.copyRef(); }
 
     SUPPRESS_ASAN bool isDestroyed() const
     {

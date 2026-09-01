@@ -25,27 +25,27 @@
 
 #pragma once
 
-#include "FormattingConstraints.h"
-#include "LayoutSize.h"
+#include <WebCore/FormattingConstraints.h>
+#include <WebCore/LayoutSize.h>
 
 namespace WebCore {
 namespace Layout {
 
 struct ConstraintsForInlineContent : public ConstraintsForInFlowContent {
-    ConstraintsForInlineContent(const ConstraintsForInFlowContent&, LayoutUnit visualLeft, LayoutSize containerRenderSize);
+    ConstraintsForInlineContent(const ConstraintsForInFlowContent&, LayoutUnit visualLeft, LayoutSize formattingRootBorderBoxSize);
 
     LayoutUnit visualLeft() const { return m_visualLeft; }
-    LayoutSize containerRenderSize() const { return m_containerRenderSize; }
+    LayoutSize formattingRootBorderBoxSize() const { return m_formattingRootBorderBoxSize; }
 
 private:
     LayoutUnit m_visualLeft;
-    LayoutSize m_containerRenderSize;
+    LayoutSize m_formattingRootBorderBoxSize;
 };
 
-inline ConstraintsForInlineContent::ConstraintsForInlineContent(const ConstraintsForInFlowContent& genericContraints, LayoutUnit visualLeft, LayoutSize containerRenderSize)
+inline ConstraintsForInlineContent::ConstraintsForInlineContent(const ConstraintsForInFlowContent& genericContraints, LayoutUnit visualLeft, LayoutSize formattingRootBorderBoxSize)
     : ConstraintsForInFlowContent(genericContraints.horizontal(), genericContraints.logicalTop(), InlineContent)
     , m_visualLeft(visualLeft)
-    , m_containerRenderSize(containerRenderSize)
+    , m_formattingRootBorderBoxSize(formattingRootBorderBoxSize)
 {
 }
 

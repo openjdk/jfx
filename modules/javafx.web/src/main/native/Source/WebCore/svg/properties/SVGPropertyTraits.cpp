@@ -26,13 +26,72 @@
 #include "config.h"
 #include "SVGPropertyTraits.h"
 
+#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+ColorInlines.h"
+#include "ColorSerialization.h"
+#include "ContainerNodeInlines.h"
+#include "NodeDocument.h"
+#include "RenderElement.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
+#include "SVGElement.h"
+#include "StyleColor.h"
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-int SVGPropertyTraits<int>::fromString(const String& string)
+namespace {
+
+class SVGStyleColorResolutionDelegate final : public CSS::PlatformColorResolutionDelegate {
+public:
+    explicit SVGStyleColorResolutionDelegate(Ref<SVGElement> element)
+        : m_element { WTF::move(element) }
+    {
+    }
+
+    Color currentColor() const override;
+
+    const Ref<SVGElement> m_element;
+};
+
+Color SVGStyleColorResolutionDelegate::currentColor() const
+{
+    if (CheckedPtr renderer = m_element->renderer())
+        return renderer->checkedStyle()->visitedDependentColor();
+    return { };
+}
+
+} // anonymous namespace
+
+Color SVGPropertyTraits<Color>::fromString(SVGElement& targetElement, const String& string)
+{
+    using namespace CSSPropertyParserHelpers;
+
+    Ref document = targetElement.document();
+    auto& cssParserContext = document->cssParserContext();
+
+    auto trimmedString = string.trim(deprecatedIsSpaceOrNewline);
+
+    auto color = parseColorRawSimple(trimmedString, cssParserContext);
+    if (color.isValid())
+        return color;
+
+    SVGStyleColorResolutionDelegate delegate(targetElement);
+    CSSColorParsingOptions options;
+    CSS::PlatformColorResolutionState state {
+        .delegate = &delegate
+    };
+    return parseColorRawGeneral(trimmedString, cssParserContext, document, options, state);
+}
+
+int SVGPropertyTraits<int>::fromString(SVGElement&, const String& string)
 {
     return parseInteger<int>(string).value_or(0);
 }
 
+String SVGPropertyTraits<Color>::toString(const Color& type)
+{
+    return serializationForHTML(type);
 }
+
+} // namespace WebCore

@@ -57,7 +57,7 @@ public:
     void setLabel(String&&);
 
     bool isValid() const;
-    void startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex);
+    void startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex, unsigned screenWidth, unsigned screenHeight, Vector<float>&& horizontalSamplesLeft, Vector<float>&& horizontalSamplesRight, Vector<float>&& verticalSamples);
 
     id<MTLTexture> colorTexture() const;
     id<MTLTexture> depthTexture() const;
@@ -68,6 +68,7 @@ public:
     WGPUTextureUsageFlags flags() const { return m_flags; }
     double scale() const { return m_scale; }
 
+    std::pair<id<MTLRasterizationRateMap>, id<MTLRasterizationRateMap>> rasterizationRateMaps() const { return std::make_pair(m_rasterizationMapLeft, m_rasterizationMapRight); }
 private:
     XRProjectionLayer(WGPUTextureFormat, WGPUTextureFormat*, WGPUTextureUsageFlags, double scale, Device&);
     XRProjectionLayer(Device&);
@@ -81,6 +82,8 @@ private:
     WGPUTextureFormat m_colorFormat { WGPUTextureFormat_Undefined };
     std::optional<WGPUTextureFormat> m_optionalDepthStencilFormat;
     WGPUTextureUsageFlags m_flags { WGPUTextureUsage_None };
+    id<MTLRasterizationRateMap> m_rasterizationMapLeft { nil };
+    id<MTLRasterizationRateMap> m_rasterizationMapRight { nil };
     double m_scale { 1.f };
 
     const Ref<Device> m_device;

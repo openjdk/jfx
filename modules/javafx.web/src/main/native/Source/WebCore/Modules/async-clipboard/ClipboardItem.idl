@@ -30,7 +30,9 @@ typedef Promise<ClipboardItemDataType> ClipboardItemData;
 
 enum PresentationStyle { "unspecified", "inline", "attachment" };
 
-dictionary ClipboardItemOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ClipboardItemOptions {
     PresentationStyle presentationStyle = "unspecified";
 };
 

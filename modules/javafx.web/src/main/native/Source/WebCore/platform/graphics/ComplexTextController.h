@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "GlyphBuffer.h"
-#include "TextSpacing.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/GlyphBuffer.h>
+#include <WebCore/TextSpacing.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -67,6 +68,7 @@ public:
     ComplexTextController(const FontCascade&, const TextRun&, bool mayUseNaturalWritingDirection = false, SingleThreadWeakHashSet<const Font>* fallbackFonts = 0, bool forTextEmphasis = false);
 
     static std::pair<float, float> enclosingGlyphBoundsForTextRun(const FontCascade&, const TextRun&);
+    static Vector<float> glyphAdvancesForTextRun(const FontCascade&, const TextRun&);
 
     class ComplexTextRun;
     WEBCORE_EXPORT ComplexTextController(const FontCascade&, const TextRun&, Vector<Ref<ComplexTextRun>>&);
@@ -118,6 +120,7 @@ public:
 
         unsigned glyphCount() const { return m_glyphCount; }
         const Font& font() const { return m_font; }
+        Ref<const Font> protectedFont() const { return m_font.get(); }
         std::span<const char16_t> characters() const { return m_characters; }
         unsigned stringLocation() const { return m_stringLocation; }
         size_t stringLength() const { return m_characters.size(); }

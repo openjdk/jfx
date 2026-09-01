@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "StyleValueTypes.h"
-#include "ViewTimeline.h"
+#include <WebCore/StyleValueTypes.h>
+#include <WebCore/ViewTimeline.h>
 
 namespace WebCore {
 namespace Style {

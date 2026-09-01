@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "RegExpCachedResult.h"
-#include "RegExpSubstringGlobalAtomCache.h"
+#include <JavaScriptCore/RegExpCachedResult.h>
+#include <JavaScriptCore/RegExpSubstringGlobalAtomCache.h>
 
 namespace JSC {
 

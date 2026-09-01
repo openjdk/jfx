@@ -30,9 +30,9 @@ typedef [EnforceRange] unsigned long GPUSize32;
 typedef [EnforceRange] unsigned long long GPUSize64;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUImageDataLayout {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUImageDataLayout {
     GPUSize64 offset = 0;
     GPUSize32 bytesPerRow;
     GPUSize32 rowsPerImage;

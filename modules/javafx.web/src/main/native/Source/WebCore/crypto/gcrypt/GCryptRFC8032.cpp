@@ -71,7 +71,7 @@ bool validateEd25519KeyPair(const Vector<uint8_t>& privateKey, const Vector<uint
     }
 
     std::array<uint8_t, 32> qData;
-    std::fill(qData.begin(), qData.end(), uint8_t(0));
+    std::ranges::fill(qData, 0);
 
     {
         // Perform the multiplication on the given curve. Both coordinates of the resulting point

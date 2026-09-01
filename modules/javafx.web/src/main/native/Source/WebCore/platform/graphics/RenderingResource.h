@@ -25,28 +25,28 @@
 
 #pragma once
 
-#include "RenderingResourceIdentifier.h"
+#include <WebCore/RenderingResourceIdentifier.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
-class RenderingResourceObserver;
+namespace DisplayList {
+class DisplayList;
 }
+class Gradient;
+class NativeImage;
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RenderingResourceObserver> : std::true_type { };
-}
-
-namespace WebCore {
-
-class RenderingResourceObserver : public CanMakeWeakPtr<RenderingResourceObserver> {
+class RenderingResourceObserver : public AbstractCanMakeCheckedPtr {
 public:
+    using WeakValueType = RenderingResourceObserver;
     virtual ~RenderingResourceObserver() = default;
-    virtual void willDestroyNativeImage(RenderingResourceIdentifier) = 0;
-    virtual void willDestroyGradient(RenderingResourceIdentifier) = 0;
-    virtual void willDestroyDecomposedGlyphs(RenderingResourceIdentifier) = 0;
+
+    virtual void willDestroyNativeImage(const NativeImage&) = 0;
+    virtual void willDestroyGradient(const Gradient&) = 0;
     virtual void willDestroyFilter(RenderingResourceIdentifier) = 0;
+    virtual void willDestroyDisplayList(const DisplayList::DisplayList&) = 0;
+
 protected:
     RenderingResourceObserver() = default;
 };
@@ -56,9 +56,6 @@ class RenderingResource
 public:
     virtual ~RenderingResource() = default;
 
-    virtual bool isNativeImage() const { return false; }
-    virtual bool isGradient() const { return false; }
-    virtual bool isDecomposedGlyphs() const { return false; }
     virtual bool isFilter() const { return false; }
 
     bool hasValidRenderingResourceIdentifier() const
@@ -80,7 +77,7 @@ public:
     void addObserver(WeakRef<RenderingResourceObserver>&& observer)
     {
         ASSERT(hasValidRenderingResourceIdentifier());
-        m_observers.add(WTFMove(observer));
+        m_observers.add(WTF::move(observer));
     }
 
 protected:

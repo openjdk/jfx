@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "JSImmutableButterfly.h"
-#include "JSPropertyNameEnumerator.h"
-#include "JSString.h"
-#include "StructureChain.h"
-#include "StructureRareData.h"
-#include "VM.h"
+#include <JavaScriptCore/JSCellButterfly.h>
+#include <JavaScriptCore/JSPropertyNameEnumerator.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/PackedCellPtr.h>
+#include <JavaScriptCore/StructureChain.h>
+#include <JavaScriptCore/StructureRareData.h>
+#include <JavaScriptCore/VM.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -122,7 +123,7 @@ inline void StructureRareData::setCachedPropertyNameEnumerator(VM& vm, Structure
     vm.writeBarrier(this, enumerator);
 }
 
-inline JSImmutableButterfly* StructureRareData::cachedPropertyNames(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* StructureRareData::cachedPropertyNames(CachedPropertyNamesKind kind) const
 {
     ASSERT(!isCompilationThread());
     auto* butterfly = m_cachedPropertyNames[static_cast<unsigned>(kind)].unvalidatedGet();
@@ -131,13 +132,13 @@ inline JSImmutableButterfly* StructureRareData::cachedPropertyNames(CachedProper
     return butterfly;
 }
 
-inline JSImmutableButterfly* StructureRareData::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* StructureRareData::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
 {
     ASSERT(!isCompilationThread());
     return m_cachedPropertyNames[static_cast<unsigned>(kind)].unvalidatedGet();
 }
 
-inline JSImmutableButterfly* StructureRareData::cachedPropertyNamesConcurrently(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* StructureRareData::cachedPropertyNamesConcurrently(CachedPropertyNamesKind kind) const
 {
     auto* butterfly = m_cachedPropertyNames[static_cast<unsigned>(kind)].unvalidatedGet();
     if (butterfly == cachedPropertyNamesSentinel())
@@ -145,7 +146,7 @@ inline JSImmutableButterfly* StructureRareData::cachedPropertyNamesConcurrently(
     return butterfly;
 }
 
-inline void StructureRareData::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSImmutableButterfly* butterfly)
+inline void StructureRareData::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSCellButterfly* butterfly)
 {
     if (butterfly == cachedPropertyNamesSentinel()) {
         m_cachedPropertyNames[static_cast<unsigned>(kind)].setWithoutWriteBarrier(butterfly);

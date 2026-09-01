@@ -41,20 +41,13 @@ JSSetIterator* JSSetIterator::createWithInitialValues(VM& vm, Structure* structu
     return iterator;
 }
 
-void JSSetIterator::finishCreation(JSGlobalObject* globalObject,  JSSet* iteratedObject, IterationKind kind)
+void JSSetIterator::finishCreation(VM& vm,  JSSet* iteratedObject, IterationKind kind)
 {
-    VM& vm = getVM(globalObject);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
     Base::finishCreation(vm);
     setEntry(vm, 0);
     setIteratedObject(vm, iteratedObject);
-
-    JSCell* storage = iteratedObject->storage(globalObject);
-    RETURN_IF_EXCEPTION(scope, void());
-    setStorage(vm, storage);
-
-    internalField(Field::Kind).set(vm, this, jsNumber(static_cast<int32_t>(kind)));
+    internalField(Field::Storage).set(vm, this, iteratedObject->storage());
+    internalField(Field::Kind).setWithoutWriteBarrier(jsNumber(static_cast<int32_t>(kind)));
 }
 
 void JSSetIterator::finishCreation(VM& vm)
@@ -98,7 +91,7 @@ JSC_DEFINE_HOST_FUNCTION(setIteratorPrivateFuncSetIteratorKey, (JSGlobalObject *
         return JSValue::encode(cell);
 
     JSSetIterator* iterator = jsCast<JSSetIterator*>(cell);
-    return JSValue::encode(iterator->nextKey(vm));
+    return JSValue::encode(iterator->peekKey(vm));
 }
 
 }

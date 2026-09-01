@@ -26,8 +26,8 @@
 #ifndef WidthCache_h
 #define WidthCache_h
 
-#include "TextRun.h"
-#include "TextSpacing.h"
+#include <WebCore/TextRun.h>
+#include <WebCore/TextSpacing.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashSet.h>
@@ -73,6 +73,8 @@ private:
 
         bool isHashTableDeletedValue() const { return m_hashAndLength == s_deletedValueLength; }
         bool isHashTableEmptyValue() const { return !m_hashAndLength; }
+        // Empty and deleted values have lengths that are not equal to any valid length.
+        static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
         friend bool operator==(const SmallStringKey&, const SmallStringKey&) = default;
 
@@ -93,12 +95,6 @@ private:
 
         std::array<char16_t, s_capacity> m_characters { };
         unsigned m_hashAndLength { 0 };
-    };
-
-    struct SmallStringKeyHash {
-        static unsigned hash(const SmallStringKey& key) { return key.hash(); }
-        static bool equal(const SmallStringKey& a, const SmallStringKey& b) { return a == b; }
-        static constexpr bool safeToCompareToEmptyOrDeleted = true; // Empty and deleted values have lengths that are not equal to any valid length.
     };
 
     struct SmallStringKeyHashTraits : SimpleClassHashTraits<SmallStringKey> {
@@ -221,7 +217,7 @@ private:
         return false;
     }
 
-    using Map = HashMap<SmallStringKey, float, SmallStringKeyHash, SmallStringKeyHashTraits, WTF::FloatWithZeroEmptyKeyHashTraits<float>>;
+    using Map = HashMap<SmallStringKey, float, DefaultHash<SmallStringKey>, SmallStringKeyHashTraits, WTF::FloatWithZeroEmptyKeyHashTraits<float>>;
     using SingleCharMap = HashMap<uint32_t, float, DefaultHash<uint32_t>, HashTraits<uint32_t>, WTF::FloatWithZeroEmptyKeyHashTraits<float>>;
 
     static constexpr int s_minInterval = -3; // A cache hit pays for about 3 cache misses.

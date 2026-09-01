@@ -19,11 +19,11 @@
 
 #pragma once
 
-#include "LocalDOMWindowProperty.h"
-#include "NavigatorBase.h"
-#include "ScriptWrappable.h"
-#include "ShareData.h"
-#include "Supplementable.h"
+#include <WebCore/LocalDOMWindowProperty.h>
+#include <WebCore/NavigatorBase.h>
+#include <WebCore/ScriptWrappable.h>
+#include <WebCore/ShareData.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -43,7 +43,7 @@ class Navigator final
     , public LocalDOMWindowProperty
     , public Supplementable<Navigator>
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Navigator);
+    WTF_MAKE_TZONE_ALLOCATED(Navigator);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Navigator);
 public:
     static Ref<Navigator> create(ScriptExecutionContext* context, LocalDOMWindow& window) { return adoptRef(*new Navigator(context, window)); }
@@ -69,7 +69,7 @@ public:
 
     int maxTouchPoints() const;
 
-    GPU* gpu();
+    WEBCORE_EXPORT GPU* gpu();
 
     Page* page();
     RefPtr<Page> protectedPage();
@@ -86,7 +86,6 @@ private:
     explicit Navigator(ScriptExecutionContext*, LocalDOMWindow&);
 
     void initializePluginAndMimeTypeArrays();
-    void initializeNavigatorUAData() const;
 
     mutable RefPtr<ShareDataReader> m_loader;
     mutable bool m_hasPendingShare { false };

@@ -36,9 +36,11 @@
 #include "HTMLVideoElement.h"
 #include "Image.h"
 #include "ImageBitmap.h"
+#include "InspectorInstrumentation.h"
 #include "OriginAccessPatterns.h"
 #include "PixelFormat.h"
 #include "SVGImageElement.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -52,7 +54,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CanvasRenderingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CanvasRenderingContext);
 
 Lock CanvasRenderingContext::s_instancesLock;
 
@@ -92,17 +94,6 @@ void CanvasRenderingContext::deref() const
     m_canvas->deref();
 }
 
-RefPtr<ImageBuffer> CanvasRenderingContext::surfaceBufferToImageBuffer(SurfaceBuffer)
-{
-    // This will be removed once all contexts store their own buffers.
-    return canvasBase().buffer();
-}
-
-bool CanvasRenderingContext::isSurfaceBufferTransparentBlack(SurfaceBuffer) const
-{
-    return false;
-}
-
 bool CanvasRenderingContext::delegatesDisplay() const
 {
 #if USE(SKIA)
@@ -128,14 +119,14 @@ RefPtr<ImageBuffer> CanvasRenderingContext::transferToImageBuffer()
     return nullptr;
 }
 
-ImageBufferPixelFormat CanvasRenderingContext::pixelFormat() const
+PixelFormat CanvasRenderingContext::pixelFormat() const
 {
-    return ImageBufferPixelFormat::BGRA8;
+    return PixelFormat::BGRA8;
 }
 
 bool CanvasRenderingContext::isOpaque() const
 {
-    return imageBufferPixelFormatIsOpaque(pixelFormat());
+    return pixelFormatIsOpaque(pixelFormat());
 }
 
 DestinationColorSpace CanvasRenderingContext::colorSpace() const
@@ -222,5 +213,35 @@ void CanvasRenderingContext::checkOrigin(const CSSStyleImageValue&)
 {
     m_canvas->setOriginTainted();
 }
+
+void CanvasRenderingContext::updateMemoryCost(size_t newMemoryCost) const
+{
+    size_t oldMemoryCost = m_memoryCost.load(std::memory_order_relaxed);
+    m_memoryCost.store(newMemoryCost, std::memory_order_relaxed);
+    if (newMemoryCost) {
+        if (RefPtr scriptExecutionContext = canvasBase().scriptExecutionContext()) {
+            JSC::JSLockHolder lock(scriptExecutionContext->vm());
+            scriptExecutionContext->vm().heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), newMemoryCost);
+        }
+    }
+    if (oldMemoryCost != newMemoryCost)
+        InspectorInstrumentation::didChangeCanvasMemory(*this);
+}
+
+size_t CanvasRenderingContext::memoryCost() const
+{
+    // May be called from GC threads.
+    return m_memoryCost.load(std::memory_order_relaxed);
+}
+
+#if ENABLE(RESOURCE_USAGE)
+size_t CanvasRenderingContext::externalMemoryCost() const
+{
+    // For the purposes of Web Inspector, external memory means memory reported as 1) being traceable from JS objects, i.e. GC owned memory
+    // 2) not allocated from "Page" category, e.g. from bmalloc.
+    // Report the same value until we have implementations that differ.
+    return memoryCost();
+}
+#endif
 
 } // namespace WebCore

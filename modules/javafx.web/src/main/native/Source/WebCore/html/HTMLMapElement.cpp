@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLMapElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLMapElement);
 
 using namespace HTMLNames;
 
@@ -62,11 +62,11 @@ bool HTMLMapElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size,
 {
     RefPtr<HTMLAreaElement> defaultArea;
 
-    for (auto& area : descendantsOfType<HTMLAreaElement>(*this)) {
-        if (area.isDefault()) {
+    for (Ref area : descendantsOfType<HTMLAreaElement>(*this)) {
+        if (area->isDefault()) {
             if (!defaultArea)
-                defaultArea = area;
-        } else if (area.mapMouseEvent(location, size, result))
+                defaultArea = area.ptr();
+        } else if (area->mapMouseEvent(location, size, result))
             return true;
     }
 
@@ -103,7 +103,7 @@ void HTMLMapElement::attributeChanged(const QualifiedName& name, const AtomStrin
         AtomString mapName = newValue;
         if (mapName[0] == '#')
             mapName = StringView(mapName).substring(1).toAtomString();
-        m_name = WTFMove(mapName);
+        m_name = WTF::move(mapName);
         if (isInTreeScope())
             treeScope().addImageMap(*this);
     }

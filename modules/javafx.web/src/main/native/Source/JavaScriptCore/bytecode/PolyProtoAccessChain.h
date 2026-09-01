@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CacheableIdentifier.h"
-#include "StructureID.h"
-#include "VM.h"
+#include <JavaScriptCore/CacheableIdentifier.h>
+#include <JavaScriptCore/StructureID.h>
+#include <JavaScriptCore/VM.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Vector.h>
 
@@ -73,7 +73,7 @@ public:
 
 private:
     explicit PolyProtoAccessChain(Vector<StructureID>&& chain)
-        : m_chain(WTFMove(chain))
+        : m_chain(WTF::move(chain))
     {
     }
 

@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace Style {

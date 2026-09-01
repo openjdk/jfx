@@ -27,7 +27,7 @@
 #include "MediaCapabilities.h"
 
 #include "ContentType.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "EventLoop.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaCapabilitiesDecodingInfo.h"
@@ -39,7 +39,6 @@
 #include "MediaDecodingConfiguration.h"
 #include "MediaEncodingConfiguration.h"
 #include "MediaEngineConfigurationFactory.h"
-#include "Page.h"
 #include "Settings.h"
 #include "WebRTCProvider.h"
 #include <wtf/Logger.h>
@@ -51,7 +50,7 @@ static bool isValidMediaMIMEType(const ContentType& contentType)
 {
     // A "bucket" MIME types is one whose container type does not uniquely specify a codec.
     // See: https://tools.ietf.org/html/rfc6381
-    static constexpr ComparableASCIILiteral bucketMIMETypeArray[] = {
+    static constexpr SortedArraySet bucketMIMETypes { std::to_array<ComparableASCIILiteral>({
         "application/mp21"_s,
         "application/mp4"_s,
         "audio/3gpp"_s,
@@ -67,8 +66,7 @@ static bool isValidMediaMIMEType(const ContentType& contentType)
         "video/quicktime"_s,
         "video/vnd.apple.mpegurl"_s,
         "video/webm"_s,
-    };
-    static constexpr SortedArraySet bucketMIMETypes { bucketMIMETypeArray };
+    }) };
 
     // 2.1.4. MIME types
     // https://wicg.github.io/media-capabilities/#valid-media-mime-type
@@ -168,9 +166,9 @@ static bool isValidMediaConfiguration(const MediaConfiguration& configuration)
 static void gatherDecodingInfo(Document& document, MediaDecodingConfiguration&& configuration, MediaEngineConfigurationFactory::DecodingConfigurationCallback&& callback)
 {
     RELEASE_LOG_INFO(Media, "Gathering decoding MediaCapabilities");
-    MediaEngineConfigurationFactory::DecodingConfigurationCallback decodingCallback = [callback = WTFMove(callback)](MediaCapabilitiesDecodingInfo&& result) mutable {
+    MediaEngineConfigurationFactory::DecodingConfigurationCallback decodingCallback = [callback = WTF::move(callback)](MediaCapabilitiesDecodingInfo&& result) mutable {
         RELEASE_LOG_INFO(Media, "Finished gathering decoding MediaCapabilities");
-        callback(WTFMove(result));
+        callback(WTF::move(result));
     };
 
     if (!document.settings().mediaCapabilitiesExtensionsEnabled() && configuration.video)
@@ -183,38 +181,38 @@ static void gatherDecodingInfo(Document& document, MediaDecodingConfiguration&& 
     configuration.canExposeVP9 = document.settings().vp9DecoderEnabled();
 #endif
 
-    RefPtr protectedPage = document.page();
-    if (protectedPage)
-        configuration.pageIdentifier = protectedPage->identifier();
+    RefPtr page = document.page();
+    if (page)
+        configuration.pageIdentifier = page->identifier();
 
 #if ENABLE(WEB_RTC)
     if (configuration.type == MediaDecodingType::WebRTC) {
-        if (protectedPage)
-            protectedPage->webRTCProvider().createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
+        if (page)
+            page->webRTCProvider().createDecodingConfiguration(WTF::move(configuration), WTF::move(decodingCallback));
         return;
     }
 #endif
-    MediaEngineConfigurationFactory::createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
+    MediaEngineConfigurationFactory::createDecodingConfiguration(WTF::move(configuration), WTF::move(decodingCallback));
 }
 
 static void gatherEncodingInfo(Document& document, MediaEncodingConfiguration&& configuration, MediaEngineConfigurationFactory::EncodingConfigurationCallback&& callback)
 {
     RELEASE_LOG_INFO(Media, "Gathering encoding MediaCapabilities");
-    MediaEngineConfigurationFactory::EncodingConfigurationCallback encodingCallback = [callback = WTFMove(callback)](auto&& result) mutable {
+    MediaEngineConfigurationFactory::EncodingConfigurationCallback encodingCallback = [callback = WTF::move(callback)](auto&& result) mutable {
         RELEASE_LOG_INFO(Media, "Finished gathering encoding MediaCapabilities");
-        callback(WTFMove(result));
+        callback(WTF::move(result));
     };
 
 #if ENABLE(WEB_RTC)
     if (configuration.type == MediaEncodingType::WebRTC) {
-        if (auto* page = document.page())
-            page->webRTCProvider().createEncodingConfiguration(WTFMove(configuration), WTFMove(encodingCallback));
+        if (RefPtr page = document.page())
+            page->webRTCProvider().createEncodingConfiguration(WTF::move(configuration), WTF::move(encodingCallback));
         return;
     }
 #else
     UNUSED_PARAM(document);
 #endif
-    MediaEngineConfigurationFactory::createEncodingConfiguration(WTFMove(configuration), WTFMove(encodingCallback));
+    MediaEngineConfigurationFactory::createEncodingConfiguration(WTF::move(configuration), WTF::move(encodingCallback));
 }
 
 void MediaCapabilities::decodingInfo(ScriptExecutionContext& context, MediaDecodingConfiguration&& configuration, Ref<DeferredPromise>&& promise)
@@ -247,25 +245,25 @@ void MediaCapabilities::decodingInfo(ScriptExecutionContext& context, MediaDecod
     // 5. In parallel, run the create a MediaCapabilitiesInfo algorithm with configuration and resolve p with its result.
     // 6. Return p.
 
-    MediaEngineConfigurationFactory::DecodingConfigurationCallback callback = [promise = WTFMove(promise), context = Ref { context }](auto info) mutable {
-        context->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTFMove(promise), info = WTFMove(info)] () mutable {
-            promise->resolve<IDLDictionary<MediaCapabilitiesDecodingInfo>>(WTFMove(info));
+    MediaEngineConfigurationFactory::DecodingConfigurationCallback callback = [promise = WTF::move(promise), context = Ref { context }](auto info) mutable {
+        context->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTF::move(promise), info = WTF::move(info)] () mutable {
+            promise->resolve<IDLDictionary<MediaCapabilitiesDecodingInfo>>(WTF::move(info));
         });
     };
 
     if (RefPtr document = dynamicDowncast<Document>(context)) {
-        gatherDecodingInfo(*document, WTFMove(configuration), WTFMove(callback));
+        gatherDecodingInfo(*document, WTF::move(configuration), WTF::move(callback));
         return;
     }
 
-    m_decodingTasks.add(++m_nextTaskIdentifier, WTFMove(callback));
-    context.postTaskToResponsibleDocument([configuration = WTFMove(configuration).isolatedCopy(), contextIdentifier = context.identifier(), weakThis = WeakPtr { this }, taskIdentifier = m_nextTaskIdentifier](auto& document) mutable {
-        gatherDecodingInfo(document, WTFMove(configuration), [contextIdentifier, weakThis = WTFMove(weakThis), taskIdentifier](MediaCapabilitiesDecodingInfo&& result) mutable {
-            ScriptExecutionContext::postTaskTo(contextIdentifier, [weakThis = WTFMove(weakThis), taskIdentifier, result = WTFMove(result).isolatedCopy()](auto&) mutable {
+    m_decodingTasks.add(++m_nextTaskIdentifier, WTF::move(callback));
+    context.postTaskToResponsibleDocument([configuration = WTF::move(configuration).isolatedCopy(), contextIdentifier = context.identifier(), weakThis = WeakPtr { this }, taskIdentifier = m_nextTaskIdentifier](auto& document) mutable {
+        gatherDecodingInfo(document, WTF::move(configuration), [contextIdentifier, weakThis = WTF::move(weakThis), taskIdentifier](MediaCapabilitiesDecodingInfo&& result) mutable {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [weakThis = WTF::move(weakThis), taskIdentifier, result = WTF::move(result).isolatedCopy()](auto&) mutable {
                 if (!weakThis)
                     return;
                 if (auto callback = weakThis->m_decodingTasks.take(taskIdentifier))
-                    callback(WTFMove(result));
+                    callback(WTF::move(result));
             });
         });
     });
@@ -304,25 +302,25 @@ void MediaCapabilities::encodingInfo(ScriptExecutionContext& context, MediaEncod
     // 5. In parallel, run the create a MediaCapabilitiesInfo algorithm with configuration and resolve p with its result.
     // 6. Return p.
 
-    MediaEngineConfigurationFactory::EncodingConfigurationCallback callback = [promise = WTFMove(promise), context = Ref { context }](auto info) mutable {
-        context->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTFMove(promise), info = WTFMove(info)] () mutable {
-            promise->resolve<IDLDictionary<MediaCapabilitiesEncodingInfo>>(WTFMove(info));
+    MediaEngineConfigurationFactory::EncodingConfigurationCallback callback = [promise = WTF::move(promise), context = Ref { context }](auto info) mutable {
+        context->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTF::move(promise), info = WTF::move(info)] () mutable {
+            promise->resolve<IDLDictionary<MediaCapabilitiesEncodingInfo>>(WTF::move(info));
         });
     };
 
     if (RefPtr document = dynamicDowncast<Document>(context)) {
-        gatherEncodingInfo(*document, WTFMove(configuration), WTFMove(callback));
+        gatherEncodingInfo(*document, WTF::move(configuration), WTF::move(callback));
         return;
     }
 
-    m_encodingTasks.add(++m_nextTaskIdentifier, WTFMove(callback));
-    context.postTaskToResponsibleDocument([configuration = WTFMove(configuration).isolatedCopy(), contextIdentifier = context.identifier(), weakThis = WeakPtr { this }, taskIdentifier = m_nextTaskIdentifier](auto& document) mutable {
-        gatherEncodingInfo(document, WTFMove(configuration), [contextIdentifier, weakThis = WTFMove(weakThis), taskIdentifier](auto&& result) mutable {
-            ScriptExecutionContext::postTaskTo(contextIdentifier, [weakThis = WTFMove(weakThis), taskIdentifier, result = WTFMove(result).isolatedCopy()](auto&) mutable {
+    m_encodingTasks.add(++m_nextTaskIdentifier, WTF::move(callback));
+    context.postTaskToResponsibleDocument([configuration = WTF::move(configuration).isolatedCopy(), contextIdentifier = context.identifier(), weakThis = WeakPtr { this }, taskIdentifier = m_nextTaskIdentifier](auto& document) mutable {
+        gatherEncodingInfo(document, WTF::move(configuration), [contextIdentifier, weakThis = WTF::move(weakThis), taskIdentifier](auto&& result) mutable {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [weakThis = WTF::move(weakThis), taskIdentifier, result = WTF::move(result).isolatedCopy()](auto&) mutable {
                 if (!weakThis)
                     return;
                 if (auto callback = weakThis->m_encodingTasks.take(taskIdentifier))
-                    callback(WTFMove(result));
+                    callback(WTF::move(result));
             });
         });
     });

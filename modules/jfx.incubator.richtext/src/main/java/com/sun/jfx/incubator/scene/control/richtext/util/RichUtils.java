@@ -26,7 +26,6 @@
 package com.sun.jfx.incubator.scene.control.richtext.util;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,8 +34,8 @@ import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Supplier;
-import javax.imageio.ImageIO;
 import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -67,8 +66,10 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.util.ImageUtils;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
@@ -77,9 +78,9 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
  */
 public final class RichUtils {
 
-    /// enabled debug output
+    /// enables debug output
     private static final boolean DEBUG = Boolean.getBoolean("jfx.incubator.richtext.DEBUG");
-    /// includes fileName:lineNumber in the debug output
+    /// includes FILE.METHOD:LINE in the debug output
     private static final boolean CALLER = Boolean.getBoolean("jfx.incubator.richtext.CALLER");
     private static final DecimalFormat format = new DecimalFormat("#0.##");
 
@@ -173,13 +174,16 @@ public final class RichUtils {
         return Platform.isSupported(ConditionalFeature.INPUT_TOUCH);
     }
 
+    /// Computes text length for the TextFlow embedded into TextCell,
+    /// ignoring unmanagement Nodes (highlights) and counting non-Text nodes
+    /// as having length=1.
     public static int getTextLength(TextFlow f) {
         int len = 0;
         for (Node n : f.getChildrenUnmodifiable()) {
             if (n instanceof Text t) {
                 len += t.getText().length();
-            } else {
-                // treat non-Text nodes as having 1 character
+            } else if (n.isManaged()) {
+                // treat non-Text nodes as having 1 character (excluding decorations)
                 len++;
             }
         }
@@ -360,37 +364,6 @@ public final class RichUtils {
         return format.format(value);
     }
 
-    @Deprecated // FIX remove
-    public static char encodeAlignment(TextAlignment a) {
-        switch (a) {
-        case CENTER:
-            return 'C';
-        case JUSTIFY:
-            return 'J';
-        case RIGHT:
-            return 'R';
-        case LEFT:
-        default:
-            return 'L';
-        }
-    }
-
-    @Deprecated // FIX remove
-    public static TextAlignment decodeAlignment(int c) throws IOException {
-        switch (c) {
-        case 'C':
-            return TextAlignment.CENTER;
-        case 'J':
-            return TextAlignment.JUSTIFY;
-        case 'L':
-            return TextAlignment.LEFT;
-        case 'R':
-            return TextAlignment.RIGHT;
-        default:
-            throw new IOException("failed parsing alignment (" + (char)c + ")");
-        }
-    }
-
     /**
      * Combines style attributes, returning combined object (or null).
      *
@@ -468,11 +441,7 @@ public final class RichUtils {
      * @throws IOException if an I/O error occurs
      */
     public static byte[] writePNG(Image im) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        // this might conflict with user-set value
-        ImageIO.setUseCache(false);
-        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
-        return out.toByteArray();
+        return ImageUtils.writeImage(im, "PNG");
     }
 
     /**
@@ -763,6 +732,56 @@ public final class RichUtils {
             node = node.getParent();
         }
         return null;
+    }
+
+    // removes inline node attributes
+    public static StyleAttributeMap filterOutNodeAttributes(StyleAttributeMap map) {
+        if (containsInlineNodes(map)) {
+            StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+            for (StyleAttribute a : map.getAttributes()) {
+                if (!a.isInlineNode()) {
+                    Object v = map.get(a);
+                    b.set(a, v);
+                }
+            }
+            return b.build();
+        }
+        return map;
+    }
+
+    public static boolean containsInlineNodes(StyleAttributeMap map) {
+        for (StyleAttribute<?> a : map.getAttributes()) {
+            if (a.isInlineNode()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap map, Set<StyleAttribute<?>> supported) {
+        if (supported != null) {
+            Set<StyleAttribute<?>> as = map.getAttributes();
+            // attributes sourced from the same model are all supported, so typically the process
+            // ends without filtering and re-allocation
+            boolean filter = false;
+            for (StyleAttribute a : as) {
+                if (!supported.contains(a)) {
+                    filter = true;
+                    break;
+                }
+            }
+            // but we must filter out unsupported attributes that come from a different model
+            if (filter) {
+                StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+                for (StyleAttribute a : as) {
+                    if (supported.contains(a)) {
+                        b.set(a, map.get(a));
+                    }
+                }
+                return b.build();
+            }
+        }
+        return map;
     }
 
     public static void log(Throwable e) {

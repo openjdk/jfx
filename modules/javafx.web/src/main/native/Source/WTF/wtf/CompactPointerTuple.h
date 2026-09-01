@@ -77,7 +77,8 @@ public:
         ASSERT(this->pointer() == pointer);
     }
 
-    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    template<typename OtherPointerType>
+        requires (std::is_pointer_v<PointerType> && std::is_convertible_v<OtherPointerType, PointerType>)
     CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
         : m_data { std::exchange(other.m_data, { }) }
     {
@@ -128,7 +129,8 @@ public:
     {
     }
 
-    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    template<typename OtherPointerType>
+        requires (std::is_pointer_v<PointerType> && std::is_convertible_v<OtherPointerType, PointerType>)
     CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
         : m_pointer { std::exchange(other.m_pointer, { }) }
         , m_type { std::exchange(other.m_type, { }) }

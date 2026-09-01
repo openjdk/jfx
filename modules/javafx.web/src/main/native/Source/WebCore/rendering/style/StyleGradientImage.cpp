@@ -32,14 +32,14 @@
 #include "GradientImage.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 
 namespace WebCore {
 
 StyleGradientImage::StyleGradientImage(Style::Gradient&& gradient)
     : StyleGeneratedImage { Type::GradientImage, StyleGradientImage::isFixedSize }
-    , m_gradient { WTFMove(gradient) }
+    , m_gradient { WTF::move(gradient) }
     , m_knownCacheableBarringFilter { Style::stopsAreCacheable(m_gradient) }
 {
 }
@@ -71,7 +71,7 @@ void StyleGradientImage::load(CachedResourceLoader&, const ResourceLoaderOptions
 {
 }
 
-RefPtr<Image> StyleGradientImage::image(const RenderElement* renderer, const FloatSize& size, bool isForFirstLine) const
+RefPtr<Image> StyleGradientImage::image(const RenderElement* renderer, const FloatSize& size, const GraphicsContext&, bool isForFirstLine) const
 {
     if (!renderer)
         return &Image::nullImage();
@@ -81,7 +81,7 @@ RefPtr<Image> StyleGradientImage::image(const RenderElement* renderer, const Flo
 
     auto& style = isForFirstLine ? renderer->firstLineStyle() : renderer->style();
 
-    bool cacheable = m_knownCacheableBarringFilter && !style.hasAppleColorFilter();
+    bool cacheable = m_knownCacheableBarringFilter && style.appleColorFilter().isNone();
     if (cacheable) {
         if (auto* result = const_cast<StyleGradientImage&>(*this).cachedImageForSize(size))
             return result;
@@ -89,7 +89,7 @@ RefPtr<Image> StyleGradientImage::image(const RenderElement* renderer, const Flo
 
     auto gradient = Style::createPlatformGradient(m_gradient, size, style);
 
-    auto newImage = GradientImage::create(WTFMove(gradient), size);
+    auto newImage = GradientImage::create(WTF::move(gradient), size);
     if (cacheable)
         const_cast<StyleGradientImage&>(*this).saveCachedImageForSize(size, newImage);
     return newImage;

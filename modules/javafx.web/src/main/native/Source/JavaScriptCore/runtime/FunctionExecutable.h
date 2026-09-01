@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "JSFunction.h"
-#include "ScriptExecutable.h"
-#include "SourceCode.h"
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/ScriptExecutable.h>
+#include <JavaScriptCore/SourceCode.h>
 #include <wtf/Box.h>
 #include <wtf/Markable.h>
 
@@ -228,7 +228,7 @@ public:
 
     void overrideInfo(const FunctionOverrideInfo&);
 
-    DECLARE_INFO;
+    DECLARE_EXPORT_INFO;
 
     InferredValue<JSFunction>& singleton()
     {

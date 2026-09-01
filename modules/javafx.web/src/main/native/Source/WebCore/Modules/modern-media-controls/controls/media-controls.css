@@ -42,6 +42,7 @@
     --primary-glyph-color: rgba(255, 255, 255, 0.75);
     --secondary-glyph-color: rgba(255, 255, 255, 0.55);
     --scrubber-margin: 5px;
+    --inline-controls-border-radius: 23px;
 }
 
 :host(audio), :host(video.media-document.audio), * {

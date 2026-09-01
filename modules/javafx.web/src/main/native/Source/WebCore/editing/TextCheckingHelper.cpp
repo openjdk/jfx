@@ -31,8 +31,9 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "EditorClient.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Range.h"
 #include "Settings.h"
 #include "TextCheckerClient.h"
@@ -64,7 +65,7 @@ static void findGrammaticalErrors(TextCheckerClient& client, StringView text, Ve
         TextCheckingResult badGrammar;
         badGrammar.type = TextCheckingType::Grammar;
         badGrammar.range = CharacterRange(checkLocation + badGrammarLocation, badGrammarLength);
-        badGrammar.details = WTFMove(badGrammarDetails);
+        badGrammar.details = WTF::move(badGrammarDetails);
         results.append(badGrammar);
 
         checkLocation += badGrammarLocation + badGrammarLength;
@@ -130,7 +131,7 @@ void TextCheckingParagraph::expandRangeToNextEnd()
 {
     paragraphRange();
     if (auto end = makeBoundaryPoint(endOfParagraph(startOfNextParagraph(makeDeprecatedLegacyPosition(m_paragraphRange->start)))))
-        m_paragraphRange->end = WTFMove(*end);
+        m_paragraphRange->end = WTF::move(*end);
     invalidateParagraphRangeValues();
 }
 
@@ -182,7 +183,7 @@ const SimpleRange& TextCheckingParagraph::offsetAsRange() const
     return *m_offsetAsRange;
 }
 
-StringView TextCheckingParagraph::text() const
+StringView TextCheckingParagraph::text() const LIFETIME_BOUND
 {
     if (m_text.isNull())
         m_text = plainText(paragraphRange());
@@ -242,7 +243,7 @@ auto TextCheckingHelper::findMisspelledWords(Operation operation) const -> std::
 
         int misspellingLocation = -1;
         int misspellingLength = 0;
-        m_client.textChecker()->checkSpellingOfString(text, &misspellingLocation, &misspellingLength);
+        checkedClient()->textChecker()->checkSpellingOfString(text, &misspellingLocation, &misspellingLength);
 
         int textLength = text.length();
 
@@ -269,7 +270,7 @@ auto TextCheckingHelper::findMisspelledWords(Operation operation) const -> std::
                     text.substring(misspellingLocation, misspellingLength).toString(),
                     currentChunkOffset + misspellingLocation
                 },
-                WTFMove(misspellingRange)
+                WTF::move(misspellingRange)
             };
         }
 
@@ -338,7 +339,7 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
                 VisibleSelection currentSelection;
                 if (auto* frame = paragraphRange.start.document().frame())
                     currentSelection = frame->selection().selection();
-                checkTextOfParagraph(*m_client.textChecker(), paragraphString, checkingTypes, results, currentSelection);
+                checkTextOfParagraph(*checkedClient()->textChecker(), paragraphString, checkingTypes, results, currentSelection);
 
                 for (auto& result : results) {
                     if (result.type == TextCheckingType::Spelling && result.range.location >= currentStartOffset && result.range.location + result.range.length <= currentEndOffset) {
@@ -402,7 +403,7 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
         auto nextParagraphRange = makeSimpleRange(nextStart, endOfParagraph(nextStart));
         if (!nextParagraphRange)
             break;
-        paragraphRange = WTFMove(*nextParagraphRange);
+        paragraphRange = WTF::move(*nextParagraphRange);
 
         firstIteration = false;
         totalLengthProcessed += currentLength;
@@ -458,7 +459,7 @@ auto TextCheckingHelper::findUngrammaticalPhrases(Operation operation) const -> 
         Vector<GrammarDetail> grammarDetails;
         int badGrammarPhraseLocation = -1;
         int badGrammarPhraseLength = 0;
-        m_client.textChecker()->checkGrammarOfString(paragraph.text().substring(startOffset), grammarDetails, &badGrammarPhraseLocation, &badGrammarPhraseLength);
+        checkedClient()->textChecker()->checkGrammarOfString(paragraph.text().substring(startOffset), grammarDetails, &badGrammarPhraseLocation, &badGrammarPhraseLength);
 
         if (!badGrammarPhraseLength) {
             ASSERT(badGrammarPhraseLocation == -1);
@@ -517,16 +518,17 @@ TextCheckingGuesses TextCheckingHelper::guessesForMisspelledWordOrUngrammaticalP
     VisibleSelection currentSelection;
     if (auto frame = m_range.start.document().frame())
         currentSelection = frame->selection().selection();
-    checkTextOfParagraph(*m_client.textChecker(), paragraph.text(), checkingTypes, results, currentSelection);
+    CheckedRef client = m_client.get();
+    checkTextOfParagraph(*client->textChecker(), paragraph.text(), checkingTypes, results, currentSelection);
 
     for (auto& result : results) {
         if (result.type == TextCheckingType::Spelling && paragraph.checkingRangeMatches(result.range)) {
             String misspelledWord = paragraph.checkingSubstring().toString();
             ASSERT(misspelledWord.length());
             Vector<String> guesses;
-            m_client.textChecker()->getGuessesForWord(misspelledWord, String(), currentSelection, guesses);
-            m_client.updateSpellingUIWithMisspelledWord(misspelledWord);
-            return { WTFMove(guesses), true, false };
+            client->textChecker()->getGuessesForWord(misspelledWord, String(), currentSelection, guesses);
+            client->updateSpellingUIWithMisspelledWord(misspelledWord);
+            return { WTF::move(guesses), true, false };
         }
     }
 
@@ -540,8 +542,8 @@ TextCheckingGuesses TextCheckingHelper::guessesForMisspelledWordOrUngrammaticalP
                 if (paragraph.checkingRangeMatches({ result.range.location + detail.range.location, detail.range.length })) {
                     String badGrammarPhrase = paragraph.text().substring(result.range.location, result.range.length).toString();
                     ASSERT(badGrammarPhrase.length());
-                    m_client.updateSpellingUIWithGrammarString(badGrammarPhrase, detail);
-                    return { WTFMove(detail.guesses), false, true };
+                    client->updateSpellingUIWithGrammarString(badGrammarPhrase, detail);
+                    return { WTF::move(detail.guesses), false, true };
                 }
             }
         }
@@ -565,6 +567,11 @@ bool TextCheckingHelper::unifiedTextCheckerEnabled() const
     return WebCore::unifiedTextCheckerEnabled(m_range.start.document().frame());
 }
 
+CheckedRef<EditorClient> TextCheckingHelper::checkedClient() const
+{
+    return m_client.get();
+}
+
 void checkTextOfParagraph(TextCheckerClient& client, StringView text, OptionSet<TextCheckingType> checkingTypes, Vector<TextCheckingResult>& results, const VisibleSelection& currentSelection)
 {
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -585,10 +592,10 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, OptionSet<
         findGrammaticalErrors(client, text.left(grammarCheckLength), grammaticalErrors);
     }
 
-    results = WTFMove(grammaticalErrors);
+    results = WTF::move(grammaticalErrors);
 
     if (results.isEmpty())
-        results = WTFMove(misspellings);
+        results = WTF::move(misspellings);
     else
         results.appendVector(misspellings);
 #endif // USE(UNIFIED_TEXT_CHECKING)

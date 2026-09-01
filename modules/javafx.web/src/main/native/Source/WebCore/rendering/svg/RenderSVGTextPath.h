@@ -26,10 +26,11 @@
 namespace WebCore {
 
 class SVGGeometryElement;
+class SVGLengthValue;
 class SVGTextPathElement;
 
 class RenderSVGTextPath final : public RenderSVGInline {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGTextPath);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGTextPath);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGTextPath);
 public:
     RenderSVGTextPath(SVGTextPathElement&, RenderStyle&&);
@@ -45,8 +46,6 @@ private:
     void graphicsElement() const = delete;
 
     ASCIILiteral renderName() const override { return "RenderSVGTextPath"_s; }
-
-    Path m_layoutPath;
 };
 
 } // namespace WebCore

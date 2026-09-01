@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,19 +72,12 @@ public:
     using PageBlock::PageBlock;
     using PageBlock::size;
     using PageBlock::base;
-
-#ifndef __clang__
     using PageBlock::operator bool;
-#else
-    // FIXME: This is a workaround for <rdar://problem/8876150>, wherein Clang incorrectly emits an access
-    // control warning when a client tries to use operator bool exposed above via "using PageBlock::operator bool".
-    operator bool() const { return PageBlock::operator bool(); }
-#endif
 
     static PageAllocation allocate(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false)
     {
         ASSERT(isPageAligned(size));
-        return PageAllocation(OSAllocator::reserveAndCommit(size, usage, writable, executable), size);
+        return PageAllocation(OSAllocator::reserveAndCommit(size, usage, nullptr, writable, executable), size);
     }
 
     void deallocate()
@@ -102,7 +95,7 @@ public:
 
 private:
     PageAllocation(void* base, size_t size)
-        : PageBlock(base, size, false)
+        : PageBlock(base, size)
     {
     }
 };

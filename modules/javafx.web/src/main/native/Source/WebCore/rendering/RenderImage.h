@@ -24,8 +24,9 @@
 
 #pragma once
 
-#include "RenderImageResource.h"
-#include "RenderReplaced.h"
+#include <WebCore/RenderImageResource.h>
+#include <WebCore/RenderReplaced.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ enum ImageSizeChangeType {
 };
 
 class RenderImage : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderImage);
+    WTF_MAKE_TZONE_ALLOCATED(RenderImage);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderImage);
 public:
     RenderImage(Type, Element&, RenderStyle&&, StyleImage* = nullptr, const float imageDevicePixelRatio = 1.0f);
@@ -78,6 +79,7 @@ public:
     bool isShowingAltText() const;
 
     virtual bool shouldDisplayBrokenImageIcon() const;
+    bool shouldRespectZeroIntrinsicWidth() const override;
 
     String accessibilityDescription() const { return imageResource().image()->accessibilityDescription(); }
 
@@ -91,11 +93,12 @@ protected:
 
     bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
-    std::pair<FloatSize, FloatSize> computeIntrinsicSizeAndPreferredAspectRatio() const final;
+    FloatSize computeIntrinsicSize() const final;
+    FloatSize preferredAspectRatio() const final;
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;
 
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
-    void styleDidChange(StyleDifference, const RenderStyle*) override;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle*) override;
 
     void imageChanged(WrappedImagePtr, const IntRect* = nullptr) override;
 
@@ -132,6 +135,8 @@ private:
     void updateInnerContentRect();
 
     void paintAreaElementFocusRing(PaintInfo&, const LayoutPoint& paintOffset);
+
+    bool isDimensionlessSVG() const;
 
     bool hasShadowContent() const { return m_hasShadowControls || m_hasImageOverlay; }
 

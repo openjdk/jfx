@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FileSystemHandle.h"
-#include "FileSystemSyncAccessHandleIdentifier.h"
-#include "FileSystemWritableFileStreamIdentifier.h"
+#include <WebCore/FileSystemHandle.h>
+#include <WebCore/FileSystemSyncAccessHandleIdentifier.h>
+#include <WebCore/FileSystemWritableFileStreamIdentifier.h>
 
 namespace WebCore {
 
@@ -39,7 +39,7 @@ enum class FileSystemWriteCommandType : uint8_t;
 template<typename> class ExceptionOr;
 
 class FileSystemFileHandle final : public FileSystemHandle {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FileSystemFileHandle);
+    WTF_MAKE_TZONE_ALLOCATED(FileSystemFileHandle);
 public:
     WEBCORE_EXPORT static Ref<FileSystemFileHandle> create(ScriptExecutionContext&, String&&, FileSystemHandleIdentifier, Ref<FileSystemStorageConnection>&&);
     void getFile(DOMPromiseDeferred<IDLInterface<File>>&&);

@@ -32,12 +32,15 @@
 #include "InspectorInstrumentation.h"
 #include "RenderElement.h"
 #include "RenderObjectInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleCanvasImage);
+
 StyleCanvasImage::StyleCanvasImage(String&& name)
     : StyleGeneratedImage { Type::CanvasImage, StyleCanvasImage::isFixedSize }
-    , m_name { WTFMove(name) }
+    , m_name { WTF::move(name) }
 {
 }
 
@@ -72,7 +75,7 @@ void StyleCanvasImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<Image> StyleCanvasImage::image(const RenderElement* renderer, const FloatSize&, bool) const
+RefPtr<Image> StyleCanvasImage::image(const RenderElement* renderer, const FloatSize&, const GraphicsContext&, bool) const
 {
     if (!renderer)
         return &Image::nullImage();

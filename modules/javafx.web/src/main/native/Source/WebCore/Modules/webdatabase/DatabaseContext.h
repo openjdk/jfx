@@ -27,8 +27,9 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "Document.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/Document.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -80,7 +81,7 @@ private:
     // ActiveDOMObject.
     void stop() override;
 
-    RefPtr<DatabaseThread> m_databaseThread;
+    const RefPtr<DatabaseThread> m_databaseThread;
     bool m_hasOpenDatabases { false }; // This never changes back to false, even after the database thread is closed.
     bool m_hasRequestedTermination { false };
 

@@ -39,7 +39,7 @@ public:
     static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<CharacterType>&); // Defined in SVGTransformableInlines.h
 
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringView);
-    static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<LChar>&);
+    static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<Latin1Character>&);
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<char16_t>&);
 
     AffineTransform localCoordinateSpaceTransform(CTMScope) const override { return animatedLocalTransform(); }

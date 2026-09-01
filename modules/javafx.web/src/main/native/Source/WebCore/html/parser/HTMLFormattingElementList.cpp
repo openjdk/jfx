@@ -81,19 +81,19 @@ void HTMLFormattingElementList::swapTo(Ref<Element> oldElement, HTMLStackItem&& 
     ASSERT(!contains(newItem.element()));
     if (!bookmark.hasBeenMoved()) {
         ASSERT(&bookmark.mark().element() == oldElement.ptr());
-        bookmark.mark().replaceElement(WTFMove(newItem));
+        bookmark.mark().replaceElement(WTF::move(newItem));
         return;
     }
     size_t index = &bookmark.mark() - &first();
     ASSERT_WITH_SECURITY_IMPLICATION(index <= size());
-    m_entries.insert(index, WTFMove(newItem));
+    m_entries.insert(index, WTF::move(newItem));
     remove(oldElement);
 }
 
 void HTMLFormattingElementList::append(HTMLStackItem&& item)
 {
     ensureNoahsArkCondition(item);
-    m_entries.append(WTFMove(item));
+    m_entries.append(WTF::move(item));
 }
 
 void HTMLFormattingElementList::remove(Element& element)

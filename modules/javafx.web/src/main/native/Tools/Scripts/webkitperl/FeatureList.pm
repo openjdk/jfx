@@ -54,6 +54,7 @@ my (
     $accessibilityIsolatedTreeSupport,
     $applePaySupport,
     $applicationManifestSupport,
+    $assertsEnabled,
     $asyncScrollingSupport,
     $attachmentElementSupport,
     $autocapitalizeSupport,
@@ -129,6 +130,7 @@ my (
     $speechSynthesisSupport,
     $spellcheckSupport,
     $svgFontsSupport,
+    $swiftDemoUriScheme,
     $isoMallocSupport,
     $systemMallocSupport,
     $telephoneNumberDetectionSupport,
@@ -166,6 +168,10 @@ my (
 );
 
 my @features = (
+
+    { option => "asserts", desc => "Toggle assertions (CMake only). Defaults to disable on Release, enable on Debug.",
+      define => "ENABLE_ASSERTS", value => \$assertsEnabled, },
+
     { option => "fatal-warnings", desc => "Toggle warnings as errors (CMake only)",
       define => "DEVELOPER_MODE_FATAL_WARNINGS", value => \$fatalWarnings },
 
@@ -363,6 +369,9 @@ my @features = (
 
     { option => "spellcheck", desc => "Toggle Spellchecking support (requires Enchant)",
       define => "ENABLE_SPELLCHECK", value => \$spellcheckSupport },
+
+    { option => "swift-demo-uri-scheme", desc => "Toggle demo Swift x-swift-demo: URI handler",
+      define => "ENABLE_SWIFT_DEMO_URI_SCHEME", value => \$swiftDemoUriScheme},
 
     { option => "telephone-number-detection", desc => "Toggle telephone number detection support",
       define => "ENABLE_TELEPHONE_NUMBER_DETECTION", value => \$telephoneNumberDetectionSupport },
