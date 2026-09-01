@@ -168,7 +168,6 @@ void loadProperties(String sourceFileName) {
 }
 
 /**
-<<<<<<< HEAD
  * Reads the JavaFX local user properties file (gradle-local.properties).
  */
 void loadLocalProperties(String sourceFileName) {
@@ -202,8 +201,6 @@ class CompileTarget {
 }
 
 /**
-=======
->>>>>>> refs/remotes/origin/master
  * Iterates over each of the compile targets, passing the given closure
  * a CompileTarget instance.
  *
