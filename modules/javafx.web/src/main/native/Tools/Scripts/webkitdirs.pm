@@ -576,7 +576,23 @@ sub determineArchitecture
             $compiler = $ENV{'CC'} if (defined($ENV{'CC'}));
             my @compiler_machine = split('-', `$compiler -dumpmachine`);
             $architecture = $compiler_machine[0];
-        } elsif (open my $cmake_sysinfo, "cmake --system-information |") {
+        } else {
+            my $prefix = "";
+            # This gets called from argumentsForConfiguration() which needs to resolve the target architecture
+            # before entering into the cross-toolchain-env, so to achieve that we call the cross-target cmake.
+            if (shouldBuildForCrossTarget()) {
+                my $helper = File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper");
+                my $target = getCrossTargetName();
+                # Pre-build the toolchain if needed so its (potentially multi-hour) bitbake output reaches
+                # the terminal instead of being swallowed by the pipe opened below.
+                # The build-toolchain call runs with info log level (the default) because it is the first
+                # one to happen, so those messages are printed at the start. Next calls to cross-toolchain-helper
+                # should pass --log-level=quiet to avoid repeated messages.
+                system($helper, "--cross-target=$target", "--build-toolchain") == 0
+                    or die "cross-toolchain-helper --build-toolchain failed for $target\n";
+                $prefix = "$helper --log-level=quiet --cross-target=$target --cross-toolchain-run-cmd";
+            }
+            if (open my $cmake_sysinfo, "$prefix cmake --system-information |") {
             while (<$cmake_sysinfo>) {
                 next unless index($_, 'CMAKE_SYSTEM_PROCESSOR') == 0;
                 if (/^CMAKE_SYSTEM_PROCESSOR \"([^"]+)\"/) {
@@ -586,6 +602,7 @@ sub determineArchitecture
             }
             close $cmake_sysinfo;
         }
+    }
     }
 
     $architecture = 'x86_64' if $architecture =~ /amd64/i;
@@ -2521,8 +2538,10 @@ sub inFlatpakSandbox()
 sub runInCrossTargetEnvironment(@)
 {
     return if not shouldBuildForCrossTarget();
+    # Run with quiet log level to avoid repeated messages, the first run at determineArchitecture()
+    # to build the toolchain happens with log level info (the default)
     my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper"),
-                  "--cross-target", getCrossTargetName(), "--cross-toolchain-run-cmd");
+                  "--log-level=quiet", "--cross-target", getCrossTargetName(), "--cross-toolchain-run-cmd");
     my @command = @_;
     exec @prefix, @command, argumentsForConfiguration(), @ARGV or die;
 }
@@ -2952,6 +2971,21 @@ sub generateBuildSystemFromCMakeProject
 
     my $cmakeSourceDir = isCygwin() ? windowsSourceDir() : sourceDir();
     push @args, '"' . $cmakeSourceDir . '"';
+
+    # The GTK and WPE bots build and test with -DENABLE_ASSERTS=ON (both on Release and Debug).
+    # Warn when the local build differs from the CI configuration.
+    if (isGtk() || isWPE()) {
+        # configuration() is the name of the build config and directory, and in the case of a cross-toolchain
+        # build it is something like "Release_rpi4-64bits-mesa" (for example), so this doesn't trigger in that case.
+        # That is intentional: the CI does not enable assertions for cross-toolchain builds, so no need to warn.
+        if (configuration() eq "Release") {
+            my $assertsOn = grep { /^-DENABLE_ASSERTS=ON\b/i } @args;
+            print STDERR "WARNING: Building Release without assertions. Pass --asserts to match the CI build.\n" unless $assertsOn;
+        } elsif (configuration() eq "Debug") {
+            my $assertsOff = grep { /^-DENABLE_ASSERTS=OFF\b/i } @args;
+            print STDERR "WARNING: Building Debug with assertions disabled. Drop --no-asserts to match the CI build.\n" if $assertsOff;
+        }
+    }
 
     # We call system("cmake @args") instead of system("cmake", @args) so that @args is
     # parsed for shell metacharacters.

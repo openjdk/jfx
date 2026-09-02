@@ -25,17 +25,12 @@
 
 package test.javafx.css;
 
-import com.sun.javafx.css.RuleHelper;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.media.MediaFeaturesShim;
-import com.sun.javafx.css.media.TriState;
-import com.sun.javafx.css.media.expression.FunctionExpression;
-import javafx.application.ColorScheme;
-import javafx.css.StyleConverter.StringStore;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.StringConverter;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -46,10 +41,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
 import javafx.css.Declaration;
@@ -58,11 +55,13 @@ import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
 import javafx.css.StyleConverter;
+import javafx.css.StyleConverter.StringStore;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
-
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.StringConverter;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -79,9 +78,14 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import com.sun.javafx.css.BinarySerializer;
+import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.media.expression.FunctionExpression;
 
 public class StylesheetTest {
 
@@ -864,5 +868,35 @@ public class StylesheetTest {
         } finally {
             MediaFeaturesShim.setDefault(oldDefault);
         }
+    }
+
+    @Test
+    public void testSortedPseudoClasses() throws Exception {
+        String name = "yo";
+        List<String> styleClasses = List.of("test", "TEST");
+        List<String> pseudoClasses = List.of(
+            "z",
+            "a",
+            "d",
+            "b",
+            "x",
+            "gggg",
+            "uu",
+            "zzz"
+            );
+        String id = "id";
+        Selector selector = new SimpleSelector(name, styleClasses, pseudoClasses, id);
+
+        StringStore store = new StringStore();
+        DataOutputStream out = new DataOutputStream(new ByteArrayOutputStream());
+        BinarySerializer.write(selector, out, store);
+
+        ArrayList<String> expected = new ArrayList<>();
+        expected.add(name);
+        expected.addAll(styleClasses);
+        expected.add(id);
+        expected.addAll(pseudoClasses.stream().sorted().toList());
+
+        assertEquals(expected, store.strings);
     }
 }

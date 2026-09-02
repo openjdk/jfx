@@ -107,6 +107,7 @@ private:
 
     void startSpeakingImmediately(SpeechSynthesisUtterance&);
     void handleSpeakingCompleted(SpeechSynthesisUtterance&, bool errorOccurred);
+    void stopPlatformSpeech();
 
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final;

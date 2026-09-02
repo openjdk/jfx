@@ -39,6 +39,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -277,6 +278,31 @@ public class HeaderBarTest {
 
     @Nested
     class LayoutTest {
+        @Test
+        void verticallyBiasedChildUsesSnappedHeightForWidth() {
+            var content = new MockBiased(Orientation.VERTICAL, 200, 100);
+            headerBar.setLeft(content);
+            headerBar.resize(1000, 99.2);
+            headerBar.layout();
+
+            assertEquals(200, content.getWidth());
+            assertEquals(100, content.getHeight());
+        }
+
+        @Test
+        void childHeightUsesVerticalRenderScale() {
+            stage.setRenderScaleX(1.25);
+            stage.setRenderScaleY(1.5);
+
+            var content = new MockResizable(0, 0, 10, 10, Double.MAX_VALUE, Double.MAX_VALUE);
+            headerBar.setLeft(content);
+            headerBar.resize(100, 10.2);
+            headerBar.layout();
+
+            assertEquals(10.4, content.getWidth());
+            assertEquals(10.666666666666666, content.getHeight());
+        }
+
         @ParameterizedTest
         @CsvSource({
             "TOP_LEFT, 10, 10, 100, 80",
