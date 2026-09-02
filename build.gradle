@@ -181,6 +181,10 @@ void loadLocalProperties(String sourceFileName) {
 
     def cliProps = gradle.startParameter.projectProperties
     localProps.forEach((name, value) -> {
+        if (name.startsWith("org.gradle") || name.startsWith("systemProp")) {
+            throw new GradleException(
+                    "Gradle and system properties are not allowed in the local properties file: $name")
+        }
         if (cliProps.containsKey(name)) {
             logger.info("gradle-local.properties: $name overriden by CLI arg")
             return
