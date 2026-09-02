@@ -97,6 +97,4 @@ final class WinTimer extends Timer {
     @Override
     public void resume() {
     }
-
 }
-

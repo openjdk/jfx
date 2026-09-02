@@ -166,5 +166,4 @@ public class WinTimerTest {
         assertFalse(stopperThread.isAlive(), "Stopper thread is still running");
         assertNull(throwable.get());
     }
-
 }
