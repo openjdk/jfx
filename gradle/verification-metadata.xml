@@ -4,7 +4,11 @@
       <verify-metadata>true</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
+         <!-- Some IDEs automatically download sources or Groovy dependencies during import.
+              These dependencies are not part of the Gradle build, so we trust them here to
+              make working with these IDEs easier. -->
          <trust file=".*-sources[.]jar" regex="true"/>
+         <trust group="org[.]apache[.]groovy" file="groovy-.*[.](?:pom|module)" regex="true"/>
       </trusted-artifacts>
    </configuration>
    <components>
