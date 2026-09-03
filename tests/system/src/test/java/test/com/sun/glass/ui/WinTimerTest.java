@@ -123,6 +123,7 @@ public class WinTimerTest {
         Application application = Application.GetApplication();
         timer = application.createTimer(this::timerCallback);
         timer.start(Timer.getMinPeriod());
+        assertTrue(timer.isRunning());
 
         /*
          * Thread to stop the timer. It does the following:
@@ -160,6 +161,7 @@ public class WinTimerTest {
             }
             assertTrue(stopped.await(TIMEOUT, TimeUnit.MILLISECONDS),
                     "Timeout waiting for stop to return");
+            assertFalse(timer.isRunning());
         } finally {
             stopperThread.join(TIMEOUT);
         }
