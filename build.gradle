@@ -2060,6 +2060,11 @@ allprojects {
     // set compiler.options.release (to the same target version), which will
     // override this setting, but it is needed for those modules that can't.
     java {
+        toolchain {
+            // 'jdkVersionInfo' is the resolved Runtime.Version. 'feature' is the new name for the 'major' element
+            languageVersion = JavaLanguageVersion.of(jdkVersionInfo.feature())
+        }
+    
         sourceCompatibility = JAVA_TARGET_VERSION
     }
 
@@ -4403,7 +4408,7 @@ allprojects {
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
 
-        compile.options.forkOptions.executable = JAVAC
+//        compile.options.forkOptions.executable = JAVAC
 
         compile.options.compilerArgs += ["-encoding", "UTF-8"]
         compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
