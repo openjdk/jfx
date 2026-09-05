@@ -2064,7 +2064,7 @@ allprojects {
             // 'jdkVersionInfo' is the resolved Runtime.Version. 'feature' is the new name for the 'major' element
             languageVersion = JavaLanguageVersion.of(jdkVersionInfo.feature())
         }
-    
+
         sourceCompatibility = JAVA_TARGET_VERSION
     }
 
@@ -4404,7 +4404,7 @@ allprojects {
 
         compile.options.debug = true // we always generate debugging info in the class files
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
-        
+
         // forces forking of the damon and build JVMs (even when it's the same JDK), no-op if the JVMs are different
         compile.options.fork = true
 
