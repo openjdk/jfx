@@ -121,7 +121,7 @@ public class SimpleStyleableLongProperty extends StyleableLongProperty {
                                        @NamedArg("declaringClass") Class<?> declaringClass,
                                        @NamedArg("name") String name) {
         this(cssMetaData, bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -140,7 +140,7 @@ public class SimpleStyleableLongProperty extends StyleableLongProperty {
                                        @NamedArg("name") String name,
                                        @NamedArg("initialValue") Long initialValue) {
         this(cssMetaData, bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**

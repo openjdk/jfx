@@ -89,24 +89,26 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
             return null;
         }
 
-        Class<?> beanClass = bean.getClass();
-        String propertyName = name + "Property";
+        return DeclaringClassCache.computeIfAbsent(this, name, property -> {
+            Class<?> declaringClass = property.getBean().getClass();
+            String propertyName = property.getName() + "Property";
 
-        do {
-            try {
-                Method method = beanClass.getDeclaredMethod(propertyName);
+            do {
+                try {
+                    Method method = declaringClass.getDeclaredMethod(propertyName);
 
-                if ((method.getModifiers() & Modifier.STATIC) == 0
-                        && ReadOnlyProperty.class.isAssignableFrom(method.getReturnType())) {
-                    return beanClass;
+                    if ((method.getModifiers() & Modifier.STATIC) == 0
+                            && ReadOnlyProperty.class.isAssignableFrom(method.getReturnType())) {
+                        return declaringClass;
+                    }
+                } catch (NoSuchMethodException ignored) {
+                    // fall through
                 }
-            } catch (NoSuchMethodException ignored) {
-                // fall through
-            }
 
-            beanClass = beanClass.getSuperclass();
-        } while (beanClass != null);
+                declaringClass = declaringClass.getSuperclass();
+            } while (declaringClass != null);
 
-        return null;
+            return null;
+        });
     }
 }

@@ -129,7 +129,7 @@ public class SimpleListProperty<E> extends ListPropertyBase<E> {
      */
     public SimpleListProperty(Object bean, Class<?> declaringClass, String name) {
         this(bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -143,6 +143,6 @@ public class SimpleListProperty<E> extends ListPropertyBase<E> {
      */
     public SimpleListProperty(Object bean, Class<?> declaringClass, String name, ObservableList<E> initialValue) {
         this(bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 }

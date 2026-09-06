@@ -121,7 +121,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
                                           @NamedArg("declaringClass") Class<?> declaringClass,
                                           @NamedArg("name") String name) {
         this(cssMetaData, bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -140,7 +140,7 @@ public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
                                           @NamedArg("name") String name,
                                           @NamedArg("initialValue") Integer initialValue) {
         this(cssMetaData, bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**

@@ -130,7 +130,7 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
      */
     public SimpleMapProperty(Object bean, Class<?> declaringClass, String name) {
         this(bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -144,6 +144,6 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
      */
     public SimpleMapProperty(Object bean, Class<?> declaringClass, String name, ObservableMap<K, V> initialValue) {
         this(bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 }

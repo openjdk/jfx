@@ -121,7 +121,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
                                         @NamedArg("declaringClass") Class<?> declaringClass,
                                         @NamedArg("name") String name) {
         this(cssMetaData, bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -140,7 +140,7 @@ public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
                                         @NamedArg("name") String name,
                                         @NamedArg("initialValue") Float initialValue) {
         this(cssMetaData, bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**

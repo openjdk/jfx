@@ -129,7 +129,7 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
      */
     public SimpleSetProperty(Object bean, Class<?> declaringClass, String name) {
         this(bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -143,6 +143,6 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
      */
     public SimpleSetProperty(Object bean, Class<?> declaringClass, String name, ObservableSet<E> initialValue) {
         this(bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 }

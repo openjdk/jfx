@@ -316,7 +316,7 @@ public final class PropertyMetadataVerifier {
         String propertyName = methodName.substring(0, methodName.length() - "Property".length());
         String displayName = declaringClass.getName() + "." + propertyName;
 
-        return method.getParameterCount() == 1
+        return method.getParameterCount() == 1 && (method.getModifiers() & Modifier.STATIC) != 0
             ? new PropertyInfo(propertyName, displayName, declaringClass,
                                method.getReturnType(), method.getParameterTypes()[0])
             : new PropertyInfo(propertyName, displayName, declaringClass,

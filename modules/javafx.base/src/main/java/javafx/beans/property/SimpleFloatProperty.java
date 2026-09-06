@@ -126,7 +126,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
      */
     public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name) {
         this(bean, name);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 
     /**
@@ -140,6 +140,6 @@ public class SimpleFloatProperty extends FloatPropertyBase {
      */
     public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name, float initialValue) {
         this(bean, name, initialValue);
-        this.declaringClass = declaringClass;
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
     }
 }
