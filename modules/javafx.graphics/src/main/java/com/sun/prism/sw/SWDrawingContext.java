@@ -1027,8 +1027,16 @@ public class SWDrawingContext implements DrawingContext {
 
     @Override
     public boolean isPointInPath(double x, double y) {
-        // TODO: HTML5 considers points on the path to be inside, but we
-        // implement a halfin-halfout approach...
+
+        /*
+         * Tests the point against the region the current path would fill. The
+         * path is treated as an infinitely thin boundary, so the stroke
+         * attributes do not matter. A point lying exactly on the boundary is
+         * reported per the fill's half-open rasterization convention (the low
+         * edges and corner count as inside, the high ones as outside), rather
+         * than treated as inside the way HTML5 does.
+         */
+
         return path.contains((float) x, (float) y);
     }
 

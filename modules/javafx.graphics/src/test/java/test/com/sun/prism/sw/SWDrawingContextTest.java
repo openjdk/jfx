@@ -1261,6 +1261,29 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void isPointInPathShouldMatchTheFilledPixels() {
+        h.context.beginPath();
+        h.context.rect(10, 10, 10, 10);
+
+        assertTrue(h.context.isPointInPath(15, 15));  // an interior point
+        assertFalse(h.context.isPointInPath(9, 15));  // a point to the left
+        assertFalse(h.context.isPointInPath(21, 15));  // a point to the right
+
+        // the fill covers a half-open range: the min edges belong to it, the max edges do not
+        assertTrue(h.context.isPointInPath(10, 15));  // the left edge
+        assertTrue(h.context.isPointInPath(15, 10));  // the top edge
+        assertTrue(h.context.isPointInPath(10, 10));  // the top-left corner
+        assertFalse(h.context.isPointInPath(20, 15));  // the right edge
+        assertFalse(h.context.isPointInPath(15, 20));  // the bottom edge
+        assertFalse(h.context.isPointInPath(20, 20));  // the bottom-right corner
+
+        // the boundary is continuous: moving arbitrarily close to an edge from
+        // the inside is inside, from the outside is outside
+        assertTrue(h.context.isPointInPath(19.9999, 19.9999));  // just inside the bottom-right corner
+        assertFalse(h.context.isPointInPath(20.0001, 20.0001));  // just outside the bottom-right corner
+    }
+
+    @Test
     public void imageShouldReportDirtyRegionCoveringTheChangedPixels() {
         Image source = createSolidFxImage(8, 8, argb(255, 0, 255, 0));
 
