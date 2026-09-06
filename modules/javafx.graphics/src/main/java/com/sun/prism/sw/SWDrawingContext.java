@@ -1281,9 +1281,6 @@ public class SWDrawingContext implements DrawingContext {
         this.prismStroke = null;
     }
 
-    // TODO It seems bufferDirty only remembers the last rect; may need to update this only once per frame
-    // Note: if called multiple times per frame, then it just updates everything (optimize?)
-
     /*
      * Reports a dirty rectangle given in device coordinates (already
      * transformed), clipped to the image bounds.
