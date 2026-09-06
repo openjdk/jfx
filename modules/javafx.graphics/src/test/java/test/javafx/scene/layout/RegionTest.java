@@ -2566,13 +2566,6 @@ public class RegionTest {
         assertEquals(List.of(expected, expected, expected), child.dependentArguments);
     }
 
-    private static final class HeightDependentBaselineRegion extends Region {
-        @Override
-        public double getBaselineOffset() {
-            return getHeight() / 2;
-        }
-    }
-
     private static final class RecordingBiasedRegion extends Region {
         private final Orientation bias;
         private final double preferredPrimarySize;
