@@ -39,6 +39,7 @@ import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.List;
@@ -971,6 +972,26 @@ public class RegionTest {
     }
 
     @Test
+    public void testLayoutInAreaForNonResizableBaselineSameAsHeight() {
+        Rectangle child = new Rectangle(30, 40) {
+            @Override public double getBaselineOffset() {
+                return BASELINE_OFFSET_SAME_AS_HEIGHT;
+            }
+        };
+
+        Region.layoutInArea(
+            child, 10, 10, 100, 100, 60,
+            Insets.EMPTY, true, true,
+            HPos.CENTER, VPos.BASELINE, false);
+
+        assertFalse(child.isResizable());
+        assertEquals(30, child.getWidth());
+        assertEquals(40, child.getHeight());
+        assertEquals(45, child.getLayoutX());
+        assertEquals(30, child.getLayoutY());
+    }
+
+    @Test
     public void testComputeChildPrefAreaWidthHonorsMaxWidthOverPref() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 
@@ -1565,8 +1586,7 @@ public class RegionTest {
 
         pane.getChildren().add(child);
 
-        assertEquals(10, RegionShim.computeChildMaxAreaWidth(
-            pane, child, -1, Insets.EMPTY, 50, true));
+        assertEquals(10, RegionShim.computeChildMaxAreaWidth(pane, child, -1, Insets.EMPTY, 50, true));
     }
 
     @Test
@@ -1682,8 +1702,7 @@ public class RegionTest {
 
         pane.getChildren().add(child);
 
-        assertEquals(10, RegionShim.computeChildMaxAreaHeight(
-            pane, child, -1, Insets.EMPTY, 50, true));
+        assertEquals(10, RegionShim.computeChildMaxAreaHeight(pane, child, -1, Insets.EMPTY, 50, true));
     }
 
     @Test
@@ -2259,7 +2278,7 @@ public class RegionTest {
     @MethodSource("renderScales")
     public void layoutInAreaNormalizesAvailableSpanAfterSubtractingMargins(double scaleX, double scaleY) {
         Pane root = new Pane();
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
         double areaWidth = 4 / scaleX;
         double rightMargin = 3 / scaleX;
         double expectedWidth = 1 / scaleX;
@@ -2299,7 +2318,7 @@ public class RegionTest {
     @MethodSource("renderScales")
     public void layoutInAreaUsesNormalizedAvailableSpanForContentBias(double scaleX, double scaleY) {
         Pane root = new Pane();
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
         double areaWidth = 4 / scaleX;
         double rightMargin = 3 / scaleX;
         double expectedWidth = 1 / scaleX;
@@ -2341,7 +2360,7 @@ public class RegionTest {
         Pane root = new Pane();
         Region child = new Region();
         root.getChildren().add(child);
-        Stage stage = showAtScale(root, 1, scaleY);
+        Stage stage = createAtScale(root, 1, scaleY);
         double areaHeight = 4 / scaleY;
         double areaBaselineOffset = 1 / scaleY;
 
@@ -2393,7 +2412,7 @@ public class RegionTest {
     @MethodSource("renderScales")
     public void adjustSizeByMarginSnapsOnlyMargins(double scaleX, double scaleY) {
         Pane root = new Pane();
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
         double width = 4 / scaleX;
         double height = 4 / scaleY;
         double left = 0.875 / scaleX;
@@ -2431,7 +2450,7 @@ public class RegionTest {
         child.setPrefSize(0.1, 0.1);
         child.setMaxSize(0.1, 0.1);
         root.getChildren().add(child);
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
 
         // The child receives 1 pixel and the trailing margin receives 2 pixels.
         // Their composed area is exactly 3 pixels on each axis.
@@ -2456,7 +2475,7 @@ public class RegionTest {
     @MethodSource("renderScales")
     public void childAreaMeasurementsPreservePixelAlignedResidualForDependentDimension(double scaleX, double scaleY) {
         Pane root = new Pane();
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
         double availableWidth = 4 / scaleX;
         double rightMargin = 3 / scaleX;
         double expectedContentWidth = 1 / scaleX;
@@ -2489,7 +2508,7 @@ public class RegionTest {
     @MethodSource("renderScales")
     public void childAreaWidthMeasurementsSnapBaselineComplementAsSpace(double scaleX, double scaleY) {
         Pane root = new Pane();
-        Stage stage = showAtScale(root, scaleX, scaleY);
+        Stage stage = createAtScale(root, scaleX, scaleY);
         double availableHeight = 10.2 / scaleY;
         double baselineComplement = 0.6 / scaleY;
         double expectedDependentArgument = 10 / scaleY;
@@ -2535,7 +2554,7 @@ public class RegionTest {
         );
     }
 
-    private static Stage showAtScale(Pane root, double scaleX, double scaleY) {
+    private static Stage createAtScale(Pane root, double scaleX, double scaleY) {
         Stage stage = new Stage();
         stage.renderScaleXProperty().bind(new SimpleDoubleProperty(scaleX));
         stage.renderScaleYProperty().bind(new SimpleDoubleProperty(scaleY));
@@ -2545,6 +2564,13 @@ public class RegionTest {
 
     private static void assertDependentArguments(RecordingBiasedRegion child, double expected) {
         assertEquals(List.of(expected, expected, expected), child.dependentArguments);
+    }
+
+    private static final class HeightDependentBaselineRegion extends Region {
+        @Override
+        public double getBaselineOffset() {
+            return getHeight() / 2;
+        }
     }
 
     private static final class RecordingBiasedRegion extends Region {
