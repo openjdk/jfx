@@ -53,171 +53,189 @@ import javafx.scene.transform.Affine;
  * The {@code DrawingContext} maintains the following rendering attributes
  * which affect various subsets of the rendering methods:
  * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
- * <caption>List of Rendering Attributes</caption>
- * <tr>
- * <th class="colLast" style="width:15%" scope="col">Attribute</th>
- * <th class="colLast" style="width:10%; text-align:center" scope="col">Save/Restore?</th>
- * <th class="colLast" style="width:10%; text-align:center" scope="col">Default value</th>
- * <th class="colLast" scope="col">Description</th>
- * </tr>
- * <tr><th colspan="3" scope="row"><a id="comm-attr">Common Rendering Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #clipRect(double, double, double, double) Clip}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">No clipping</td>
- * <td class="colLast">
- * An intersection of clipping rectangles to which rendering is restricted.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setGlobalAlpha(double) Global Alpha}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
- * <td class="colLast">
- * An opacity value that controls the visibility or fading of each rendering
- * operation.
- * </td></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setGlobalBlendMode(javafx.scene.effect.BlendMode) Global Blend Mode}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link BlendMode#SRC_OVER SRC_OVER}</td>
- * <td class="colLast">
- * A {@link BlendMode} enum value that controls how pixels from each rendering
- * operation are composited into the existing image.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setTransform(javafx.scene.transform.Affine) Transform}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code Identity}</td>
- * <td class="colLast">
- * A 3x2 2D affine transformation matrix that controls how coordinates are
- * mapped onto the logical pixels of the drawing surface.
- * </td></tr>
- * <tr><th colspan="3" scope="row"><a id="fill-attr">Fill Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
- * <td class="colLast">
- * The {@link Paint} to be applied to the interior of shapes in a
- * fill operation.
- * </td></tr>
- * <tr><th colspan="3" scope="row"><a id="strk-attr">Stroke Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
- * <td class="colLast">
- * The {@link Paint} to be applied to the boundary of shapes in a
- * stroke operation.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setLineWidth(double) Line Width}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
- * <td class="colLast">
- * The width of the stroke applied to the boundary of shapes in a
- * stroke operation.
- * </td></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setLineCap(javafx.scene.shape.StrokeLineCap) Line Cap}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineCap#SQUARE SQUARE}</td>
- * <td class="colLast">
- * The style of the end caps applied to the beginnings and ends of each
- * dash and/or subpath in a stroke operation.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setLineJoin(javafx.scene.shape.StrokeLineJoin) Line Join}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineJoin#MITER MITER}</td>
- * <td class="colLast">
- * The style of the joins applied between individual segments in the boundary
- * paths of shapes in a stroke operation.
- * </td></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setMiterLimit(double) Miter Limit}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code 10.0}</td>
- * <td class="colLast">
- * The ratio limit of how far a {@link StrokeLineJoin#MITER MITER} line join
- * may extend in the direction of a sharp corner between segments in the
- * boundary path of a shape, relative to the line width, before it is truncated
- * to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setLineDashes(double...) Line Dashes}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
- * <td class="colLast">
- * The array of dash lengths to be applied to the segments in the boundary
- * of shapes in a stroke operation.
- * </td></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code 0.0}</td>
- * <td class="colLast">
- * The distance offset into the array of dash lengths at which to start the
- * dashing of the segments in the boundary of shapes in a stroke operation.
- * </td></tr>
- * <tr><th colspan="3" scope="row"><a id="text-attr">Text Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link Font#getDefault() Default Font}</td>
- * <td class="colLast">
- * The font used for all fill and stroke text operations.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setTextAlign(javafx.scene.text.TextAlignment) Text Align}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link TextAlignment#LEFT LEFT}</td>
- * <td class="colLast">
- * The horizontal alignment of text with respect to the {@code X} coordinate
- * specified in the text operation.
- * </td></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setTextBaseline(javafx.geometry.VPos) Text Baseline}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link VPos#BASELINE BASELINE}</td>
- * <td class="colLast">
- * The vertical position of the text relative to the {@code Y} coordinate
- * specified in the text operation.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setFontSmoothingType(javafx.scene.text.FontSmoothingType) Font Smoothing}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link FontSmoothingType#GRAY GRAY}</td>
- * <td class="colLast">
- * The type of smoothing (antialiasing) applied to the glyphs in the font
- * for all fill text operations.
- * </td></tr>
- * <tr><th colspan="3" scope="row"><a id="path-attr">Path Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #beginPath() Current Path}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:10%; text-align:center">Empty path</td>
- * <td class="colLast">
- * The path constructed using various path construction methods to be used
- * in various path filling, stroking, or clipping operations.
- * </td></tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setFillRule(javafx.scene.shape.FillRule) Fill Rule}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@link FillRule#NON_ZERO NON_ZERO}</td>
- * <td class="colLast">
- * The method used to determine the interior of paths for a path fill or
- * clip operation.
- * </td></tr>
- * <tr><th colspan="3" scope="row"><a id="image-attr">Image Attributes</a></th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:15%">{@link #setImageSmoothing(boolean) Image Smoothing}</th>
- * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:10%; text-align:center">{@code true}</td>
- * <td class="colLast">
- * A boolean state which enables or disables image smoothing for
- * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}.
- * </td></tr>
+ *     <caption>List of Rendering Attributes</caption>
+ *     <tr>
+ *         <th class="colLast" style="width:15%" scope="col">Attribute</th>
+ *         <th class="colLast" style="width:10%; text-align:center" scope="col">Save/Restore?</th>
+ *         <th class="colLast" style="width:10%; text-align:center" scope="col">Default value</th>
+ *         <th class="colLast" scope="col">Description</th>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="comm-attr">Common Rendering Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #clipRect(double, double, double, double) Clip}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">No clipping</td>
+ *         <td class="colLast">
+ *             An intersection of clipping rectangles to which rendering is restricted.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setGlobalAlpha(double) Global Alpha}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
+ *         <td class="colLast">
+ *             An opacity value that controls the visibility or fading of each rendering operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setGlobalBlendMode(javafx.scene.effect.BlendMode) Global Blend Mode}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link BlendMode#SRC_OVER SRC_OVER}</td>
+ *         <td class="colLast">
+ *             A {@link BlendMode} enum value that controls how pixels from each rendering
+ *             operation are composited into the existing image.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setTransform(javafx.scene.transform.Affine) Transform}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code Identity}</td>
+ *         <td class="colLast">
+ *             A 3x2 2D affine transformation matrix that controls how coordinates are
+ *             mapped onto the logical pixels of the drawing surface.
+ *         </td>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="fill-attr">Fill Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
+ *         <td class="colLast">
+ *             The {@link Paint} to be applied to the interior of shapes in a
+ *             fill operation.
+ *         </td>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="strk-attr">Stroke Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
+ *         <td class="colLast">
+ *             The {@link Paint} to be applied to the boundary of shapes in a
+ *             stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setLineWidth(double) Line Width}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
+ *         <td class="colLast">
+ *             The width of the stroke applied to the boundary of shapes in a
+ *             stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setLineCap(javafx.scene.shape.StrokeLineCap) Line Cap}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineCap#SQUARE SQUARE}</td>
+ *         <td class="colLast">
+ *             The style of the end caps applied to the beginnings and ends of each
+ *             dash and/or subpath in a stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setLineJoin(javafx.scene.shape.StrokeLineJoin) Line Join}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineJoin#MITER MITER}</td>
+ *         <td class="colLast">
+ *             The style of the joins applied between individual segments in the boundary
+ *             paths of shapes in a stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setMiterLimit(double) Miter Limit}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code 10.0}</td>
+ *         <td class="colLast">
+ *             The ratio limit of how far a {@link StrokeLineJoin#MITER MITER} line join
+ *             may extend in the direction of a sharp corner between segments in the
+ *             boundary path of a shape, relative to the line width, before it is truncated
+ *             to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setLineDashes(double...) Line Dashes}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
+ *         <td class="colLast">
+ *             The array of dash lengths to be applied to the segments in the boundary
+ *             of shapes in a stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code 0.0}</td>
+ *         <td class="colLast">
+ *             The distance offset into the array of dash lengths at which to start the
+ *             dashing of the segments in the boundary of shapes in a stroke operation.
+ *         </td>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="text-attr">Text Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link Font#getDefault() Default Font}</td>
+ *         <td class="colLast">
+ *             The font used for all fill and stroke text operations.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setTextAlign(javafx.scene.text.TextAlignment) Text Align}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link TextAlignment#LEFT LEFT}</td>
+ *         <td class="colLast">
+ *             The horizontal alignment of text with respect to the {@code X} coordinate
+ *             specified in the text operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setTextBaseline(javafx.geometry.VPos) Text Baseline}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link VPos#BASELINE BASELINE}</td>
+ *         <td class="colLast">
+ *             The vertical position of the text relative to the {@code Y} coordinate
+ *             specified in the text operation.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setFontSmoothingType(javafx.scene.text.FontSmoothingType) Font Smoothing}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link FontSmoothingType#GRAY GRAY}</td>
+ *         <td class="colLast">
+ *             The type of smoothing (antialiasing) applied to the glyphs in the font
+ *             for all fill text operations.
+ *         </td>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="path-attr">Path Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #beginPath() Current Path}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:10%; text-align:center">Empty path</td>
+ *         <td class="colLast">
+ *             The path constructed using various path construction methods to be used
+ *             in various path filling, stroking, or clipping operations.
+ *         </td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setFillRule(javafx.scene.shape.FillRule) Fill Rule}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link FillRule#NON_ZERO NON_ZERO}</td>
+ *         <td class="colLast">
+ *             The method used to determine the interior of paths for a path fill or
+ *            clip operation.
+ *         </td>
+ *     </tr>
+ *     <tr><th colspan="3" scope="row"><a id="image-attr">Image Attributes</a></th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setImageSmoothing(boolean) Image Smoothing}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code true}</td>
+ *         <td class="colLast">
+ *             A boolean state which enables or disables image smoothing for
+ *             {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}.
+ *         </td>
+ *     </tr>
  * </table>
  * <p>
  * <a id="attr-ops-table">
@@ -225,194 +243,200 @@ import javafx.scene.transform.Affine;
  * following sets of rendering attributes:
  * </a>
  * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
- * <caption>Rendering Attributes Table</caption>
- * <tr>
- * <th scope="col" class="colLast" style="width:22%">Method</th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#fill-attr">Fill Attributes</a></th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#strk-attr">Stroke Attributes</a></th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
- * <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#image-attr">Image Attributes</a></th>
- * </tr>
- * <tr><th colspan="1" scope="row">Basic Shape Rendering</th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #fillRect(double, double, double, double) fillRect()},
- * {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
- * {@link #fillOval(double, double, double, double) fillOval()},
- * {@link #fillArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) fillArc()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #strokeLine(double, double, double, double) strokeLine()},
- * {@link #strokeRect(double, double, double, double) strokeRect()},
- * {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
- * {@link #strokeOval(double, double, double, double) strokeOval()},
- * {@link #strokeArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) strokeArc()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #clearRect(double, double, double, double) clearRect()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#base-fn-1">[1]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #fillPolygon(double[], double[], int) fillPolygon()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#base-fn-2">[2]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #strokePolygon(double[], double[], int) strokePolygon()},
- * {@link #strokePolyline(double[], double[], int) strokePolyline()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr><th scope="row" colspan="7">
- * <a id="base-fn-1">[1]</a> Only the Transform and Clip apply to clearRect()<br>
- * <a id="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon()
- * </th></tr>
- * <tr><th scope="row" colspan="1">Path Construction</th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #beginPath() beginPath()},
- * {@link #moveTo(double, double) moveTo()},
- * {@link #lineTo(double, double) lineTo()},
- * {@link #quadraticCurveTo(double, double, double, double) quadraticCurveTo()},
- * {@link #bezierCurveTo(double, double, double, double, double, double) bezierCurveTo()},
- * {@link #arcTo(double, double, double, double, double) arcTo()},
- * {@link #arc(double, double, double, double, double, double) arc()},
- * {@link #rect(double, double, double, double) rect()},
- * {@link #appendSVGPath(java.lang.String) appendSVGPath()},
- * {@link #closePath() closePath()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr><th scope="row" colspan="1">Path Rendering</th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #fill() fill()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #stroke() stroke()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #clip() clip()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #isPointInPath(double, double) isPointInPath()}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr><th scope="row" colspan="7">
- * <a id="path-fn-4">[4]</a> Transform applied only during path construction<br>
- * <a id="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
- * </th></tr>
- * <tr><th scope="row" colspan="1">Text Rendering</th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #fillText(java.lang.String, double, double) fillText()},
- * {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr class="altColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #strokeText(java.lang.String, double, double) strokeText()},
- * {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * </tr>
- * <tr><th scope="row" colspan="7">
- * <a id="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
- * </th></tr>
- * <tr><th scope="row" colspan="1">Image Rendering</th></tr>
- * <tr class="rowColor">
- * <th scope="row" class="colLast" style="width:22%">
- * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
- * </th>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
- * </tr>
+ *     <caption>Rendering Attributes Table</caption>
+ *     <tr>
+ *         <th scope="col" class="colLast" style="width:22%">Method</th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#fill-attr">Fill Attributes</a></th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#strk-attr">Stroke Attributes</a></th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
+ *         <th scope="col" class="colLast" style="width:13%; text-align:center"><a href="#image-attr">Image Attributes</a></th>
+ *     </tr>
+ *     <tr><th colspan="1" scope="row">Basic Shape Rendering</th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #fillRect(double, double, double, double) fillRect()},
+ *             {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
+ *             {@link #fillOval(double, double, double, double) fillOval()},
+ *             {@link #fillArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) fillArc()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #strokeLine(double, double, double, double) strokeLine()},
+ *             {@link #strokeRect(double, double, double, double) strokeRect()},
+ *             {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
+ *             {@link #strokeOval(double, double, double, double) strokeOval()},
+ *             {@link #strokeArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) strokeArc()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #clearRect(double, double, double, double) clearRect()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#base-fn-1">[1]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #fillPolygon(double[], double[], int) fillPolygon()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#base-fn-2">[2]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #strokePolygon(double[], double[], int) strokePolygon()},
+ *             {@link #strokePolyline(double[], double[], int) strokePolyline()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr>
+ *         <th scope="row" colspan="7">
+ *             <a id="base-fn-1">[1]</a> Only the Transform and Clip apply to clearRect()<br>
+ *             <a id="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon()
+ *         </th>
+ *     </tr>
+ *     <tr><th scope="row" colspan="1">Path Construction</th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #beginPath() beginPath()},
+ *             {@link #moveTo(double, double) moveTo()},
+ *             {@link #lineTo(double, double) lineTo()},
+ *             {@link #quadraticCurveTo(double, double, double, double) quadraticCurveTo()},
+ *             {@link #bezierCurveTo(double, double, double, double, double, double) bezierCurveTo()},
+ *             {@link #arcTo(double, double, double, double, double) arcTo()},
+ *             {@link #arc(double, double, double, double, double, double) arc()},
+ *             {@link #rect(double, double, double, double) rect()},
+ *             {@link #appendSVGPath(java.lang.String) appendSVGPath()},
+ *             {@link #closePath() closePath()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr><th scope="row" colspan="1">Path Rendering</th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #fill() fill()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #stroke() stroke()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #clip() clip()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #isPointInPath(double, double) isPointInPath()}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr>
+ *         <th scope="row" colspan="7">
+ *             <a id="path-fn-4">[4]</a> Transform applied only during path construction<br>
+ *             <a id="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
+ *         </th>
+ *     </tr>
+ *     <tr><th scope="row" colspan="1">Text Rendering</th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #fillText(java.lang.String, double, double) fillText()},
+ *             {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr class="altColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #strokeText(java.lang.String, double, double) strokeText()},
+ *             {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *     </tr>
+ *     <tr>
+ *         <th scope="row" colspan="7">
+ *             <a id="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
+ *         </th>
+ *     </tr>
+ *     <tr><th scope="row" colspan="1">Image Rendering</th></tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:22%">
+ *             {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
+ *         </th>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#c00">No</td>
+ *         <td class="colLast" style="width:13%; text-align:center; color:#0c0">Yes</td>
+ *     </tr>
  * </table>
  * <p>
  * Example:

@@ -87,18 +87,19 @@ import javafx.scene.transform.Affine;
  * <p>
  * Features include:
  * <ul>
- *   <li>Stroke and fill management (line width, line caps, joins, miter limits, dashes).</li>
- *   <li>Global alpha and support for {@link javafx.scene.effect.BlendMode#SRC_OVER} and
- *       {@link javafx.scene.effect.BlendMode#ADD}.</li>
- *    <li>Drawing of lines, rectangles, rounded rectangles, ovals, arcs, polygons, polylines, and images.</li>
- *    <li>Automatic dirty-region tracking for efficient pixel updates.</li>
+ *     <li>Stroke and fill management (line width, line caps, joins, miter limits, dashes).
+ *     <li>Global alpha and support for {@link javafx.scene.effect.BlendMode#SRC_OVER} and
+ *         {@link javafx.scene.effect.BlendMode#ADD}.
+ *     <li>Drawing of lines, rectangles, rounded rectangles, ovals, arcs, polygons, polylines, and images.
+ *     <li>Automatic dirty-region tracking for efficient pixel updates.
  * </ul>
  * <p>
  * Limitations:
  * <ul>
- *   <li>Only SRC_OVER blend mode is supported; others will throw an exception.</li>
+ *     <li>Only SRC_OVER blend mode is supported; others will throw an exception.
+ *     <li>Arbitrary path clipping is not supported, only {@link #clipRect(double, double, double, double)}.
  * </ul>
-  * <p>
+ * <p>
  * This class is intended for use in contexts where direct drawing into a Prism image is needed, such as the
  * {@code getDrawingContext()} method in WritableImage, providing a more convenient API than PixelWriter or snapshotting
  * a Canvas.
