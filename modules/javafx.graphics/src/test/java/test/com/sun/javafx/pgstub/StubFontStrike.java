@@ -78,7 +78,7 @@ public record StubFontStrike(FontResource fontResource, float size, BaseTransfor
 
     @Override
     public Glyph getGlyph(int glyphCode) {
-        return new StubGlyph(glyphCode, size);
+        return new StubGlyph(glyphCode, size, fontResource.isItalic());
     }
 
     @Override

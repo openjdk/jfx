@@ -108,13 +108,12 @@ import javafx.scene.transform.Affine;
  * @since 28
  */
 public class SWDrawingContext implements DrawingContext {
-    private static final double SQRT2 = Math.sqrt(2);
 
     static {
         NativeLibLoader.loadLibrary("prism_sw");
     }
 
-    private final Graphics graphics;
+    private final SWGraphics graphics;
     private final SWResourceFactory resourceFactory;
     private final Consumer<Rectangle> pixelsDirty;
     private final int imageWidth;
@@ -203,7 +202,7 @@ public class SWDrawingContext implements DrawingContext {
 
         SWRTTexture texture = createTexture(resourceFactory, img);
 
-        this.graphics = texture.createGraphics();
+        this.graphics = (SWGraphics)texture.createGraphics();
 
         FXCleaner.register(this, new StateCleaner(resourceFactory, texture));
     }
@@ -654,9 +653,10 @@ public class SWDrawingContext implements DrawingContext {
     public void strokeLine(double x1, double y1, double x2, double y2) {
         applyStrokeParameters();
 
+        graphics.resetPaintBounds();
         graphics.drawLine((float)x1, (float)y1, (float)x2, (float)y2);
 
-        markStrokeRectDirty(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+        reportGraphicsPaintBounds();
     }
 
     @Override
@@ -664,18 +664,20 @@ public class SWDrawingContext implements DrawingContext {
         if (w != 0 || h != 0) {
             applyStrokeParameters();
 
+            graphics.resetPaintBounds();
             graphics.drawRect((float)x, (float)y, (float)w, (float)h);
 
-            markStrokeRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
     @Override
     public void clearRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
+            graphics.resetPaintBounds();
             graphics.clearQuad((float)x, (float)y, (float)(x + w), (float)(y + h));
 
-            markRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -683,9 +685,10 @@ public class SWDrawingContext implements DrawingContext {
     public void fillRect(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
             graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
             graphics.fillRect((float)x, (float)y, (float)w, (float)h);
 
-            markRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -694,9 +697,10 @@ public class SWDrawingContext implements DrawingContext {
         if (w != 0 || h != 0) {
             applyStrokeParameters();
 
+            graphics.resetPaintBounds();
             graphics.drawRoundRect((float)x, (float)y, (float)w, (float)h, (float)arcWidth, (float)arcHeight);
 
-            markStrokeRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -704,9 +708,10 @@ public class SWDrawingContext implements DrawingContext {
     public void fillRoundRect(double x, double y, double w, double h, double arcWidth, double arcHeight) {
         if (w != 0 && h != 0) {
             graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
             graphics.fillRoundRect((float)x, (float)y, (float)w, (float)h, (float)arcWidth, (float)arcHeight);
 
-            markRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -715,9 +720,10 @@ public class SWDrawingContext implements DrawingContext {
         if (w != 0 || h != 0) {
             applyStrokeParameters();
 
+            graphics.resetPaintBounds();
             graphics.drawEllipse((float)x, (float)y, (float)w, (float)h);
 
-            markStrokeRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -727,9 +733,10 @@ public class SWDrawingContext implements DrawingContext {
             applyStrokeParameters();
 
             graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
             graphics.fillEllipse((float)x, (float)y, (float)w, (float)h);
 
-            markRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -744,9 +751,10 @@ public class SWDrawingContext implements DrawingContext {
 
             applyStrokeParameters();
 
+            graphics.resetPaintBounds();
             graphics.draw(new Arc2D((float)x, (float)y, (float)w, (float)h, (float)startAngle, (float)arcExtent, arcType));
 
-            markStrokeRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -760,9 +768,10 @@ public class SWDrawingContext implements DrawingContext {
             };
 
             graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
             graphics.fill(new Arc2D((float)x, (float)y, (float)w, (float)h, (float)startAngle, (float)arcExtent, arcType));
 
-            markRectDirty(x, y, w, h);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -779,20 +788,11 @@ public class SWDrawingContext implements DrawingContext {
     private void strokePolyline(double[] xPoints, double[] yPoints, int nPoints, boolean close) {
         if (xPoints != null && yPoints != null && nPoints >= 2 && xPoints.length >= nPoints && yPoints.length >= nPoints) {
             Path2D path = new Path2D();
-            double minX = xPoints[0];
-            double maxX = xPoints[0];
-            double minY = yPoints[0];
-            double maxY = yPoints[0];
 
             path.moveTo((float)xPoints[0], (float)yPoints[0]);
 
             for (int i = 1; i < nPoints; i++) {
                 path.lineTo((float)xPoints[i], (float)yPoints[i]);
-
-                minX = Math.min(minX, xPoints[i]);
-                minY = Math.min(minY, yPoints[i]);
-                maxX = Math.max(maxX, xPoints[i]);
-                maxY = Math.max(maxY, yPoints[i]);
             }
 
             if (close) {
@@ -801,9 +801,10 @@ public class SWDrawingContext implements DrawingContext {
 
             applyStrokeParameters();
 
+            graphics.resetPaintBounds();
             graphics.draw(path);
 
-            markStrokeRectDirty(minX, minY, maxX - minX, maxY - minY);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -814,28 +815,20 @@ public class SWDrawingContext implements DrawingContext {
                 case EVEN_ODD -> Path2D.WIND_EVEN_ODD;
                 case NON_ZERO -> Path2D.WIND_NON_ZERO;
             });
-            double minX = xPoints[0];
-            double maxX = xPoints[0];
-            double minY = yPoints[0];
-            double maxY = yPoints[0];
 
             path.moveTo((float)xPoints[0], (float)yPoints[0]);
 
             for (int i = 1; i < nPoints; i++) {
                 path.lineTo((float)xPoints[i], (float)yPoints[i]);
-
-                minX = Math.min(minX, xPoints[i]);
-                minY = Math.min(minY, yPoints[i]);
-                maxX = Math.max(maxX, xPoints[i]);
-                maxY = Math.max(maxY, yPoints[i]);
             }
 
             path.closePath();
 
             graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
             graphics.fill(path);
 
-            markRectDirty(minX, minY, maxX - minX, maxY - minY);
+            reportGraphicsPaintBounds();
         }
     }
 
@@ -987,12 +980,11 @@ public class SWDrawingContext implements DrawingContext {
 
         graphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
         graphics.setPaint(prismFillPaint);
+        graphics.resetPaintBounds();
         graphics.fill(path);
         graphics.setTransform(transform);
 
-        RectBounds bounds = path.getBounds();
-
-        markDeviceRectDirty(bounds.getMinX(), bounds.getMinY(), bounds.getMaxX(), bounds.getMaxY());
+        reportGraphicsPaintBounds();
     }
 
     @Override
@@ -1016,6 +1008,7 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         graphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+        graphics.resetPaintBounds();
         graphics.draw(path);
         graphics.setTransform(transform);  // restore transform
 
@@ -1023,10 +1016,7 @@ public class SWDrawingContext implements DrawingContext {
             applyStrokeParameters();  // restore stroke just in case
         }
 
-        RectBounds bounds = path.getBounds();
-        double r = strokeExpansion() * scale;
-
-        markDeviceRectDirty(bounds.getMinX() - r, bounds.getMinY() - r, bounds.getMaxX() + r, bounds.getMaxY() + r);
+        reportGraphicsPaintBounds();
     }
 
     @Override
@@ -1169,10 +1159,8 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         GlyphList[] runs = layout.getRuns();
-        float dirtyMinX = Float.POSITIVE_INFINITY;
-        float dirtyMinY = Float.POSITIVE_INFINITY;
-        float dirtyMaxX = Float.NEGATIVE_INFINITY;
-        float dirtyMaxY = Float.NEGATIVE_INFINITY;
+
+        graphics.resetPaintBounds();
 
         for (GlyphList run : runs) {
             if (run.getGlyphCount() == 0) {
@@ -1190,29 +1178,11 @@ public class SWDrawingContext implements DrawingContext {
             else {
                 graphics.drawString(run, strike, runX, runY, null, 0, 0);
             }
-
-            dirtyMinX = Math.min(dirtyMinX, runX);
-            dirtyMaxX = Math.max(dirtyMaxX, runX + run.getWidth());
-            dirtyMinY = Math.min(dirtyMinY, runY + lineBounds.getMinY());
-            dirtyMaxY = Math.max(dirtyMaxY, runY + lineBounds.getMaxY());
         }
 
         graphics.setTransform(transform);
 
-        if (dirtyMinX != Float.POSITIVE_INFINITY) {
-            if (stroke) {
-                markStrokeRectDirty(
-                    scaleX * dirtyMinX, dirtyMinY,
-                    scaleX * (dirtyMaxX - dirtyMinX), dirtyMaxY - dirtyMinY
-                );
-            }
-            else {
-                markRectDirty(
-                    scaleX * dirtyMinX, dirtyMinY,
-                    scaleX * (dirtyMaxX - dirtyMinX), dirtyMaxY - dirtyMinY
-                );
-            }
-        }
+        reportGraphicsPaintBounds();
     }
 
     @Override
@@ -1238,12 +1208,21 @@ public class SWDrawingContext implements DrawingContext {
         try {
             tex.setLinearFiltering(imageSmoothing);
 
+            graphics.resetPaintBounds();
             graphics.drawTexture(tex, (float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh), (float)sx, (float)sy, (float)(sx + sw), (float)(sy + sh));
 
-            markRectDirty(dx, dy, dw, dh);
+            reportGraphicsPaintBounds();
         }
         finally {
             tex.dispose();
+        }
+    }
+
+    private void reportGraphicsPaintBounds() {
+        Rectangle painted = graphics.takePaintBounds();
+
+        if (painted != null) {
+            markDeviceRectDirty(painted.x, painted.y, painted.x + painted.width, painted.y + painted.height);
         }
     }
 
@@ -1293,37 +1272,8 @@ public class SWDrawingContext implements DrawingContext {
         this.prismStroke = null;
     }
 
-    private void markStrokeRectDirty(double x, double y, double w, double h) {
-        // Expand area by half the stroke width:
-        double halfWidth = lineWidth * 0.5;
-
-        // Expand further based on caps and joins:
-        double expansionFactor = switch (lineJoin) {
-            case MITER -> Math.max(miterLimit, lineCap == StrokeLineCap.SQUARE ? SQRT2 : 1.0);
-            case BEVEL, ROUND -> lineCap == StrokeLineCap.SQUARE ? SQRT2 : 1.0;
-        };
-
-        double r = halfWidth * expansionFactor;
-        double dirtyX = x - r;
-        double dirtyY = y - r;
-        double dirtyW = w + r * 2.0;
-        double dirtyH = h + r * 2.0;
-
-        markRectDirty(dirtyX, dirtyY, dirtyW, dirtyH);
-    }
-
-    /*
-     * How far a stroke of the current width can extend beyond the path bounds,
-     * based on the line join and cap.
-     */
-    private double strokeExpansion() {
-        double halfWidth = lineWidth * 0.5;
-
-        return halfWidth * switch (lineJoin) {
-            case MITER -> Math.max(miterLimit, lineCap == StrokeLineCap.SQUARE ? SQRT2 : 1.0);
-            case BEVEL, ROUND -> lineCap == StrokeLineCap.SQUARE ? SQRT2 : 1.0;
-        };
-    }
+    // TODO It seems bufferDirty only remembers the last rect; may need to update this only once per frame
+    // Note: if called multiple times per frame, then it just updates everything (optimize?)
 
     /*
      * Reports a dirty rectangle given in device coordinates (already
@@ -1340,18 +1290,5 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         pixelsDirty.accept(new Rectangle((int) minX, (int) minY, (int) (maxX - minX), (int) (maxY - minY)));
-    }
-
-    // TODO It seems bufferDirty only remembers the last rect; may need to update this only once per frame
-    // Note: if called multiple times per frame, then it just updates everything (optimize?)
-    private void markRectDirty(double x, double y, double w, double h) {
-        Rectangle r = transformRect(
-            Math.min(x, x + w), Math.min(y, y + h),
-            Math.max(x, x + w), Math.max(y, y + h)
-        );
-
-        if (r != null) {
-            pixelsDirty.accept(r);
-        }
     }
 }

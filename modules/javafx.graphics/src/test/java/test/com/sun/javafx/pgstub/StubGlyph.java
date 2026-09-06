@@ -34,18 +34,25 @@ import com.sun.javafx.geom.Shape;
 
 /**
  * A {@code Glyph} that renders as a solid rectangle, so that text drawing can
- * be exercised in the stub toolkit without a real font rasterizer. The glyph
- * is as wide as the font size and as tall as the baseline of the font.
+ * be exercised in the stub toolkit without a real font rasterizer. A regular glyph
+ * is as wide as the font size and as tall as the baseline of the font. Italic glyphs
+ * are 50% wider.
  */
 public class StubGlyph implements Glyph {
+    private static final float ITALIC_WIDTH_FACTOR = 1.5f;
+
     private final int glyphCode;
     private final int width;
     private final int height;
     private final byte[] pixelData;
 
     public StubGlyph(int glyphCode, float size) {
+        this(glyphCode, size, false);
+    }
+
+    public StubGlyph(int glyphCode, float size, boolean italic) {
         this.glyphCode = glyphCode;
-        this.width = (int) Math.ceil(size);
+        this.width = (int) Math.ceil(italic ? size * ITALIC_WIDTH_FACTOR : size);
         this.height = (int) Math.ceil(StubFontMetrics.BASELINE * size);
         this.pixelData = new byte[width * height];
 

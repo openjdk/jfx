@@ -48,6 +48,7 @@ import javafx.scene.shape.FillRule;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
@@ -1249,6 +1250,14 @@ public class SWDrawingContextTest {
             h.context.closePath();
             h.context.stroke();
         });
+    }
+
+    @Test
+    public void italicFillTextDirtyShouldCoverGlyphsThatOverhangTheAdvance() {
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", FontPosture.ITALIC, 20));
+
+        assertDirtyCoversOnEmptyImage("fillText italic", () -> h.context.fillText("M", 10, 20));
     }
 
     @Test
