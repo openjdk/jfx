@@ -1967,6 +1967,33 @@ void addJCov(p, test) {
     }
 }
 
+// These strings define the module-source-path to be used in compilation.
+// They need to contain the full paths to the sources and the * will be
+// used to infer the module name that is used.
+project.ext.defaultModuleSourcePath =
+    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java') +
+        File.pathSeparator  +
+    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
+
+// graphics pass one
+project.ext.defaultModuleSourcePath_GraphicsOne =
+    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java') +
+        File.pathSeparator  +
+    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
+
+// web pass one
+// NOTE: unused
+project.ext.defaultModuleSourcePath_WebOne =
+    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java')
+
+// Compiling the test shim files too.
+project.ext.defaultModuleSourcePathShim =
+    cygpath(rootProject.projectDir.path + '/modules/*/src/{main,shims}/java') +
+        File.pathSeparator  +
+    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
+
+
+// non-tasks configuration
 allprojects {
 
     // Setup the repositories that we'll download libraries from.
@@ -2059,7 +2086,7 @@ allprojects {
 
     // All of our projects are java projects
 
-    apply plugin: "java"
+    apply plugin: "java-library"
 
     // Set sourceCompatibility to the target release of Java. Most modules
     // set compiler.options.release (to the same target version), which will
@@ -2070,6 +2097,22 @@ allprojects {
         }
 
         sourceCompatibility = JAVA_TARGET_VERSION
+    }
+
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = projectDir.name
+
+    // not the right way of determining a module in Gralde, but it will do until a proper modular setup exists
+    if (file("src/main/java/module-info.java").exists()) {
+        project.ext.moduleSourcePath = defaultModuleSourcePath
+        project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+    }
+
+    // systemTests does a different validation locally
+    if (project.name != "systemTests") {
+        addValidateSourceSets(project, sourceSets)
     }
 
     // By default all of our projects require junit for testing so we can just
@@ -2132,68 +2175,19 @@ allprojects {
     }
 }
 
-// These strings define the module-source-path to be used in compilation.
-// They need to contain the full paths to the sources and the * will be
-// used to infer the module name that is used.
-project.ext.defaultModuleSourcePath =
-    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java') +
-        File.pathSeparator  +
-    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
-
-// graphics pass one
-project.ext.defaultModuleSourcePath_GraphicsOne =
-    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java') +
-        File.pathSeparator  +
-    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
-
-// web pass one
-project.ext.defaultModuleSourcePath_WebOne =
-    cygpath(rootProject.projectDir.path + '/modules/*/src/main/java')
-
-// Compiling the test shim files too.
-project.ext.defaultModuleSourcePathShim =
-    cygpath(rootProject.projectDir.path + '/modules/*/src/{main,shims}/java') +
-        File.pathSeparator  +
-    cygpath(rootProject.projectDir.path + '/modules/*/build/gensrc/{java,jsl-decora,jsl-prism}')
-
 // The "base" project is our first module and the most basic one required for
 // all other modules. It is useful even for non-GUI applications.
 project(":base") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.base"
-
 // TODO: the following is an example of enabling module-specific lint opts
 //    project.ext.extraLintOptions =
 //        "deprecation" + "," +
 //        "divzero"
 
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
-    }
-
-    dependencies {
-        testImplementation sourceSets.main.output
-        testImplementation sourceSets.shims.output
+        shims
     }
 
     commonModuleSetup(project, [ 'base' ])
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     // We need to take the VersionInfo.java file and replace the various
     // properties within it
@@ -2223,8 +2217,6 @@ project(":base") {
 
     compileJava.dependsOn processVersionInfo
 
-    addValidateSourceSets(project, sourceSets)
-
     test {
         if (IS_TEST_SDK) {
             logger.info "Skipping VersionInfoTest when TEST_SDK_PATH is set."
@@ -2238,30 +2230,12 @@ project(":base") {
 // This is a fairly complicated module. There are many different types of native components
 // that all need to be compiled.
 project(":graphics") {
-
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.graphics"
-
     getConfigurations().create("antlr");
 
     sourceSets {
         jslc   // JSLC gramar subset
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
+        shims
         shaders // generated shaders (prism & decora)
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
         stub
     }
 
@@ -2272,8 +2246,8 @@ project(":graphics") {
         implementation project(':base')
     }
 
+    // override the default in allprojects
     project.ext.moduleSourcePath = defaultModuleSourcePath_GraphicsOne
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [ 'base', 'graphics' ])
 
@@ -2774,34 +2748,12 @@ project(":graphics") {
             }
         }
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":controls") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.controls"
-
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
@@ -2852,8 +2804,6 @@ project(":controls") {
         include "**/*.bss"
     }
     processShimsResources.dependsOn(copyShimBssTask)
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 // Add a project declaration for each incubator module here, leaving the
@@ -2861,40 +2811,17 @@ project(":controls") {
 // See CSR JDK-8344644 for more information.
 // BEGIN: incubator placeholder
 //project(":incubator.mymod") {
-//    project.ext.buildModule = true
-//    project.ext.includeSources = true
-//    project.ext.moduleRuntime = true
-//    project.ext.moduleName = "jfx.incubator.mymod"
 //    project.ext.incubating = true
 //    ...
 //}
 // END: incubator placeholder
 
 project(":incubator.input") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "jfx.incubator.input"
     project.ext.incubating = true
 
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [
         'base',
@@ -2924,35 +2851,14 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":incubator.richtext") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "jfx.incubator.richtext"
     project.ext.incubating = true
 
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [
         'base',
@@ -2986,8 +2892,6 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":swing") {
@@ -3008,28 +2912,10 @@ project(":swing") {
     }
 
     project.ext.buildModule = COMPILE_SWING
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.swing"
 
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [ 'base', 'graphics', 'swing' ])
 
@@ -3043,8 +2929,6 @@ project(":swing") {
 
         jvmArgs enableNativeGraphics
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":swt") {
@@ -3053,6 +2937,7 @@ project(":swt") {
     }
 
     // javafx.swt is an automatic module
+    // Better is https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_modular_auto
     project.ext.buildModule = false
 
     commonModuleSetup(project, [ 'base', 'graphics' ])
@@ -3114,37 +2999,14 @@ project(":swt") {
         }
 
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":fxml") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.fxml"
-
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
 
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
-
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'fxml' ])
-
 
     def baseTestOutput = project(":base").sourceSets.test.output
     def graphicsTestOutput = project(":graphics").sourceSets.test.output
@@ -3164,8 +3026,6 @@ project(":fxml") {
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":media") {
@@ -3173,22 +3033,12 @@ project(":media") {
         media
     }
 
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.media"
-
     sourceSets {
-        main
         //shims // no test shims needed
-        test
         tools {
             java.srcDir "src/tools/java"
         }
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [ 'base', 'graphics', 'media' ])
 
@@ -3771,61 +3621,22 @@ project(":media") {
             dependsOn buildNativeTargets
         }
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":jsobject") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "jdk.jsobject"
-
-    sourceSets {
-        main
-    }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
-
     commonModuleSetup(project, [ 'jsobject' ])
-
-
-    dependencies {
-    }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 project(":web") {
     configurations {
         webkit
     }
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.web"
 
     getConfigurations().create("icu");
 
     sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
+        shims
     }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
@@ -4101,8 +3912,6 @@ project(":web") {
         compileShimsJava.dependsOn compileJavaDOMBinding
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
-
-    addValidateSourceSets(project, sourceSets)
 }
 
 // This project is for system tests that need to run with a full SDK.
@@ -4113,8 +3922,6 @@ project(":web") {
 project(":systemTests") {
 
     sourceSets {
-        test
-
         // Source sets for standalone test apps (used for launcher tests)
         testapp1
 
@@ -4381,6 +4188,7 @@ void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
     compile.options.compilerArgs += [ "-Xmaxwarns", "1000" ]
 }
 
+// tasks configuration
 allprojects {
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
@@ -4545,7 +4353,8 @@ allprojects {
        compileTestJava.dependsOn(copyGeneratedShimsTask)
     }
 
-    if (project.hasProperty('modulePathArgs')) {
+    // the 'modulePathArgs' are needed only for non-module projects. The `buildModule` is WIP check
+    if (project.hasProperty('modulePathArgs') && project.ext.buildModule == false) {
         project.compileJava.options.compilerArgs.addAll(modulePathArgs)
     }
 
