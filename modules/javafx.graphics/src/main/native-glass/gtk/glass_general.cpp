@@ -295,8 +295,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkWindow");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jGtkWindowNotifyStateChanged = env->GetMethodID(clazz, "notifyStateChanged", "(I)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
     jGtkWindowNonClientHitTest = env->GetMethodID(clazz, "nonClientHitTest", "(II)I");
     if (env->ExceptionCheck()) return JNI_ERR;
 

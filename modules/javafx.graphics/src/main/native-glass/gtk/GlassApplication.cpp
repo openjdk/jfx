@@ -135,7 +135,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
 
     const char* categories = env->GetStringUTFChars(logCategories, nullptr);
     glass_gtk_log_init(categories);
-    env->ReleaseStringUTFChars(logCategories, categories);
+
+    if (categories != nullptr) {
+        env->ReleaseStringUTFChars(logCategories, categories);
+    }
 
     checkGtkVersion(env, version);
 }

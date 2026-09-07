@@ -269,7 +269,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
     }
 }
 
-
 /*
  * Class:     com_sun_glass_ui_gtk_GtkView
  * Method:    _enterFullscreen

@@ -140,19 +140,6 @@ class GtkWindow extends Window {
         return maximize;
     }
 
-    protected void notifyStateChanged(final int state) {
-        switch (state) {
-            case WindowEvent.MINIMIZE:
-            case WindowEvent.MAXIMIZE:
-            case WindowEvent.RESTORE:
-                notifyResize(state, getWidth(), getHeight());
-                break;
-            default:
-                System.err.println("Unknown window state: " + state);
-                break;
-        }
-    }
-
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {
         if (cursor.getType() == Cursor.CURSOR_CUSTOM) {

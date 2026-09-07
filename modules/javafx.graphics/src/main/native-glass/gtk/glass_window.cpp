@@ -130,6 +130,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
 
     if (frame_type != TITLED) {
         initial_wmf = GDK_FUNC_ALL;
+        current_wmf = GDK_FUNC_ALL;
     }
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);

@@ -50,7 +50,7 @@ import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
-@Timeout(value = TIMEOUT, unit= TimeUnit.MILLISECONDS)
+@Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
 class StageLocationTest extends VisualTestBase {
     private static final int WIDTH = 300;
     private static final int HEIGHT = 300;

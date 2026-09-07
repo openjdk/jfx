@@ -69,7 +69,6 @@ public class Util {
      * Time in milliseconds to wait for window geometry changes (resize, move)
      * to be processed. On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
-     * <p>
      */
     public static final long GEOMETRY_DELAY = 300;
 
@@ -78,7 +77,6 @@ public class Util {
      * (e.g. iconify, maximize, fullscreen animations) to be processed.
      * On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
-     * <p>
      */
     public static final long STATE_DELAY =  500;
 
@@ -86,14 +84,12 @@ public class Util {
      * Time in milliseconds to wait for focus changes to be processed.
      * On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
-     * <p>
      */
     public static final long FOCUS_DELAY = 300;
 
     /**
      * Default timeout in milliseconds for waiting on an observable property
      * to reach an expected value.
-     * <p>
      */
     public static final long PROPERTY_VALUE_TIMEOUT = 1000;
 
