@@ -69,9 +69,12 @@ public class HeadlessApplicationKeyCombinationTest {
         assertFalse(match);
 
         event = new KeyEvent(KeyEvent.KEY_PRESSED, ",", ",", KeyCode.COMMA, false, true, false, false);
-        match = combination.match(event);
+        boolean otherOSMatch = combination.match(event);
 
-        assertTrue(match);
+        event = new KeyEvent(KeyEvent.KEY_PRESSED, ",", ",", KeyCode.COMMA, false, false, false, true);
+        boolean macOSMatch = combination.match(event);
+
+        assertTrue(otherOSMatch ^ macOSMatch);
     }
 
 }
