@@ -45,6 +45,22 @@ final class LayoutUtils {
         return computeChildMinAreaWidth(snapper, child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the minimum horizontal space required to lay out the child, including its left and right margins.
+     * For a child with vertical content bias, {@code availableHeight} determines the height used to compute
+     * its width.
+     * <p>
+     * When the {@code snapper} snaps to pixels, the result is guaranteed to be aligned to the horizontal
+     * pixel grid. Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the minimum horizontal space required to lay out the child
+     */
     static double computeChildMinAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double snappedLeft = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double snappedRight = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
@@ -70,6 +86,22 @@ final class LayoutUtils {
         return computeChildMinAreaHeight(snapper, child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the minimum vertical space required to lay out the child, taking its margins and optional
+     * common-baseline alignment into account. For a child with horizontal content bias,
+     * {@code availableWidth} determines the width used to compute its height.
+     * <p>
+     * When the {@code snapper} snaps to pixels, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param minBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the minimum vertical space required to lay out the child
+     */
     static double computeChildMinAreaHeight(Snapper snapper, Measurable child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double snappedTop = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
         double snappedBottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
@@ -104,6 +136,22 @@ final class LayoutUtils {
         return computeChildPrefAreaWidth(snapper, child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the preferred horizontal space required to lay out the child, including its left and right margins.
+     * For a child with vertical content bias, {@code availableHeight} determines the height used to compute
+     * its width.
+     * <p>
+     * When the {@code snapper} snaps to pixels, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the preferred horizontal space to lay out the child
+     */
     static double computeChildPrefAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double snappedLeft = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double snappedRight = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
@@ -130,6 +178,22 @@ final class LayoutUtils {
         return computeChildPrefAreaHeight(snapper, child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the preferred vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height.
+     * <p>
+     * When the {@code snapper} snaps to pixels, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param prefBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the preferred vertical space to lay out the child
+     */
     static double computeChildPrefAreaHeight(Snapper snapper, Measurable child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double snappedTop = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
         double snappedBottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
@@ -163,6 +227,23 @@ final class LayoutUtils {
         return snapper.snapSpaceY(snappedTop + snappedBottom + snappedChildPrefHeight);
     }
 
+    /**
+     * Returns the maximum horizontal space to lay out the child, including its left and right margins.
+     * For a child with vertical content bias, {@code availableHeight} determines the height used to compute
+     * its width. If the child has no finite maximum width, {@link Double#MAX_VALUE} is returned unchanged.
+     * <p>
+     * When the {@code snapper} snaps to pixels, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the horizontal pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the maximum horizontal space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum width
+     */
     static double computeChildMaxAreaWidth(Snapper snapper, Measurable child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double snappedLeft = margin != null ? snapper.snapSpaceX(margin.getLeft()) : 0;
         double snappedRight = margin != null ? snapper.snapSpaceX(margin.getRight()) : 0;
@@ -190,6 +271,24 @@ final class LayoutUtils {
         return snapper.snapSpaceX(snappedLeft + snappedChildWidth + snappedRight);
     }
 
+    /**
+     * Returns the maximum vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height. If the child has no finite maximum height,
+     * {@link Double#MAX_VALUE} is returned unchanged.
+     * <p>
+     * When the {@code snapper} snaps to pixels, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the vertical pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param snapper the {@link Snapper} to use, cannot be {@code null}
+     * @param child the child to measure
+     * @param maxBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the maximum vertical space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum height
+     */
     static double computeChildMaxAreaHeight(Snapper snapper, Measurable child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double snappedTop = margin != null ? snapper.snapSpaceY(margin.getTop()) : 0;
         double snappedBottom = margin != null ? snapper.snapSpaceY(margin.getBottom()) : 0;
