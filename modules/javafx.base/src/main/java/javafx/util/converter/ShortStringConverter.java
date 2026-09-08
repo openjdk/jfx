@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,44 +25,28 @@
 
 package javafx.util.converter;
 
-import javafx.util.StringConverter;
+/// A `StringConverter` implementation for `Short` (and `short`) values. Formatting is done by [Short#toString()] for
+/// non-`null` values, and parsing with [Short#valueOf(String)] for non-`null` non-empty strings.
+///
+/// @since JavaFX 2.1
+public class ShortStringConverter extends BaseStringConverter<Short> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link Short} values.</p>
- * @since JavaFX 2.1
- */
-public class ShortStringConverter extends StringConverter<Short> {
-
-    /**
-     * Creates a default {@code ShortStringConverter}.
-     */
+    /// Creates a default `ShortStringConverter`.
     public ShortStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public Short fromString(String text) {
-        // If the specified value is null or zero-length, return null
-        if (text == null) {
-            return null;
-        }
-
-        text = text.trim();
-
-        if (text.length() < 1) {
-            return null;
-        }
-
-        return Short.valueOf(text);
+    @Override
+    public Short fromString(String value) {
+        return super.fromString(value);
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(Short value) {
-        // If the specified value is null, return a
-        // zero-length String
-        if (value == null) {
-            return "";
-        }
+    @Override
+    Short fromNonEmptyString(String string) {
+        return Short.valueOf(string);
+    }
 
-        return Short.toString(value.shortValue());
+    @Override
+    public String toString(Short value) {
+        return super.toString(value);
     }
 }
