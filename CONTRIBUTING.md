@@ -224,7 +224,7 @@ The following formatting rules are enforced for source code files by
 
 Please also follow these formatting guidelines:
 
-* Java indent is 4 spaces
+* Java and Javadoc indent is 4 spaces
 * Line width is no more than 120 characters
 * The rest is left to Java coding standards
 * Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
