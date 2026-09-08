@@ -137,8 +137,8 @@ public abstract class TextViewModel extends StyledTextModelViewOnlyBase {
                 }
 
                 // separator
-                int ct = 2 + ((WIDTH - i) * 3) + (i < (WIDTH / 2) ? 2 : 0); 
-                for(int j=0; j<ct; j++) {
+                int ct = 2 + ((WIDTH - i) * 3) + (i < (WIDTH / 2) ? 2 : 0);
+                for (int j = 0; j < ct; j++) {
                     sb.append(' ');
                 }
 

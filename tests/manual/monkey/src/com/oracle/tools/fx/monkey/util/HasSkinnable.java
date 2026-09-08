@@ -37,6 +37,6 @@ public interface HasSkinnable {
     /** Sets a new default {@link Skin} in the underlying {@link Control} */
     public void newSkin();
 
-    /** Returns the current skinnable Control.  Might return null. */ 
+    /** Returns the current skinnable Control.  Might return null. */
     public Control getSkinnableControl();
 }

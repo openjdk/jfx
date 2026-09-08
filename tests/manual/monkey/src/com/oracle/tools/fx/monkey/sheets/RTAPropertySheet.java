@@ -171,7 +171,7 @@ public class RTAPropertySheet {
             FX.item(m3, "50", () -> model.setDefaultTabStops(50));
             FX.item(m3, "100", () -> model.setDefaultTabStops(100));
             FX.item(m3, "200", () -> model.setDefaultTabStops(200));
-            
+
             TextPos p = caretAtPopup(r);
             EmbeddedImage im = embeddedImageAt(r, p);
             if (im != null) {

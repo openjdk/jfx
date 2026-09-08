@@ -86,7 +86,7 @@ public class ContextMenuOptions extends ComboBox<NamedValue<Object>> {
     public void addChoice(String name, Supplier<ContextMenu> gen) {
         getItems().add(new NamedValue<>(name, gen));
     }
-    
+
     public void addChoice(String name, Function<PickResult,ContextMenu> gen) {
         getItems().add(new NamedValue<>(name, gen));
     }
