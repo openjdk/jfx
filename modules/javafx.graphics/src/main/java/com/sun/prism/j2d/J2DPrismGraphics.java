@@ -33,7 +33,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.font.CompositeGlyphMapper;
 import com.sun.javafx.font.CompositeStrike;
 import com.sun.javafx.font.FontResource;

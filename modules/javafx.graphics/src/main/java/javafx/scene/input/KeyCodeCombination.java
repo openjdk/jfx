@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.util.PlatformUtil;
 import javafx.beans.NamedArg;
 
 
@@ -277,7 +278,7 @@ public final class KeyCodeCombination extends KeyCombination {
         ** On Mac we display these unicode symbols,
         ** otherwise we default to the Text version of the char.
         */
-        if (com.sun.javafx.PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac()) {
             switch (code) {
                 case BACK_SPACE: return '\u232B';
                 case ESCAPE: return '\u238B';

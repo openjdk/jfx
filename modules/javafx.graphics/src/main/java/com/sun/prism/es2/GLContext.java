@@ -28,7 +28,7 @@ package com.sun.prism.es2;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.prism.MeshView;
 import com.sun.prism.PhongMaterial.MapType;
 import com.sun.prism.Texture.WrapMode;

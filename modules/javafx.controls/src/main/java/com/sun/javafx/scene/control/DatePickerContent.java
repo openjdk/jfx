@@ -68,7 +68,7 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 
-import static com.sun.javafx.PlatformUtil.*;
+import static com.sun.javafx.util.PlatformUtil.*;
 import com.sun.javafx.scene.NodeHelper;
 
 /**

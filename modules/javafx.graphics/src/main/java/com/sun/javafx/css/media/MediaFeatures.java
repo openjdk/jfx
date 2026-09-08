@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.media;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;

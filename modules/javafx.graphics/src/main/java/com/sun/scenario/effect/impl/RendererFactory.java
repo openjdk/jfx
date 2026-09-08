@@ -26,7 +26,7 @@
 package com.sun.scenario.effect.impl;
 
 import java.lang.reflect.Method;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.scenario.effect.FilterContext;
 
 /**

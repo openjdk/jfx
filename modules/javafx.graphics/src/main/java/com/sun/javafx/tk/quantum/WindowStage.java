@@ -39,7 +39,7 @@ import javafx.stage.StageStyle;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.Window.Level;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
 import com.sun.javafx.stage.HeaderButtonMetrics;

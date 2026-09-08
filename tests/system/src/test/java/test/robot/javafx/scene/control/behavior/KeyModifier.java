@@ -25,7 +25,7 @@
 package test.robot.javafx.scene.control.behavior;
 
 import javafx.scene.input.KeyCode;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 /**
  * Key Modifiers for use in behavior tests.

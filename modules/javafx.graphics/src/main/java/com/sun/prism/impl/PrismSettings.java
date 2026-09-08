@@ -28,7 +28,7 @@ package com.sun.prism.impl;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.util.Utils;
 
 /**

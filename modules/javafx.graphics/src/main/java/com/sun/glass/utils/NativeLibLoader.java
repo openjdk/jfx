@@ -24,7 +24,7 @@
  */
 package com.sun.glass.utils;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.FXVK;
@@ -55,9 +55,9 @@ import javafx.scene.input.MouseEvent;
 import java.text.Bidi;
 import java.util.function.Predicate;
 
-import static com.sun.javafx.PlatformUtil.isLinux;
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.util.PlatformUtil.isLinux;
+import static com.sun.javafx.util.PlatformUtil.isMac;
+import static com.sun.javafx.util.PlatformUtil.isWindows;
 import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;

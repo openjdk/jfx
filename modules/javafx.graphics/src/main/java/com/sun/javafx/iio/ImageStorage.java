@@ -25,7 +25,7 @@
 
 package com.sun.javafx.iio;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.iio.ImageFormatDescription.Signature;
 import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
 import com.sun.javafx.iio.common.ImageTools;

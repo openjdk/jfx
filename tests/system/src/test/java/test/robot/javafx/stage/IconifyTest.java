@@ -40,7 +40,7 @@ import javafx.stage.StageStyle;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
 /**

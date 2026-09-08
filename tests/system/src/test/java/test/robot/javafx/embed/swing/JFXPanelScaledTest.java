@@ -46,7 +46,7 @@ import javafx.scene.layout.Region;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 public class JFXPanelScaledTest {
     static CountDownLatch launchLatch;

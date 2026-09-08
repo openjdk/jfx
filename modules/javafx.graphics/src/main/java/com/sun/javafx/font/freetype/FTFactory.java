@@ -26,7 +26,7 @@
 package com.sun.javafx.font.freetype;
 
 import java.util.ArrayList;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.font.FontConfigManager;
 import com.sun.javafx.font.FontFallbackInfo;
 import com.sun.javafx.font.FontResource;

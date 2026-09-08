@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.WeakHashMap;
 
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;

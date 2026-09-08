@@ -24,7 +24,7 @@
  */
 package com.sun.media.jfxmedia.locator;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.media.jfxmedia.logging.Logger;
@@ -35,7 +35,6 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
-import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;

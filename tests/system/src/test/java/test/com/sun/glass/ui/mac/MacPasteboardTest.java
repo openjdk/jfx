@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.mac.MacPasteboardShim;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 public class MacPasteboardTest {
 

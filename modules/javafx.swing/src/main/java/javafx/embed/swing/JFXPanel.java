@@ -64,7 +64,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.embed.AbstractEvents;

@@ -30,7 +30,7 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.menu.MenuItemBase;
 import com.sun.javafx.menu.RadioMenuItemBase;
 import com.sun.javafx.menu.SeparatorMenuItemBase;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.tk.TKSystemMenu;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.Application;

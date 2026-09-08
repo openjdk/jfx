@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;

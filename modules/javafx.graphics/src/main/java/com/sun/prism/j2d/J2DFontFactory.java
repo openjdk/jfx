@@ -36,7 +36,7 @@ import java.io.InputStream;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.FontFactory;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 /**
  * This is mostly just delegating, except for allowing for the

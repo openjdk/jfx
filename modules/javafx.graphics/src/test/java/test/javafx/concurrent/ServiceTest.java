@@ -25,7 +25,7 @@
 
 package test.javafx.concurrent;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import test.javafx.concurrent.mocks.SimpleTask;

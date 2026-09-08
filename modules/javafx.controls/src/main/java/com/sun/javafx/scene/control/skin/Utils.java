@@ -43,6 +43,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+
+import com.sun.javafx.util.PlatformUtil;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -847,7 +849,7 @@ public class Utils {
 
     public static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState, List<Mnemonic> into) {
 
-        if (!com.sun.javafx.PlatformUtil.isMac()) {
+        if (!PlatformUtil.isMac()) {
 
             ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
             MenuItem menuitem;
@@ -879,7 +881,7 @@ public class Utils {
 
     public static void removeMnemonics(ContextMenu popup, Scene scene) {
 
-        if (!com.sun.javafx.PlatformUtil.isMac()) {
+        if (!PlatformUtil.isMac()) {
 
             ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
             MenuItem menuitem;

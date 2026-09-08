@@ -52,7 +52,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.util.Duration;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.util.Utils;
 import com.sun.jfx.incubator.scene.control.input.BehaviorBase;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;

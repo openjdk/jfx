@@ -25,8 +25,8 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.util.PlatformUtil.isMac;
+import static com.sun.javafx.util.PlatformUtil.isWindows;
 import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
