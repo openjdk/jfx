@@ -119,49 +119,35 @@ public interface Snapper {
         return Cache.INSTANCES.computeIfAbsent(context, _ -> new Snapper() {
             final double ssx = context.snapScaleX();
             final double ssy = context.snapScaleY();
-            final double rssx = 1.0 / ssx;
-            final double rssy = 1.0 / ssy;
 
             @Override
             public double snapPositionX(double value) {
-                return Math.round(value * ssx) * rssx;
+                return ScaledMath.round(value, ssx);
             }
 
             @Override
             public double snapPositionY(double value) {
-                return Math.round(value * ssy) * rssy;
+                return ScaledMath.round(value, ssy);
             }
 
             @Override
             public double snapSpaceX(double value) {
-                return Math.round(value * ssx) * rssx;
+                return ScaledMath.round(value, ssx);
             }
 
             @Override
             public double snapSpaceY(double value) {
-                return Math.round(value * ssy) * rssy;
+                return ScaledMath.round(value, ssy);
             }
 
             @Override
             public double snapSizeX(double value) {
-                double d = value * ssx;
-
-                if (Double.isInfinite(d)) {  // Avoids returning NaN for high magnitude inputs
-                    return value;
-                }
-
-                return Math.ceil(d - Math.ulp(d)) * rssx;
+                return ScaledMath.ceil(value, ssx);
             }
 
             @Override
             public double snapSizeY(double value) {
-                double d = value * ssy;
-
-                if (Double.isInfinite(d)) {  // Avoids returning NaN for high magnitude inputs
-                    return value;
-                }
-
-                return Math.ceil(d - Math.ulp(d)) * rssy;
+                return ScaledMath.ceil(value, ssy);
             }
         });
     }
