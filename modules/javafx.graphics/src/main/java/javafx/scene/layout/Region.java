@@ -411,18 +411,6 @@ public class Region extends Parent {
     }
 
     /**
-     * If snapToPixel is true, rounds the value to the nearest pixel. This method is used to
-     * remove floating-point drift after a calculation that involves known-aligned values.
-     * <p>
-     * This method is mathematically equivalent to {@link #snapSpace(double, boolean, double)},
-     * but has a distinct name that clearly communicates that the author knows that the value
-     * is already pixel-aligned.
-     */
-    private static double snapAligned(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
-    }
-
-    /**
      * If snapToPixel is true, then the value is either floored (positive values) or
      * ceiled (negative values) with a scale. When the absolute value of the given value
      * multiplied by the current scale is less than 10^15, then this method guarantees that:
@@ -464,6 +452,18 @@ public class Region extends Parent {
         double s = getSnapScaleY();
 
         return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
+    }
+
+    /**
+     * If snapToPixel is true, rounds the value to the nearest pixel. This method is used to
+     * remove floating-point drift after a calculation that involves known-aligned values.
+     * <p>
+     * This method is mathematically equivalent to {@link #snapSpace(double, boolean, double)},
+     * but has a distinct name that clearly communicates that the author knows that the value
+     * is already pixel-aligned.
+     */
+    private static double snapAligned(double value, boolean snapToPixel, double snapScale) {
+        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
@@ -1929,6 +1929,21 @@ public class Region extends Parent {
         return computeChildMinAreaWidth(child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the minimum horizontal space required to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used to
+     * compute its width.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the minimum horizontal space required to lay out the child
+     */
     double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         return LayoutUtils.computeChildMinAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
@@ -1947,6 +1962,21 @@ public class Region extends Parent {
         return computeChildMinAreaHeight(child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the minimum vertical space required to lay out the child, taking its margins and optional
+     * common-baseline alignment into account. For a resizable child with horizontal content bias,
+     * {@code availableWidth} determines the width used to compute its height.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param minBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the minimum vertical space required to lay out the child
+     */
     double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         return LayoutUtils.computeChildMinAreaHeight(snapper(), child, minBaselineComplement, margin, availableWidth, fillWidth);
     }
@@ -1965,6 +1995,21 @@ public class Region extends Parent {
         return computeChildPrefAreaWidth(child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the preferred horizontal space required to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used
+     * to compute its width.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the preferred horizontal space to lay out the child
+     */
     double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         return LayoutUtils.computeChildPrefAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
@@ -1983,14 +2028,63 @@ public class Region extends Parent {
         return computeChildPrefAreaHeight(child, -1, margin, -1, false);
     }
 
+    /**
+     * Returns the preferred vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a resizable child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param prefBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the preferred vertical space to lay out the child
+     */
     double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         return LayoutUtils.computeChildPrefAreaHeight(snapper(), child, prefBaselineComplement, margin, availableWidth, fillWidth);
     }
 
+    /**
+     * Returns the maximum horizontal space to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used
+     * to compute its width. If the child has no finite maximum width, {@link Double#MAX_VALUE} is returned
+     * unchanged.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the horizontal pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the maximum horizontal space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum width
+     */
     double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         return LayoutUtils.computeChildMaxAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
+    /**
+     * Returns the maximum vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a resizable child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height. If the child has no finite maximum height,
+     * {@link Double#MAX_VALUE} is returned unchanged.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the vertical pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param child the child to measure
+     * @param maxBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the maximum vertical space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum height
+     */
     double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         return LayoutUtils.computeChildMaxAreaHeight(snapper(), child, maxBaselineComplement, margin, availableWidth, fillWidth);
     }
