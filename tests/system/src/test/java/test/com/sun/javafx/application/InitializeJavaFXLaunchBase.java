@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import test.util.Util;
+
 public class InitializeJavaFXLaunchBase extends InitializeJavaFXBase {
     public static final CountDownLatch appLatch = new CountDownLatch(1);
 
@@ -45,6 +47,6 @@ public class InitializeJavaFXLaunchBase extends InitializeJavaFXBase {
         new Thread(() -> {
             Application.launch(InitializeApp.class);
         }).start();
-        assertTrue(appLatch.await(15, TimeUnit.SECONDS));
+        assertTrue(appLatch.await(Util.STARTUP_TIMEOUT, TimeUnit.SECONDS));
     }
 }
