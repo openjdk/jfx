@@ -62,19 +62,6 @@ final class WinTimer extends Timer {
     @Override protected void _resume(long timer) {}
 
     /*
-     * Overrides the base class method and calls super.stop() in a try/catch so that an
-     * IllegalStateException won't abort QuantumToolkit.exit() or QuantumToolkit.dispose()
-     */
-    @Override
-    public void stop() {
-        try {
-            super.stop();
-        } catch (IllegalStateException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    /*
      * Overrides the base class method as a non-synchronized no-op. This avoids
      * a potential deadlock that could otherwise happen if pause() is called
      * from a Timer callback concurrently with stop() being called from another thread.

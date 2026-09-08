@@ -82,7 +82,7 @@ public class WinTimerTest {
      *   2. wait for the main thread to release the callback latch
      *   3. call pause (skipped if an earlier error is detected)
      *
-     * This method logs an exception or error if caught
+     * This method records an exception or error if caught
      */
     private void timerCallback() {
         if (!firstTime.getAndSet(false)) {
@@ -111,12 +111,12 @@ public class WinTimerTest {
      *   2. Start the timer with the minimum timer period
      *   3. Wait for the callback to be called
      *   4. Start a new "stopper" thread that stops the timer via timer.stop()
-     *   5. Wait for up to 4 second for a signal that timer.stop() has returned
+     *   5. Wait for up to 4 seconds for a signal that timer.stop() has returned
      *      (it should not return until the callback does)
      *   6. release the callback
      *   7. Wait for a signal that timer.stop() has returned (this time it should)
      *   8. Join the "stopper" thread and verify that it is terminated
-     *   9. Check for any logged exceptions from the callback or the stopper thread
+     *   9. Check for any recorded exceptions from the callback or the stopper thread
      */
     @Test
     public void timerLifeCycleTest() throws Exception {
@@ -129,9 +129,9 @@ public class WinTimerTest {
          * Thread to stop the timer. It does the following:
          *   1. Signal that the thread is about to call timer.stop()
          *   2. Call timer.stop();
-         *   3. Signal that the timer is stopped.
+         *   3. Signal that timer.stop() has completed.
          *
-         * This thread logs an exception or error if caught
+         * This thread records an exception or error if caught
          */
         Thread stopperThread = new Thread(() -> {
             aboutToStop.countDown();
@@ -153,19 +153,22 @@ public class WinTimerTest {
                 assertTrue(aboutToStop.await(TIMEOUT, TimeUnit.MILLISECONDS),
                         "Timeout waiting for stopper thread to run");
                 // Check for early release
-                assertFalse(stopped.await(TIMED_WAIT, TimeUnit.MILLISECONDS),
+                boolean stoppedEarly = stopped.await(TIMED_WAIT, TimeUnit.MILLISECONDS);
+                assertNull(throwable.get());
+                assertFalse(stoppedEarly,
                         "Timer.stop completed while callback still running");
                 checkPause.set(true);
             } finally {
                 releaseCallback.countDown();
             }
-            assertTrue(stopped.await(TIMEOUT, TimeUnit.MILLISECONDS),
-                    "Timeout waiting for stop to return");
+            boolean stoppedAfterRelease = stopped.await(TIMEOUT, TimeUnit.MILLISECONDS);
+            assertNull(throwable.get());
+            assertTrue(stoppedAfterRelease, "Timeout waiting for stop to return");
             assertFalse(timer.isRunning());
         } finally {
             stopperThread.join(TIMEOUT);
         }
-        assertFalse(stopperThread.isAlive(), "Stopper thread is still running");
         assertNull(throwable.get());
+        assertFalse(stopperThread.isAlive(), "Stopper thread is still running");
     }
 }
