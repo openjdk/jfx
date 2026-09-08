@@ -60,21 +60,50 @@ public class HeadlessApplicationKeyCombinationTest {
     }
 
     @Test
-    public void testKeyCharacterCombinationMatching() {
+    public void testKeyCharacterCombinationShortcutMatching() {
         KeyCombination combination = KeyCombination.valueOf("shortcut+,");
 
-        KeyEvent event = new KeyEvent(KeyEvent.KEY_PRESSED, "s", "S", KeyCode.S, false, true, false, false);
-        boolean match = combination.match(event);
+        assertFalse(combination.match(keyPressed(",", KeyCode.COMMA, false, false)));
 
-        assertFalse(match);
-
-        event = new KeyEvent(KeyEvent.KEY_PRESSED, ",", ",", KeyCode.COMMA, false, true, false, false);
-        boolean otherOSMatch = combination.match(event);
-
-        event = new KeyEvent(KeyEvent.KEY_PRESSED, ",", ",", KeyCode.COMMA, false, false, false, true);
-        boolean macOSMatch = combination.match(event);
+        boolean otherOSMatch = combination.match(keyPressed(",", KeyCode.COMMA, true, false));
+        boolean macOSMatch = combination.match(keyPressed(",", KeyCode.COMMA, false, true));
 
         assertTrue(otherOSMatch ^ macOSMatch);
     }
 
+    @Test
+    public void testNumpadKeyMatchesCharacterOfNumpadKey() {
+        KeyCombination combination = KeyCombination.valueOf("'*'");
+        assertTrue(combination.match(keyPressed("*", KeyCode.MULTIPLY)));
+
+        combination = KeyCombination.valueOf("'8'");
+        assertTrue(combination.match(keyPressed("8", KeyCode.NUMPAD8)));
+        assertTrue(combination.match(keyPressed("8", KeyCode.DIGIT8)));
+
+        combination = KeyCombination.valueOf("'.'");
+        assertTrue(combination.match(keyPressed(".", KeyCode.DECIMAL)));
+        assertTrue(combination.match(keyPressed(".", KeyCode.PERIOD)));
+    }
+
+    @Test
+    public void testNumpadKeyDoesNotMatchCharacterOfOtherNumpadKey() {
+        KeyCombination combination = KeyCombination.valueOf("'*'");
+        assertFalse(combination.match(keyPressed("*", KeyCode.NUMPAD8)));
+        assertFalse(combination.match(keyPressed("*", KeyCode.ADD)));
+    }
+
+    @Test
+    public void testSpaceMatchesSpaceKey() {
+        KeyCombination combination = KeyCombination.valueOf("' '");
+        assertTrue(combination.match(keyPressed(" ", KeyCode.SPACE)));
+        assertFalse(combination.match(keyPressed(" ", KeyCode.ENTER)));
+    }
+
+    private static KeyEvent keyPressed(String character, KeyCode code) {
+        return keyPressed(character, code, false, false);
+    }
+
+    private static KeyEvent keyPressed(String character, KeyCode code, boolean controlDown, boolean metaDown) {
+        return new KeyEvent(KeyEvent.KEY_PRESSED, character, character, code, false, controlDown, false, metaDown);
+    }
 }

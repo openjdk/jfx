@@ -240,6 +240,9 @@ public class HeadlessApplication extends Application {
 
     @Override
     protected int _getKeyCodeForChar(char c, int hint) {
+        if (charForNumpadKeyCode(hint) == c) {
+            return hint;
+        }
         c = Character.toUpperCase(c);
         c = characterWithoutShift(c);
         if (c >= 'A' && c <= 'Z') {
@@ -248,6 +251,7 @@ public class HeadlessApplication extends Application {
             return (c - '0') + KeyEvent.VK_0;
         }
         return switch (c) {
+            case ' ' -> KeyEvent.VK_SPACE;
             case '`' -> KeyEvent.VK_BACK_QUOTE;
             case '-' -> KeyEvent.VK_MINUS;
             case '=' -> KeyEvent.VK_EQUALS;
@@ -264,7 +268,35 @@ public class HeadlessApplication extends Application {
     }
 
     /**
-     * Removes the shift modification (US keyboard layout), if needed.
+     * Returns the character produced by the given numpad key code (US keyboard layout),
+     * or {@code '\0'} if there is no character for the numpad key code.
+     *
+     * @param keyCode the key code
+     * @return the produced character, or {@code '\0'}
+     */
+    private static char charForNumpadKeyCode(int keyCode) {
+        return switch (keyCode) {
+            case KeyEvent.VK_NUMPAD0 -> '0';
+            case KeyEvent.VK_NUMPAD1 -> '1';
+            case KeyEvent.VK_NUMPAD2 -> '2';
+            case KeyEvent.VK_NUMPAD3 -> '3';
+            case KeyEvent.VK_NUMPAD4 -> '4';
+            case KeyEvent.VK_NUMPAD5 -> '5';
+            case KeyEvent.VK_NUMPAD6 -> '6';
+            case KeyEvent.VK_NUMPAD7 -> '7';
+            case KeyEvent.VK_NUMPAD8 -> '8';
+            case KeyEvent.VK_NUMPAD9 -> '9';
+            case KeyEvent.VK_DIVIDE -> '/';
+            case KeyEvent.VK_MULTIPLY -> '*';
+            case KeyEvent.VK_SUBTRACT -> '-';
+            case KeyEvent.VK_ADD -> '+';
+            case KeyEvent.VK_DECIMAL -> '.';
+            default -> '\0';
+        };
+    }
+
+    /**
+     * Removes the shift modification (US keyboard layout), and returns the new character, if needed.
      *
      * @param c the character
      * @return the eventually modified character
