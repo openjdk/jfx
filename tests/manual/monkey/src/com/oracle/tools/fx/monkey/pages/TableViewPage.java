@@ -38,6 +38,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
@@ -235,6 +236,11 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new TableViewSkin<>(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 
     /**

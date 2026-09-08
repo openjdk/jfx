@@ -24,12 +24,12 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
+import java.util.function.Function;
+import java.util.function.Supplier;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
-import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.PickResult;
-import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
 import com.oracle.tools.fx.monkey.sheets.TypeSpecificContextMenu;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
@@ -37,32 +37,26 @@ import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 /**
  * Helps create ContextMenu options.
  */
-public class ContextMenuOptions extends ObjectOption<ContextMenu> {
+public class ContextMenuOptions extends ComboBox<NamedValue<Object>> {
 
-    private PickResult pick;
+    private final Node target;
 
-    public ContextMenuOptions(String name, Control control) {
-        super(name, control.contextMenuProperty());
+    public ContextMenuOptions(String name, Node target) {
+        this.target = target;
+        FX.name(this, name);
+        setMaxWidth(Double.MAX_VALUE);
 
-        control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, (ev) -> {
-            pick = ev.getPickResult();
+        getSelectionModel().selectedItemProperty().addListener((s, pr, c) -> {
+            Object v = c.getValue();
+            setMenu(v);
         });
 
-        addChoice("<null>", null);
-        addChoiceSupplier("Standard Context Menu", () -> {
-            return new ContextMenu() {
-                @Override
-                public void show(Node anchor, double screenX, double screenY) {
-                    getItems().clear();
-                    populate(this, control, pick);
-                    super.show(anchor, screenX, screenY);
-                }
-            };
-        });
-        selectInitialValue();
+        addChoice("<null>", () -> null);
+        addChoice("Standard Context Menu", this::populate);
     }
 
-    private static void populate(ContextMenu m, Control c, PickResult pick) {
+    private ContextMenu populate(PickResult pick) {
+        ContextMenu m = new ContextMenu();
         Node source = pick.getIntersectedNode();
         TypeSpecificContextMenu.populate(m, source);
         if (m.getItems().size() > 0) {
@@ -74,9 +68,26 @@ public class ContextMenuOptions extends ObjectOption<ContextMenu> {
         FX.item(m, "Show Properties Monitor...", () -> {
             PropertiesMonitor.open(source);
         });
-        StdoutMouseListener.attach(m, c);
-        if (c != source) {
+        StdoutMouseListener.attach(m, target);
+        if (target != source) {
             StdoutMouseListener.attach(m, source);
         }
+        return m;
+    }
+
+    private void setMenu(Object v) {
+        if(v instanceof Supplier s) {
+            FX.setPopupMenu(target, s);
+        } else if(v instanceof Function f) {
+            FX.setPopupMenu(target, f);
+        }
+    }
+
+    public void addChoice(String name, Supplier<ContextMenu> gen) {
+        getItems().add(new NamedValue<>(name, gen));
+    }
+    
+    public void addChoice(String name, Function<PickResult,ContextMenu> gen) {
+        getItems().add(new NamedValue<>(name, gen));
     }
 }

@@ -44,20 +44,24 @@ import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HugeTextModel;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SampleModel;
+import com.oracle.tools.fx.monkey.util.Utils;
 import com.oracle.tools.fx.monkey.util.WritingSystemsModel;
 import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.SideDecorator;
 import jfx.incubator.scene.control.richtext.SyntaxDecorator;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * RichTextArea/CodeArea property sheet.
@@ -115,7 +119,7 @@ public class RTAPropertySheet {
     private static ContextMenuOptions contextMenuOptions(String name, RichTextArea r) {
         ContextMenuOptions c = new ContextMenuOptions(name, r);
         if (!(r instanceof CodeArea)) {
-            c.addChoice("RichTextArea Menu", createRtaContextMenu(r));
+            c.addChoice("RichTextArea Menu", () -> createRtaContextMenu(r));
         }
         return c;
     }
@@ -142,7 +146,12 @@ public class RTAPropertySheet {
         menuItem(m2, "Font Family", r, StyleAttributeMap.FONT_FAMILY, "Cursive", "Fantasy", "Monospace", "Sans-serif", "Serif", "System");
         menuItem(m2, "Font Size", r, StyleAttributeMap.FONT_SIZE, 2.0, 6.0, 8.0, 10.0, 12.0, 24.0, 48.0, 72.0, 144.0);
         menuItem(m2, "Text Color", r, StyleAttributeMap.TEXT_COLOR, Color.BLACK, Color.RED, Color.GREEN, Color.BLUE, Color.WHITE);
-        FX.separator(m);
+        menuItem(m2, "Text Highlight", r,
+            StyleAttributeMap.TEXT_HIGHLIGHT_1,
+            StyleAttributeMap.TEXT_HIGHLIGHT_2,
+            StyleAttributeMap.TEXT_HIGHLIGHT_3,
+            StyleAttributeMap.TEXT_HIGHLIGHT_4,
+            StyleAttributeMap.TEXT_HIGHLIGHT_5);
         m2 = FX.menu(m, "Paragraph Styles");
         menuItem(m2, "Background", r, StyleAttributeMap.BACKGROUND, Color.rgb(255, 0, 0, 0.3), Color.rgb(0, 0, 0, 0.3));
         menuItem(m2, "Bullet", r, StyleAttributeMap.BULLET, "•", "✓");
@@ -153,8 +162,76 @@ public class RTAPropertySheet {
         menuItem(m2, "Space Below", r, StyleAttributeMap.SPACE_BELOW, 10.0, 33.0, 100.0);
         menuItem(m2, "Space Left", r, StyleAttributeMap.SPACE_LEFT, 10.0, 33.0, 100.0);
         menuItem(m2, "Space Right", r, StyleAttributeMap.SPACE_RIGHT, 10.0, 33.0, 100.0);
+        createTabStopsSubmenu(m2, "Tabs", r);
         menuItem(m2, "Text Alignment", r, StyleAttributeMap.TEXT_ALIGNMENT, TextAlignment.values());
+        if (r.getModel() instanceof RichTextModel model) {
+            Menu m3 = FX.menu(m, "Default Tab Stops");
+            FX.item(m3, "<8 spaces>", () -> model.setDefaultTabStops(RichTextModel.DEFAULT_TAB_STOPS_FIXED));
+            FX.item(m3, "Disabled", () -> model.setDefaultTabStops(RichTextModel.DEFAULT_TAB_STOPS_DISABLED));
+            FX.item(m3, "50", () -> model.setDefaultTabStops(50));
+            FX.item(m3, "100", () -> model.setDefaultTabStops(100));
+            FX.item(m3, "200", () -> model.setDefaultTabStops(200));
+            
+            TextPos p = caretAtPopup(r);
+            EmbeddedImage im = embeddedImageAt(r, p);
+            if (im != null) {
+                FX.separator(m);
+                m3 = FX.menu(m, "Image");
+                Menu m4 = FX.menu(m3, "Width");
+                FX.item(m4, "AUTO", () -> formatImage(r, p, im, EmbeddedImage.AUTO, im.getTargetHeight(), im.isKeepAspectRatio()));
+                FX.item(m4, "FIT_WIDTH", () -> formatImage(r, p, im, EmbeddedImage.FIT_WIDTH, im.getTargetHeight(), im.isKeepAspectRatio()));
+                FX.item(m4, "FIT_WIDTH_ALWAYS", () -> formatImage(r, p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, im.getTargetHeight(), im.isKeepAspectRatio()));
+                FX.item(m4, "50", () -> formatImage(r, p, im, 50, im.getTargetHeight(), im.isKeepAspectRatio()));
+                FX.item(m4, "500", () -> formatImage(r, p, im, 500, im.getTargetHeight(), im.isKeepAspectRatio()));
+                m4 = FX.menu(m3, "Height");
+                FX.item(m4, "AUTO", () -> formatImage(r, p, im, im.getTargetWidth(), EmbeddedImage.AUTO, im.isKeepAspectRatio()));
+                FX.item(m4, "50", () -> formatImage(r, p, im, im.getTargetWidth(), 50, im.isKeepAspectRatio()));
+                FX.item(m4, "500", () -> formatImage(r, p, im, im.getTargetWidth(), 500, im.isKeepAspectRatio()));
+                FX.checkItem(m3, "Keep Aspect Ratio", im.isKeepAspectRatio(), (v) -> formatImage(r, p, im, im.getTargetWidth(), im.getTargetHeight(), !im.isKeepAspectRatio()));
+                FX.separator(m3);
+                FX.item(m3, "Fit to Width", () -> formatImage(r, p, im, EmbeddedImage.FIT_WIDTH, EmbeddedImage.AUTO, true));
+                FX.item(m3, "Fit to Width Always", () -> formatImage(r, p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, EmbeddedImage.AUTO, true));
+                FX.item(m3, "Original Size", () -> formatImage(r, p, im, EmbeddedImage.AUTO, EmbeddedImage.AUTO, true));
+            }
+        }
         return m;
+    }
+
+    // returns caret position only if selection exists and collapsed, otherwise null
+    private static TextPos caretAtPopup(RichTextArea r) {
+        SelectionSegment sel = r.getSelection();
+        if (sel != null) {
+            if (sel.isCollapsed()) {
+                return sel.getMin();
+            }
+        }
+        return null;
+    }
+
+    private static EmbeddedImage embeddedImageAt(RichTextArea r, TextPos p) {
+        if (p != null) {
+            StyleAttributeMap a = r.getStyleAttributeMap(p, false);
+            return a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+        }
+        return null;
+    }
+
+    private static void formatImage(RichTextArea r,  TextPos p, EmbeddedImage im, double targetWidth, double targetHeight, boolean keepAspectRatio) {
+        TextPos start = Utils.leading(p);
+        TextPos end = Utils.trailing(p);
+        EmbeddedImage updated = im.copy(targetWidth, targetHeight, keepAspectRatio);
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, updated);
+        r.applyStyle(start, end, a);
+    }
+
+    private static void createTabStopsSubmenu(Menu menu, String name, RichTextArea control) {
+        var a = StyleAttributeMap.TAB_STOPS;
+        Menu m = FX.menu(menu, name);
+        FX.item(m, "<null>", () -> setAttribute(control, a, null));
+        FX.item(m, "[]", () -> setAttribute(control, a, TabStops.of()));
+        FX.item(m, "[100]", () -> setAttribute(control, a, TabStops.of(100)));
+        FX.item(m, "[50, 100, 200]", () -> setAttribute(control, a, TabStops.of(50, 100, 200)));
+        FX.item(m, "[100, 200]", () -> setAttribute(control, a, TabStops.of(100, 200)));
     }
 
     private static <T> void menuItem(Menu menu, String name, RichTextArea control, StyleAttribute<T> a, T... values) {
@@ -163,6 +240,26 @@ public class RTAPropertySheet {
         for (T v : values) {
             String s = v.toString();
             FX.item(m, s, () -> setAttribute(control, a, v));
+        }
+    }
+
+    private static void menuItem(Menu menu, String name, RichTextArea control, StyleAttribute<Boolean> ... attrs) {
+        Menu m = FX.menu(menu, name);
+        for (StyleAttribute<Boolean> a : attrs) {
+            String s = a.toString();
+            FX.item(m, s, () -> setBooleanAttributeSpan(control, a));
+        }
+    }
+
+    private static void setBooleanAttributeSpan(RichTextArea control, StyleAttribute<Boolean> a) {
+        SelectionSegment sel = control.getSelection();
+        if (sel != null) {
+            if (!sel.isCollapsed()) {
+                StyleAttributeMap attr = control.getStyleAttributeMap(sel.getMin(), false);
+                Boolean on = attr.get(a);
+                on = (on == null) ? Boolean.TRUE : !on;
+                control.applyStyle(sel.getMin(), sel.getMax(), StyleAttributeMap.of(a, on));
+            }
         }
     }
 

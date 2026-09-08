@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import java.util.List;
 import java.util.function.Supplier;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
@@ -32,7 +33,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
@@ -65,6 +70,7 @@ import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.PaintOption;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.NamedValue;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -449,16 +455,32 @@ public class ShapePage extends TestPaneBase {
         return rv;
     }
 
+    private static Node createDashArrayOption(String name, ObservableList<Double> dashArray) {
+        ComboBox<NamedValue<List<Double>>> op = new ComboBox<>();
+        FX.name(op, name);
+        op.getItems().setAll(
+            new NamedValue("[]", List.of()),
+            new NamedValue("[2]", List.of(2.0)),
+            new NamedValue("[3, 5]", List.of(3.0, 5.0))
+        );
+        op.getSelectionModel().selectedItemProperty().addListener((s, pr, c) -> {
+            List<Double> v = c.getValue();
+            dashArray.setAll(v);
+        });
+        return op;
+    }
+
     public static void props(String prefix, OptionPane op, Props p) {
         op.option("Fill:", new PaintOption(prefix + "fill", p.fill));
         op.option(new BooleanOption(prefix + "smooth", "smooth", p.smooth));
         op.option("Stroke:", new PaintOption("stroke", p.stroke));
-        op.option("Stroke Dash Offset:", new DoubleSpinner(prefix + "strokeDashOffset", 0, 100, 0.1, p.strokeDashOffset));
-        op.option("Stroke Line Cap:", new EnumOption<>(prefix + "strokeLineCap", StrokeLineCap.class, p.strokeLineCap));
-        op.option("Stroke Line Join:", new EnumOption<>(prefix + "strokeLineJoin", StrokeLineJoin.class, p.strokeLineJoin));
-        op.option("Stroke Miter Limit:", new DoubleSpinner(prefix + "strokeMeterLimit", 0, 100, 0.1, p.strokeMiterLimit));
-        op.option("Stroke Type:", new EnumOption<>(prefix + "strokeType", StrokeType.class, p.strokeType));
-        op.option("Stroke Width:", new DoubleSpinner(prefix + "strokeWidth", 0, 100, 0.1, p.strokeWidth));
+        op.option("- Dash Array:", createDashArrayOption(prefix + "dashArray", p.dashArray));
+        op.option("- Dash Offset:", new DoubleSpinner(prefix + "strokeDashOffset", 0, 100, 0.1, p.strokeDashOffset));
+        op.option("- Line Cap:", new EnumOption<>(prefix + "strokeLineCap", StrokeLineCap.class, p.strokeLineCap));
+        op.option("- Line Join:", new EnumOption<>(prefix + "strokeLineJoin", StrokeLineJoin.class, p.strokeLineJoin));
+        op.option("- Miter Limit:", new DoubleSpinner(prefix + "strokeMeterLimit", 0, 100, 0.1, p.strokeMiterLimit));
+        op.option("- Type:", new EnumOption<>(prefix + "strokeType", StrokeType.class, p.strokeType));
+        op.option("- Width:", new DoubleSpinner(prefix + "strokeWidth", 0, 100, 0.1, p.strokeWidth));
     }
 
     private static void setProps(Shape s, Props p) {
@@ -471,9 +493,11 @@ public class ShapePage extends TestPaneBase {
         s.strokeMiterLimitProperty().bind(p.strokeMiterLimit);
         s.strokeTypeProperty().bind(p.strokeType);
         s.strokeWidthProperty().bind(p.strokeWidth);
+        p.setShape(s);
     }
 
     private static class Props {
+        public final ObservableList<Double> dashArray = FXCollections.observableArrayList();
         public final SimpleObjectProperty<Paint> fill = new SimpleObjectProperty<>();
         public final SimpleBooleanProperty smooth = new SimpleBooleanProperty(true);
         public final SimpleObjectProperty<Paint> stroke = new SimpleObjectProperty<>();
@@ -483,6 +507,7 @@ public class ShapePage extends TestPaneBase {
         public final SimpleDoubleProperty strokeMiterLimit = new SimpleDoubleProperty();
         public final SimpleObjectProperty<StrokeType> strokeType = new SimpleObjectProperty<>();
         public final SimpleDoubleProperty strokeWidth = new SimpleDoubleProperty(5);
+        private Shape shape;
 
         public Props(boolean first) {
             if (first) {
@@ -492,6 +517,19 @@ public class ShapePage extends TestPaneBase {
                 stroke.set(Color.GREEN);
                 fill.set(FX.alpha(Color.GREEN, 0.5));
             }
+
+            dashArray.addListener(new ListChangeListener<>() {
+                @Override
+                public void onChanged(Change<? extends Double> ch) {
+                    if (shape != null) {
+                        shape.getStrokeDashArray().setAll(ch.getList());
+                    }
+                }
+            });
+        }
+
+        public void setShape(Shape s) {
+            this.shape = s;
         }
     }
 }
