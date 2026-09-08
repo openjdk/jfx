@@ -48,6 +48,9 @@
 // Resize border width of EXTENDED windows
 #define RESIZE_BORDER_WIDTH 5
 
+static constexpr GdkWMFunction ALL_WM_FUNCTIONS = static_cast<GdkWMFunction>(
+    GDK_FUNC_RESIZE | GDK_FUNC_MOVE | GDK_FUNC_MINIMIZE | GDK_FUNC_MAXIMIZE | GDK_FUNC_CLOSE);
+
 
 void destroy_and_delete_ctx(WindowContext* ctx) {
     LOG(LIFECYCLE, "", "destroy_and_delete_ctx\n");
@@ -129,8 +132,8 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     LOG(LIFECYCLE, log_id, "WindowContext: created\n");
 
     if (frame_type != TITLED) {
-        initial_wmf = GDK_FUNC_ALL;
-        current_wmf = GDK_FUNC_ALL;
+        initial_wmf = ALL_WM_FUNCTIONS;
+        current_wmf = ALL_WM_FUNCTIONS;
     }
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
