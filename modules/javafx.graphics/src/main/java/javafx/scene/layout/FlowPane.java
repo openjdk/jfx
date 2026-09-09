@@ -650,6 +650,11 @@ public class FlowPane extends Pane {
         super.requestLayout();
     }
 
+    @Override protected void layoutContextInvalidated() {
+        runs = null;
+        super.layoutContextInvalidated();
+    }
+
     private List<Run> runs = null;
     private double lastMaxRunLength = -1;
     boolean computingRuns = false;

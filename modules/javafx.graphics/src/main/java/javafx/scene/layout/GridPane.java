@@ -1226,6 +1226,16 @@ public class GridPane extends Pane {
         }
     }
 
+    private void clearGridMetrics() {
+        metricsDirty = true;
+        bias = null;
+        rowGrow = null;
+        rowMinHeight = rowPrefHeight = rowMaxHeight = null;
+        columnGrow = null;
+        columnMinWidth = columnPrefWidth = columnMaxWidth = null;
+        rowMinBaselineComplement = rowPrefBaselineComplement = rowMaxBaselineComplement = null;
+    }
+
     @Override protected double computeMinWidth(double height) {
         computeGridMetrics();
         performingLayout = true;
@@ -1694,14 +1704,14 @@ public class GridPane extends Pane {
             super.requestLayout();
             return;
         }
-        metricsDirty = true;
-        bias = null;
-        rowGrow = null;
-        rowMinHeight = rowPrefHeight = rowMaxHeight = null;
-        columnGrow = null;
-        columnMinWidth = columnPrefWidth = columnMaxWidth = null;
-        rowMinBaselineComplement = rowPrefBaselineComplement = rowMaxBaselineComplement = null;
+
+        clearGridMetrics();
         super.requestLayout();
+    }
+
+    @Override protected void layoutContextInvalidated() {
+        clearGridMetrics();
+        super.layoutContextInvalidated();
     }
 
     @Override protected void layoutChildren() {

@@ -585,8 +585,7 @@ public final class RichUtils {
      * @param h the height of the layout area
      */
     public static void layoutInArea(Node n, double x, double y, double w, double h) {
-        Parent p = n.getParent();
-        boolean snap = (p instanceof Region r) ? r.isSnapToPixel() : false;
+        boolean snap = n.getParent() instanceof Parent p && p.isSnappedToPixel();
         Region.layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, true, true, HPos.CENTER, VPos.CENTER, snap);
     }
 

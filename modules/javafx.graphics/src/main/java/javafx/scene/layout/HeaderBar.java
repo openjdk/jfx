@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.geom.Vec2d;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.ColorScheme;
@@ -852,7 +853,7 @@ public class HeaderBar extends Region {
                 leftMargin,
                 alignment != null ? alignment.getHpos() : HPos.CENTER,
                 alignment != null ? alignment.getVpos() : VPos.CENTER,
-                isSnapToPixel());
+                isSnappedToPixel());
         }
 
         if (right != null && right.isManaged()) {
@@ -868,7 +869,7 @@ public class HeaderBar extends Region {
                 rightMargin,
                 alignment != null ? alignment.getHpos() : HPos.CENTER,
                 alignment != null ? alignment.getVpos() : VPos.CENTER,
-                isSnapToPixel());
+                isSnappedToPixel());
         }
 
         if (center != null && center.isManaged()) {
@@ -897,7 +898,7 @@ public class HeaderBar extends Region {
                     childWidth, insideHeight, 0,
                     new Insets(centerMargin.getTop(), 0, centerMargin.getBottom(), 0),
                     HPos.LEFT, alignment != null ? alignment.getVpos() : VPos.CENTER,
-                    isSnapToPixel());
+                    isSnappedToPixel());
             } else {
                 layoutInArea(
                     center,
@@ -920,8 +921,8 @@ public class HeaderBar extends Region {
     private double resizeChild(Node child, double adjustedWidth, boolean fillWidth, double insideHeight, Insets margin) {
         double adjustedHeight = adjustHeightByMargin(insideHeight, margin);
         Vec2d size = boundedNodeSizeWithBias(
-            child, adjustedWidth, adjustedHeight, fillWidth, true, isSnapToPixel(),
-            getSnapScaleX(this), getSnapScaleY(this), TEMP_VEC2D);
+            child, adjustedWidth, adjustedHeight, fillWidth, true, isSnappedToPixel(),
+            NodeHelper.getRenderScaleX(this), NodeHelper.getRenderScaleY(this), TEMP_VEC2D);
         child.resize(size.x, size.y);
         return size.x;
     }

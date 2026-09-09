@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,14 @@ public class ParentHelper extends NodeHelper {
         return ((ParentHelper) getHelper(parent)).getAllParentStylesheetsImpl(parent);
     }
 
+    public static void notifyLayoutContextChanged(Parent parent) {
+        parentAccessor.doNotifyLayoutContextChanged(parent);
+    }
+
+    public static void layoutContextInvalidated(Parent parent) {
+        ((ParentHelper) getHelper(parent)).layoutContextInvalidatedImpl(parent);
+    }
+
     @Override
     protected NGNode createPeerImpl(Node node) {
         return parentAccessor.doCreatePeer(node);
@@ -102,6 +110,20 @@ public class ParentHelper extends NodeHelper {
         return parentAccessor.doGetAllParentStylesheets(parent);
     }
 
+    protected void layoutContextInvalidatedImpl(Parent parent) {
+        parentAccessor.doLayoutContextInvalidated(parent);
+    }
+
+    @Override
+    protected double getRenderScaleXImpl(Node node) {
+        return parentAccessor.getRenderScaleX((Parent)node);
+    }
+
+    @Override
+    protected double getRenderScaleYImpl(Node node) {
+        return parentAccessor.getRenderScaleY((Parent)node);
+    }
+
     @Override
     protected void pickNodeLocalImpl(Node node, PickRay localPickRay,
             PickResultChooser result) {
@@ -135,11 +157,14 @@ public class ParentHelper extends NodeHelper {
         boolean doComputeContains(Node node, double localX, double localY);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         void doProcessCSS(Node node);
+        void doNotifyLayoutContextChanged(Parent parent);
+        void doLayoutContextInvalidated(Parent parent);
         void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result);
         boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result);
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
+        double getRenderScaleX(Parent parent);
+        double getRenderScaleY(Parent parent);
     }
-
 }

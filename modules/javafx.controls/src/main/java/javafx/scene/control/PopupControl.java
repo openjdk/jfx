@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1133,15 +1133,26 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
          * added directly to the scene's dirty layout list, otherwise requestLayout
          * will be invoked on its parent.
          */
-        @Override public void requestLayout() {
+        @Override
+        public void requestLayout() {
+            clearSizeCache();
+            //skinSizeComputed = false; -- JDK-8096434 disabled this
+            super.requestLayout();
+        }
+
+        @Override
+        protected void layoutContextInvalidated() {
+            clearSizeCache();
+            super.layoutContextInvalidated();
+        }
+
+        private void clearSizeCache() {
             prefWidthCache = -1;
             prefHeightCache = -1;
             minWidthCache = -1;
             minHeightCache = -1;
             maxWidthCache = -1;
             maxHeightCache = -1;
-            //skinSizeComputed = false; -- JDK-8096434 disabled this
-            super.requestLayout();
         }
 
         /**

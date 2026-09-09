@@ -134,6 +134,14 @@ public abstract class NodeHelper {
         getHelper(node).processCSSImpl(node);
     }
 
+    public static double getRenderScaleX(Node node) {
+        return getHelper(node).getRenderScaleXImpl(node);
+    }
+
+    public static double getRenderScaleY(Node node) {
+        return getHelper(node).getRenderScaleYImpl(node);
+    }
+
     /*
      * Methods that will be overridden by subclasses
      */
@@ -179,6 +187,14 @@ public abstract class NodeHelper {
 
     protected void processCSSImpl(Node node) {
         nodeAccessor.doProcessCSS(node);
+    }
+
+    protected double getRenderScaleXImpl(Node node) {
+        return nodeAccessor.getRenderScaleX(node);
+    }
+
+    protected double getRenderScaleYImpl(Node node) {
+        return nodeAccessor.getRenderScaleY(node);
     }
 
     /*
@@ -431,6 +447,8 @@ public abstract class NodeHelper {
         void removeTransitionTimer(Node node, String propertyName);
         TransitionTimer findTransitionTimer(Node node, String propertyName);
         MediaQueryContext getMediaQueryContext(Node node);
+        double getRenderScaleX(Node node);
+        double getRenderScaleY(Node node);
     }
 
 }
