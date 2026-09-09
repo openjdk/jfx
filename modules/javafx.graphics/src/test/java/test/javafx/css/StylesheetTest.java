@@ -25,6 +25,7 @@
 
 package test.javafx.css;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -803,6 +804,42 @@ public class StylesheetTest {
 
         root.applyCss();
         assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithTransitions() throws IOException {
+        String css = """
+            .control {
+                transition: -fx-background-color 120ms ease-out,
+                            -fx-opacity 0.2s 30ms linear;
+            }
+            .longhand {
+                transition-property: -fx-scale-x, -fx-scale-y;
+                transition-duration: 160ms, 0.2s;
+                transition-delay: 0s, -20ms;
+                transition-timing-function: ease-out, linear;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .control { transition: all 0s; }
+            }
+            """;
+
+        var source = new CssParser().parse(css);
+        var restored = Stylesheet.loadBinary(new ByteArrayInputStream(convertCssTextToBinary(css)));
+        assertEquals(source.getRules().size(), restored.getRules().size());
+
+        for (int rule = 0; rule < source.getRules().size(); rule++) {
+            var original = source.getRules().get(rule).getDeclarations();
+            var loaded = restored.getRules().get(rule).getDeclarations();
+            assertEquals(original.size(), loaded.size());
+
+            for (int declaration = 0; declaration < original.size(); declaration++) {
+                assertArrayEquals(
+                    (Object[])original.get(declaration).getParsedValue().convert(null),
+                    (Object[])loaded.get(declaration).getParsedValue().convert(null),
+                    original.get(declaration).getProperty());
+            }
+        }
     }
 
     @Test
