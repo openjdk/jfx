@@ -25,7 +25,6 @@
 
 package test.javafx.scene.control;
 
-import javafx.scene.Node;
 import javafx.scene.control.Tooltip;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,26 +68,24 @@ public class ControlTooltipTest {
     @Test public void testTooltipInstallAndUninstallOnControl() {
         // Test Tooltip install
         Tooltip.install(control, tooltip);
-        Node node = (Node) control;
-        Tooltip temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
         assertSame(tooltip, temp);
 
         // Test Tooltip uninstall
         Tooltip.uninstall(control, tooltip);
-        temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
         assertNull(temp);
     }
 
     @Test public void testTooltipInstallTwiceOnControl() {
         Tooltip.install(control, tooltip);
-        Node node = (Node) control;
-        Tooltip temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
         assertSame(tooltip, temp);
 
         Tooltip tooltip1 = new Tooltip();
         Tooltip.install(control, tooltip1);
 
-        temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
         assertSame(tooltip1, temp);
     }
 }
