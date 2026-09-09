@@ -36,59 +36,59 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * Tests setting Tooltip on a Control
  */
 public class ControlTooltipTest {
-    private ControlStub c;
-    private Tooltip t;
+    private ControlStub control;
+    private Tooltip tooltip;
 
     @BeforeEach
     public void setUp() {
-        c = new ControlStub();
-        t = new Tooltip();
+        control = new ControlStub();
+        tooltip = new Tooltip();
     }
 
     @Test public void controlHasNoTooltipByDefault() {
-        assertNull(c.getTooltip());
+        assertNull(control.getTooltip());
     }
 
     @Test public void testAddingRemovingTooltipOnControl() {
-        c.setTooltip(t);
-        assertSame(t, c.getTooltip());
+        control.setTooltip(tooltip);
+        assertSame(tooltip, control.getTooltip());
 
-        c.setTooltip(null);
-        assertNull(c.getTooltip());
+        control.setTooltip(null);
+        assertNull(control.getTooltip());
     }
 
     @Test public void testAddingASecondTooltipOnControl() {
-        c.setTooltip(t);
-        assertSame(t, c.getTooltip());
+        control.setTooltip(tooltip);
+        assertSame(tooltip, control.getTooltip());
 
-        Tooltip t1 = new Tooltip();
-        c.setTooltip(t1);
-        assertSame(t1, c.getTooltip());
+        Tooltip tooltip1 = new Tooltip();
+        control.setTooltip(tooltip1);
+        assertSame(tooltip1, control.getTooltip());
     }
 
     @Test public void testTooltipInstallAndUninstallOnControl() {
         // Test Tooltip install
-        Tooltip.install(c, t);
-        Node n = (Node) c;
-        Tooltip temp = (Tooltip) n.getProperties().get("javafx.scene.control.Tooltip");
-        assertSame(t, temp);
+        Tooltip.install(control, tooltip);
+        Node node = (Node) control;
+        Tooltip temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip, temp);
 
         // Test Tooltip uninstall
-        Tooltip.uninstall(c, t);
-        temp = (Tooltip) n.getProperties().get("javafx.scene.control.Tooltip");
+        Tooltip.uninstall(control, tooltip);
+        temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
         assertNull(temp);
     }
 
     @Test public void testTooltipInstallTwiceOnControl() {
-        Tooltip.install(c, t);
-        Node n = (Node) c;
-        Tooltip temp = (Tooltip) n.getProperties().get("javafx.scene.control.Tooltip");
-        assertSame(t, temp);
+        Tooltip.install(control, tooltip);
+        Node node = (Node) control;
+        Tooltip temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip, temp);
 
-        Tooltip t1 = new Tooltip();
-        Tooltip.install(c, t1);
+        Tooltip tooltip1 = new Tooltip();
+        Tooltip.install(control, tooltip1);
 
-        temp = (Tooltip) n.getProperties().get("javafx.scene.control.Tooltip");
-        assertSame(t1, temp);
+        temp = (Tooltip) node.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip1, temp);
     }
 }
