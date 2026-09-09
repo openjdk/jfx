@@ -72,6 +72,19 @@ public class HeadlessApplicationKeyCombinationTest {
     }
 
     @Test
+    public void testShiftedCharacterMatchesUnshiftedKey() {
+        KeyCombination combination = KeyCombination.valueOf("'+'");
+        assertTrue(combination.match(keyPressed("=", KeyCode.EQUALS)));
+        assertTrue(combination.match(keyPressed("+", KeyCode.ADD)));
+
+        combination = KeyCombination.valueOf("'?'");
+        assertTrue(combination.match(keyPressed("/", KeyCode.SLASH)));
+
+        combination = KeyCombination.valueOf("':'");
+        assertTrue(combination.match(keyPressed(";", KeyCode.SEMICOLON)));
+    }
+
+    @Test
     public void testNumpadKeyMatchesCharacterOfNumpadKey() {
         KeyCombination combination = KeyCombination.valueOf("'*'");
         assertTrue(combination.match(keyPressed("*", KeyCode.MULTIPLY)));
