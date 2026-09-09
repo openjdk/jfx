@@ -1702,10 +1702,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Add any necessary leading cells
             if (firstCell != null) {
-                // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
-                int previousIndex = getCellIndex(firstCell) - 1;
-                double prevIndexSize = getCellLength(previousIndex);
-                addLeadingCells(previousIndex, getCellPosition(firstCell) - prevIndexSize);
+                double firstCellPosition = getCellPosition(firstCell);
+                if (firstCellPosition > 0) {
+                    // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
+                    int previousIndex = getCellIndex(firstCell) - 1;
+                    double prevIndexSize = getCellLength(previousIndex);
+                    addLeadingCells(previousIndex, firstCellPosition - prevIndexSize);
+                }
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -2848,11 +2851,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
-        }
 
-        // Remove all cells that are in the pile and therefore not relevant anymore.
-        if (sheetChildren.size() != cells.size()) {
-            sheetChildren.removeAll(pile);
+            if (cell.getParent() != null) {
+                sheetChildren.remove(cell);
+            }
         }
 
         // Fix for JDK-8095710: Rather than have the cells do weird things with
