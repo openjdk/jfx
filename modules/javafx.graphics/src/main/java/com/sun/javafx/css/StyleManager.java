@@ -1632,10 +1632,11 @@ final public class StyleManager {
 
             if (styleClasses != null) {
                 key.styleClasses = FixedCapacitySet.of(styleClasses.size());
-                for (int n=0, nMax=styleClasses.size(); n<nMax; n++) {
-
+                for (int n = 0, nMax = styleClasses.size(); n < nMax; n++) {
                     final String styleClass = styleClasses.get(n);
-                    if (styleClass == null || styleClass.isEmpty()) continue;
+                    if (styleClass == null || styleClass.isEmpty()) {
+                        continue;
+                    }
 
                     key.styleClasses.add(styleClass);
                 }

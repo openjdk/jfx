@@ -109,12 +109,13 @@ public class NodeTest {
     @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
-        stage = new Stage();
     }
 
     @AfterEach
     public void tearDown() {
-        stage.close();
+        if (stage != null) {
+            stage.close();
+        }
     }
 
     // Things to test:
@@ -224,6 +225,7 @@ public class NodeTest {
 
         Group g = new Group(node);
         Scene s = new Scene(g);
+        stage = new Stage();
         stage.setScene(s);
         stage.show();
 
