@@ -41,6 +41,10 @@
 typedef void *EGLImage;
 
 namespace WebCore {
+#if PLATFORM(JAVA)
+inline constexpr int maximumAllowedImageBufferDimension = 256;
+#endif
+
 class BitmapTexture;
 class ClipPath;
 class TextureMapperGLData;
@@ -151,7 +155,11 @@ private:
     WrapMode m_wrapMode { WrapMode::Stretch };
     std::optional<FloatSize> m_uvClampMax;
     std::optional<FloatSize> m_uvClampTexelSize;
+#if !PLATFORM(JAVA)
     TextureMapperGLData* m_data;
+#else
+    TextureMapperGLData* m_data { nullptr };
+#endif
     ClipStack m_clipStack;
 #if ENABLE(DAMAGE_TRACKING)
     std::optional<Damage> m_damage;

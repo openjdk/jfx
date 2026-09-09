@@ -147,6 +147,10 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     /** {@inheritDoc} */
     @Override public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
+            }
             case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();

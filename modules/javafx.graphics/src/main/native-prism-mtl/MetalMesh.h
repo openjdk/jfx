@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,8 @@
 @interface MetalMesh : NSObject
 {
     MetalContext *context;
-    id<MTLBuffer> indexBuffer[3];
-    id<MTLBuffer> vertexBuffer[3];
+    id<MTLBuffer> indexBuffer;
+    id<MTLBuffer> vertexBuffer;
     NSUInteger numVertices;
     NSUInteger numIndices;
     NSUInteger indexType;

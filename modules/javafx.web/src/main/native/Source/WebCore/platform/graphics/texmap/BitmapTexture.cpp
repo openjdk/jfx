@@ -378,6 +378,14 @@ void BitmapTexture::updateContents(NativeImage* frameImage, const IntRect& targe
 
 void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& offset, float scale)
 {
+#if PLATFORM(JAVA)
+    // Java has no GL texture upload path. This was a no-op in BitmapTextureJava.
+    UNUSED_PARAM(sourceLayer);
+    UNUSED_PARAM(targetRect);
+    UNUSED_PARAM(offset);
+    UNUSED_PARAM(scale);
+    return;
+#else
     // Making an unconditionally unaccelerated buffer here is OK because this code
     // isn't used by any platforms that respect the accelerated bit.
     auto imageBuffer = ImageBuffer::create(targetRect.size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
@@ -400,6 +408,7 @@ void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& ta
         return;
 
     updateContents(image.get(), targetRect, IntPoint());
+#endif
 }
 
 void BitmapTexture::initializeStencil()

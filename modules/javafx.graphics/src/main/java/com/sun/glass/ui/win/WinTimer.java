@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,5 +60,28 @@ final class WinTimer extends Timer {
     @Override native protected void _stop(long timer);
     @Override protected void _pause(long timer) {}
     @Override protected void _resume(long timer) {}
-}
 
+    /*
+     * Overrides the base class method as a non-synchronized no-op. This avoids
+     * a potential deadlock that could otherwise happen if pause() is called
+     * from a Timer callback concurrently with stop() being called from another thread.
+     * The stop() method holds the Timer monitor and won't release it until
+     * _stop() completes, so pause() cannot acquire the monitor; _stop() will not
+     * complete until the callback returns.
+     */
+    @Override
+    public void pause() {
+    }
+
+    /*
+     * Overrides the base class method as a non-synchronized no-op. This avoids
+     * a potential deadlock that could otherwise happen if resume() is called
+     * from a Timer callback concurrently with stop() being called from another thread.
+     * The stop() method holds the Timer monitor and won't release it until
+     * _stop() completes, so resume() cannot acquire the monitor; _stop() will not
+     * complete until the callback returns.
+     */
+    @Override
+    public void resume() {
+    }
+}
