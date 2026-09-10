@@ -69,6 +69,7 @@ final class WinTimer extends Timer {
      * _stop() completes, so pause() cannot acquire the monitor; _stop() will not
      * complete until the callback returns.
      */
+    @SuppressWarnings("sync-override")
     @Override
     public void pause() {
     }
@@ -81,6 +82,7 @@ final class WinTimer extends Timer {
      * _stop() completes, so resume() cannot acquire the monitor; _stop() will not
      * complete until the callback returns.
      */
+    @SuppressWarnings("sync-override")
     @Override
     public void resume() {
     }
