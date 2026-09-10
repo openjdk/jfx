@@ -1564,6 +1564,51 @@ public class Region extends Parent {
     }
 
     /**
+     * If this region's snapToPixel property is false, this method returns the
+     * same value, else it tries to return a value rounded to the nearest
+     * pixel, but since there is no indication if the value is a vertical
+     * or horizontal measurement then it may be snapped to the wrong pixel
+     * size metric on screens with different horizontal and vertical scales.
+     * @param value the space value to be snapped
+     * @return value rounded to nearest pixel
+     * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
+     */
+    @Deprecated(since = "9", forRemoval = true)
+    protected double snapSpace(double value) {
+        return snapSpaceX(value);
+    }
+
+    /**
+     * If this region's snapToPixel property is false, this method returns the
+     * same value, else it tries to return a value ceiled to the nearest
+     * pixel, but since there is no indication if the value is a vertical
+     * or horizontal measurement then it may be snapped to the wrong pixel
+     * size metric on screens with different horizontal and vertical scales.
+     * @param value the size value to be snapped
+     * @return value ceiled to nearest pixel
+     * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
+     */
+    @Deprecated(since = "9", forRemoval = true)
+    protected double snapSize(double value) {
+        return snapSizeX(value);
+    }
+
+    /**
+     * If this region's snapToPixel property is false, this method returns the
+     * same value, else it tries to return a value rounded to the nearest
+     * pixel, but since there is no indication if the value is a vertical
+     * or horizontal measurement then it may be snapped to the wrong pixel
+     * size metric on screens with different horizontal and vertical scales.
+     * @param value the position value to be snapped
+     * @return value rounded to nearest pixel
+     * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
+     */
+    @Deprecated(since = "9", forRemoval = true)
+    protected double snapPosition(double value) {
+        return snapPositionX(value);
+    }
+
+    /**
      * Utility method to get the top inset, which includes padding and border inset.
      * The value is snapped to the pixel grid if {@link #isSnappedToPixel()} is {@code true}.
      *

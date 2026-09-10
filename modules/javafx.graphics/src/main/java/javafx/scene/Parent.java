@@ -1069,21 +1069,6 @@ public abstract non-sealed class Parent extends Node {
     /**
      * Returns a value rounded to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
      * returns the value unchanged. This method is used to create an allocation for empty space during
-     * layout, it allows snapping to slightly expand or reduce the requested amount of empty space.
-     *
-     * @param value the horizontal value
-     * @return the nearest horizontal value on the pixel grid, or the unchanged value
-     * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
-     * @since 28
-     */
-    @Deprecated(since = "9", forRemoval = true)
-    protected final double snapSpace(double value) {
-        return ScaledMath.snapSpace(value, snappedToPixel, renderScaleX);
-    }
-
-    /**
-     * Returns a value rounded to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
-     * returns the value unchanged. This method is used to create an allocation for empty space during
      * layout, it allows snapping to slightly reduce the requested amount of empty space.
      *
      * @param value the horizontal value
@@ -1113,21 +1098,6 @@ public abstract non-sealed class Parent extends Node {
      * layout, it ensures that snapping does not reduce the measured size allocation.
      *
      * @param value the horizontal value
-     * @return the nearest horizontal value on the pixel grid, or the unchanged value
-     * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
-     * @since 28
-     */
-    @Deprecated(since = "9", forRemoval = true)
-    protected final double snapSize(double value) {
-        return ScaledMath.snapSize(value, snappedToPixel, renderScaleX);
-    }
-
-    /**
-     * Returns a value ceiled to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
-     * returns the value unchanged. This method is used to create a size allocation for children during
-     * layout, it ensures that snapping does not reduce the measured size allocation.
-     *
-     * @param value the horizontal value
      * @return the next horizontal value on the pixel grid, or the unchanged value
      * @since 28
      */
@@ -1146,21 +1116,6 @@ public abstract non-sealed class Parent extends Node {
      */
     public final double snapSizeY(double value) {
         return ScaledMath.snapSize(value, snappedToPixel, renderScaleY);
-    }
-
-    /**
-     * Rounds the value to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
-     * returns the value unchanged. This method is used to align the position of a region to the
-     * closest value on the pixel grid.
-     *
-     * @param value the value
-     * @return the nearest horizontal value on the pixel grid, or the unchanged value
-     * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
-     * @since 28
-     */
-    @Deprecated(since = "9", forRemoval = true)
-    protected final double snapPosition(double value) {
-        return ScaledMath.snapPosition(value, snappedToPixel, renderScaleX);
     }
 
     /**
