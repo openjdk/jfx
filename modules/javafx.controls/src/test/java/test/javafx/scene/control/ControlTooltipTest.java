@@ -44,11 +44,13 @@ public class ControlTooltipTest {
         tooltip = new Tooltip();
     }
 
-    @Test public void controlHasNoTooltipByDefault() {
+    @Test
+    public void controlHasNoTooltipByDefault() {
         assertNull(control.getTooltip());
     }
 
-    @Test public void testAddingRemovingTooltipOnControl() {
+    @Test
+    public void testAddingRemovingTooltipOnControl() {
         control.setTooltip(tooltip);
         assertSame(tooltip, control.getTooltip());
 
@@ -56,7 +58,8 @@ public class ControlTooltipTest {
         assertNull(control.getTooltip());
     }
 
-    @Test public void testAddingASecondTooltipOnControl() {
+    @Test
+    public void testAddingASecondTooltipOnControl() {
         control.setTooltip(tooltip);
         assertSame(tooltip, control.getTooltip());
 
@@ -65,7 +68,8 @@ public class ControlTooltipTest {
         assertSame(tooltip1, control.getTooltip());
     }
 
-    @Test public void testTooltipInstallAndUninstallOnControl() {
+    @Test
+    public void testTooltipInstallAndUninstallOnControl() {
         // Test Tooltip install
         Tooltip.install(control, tooltip);
         Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
@@ -77,7 +81,8 @@ public class ControlTooltipTest {
         assertNull(temp);
     }
 
-    @Test public void testTooltipInstallTwiceOnControl() {
+    @Test
+    public void testTooltipInstallTwiceOnControl() {
         Tooltip.install(control, tooltip);
         Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
         assertSame(tooltip, temp);
