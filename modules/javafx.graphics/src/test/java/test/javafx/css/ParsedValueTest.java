@@ -507,7 +507,11 @@ public class ParsedValueTest {
     @Test
     public void testWriteAndReadBinaryNumbers() {
         Number[] numbers = {
+            Integer.MIN_VALUE,
+            Integer.MAX_VALUE,
             12345678,
+            Double.NaN,
+            -0.0,
             -123.5
         };
 

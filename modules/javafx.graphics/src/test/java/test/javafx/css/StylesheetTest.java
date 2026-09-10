@@ -822,7 +822,11 @@ public class StylesheetTest {
                 transition-delay: 0s, -20ms;
                 transition-timing-function: ease-out, linear,
                                             cubic-bezier(0.5, 2, 0.5, -1),
-                                            step-start, step-end, steps(3),
+                                            step-start, step-end,
+                                            steps(3), steps(3, start), steps(3, end),
+                                            steps(3, jump-start), steps(3, jump-end),
+                                            steps(3, jump-none), steps(3, jump-both),
+                                            linear(0, 0.3, 1),
                                             linear(0 0%, 0.25 25% 75%, 1 100%);
             }
             @media (prefers-reduced-motion: reduce) {
