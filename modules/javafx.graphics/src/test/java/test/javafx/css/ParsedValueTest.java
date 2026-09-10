@@ -44,6 +44,7 @@ import javafx.css.SizeUnits;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -506,14 +507,29 @@ public class ParsedValueTest {
     @Test
     public void testWriteAndReadBinaryNumbers() {
         Number[] numbers = {
-            0x12345678,
-            0x0123456789ABCDEFL,
-            -123.75F,
-            Math.PI
+            12345678,
+            -123.5
         };
 
         for (Number number : numbers) {
             writeAndReadBinary(new ParsedValueImpl<>(number, null));
+        }
+    }
+
+    @Test
+    public void testWriteBinaryFailsForUnsupportedNumberTypes() {
+        Number[] numbers = {
+            Byte.MIN_VALUE,
+            Short.MIN_VALUE,
+            0x0123456789ABCDEFL,
+            -123.75F
+        };
+
+        for (Number number : numbers) {
+            assertThrows(AssertionError.class, () ->
+                new ParsedValueImpl<>(number, null).writeBinary(
+                    new DataOutputStream(new ByteArrayOutputStream()), new StringStore()),
+                number.getClass().getName());
         }
     }
 

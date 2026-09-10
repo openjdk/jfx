@@ -706,9 +706,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
     private enum NumberType {
         INT(0, (stream, number) -> stream.writeInt(number.intValue()), stream -> stream.readInt()),
-        LONG(1, (stream, number) -> stream.writeLong(number.longValue()), stream -> stream.readLong()),
-        FLOAT(2, (stream, number) -> stream.writeFloat(number.floatValue()), stream -> stream.readFloat()),
-        DOUBLE(3, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
+        DOUBLE(1, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
 
         NumberType(int typeCode, Serializer serializer, Deserializer deserializer) {
             this.typeCode = typeCode;
@@ -723,8 +721,6 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         static void writeBinary(DataOutputStream stream, Number number) throws IOException {
             NumberType typeCode = switch (number) {
                 case Integer _ -> INT;
-                case Long _ -> LONG;
-                case Float _ -> FLOAT;
                 case Double _ -> DOUBLE;
                 default -> throw new AssertionError();
             };
@@ -736,9 +732,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         static Number readBinary(DataInputStream stream) throws IOException {
             NumberType typeCode = switch (stream.readUnsignedByte()) {
                 case 0 -> INT;
-                case 1 -> LONG;
-                case 2 -> FLOAT;
-                case 3 -> DOUBLE;
+                case 1 -> DOUBLE;
                 default -> throw new IOException("Unknown number type");
             };
 
