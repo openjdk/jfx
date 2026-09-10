@@ -811,13 +811,19 @@ public class StylesheetTest {
         String css = """
             .control {
                 transition: -fx-background-color 120ms ease-out,
-                            -fx-opacity 0.2s 30ms linear;
+                            -fx-opacity 0.2s 30ms linear,
+                            -fx-scale-x 160ms cubic-bezier(0.1, 0.2, 0.3, 0.4),
+                            -fx-scale-y 0.2s steps(3, jump-both),
+                            -fx-rotate 180ms linear(0 0%, 0.25 50%, 1 100%);
             }
             .longhand {
                 transition-property: -fx-scale-x, -fx-scale-y;
                 transition-duration: 160ms, 0.2s;
                 transition-delay: 0s, -20ms;
-                transition-timing-function: ease-out, linear;
+                transition-timing-function: ease-out, linear,
+                                            cubic-bezier(0.5, 2, 0.5, -1),
+                                            step-start, step-end, steps(3),
+                                            linear(0 0%, 0.25 25% 75%, 1 100%);
             }
             @media (prefers-reduced-motion: reduce) {
                 .control { transition: all 0s; }

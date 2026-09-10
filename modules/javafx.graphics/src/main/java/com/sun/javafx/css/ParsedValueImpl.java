@@ -428,7 +428,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     final static private byte BOOLEAN = 7;
     final static private byte URL = 8;
     final static private byte SIZE = 9;
-
+    final static private byte NUMBER = 10;
 
     public final void writeBinary(DataOutputStream os, StringStore stringStore)
         throws IOException {
@@ -541,6 +541,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
             final int index = stringStore.addString(size.getUnits().name());
             os.writeShort(index);
+
+        } else if (value instanceof Number n) {
+            os.writeByte(NUMBER);
+            NumberType.writeBinary(os, n);
 
         } else if (value instanceof String) {
             os.writeByte(STRING);
@@ -676,6 +680,9 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             }
             return new ParsedValueImpl<Size,Size>(new Size(val,units), converter, lookup);
 
+        } else if (valType == NUMBER) {
+            return new ParsedValueImpl(NumberType.readBinary(is), converter, lookup);
+
         } else if (valType == STRING) {
             String str = strings[is.readShort()];
             return new ParsedValueImpl(str, converter, lookup);
@@ -694,6 +701,62 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else {
             throw new InternalError("unknown type: " + valType);
+        }
+    }
+
+    private enum NumberType {
+        BYTE(0, (stream, number) -> stream.writeByte(number.byteValue()), stream -> stream.readByte()),
+        SHORT(1, (stream, number) -> stream.writeShort(number.shortValue()), stream -> stream.readShort()),
+        INT(2, (stream, number) -> stream.writeInt(number.intValue()), stream -> stream.readInt()),
+        LONG(3, (stream, number) -> stream.writeLong(number.longValue()), stream -> stream.readLong()),
+        FLOAT(4, (stream, number) -> stream.writeFloat(number.floatValue()), stream -> stream.readFloat()),
+        DOUBLE(5, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
+
+        NumberType(int typeCode, Serializer serializer, Deserializer deserializer) {
+            this.typeCode = typeCode;
+            this.serializer = serializer;
+            this.deserializer = deserializer;
+        }
+
+        final int typeCode;
+        final Serializer serializer;
+        final Deserializer deserializer;
+
+        static void writeBinary(DataOutputStream stream, Number number) throws IOException {
+            NumberType typeCode = switch (number) {
+                case Byte _ -> BYTE;
+                case Short _ -> SHORT;
+                case Integer _ -> INT;
+                case Long _ -> LONG;
+                case Float _ -> FLOAT;
+                case Double _ -> DOUBLE;
+                default -> throw new AssertionError();
+            };
+
+            stream.writeByte(typeCode.typeCode);
+            typeCode.serializer.serialize(stream, number);
+        }
+
+        static Number readBinary(DataInputStream stream) throws IOException {
+            NumberType typeCode = switch (stream.readUnsignedByte()) {
+                case 0 -> BYTE;
+                case 1 -> SHORT;
+                case 2 -> INT;
+                case 3 -> LONG;
+                case 4 -> FLOAT;
+                case 5 -> DOUBLE;
+                default -> throw new IOException("Unknown number type");
+            };
+
+            return typeCode.deserializer.deserialize(stream);
+        }
+
+        interface Serializer {
+            void serialize(DataOutputStream stream, Number number) throws IOException;
+        }
+
+        interface Deserializer {
+            Number deserialize(DataInputStream stream) throws IOException;
         }
     }
 }

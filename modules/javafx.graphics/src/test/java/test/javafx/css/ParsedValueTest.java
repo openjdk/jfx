@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -502,6 +502,23 @@ public class ParsedValueTest {
         }
 
     }
+
+    @Test
+    public void testWriteAndReadBinaryNumbers() {
+        Number[] numbers = {
+            Byte.MIN_VALUE,
+            Short.MIN_VALUE,
+            0x12345678,
+            0x0123456789ABCDEFL,
+            -123.75F,
+            Math.PI
+        };
+
+        for (Number number : numbers) {
+            writeAndReadBinary(new ParsedValueImpl<>(number, null));
+        }
+    }
+
     /**
      * Test of readBinary method, of class ParsedValueImpl.
      */

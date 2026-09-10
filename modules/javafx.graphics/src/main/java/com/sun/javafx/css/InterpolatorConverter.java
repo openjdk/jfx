@@ -32,7 +32,6 @@ import javafx.css.StyleConverter;
 import javafx.geometry.Point2D;
 import javafx.scene.text.Font;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -46,8 +45,8 @@ import java.util.Map;
  * </ol>
  * <p>
  * If the value is a {@code ParsedValue} array, the first element represents the name of the function
- * ({@code linear}, {@code cubic-bezier}, or {@code steps}), and the second element contains a list of
- * arguments.
+ * ({@code linear}, {@code cubic-bezier}, or {@code steps}), and the remaining values contain the
+ * function arguments.
  */
 public class InterpolatorConverter extends StyleConverter<Object, Interpolator> {
 
@@ -100,14 +99,14 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
         if (value.getValue() instanceof ParsedValue<?, ?>[] pv && pv[0].getValue() instanceof String funcName) {
             return switch (funcName) {
                 case "cubic-bezier(" -> CACHE.computeIfAbsent(value, key -> {
-                    List<Double> args = arguments(key);
-                    return Interpolator.ofSpline(args.get(0), args.get(1), args.get(2), args.get(3));
+                    return Interpolator.ofSpline(
+                        numberArg(pv, 1), numberArg(pv, 2),
+                        numberArg(pv, 3), numberArg(pv, 4));
                 });
 
                 case "steps(" -> CACHE.computeIfAbsent(value, key -> {
-                    List<Object> args = arguments(key);
-                    String position = args.get(1) != null ? (String)args.get(1) : "end";
-                    return Interpolator.ofSteps((int)args.get(0), switch (position) {
+                    String position = pv[2] != null ? (String)pv[2].getValue() : "end";
+                    return Interpolator.ofSteps(((Number)pv[1].getValue()).intValue(), switch (position) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;
                         case "jump-none" -> StepPosition.NONE;
@@ -116,8 +115,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                 });
 
                 case "linear(" -> CACHE.computeIfAbsent(value, key -> {
-                    List<Point2D> args = arguments(key);
-                    return Interpolator.ofLinear(args.toArray(Point2D[]::new));
+                    return Interpolator.ofLinear(pointArg(pv));
                 });
 
                 default -> throw new AssertionError();
@@ -127,10 +125,19 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
         throw new AssertionError();
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> List<T> arguments(ParsedValue<?, ?> value) {
-        ParsedValue<?, ?>[] values = (ParsedValue<?, ?>[])value.getValue();
-        return (List<T>)values[1].getValue();
+    private double numberArg(ParsedValue<?, ?>[] values, int index) {
+        return ((Number)values[index].getValue()).doubleValue();
+    }
+
+    private Point2D[] pointArg(ParsedValue<?, ?>[] values) {
+        Point2D[] arguments = new Point2D[(values.length - 1) / 2];
+        for (int i = 1; i < values.length; i += 2) {
+            Number x = (Number)values[i].getValue();
+            Number y = (Number)values[i + 1].getValue();
+            arguments[i / 2] = new Point2D(x.doubleValue(), y.doubleValue());
+        }
+
+        return arguments;
     }
 
     /**
