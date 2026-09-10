@@ -47,7 +47,6 @@ import javafx.stage.Stage;
 // The first parameter (optional) is the name of the font to use. Defaults to System.
 // The second parameter (optional) is a description added at the bottom. This is
 // useful to ensure descriptive text is included in screenshots.
-
 public class TextCascade extends Application {
     public static void main(String[] args) {
         launch(TextCascade.class, args);
