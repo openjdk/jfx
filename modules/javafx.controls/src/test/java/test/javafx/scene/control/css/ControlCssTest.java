@@ -27,6 +27,7 @@ package test.javafx.scene.control.css;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.css.CssParser;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -44,7 +45,9 @@ import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -181,6 +184,48 @@ public class ControlCssTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals(0, errors.size(), errors::toString);
+    }
+
+    /**
+     * While the properties of a replaced style helper are being reset, no font relative property may be
+     * recalculated, because the new styles are not applied yet.
+     */
+    @Test
+    void testRelativeSizesAreNotRecalculatedWhileResettingProperties() {
+        String theme = toBase64("""
+                .container {
+                    -fx-font-size: 40px;
+                }
+                .old {
+                    -fx-font-size: 20px;
+                    -fx-padding: 1em;
+                }
+                .new {
+                    -fx-padding: 2em;
+                }
+                """);
+
+        Label label = new Label("Test");
+        label.getStyleClass().add("old");
+
+        StackPane container = new StackPane(label);
+        container.getStyleClass().add("container");
+
+        Scene scene = new Scene(container);
+        scene.getStylesheets().add(theme);
+        stageLoader = new StageLoader(scene);
+
+        assertEquals(new Insets(20), label.getPadding());
+
+        List<Insets> observed = new ArrayList<>();
+        label.paddingProperty().addListener((_, _, newValue) -> observed.add(newValue));
+
+        // Resets the font, which recalculates the font relative padding.
+        label.getStyleClass().setAll("new");
+        Toolkit.getToolkit().firePulse();
+
+        // A single change: recalculating during the reset would set the padding from the reset font first.
+        assertEquals(List.of(new Insets(80)), observed, "padding must not be calculated with the old font-size");
     }
 
     private static void swapRootWhenAddedToScene(Node node) {

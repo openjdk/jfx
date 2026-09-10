@@ -65,7 +65,9 @@ import javafx.stage.Stage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -1706,6 +1708,107 @@ public class CssStyleHelperTest {
         int stale = walks.get();
 
         assertTrue(stale <= baseline * 4, "Baseline = " + baseline + ", observed = " + stale);
+    }
+
+    /**
+     * A stale ancestor's helper must be installed before the old helper resets its properties,
+     * so listeners running during the reset never observe an outdated helper.
+     */
+    @Test
+    void testStaleAncestorHelperIsInstalledBeforeItsPropertiesAreReset() {
+        scene.getStylesheets().add(toDataURL("""
+                .container {
+                   -fx-padding: 3;
+                }
+                .marked {
+                   -fx-background-color: red;
+                }
+                """));
+        stage.show();
+
+        StackPane container = new StackPane();
+        container.getStyleClass().addAll("container", "marked");
+
+        StackPane child = new StackPane();
+        container.getChildren().add(child);
+        root.getChildren().add(container);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(container));
+
+        Object oldStaleHelper = NodeShim.getStyleHelper(container);
+
+        // The added child makes the container a DIRTY_BRANCH, dropping the style class defers the REAPPLY
+        // and leaves the container with a stale style helper.
+        container.getChildren().add(new StackPane());
+        container.getStyleClass().remove("marked");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(container));
+
+        // Rebuilds the container's style helper on demand, which resets its background.
+        child.getChildren().add(new StackPane());
+
+        Object newHelper = NodeShim.getStyleHelper(container);
+        assertNotSame(oldStaleHelper, newHelper);
+        assertSame(NodeShim.getStyleHelper(container), newHelper);
+        assertNull(container.getBackground(), "not matching .marker anymore");
+    }
+
+    /**
+     * A listener running while a stale ancestor is rebuilt may reparent the node the chain was collected
+     * for. The chain must then be collected again.
+     */
+    @Test
+    void testStyleableChainIsRebuiltWhenReparentedWhileAStaleAncestorIsRebuilt() {
+        scene.getStylesheets().add(toDataURL("""
+                .marked {
+                   -fx-background-color: red;
+                }
+                .other {
+                   -my-color: green;
+                }
+                .leaf {
+                   -fx-background-color: -my-color;
+                }
+                """));
+        stage.show();
+
+        StackPane container = new StackPane();
+        container.getStyleClass().add("marked");
+
+        StackPane other = new StackPane();
+        other.getStyleClass().add("other");
+
+        StackPane child = new StackPane();
+        container.getChildren().add(child);
+        root.getChildren().addAll(container, other);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(container));
+
+        // The added child makes the container a DIRTY_BRANCH, dropping the style class defers the REAPPLY
+        // and leaves the container with a stale style helper.
+        container.getChildren().add(new StackPane());
+        container.getStyleClass().remove("marked");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(container));
+
+        StackPane leaf = new StackPane();
+        leaf.getStyleClass().add("leaf");
+
+        // Resetting the container's background moves the leaf itself away, so the chain collected for it
+        // no longer leads to the container.
+        container.backgroundProperty().addListener((_, _, _) -> {
+            if (leaf.getParent() == child) {
+                child.getChildren().remove(leaf);
+                other.getChildren().add(leaf);
+            }
+        });
+
+        child.getChildren().add(leaf);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertSame(other, leaf.getParent());
+        assertEquals(Color.GREEN, getBackgroundColor(leaf), "leaf must be styled for its actual ancestors");
     }
 
     private Paint getBackgroundColor(StackPane leaf) {
