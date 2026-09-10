@@ -506,8 +506,6 @@ public class ParsedValueTest {
     @Test
     public void testWriteAndReadBinaryNumbers() {
         Number[] numbers = {
-            Byte.MIN_VALUE,
-            Short.MIN_VALUE,
             0x12345678,
             0x0123456789ABCDEFL,
             -123.75F,

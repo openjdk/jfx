@@ -705,12 +705,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     }
 
     private enum NumberType {
-        BYTE(0, (stream, number) -> stream.writeByte(number.byteValue()), stream -> stream.readByte()),
-        SHORT(1, (stream, number) -> stream.writeShort(number.shortValue()), stream -> stream.readShort()),
-        INT(2, (stream, number) -> stream.writeInt(number.intValue()), stream -> stream.readInt()),
-        LONG(3, (stream, number) -> stream.writeLong(number.longValue()), stream -> stream.readLong()),
-        FLOAT(4, (stream, number) -> stream.writeFloat(number.floatValue()), stream -> stream.readFloat()),
-        DOUBLE(5, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
+        INT(0, (stream, number) -> stream.writeInt(number.intValue()), stream -> stream.readInt()),
+        LONG(1, (stream, number) -> stream.writeLong(number.longValue()), stream -> stream.readLong()),
+        FLOAT(2, (stream, number) -> stream.writeFloat(number.floatValue()), stream -> stream.readFloat()),
+        DOUBLE(3, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
 
         NumberType(int typeCode, Serializer serializer, Deserializer deserializer) {
             this.typeCode = typeCode;
@@ -724,8 +722,6 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         static void writeBinary(DataOutputStream stream, Number number) throws IOException {
             NumberType typeCode = switch (number) {
-                case Byte _ -> BYTE;
-                case Short _ -> SHORT;
                 case Integer _ -> INT;
                 case Long _ -> LONG;
                 case Float _ -> FLOAT;
@@ -739,12 +735,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         static Number readBinary(DataInputStream stream) throws IOException {
             NumberType typeCode = switch (stream.readUnsignedByte()) {
-                case 0 -> BYTE;
-                case 1 -> SHORT;
-                case 2 -> INT;
-                case 3 -> LONG;
-                case 4 -> FLOAT;
-                case 5 -> DOUBLE;
+                case 0 -> INT;
+                case 1 -> LONG;
+                case 2 -> FLOAT;
+                case 3 -> DOUBLE;
                 default -> throw new IOException("Unknown number type");
             };
 
