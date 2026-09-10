@@ -1165,10 +1165,8 @@ public abstract sealed class Node
             }
             focusSetDirty(oldScene);
             focusSetDirty(newScene);
-        }
 
-        // All children are notified below before this node is, so the style helper is marked stale upfront.
-        if (sceneChanged) {
+            // All children are notified below before this node is, so the style helper is marked stale upfront.
             cssHelperStale = true;
         }
 
@@ -9840,6 +9838,12 @@ public abstract sealed class Node
     boolean cssHelperResolvedEarly;
 
     /**
+     * The CSS properties of this node are currently being reset to their initial values. The style
+     * helper must not be consulted while that is in progress.
+     */
+    boolean cssResetInProgress;
+
+    /**
      * Called when a CSS pseudo-class change would cause styles to be reapplied.
      */
     private void requestCssStateTransition() {
@@ -10016,7 +10020,6 @@ public abstract sealed class Node
         // so their cached first styleable ancestor may still be stale.
         final boolean resolvedEarly = cssHelperResolvedEarly;
 
-        cssHelperStale = false;
         cssHelperResolvedEarly = false;
 
         // CSS state is "REAPPLY"
