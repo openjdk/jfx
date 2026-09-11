@@ -46,7 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 

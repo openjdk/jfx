@@ -65,7 +65,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.scene.NodeHelper;
 import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 

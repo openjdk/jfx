@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import test.util.Util;
 
 public class DatePickerTest {

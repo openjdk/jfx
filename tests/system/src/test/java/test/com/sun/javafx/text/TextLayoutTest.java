@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Point2D;

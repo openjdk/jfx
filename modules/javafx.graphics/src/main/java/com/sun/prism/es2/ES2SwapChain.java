@@ -33,7 +33,7 @@ import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
 

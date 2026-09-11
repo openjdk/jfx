@@ -25,7 +25,7 @@
 
 package com.sun.javafx.application;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.SecurityUtil;
 import com.sun.javafx.util.Utils;

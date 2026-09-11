@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.layout;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
 import javafx.event.Event;

@@ -25,7 +25,7 @@
 
 package test.com.sun.webkit;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.SharedBuffer;
 import com.sun.webkit.SharedBufferShim;

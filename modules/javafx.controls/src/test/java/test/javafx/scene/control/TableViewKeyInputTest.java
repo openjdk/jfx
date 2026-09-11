@@ -53,7 +53,7 @@ import javafx.scene.layout.HBox;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;

@@ -31,7 +31,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.Utils;
 
-import static com.sun.javafx.PlatformUtil.*;
+import static com.sun.javafx.util.PlatformUtil.*;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;

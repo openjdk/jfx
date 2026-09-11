@@ -74,7 +74,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;

@@ -39,7 +39,7 @@ import javafx.scene.input.DataFormat;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import sun.awt.datatransfer.ClipboardTransferable;
 import sun.awt.datatransfer.SunClipboard;
 import test.util.Util;

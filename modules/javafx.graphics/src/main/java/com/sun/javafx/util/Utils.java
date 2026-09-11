@@ -42,7 +42,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.util.List;
-import com.sun.javafx.PlatformUtil;
+
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 

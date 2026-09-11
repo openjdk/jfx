@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 /**
  * Unit test for FX support in Java 8 launcher

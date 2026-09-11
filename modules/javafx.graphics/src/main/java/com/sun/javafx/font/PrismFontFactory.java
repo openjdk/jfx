@@ -39,7 +39,7 @@ import java.util.Locale;
 
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
 
 public abstract class PrismFontFactory implements FontFactory {

@@ -25,7 +25,7 @@
 
 package com.sun.media.jfxmediaimpl.platform;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.MetadataParser;

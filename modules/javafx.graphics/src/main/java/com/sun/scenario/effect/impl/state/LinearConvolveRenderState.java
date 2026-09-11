@@ -25,7 +25,7 @@
 
 package com.sun.scenario.effect.impl.state;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;

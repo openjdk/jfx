@@ -25,7 +25,7 @@
 
 package com.sun.media.jfxmediaimpl.platform.gstreamer;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaPlayer;

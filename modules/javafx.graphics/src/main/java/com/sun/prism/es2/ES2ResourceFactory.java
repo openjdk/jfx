@@ -29,7 +29,7 @@ import java.io.InputStream;
 import java.util.Map;
 
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.Mesh;

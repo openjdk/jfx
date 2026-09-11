@@ -25,7 +25,7 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
@@ -184,4 +184,3 @@ public class SystemMenuBarClickEventsTest {
 
     }
 }
-

@@ -26,7 +26,7 @@
 package com.sun.javafx.embed.swing.newimpl;
 
 import com.sun.glass.ui.Application;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.FXDnD;
 import com.sun.javafx.embed.swing.SwingCursors;

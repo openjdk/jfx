@@ -25,7 +25,7 @@
 
 package test.javafx.scene.web;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import javafx.event.Event;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;

@@ -26,13 +26,8 @@
 package test.util;
 
 import static org.junit.jupiter.api.Assertions.fail;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -49,7 +44,7 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import org.junit.jupiter.api.Assertions;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 /**
  * Utility methods for life-cycle testing

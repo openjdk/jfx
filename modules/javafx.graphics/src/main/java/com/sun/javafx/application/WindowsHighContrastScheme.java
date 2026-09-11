@@ -25,7 +25,7 @@
 
 package com.sun.javafx.application;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;

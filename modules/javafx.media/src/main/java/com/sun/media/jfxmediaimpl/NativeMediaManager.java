@@ -26,7 +26,7 @@
 package com.sun.media.jfxmediaimpl;
 
 import com.sun.glass.utils.NativeLibLoader;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.media.jfxmedia.*;
 import com.sun.media.jfxmedia.events.MediaErrorListener;
 import com.sun.media.jfxmedia.locator.Locator;

@@ -25,7 +25,7 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;

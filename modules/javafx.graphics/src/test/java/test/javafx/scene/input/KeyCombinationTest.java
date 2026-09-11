@@ -34,6 +34,7 @@ import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.sun.javafx.util.PlatformUtil;
 import javafx.event.Event;
 import javafx.scene.input.KeyCombination.ModifierValue;
 
@@ -558,7 +559,7 @@ public class KeyCombinationTest {
     // ------ Tests for getDisplayText() method
 
     private void assertPlatformEquals(String expectedWin, String expectedMac, String actual) {
-        if (com.sun.javafx.PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac()) {
             assertEquals(expectedMac, actual);
         } else {
             assertEquals(expectedWin, actual);
@@ -566,7 +567,7 @@ public class KeyCombinationTest {
     }
 
     private void assertPlatformEquals(KeyCombination expectedWin, KeyCombination expectedMac, KeyCombination actual) {
-        if (com.sun.javafx.PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac()) {
             assertEquals(expectedMac.getDisplayText(), actual.getDisplayText());
         } else {
             assertEquals(expectedWin.getDisplayText(), actual.getDisplayText());

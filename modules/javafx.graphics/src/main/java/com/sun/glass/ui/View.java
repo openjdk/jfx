@@ -26,6 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.tk.HeaderAreaType;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
@@ -49,12 +50,12 @@ public abstract class View {
 
         /* By default accessibility is enabled for Mac 10.9 or greater and Windows 7 or greater. */
         try {
-            String platform = Platform.determinePlatform();
+            String platform = PlatformUtil.getPlatform();
             String major = System.getProperty("os.version").replaceFirst("(\\d+)\\.\\d+.*", "$1");
             String minor = System.getProperty("os.version").replaceFirst("\\d+\\.(\\d+).*", "$1");
             int v = Integer.parseInt(major) * 100 + Integer.parseInt(minor);
-            return (platform.equals(Platform.MAC) && v >= 1009) ||
-                   (platform.equals(Platform.WINDOWS) && v >= 601);
+            return (platform.equals(PlatformUtil.MAC) && v >= 1009) ||
+                   (platform.equals(PlatformUtil.WINDOWS) && v >= 601);
         } catch (Exception e) {
             return false;
         }

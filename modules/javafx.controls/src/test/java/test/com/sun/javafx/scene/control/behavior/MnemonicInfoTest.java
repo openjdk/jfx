@@ -28,6 +28,8 @@ package test.com.sun.javafx.scene.control.behavior;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+
+import com.sun.javafx.util.PlatformUtil;
 import javafx.scene.input.KeyCombination;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.behavior.MnemonicInfo;
@@ -35,7 +37,7 @@ import com.sun.javafx.scene.control.behavior.MnemonicInfo;
 public class MnemonicInfoTest {
 
     private static void assertKeyCombination(String expected, KeyCombination actual) {
-        if (com.sun.javafx.PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac()) {
             assertSame(KeyCombination.ModifierValue.DOWN, actual.getMeta());
         } else {
             assertSame(KeyCombination.ModifierValue.DOWN, actual.getAlt());

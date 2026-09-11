@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
 import javafx.beans.InvalidationListener;

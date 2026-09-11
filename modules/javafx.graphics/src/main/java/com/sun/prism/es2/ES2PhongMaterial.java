@@ -25,7 +25,7 @@
 
 package com.sun.prism.es2;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;

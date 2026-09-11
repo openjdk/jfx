@@ -30,7 +30,7 @@ import java.util.Objects;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 
 /**
  * This immutable class represents a combination of keys which are used in key mappings.

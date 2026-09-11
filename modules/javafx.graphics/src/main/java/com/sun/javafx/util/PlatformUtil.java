@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,6 +35,12 @@ import java.util.Locale;
 import java.util.Properties;
 
 public class PlatformUtil {
+
+    public static final String MAC = "Mac";
+    public static final String WINDOWS = "Win";
+    public static final String GTK = "Gtk";
+    public static final String IOS = "Ios";
+    public static final String HEADLESS = "Headless";
 
     private static final String os = System.getProperty("os.name");
     private static final boolean embedded;
@@ -53,34 +59,35 @@ public class PlatformUtil {
         useEGL = Boolean.getBoolean("use.egl");
     }
 
-    private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
-    private static final boolean WINDOWS = os.startsWith("Windows");
-    private static final boolean MAC = os.startsWith("Mac");
-    private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
-    private static final boolean SOLARIS = os.startsWith("SunOS");
-    private static final boolean IOS = os.startsWith("iOS");
-    private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
-    private static final boolean HEADLESS = "headless".equals(embeddedType);
+    private static final boolean IS_ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
+    private static final boolean IS_WINDOWS = os.startsWith("Windows");
+    private static final boolean IS_MAC = os.startsWith("Mac");
+    private static final boolean IS_LINUX = os.startsWith("Linux") && !IS_ANDROID;
+    private static final boolean IS_SOLARIS = os.startsWith("SunOS");
+    private static final boolean IS_IOS = os.startsWith("iOS");
+    private static final boolean IS_STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
+    private static final boolean IS_HEADLESS = "headless".equals(embeddedType);
+    private static final String GLASS_PLATFORM = determineGlassPlatform();
 
     /**
      * Returns true if the operating system is a form of Windows.
      */
     public static boolean isWindows(){
-        return WINDOWS;
+        return IS_WINDOWS;
     }
 
     /**
      * Returns true if the operating system is a form of Mac OS.
      */
     public static boolean isMac(){
-        return MAC;
+        return IS_MAC;
     }
 
     /**
      * Returns true if the operating system is a form of Linux.
      */
     public static boolean isLinux(){
-        return LINUX;
+        return IS_LINUX;
     }
 
     public static boolean useEGL() {
@@ -91,7 +98,7 @@ public class PlatformUtil {
      * Returns true if the operating system is a form of Linux or Solaris
      */
     public static boolean isUnix(){
-        return LINUX || SOLARIS;
+        return IS_LINUX || IS_SOLARIS;
     }
 
     /**
@@ -112,25 +119,61 @@ public class PlatformUtil {
      * Returns true if the Headless glass platform is selected
      */
     public static boolean isHeadless(){
-        return HEADLESS;
+        return IS_HEADLESS;
     }
 
     /**
      * Returns true if the operating system is iOS
      */
     public static boolean isIOS(){
-        return IOS;
+        return IS_IOS;
     }
 
     public static boolean isAndroid() {
-        return ANDROID;
+        return IS_ANDROID;
     }
 
     /**
      * Returns true if the current runtime is a statically linked image
      */
     public static boolean isStaticBuild(){
-        return STATIC_BUILD;
+        return IS_STATIC_BUILD;
+    }
+
+    /**
+     * Returns the platform name as String.
+     */
+    public static String getPlatform() {
+        return GLASS_PLATFORM;
+    }
+
+    private static String determineGlassPlatform() {
+        // Provide for a runtime override, allowing EGL for example
+        String userPlatform = System.getProperty("glass.platform");
+        if (userPlatform != null) {
+            return switch (userPlatform) {
+                case "macosx" -> MAC;
+                case "windows" -> WINDOWS;
+                case "linux", "gtk" -> GTK;
+                case "ios" -> IOS;
+                case "headless" -> HEADLESS;
+                default -> userPlatform;
+            };
+        }
+
+        if (IS_MAC) {
+            return MAC;
+        }
+        if (IS_WINDOWS) {
+            return WINDOWS;
+        }
+        if (IS_LINUX) {
+            return GTK;
+        }
+        if (IS_IOS) {
+            return IOS;
+        }
+        return null;
     }
 
     private static void loadPropertiesFromFile(final File file) {

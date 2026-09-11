@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.scene.control.Properties;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.beans.value.ChangeListener;
@@ -46,8 +46,8 @@ import javafx.stage.Window;
 
 import java.util.function.Predicate;
 
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.util.PlatformUtil.isMac;
+import static com.sun.javafx.util.PlatformUtil.isWindows;
 import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import static javafx.scene.control.skin.TextInputControlSkin.Direction;
 import static javafx.scene.input.KeyCode.*;

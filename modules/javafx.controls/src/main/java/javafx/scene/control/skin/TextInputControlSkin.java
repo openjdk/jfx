@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.util.PlatformUtil;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.control.skin.FXVK;
@@ -38,7 +38,7 @@ import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
 
-import static com.sun.javafx.PlatformUtil.*;
+import static com.sun.javafx.util.PlatformUtil.*;
 
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
