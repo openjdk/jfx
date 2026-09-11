@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.BindingHelperObserver;
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.ListenerManager;
 
 /**
  * Base class that provides most of the functionality needed to implement a
@@ -60,6 +60,18 @@ import com.sun.javafx.binding.ExpressionHelper;
 public abstract class StringBinding extends StringExpression implements
         Binding<String> {
 
+    private static final ListenerManager<String, StringBinding> LISTENER_MANAGER = new ListenerManager<>() {
+        @Override
+        protected Object getData(StringBinding instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(StringBinding instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private String value;
     private boolean valid = false;
 
@@ -70,7 +82,7 @@ public abstract class StringBinding extends StringExpression implements
      * in one or more calls to {@link #unbind(Observable...)}.
      */
     private BindingHelperObserver observer;
-    private ExpressionHelper<String> helper = null;
+    private Object listenerData;
 
     /**
      * Creates a default {@code StringBinding}.
@@ -80,22 +92,22 @@ public abstract class StringBinding extends StringExpression implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super String> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super String> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -176,9 +188,12 @@ public abstract class StringBinding extends StringExpression implements
     @Override
     public final void invalidate() {
         if (valid) {
+            String oldValue = value;
+
             valid = false;
             onInvalidating();
-            ExpressionHelper.fireValueChangedEvent(helper);
+
+            LISTENER_MANAGER.fireValueChanged(this, oldValue, listenerData);
         }
     }
 
