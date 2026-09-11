@@ -27,6 +27,7 @@ package com.sun.javafx.stage;
 
 import com.sun.javafx.util.Utils;
 import javafx.collections.ObservableList;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.Node;
 import javafx.stage.PopupWindow;
 import javafx.stage.Window;
@@ -67,6 +68,14 @@ public class PopupWindowHelper extends WindowHelper {
         popupWindowAccessor.applyStylesheetFromOwner(popupWindow, owner);
     }
 
+    public static ReadOnlyObjectWrapper<Window> ownerWindow(PopupWindow popupWindow) {
+        return popupWindowAccessor.ownerWindow(popupWindow);
+    }
+
+    public static ReadOnlyObjectWrapper<Node> ownerNode(PopupWindow popupWindow) {
+        return popupWindowAccessor.ownerNode(popupWindow);
+    }
+
     public static ObservableList<Node> getContent(PopupWindow popupWindow) {
         return popupWindowAccessor.getContent(popupWindow);
     }
@@ -84,5 +93,7 @@ public class PopupWindowHelper extends WindowHelper {
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
         void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner);
+        ReadOnlyObjectWrapper<Window> ownerWindow(PopupWindow popupWindow);
+        ReadOnlyObjectWrapper<Node> ownerNode(PopupWindow popupWindow);
     }
 }
