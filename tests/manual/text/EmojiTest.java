@@ -41,24 +41,24 @@ public class EmojiTest extends Application {
    static String instructions =
            """
              This tests rendering of Emoji glyphs, which is only supported on macOS.
-     
+
              On macOS, you should see a yellow-coloured smiling face image embedded
              between 'ab' and 'cd'.
              On other platforms, it may be a missing glyph, an empty space, or a
              similar rendering as a greyscale/B&W glyph.
-     
+
              Principally, you are checking that the emoji is rendered on macOS in
              each of the controls and nodes displayed in the test. You are also
              checking that the editable text field handles selection of the emoji
              glyph with the same background as other glyphs. This presumes that the
              emoji image has transparent background pixels.
-     
+
              There are three different ways it is displayed for verification:
-     
+
              1. Text node
              2. Label control
              3. TextField control
-     
+
              Press the Pass or Fail button as appropriate, and the test will exit.
              If what you see is not explained here, ask before filing a bug.
              """;
