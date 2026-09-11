@@ -93,8 +93,21 @@
     dd->eventLoop = (*env)->NewGlobalRef(env, jobj);
 
     if (owner) {
+        // AppKit does not call the completionHandler when the owner window
+        // is closed, which would lead the nested event loop stuck.
+        // Therefore we close the dialog when the owner is closed.
+        id closeObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:NSWindowWillCloseNotification
+                        object:owner
+                         queue:nil
+                    usingBlock:^(NSNotification *note)
+        {
+            [self->owner endSheet:self->panel returnCode:NSModalResponseCancel];
+        }];
+
         [panel beginSheetModalForWindow: owner completionHandler:^(NSInteger result)
         {
+            [[NSNotificationCenter defaultCenter] removeObserver:closeObserver];
             [dd exitModalWithEnv:env result:result];
         }
         ];
