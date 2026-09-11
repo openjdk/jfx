@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -260,11 +260,26 @@ public class DWGlyph implements Glyph {
     IDWriteGlyphRunAnalysis createAnalysis(float x, float y) {
         if (run.fontFace == 0) return null;
         IDWriteFactory factory = DWFactory.getDWriteFactory();
-        int renderingMode = DWFontStrike.SUBPIXEL_Y ?
-                            OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC :
-                            OS.DWRITE_RENDERING_MODE_NATURAL;
+        // The NATURAL rendering mode can produce distorted glyphs at certain
+        // sizes (see Tahoma 12 pt at a screen scale of %150 as an example)
+        // so we default to NATURAL_SYMMETRIC. But that can produce light,
+        // fuzzy results for small glyphs. Microsoft suggests using
+        // NATURAL_SYMMETRIC for anything greater than 16 ppem and NATURAL
+        // for smaller glyphs.
+        int renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
         int measuringMode = OS.DWRITE_MEASURING_MODE_NATURAL;
         DWRITE_MATRIX matrix = strike.matrix; /* can be null */
+        if (matrix != null && !DWFontStrike.SUBPIXEL_Y) {
+            Point2D pt = new Point2D(1.0f, 0.0f);
+            strike.getTransform().transform(pt, pt);
+            if (pt.y == 0 && Math.abs(pt.x) > 0) {
+                double scale = Math.abs(pt.x);
+                double ppem = (run.fontEmSize * 96 * scale) / 72.0;
+                if (ppem < 16) {
+                    renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL;
+                }
+            }
+        }
         float dpi = 1;  /* Assumes WICBitmap has 96 dpi */
         return factory.CreateGlyphRunAnalysis(run, dpi, matrix, renderingMode, measuringMode, x, y);
     }
