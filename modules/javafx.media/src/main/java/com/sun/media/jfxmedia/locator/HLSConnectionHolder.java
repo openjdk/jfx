@@ -28,7 +28,9 @@ import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -45,7 +47,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 final class HLSConnectionHolder extends ConnectionHolder {
@@ -54,8 +56,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private boolean isAudioExtStream = false;
     private HLSConnectionHolder audioConnectionHolder = null;
     private URLConnection urlConnection = null;
-    private URLConnection headerConnection = null;
+    private boolean sendHeader = false;
     private ReadableByteChannel headerChannel = null;
+    private String cachedHeaderUri = null;
+    private byte[] cachedHeader = null;
     private final PlaylistLoader playlistLoader;
     private VariantPlaylist variantPlaylist = null;
     private Playlist currentPlaylist = null;
@@ -66,7 +70,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private boolean isBitrateAdjustable = false;
     private boolean hasAudioExtStream = false;
     private long readStartTime = -1;
-    private boolean sendHeader = false;
     private boolean isInitialized = false;
     private int duration = -1;
     // Will be set to adjusted start time of segment.
@@ -87,6 +90,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     static final int HLS_VALUE_MIMETYPE_AAC = 4;
     static final String CHARSET_UTF_8 = "UTF-8";
     static final String CHARSET_US_ASCII = "US-ASCII";
+    static final long MAX_HEADER_SIZE = 4 * 1024 * 1024;
 
     HLSConnectionHolder(URI uri) {
         playlistLoader = new PlaylistLoader();
@@ -165,14 +169,32 @@ final class HLSConnectionHolder extends ConnectionHolder {
         }
 
         if (hasAudioExtStream && position != 0) {
-            if (getAudioStream() == null || getAudioStream().getCurrentPlaylist() == null) {
+            HLSConnectionHolder audioStream = getAudioStream();
+            if (audioStream == null || audioStream.getCurrentPlaylist() == null) {
                 return -1; // Something wrong or EOS
+            }
+
+            if (isEndSeek(position)) {
+                double audioPosition = audioStream.getCurrentPlaylist().seekLastSegment();
+                if (audioPosition == -1) {
+                    return -1; // Something wrong or EOS
+                }
+
+                // Audio and video renditions can have slightly different durations.
+                // Try to align video to audio first, but fall back to the last video
+                // segment instead of reporting EOS for seek-to-end.
+                if (currentPlaylist.seek((long) audioPosition) == -1 &&
+                        currentPlaylist.seekLastSegment() == -1) {
+                    return -1; // Something wrong or EOS
+                }
+
+                return (long) (audioPosition * HLS_VALUE_FLOAT_MULTIPLIER);
             }
 
             // Video stream with audio extenstion.
             // Get start of audio segment for seek position. This is same start position for
             // audio stream when seek to "position".
-            double audioPosition = getAudioStream().getCurrentPlaylist().seekGetStartTime(position);
+            double audioPosition = audioStream.getCurrentPlaylist().seekGetStartTime(position);
 
             // Seek this video stream to audioPosition. Note: If we seek video stream to position,
             // we might get segment which will not be aligned with audio start time after seek, since
@@ -189,6 +211,11 @@ final class HLSConnectionHolder extends ConnectionHolder {
         } else {
             return (long) (currentPlaylist.seek(position) * HLS_VALUE_FLOAT_MULTIPLIER);
         }
+    }
+
+    private boolean isEndSeek(long position) {
+        return duration >= 0 &&
+                position >= ((double) duration / HLS_VALUE_FLOAT_MULTIPLIER) - 1.0;
     }
 
     @Override
@@ -215,7 +242,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
             case HLS_PROP_LOAD_SEGMENT:
                 return loadNextSegment();
             case HLS_PROP_SEGMENT_START_TIME:
-                int segmentStart = -1;
+                int segmentStart;
                 if (segmentStartTimeAfterSeek != -1) {
                     segmentStart = segmentStartTimeAfterSeek;
                     segmentStartTimeAfterSeek = -1;
@@ -328,9 +355,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
         } finally {
             headerChannel = null;
         }
-
-        Locator.closeConnection(headerConnection);
-        headerConnection = null;
     }
 
     void setNewCurrentPlaylist(Playlist value) {
@@ -343,6 +367,32 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
     void setDuration(int value) {
         duration = value;
+    }
+
+    private byte[] getCachedHeader(String mediaFile) throws IOException, URISyntaxException {
+        if (mediaFile.equals(cachedHeaderUri)) {
+            return cachedHeader;
+        }
+
+        final URI uri = new URI(mediaFile);
+        final URLConnection connection = uri.toURL().openConnection();
+
+        try (InputStream in = connection.getInputStream()) {
+            long length = connection.getContentLengthLong();
+            if (length > MAX_HEADER_SIZE) {
+                throw new IOException("HLS init segment is too large: " + length);
+            }
+
+            byte[] header = in.readNBytes((int)(MAX_HEADER_SIZE + 1));
+            if (header.length > MAX_HEADER_SIZE) {
+               throw new IOException("HLS init segment is too large: " + length);
+            }
+            cachedHeader = header;
+            cachedHeaderUri = mediaFile;
+            return cachedHeader;
+        } finally {
+            Locator.closeConnection(connection);
+        }
     }
 
     // Returns -1 EOS or critical error
@@ -361,10 +411,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
             }
 
             try {
-                URI uri = new URI(mediaFile);
-                headerConnection = uri.toURL().openConnection();
-                headerChannel = openHeaderChannel();
-                headerLength = headerConnection.getContentLength();
+                byte[] header = getCachedHeader(mediaFile);
+                headerChannel = Channels.newChannel(new ByteArrayInputStream(header));
+                headerLength = header.length;
             } catch (IOException | URISyntaxException e) {
                 return -1;
             }
@@ -398,8 +447,20 @@ final class HLSConnectionHolder extends ConnectionHolder {
         return Channels.newChannel(urlConnection.getInputStream());
     }
 
-    private ReadableByteChannel openHeaderChannel() throws IOException {
-        return Channels.newChannel(headerConnection.getInputStream());
+    // Sets media file index based on sequence number and not on file name.
+    // Files names can be different beetween variable playlists.
+    // For example file_1080p_0025.m4s and file_720p_0025.m4s.
+    private void setAdjustedBitrateIndex(Playlist currentPlaylist, Playlist playlist) {
+        int currentSequenceNumber = currentPlaylist.getSequenceNumber();
+        int sequenceNumber = playlist.getSequenceNumber();
+
+        int currentMediaFileIndex = currentPlaylist.getMediaFileIndex();
+
+        int diff = currentSequenceNumber - sequenceNumber;
+        playlist.setMediaFileIndex(currentMediaFileIndex + diff);
+
+        double currentStartTime = currentPlaylist.getMediaFileStartTime(currentMediaFileIndex);
+        playlist.adjustStartTime(currentStartTime);
     }
 
     private void adjustBitrate(long readTime) {
@@ -408,14 +469,16 @@ final class HLSConnectionHolder extends ConnectionHolder {
         Playlist playlist = variantPlaylist.getPlaylistBasedOnBitrate(avgBitrate);
         if (playlist != null && playlist != currentPlaylist) {
             if (currentPlaylist.isLive()) {
-                playlist.update(currentPlaylist.getNextMediaFile());
+                playlist.updateForBitrateSwitch();
+                setAdjustedBitrateIndex(currentPlaylist, playlist);
                 playlistLoader.setReloadPlaylist(playlist);
+            } else {
+                // Copy index when switching playlist, so we continue reading
+                // from correct position.
+                playlist.setMediaFileIndex(currentPlaylist.getMediaFileIndex());
             }
 
             playlist.setForceDiscontinuity(true);
-            // Copy index when switching playlist, so we continue reading
-            // from correct position.
-            playlist.setMediaFileIndex(currentPlaylist.getMediaFileIndex());
             currentPlaylist = playlist;
             if (currentPlaylist.isFragmentedMP4()) {
                 sendHeader = true;
@@ -436,14 +499,16 @@ final class HLSConnectionHolder extends ConnectionHolder {
         synchronized (newPlaylistLock) {
             if (newCurrentPlaylist != null && newCurrentPlaylist != currentPlaylist) {
                 if (currentPlaylist.isLive()) {
-                    newCurrentPlaylist.update(currentPlaylist.getNextMediaFile());
+                    newCurrentPlaylist.updateForBitrateSwitch();
+                    setAdjustedBitrateIndex(currentPlaylist, newCurrentPlaylist);
                     playlistLoader.setReloadAudioExtPlaylist(newCurrentPlaylist);
+                } else {
+                    // Copy index when switching playlist, so we continue reading
+                    // from correct position.
+                    newCurrentPlaylist.setMediaFileIndex(currentPlaylist.getMediaFileIndex());
                 }
 
                 newCurrentPlaylist.setForceDiscontinuity(true);
-                // Copy index when switching playlist, so we continue reading
-                // from correct position.
-                newCurrentPlaylist.setMediaFileIndex(currentPlaylist.getMediaFileIndex());
                 currentPlaylist = newCurrentPlaylist;
                 if (currentPlaylist.isFragmentedMP4()) {
                     sendHeader = true;
@@ -587,6 +652,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 } else {
                     if (currentPlaylist == null) {
                         currentPlaylist = parser.getPlaylistOrNull();
+                        if (currentPlaylist != null) {
+                            currentPlaylist.setLive(parser.isLivePlaylist());
+                        }
                     }
                 }
 
@@ -594,7 +662,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
                     // Load playlists (EXT-X-STREAM-INF) inside variant playlist if needed
                     variantPlaylist.getExtStreamInf().forEach((ExtStreamInf ext) -> {
                         Playlist playlist = new Playlist(ext.getPlaylistURI());
-                        playlist.update(null);
+                        playlist.update();
                         playlist.setAudioGroupID(ext.getAudioGroupID());
                         ext.setPlaylist(playlist);
                     });
@@ -620,7 +688,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         Playlist playlist = new Playlist(ext.getPlaylistURI());
                         playlist.setIsVideoStreamFragmentedMP4(isVideoStreamFragmentedMP4);
                         playlist.setVideoStreamTargetDuration(videoStreamTargetDuration);
-                        playlist.update(null);
+                        playlist.update();
                         ext.setPlaylist(playlist);
                     });
                     variantPlaylist.validateAudioExtMedia();
@@ -628,19 +696,22 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
                 if (variantPlaylist != null) {
                     currentPlaylist = variantPlaylist.getPlaylist(0);
-                    // Start reloading live playlist
-                    if (currentPlaylist != null && currentPlaylist.isLive()) {
-                        setReloadPlaylist(currentPlaylist);
+                }
 
-                        // Add audio ext playlist for reload if we have one
+                // Start reloading live playlist if needed
+                if (currentPlaylist != null && currentPlaylist.isLive()) {
+                    setReloadPlaylist(currentPlaylist);
+
+                    // Add audio ext playlist for reload if we have one
+                    if (variantPlaylist != null) {
                         Playlist audioExtPlaylist = variantPlaylist
                                 .getAudioExtPlaylist(currentPlaylist.getAudioGroupID());
                         if (audioExtPlaylist != null && audioExtPlaylist.isLive()) {
                             this.setReloadAudioExtPlaylist(audioExtPlaylist);
                         }
-
-                        putState(STATE_RELOAD_PLAYLIST);
                     }
+
+                    putState(STATE_RELOAD_PLAYLIST);
                 }
             } finally {
                 readySignal.countDown();
@@ -651,7 +722,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
             try {
                 long timeout;
                 synchronized (reloadLock) {
-                    timeout = reloadPlaylist.getTargetDuration() / 2;
+                    timeout = TimeUnit.SECONDS.toMillis(
+                            reloadPlaylist.getTargetDuration()) / 2;
                 }
                 Thread.sleep(timeout);
             } catch (InterruptedException ex) {
@@ -659,9 +731,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
             }
 
             synchronized (reloadLock) {
-                reloadPlaylist.update(null);
+                reloadPlaylist.update();
                 if (reloadAudioExtPlaylist != null) {
-                    reloadAudioExtPlaylist.update(null);
+                    reloadAudioExtPlaylist.update();
                 }
             }
 
@@ -769,12 +841,12 @@ final class HLSConnectionHolder extends ConnectionHolder {
         private String getNextLine(BufferedReader reader) throws IOException {
             String line;
             while ((line = reader.readLine()) != null) {
-                // Ignore blank lines, comments and tags
+                // Ignore blank lines and comments
                 if (line.isEmpty() || line.startsWith("#")) {
                     continue;
-                } else {
-                    return line;
                 }
+
+                return line;
             }
 
             throw new MediaException("Invalid HLS playlist");
@@ -803,7 +875,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         validateArray(params, 1);
                         String uri = getNextLine(reader);
                         getPlaylist().addMediaFile(uri,
-                                Double.parseDouble(params[0]), isDiscontinuity);
+                                Double.parseDouble(params[0]), isDiscontinuity,
+                                false);
                         // Clear discontinue flag, until it is set again by parser.
                         isDiscontinuity = false;
                         break;
@@ -844,7 +917,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         String[] params = tagParams[1].split(",");
                         String uri = getStringParams(TAG_PARAM_URI, params);
                         getPlaylist().addMediaFile(uri,
-                                getPlaylist().getTargetDuration(), true);
+                                getPlaylist().getTargetDuration(), true,
+                                true);
                         break;
                     }
                     case "#EXT-X-MEDIA": { // #EXT-X-MEDIA
@@ -910,7 +984,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         String[] paramValuePair = param.split("=");
                         if (paramValuePair.length == 2 &&
                                 !paramValuePair[1].isEmpty()) {
-                            return Stream.of(Integer.parseInt(paramValuePair[1]));
+                            return Stream.of(Integer.valueOf(paramValuePair[1]));
                         }
                         return Stream.empty();
                     })
@@ -1184,9 +1258,14 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
     private static class Playlist {
 
+        // true if playlist is live
         private boolean isLive = false;
-        private volatile boolean isLiveWaiting = false;
-        private volatile boolean isLiveStop = false;
+        // true if getNextMediaFiles() waits for new segment
+        private boolean isGetNextMediaFileWaits = false;
+        // true if getNextMediaFiles() needs to abort (return null) after notification
+        private boolean abortGetNextMediaFile = false;
+        // true if playlist is closed and getNextMediaFiles() should return null
+        private boolean isPlaylistClosed = false;
         private long targetDuration = 0;
         private URI playlistURI = null;
         private final Object lock = new Object();
@@ -1196,13 +1275,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
         private double startTime = 0.0;
         private double duration = 0.0;
         private int sequenceNumber = -1;
-        private int sequenceNumberStart = -1;
         private boolean sequenceNumberUpdated = false;
         private boolean forceDiscontinuity = false;
         private int mimeType = HLS_VALUE_MIMETYPE_UNKNOWN;
         private int mediaFileIndex = -1;
-        private final Semaphore liveSemaphore = new Semaphore(0);
-        private boolean isPlaylistClosed = false;
         // Valid only if this playlist represent audio extension
         private boolean isVideoStreamFragmentedMP4 = false;
         // Target duration of video stream. For fMP4 streams PTS
@@ -1218,27 +1294,26 @@ final class HLSConnectionHolder extends ConnectionHolder {
             playlistURI = uri;
         }
 
-        void update(String nextMediaFile) {
+        void updateForBitrateSwitch() {
+            synchronized (lock) {
+                mediaFiles.clear();
+                mediaFilesDiscontinuities.clear();
+                mediaFilesStartTimes.clear();
+                mediaFileIndex = -1;
+                sequenceNumber = -1;
+                sequenceNumberUpdated = false;
+                forceDiscontinuity = false;
+            }
+
+            update();
+        }
+
+        void update() {
             PlaylistParser parser = new PlaylistParser();
             parser.setPlaylist(this);
             parser.load(playlistURI);
 
-            isLive = parser.isLivePlaylist();
-            if (isLive) {
-                duration = -1.0;
-            }
-
-            if (nextMediaFile != null) {
-                synchronized (lock) {
-                    for (int i = 0; i < mediaFiles.size(); i++) {
-                        String mediaFile = mediaFiles.get(i);
-                        if (nextMediaFile.endsWith(mediaFile)) {
-                            mediaFileIndex = i - 1;
-                            break;
-                        }
-                    }
-                }
-            }
+            setLive(parser.isLivePlaylist());
         }
 
         void setMediaFileIndex(int value) {
@@ -1251,6 +1326,17 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         boolean isLive() {
             return isLive;
+        }
+
+        void setLive(boolean value) {
+            synchronized (lock) {
+                isLive = value;
+                if (isLive) {
+                    duration = -1.0;
+                }
+                // Notify wait if we transition from live to on-demand.
+                lock.notifyAll();
+            }
         }
 
         boolean isFragmentedMP4() {
@@ -1273,7 +1359,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
             isVideoStreamFragmentedMP4 = value;
         }
 
-        void addMediaFile(String uri, double duration, boolean isDiscontinuity)
+        void addMediaFile(String uri, double duration, boolean isDiscontinuity, boolean isInitSegment)
                 throws URISyntaxException, MalformedURLException {
             synchronized (lock) {
 
@@ -1286,21 +1372,36 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 }
 
                 if (isLive) {
-                    if (sequenceNumberUpdated) {
+                    if (sequenceNumberUpdated && !isInitSegment) {
                         int index = mediaFiles.indexOf(uri);
                         if (index != -1) {
-                            for (int i = 0; i < index; i++) {
-                                mediaFiles.remove(0);
-                                mediaFilesDiscontinuities.remove(0);
+                            // For fMP4, index 0 is init header and cannot be removed
+                            int removeIndex = isFragmentedMP4() ? 1 : 0;
+                            for (int i = removeIndex; i < index; i++) {
+                                mediaFiles.remove(removeIndex);
+                                mediaFilesDiscontinuities.remove(removeIndex);
+                                mediaFilesStartTimes.remove(removeIndex);
                                 if (mediaFileIndex == -1) {
                                     forceDiscontinuity = true;
                                 }
-                                if (mediaFileIndex >= 0) {
+                                if (mediaFileIndex >= removeIndex) {
                                     mediaFileIndex--;
                                 }
                             }
                         }
                         sequenceNumberUpdated = false;
+                    } else if (isInitSegment) {
+                        if (mediaFiles.isEmpty()) {
+                            mediaFiles.add(uri);
+                            mediaFilesDiscontinuities.add(isDiscontinuity);
+                            mediaFilesStartTimes.add(startTime);
+                            startTime += duration;
+                        } else if (!mediaFiles.get(0).equals(uri)) {
+                            mediaFiles.set(0, uri);
+                            mediaFilesDiscontinuities.set(0, isDiscontinuity);
+                            forceDiscontinuity = true;
+                        }
+                        return; // Just init segment update. We done.
                     }
 
                     if (mediaFiles.contains(uri)) {
@@ -1308,66 +1409,63 @@ final class HLSConnectionHolder extends ConnectionHolder {
                     }
                 }
 
+                // Add URL, discontinue flag and start time
                 mediaFiles.add(uri);
                 mediaFilesDiscontinuities.add(isDiscontinuity);
+                mediaFilesStartTimes.add(this.startTime);
 
+                startTime += duration;
+
+                // For fragmented MP4 we should not add duration of first
+                // segment, since it is header without actually data.
+                if (!isInitSegment) {
+                    this.duration += duration;
+                }
+
+                // Notify live that we got new segment
                 if (isLive) {
-                    if (isLiveWaiting) {
-                        liveSemaphore.release();
-                    }
-                } else {
-                    mediaFilesStartTimes.add(this.startTime);
-                    this.startTime += duration;
-
-                    // For fragmented MP4 we should not add duration of first
-                    // segment, since it is header without actually data.
-                    if (mediaFiles.size() == 1) {
-                        if (!isFragmentedMP4()) {
-                            this.duration += duration;
-                        }
-                    } else {
-                        this.duration += duration;
+                    if (isGetNextMediaFileWaits) {
+                        lock.notifyAll();
                     }
                 }
             }
         }
 
         String getNextMediaFile() {
-            if (isLive) {
                 synchronized (lock) {
-                    isLiveWaiting = ((mediaFileIndex + 1) >= mediaFiles.size());
-                }
-                if (isLiveWaiting) {
+                // If live check if we need to wait for segment
+                while (isLive &&  !isPlaylistClosed && !abortGetNextMediaFile &&
+                        ((mediaFileIndex + 1) >= mediaFiles.size())) {
                     try {
-                        liveSemaphore.acquire();
-                        isLiveWaiting = false;
-                        if (isLiveStop) {
-                            isLiveStop = false;
-                            return null;
-                        }
+                        isGetNextMediaFileWaits = true;
+                        lock.wait();
+                        isGetNextMediaFileWaits = false;
                     } catch (InterruptedException e) {
-                        isLiveWaiting = false;
+                        isGetNextMediaFileWaits = false;
+                        abortGetNextMediaFile = false;
                         return null;
                     }
                 }
-                if (isPlaylistClosed) {
+
+                if (isPlaylistClosed || abortGetNextMediaFile) {
+                    if (abortGetNextMediaFile) {
+                        abortGetNextMediaFile = false;
+                    }
                     return null;
-                }
             }
 
-            synchronized (lock) {
                 mediaFileIndex++;
-                if (mediaFileIndex < mediaFiles.size()) {
-                    return mediaFiles.get(mediaFileIndex);
-                } else {
+                if (mediaFileIndex >= mediaFiles.size()) {
                     return null;
                 }
+
+                return mediaFiles.get(mediaFileIndex);
             }
         }
 
         String getHeaderFile() {
             synchronized (lock) {
-                if (mediaFiles.size() > 0) {
+                if (!mediaFiles.isEmpty()) {
                     return mediaFiles.get(0);
                 } else {
                     return null;
@@ -1376,20 +1474,42 @@ final class HLSConnectionHolder extends ConnectionHolder {
         }
 
         double getMediaFileStartTime() {
-            return getMediaFileStartTime(mediaFileIndex);
+            synchronized (lock) {
+                return getMediaFileStartTime(mediaFileIndex);
+            }
         }
 
         double getMediaFileStartTime(int index) {
-            if (index >= 0 && index < mediaFilesStartTimes.size()) {
-                // Special case if video is fMP4 and audio ext is not
-                if (isVideoStreamFragmentedMP4 && !isFragmentedMP4() && index != 0) {
-                    return (mediaFilesStartTimes.get(index) + (double) videoStreamTargetDuration);
-                } else {
-                    return mediaFilesStartTimes.get(index);
+            synchronized (lock) {
+                if (index >= 0 && index < mediaFilesStartTimes.size()) {
+                    // Special case if video is fMP4 and audio ext is not
+                    if (isVideoStreamFragmentedMP4 && !isFragmentedMP4() && index != 0) {
+                        return (mediaFilesStartTimes.get(index) + (double) videoStreamTargetDuration);
+                    } else {
+                        return mediaFilesStartTimes.get(index);
+                    }
                 }
-            }
 
-            return -1.0;
+                return -1.0;
+            }
+        }
+
+        void adjustStartTime(double expectedStartTime) {
+            synchronized (lock) {
+                if (expectedStartTime < 0 ||
+                        mediaFileIndex < 0 ||
+                        mediaFileIndex >= mediaFilesStartTimes.size()) {
+                    return;
+                }
+
+                double offset = expectedStartTime - mediaFilesStartTimes.get(mediaFileIndex);
+
+                for (int i = 0; i < mediaFilesStartTimes.size(); i++) {
+                    mediaFilesStartTimes.set(i, mediaFilesStartTimes.get(i) + offset);
+                }
+
+                startTime += offset;
+            }
         }
 
         double getDuration() {
@@ -1474,9 +1594,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         } else {
                             mediaFileIndex = -1;
                         }
-                        if (isLiveWaiting) {
-                            isLiveStop = true;
-                            liveSemaphore.release();
+                        if (isGetNextMediaFileWaits) {
+                            abortGetNextMediaFile = true;
+                            lock.notifyAll();
                         }
                         return 0;
                     }
@@ -1528,10 +1648,26 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return -1;
         }
 
+        double seekLastSegment() {
+            synchronized (lock) {
+                if (isLive || mediaFilesStartTimes.isEmpty()) {
+                    return -1.0;
+                }
+
+                int lastIndex = mediaFilesStartTimes.size() - 1;
+                if (isFragmentedMP4() && lastIndex == 0) {
+                    return -1.0;
+                }
+
+                mediaFileIndex = lastIndex - 1; // Load segment will increment mediaFileIndex.
+                return getMediaFileStartTime(lastIndex);
+            }
+        }
+
         int getMimeType() {
             synchronized (lock) {
                 if (mimeType == HLS_VALUE_MIMETYPE_UNKNOWN) {
-                    if (mediaFiles.size() > 0) {
+                    if (!mediaFiles.isEmpty()) {
                         if (stripParameters(mediaFiles.get(0)).endsWith(".ts")) {
                             mimeType = HLS_VALUE_MIMETYPE_MP2T;
                         } else if (stripParameters(mediaFiles.get(0)).endsWith(".mp3")) {
@@ -1551,7 +1687,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         String getMediaFileExtension() {
             synchronized (lock) {
-                if (mediaFiles.size() > 0) {
+                if (!mediaFiles.isEmpty()) {
                     String mediaFile = stripParameters(mediaFiles.get(0));
                     int index = mediaFile.lastIndexOf(".");
                     if (index != -1) {
@@ -1563,23 +1699,25 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return null;
         }
 
-        boolean setSequenceNumber(int value) {
-            if (sequenceNumberStart == -1) {
-                sequenceNumberStart = value;
-            } else if (sequenceNumber != value) {
-                sequenceNumberUpdated = true;
+        void setSequenceNumber(int value) {
+            synchronized (lock) {
+                sequenceNumberUpdated = sequenceNumber != -1 && sequenceNumber != value;
                 sequenceNumber = value;
-            } else {
-                return false;
             }
+        }
 
-            return true;
+        int getSequenceNumber() {
+            synchronized (lock) {
+                return sequenceNumber;
+            }
         }
 
         void close() {
-            if (isLive) {
-                isPlaylistClosed = true;
-                liveSemaphore.release();
+            synchronized (lock) {
+                if (isLive) {
+                    isPlaylistClosed = true;
+                    lock.notifyAll();
+                }
             }
         }
 
