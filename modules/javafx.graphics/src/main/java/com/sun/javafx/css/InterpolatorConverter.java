@@ -98,13 +98,13 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
 
         if (value.getValue() instanceof ParsedValue<?, ?>[] pv && pv[0].getValue() instanceof String funcName) {
             return switch (funcName) {
-                case "cubic-bezier(" -> CACHE.computeIfAbsent(value, key -> {
+                case "cubic-bezier(" -> CACHE.computeIfAbsent(value, _ -> {
                     return Interpolator.ofSpline(
                         numberArg(pv, 1), numberArg(pv, 2),
                         numberArg(pv, 3), numberArg(pv, 4));
                 });
 
-                case "steps(" -> CACHE.computeIfAbsent(value, key -> {
+                case "steps(" -> CACHE.computeIfAbsent(value, _ -> {
                     String position = pv[2] != null ? (String)pv[2].getValue() : "end";
                     return Interpolator.ofSteps(((Number)pv[1].getValue()).intValue(), switch (position) {
                         case "jump-start", "start" -> StepPosition.START;
@@ -114,7 +114,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                     });
                 });
 
-                case "linear(" -> CACHE.computeIfAbsent(value, key -> {
+                case "linear(" -> CACHE.computeIfAbsent(value, _ -> {
                     return Interpolator.ofLinear(pointArg(pv));
                 });
 

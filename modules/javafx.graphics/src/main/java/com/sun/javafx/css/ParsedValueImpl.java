@@ -33,6 +33,7 @@ import javafx.css.StyleConverter.StringStore;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -705,8 +706,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     }
 
     private enum NumberType {
-        INT(0, (stream, number) -> stream.writeInt(number.intValue()), stream -> stream.readInt()),
-        DOUBLE(1, (stream, number) -> stream.writeDouble(number.doubleValue()), stream -> stream.readDouble());
+        INT(0, (stream, number) -> stream.writeInt(number.intValue()), DataInputStream::readInt),
+        DOUBLE(1, (stream, number) -> stream.writeDouble(number.doubleValue()), DataInputStream::readDouble);
 
         NumberType(int typeCode, Serializer serializer, Deserializer deserializer) {
             this.typeCode = typeCode;
@@ -722,7 +723,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             NumberType typeCode = switch (number) {
                 case Integer _ -> INT;
                 case Double _ -> DOUBLE;
-                default -> throw new AssertionError();
+                default -> throw new InternalError();
             };
 
             stream.writeByte(typeCode.typeCode);
