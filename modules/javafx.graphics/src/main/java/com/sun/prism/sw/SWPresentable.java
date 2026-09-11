@@ -51,23 +51,24 @@ final class SWPresentable extends SWRTTexture implements Presentable {
 
     @Override
     public boolean prepare(Rectangle dirtyregion) {
-        if (!pState.isViewClosed()) {
-            /*
-             * JDK-8092310
-             * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
-             * TODO: dirty region support
-             */
-            int w = getPhysicalWidth();
-            int h = getPhysicalHeight();
-            pixels = pixelSource.getUnusedPixels(w, h, 1.0f, 1.0f);
-            IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
-            IntBuffer buf = getSurface().getDataIntBuffer();
-            assert buf.hasArray();
-            System.arraycopy(buf.array(), 0, pixBuf.array(), 0, w*h);
-            return true;
-        } else {
+        if (pState.isViewClosed()) {
             return false;
         }
+
+        /*
+         * JDK-8092310
+         * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
+         * TODO: dirty region support
+         */
+        int w = getPhysicalWidth();
+        int h = getPhysicalHeight();
+        pixels = pixelSource.getUnusedPixels(w, h, 1.0f, 1.0f);
+        IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
+        IntBuffer buf = IntBuffer.wrap(getDataNoClone());
+        assert buf.hasArray();
+        System.arraycopy(buf.array(), 0, pixBuf.array(), 0, w*h);
+
+        return true;
     }
 
     @Override

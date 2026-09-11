@@ -27,6 +27,7 @@ package com.sun.javafx.tk.quantum;
 
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
+import javafx.scene.image.DrawingContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
 import javafx.scene.input.Dragboard;
@@ -74,6 +75,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
@@ -90,6 +92,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -125,6 +128,7 @@ import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.prism.sw.SWDrawingContext;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -1509,8 +1513,17 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override
     public PlatformImage createPlatformImage(int w, int h) {
-        ByteBuffer bytebuf = ByteBuffer.allocate(w * h * 4);
-        return com.sun.prism.Image.fromByteBgraPreData(bytebuf, w, h);
+        IntBuffer buf = IntBuffer.allocate(w * h);
+        return com.sun.prism.Image.fromIntArgbPreData(buf, w, h);
+    }
+
+    @Override
+    public DrawingContext createDrawingContext(PlatformImage image, Consumer<Rectangle> pixelsDirty) {
+        if (image instanceof com.sun.prism.Image prismImage) {
+            return new SWDrawingContext(prismImage, pixelsDirty);
+        }
+
+        throw new UnsupportedOperationException("no drawing context for platform image: " + image.getClass().getName());
     }
 
     @Override

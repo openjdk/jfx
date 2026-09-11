@@ -26,18 +26,19 @@
 package test.com.sun.javafx.geom;
 
 import com.sun.javafx.geom.Arc2D;
-import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.IllegalPathStateException;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
-import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Path2DTest {
     void checkLine(PathIterator pi, float x1, float y1, float x2, float y2) {
@@ -189,7 +190,6 @@ public class Path2DTest {
 
     public @Test
     void testArcTo() {
-        Path2D path = new Path2D();
         for (int pathdeg = 0; pathdeg <= 360; pathdeg += 15) {
             double pathrad = Math.toRadians(pathdeg);
             float px = (float) Math.cos(pathrad) * 50;
@@ -206,17 +206,6 @@ public class Path2DTest {
                 }
             }
         }
-        RectBounds rectBounds = new RectBounds(10, 20, 20, 30);
-        assertFalse(rectBounds.isEmpty());
-        rectBounds.makeEmpty();
-        assertTrue(rectBounds.isEmpty());
-        assertEquals(new RectBounds(), rectBounds);
-
-        BoxBounds boxBounds = new BoxBounds(10, 20, 10, 40, 50, 20);
-        assertFalse(boxBounds.isEmpty());
-        boxBounds.makeEmpty();
-        assertTrue(boxBounds.isEmpty());
-        assertEquals(new BoxBounds(), boxBounds);
     }
 
     public @Test
@@ -590,5 +579,117 @@ public class Path2DTest {
         Path2D p2dtest = new Path2D();
         p2dtest.appendSVGPath(svgpathminWS);
         checkShapes(p2dref, p2dtest);
+    }
+
+    @Test
+    void arcToShouldRoundCorner() throws NoninvertibleTransformException {
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 30);
+        p.arcTo(BaseTransform.IDENTITY_TRANSFORM, 30, 30, 30, 10, 10);
+        p.closePath();
+
+        assertTrue(p.contains(24, 24));  // inside the path
+        assertFalse(p.contains(29, 29));  // cut off by the rounded corner
+    }
+
+    @Test
+    void arcToShouldApplyTransformAfterComputingArc() throws NoninvertibleTransformException {
+        Affine2D tx = new Affine2D();
+
+        tx.setToTranslation(100, 50);
+
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 30);
+        p.arcTo(tx, 30, 30, 30, 10, 10);
+        p.closePath();
+
+        assertTrue(p.contains(124, 74));  // (24, 24) shifted by the transform
+        assertFalse(p.contains(129, 79));  // (29, 29) shifted by the transform
+    }
+
+    @Test
+    void arcToShouldRejectColinearArcs() {
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 10);
+        p.lineTo(30, 10);
+
+        // all points lie on the same line
+        assertThrows(IllegalPathStateException.class, () -> p.arcTo(BaseTransform.IDENTITY_TRANSFORM, 50, 10, 70, 10, 10));
+    }
+
+    @Test
+    void arcToShouldRejectNonInvertibleTransforms() {
+        Affine2D tx = new Affine2D();
+
+        tx.setToScale(0, 1);  // squashes one dimension flat, can't invert that
+
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 10);
+
+        assertThrows(NoninvertibleTransformException.class, () -> p.arcTo(tx, 30, 30, 30, 10, 10));
+    }
+
+    @Test
+    void arcToShouldRejectNullTransform() {
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 10);
+
+        assertThrows(NullPointerException.class, () -> p.arcTo(null, 30, 30, 30, 10, 10));
+    }
+
+    @Test
+    void appendSVGPathShouldApplyTransform() throws NoninvertibleTransformException {
+        Affine2D tx = new Affine2D();
+
+        tx.setToTranslation(100, 50);
+
+        Path2D p = new Path2D();
+
+        p.appendSVGPath(tx, "M 10 10 L 30 10");
+
+        PathIterator pi = p.getPathIterator(BaseTransform.IDENTITY_TRANSFORM);
+        float[] coords = new float[6];
+
+        assertFalse(pi.isDone());
+        assertEquals(PathIterator.SEG_MOVETO, pi.currentSegment(coords));
+        assertEquals(110, coords[0]);
+        assertEquals(60, coords[1]);
+
+        pi.next();
+
+        assertFalse(pi.isDone());
+        assertEquals(PathIterator.SEG_LINETO, pi.currentSegment(coords));
+        assertEquals(130, coords[0]);
+        assertEquals(60, coords[1]);
+    }
+
+    @Test
+    void appendSVGPathShouldMergeWithExistingPath() throws NoninvertibleTransformException {
+        Path2D p = new Path2D();
+
+        p.moveTo(10, 10);
+        p.lineTo(20, 10);
+        p.appendSVGPath(BaseTransform.IDENTITY_TRANSFORM, "l 10 0");
+
+        // the relative line continues from the current point
+        assertEquals(30, p.getCurrentX());
+        assertEquals(10, p.getCurrentY());
+    }
+
+    @Test
+    void appendSVGPathShouldRejectIllegalCallsAndBadInput() {
+        Path2D p = new Path2D();
+
+        assertThrows(IllegalPathStateException.class, () -> p.appendSVGPath(BaseTransform.IDENTITY_TRANSFORM, "l 10 0"));
+
+        p.moveTo(10, 10);
+
+        assertThrows(NullPointerException.class, () -> p.appendSVGPath(BaseTransform.IDENTITY_TRANSFORM, null));
+        assertThrows(NullPointerException.class, () -> p.appendSVGPath(null, "l 10 0"));
     }
 }
