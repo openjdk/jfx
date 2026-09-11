@@ -530,7 +530,7 @@ public class ParsedValueTest {
         };
 
         for (Number number : numbers) {
-            assertThrows(AssertionError.class, () ->
+            assertThrows(InternalError.class, () ->
                 new ParsedValueImpl<>(number, null).writeBinary(
                     new DataOutputStream(new ByteArrayOutputStream()), new StringStore()),
                 number.getClass().getName());
