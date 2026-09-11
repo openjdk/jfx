@@ -806,6 +806,11 @@ try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStrea
 }
 if (jdkVersionInfo == null) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
+apply plugin: "jvm-toolchains"
+
+// 'jdkVersionInfo' is the resolved Runtime.Version. 'feature' is the new name for the 'major' element
+ext.JDK_TOOLCHAIN_VERSION = JavaLanguageVersion.of(jdkVersionInfo.feature())
+
 // Use --upgrade-module-path instead of --module-path when compiling and
 // running tests if we are using a JDK that includes an upgradable
 // jdk.jsobject module.  Currently, this is JDK 24 or later. Once
@@ -2060,6 +2065,10 @@ allprojects {
     // set compiler.options.release (to the same target version), which will
     // override this setting, but it is needed for those modules that can't.
     java {
+        toolchain {
+            languageVersion = JDK_TOOLCHAIN_VERSION
+        }
+
         sourceCompatibility = JAVA_TARGET_VERSION
     }
 
@@ -2095,7 +2104,6 @@ allprojects {
         // Tests are forced to rerun when they are *not* marked as up-to-date
         outputs.upToDateWhen { !IS_FORCE_TESTS }
 
-        executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
         scanForTestClasses = true;
@@ -2319,7 +2327,6 @@ project(":graphics") {
             inJSL = inJSL.replace("/", "\\")
         }
 
-        executable = JAVA
         classpath = project.configurations.antlr
         workingDir = wd
         mainClass = "org.antlr.v4.Tool"
@@ -4381,6 +4388,9 @@ allprojects {
     // task and manually provide the options necessary to fire up the
     // compiler with the right settings.
     tasks.withType(JavaCompile) { compile ->
+        compile.javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JDK_TOOLCHAIN_VERSION
+        }
         if (compile.options.hasProperty("useAnt")) {
             compile.options.useAnt = true
             compile.options.useDepend = IS_USE_DEPEND
@@ -4401,9 +4411,9 @@ allprojects {
 
         compile.options.debug = true // we always generate debugging info in the class files
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
-        compile.options.fork = true
 
-        compile.options.forkOptions.executable = JAVAC
+        // forces forking of the damon and build JVMs (even when it's the same JDK), no-op if the JVMs are different
+        compile.options.fork = true
 
         compile.options.compilerArgs += ["-encoding", "UTF-8"]
         compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
@@ -4644,7 +4654,9 @@ task createOverviewFile() {
 task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
-    executable = JAVADOC
+    javadocTool = javaToolchains.javadocToolFor {
+        languageVersion = JDK_TOOLCHAIN_VERSION
+    }
     def projectsToDocument = [
         project(":base"),
         project(":graphics"),
