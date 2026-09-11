@@ -122,7 +122,7 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         VBox rootNode = new VBox(6, hBox1,
                             new Label("1. This is a test for drag / drop onto a JavaFX control in a JFXPanel."),
                             new Label("2. Drag JLabel \"Drag Me\" text and drop into \"Drop here\" JavaFX textfield."),
-                            new Label("3. If \"Drag text\" text is added to existing text in JavaFX TextField control, click on Pass or else click on Fail"),
+                            new Label("3. If \"Drag text\" text replaces the existing text in JavaFX TextField control, click on Pass or else click on Fail"),
                             new Label(""),
                         new HBox(10, passButton, failButton));
                         Scene scene = new Scene(rootNode);

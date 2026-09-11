@@ -68,15 +68,17 @@ public class PrintOrientTest extends Application {
     }
 
     static final String instructions =
-       "This tests that paper orientation is correct for all supported "+
-       "cases of portrait, reverse portrait, landscape, and reverse "+
-       "landscape. Since not all printers support the 4 cases, pay attention "+
-       "to the text on the printed page. If it says 'unsupported on this "+
-       "printer', you can ignore that page. For the other cases, "+
-       "the test passes if the rectangle has uniform margins 1\" from "+
-       "the edge the paper. Also the 'reverse' orientations should emerge "+
-       "from the printer 180 degrees rotated from the non-reversed cases."+
-       "Take care to examine this as it came out from the printer.";
+            "This test verifies paper orientation for all supported cases: " +
+            "portrait, reverse portrait, landscape, and reverse landscape. \n\n" +
+            "Press 'Print' button and inspect each sheet in the same orientation in which " +
+            "it emerges from the printer. DO NOT rotate, flip, or reorder the sheets. \n" +
+            "If a page says that its orientation is 'unsupported on this printer', " +
+            "ignore that page. \n\n" +
+            "For every supported orientation, verify that the rectangle has uniform " +
+            "1-inch margins from the edges of the paper." +
+            "The reverse portrait and reverse landscape pages must emerge rotated " +
+            "180 degrees relative to their corresponding non-reversed pages. \n" +
+            "The test passes only if all supported orientations meet these conditions.";
 
     static final String noprinter =
         "There are no printers installed. This test cannot run";
@@ -104,7 +106,7 @@ public class PrintOrientTest extends Application {
 
         Button print = new Button("Print");
         print.setLayoutX(80);
-        print.setLayoutY(200);
+        print.setLayoutY(300);
         print.setOnAction(e -> {
             createJob(PORTRAIT);
             createJob(REVERSE_PORTRAIT);
