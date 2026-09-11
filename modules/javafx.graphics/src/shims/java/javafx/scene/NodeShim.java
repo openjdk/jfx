@@ -27,6 +27,7 @@ package javafx.scene;
 
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;
 
@@ -44,6 +45,14 @@ public class NodeShim {
 
     public static Node getClipParent(Node n) {
         return n.getClipParent();
+    }
+
+    public static CssFlags getCSSFlags(Node n) {
+        return n.cssFlag;
+    }
+
+    public static CssStyleHelper getStyleHelper(Node n) {
+        return n.styleHelper;
     }
 
     public static Transform getCurrentLocalToSceneTransformState(Node n) {
