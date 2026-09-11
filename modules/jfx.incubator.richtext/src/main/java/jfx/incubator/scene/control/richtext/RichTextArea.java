@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -57,6 +58,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
@@ -309,6 +311,7 @@ public class RichTextArea extends Control {
     private ReadOnlyBooleanWrapper redoable;
     private ReadOnlyObjectWrapper<Bounds> documentArea;
     private ReadOnlyObjectWrapper<TextPos> dropTarget;
+    private SimpleObjectProperty prompt;
     // styleables
     private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
     private SimpleStyleableObjectProperty<Insets> contentPadding;
@@ -2643,6 +2646,18 @@ public class RichTextArea extends Control {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) {
                     return accText;
+                } else if (RichUtils.isEmpty(this)) {
+                    Object v = getPrompt();
+                    if (v instanceof Supplier<?> sup) {
+                        v = sup.get();
+                    }
+                    if (v == null) {
+                        return null;
+                    } else if (v instanceof Node n) {
+                        return n.getAccessibleText();
+                    } else {
+                        return v.toString();
+                    }
                 }
                 return accessibilityHelper().getText();
             }
@@ -2690,5 +2705,61 @@ public class RichTextArea extends Control {
             BoundingBox b = new BoundingBox(minX, minY, width, height);
             documentAreaPropertyImpl().set(b);
         }
+    }
+
+    /**
+     * The prompt to display in the {@code RichTextArea}.  The prompt becomes visible when the model is
+     * either {@code null} or empty.
+     * <p>
+     * For maximum flexibility, this property accepts an {@code Object} which can be either
+     * <ul>
+     *   <li>a {@code String}
+     *   <li>a {@code Node}
+     *   <li>a {code Supplier&lt;Object&gt;}
+     * </ul>
+     * A {@code null} value set or supplied removes the prompt.
+     * <p>
+     * If the property is set to a {@code Node} value, or a {@code Supplier} that supplies a {@code Node},
+     * that node will be used.  For any other type, its {@code toString()} value will be used.
+     *
+     * @defaultValue {@code null}
+     * @return the property
+     * @since 28
+     */
+    public final ObjectProperty promptProperty() {
+        if (prompt == null) {
+            prompt = new SimpleObjectProperty(this, "prompt") {
+                @Override
+                public void invalidated() {
+                    RichTextAreaSkinHelper.handlePromptChange(RichTextArea.this);
+                }
+            };
+        }
+        return prompt;
+    }
+
+    public final Object getPrompt() {
+        return prompt == null ? null : prompt.get();
+    }
+
+    public final void setPrompt(Object x) {
+        promptProperty().set(x);
+    }
+
+    /**
+     * Sets the value of the property {@link #prompt}.
+     * For maximum flexibility, the supplied values can be either
+     * <ul>
+     *   <li>a {@code String}
+     *   <li>a {@code Node}
+     *   <li>{@code null}
+     * </ul>
+     * Supplied {@code null} value removes the prompt.
+     *
+     * @param sup the prompt value supplier
+     * @since 28
+     */
+    public final void setPrompt(Supplier<Object> sup) {
+        promptProperty().set(sup);
     }
 }

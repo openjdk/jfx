@@ -56,6 +56,7 @@ import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextFlow;
@@ -1278,7 +1279,7 @@ public class RichTextAreaTest {
         control.setLineEnding(LineEnding.LF);
         assertEquals(null, control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
         control.select(TextPos.ZERO);
-        assertEquals("\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        assertEquals(null, control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
         control.appendText("1\n2\n");
         assertEquals("1\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
         control.select(TextPos.ofLeading(1, 0));
@@ -1445,5 +1446,114 @@ public class RichTextAreaTest {
         assertEquals(containerWidth, container.getWidth(), EPSILON, "container width");
         assertEquals(expectedWidth, b.getWidth(), EPSILON, "width");
         assertEquals(expectedHeight, b.getHeight(), EPSILON, "height");
+    }
+
+    private Object getPromptNode() {
+        VFlow f = RichTextAreaShim.vflow(control);
+        return f.promptNode();
+    }
+
+    public void promptString() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        control.setPrompt("StringPrompt");
+        assertTrue(getPromptNode() instanceof Label);
+        assertTrue(((Label)getPromptNode()).isVisible());
+        assertEquals("StringPrompt", ((Label)getPromptNode()).getText());
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptNode() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        Node n = new HBox();
+        control.setPrompt(n);
+        assertTrue(getPromptNode() == n);
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptObject() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        String pattern = "376453-unlikely-pattern-@#%@#$^";
+        Object x = new Object() {
+            @Override
+            public String toString() {
+                return pattern;
+            }
+        };
+        control.setPrompt(x);
+        assertTrue(getPromptNode() instanceof Label);
+        assertTrue(((Label)getPromptNode()).isVisible());
+        assertEquals(pattern, ((Label)getPromptNode()).getText());
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptSupplierString() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        control.setPrompt(() -> "StringPrompt");
+        assertTrue(getPromptNode() instanceof Label);
+        assertTrue(((Label)getPromptNode()).isVisible());
+        assertEquals("StringPrompt", ((Label)getPromptNode()).getText());
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptSupplierNode() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        Node n = new HBox();
+        control.setPrompt(() -> n);
+        assertTrue(getPromptNode() == n);
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptSupplierObject() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        String pattern = "376453-unlikely-pattern-@#%@#$^";
+        Object x = new Object() {
+            @Override
+            public String toString() {
+                return pattern;
+            }
+        };
+        control.setPrompt(() -> x);
+        assertTrue(getPromptNode() instanceof Label);
+        assertTrue(((Label)getPromptNode()).isVisible());
+        assertEquals(pattern, ((Label)getPromptNode()).getText());
+
+        control.select(TextPos.ZERO);
+        control.appendText("yo");
+        assertFalse(((Node)getPromptNode()).isVisible());
+    }
+
+    public void promptSupplierNull() {
+        control.clear();
+        assertEquals(null, getPromptNode());
+
+        control.setPrompt(() -> null);
+        assertTrue(getPromptNode() == null);
     }
 }
