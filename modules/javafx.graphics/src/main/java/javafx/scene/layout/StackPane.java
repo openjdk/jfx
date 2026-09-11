@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -283,38 +283,42 @@ public class StackPane extends Pane {
     }
 
     @Override protected double computeMinWidth(double height) {
-        List<Node>managed = getManagedChildren();
-        return getInsets().getLeft() +
-               computeMaxMinAreaWidth(managed, marginAccessor, height, true) +
-               getInsets().getRight();
+        List<Node> managed = getManagedChildren();
+        return snapSpaceX(
+            snappedLeftInset() +
+            computeMaxMinAreaWidth(managed, marginAccessor, snapContentHeight(height), true) +
+            snappedRightInset());
     }
 
     @Override protected double computeMinHeight(double width) {
-        List<Node>managed = getManagedChildren();
-        return getInsets().getTop() +
-               computeMaxMinAreaHeight(managed, marginAccessor, width, true, getAlignmentInternal().getVpos()) +
-               getInsets().getBottom();
+        List<Node> managed = getManagedChildren();
+        VPos vpos = getAlignmentInternal().getVpos();
+        double contentWidth = snapContentWidth(width);
+        double contentHeight = vpos == VPos.BASELINE && contentWidth != -1
+            ? computeMaxMinAreaHeight(managed, marginAccessor, computeChildWidths(managed, contentWidth), true, vpos)
+            : computeMaxMinAreaHeight(managed, marginAccessor, contentWidth, true, vpos);
+
+        return snapSpaceY(snappedTopInset() + contentHeight + snappedBottomInset());
     }
 
     @Override protected double computePrefWidth(double height) {
-        List<Node>managed = getManagedChildren();
-        Insets padding = getInsets();
-        return padding.getLeft() +
-               computeMaxPrefAreaWidth(managed, marginAccessor,
-                                       (height == -1) ? -1 : (height - padding.getTop() - padding.getBottom()), true) +
-               padding.getRight();
+        List<Node> managed = getManagedChildren();
+        return snapSpaceX(
+            snappedLeftInset() +
+            computeMaxPrefAreaWidth(managed, marginAccessor, snapContentHeight(height), true) +
+            snappedRightInset());
     }
 
     @Override protected double computePrefHeight(double width) {
-        List<Node>managed = getManagedChildren();
-        Insets padding = getInsets();
-        return padding.getTop() +
-               computeMaxPrefAreaHeight(managed, marginAccessor,
-                                        (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()), true,
-                                        getAlignmentInternal().getVpos()) +
-               padding.getBottom();
-    }
+        List<Node> managed = getManagedChildren();
+        VPos vpos = getAlignmentInternal().getVpos();
+        double contentWidth = snapContentWidth(width);
+        double contentHeight = vpos == VPos.BASELINE && contentWidth != -1
+            ? computeMaxPrefAreaHeight(managed, marginAccessor, computeChildWidths(managed, contentWidth), true, vpos)
+            : computeMaxPrefAreaHeight(managed, marginAccessor, contentWidth, true, vpos);
 
+        return snapSpaceY(snappedTopInset() + contentHeight + snappedBottomInset());
+    }
 
     @Override public void requestLayout() {
         biasDirty = true;
@@ -327,17 +331,15 @@ public class StackPane extends Pane {
         Pos align = getAlignmentInternal();
         HPos alignHpos = align.getHpos();
         VPos alignVpos = align.getVpos();
-        final double width = getWidth();
-        double height = getHeight();
-        double top = getInsets().getTop();
-        double right = getInsets().getRight();
-        double left = getInsets().getLeft();
-        double bottom = getInsets().getBottom();
-        double contentWidth = width - left - right;
-        double contentHeight = height - top - bottom;
-        double baselineOffset = alignVpos == VPos.BASELINE ?
-                getAreaBaselineOffset(managed, marginAccessor, i -> width, contentHeight, true)
-                                    : 0;
+        double top = snappedTopInset();
+        double left = snappedLeftInset();
+        double contentWidth = snapContentWidth(getWidth());
+        double contentHeight = snapContentHeight(getHeight());
+        double baselineOffset = alignVpos == VPos.BASELINE
+            ? getAreaBaselineOffset(managed, marginAccessor,
+                i -> computeChildWidth(managed.get(i), contentWidth), contentHeight, true)
+            : 0;
+
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
             Pos childAlignment = StackPane.getAlignment(child);
@@ -347,6 +349,35 @@ public class StackPane extends Pane {
                            childAlignment != null? childAlignment.getHpos() : alignHpos,
                            childAlignment != null? childAlignment.getVpos() : alignVpos);
         }
+    }
+
+    private double snapContentWidth(double width) {
+        return width < 0 ? -1 : snapSpaceX(snapSpaceX(width) - snappedLeftInset() - snappedRightInset());
+    }
+
+    private double snapContentHeight(double height) {
+        return height < 0 ? -1 : snapSpaceY(snapSpaceY(height) - snappedTopInset() - snappedBottomInset());
+    }
+
+    private double computeChildWidth(Node child, double areaWidth) {
+        if (!child.isResizable()) {
+            return child.getLayoutBounds().getWidth();
+        }
+
+        return snapSizeX(boundedSize(
+            child.minWidth(-1),
+            adjustWidthByMargin(areaWidth, getMargin(child)),
+            child.maxWidth(-1)));
+    }
+
+    private double[] computeChildWidths(List<Node> children, double areaWidth) {
+        double[] widths = new double[children.size()];
+
+        for (int i = 0; i < widths.length; ++i) {
+            widths[i] = computeChildWidth(children.get(i), areaWidth);
+        }
+
+        return widths;
     }
 
     /* *************************************************************************
