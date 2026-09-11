@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,14 +30,16 @@ import com.sun.javafx.util.Utils;
 import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
+import jfx.incubator.scene.control.richtext.skin.RowMap;
 
 /**
  * Manages RichTextAreaSkin Accessor.
  */
 public class RichTextAreaSkinHelper {
     public interface Accessor {
-        public VFlow getVFlow(Skin<?> skin);
-        public ListenerHelper getListenerHelper(Skin<?> skin);
+        VFlow getVFlow(Skin<?> skin);
+        ListenerHelper getListenerHelper(Skin<?> skin);
+        RowMap getRowMap(Skin<?> skin);
     }
 
     static {
@@ -60,5 +62,9 @@ public class RichTextAreaSkinHelper {
 
     public static ListenerHelper getListenerHelper(RichTextAreaSkin skin) {
         return accessor.getListenerHelper(skin);
+    }
+
+    public static RowMap getRowMap(RichTextAreaSkin skin) {
+        return accessor.getRowMap(skin);
     }
 }

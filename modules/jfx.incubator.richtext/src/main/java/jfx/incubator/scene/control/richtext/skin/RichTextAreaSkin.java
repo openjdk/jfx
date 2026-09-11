@@ -29,6 +29,7 @@ package jfx.incubator.scene.control.richtext.skin;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -87,6 +88,7 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
+    private final RowMap rowMap;
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
@@ -108,6 +110,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             public ListenerHelper getListenerHelper(Skin<?> skin) {
                 return ((RichTextAreaSkin)skin).listenerHelper;
             }
+
+            @Override
+            public RowMap getRowMap(Skin<?> skin) {
+                return ((RichTextAreaSkin)skin).getRowMap();
+            }
         });
     }
 
@@ -127,6 +134,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         hscroll = createHScrollBar();
         hscroll.setOrientation(Orientation.HORIZONTAL);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
+
+        rowMap = createRowMap();
 
         vflow = new VFlow(this, vscroll, hscroll);
         getChildren().add(vflow);
@@ -232,6 +241,26 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
             super.dispose();
         }
+    }
+
+    /**
+     * Creates the row map instance.
+     * <p>
+     * Subclasses may override this method to provide a custom {@link RowMap} implementation.
+     * It gets called when this skin is constructed.
+     *
+     * @return the row map
+     */
+    protected RowMap createRowMap() {
+        return new RowMap();
+    }
+
+    /**
+     * Returns the row map which maps the visible rows to the model paragraphs.
+     * @return the row map
+     */
+    protected final RowMap getRowMap() {
+        return rowMap;
     }
 
     private void handleInputMethodEvent(InputMethodEvent ev) {

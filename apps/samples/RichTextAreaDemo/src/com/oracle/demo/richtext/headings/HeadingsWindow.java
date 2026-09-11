@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,25 +30,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+package com.oracle.demo.richtext.headings;
+
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.MenuBar;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+import com.oracle.demo.richtext.util.FX;
+
 /**
- * RichTextArea Control demos and sample code.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * Headings Demo window
  */
+public class HeadingsWindow extends Stage {
+    public final HeadingsDemoPane demoPane;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
-    exports com.oracle.demo.richtext.headings;
+    public HeadingsWindow() {
+        demoPane = new HeadingsDemoPane();
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+        MenuBar mb = new MenuBar();
+        FX.menu(mb, "File");
+        FX.item(mb, "New Window", this::newWindow);
+        FX.separator(mb);
+        FX.item(mb, "Close Window", this::hide);
+        FX.separator(mb);
+        FX.item(mb, "Quit", () -> Platform.exit());
+
+        BorderPane bp = new BorderPane();
+        bp.setTop(mb);
+        bp.setCenter(demoPane);
+
+        Scene scene = new Scene(bp);
+        scene.getStylesheets().add(getClass().getResource("headings.css").toExternalForm());
+        setScene(scene);
+        setTitle(
+            "Headings Tester  JFX:" + System.getProperty("javafx.runtime.version") +
+            "  JDK:" + System.getProperty("java.version")
+        );
+        setWidth(1200);
+        setHeight(600);
+
+    }
+
+    protected void newWindow() {
+        double offset = 20;
+
+        HeadingsWindow w = new HeadingsWindow();
+        w.setX(getX() + offset);
+        w.setY(getY() + offset);
+        w.setWidth(getWidth());
+        w.setHeight(getHeight());
+        w.show();
+    }
 }
