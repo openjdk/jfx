@@ -2847,14 +2847,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void cleanPile() {
         boolean wasFocusOwner = false;
 
+        List<T> removedCells = null;
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
 
+            // Everything that ended up in the pile should not be inside the sheet.
             if (cell.getParent() != null) {
-                sheetChildren.remove(cell);
+                if (removedCells == null) {
+                    removedCells = new ArrayList<>();
+                }
+                removedCells.add(cell);
             }
+        }
+
+        if (removedCells != null) {
+            sheetChildren.removeAll(removedCells);
         }
 
         // Fix for JDK-8095710: Rather than have the cells do weird things with
