@@ -77,6 +77,9 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Specifies whether awt is initialized to receive embedded events.
+static bool awtInitialized = false;
+
 // Custom event that is provided by AWT to allow libraries like
 // JavaFX to forward native events to AWT even if AWT runs in
 // embedded mode.
@@ -203,6 +206,25 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 }
 
 #pragma mark --- delegate methods
+
+- (void)_initAwt {
+    LOG("_initAwt");
+
+    if (awtInitialized) {
+        return;
+    }
+
+    JNIEnv *env = jEnv;
+    jclass awt = [GlassHelper ClassForName:"java.awt.Toolkit" withEnv:env];
+    jmethodID method = (*env)->GetMethodID(env, awt, "getDefaultToolkit", "()V");
+
+    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+        return;
+    }
+
+    (*env)->CallVoidMethod(env, awt, method);
+    awtInitialized = true;
+}
 
 - (void)GlassApplicationDidChangeScreenParameters
 {
@@ -502,10 +524,12 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     return YES;
 }
 
-- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+- (void)application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
 {
+    [self _initAwt];
+
     for (NSURL* url in urls) {
-         NSDictionary *userInfo = @{
+        NSDictionary *userInfo = @{
             @"name": @"openURL",
             @"url": url.absoluteString
         };
