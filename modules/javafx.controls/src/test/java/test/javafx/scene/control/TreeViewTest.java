@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -96,6 +97,7 @@ import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Employee;
@@ -4298,6 +4300,19 @@ public class TreeViewTest {
 
         cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals(newName, cell.getText());
+    }
+
+    @Test
+    void testDoubleClickOnEmptyCell() {
+        TreeView<Person> table = new TreeView<>();
+
+        table.setRoot(new TreeItem<>(new Person("John")));
+
+        stageLoader = new StageLoader(table);
+
+        TreeCell<Person> cell = (TreeCell<Person>) VirtualFlowTestUtils.getCell(table, 1);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2));
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
