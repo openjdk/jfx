@@ -474,6 +474,11 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// INCLUDE_APPS specifies whether the "apps" directory is part of the build.
+// When disabled, the "apps", "appsjar" and "clean" tasks will not compile or clean the "apps" directory.
+defineProperty("INCLUDE_APPS", "true")
+ext.IS_INCLUDE_APPS = Boolean.parseBoolean(INCLUDE_APPS)
+
 defineProperty("STATIC_BUILD", "false")
 ext.IS_STATIC_BUILD = Boolean.parseBoolean(STATIC_BUILD)
 
@@ -941,70 +946,6 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
             throw new GradleException("Error: missing tool packages: $errors")
         } else {
             logger.quiet "all tool packages are present $packages"
-        }
-    }
-}
-
-// Make a forked ANT call.
-// This needs to be forked so that ant can be used with the right JDK and updated modules
-// for testing obscure things like packaging of apps
-void ant(String conf,   // platform configuration
-         String dir,    // directory to run from
-         String target, // ant target
-         List<String>  params // parameters (usually -Dxxx=yyy)
-         ) {
-    // Try to use ANT_HOME
-    String antHomeEnv = System.getenv("ANT_HOME")
-    String antHome = antHomeEnv != null ? cygpath(antHomeEnv) : null;
-    String ant = (antHome != null && !antHome.equals("")) ? "$antHome/bin/ant" : "ant";
-
-    List<String> cmdArgs = new ArrayList<String>()
-    if (IS_WINDOWS) {
-        cmdArgs += !ant.matches("\\s+") ? '"' + ant + '"' : ant
-    }
-
-    cmdArgs += "-Dbuild.compiler=javac1.7"
-
-    if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
-        def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
-        cmdArgs += "-Dcross.platform=$conf"
-        if (targetProperties.containsKey('arch')) {
-            cmdArgs += "-Dcross.platform.arch=${targetProperties.arch}"
-        }
-    }
-
-    if (params != null) {
-        params.each() { s->
-            cmdArgs += IS_WINDOWS && !s.matches("\\s+") ? '"' + s + '"' : s
-        }
-    }
-
-    if (IS_MILESTONE_FCS) {
-        cmdArgs += '-Djfx.release.suffix=""'
-    }
-
-    cmdArgs += target
-
-    def execOps = project.services.get(ExecOperations)
-    execOps.exec { spec ->
-        workingDir = dir
-        environment("JDK_HOME", JDK_HOME)
-        environment("JAVA_HOME", JDK_HOME)
-        if (IS_WINDOWS) {
-            environment([
-                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
-                    "LIB"                  : WINDOWS_VS_LIB,
-                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "PATH"                 : WINDOWS_VS_PATH
-            ]);
-            commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
-        } else {
-            commandLine ant
-            args(cmdArgs)
         }
     }
 }
@@ -1565,6 +1506,7 @@ logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
+logger.quiet("INCLUDE_APPS: $IS_INCLUDE_APPS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
 logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
@@ -4892,73 +4834,9 @@ compileTargets { t ->
     sdk.dependsOn(sdkTask)
 }
 
-project(":apps") {
-    // The apps build is Ant based, we will exec ant from gradle.
-
-    // Download the Lucene libraries needed for the Ensemble8 app
-    getConfigurations().create("lucene");
-    dependencies {
-        lucene group: "org.apache.lucene", name: "lucene-core", version: "${luceneVersion}"
-        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "${luceneVersion}"
-        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "${luceneVersion}"
-    }
-
-    // Copy Lucene libraries into the Ensemble8/lib directory
-    File ensembleLibDir = rootProject.file("apps/samples/Ensemble8/lib");
-    def libNames = [ "lucene-core-${luceneVersion}.jar",
-                     "lucene-grouping-${luceneVersion}.jar",
-                     "lucene-queryparser-${luceneVersion}.jar" ]
-
-
-    task getLucene(type: Copy) {
-        doFirst {
-            ensembleLibDir.mkdirs();
-        }
-        into ensembleLibDir
-        includeEmptyDirs = false
-        configurations.lucene.files.each { f ->
-            libNames.each { name ->
-                if (name == f.getName()) {
-                    from f.getPath()
-                }
-            }
-        }
-    }
-
-    compileTargets { t ->
-        List<String> params = []
-
-        params << "-DtargetBld=$t.name"
-
-        if (!rootProject.ext[t.upper].compileSwing) {
-            params << "-DJFX_CORE_ONLY=true"
-        }
-        params << "-Dplatforms.JDK_1.9.home=${rootProject.ext.JDK_HOME}"
-        params << "-Dcompile.patch=@${rootProject.buildDir}/${COMPILEARGSFILE}"
-        params << "-Drun.patch=@${rootProject.buildDir}/${RUNARGSFILE}"
-
-        def appsJar = project.task("appsJar${t.capital}") {
-            dependsOn(sdk, getLucene)
-            doLast() {
-                ant(t.name,
-                      projectDir.path,
-                      "appsJar",
-                      params);
-            }
-        }
-        rootProject.appsjar.dependsOn(appsJar)
-
-        def appsClean = project.task("clean${t.capital}") {
-            doLast() {
-                ant(t.name,
-                      project.projectDir.path,
-                      "clean",
-                      params);
-                delete(ensembleLibDir);
-            }
-        }
-        rootProject.clean.dependsOn(appsClean)
-    }
+// The apps are built by a separate Ant based build, which is only wired into this build when INCLUDE_APPS is enabled.
+if (IS_INCLUDE_APPS) {
+    apply from: 'apps.gradle'
 }
 
 // Tasks to create the disk layout for the sdk, jmods, and docs

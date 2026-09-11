@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+import com.sun.javafx.gradle.CompileTarget
+
+project(":apps") {
+    // Download the Lucene libraries needed for the Ensemble8 app
+    getConfigurations().create("lucene");
+    dependencies {
+        lucene group: "org.apache.lucene", name: "lucene-core", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "${luceneVersion}"
+    }
+
+    // Copy Lucene libraries into the Ensemble8/lib directory
+    File ensembleLibDir = rootProject.file("apps/samples/Ensemble8/lib");
+    def libNames = [ "lucene-core-${luceneVersion}.jar",
+                     "lucene-grouping-${luceneVersion}.jar",
+                     "lucene-queryparser-${luceneVersion}.jar" ]
+
+
+    task getLucene(type: Copy) {
+        doFirst {
+            ensembleLibDir.mkdirs();
+        }
+        into ensembleLibDir
+        includeEmptyDirs = false
+        configurations.lucene.files.each { f ->
+            libNames.each { name ->
+                if (name == f.getName()) {
+                    from f.getPath()
+                }
+            }
+        }
+    }
+
+    compileTargets { CompileTarget t ->
+        List<String> params = []
+
+        params << "-DtargetBld=$t.name"
+
+        if (!rootProject.ext[t.upper].compileSwing) {
+            params << "-DJFX_CORE_ONLY=true"
+        }
+        params << "-Dplatforms.JDK_1.9.home=${rootProject.ext.JDK_HOME}"
+        params << "-Dcompile.patch=@${rootProject.buildDir}/${COMPILEARGSFILE}"
+        params << "-Drun.patch=@${rootProject.buildDir}/${RUNARGSFILE}"
+
+        def appsJar = project.task("appsJar${t.capital}") {
+            dependsOn(sdk, getLucene)
+            doLast() {
+                ant(t.name,
+                      projectDir.path,
+                      "appsJar",
+                      params);
+            }
+        }
+        rootProject.appsjar.dependsOn(appsJar)
+
+        def appsClean = project.task("clean${t.capital}") {
+            doLast() {
+                ant(t.name,
+                      project.projectDir.path,
+                      "clean",
+                      params);
+                delete(ensembleLibDir);
+            }
+        }
+        rootProject.clean.dependsOn(appsClean)
+    }
+}
+
+// Make a forked ANT call.
+// This needs to be forked so that ant can be used with the right JDK and updated modules
+// for testing obscure things like packaging of apps
+void ant(String conf,   // platform configuration
+         String dir,    // directory to run from
+         String target, // ant target
+         List<String>  params // parameters (usually -Dxxx=yyy)
+         ) {
+    // Try to use ANT_HOME
+    String antHomeEnv = System.getenv("ANT_HOME")
+    String antHome = antHomeEnv != null ? cygpath(antHomeEnv) : null;
+    String ant = (antHome != null && !antHome.equals("")) ? "$antHome/bin/ant" : "ant";
+
+    List<String> cmdArgs = new ArrayList<String>()
+    if (IS_WINDOWS) {
+        cmdArgs += !ant.matches("\\s+") ? '"' + ant + '"' : ant
+    }
+
+    cmdArgs += "-Dbuild.compiler=javac1.7"
+
+    if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
+        def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
+        cmdArgs += "-Dcross.platform=$conf"
+        if (targetProperties.containsKey('arch')) {
+            cmdArgs += "-Dcross.platform.arch=${targetProperties.arch}"
+        }
+    }
+
+    if (params != null) {
+        params.each() { s->
+            cmdArgs += IS_WINDOWS && !s.matches("\\s+") ? '"' + s + '"' : s
+        }
+    }
+
+    if (IS_MILESTONE_FCS) {
+        cmdArgs += '-Djfx.release.suffix=""'
+    }
+
+    cmdArgs += target
+
+    def execOps = project.services.get(ExecOperations)
+    execOps.exec { spec ->
+        workingDir = dir
+        environment("JDK_HOME", JDK_HOME)
+        environment("JAVA_HOME", JDK_HOME)
+        if (IS_WINDOWS) {
+            environment([
+                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
+                    "LIB"                  : WINDOWS_VS_LIB,
+                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
+                    "PATH"                 : WINDOWS_VS_PATH
+            ]);
+            commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
+        } else {
+            commandLine ant
+            args(cmdArgs)
+        }
+    }
+}
