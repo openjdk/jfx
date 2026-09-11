@@ -401,6 +401,9 @@ public class FX {
                             };
 
                             owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                            m.setOnHidden((_) -> {
+                                owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                            });
                             m.show(owner, ev.getScreenX(), ev.getScreenY());
                         });
                         ev.consume();

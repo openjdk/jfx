@@ -202,7 +202,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     // Gets the offset within the composed text for the specified absolute x and y coordinates on the screen.
                     // This information is used, for example to handle mouse clicks and the mouse cursor.
                     // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
-                    TextPos pos = vflow.getTextPosLocal(x, y);
+                    TextPos pos = vflow.findTextPosLocal(x, y);
                     return pos.offset() - ime.start.offset();
                 }
 

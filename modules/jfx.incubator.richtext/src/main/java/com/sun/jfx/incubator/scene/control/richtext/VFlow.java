@@ -552,9 +552,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
-    /** uses vflow.content cooridinates */
-    public TextPos getTextPosLocal(double localX, double localY) {
-        return arrangement().getTextPos(localX - contentPaddingLeft, localY);
+    /** in vflow.content coordinates */
+    public TextPos findTextPosLocal(double localX, double localY) {
+        return arrangement().findTextPos(localX - contentPaddingLeft, localY);
     }
 
     /** in vflow.content coordinates */
@@ -1171,46 +1171,45 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
      * the geometry of text as determined by the layout, thus taking into account
      * line spacing and paragraph padding and borders.
      *
-     * @param caretIndex the current caret index
+     * @param caretIndex the current caret paragraph index
      * @param x the target x coordinate
      * @param y the target y coordinate
      * @param down direction of the movement relative to the caret
      * @return the new text position, or null if no movement should occur
      */
     public TextPos moveVertically(int caretIndex, double x, double y, boolean down) {
-        TextCell cell = getCell(caretIndex);
-        // account for line spacing
-        if (down) {
-            y += cell.getLineSpacing();
-        }
-
-        double cy = y - cell.getY();
-        boolean inside = cell.isInsideText(x - contentPaddingLeft, cy, down);
-        TextPos p = getTextPosLocal(x, y);
+        TextPos p = findTextPosLocal(x, y);
         if (p == null) {
             return null; // should not happen
-        } else if (inside) {
-            return p;
         }
-
         int ix = p.index();
+        TextCell cell = getCell(ix);
+
         if (ix == caretIndex) {
-            if (down) {
-                ix++;
-                if (ix >= skin.getSkinnable().getParagraphCount()) {
-                    return skin.getSkinnable().getDocumentEnd();
+            if (cell.isOutsideTextRangeY(y - cell.getY())) {
+                // jump to the adjacent cell
+                if (down) {
+                    ix++;
+                    if (ix >= getParagraphCount()) {
+                        return control.getDocumentEnd();
+                    }
+
+                    cell = getCell(ix);
+                    y = cell.getY() + cell.getFirstLineMidY();
+                } else {
+                    ix--;
+                    if (ix < 0) {
+                        return TextPos.ZERO;
+                    }
+                    cell = getCell(ix);
+                    y = cell.getY() + cell.getLastLineMidY();
                 }
-            } else {
-                ix--;
-                if (ix < 0) {
-                    return TextPos.ZERO;
-                }
+                return cell.getTextPos(x - contentPaddingLeft, y);
             }
         }
 
-        cell = getCell(ix);
-        double py = cell.findHitCandidate(y - cell.getY(), down);
-        p = getTextPosLocal(x, py + cell.getY());
+        double py = cell.findHitCandidate(y - cell.getY());
+        p = findTextPosLocal(x, py + cell.getY());
         return p;
     }
 
