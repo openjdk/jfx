@@ -28,6 +28,7 @@ import javafx.application.Application;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
+import javafx.geometry.Insets;
 import javafx.scene.layout.StackPane;
 
 /***
@@ -40,13 +41,29 @@ public class StartIconified extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        Text instructionText = new Text("""
+            1. The "Iconified Window Test" must initially appear only on the
+               operating-system taskbar or Dock.
+            2. It must not appear normally on the screen before becoming iconified.
+            3. Restore the iconified window and verify that it displays normally.
+            """);
+        instructionText.setWrappingWidth(560);
+
+        StackPane instructionRoot = new StackPane(instructionText);
+        instructionRoot.setPadding(new Insets(15));
+
+        Stage instructionStage = new Stage();
+        instructionStage.setTitle("Start Iconified Test Instructions");
+        instructionStage.setScene(new Scene(instructionRoot, 600, 160));
+        instructionStage.show();
+
         primaryStage.setTitle("Iconified Window Test");
         primaryStage.setWidth(600);
         primaryStage.setHeight(150);
         primaryStage.setIconified(true);
 
         Text text = new Text("""
-                1. The stage must initially appear on the OS taskbar (iconified), but not on the Screen
+                1. This stage must initially appear on the OS taskbar (iconified), but not on the Screen
                 2. Observe if the stage pops and then iconifies (wrong)""");
 
         Scene scene = new Scene(new StackPane(text));

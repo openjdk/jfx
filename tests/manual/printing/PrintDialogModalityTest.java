@@ -37,21 +37,25 @@ import javafx.scene.text.Text;
 public class PrintDialogModalityTest extends Application {
 
     static final String infoText =
-     "NOTE: if there are no printers installed this test is not valid " +
-     "since depending on O/S no dialog may be displayed.\n" +
-     "This tests that a print dialog can be made modal w.r.t " +
-     "a parent window. Cycle through in any order the different " +
-     "dialog options via pressing the buttons. For the modal cases " +
-     "when the dialog is displayed, the original window should be " +
-     "unresponsive to input, for example preventing you launching " +
-     "another dialog, and also should stay below the dialog. " +
-     "Depending on platform the dialog may stay above just the "+
-     "parent, or all application or even all desktop windows.\n" +
-     "Non-modal dialogs will generally allow you to click on the "+
-     "main window and raise it above the dialog. However " +
-     "depending on platform, even the non-modal cases may behave " +
-     "as if they are modal. Notably this is the case on MacOS as " +
-     "that is the behaviour enforced by the O/S";
+            "PRECONDITION: At least one printer must be installed. \n" +
+            "Without a printer, the operating system might not display the dialogs, " +
+            "and the test is not valid.\n\n" +
+
+            "Test each of the four buttons, closing each print or page-setup dialog " +
+            "before continuing to the next one.\n\n" +
+
+            "MODAL CASES:\n" + "While a modal dialog is open, the main test window must not accept input " +
+            "or allow another dialog to be opened. The main window must also remain " + "behind the dialog.\n\n" +
+
+            "NON-MODAL CASES:\n" + "While a non-modal dialog is open, the main test window should normally " +
+            "accept input and be movable in front of the dialog.\n\n" +
+
+            "PLATFORM-SPECIFIC BEHAVIOR:\n" +
+            "A modal dialog may remain above only its parent window, above all windows " +
+            "in the application, or above all desktop windows. All of these behaviors " +
+            "are acceptable. \n" +
+            "On macOS, the non-modal cases may behave like the modal cases. " +
+            "This is expected operating-system behavior and must not be reported as a failure.";
 
     @Override
     public void start(Stage primaryStage) {

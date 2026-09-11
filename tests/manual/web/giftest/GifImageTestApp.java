@@ -43,13 +43,15 @@ public class GifImageTestApp extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        VBox instructions =  new VBox(
-                new Label(" This test is for manual gif image rendering test , please follow below steps"),
-                new Label(" "),
-                new Label(" STEPS:"),
-                new Label("  1. Click on RunTest button"),
-                new Label(" "),
-                new Label("  2. Expected behaviour: gif animation should happen showing red and black animation"));
+        VBox instructions = new VBox(
+                new Label("This test verifies animated GIF rendering, please follow below steps."),
+                new Label(""),
+                new Label("STEPS:"),
+                new Label("1. Click the RunTest button."),
+                new Label("2. Observe the red-and-black GIF for at least 10 seconds."),
+                new Label("3. Press Pass if the GIF animates continuously and the application remains responsive."),
+                new Label("4. Press Fail if the GIF does not animate, stops prematurely, displays corrupted frames,"),
+                new Label("   or causes the application to become unresponsive."));
 
         Button loadButton = new Button("RunTest");
 
