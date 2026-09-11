@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,23 @@
 
 package test.javafx.scene.input;
 
-import java.util.stream.Stream;
-import javafx.scene.input.DataFormat;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
+import javafx.scene.input.DataFormat;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class DataFormatTest {
 
@@ -69,9 +74,9 @@ public class DataFormatTest {
     @ParameterizedTest
     @MethodSource("getParams")
     public void dataFormatsShouldBeFound(DataFormat format, String mime1, String mime2) {
-        assertSame(format, DataFormat.lookupMimeType(mime1));
+        assertEquals(format, DataFormat.lookupMimeType(mime1));
         if (mime2 != null) {
-            assertSame(format, DataFormat.lookupMimeType(mime2));
+            assertEquals(format, DataFormat.lookupMimeType(mime2));
         }
     }
 
@@ -84,13 +89,29 @@ public class DataFormatTest {
 
     @ParameterizedTest
     @MethodSource("getParams")
-    public void shouldNotBePossibleToReuseMimeTypes(DataFormat format, String mime1, String mime2) {
-        assertThrows(IllegalArgumentException.class, () -> {
-            DataFormat customEqual = new DataFormat(format.getIdentifiers().toArray(
-                    new String[format.getIdentifiers().size()]));
-        });
+    public void shouldBePossibleToReuseEquivalentMimeTypes(DataFormat f, String mime1, String mime2) {
+        DataFormat f1 = new DataFormat(f.getIdentifiers().toArray(String[]::new));
+        assertEquals(f, f1);
+        DataFormat f2 = new DataFormat(f.getIdentifiers().toArray(String[]::new));
+        assertEquals(f, f2);
+        assertEquals(f1, f2);
     }
 
+    @Test
+    public void shouldNotBePossibleToRegisterMismatchedFormats() {
+        // using DataFormat.FILES
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("application/x-java-file-list");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("java.file-list");
+        });
+        // using custom
+        DataFormat f1 = new DataFormat("test/foo", "test/bar");
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("test/foo");
+        });
+    }
 
     @ParameterizedTest
     @MethodSource("getParams")
@@ -100,5 +121,70 @@ public class DataFormatTest {
         assertEquals(format.hashCode(), format.hashCode());
         assertFalse(uniqueFormat.equals(format));
         assertFalse(uniqueFormat.hashCode() == format.hashCode());
+    }
+
+    @Test
+    public void noMoreNullMimeTypes() {
+        String mime = null;
+        assertThrows(NullPointerException.class, () -> {
+            new DataFormat(mime);
+        });
+    }
+
+    @Test
+    public void nullArrayIsAllowedForCompatibilityReasons() {
+        String[] mimes = null;
+        assertDoesNotThrow(() -> {
+            new DataFormat(mimes);
+        });
+    }
+
+    // verifies concurrency of the constructor and lookupMimeType()
+    @Timeout(15)
+    @RepeatedTest(10)
+    public void concurrencyWithSingleID() throws Exception {
+        long iterationCount = 100_000; // ~0.2 seconds on mac M1
+        int threadCount = 1 + Runtime.getRuntime().availableProcessors() * 2;
+        AtomicBoolean run = new AtomicBoolean(true);
+        AtomicBoolean error = new AtomicBoolean(false);
+        ArrayList<Thread> threads = new ArrayList<>(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            Thread t = new Thread("concurrencyWithSingleID_" + i) {
+                @Override
+                public void run() {
+                    int num = 0;
+                    for (long i = 0; i < iterationCount; i++) {
+                        String id = "test-data-format-" + num;
+                        ++num;
+                        if (num > 10) {
+                            num = 0;
+                        }
+                        try {
+                            DataFormat f = new DataFormat(id);
+                            assertEquals(f, DataFormat.lookupMimeType(id));
+                        } catch (Throwable e) {
+                            error.set(true);
+                            fail(e);
+                        }
+                    }
+                }
+            };
+            threads.add(t);
+        }
+
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (Exception e) {
+                fail(e);
+            }
+        }
+
+        assertFalse(error.get());
     }
 }
