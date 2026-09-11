@@ -450,10 +450,10 @@ public abstract class StyledTextModel {
      */
     public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
-        markers.update(start, end, charsTop, linesAdded, charsBottom);
         for (Listener li : listeners) {
             li.onContentChange(ch);
         }
+        markers.update(start, end, charsTop, linesAdded, charsBottom);
     }
 
     /**
