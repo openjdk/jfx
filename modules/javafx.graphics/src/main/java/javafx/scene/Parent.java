@@ -151,6 +151,11 @@ public abstract non-sealed class Parent extends Node {
             public List<String> doGetAllParentStylesheets(Parent parent) {
                 return parent.doGetAllParentStylesheets();
             }
+
+            @Override
+            public List<String> getStylesheetsOrNull(Parent parent) {
+                return parent.stylesheets;
+            }
         });
     }
 
@@ -1368,31 +1373,13 @@ public abstract non-sealed class Parent extends Node {
      * contents. For additional information about using CSS with the
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
+     * <p>
+     * Lazily initialized on the first access, so we usually call this method
+     * via {@link ParentHelper#getStylesheetsOrNull(Parent)} from CSS code to not initialize this when not needed.
+     *
+     * @defaultValue null
      */
-    private final ObservableList<String> stylesheets = new TrackableObservableList<>() {
-        @Override
-        protected void onChanged(Change<String> c) {
-            final Scene scene = getScene();
-            if (scene != null) {
-
-                // Notify the StyleManager if stylesheets change. This Parent's
-                // styleManager will get recreated in NodeHelper.processCSS.
-                StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
-
-                // JDK-8110059 - if stylesheet is removed, reset styled properties to
-                // their initial value.
-                c.reset();
-                while(c.next()) {
-                    if (c.wasRemoved() == false) {
-                        continue;
-                    }
-                    break; // no point in resetting more than once...
-                }
-
-                reapplyCSS();
-            }
-        }
-    };
+    private ObservableList<String> stylesheets;
 
     /**
      * Gets an observable list of string URLs linking to the stylesheets to use
@@ -1404,7 +1391,35 @@ public abstract non-sealed class Parent extends Node {
      * @return the list of stylesheets to use with this Parent
      * @since JavaFX 2.1
      */
-    public final ObservableList<String> getStylesheets() { return stylesheets; }
+    public final ObservableList<String> getStylesheets() {
+        if (stylesheets == null) {
+            stylesheets = new TrackableObservableList<>() {
+                @Override
+                protected void onChanged(Change<String> c) {
+                    final Scene scene = getScene();
+                    if (scene != null) {
+
+                        // Notify the StyleManager if stylesheets change. This Parent's
+                        // styleManager will get recreated in NodeHelper.processCSS.
+                        StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
+
+                        // JDK-8110059 - if stylesheet is removed, reset styled properties to
+                        // their initial value.
+                        c.reset();
+                        while (c.next()) {
+                            if (!c.wasRemoved()) {
+                                continue;
+                            }
+                            break; // no point in resetting more than once...
+                        }
+
+                        reapplyCSS();
+                    }
+                }
+            };
+        }
+        return stylesheets;
+    }
 
     /*
      * This method recurses up the parent chain until parent is null. As the
