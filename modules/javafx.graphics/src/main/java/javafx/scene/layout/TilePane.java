@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -247,6 +247,9 @@ public class TilePane extends Pane {
 
     private double _tileWidth = -1;
     private double _tileHeight = -1;
+    private double lastSnapScaleX = Double.NaN;
+    private double lastSnapScaleY = Double.NaN;
+    private boolean lastSnapToPixel;
 
     /**
      * Creates a horizontal TilePane layout with prefColumn = 5 and hgap/vgap = 0.
@@ -579,6 +582,8 @@ public class TilePane extends Pane {
     }
 
     public final double getTileWidth() {
+        validateTileSizeCache();
+
         if (tileWidth != null) {
             return tileWidth.get();
         }
@@ -615,6 +620,8 @@ public class TilePane extends Pane {
     }
 
     public final double getTileHeight() {
+        validateTileSizeCache();
+
         if (tileHeight != null) {
             return tileHeight.get();
         }
@@ -794,78 +801,88 @@ public class TilePane extends Pane {
 
     @Override protected double computeMinWidth(double height) {
         if (getContentBias() == Orientation.HORIZONTAL) {
-            return getInsets().getLeft() + getTileWidth() + getInsets().getRight();
+            return snapSpaceX(snappedLeftInset() + getTileWidth() + snappedRightInset());
         }
         return computePrefWidth(height);
     }
 
     @Override protected double computeMinHeight(double width) {
         if (getContentBias() == Orientation.VERTICAL) {
-            return getInsets().getTop() + getTileHeight() + getInsets().getBottom();
+            return snapSpaceY(snappedTopInset() + getTileHeight() + snappedBottomInset());
         }
         return computePrefHeight(width);
     }
 
     @Override protected double computePrefWidth(double forHeight) {
         List<Node> managed = getManagedChildren();
-        final Insets insets = getInsets();
+        double top = snappedTopInset();
+        double right = snappedRightInset();
+        double bottom = snappedBottomInset();
+        double left = snappedLeftInset();
         int prefCols = 0;
         if (forHeight != -1) {
             // first compute number of rows that will fit in given height and
             // compute pref columns from that
-            int prefRows = computeRows(forHeight - snapSpaceY(insets.getTop()) - snapSpaceY(insets.getBottom()), getTileHeight());
+            int prefRows = computeRows(snapSpaceY(forHeight - top - bottom), getTileHeight());
             prefCols = computeOther(managed.size(), prefRows);
         } else {
             prefCols = getOrientation() == HORIZONTAL? getPrefColumns() : computeOther(managed.size(), getPrefRows());
         }
-        return snapSpaceX(insets.getLeft()) +
-               computeContentWidth(prefCols, getTileWidth()) +
-               snapSpaceX(insets.getRight());
+        return snapSpaceX(left + computeContentWidth(prefCols, getTileWidth()) + right);
     }
 
     @Override protected double computePrefHeight(double forWidth) {
         List<Node> managed = getManagedChildren();
-        final Insets insets = getInsets();
+        double top = snappedTopInset();
+        double right = snappedRightInset();
+        double bottom = snappedBottomInset();
+        double left = snappedLeftInset();
         int prefRows = 0;
         if (forWidth != -1) {
             // first compute number of columns that will fit in given width and
             // compute pref rows from that
-            int prefCols = computeColumns(forWidth - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()), getTileWidth());
+            int prefCols = computeColumns(snapSpaceX(forWidth - left - right), getTileWidth());
             prefRows = computeOther(managed.size(), prefCols);
         } else {
             prefRows = getOrientation() == HORIZONTAL? computeOther(managed.size(), getPrefColumns()) : getPrefRows();
         }
-        return snapSpaceY(insets.getTop()) +
-               computeContentHeight(prefRows, getTileHeight()) +
-               snapSpaceY(insets.getBottom());
+        return snapSpaceY(top + computeContentHeight(prefRows, getTileHeight()) + bottom);
     }
 
     private double computeTileWidth() {
         List<Node> managed = getManagedChildren();
-        double preftilewidth = getPrefTileWidth();
-        if (preftilewidth == USE_COMPUTED_SIZE) {
+        double prefTileWidth = getPrefTileWidth();
+        if (prefTileWidth == USE_COMPUTED_SIZE) {
             double h = -1;
             boolean vertBias = false;
+            boolean horizBias = false;
             for (int i = 0, size = managed.size(); i < size; i++) {
                 Node child = managed.get(i);
                 if (child.getContentBias() == VERTICAL) {
                     vertBias = true;
-                    break;
+                } else if (child.getContentBias() == HORIZONTAL) {
+                    horizBias = true;
                 }
             }
             if (vertBias) {
                 // widest may depend on height of tile
-                h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, true, getTileAlignmentInternal().getVpos());
+                double prefTileHeight = getPrefTileHeight();
+                if (prefTileHeight == USE_COMPUTED_SIZE) {
+                    double w = horizBias ? computeNaturalTileWidth(managed) : -1;
+                    h = computeComputedTileHeight(managed, w);
+                } else {
+                    h = snapSizeY(prefTileHeight);
+                }
             }
-            return snapSizeX(computeMaxPrefAreaWidth(managed, marginAccessor, h, true));
+            return computeComputedTileWidth(managed, h);
         }
-        return snapSizeX(preftilewidth);
+        return snapSizeX(prefTileWidth);
     }
 
     private double computeTileHeight() {
         List<Node> managed = getManagedChildren();
-        double preftileheight = getPrefTileHeight();
-        if (preftileheight == USE_COMPUTED_SIZE) {
+        double prefTileHeight = getPrefTileHeight();
+        if (prefTileHeight == USE_COMPUTED_SIZE) {
             double w = -1;
             boolean horizBias = false;
             for (int i = 0, size = managed.size(); i < size; i++) {
@@ -877,11 +894,31 @@ public class TilePane extends Pane {
             }
             if (horizBias) {
                 // tallest may depend on width of tile
-                w = computeMaxPrefAreaWidth(managed, marginAccessor);
+                w = computeTileWidth();
             }
-            return snapSizeY(computeMaxPrefAreaHeight(managed, marginAccessor, w, true, getTileAlignmentInternal().getVpos()));
+            return computeComputedTileHeight(managed, w);
         }
-        return snapSizeY(preftileheight);
+        return snapSizeY(prefTileHeight);
+    }
+
+    private double computeNaturalTileWidth(List<Node> managed) {
+        return snapSpaceX(computeMaxPrefAreaWidth(managed, marginAccessor));
+    }
+
+    private double computeComputedTileWidth(List<Node> managed, double height) {
+        return snapSpaceX(computeMaxPrefAreaWidth(managed, marginAccessor, height, true));
+    }
+
+    private double computeComputedTileHeight(List<Node> managed, double width) {
+        double height = computeMaxPrefAreaHeight(
+            managed, marginAccessor, width, true, getTileAlignmentInternal().getVpos());
+
+        // A baseline-aligned height can contain unsnapped baseline offsets from
+        // different children, so it is still a content size. All other results
+        // are sums of independently snapped child sizes and margins.
+        return getTileAlignmentInternal().getVpos() == VPos.BASELINE
+            ? snapSizeY(height)
+            : snapSpaceY(height);
     }
 
     private int computeOther(int numNodes, int numCells) {
@@ -891,22 +928,46 @@ public class TilePane extends Pane {
 
     private int computeColumns(double width, double tilewidth) {
         double snappedHgap = snapSpaceX(getHgap());
-        return Math.max(1,(int)((width + snappedHgap) / (tilewidth + snappedHgap)));
+        double availableWidth = snapSpaceX(width);
+        double cellWidth = snapSpaceX(tilewidth + snappedHgap);
+        int columns = Math.max(1, (int)(snapSpaceX(availableWidth + snappedHgap) / cellWidth));
+
+        if (cellWidth > 0 && availableWidth >= 0) {
+            if (columns < Integer.MAX_VALUE && computeContentWidth(columns + 1, tilewidth) <= availableWidth) {
+                columns++;
+            } else if (columns > 1 && computeContentWidth(columns, tilewidth) > availableWidth) {
+                columns--;
+            }
+        }
+
+        return columns;
     }
 
     private int computeRows(double height, double tileheight) {
         double snappedVgap = snapSpaceY(getVgap());
-        return Math.max(1, (int)((height + snappedVgap) / (tileheight + snappedVgap)));
+        double availableHeight = snapSpaceY(height);
+        double cellHeight = snapSpaceY(tileheight + snappedVgap);
+        int rows = Math.max(1, (int)(snapSpaceY(availableHeight + snappedVgap) / cellHeight));
+
+        if (cellHeight > 0 && availableHeight >= 0) {
+            if (rows < Integer.MAX_VALUE && computeContentHeight(rows + 1, tileheight) <= availableHeight) {
+                rows++;
+            } else if (rows > 1 && computeContentHeight(rows, tileheight) > availableHeight) {
+                rows--;
+            }
+        }
+
+        return rows;
     }
 
     private double computeContentWidth(int columns, double tilewidth) {
         if (columns == 0) return 0;
-        return columns * tilewidth + (columns - 1) * snapSpaceX(getHgap());
+        return snapSpaceX(columns * tilewidth + (columns - 1) * snapSpaceX(getHgap()));
     }
 
     private double computeContentHeight(int rows, double tileheight) {
         if (rows == 0) return 0;
-        return rows * tileheight + (rows - 1) * snapSpaceY(getVgap());
+        return snapSpaceY(rows * tileheight + (rows - 1) * snapSpaceY(getVgap()));
     }
 
     @Override protected void layoutChildren() {
@@ -921,14 +982,17 @@ public class TilePane extends Pane {
         double right = snapSpaceX(getInsets().getRight());
         double vgap = snapSpaceY(getVgap());
         double hgap = snapSpaceX(getHgap());
-        double insideWidth = width - left - right;
-        double insideHeight = height - top - bottom;
+        double insideWidth = snapSpaceX(width - left - right);
+        double insideHeight = snapSpaceY(height - top - bottom);
 
         double tileWidth = getTileWidth() > insideWidth ? insideWidth : getTileWidth();
         double tileHeight = getTileHeight() > insideHeight ? insideHeight : getTileHeight();
 
         int lastRowRemainder = 0;
         int lastColumnRemainder = 0;
+        int actualColumns;
+        int actualRows;
+
         if (getOrientation() == HORIZONTAL) {
             actualColumns = computeColumns(insideWidth, tileWidth);
             actualRows = computeOther(managed.size(), actualColumns);
@@ -993,8 +1057,19 @@ public class TilePane extends Pane {
         }
     }
 
-    private int actualRows = 0;
-    private int actualColumns = 0;
+    private void validateTileSizeCache() {
+        boolean snapToPixel = isSnapToPixel();
+        double snapScaleX = snapToPixel ? getSnapScaleX(this) : 1;
+        double snapScaleY = snapToPixel ? getSnapScaleY(this) : 1;
+
+        if (lastSnapToPixel != snapToPixel || lastSnapScaleX != snapScaleX || lastSnapScaleY != snapScaleY) {
+            lastSnapToPixel = snapToPixel;
+            lastSnapScaleX = snapScaleX;
+            lastSnapScaleY = snapScaleY;
+            invalidateTileWidth();
+            invalidateTileHeight();
+        }
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -1224,6 +1299,8 @@ public class TilePane extends Pane {
 
         @Override
         public double get() {
+            validateTileSizeCache();
+
             if (!valid) {
                 value = compute();
                 valid = true;
@@ -1241,5 +1318,4 @@ public class TilePane extends Pane {
 
         public abstract double compute();
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.javafx.scene.layout;
 
+import java.util.stream.Stream;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParserShim;
@@ -35,6 +37,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.TilePane;
 import javafx.scene.shape.Rectangle;
@@ -42,12 +45,15 @@ import javafx.stage.Stage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TilePaneTest {
+
+    private static final double EPSILON = 0.0000001;
 
     TilePane tilepane;
     TilePane htilepane;
@@ -1080,6 +1086,201 @@ public class TilePaneTest {
         assertEquals(160, tilepane.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void testMinAndPrefSizeSnapInsetsAtRenderScale(double scaleX, double scaleY) {
+        var horizontal = new TilePane(Orientation.HORIZONTAL);
+        horizontal.setPadding(new Insets(9.6));
+        horizontal.setPrefColumns(1);
+        horizontal.setPrefTileWidth(100);
+        horizontal.setPrefTileHeight(100);
+        horizontal.getChildren().add(new Region());
+
+        var vertical = new TilePane(Orientation.VERTICAL);
+        vertical.setPadding(new Insets(9.6));
+        vertical.setPrefRows(1);
+        vertical.setPrefTileWidth(100);
+        vertical.setPrefTileHeight(100);
+        vertical.getChildren().add(new Region());
+
+        Stage stage = showAtScale(scaleX, scaleY, horizontal, vertical);
+
+        try {
+            double expectedWidth = horizontal.snapSpaceX(
+                horizontal.snappedLeftInset() + horizontal.getTileWidth() + horizontal.snappedRightInset());
+
+            double expectedHeight = vertical.snapSpaceY(
+                vertical.snappedTopInset() + vertical.getTileHeight() + vertical.snappedBottomInset());
+
+            assertEquals(expectedWidth, horizontal.minWidth(-1), EPSILON);
+            assertEquals(expectedWidth, horizontal.prefWidth(-1), EPSILON);
+            assertEquals(expectedHeight, vertical.minHeight(-1), EPSILON);
+            assertEquals(expectedHeight, vertical.prefHeight(-1), EPSILON);
+        } finally {
+            stage.hide();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void testExactFitDoesNotWrapAtRenderScale(double scaleX, double scaleY) {
+        double tileWidth = 2 / scaleX;
+        double tileHeight = 2 / scaleY;
+        double hgap = 1 / scaleX;
+        double vgap = 1 / scaleY;
+        double twoTileWidth = 5 / scaleX;
+        double twoTileHeight = 5 / scaleY;
+        double secondTileX = 3 / scaleX;
+        double secondTileY = 3 / scaleY;
+
+        MockResizable firstHorizontal = new MockResizable(0, 0);
+        MockResizable secondHorizontal = new MockResizable(0, 0);
+        TilePane horizontal = new TilePane(Orientation.HORIZONTAL, hgap, 0, firstHorizontal, secondHorizontal);
+        horizontal.setPrefColumns(2);
+        horizontal.setPrefTileWidth(tileWidth);
+        horizontal.setPrefTileHeight(tileHeight);
+
+        MockResizable firstVertical = new MockResizable(0, 0);
+        MockResizable secondVertical = new MockResizable(0, 0);
+        TilePane vertical = new TilePane(Orientation.VERTICAL, 0, vgap, firstVertical, secondVertical);
+        vertical.setPrefRows(2);
+        vertical.setPrefTileWidth(tileWidth);
+        vertical.setPrefTileHeight(tileHeight);
+
+        Stage stage = showAtScale(scaleX, scaleY, horizontal, vertical);
+
+        try {
+            assertEquals(twoTileWidth, horizontal.prefWidth(-1), EPSILON);
+            assertEquals(twoTileHeight, vertical.prefHeight(-1), EPSILON);
+
+            horizontal.resize(twoTileWidth, tileHeight);
+            horizontal.requestLayout();
+            horizontal.layout();
+
+            assertEquals(firstHorizontal.getLayoutY(), secondHorizontal.getLayoutY(), EPSILON);
+            assertEquals(secondTileX, secondHorizontal.getLayoutX(), EPSILON);
+
+            vertical.resize(tileWidth, twoTileHeight);
+            vertical.requestLayout();
+            vertical.layout();
+
+            assertEquals(firstVertical.getLayoutX(), secondVertical.getLayoutX(), EPSILON);
+            assertEquals(secondTileY, secondVertical.getLayoutY(), EPSILON);
+        } finally {
+            stage.hide();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void testComputedTileSizeDoesNotCeilSnappedAggregate(double scaleX, double scaleY) {
+        var child = new Region();
+        child.setPrefSize(0.1 / scaleX, 0.1 / scaleY);
+        TilePane.setMargin(child, new Insets(11 / scaleY, 1 / scaleX, 1 / scaleY, 11 / scaleX));
+
+        var tilePane = new TilePane(child);
+        tilePane.setPrefColumns(1);
+
+        Stage stage = showAtScale(scaleX, scaleY, tilePane);
+
+        try {
+            double expectedTileWidth = 13 / scaleX;
+            double expectedTileHeight = 13 / scaleY;
+
+            assertEquals(expectedTileWidth, tilePane.getTileWidth(), EPSILON);
+            assertEquals(expectedTileHeight, tilePane.getTileHeight(), EPSILON);
+            assertEquals(expectedTileWidth, tilePane.prefWidth(-1), EPSILON);
+            assertEquals(expectedTileHeight, tilePane.prefHeight(-1), EPSILON);
+        } finally {
+            stage.hide();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void testBiasedChildUsesActualSnappedTileDimension(double scaleX, double scaleY) {
+        double naturalWidth = 100 / scaleX;
+        double naturalHeight = 100 / scaleY;
+        double fixedWidth = 50 / scaleX;
+        double fixedHeight = 50 / scaleY;
+        double dependentWidth = 200 / scaleX;
+        double dependentHeight = 200 / scaleY;
+
+        var horizontalChild = new MockBiased(Orientation.HORIZONTAL, naturalWidth, naturalHeight);
+        var horizontal = new TilePane(horizontalChild);
+        horizontal.setPrefColumns(1);
+        horizontal.setPrefTileWidth(fixedWidth);
+
+        var verticalChild = new MockBiased(Orientation.VERTICAL, naturalWidth, naturalHeight);
+        var vertical = new TilePane(Orientation.VERTICAL, verticalChild);
+        vertical.setPrefRows(1);
+        vertical.setPrefTileHeight(fixedHeight);
+
+        Stage stage = showAtScale(scaleX, scaleY, horizontal, vertical);
+
+        try {
+            assertEquals(fixedWidth, horizontal.getTileWidth(), EPSILON);
+            assertEquals(dependentHeight, horizontal.getTileHeight(), EPSILON);
+            assertEquals(dependentWidth, vertical.getTileWidth(), EPSILON);
+            assertEquals(fixedHeight, vertical.getTileHeight(), EPSILON);
+
+            horizontal.resize(fixedWidth, dependentHeight);
+            horizontal.requestLayout();
+            horizontal.layout();
+            assertEquals(fixedWidth, horizontalChild.getWidth(), EPSILON);
+            assertEquals(dependentHeight, horizontalChild.getHeight(), EPSILON);
+
+            vertical.resize(dependentWidth, fixedHeight);
+            vertical.requestLayout();
+            vertical.layout();
+            assertEquals(dependentWidth, verticalChild.getWidth(), EPSILON);
+            assertEquals(fixedHeight, verticalChild.getHeight(), EPSILON);
+        } finally {
+            stage.hide();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void testTileSizeCacheTracksRenderScaleAndSnapPolicy(double scaleX, double scaleY) {
+        var tilePane = new TilePane();
+        tilePane.setPrefTileWidth(0.1);
+        tilePane.setPrefTileHeight(0.1);
+
+        var renderScaleX = new SimpleDoubleProperty(1);
+        var renderScaleY = new SimpleDoubleProperty(1);
+        var stage = new Stage();
+        stage.renderScaleXProperty().bind(renderScaleX);
+        stage.renderScaleYProperty().bind(renderScaleY);
+        stage.setScene(new Scene(tilePane, 100, 100));
+        stage.show();
+
+        try {
+            assertEquals(1, tilePane.tileWidthProperty().get(), EPSILON);
+            assertEquals(1, tilePane.tileHeightProperty().get(), EPSILON);
+
+            renderScaleX.set(scaleX);
+
+            assertEquals(1 / scaleX, tilePane.tileWidthProperty().get(), EPSILON);
+            assertEquals(1, tilePane.tileHeightProperty().get(), EPSILON);
+
+            renderScaleY.set(scaleY);
+
+            assertEquals(1 / scaleX, tilePane.tileWidthProperty().get(), EPSILON);
+            assertEquals(1 / scaleY, tilePane.tileHeightProperty().get(), EPSILON);
+
+            tilePane.setSnapToPixel(false);
+            assertEquals(0.1, tilePane.tileWidthProperty().get(), EPSILON);
+            assertEquals(0.1, tilePane.tileHeightProperty().get(), EPSILON);
+
+            tilePane.setSnapToPixel(true);
+            assertEquals(1 / scaleX, tilePane.tileWidthProperty().get(), EPSILON);
+            assertEquals(1 / scaleY, tilePane.tileHeightProperty().get(), EPSILON);
+        } finally {
+            stage.hide();
+        }
+    }
+
     @Test
     public void testCSSsetPrefTileWidthAndHeight_RT20388() {
         Scene scene = new Scene(tilepane);
@@ -1131,5 +1332,25 @@ public class TilePaneTest {
         } catch (Exception e) {
             fail(e.toString());
         }
+    }
+
+    private static Stream<Arguments> renderScales() {
+        return Stream.of(
+            Arguments.of(1.0, 1.0),
+            Arguments.of(1.25, 1.5),
+            Arguments.of(1.5, 1.5),
+            Arguments.of(1.75, 2.25),
+            Arguments.of(1.0, 1.75)
+        );
+    }
+
+    private static Stage showAtScale(double scaleX, double scaleY, Node... nodes) {
+        Pane root = new Pane(nodes);
+        Stage stage = new Stage();
+        stage.renderScaleXProperty().bind(new SimpleDoubleProperty(scaleX));
+        stage.renderScaleYProperty().bind(new SimpleDoubleProperty(scaleY));
+        stage.setScene(new Scene(root, 400, 400));
+        stage.show();
+        return stage;
     }
 }
