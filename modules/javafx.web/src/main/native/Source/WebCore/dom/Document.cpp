@@ -3844,6 +3844,9 @@ void Document::stopActiveDOMObjects()
     ScriptExecutionContext::stopActiveDOMObjects();
     platformSuspendOrStopActiveDOMObjects();
 
+    if (RefPtr eventLoop = m_eventLoop)
+        eventLoop->removeMutationObserversForContext(*this);
+
     // https://www.w3.org/TR/screen-wake-lock/#handling-document-loss-of-full-activity
     if (m_wakeLockManager)
         m_wakeLockManager->releaseAllLocks(WakeLockType::Screen);
@@ -6207,7 +6210,8 @@ void Document::processCaptureStateDidChange(Function<bool(const Page&)>&& isPage
     if (!hasRealtimeMediaSource(m_captureSources, filterSource))
         return;
 
-    eventLoop().queueTask(TaskSource::MediaElement, [weakDocument = WeakPtr { *this }, weakSession = WeakPtr { *mediaSession }, isPageMuted = isPageMutedCallback(*page), filterSource = WTF::move(filterSource), isPageMutedCallback = WTF::move(isPageMutedCallback), action] {
+    bool isPageMuted = isPageMutedCallback(*page);
+    eventLoop().queueTask(TaskSource::MediaElement, [weakDocument = WeakPtr { *this }, weakSession = WeakPtr { *mediaSession }, isPageMuted, filterSource = WTF::move(filterSource), isPageMutedCallback = WTF::move(isPageMutedCallback), action] {
         RefPtr protecteDocument = weakDocument.get();
         if (!protecteDocument)
             return;
@@ -6740,7 +6744,7 @@ bool Document::setFocusedElement(Element* newFocusedElement, const FocusOptions&
             window()->navigation().setFocusChanged(FocusDidChange::Yes);
     }
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
         // GTK relies on creating the AXObjectCache when a focus change happens.
         if (CheckedPtr cache = axObjectCache())
 #else
@@ -7999,7 +8003,7 @@ ExceptionOr<bool> Document::execCommand(const String& commandName, bool userInte
 
     auto stringValueHolder = WTF::switchOn(value,
         [&commandName, this](const String& str) -> ExceptionOr<String> {
-            if (commandName != "insertHTML"_s)
+            if (!equalIgnoringASCIICase(commandName, "insertHTML"_s))
                 return String(str);
             return trustedTypeCompliantString(TrustedType::TrustedHTML, protect(contextDocument()), str, "Document execCommand"_s);
         },

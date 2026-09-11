@@ -32,13 +32,14 @@ Recreate the dependency verification file as follows:
    builds to pick up the internal tools and development kits in the
    'javafx' component group.
 
-6. Add the following entry inside the <configuration> section:
+6. Add the following entries inside the <configuration> section:
 
    <trusted-artifacts>
       <trust file=".*-sources[.]jar" regex="true"/>
+      <trust group="org[.]apache[.]groovy" file="groovy-.*[.](?:pom|module)" regex="true"/>
    </trusted-artifacts>
 
-   This configures Gradle to trust automatically all sources.
+   This configures Gradle to trust all sources and Groovy dependencies required by IDEs.
    See also: https://docs.gradle.org/current/userguide/dependency_verification.html#sec:skipping-javadocs
 
 7. Commit the final version of the file to the repository.
