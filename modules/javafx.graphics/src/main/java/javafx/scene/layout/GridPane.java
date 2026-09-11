@@ -1734,12 +1734,12 @@ public class GridPane extends Pane {
                 widths = (CompositeSize) computePrefWidths(null).clone();
                 columnTotal = adjustColumnWidths(widths, width);
                 heights = computePrefHeights(widths);
-                rowTotal = adjustRowHeights(heights, height);
+                rowTotal = adjustRowHeights(heights, height, widths);
             } else {
                 heights = (CompositeSize) computePrefHeights(null).clone();
                 rowTotal = adjustRowHeights(heights, height);
                 widths = computePrefWidths(heights);
-                columnTotal = adjustColumnWidths(widths, width);
+                columnTotal = adjustColumnWidths(widths, width, heights);
             }
 
             final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
@@ -1847,6 +1847,10 @@ public class GridPane extends Pane {
     }
 
     private double adjustRowHeights(final CompositeSize heights, double height) {
+        return adjustRowHeights(heights, height, null);
+    }
+
+    private double adjustRowHeights(final CompositeSize heights, double height, CompositeSize widths) {
         assert(height != -1);
         final double snapvgap = snapSpaceY(getVgap());
         final double top = snapSpaceY(getInsets().getTop());
@@ -1880,8 +1884,8 @@ public class GridPane extends Pane {
             if (heightAvailable != 0) {
                 // maybe grow or shrink row heights
                 double remaining = growToMultiSpanPreferredHeights(heights, heightAvailable);
-                remaining = growOrShrinkRowHeights(heights, Priority.ALWAYS, remaining);
-                remaining = growOrShrinkRowHeights(heights, Priority.SOMETIMES, remaining);
+                remaining = growOrShrinkRowHeights(heights, Priority.ALWAYS, remaining, widths);
+                remaining = growOrShrinkRowHeights(heights, Priority.SOMETIMES, remaining, widths);
                 rowTotal += (heightAvailable - remaining);
             }
         }
@@ -2023,7 +2027,7 @@ public class GridPane extends Pane {
         return remaining;
     }
 
-    private double growOrShrinkRowHeights(CompositeSize heights, Priority priority, double extraHeight) {
+    private double growOrShrinkRowHeights(CompositeSize heights, Priority priority, double extraHeight, CompositeSize widths) {
         final boolean shrinking = extraHeight < 0;
         List<Integer> adjusting = new ArrayList<>();
 
@@ -2043,7 +2047,7 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking? computeMinHeights(null) :
+        CompositeSize limitSize = shrinking? computeMinHeights(widths) :
                             computeMaxHeights();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
@@ -2088,6 +2092,10 @@ public class GridPane extends Pane {
     }
 
     private double adjustColumnWidths(final CompositeSize widths, double width) {
+        return adjustColumnWidths(widths, width, null);
+    }
+
+    private double adjustColumnWidths(final CompositeSize widths, double width, CompositeSize heights) {
         assert(width != -1);
         final double snaphgap = snapSpaceX(getHgap());
         final double left = snapSpaceX(getInsets().getLeft());
@@ -2122,8 +2130,8 @@ public class GridPane extends Pane {
             if (widthAvailable != 0) {
                 // maybe grow or shrink row heights
                 double remaining = growToMultiSpanPreferredWidths(widths, widthAvailable);
-                remaining = growOrShrinkColumnWidths(widths, Priority.ALWAYS, remaining);
-                remaining = growOrShrinkColumnWidths(widths, Priority.SOMETIMES, remaining);
+                remaining = growOrShrinkColumnWidths(widths, Priority.ALWAYS, remaining, heights);
+                remaining = growOrShrinkColumnWidths(widths, Priority.SOMETIMES, remaining, heights);
                 columnTotal += (widthAvailable - remaining);
             }
         }
@@ -2264,7 +2272,7 @@ public class GridPane extends Pane {
         return remaining;
     }
 
-    private double growOrShrinkColumnWidths(CompositeSize widths, Priority priority, double extraWidth) {
+    private double growOrShrinkColumnWidths(CompositeSize widths, Priority priority, double extraWidth, CompositeSize heights) {
         if (extraWidth == 0) {
             return 0;
         }
@@ -2287,7 +2295,7 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking? computeMinWidths(null) :
+        CompositeSize limitSize = shrinking? computeMinWidths(heights) :
                             computeMaxWidths();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
