@@ -48,13 +48,13 @@ void init_ids(JNIEnv *);
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
-    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6)) {
+    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_8)) {
         return JNI_ERR; /* JNI version not supported */
     }
     jvm = vm;
     init_ids(env);
     init_functions(env);
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_8;
 }
 
 void init_functions(JNIEnv *env) {

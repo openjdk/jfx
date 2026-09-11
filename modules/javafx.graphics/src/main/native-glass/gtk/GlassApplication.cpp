@@ -76,7 +76,7 @@ static gboolean call_runnable (gpointer data)
     RunnableContext* context = reinterpret_cast<RunnableContext*>(data);
 
     JNIEnv *env;
-    int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_6);
+    int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_8);
     if (envStatus == JNI_EDETACHED) {
         javaVM->AttachCurrentThread((void **)&env, NULL);
     }
