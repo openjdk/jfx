@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,8 +339,7 @@ public abstract sealed class LightBase extends Node permits AmbientLight, Direct
     }
 
     @Override
-    void scenesChanged(final Scene newScene, final SubScene newSubScene,
-                       final Scene oldScene, final SubScene oldSubScene) {
+    void scenesChanged(Scene oldScene, SubScene oldSubScene) {
         // This light is owned by the Scene/SubScene, and thus must change
         // accordingly. Note lights can owned by either a Scene or SubScene,
         // but not both.
@@ -349,9 +348,9 @@ public abstract sealed class LightBase extends Node permits AmbientLight, Direct
         } else if (oldScene != null) {
             oldScene.removeLight(this);
         }
-        if (newSubScene != null) {
+        if (getSubScene() instanceof SubScene newSubScene) {
             newSubScene.addLight(this);
-        } else if (newScene != null) {
+        } else if (getScene() instanceof Scene newScene) {
             newScene.addLight(this);
         }
     }

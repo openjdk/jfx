@@ -31,6 +31,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.GridPaneShim;
@@ -38,6 +39,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +63,28 @@ public class GridPaneTest {
         assertFalse(gridpane.isGridLinesVisible());
         assertEquals(0, gridpane.getColumnConstraints().size());
         assertEquals(0, gridpane.getRowConstraints().size());
+    }
+
+    @Test public void testCachedMetricsInvalidatedWhenRenderScaleChanges() {
+        Region child = new Region() {
+            @Override
+            protected double computePrefWidth(double height) {
+                return snapSizeX(10.2);
+            }
+        };
+
+        gridpane.getChildren().add(child);
+
+        Stage stage = new Stage();
+        stage.setScene(new Scene(gridpane));
+
+        try {
+            assertEquals(11.0, gridpane.prefWidth(-1), 0.0);
+            stage.setRenderScaleX(1.5);
+            assertEquals(10.666666666666666, gridpane.prefWidth(-1), 0.0);
+        } finally {
+            stage.close();
+        }
     }
 
     @Test public void testGridPaneNulls() {

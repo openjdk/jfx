@@ -163,14 +163,6 @@ public class RegionShim extends Region {
         r.addImageListener(image);
     }
 
-    public static double snapPortionX(Region r, double value) {
-        return r.snapPortionX(value);
-    }
-
-    public static double snapPortionY(Region r, double value) {
-        return r.snapPortionY(value);
-    }
-
     public static void setWidth(Region r, double width) {
         r.setWidth(width);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -553,47 +553,35 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      **************************************************************************/
 
     /**
-     * Utility method to get the top inset which includes padding and border
-     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
-     *
-     * @return Rounded up insets top
+     * {@return the value of {@link Region#snappedTopInset() getSkinnable().snappedTopInset()}}
      */
     protected double snappedTopInset() {
         return control.snappedTopInset();
     }
 
     /**
-     * Utility method to get the bottom inset which includes padding and border
-     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
-     *
-     * @return Rounded up insets bottom
+     * {@return the value of {@link Region#snappedBottomInset() getSkinnable().snappedBottomInset()}}
      */
     protected double snappedBottomInset() {
         return control.snappedBottomInset();
     }
 
     /**
-     * Utility method to get the left inset which includes padding and border
-     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
-     *
-     * @return Rounded up insets left
+     * {@return the value of {@link Region#snappedLeftInset() getSkinnable().snappedLeftInset()}}
      */
     protected double snappedLeftInset() {
         return control.snappedLeftInset();
     }
 
     /**
-     * Utility method to get the right inset which includes padding and border
-     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
-     *
-     * @return Rounded up insets right
+     * {@return the value of {@link Region#snappedRightInset() getSkinnable().snappedRightInset()}}
      */
     protected double snappedRightInset() {
         return control.snappedRightInset();
     }
 
     /**
-     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * If {@code getSkinnable().isSnappedToPixel()} is false, this method
      * returns the same value, else it tries to return a value rounded to
      * the nearest pixel, but since there is no indication if the value is
      * a vertical or horizontal measurement then it may be snapped to the
@@ -639,7 +627,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * If {@code getSkinnable().isSnappedToPixel()} is false, this method
      * returns the same value, else it tries to return a value ceiled to
      * the nearest pixel, but since there is no indication if the value is
      * a vertical or horizontal measurement then it may be snapped to the
@@ -685,7 +673,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * If {@code getSkinnable().isSnappedToPixel()} is false, this method
      * returns the same value, else it tries to return a value rounded to
      * the nearest pixel, but since there is no indication if the value is
      * a vertical or horizontal measurement then it may be snapped to the
@@ -742,7 +730,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * will position the node so that its own baseline aligns with the passed in
      * {@code baselineOffset}, otherwise the baseline parameter is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this skin, then the x/y position
+     * If {@code getSkinnable().isSnappedToPixel()} is {@code true}, then the x/y position
      * values will be rounded to their nearest pixel boundaries.
      *
      * @param child the child being positioned within this skin
@@ -774,7 +762,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * will position the node so that its own baseline aligns with the passed in
      * {@code baselineOffset},  otherwise the baseline parameter is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this skin, then the x/y position
+     * If {@code getSkinnable().isSnappedToPixel()} is {@code true}, then the x/y position
      * values will be rounded to their nearest pixel boundaries.
      * <p>
      * If {@code margin} is non-null, then that space will be allocated around the
@@ -797,7 +785,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             Insets margin, HPos halignment, VPos valignment) {
         Region.positionInArea(child, areaX, areaY, areaWidth, areaHeight,
                 areaBaselineOffset, margin, halignment, valignment,
-                control.isSnapToPixel());
+                control.isSnappedToPixel());
     }
 
     /**
@@ -830,7 +818,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * with the area baseline offset parameter, otherwise the baseline parameter
      * is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * If {@code getSkinnable().isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -885,7 +873,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * If {@code margin} is non-null, then that space will be allocated around the
      * child within the layout area.  margin may be null.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * If {@code getSkinnable().isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -942,7 +930,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * If {@code margin} is non-null, then that space will be allocated around the
      * child within the layout area.  margin may be null.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this skin, then the resulting x,y
+     * If {@code getSkinnable().isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -965,7 +953,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
                                HPos halignment, VPos valignment) {
         Region.layoutInArea(child, areaX, areaY, areaWidth, areaHeight,
                 areaBaselineOffset, margin, fillWidth, fillHeight, halignment,
-                valignment, control.isSnapToPixel());
+                valignment, control.isSnappedToPixel());
     }
 
 

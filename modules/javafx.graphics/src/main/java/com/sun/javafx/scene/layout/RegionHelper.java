@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
 /**
@@ -98,6 +99,13 @@ public class RegionHelper extends ParentHelper {
     protected void notifyLayoutBoundsChangedImpl(Node node) {
         regionAccessor.doNotifyLayoutBoundsChanged(node);
     }
+
+    @Override
+    protected void layoutContextInvalidatedImpl(Parent parent) {
+        regionAccessor.doLayoutContextInvalidated(parent);
+        super.layoutContextInvalidatedImpl(parent);
+    }
+
     @Override
     protected void pickNodeLocalImpl(Node node, PickRay localPickRay,
             PickResultChooser result) {
@@ -119,8 +127,7 @@ public class RegionHelper extends ParentHelper {
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
         void doNotifyLayoutBoundsChanged(Node node);
-        void doPickNodeLocal(Node node, PickRay localPickRay,
-                PickResultChooser result);
+        void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result);
+        void doLayoutContextInvalidated(Node node);
     }
-
 }

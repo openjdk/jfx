@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.geom.Vec2d;
+import com.sun.javafx.scene.NodeHelper;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -508,9 +509,9 @@ public class BorderPane extends Pane {
             width = width < minWidth ? minWidth : width;
         }
 
-        final boolean snapToPixel = isSnapToPixel();
-        final double snapScaleX = getSnapScaleX(this);
-        final double snapScaleY = getSnapScaleY(this);
+        final boolean snapToPixel = isSnappedToPixel();
+        final double snapScaleX = NodeHelper.getRenderScaleX(this);
+        final double snapScaleY = NodeHelper.getRenderScaleY(this);
         final double insideX = insets.getLeft();
         final double insideY = insets.getTop();
         final double insideWidth = width - insideX - insets.getRight();
