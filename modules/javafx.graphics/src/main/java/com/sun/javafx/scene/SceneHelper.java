@@ -26,6 +26,7 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.scene.layout.Snapper;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Camera;
@@ -34,6 +35,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.RenderScaleContext;
 import javafx.stage.Window;
 
 /**
@@ -114,6 +116,14 @@ public final class SceneHelper {
         return sceneAccessor.getSceneContext(scene);
     }
 
+    public static Snapper getSnapper(Scene scene) {
+        return sceneAccessor.getSnapper(scene);
+    }
+
+    public static RenderScaleContext getRenderScaleContext(Scene scene) {
+        return sceneAccessor.getRenderScaleContext(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -161,6 +171,10 @@ public final class SceneHelper {
         Accessible getAccessible(Scene scene);
 
         SceneContext getSceneContext(Scene scene);
+
+        Snapper getSnapper(Scene scene);
+
+        RenderScaleContext getRenderScaleContext(Scene scene);
     }
 
 }
