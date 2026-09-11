@@ -28,7 +28,6 @@ DIRLIST = gstreamer/gst                     \
           gst-plugins-base/gst/typefind \
           gst-plugins-base/gst/audioconvert \
           gst-plugins-good/gst/audioparsers \
-          gst-plugins-good/gst/isomp4 \
           gst-plugins-good/gst/audiofx \
           gst-plugins-good/gst/equalizer \
           gst-plugins-good/gst/spectrum \
@@ -253,16 +252,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-good/gst/equalizer/gstiirequalizer.c \
             gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
             gst-plugins-good/gst/equalizer/gstiirequalizerplugin.c \
-            gst-plugins-good/gst/isomp4/isomp4-plugin.c \
-            gst-plugins-good/gst/isomp4/gstisomp4element.c \
-            gst-plugins-good/gst/isomp4/qtdemux-webvtt.c \
-            gst-plugins-good/gst/isomp4/qtdemux.c \
-            gst-plugins-good/gst/isomp4/gstisoff.c \
-            gst-plugins-good/gst/isomp4/qtdemux_dump.c \
-            gst-plugins-good/gst/isomp4/qtdemux_lang.c \
-            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
-            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
-            gst-plugins-good/gst/isomp4/qtdemux_types.c \
             gst-plugins-good/gst/spectrum/gstspectrum.c \
             gst-plugins-good/gst/wavparse/gstwavparse.c \
             gstreamer/plugins/elements/gstcoreelementsplugin.c \
