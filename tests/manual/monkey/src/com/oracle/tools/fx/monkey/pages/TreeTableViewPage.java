@@ -36,6 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Control;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeItem;
@@ -120,7 +121,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
 
     private ContextMenuOptions contextMenuOptions(String name) {
         ContextMenuOptions c = new ContextMenuOptions(name, control);
-        c.addChoiceSupplier("Data Manipulation", () -> {
+        c.addChoice("Data Manipulation", () -> {
             ContextMenu m = new ContextMenu();
             FX.item(m, "Add After", this::addAfter);
             FX.item(m, "Add Child", this::addChild);
@@ -187,6 +188,11 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new TreeTableViewSkin<>(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 
     /**

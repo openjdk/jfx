@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.oracle.tools.fx.monkey.pages;
 
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.Control;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.skin.RadioButtonSkin;
@@ -77,5 +78,10 @@ public class RadioButtonPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new RadioButtonSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }

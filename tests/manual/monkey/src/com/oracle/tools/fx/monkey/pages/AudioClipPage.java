@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.AudioClip;
-import com.oracle.tools.fx.monkey.media.Notes;
+import com.oracle.tools.fx.monkey.media.Resources;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
@@ -85,7 +85,7 @@ public class AudioClipPage extends TestPaneBase {
     }
 
     private void playNote(String name) {
-        play(Notes.getNoteURI(name));
+        play(Resources.getURI(name));
     }
 
     private void play() {

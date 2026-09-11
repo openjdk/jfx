@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.oracle.tools.fx.monkey.pages;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.Control;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.skin.PaginationSkin;
 import javafx.scene.image.ImageView;
@@ -95,5 +96,10 @@ public class PaginationPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new PaginationSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }
