@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ import javafx.css.SizeUnits;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -502,6 +503,40 @@ public class ParsedValueTest {
         }
 
     }
+
+    @Test
+    public void testWriteAndReadBinaryNumbers() {
+        Number[] numbers = {
+            Integer.MIN_VALUE,
+            Integer.MAX_VALUE,
+            12345678,
+            Double.NaN,
+            -0.0,
+            -123.5
+        };
+
+        for (Number number : numbers) {
+            writeAndReadBinary(new ParsedValueImpl<>(number, null));
+        }
+    }
+
+    @Test
+    public void testWriteBinaryFailsForUnsupportedNumberTypes() {
+        Number[] numbers = {
+            Byte.MIN_VALUE,
+            Short.MIN_VALUE,
+            0x0123456789ABCDEFL,
+            -123.75F
+        };
+
+        for (Number number : numbers) {
+            assertThrows(InternalError.class, () ->
+                new ParsedValueImpl<>(number, null).writeBinary(
+                    new DataOutputStream(new ByteArrayOutputStream()), new StringStore()),
+                number.getClass().getName());
+        }
+    }
+
     /**
      * Test of readBinary method, of class ParsedValueImpl.
      */
