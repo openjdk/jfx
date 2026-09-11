@@ -308,9 +308,4 @@ class GtkWindow extends Window {
             }
         }
     }
-
-    @Override
-    public boolean emulateBackdrop() {
-        return true;
-    }
 }

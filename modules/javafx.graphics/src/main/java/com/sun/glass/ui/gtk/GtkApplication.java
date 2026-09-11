@@ -452,17 +452,7 @@ final class GtkApplication extends Application implements
     }
 
     @Override protected boolean _supportsWindowBackdrops() {
-        return true;
-    }
-
-    @Override
-    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
-        if (style == StageBackdropStyle.WINDOW) {
-            return 1;
-        } else if (style == StageBackdropStyle.PARTIAL) {
-            return 2;
-        }
-        return Window.NO_BACKDROP_ID;
+        return false;
     }
 
     @Override
