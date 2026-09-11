@@ -25,11 +25,17 @@
 
 package test.javafx.scene.layout;
 
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,10 +47,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class BorderPaneTest {
 
     BorderPane borderpane;
+    private Stage stage;
 
     @BeforeEach
     public void setUp() {
         this.borderpane = new BorderPane();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (stage != null) {
+            stage.hide();
+            stage = null;
+        }
     }
 
     @Test
@@ -346,15 +361,18 @@ public class BorderPaneTest {
         /*
          * Note: there is a mix of horizontal and vertical biased children. The BorderPane
          * will favor the bias of the center node above all (see its implementation). This
-         * means the VERTICAL biased controls will have their bias ignored as they differ
-         * from the center's bias.
+         * determines the BorderPane's overall bias. Individual children still retain
+         * their own bias when a dependent size is available.
          */
 
         assertEquals(40/*l*/ + 60/*r*/ + 200/*c*/, borderpane.prefWidth(-1), 1e-100);
         assertEquals(240 /* l + r + c*/, borderpane.prefHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(-1), 1e-100); /* min center + 2x pref width (l, r) */
         assertEquals(20 /*t*/ + 200 /*c*/ + 20 /*b*/, borderpane.minHeight(-1), 1e-10);
-        assertEquals(110, borderpane.minWidth(240), 1e-100);
+
+        // The 240 height leaves 200 for the middle. The left and right preferred
+        // widths at that filled height are 20 and 60; the center minimum is 10.
+        assertEquals(90, borderpane.minWidth(240), 1e-100);
 
         // Top: at a width of 300, the biased control becomes 7 high (6.666)
         // Bottom: at a width of 300, the biased control becomes 14 high (13.333)
@@ -1045,6 +1063,180 @@ public class BorderPaneTest {
     }
 
     @Test
+    public void testSnapsInsetsAndChildSizesInMeasurements() {
+        MockResizable center = new MockResizable(10.1, 20.1, 10.1, 20.1, 10.1, 20.1);
+        borderpane.setPadding(new Insets(0.4));
+        borderpane.setCenter(center);
+
+        showAtScale(1.25, 1.75);
+
+        // X: 1 inset pixel + 13 child pixels + 1 inset pixel.
+        assertEquals(15 / 1.25, borderpane.minWidth(-1));
+        assertEquals(15 / 1.25, borderpane.prefWidth(-1));
+
+        // Y: 1 inset pixel + 36 child pixels + 1 inset pixel.
+        assertEquals(38 / 1.75, borderpane.minHeight(-1));
+        assertEquals(38 / 1.75, borderpane.prefHeight(-1));
+    }
+
+    @Test
+    public void testSnapsEdgeAllocationsAsCompleteSpans() {
+        MockResizable top = new MockResizable(0, 10.1);
+        MockResizable bottom = new MockResizable(0, 8.1);
+        MockResizable left = new MockResizable(7.1, 0);
+        MockResizable right = new MockResizable(6.1, 0);
+        MockResizable center = new MockResizable(0, 0);
+        Insets margin = new Insets(0.4);
+
+        BorderPane.setMargin(top, margin);
+        BorderPane.setMargin(bottom, margin);
+        BorderPane.setMargin(left, margin);
+        BorderPane.setMargin(right, margin);
+        borderpane.setPadding(new Insets(0.4));
+        borderpane.setTop(top);
+        borderpane.setBottom(bottom);
+        borderpane.setLeft(left);
+        borderpane.setRight(right);
+        borderpane.setCenter(center);
+
+        showAtScale(1.25, 1.75);
+        borderpane.resize(50.2, 60.2);
+        borderpane.layout();
+
+        // The snapped pane span is 63 x 105 physical pixels. Padding consumes
+        // one pixel on every side; each edge margin also consumes one pixel.
+        assertEquals(2 / 1.25, top.getLayoutX());
+        assertEquals(2 / 1.75, top.getLayoutY());
+        assertEquals(59 / 1.25, top.getWidth());
+        assertEquals(18 / 1.75, top.getHeight());
+
+        assertEquals(2 / 1.25, bottom.getLayoutX());
+        assertEquals(88 / 1.75, bottom.getLayoutY());
+        assertEquals(59 / 1.25, bottom.getWidth());
+        assertEquals(15 / 1.75, bottom.getHeight());
+
+        assertEquals(2 / 1.25, left.getLayoutX());
+        assertEquals(22 / 1.75, left.getLayoutY());
+        assertEquals(9 / 1.25, left.getWidth());
+        assertEquals(64 / 1.75, left.getHeight());
+
+        assertEquals(53 / 1.25, right.getLayoutX());
+        assertEquals(22 / 1.75, right.getLayoutY());
+        assertEquals(8 / 1.25, right.getWidth());
+        assertEquals(64 / 1.75, right.getHeight());
+
+        assertEquals(12 / 1.25, center.getLayoutX());
+        assertEquals(21 / 1.75, center.getLayoutY());
+        assertEquals(40 / 1.25, center.getWidth());
+        assertEquals(66 / 1.75, center.getHeight());
+    }
+
+    @Test
+    public void testHorizontalBiasUsesSnappedContentWidth() {
+        MockBiased top = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        borderpane.setPadding(new Insets(0.4));
+        borderpane.setTop(top);
+
+        showAtScale(1.25, 1.75);
+
+        // The 100.6-unit constraint becomes a 126-pixel pane width. After two
+        // one-pixel insets, the child receives exactly 124 pixels. Its dependent
+        // height is then ceiled to 177 pixels, plus two vertical inset pixels.
+        assertEquals(179 / 1.75, borderpane.prefHeight(100.6));
+
+        borderpane.resize(100.6, 150);
+        borderpane.layout();
+
+        assertEquals(1 / 1.25, top.getLayoutX());
+        assertEquals(1 / 1.75, top.getLayoutY());
+        assertEquals(124 / 1.25, top.getWidth());
+        assertEquals(177 / 1.75, top.getHeight());
+    }
+
+    @Test
+    public void testVerticalBiasUsesFilledSnappedContentHeight() {
+        MockBiased center = new MockBiased(Orientation.VERTICAL, 200, 100);
+        borderpane.setPadding(new Insets(0.4));
+        borderpane.setCenter(center);
+
+        showAtScale(1.25, 1.75);
+
+        // The 200.6-unit constraint becomes 351 physical pixels. Insets leave
+        // 349 pixels for the vertically-filled center, which requires 126 X pixels.
+        // Adding the two horizontal inset pixels gives a 128-pixel pane width.
+        assertEquals(128 / 1.25, borderpane.minWidth(200.6));
+        assertEquals(128 / 1.25, borderpane.prefWidth(200.6));
+
+        borderpane.resize(128 / 1.25, 200.6);
+        borderpane.layout();
+
+        assertEquals(1 / 1.25, center.getLayoutX());
+        assertEquals(1 / 1.75, center.getLayoutY());
+        assertEquals(126 / 1.25, center.getWidth());
+        assertEquals(349 / 1.75, center.getHeight());
+    }
+
+    @Test
+    public void testWidthConstraintBelowSnappedInsetSumIsClampedToZero() {
+        var top = new ConstraintSensitiveRegion(Orientation.HORIZONTAL);
+        var center = new ConstraintSensitiveRegion(Orientation.HORIZONTAL);
+
+        borderpane.setPadding(new Insets(0.75));
+        borderpane.setTop(top);
+        borderpane.setCenter(center);
+
+        showAtScale(2, 2);
+
+        // At scale 2, each horizontal inset snaps from 0.75 to 1.0.
+        double snappedInsets = borderpane.snappedLeftInset() + borderpane.snappedRightInset();
+
+        assertEquals(2, snappedInsets);
+
+        // Verify the two intermediate values exercised below.
+        // In particular, the second one is exactly the -1  sentinel.
+        assertEquals(-2, borderpane.snapSpaceX(0 - snappedInsets));
+        assertEquals(-1, borderpane.snapSpaceX(1 - snappedInsets));
+
+        // After clamping, both the top and center receive a dependent width of
+        // zero and report a height of 10:
+        //     1 top inset + 10 top + 10 center + 1 bottom inset = 22.
+        for (double width : new double[] { 0, 1 }) {
+            assertEquals(22, borderpane.minHeight(width));
+            assertEquals(22, borderpane.prefHeight(width));
+        }
+    }
+
+    @Test
+    public void testHeightConstraintBelowSnappedInsetSumIsClampedToZero() {
+        var left = new ConstraintSensitiveRegion(Orientation.VERTICAL);
+        var center = new ConstraintSensitiveRegion(Orientation.VERTICAL);
+
+        borderpane.setPadding(new Insets(0.75));
+        borderpane.setLeft(left);
+        borderpane.setCenter(center);
+
+        showAtScale(2, 2);
+
+        // At scale 2, each vertical inset snaps from 0.75 to 1.0.
+        double snappedInsets = borderpane.snappedTopInset() + borderpane.snappedBottomInset();
+
+        assertEquals(2, snappedInsets);
+
+        // Verify the two intermediate values exercised below.
+        // In particular, the second one is exactly the -1  sentinel.
+        assertEquals(-2, borderpane.snapSpaceY(0 - snappedInsets));
+        assertEquals(-1, borderpane.snapSpaceY(1 - snappedInsets));
+
+        // After clamping, both the left and center receive a dependent height
+        // of zero and report a width of 10:
+        //     1 left inset + 10 left + 10 center + 1 right inset = 22.
+        for (double height : new double[] { 0, 1 }) {
+            assertEquals(22, borderpane.minWidth(height));
+            assertEquals(22, borderpane.prefWidth(height));
+        }
+    }
+
+    @Test
     public void testResizeBelowMinimum() {
         MockResizable left = new MockResizable(10,10,100,100,150,150);
         MockResizable center = new MockResizable(30,30,100,100,200,200);
@@ -1065,32 +1257,55 @@ public class BorderPaneTest {
         assertEquals(30, center.getHeight(), 1e-100);
     }
 
-    @Test
-    public void testSnappedPrimarySizeForBiasedEdgeChildren() {
-        var top = new MockBiased(Orientation.HORIZONTAL, 100, 200);
-        var bottom = new MockBiased(Orientation.HORIZONTAL, 100, 200);
-        var horizontalPane = new BorderPane();
-        horizontalPane.setTop(top);
-        horizontalPane.setBottom(bottom);
-        horizontalPane.resize(99.2, 1000);
-        horizontalPane.layout();
+    private void showAtScale(double scaleX, double scaleY) {
+        borderpane.setManaged(false);
+        Pane root = new Pane(borderpane);
+        stage = new Stage();
+        stage.renderScaleXProperty().bind(new SimpleDoubleProperty(scaleX));
+        stage.renderScaleYProperty().bind(new SimpleDoubleProperty(scaleY));
+        stage.setScene(new Scene(root, 300, 300));
+        stage.show();
+    }
 
-        assertEquals(100, top.getWidth());
-        assertEquals(200, top.getHeight());
-        assertEquals(100, bottom.getWidth());
-        assertEquals(200, bottom.getHeight());
+    private static final class ConstraintSensitiveRegion extends Region {
+        private static final double CONSTRAINED_SIZE = 10;
+        private static final double NEGATIVE_CONSTRAINT_SIZE = 100;
 
-        var left = new MockBiased(Orientation.VERTICAL, 200, 100);
-        var right = new MockBiased(Orientation.VERTICAL, 200, 100);
-        var verticalPane = new BorderPane();
-        verticalPane.setLeft(left);
-        verticalPane.setRight(right);
-        verticalPane.resize(1000, 99.2);
-        verticalPane.layout();
+        private final Orientation bias;
 
-        assertEquals(200, left.getWidth());
-        assertEquals(100, left.getHeight());
-        assertEquals(200, right.getWidth());
-        assertEquals(100, right.getHeight());
+        private ConstraintSensitiveRegion(Orientation bias) {
+            this.bias = bias;
+        }
+
+        @Override
+        public Orientation getContentBias() {
+            return bias;
+        }
+
+        @Override
+        protected double computeMinWidth(double height) {
+            return bias == Orientation.VERTICAL ? sizeForConstraint(height) : 0;
+        }
+
+        @Override
+        protected double computePrefWidth(double height) {
+            return bias == Orientation.VERTICAL ? sizeForConstraint(height) : 0;
+        }
+
+        @Override
+        protected double computeMinHeight(double width) {
+            return bias == Orientation.HORIZONTAL ? sizeForConstraint(width) : 0;
+        }
+
+        @Override
+        protected double computePrefHeight(double width) {
+            return bias == Orientation.HORIZONTAL ? sizeForConstraint(width) : 0;
+        }
+
+        private static double sizeForConstraint(double constraint) {
+            // A negative value means that the constrained measurement was
+            // incorrectly exposed as either negative space or the -1 sentinel.
+            return constraint < 0 ? NEGATIVE_CONSTRAINT_SIZE : CONSTRAINED_SIZE;
+        }
     }
 }
