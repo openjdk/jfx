@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import javafx.beans.InvalidationListener;
@@ -2118,6 +2119,49 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(flow.cells, flow.sheetChildren);
     }
 
+    @Test
+    public void testScrollingDoesNotCreateMoreCellsThanFitInViewport() {
+        int cellSize = 25;
+        int viewportLength = 300;
+        int maxVisibleCells = viewportLength / cellSize + 1;
+
+        AtomicInteger createdCells = new AtomicInteger(0);
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(cellSize);
+        flow.setCellCount(100);
+        flow.resize(300, viewportLength);
+        flow.setCellFactory(f -> {
+            createdCells.addAndGet(1);
+            return new CellStub(flow);
+        });
+        pulse();
+
+        for (int i = 0; i < 100; i++) {
+            flow.scrollPixels(10);
+            pulse();
+            assertMaxCellCount(maxVisibleCells, createdCells.get());
+        }
+        for (int i = 0; i < 120; i++) {
+            flow.scrollPixels(-10);
+            pulse();
+            assertMaxCellCount(maxVisibleCells, createdCells.get());
+        }
+
+        flow.scrollPixels(Integer.MAX_VALUE);
+        pulse();
+        assertMaxCellCount(maxVisibleCells, createdCells.get());
+
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(i % 2 == 0 ? -7 : 7);
+            pulse();
+            assertMaxCellCount(maxVisibleCells, createdCells.get());
+        }
+    }
+
+    private void assertMaxCellCount(int maxVisibleCells, int createdCells) {
+        assertTrue(flow.sheetChildren.size() <= maxVisibleCells, "Too many cells in the sheet");
+        assertTrue(createdCells <= maxVisibleCells, "Too many cells were created");
+    }
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

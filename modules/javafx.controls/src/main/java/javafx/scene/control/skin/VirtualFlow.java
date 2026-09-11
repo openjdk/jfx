@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1702,10 +1702,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Add any necessary leading cells
             if (firstCell != null) {
-                // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
-                int previousIndex = getCellIndex(firstCell) - 1;
-                double prevIndexSize = getCellLength(previousIndex);
-                addLeadingCells(previousIndex, getCellPosition(firstCell) - prevIndexSize);
+                double firstCellPosition = getCellPosition(firstCell);
+                if (firstCellPosition > 0) {
+                    // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
+                    int previousIndex = getCellIndex(firstCell) - 1;
+                    double prevIndexSize = getCellLength(previousIndex);
+                    addLeadingCells(previousIndex, firstCellPosition - prevIndexSize);
+                }
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -2844,15 +2847,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void cleanPile() {
         boolean wasFocusOwner = false;
 
+        List<T> removedCells = null;
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
+
+            // Everything that ended up in the pile should not be inside the sheet.
+            if (cell.getParent() != null) {
+                if (removedCells == null) {
+                    removedCells = new ArrayList<>();
+                }
+                removedCells.add(cell);
+            }
         }
 
-        // Remove all cells that are in the pile and therefore not relevant anymore.
-        if (sheetChildren.size() != cells.size()) {
-            sheetChildren.removeAll(pile);
+        if (removedCells != null) {
+            sheetChildren.removeAll(removedCells);
         }
 
         // Fix for JDK-8095710: Rather than have the cells do weird things with
