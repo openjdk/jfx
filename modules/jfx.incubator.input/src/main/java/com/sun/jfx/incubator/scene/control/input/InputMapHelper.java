@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.jfx.incubator.scene.control.input;
 import com.sun.javafx.util.Utils;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.InputMap;
+import jfx.incubator.scene.control.input.SkinInputMap;
 
 /**
  * Hides execute() methods in InputMap from the public.
@@ -36,7 +37,6 @@ public class InputMapHelper {
     public interface Accessor {
         public void execute(Object source, InputMap inputMap, FunctionTag tag);
         public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
-        public void setSkinInputMap(InputMap inputMap, SkinInputMap sm);
     }
 
     static {
@@ -58,9 +58,5 @@ public class InputMapHelper {
 
     public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
         accessor.executeDefault(source, inputMap, tag);
-    }
-
-    public static void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-        accessor.setSkinInputMap(inputMap, sm);
     }
 }

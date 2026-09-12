@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package jfx.incubator.scene.control.input;
 
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -32,13 +32,9 @@ import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap.Stateful;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.KeyBinding;
 
 /**
- * This class provides convenient foundation for custom Control developers intended to simplify writing
- * stateful behaviors.
+ * This class provides convenient base class for custom Controls with the stateful behaviors.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>
@@ -49,7 +45,7 @@ import jfx.incubator.scene.control.input.KeyBinding;
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
- *      {@code addHandler()} methods correspondingly.
+ *      {@code addHandler()} methods.
  * <li> in the corresponding skin's {code Skin.install()}, set the skin input map to the control's input map.
  * </ol>
  * Example (in the actual skin class):
@@ -57,11 +53,12 @@ import jfx.incubator.scene.control.input.KeyBinding;
  *     @Override
  *     public void install() {
  *         super.install();
- *         setSkinInputMap(behavior.getSkinInputMap());
+ *         getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
  *   }
  * }</pre>
  *
  * @param <C> the type of the control
+ * @since 999 TODO
  */
 public abstract class BehaviorBase<C extends Control> {
     private final C control;
@@ -76,8 +73,8 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * In this method, which is called by {@link javafx.scene.control.Skin#install()},
-     * the child class populates the {@code SkinInputMap}
+     * In this method, which is called by {@link #getSkinInputMap()} once,
+     * the skin input map is populated by the implementation
      * by registering key mappings and event handlers.
      * <p>
      * If a subclass overrides this method, it is important to call the superclass implementation.
@@ -128,10 +125,9 @@ public abstract class BehaviorBase<C extends Control> {
 
     /**
      * Maps a key binding to the specified function tag.
-     * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping.
+     * This method will not override the user mapping.
      *
-     * @param k the key binding
+     * @param k the key binding, cannot be null
      * @param tag the function tag
      */
     protected final void registerKey(KeyBinding k, FunctionTag tag) {
@@ -187,6 +183,7 @@ public abstract class BehaviorBase<C extends Control> {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(KeyBinding.of(code), tag);
     }
+    // do we need protected final void **register**(FunctionTag, KeyCode, BooleanSupplier) ?
 
     /**
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
@@ -246,62 +243,50 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Called by any of the BehaviorBase traverse methods to actually effect a
-     * traversal of the focus. The default behavior of this method is to simply
-     * traverse on the given node, passing the given direction. A
-     * subclass may override this method.
-     *
-     * @param dir The direction to traverse
-     */
-    private void traverse(TraversalDirection dir) {
-        control.requestFocusTraversal(dir);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node above the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#UP}.
      */
     public final void traverseUp() {
-        traverse(TraversalDirection.UP);
+        control.requestFocusTraversal(TraversalDirection.UP);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node below the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#DOWN}.
      */
     public final void traverseDown() {
-        traverse(TraversalDirection.DOWN);
+        control.requestFocusTraversal(TraversalDirection.DOWN);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node left of the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#LEFT}.
      */
     public final void traverseLeft() {
-        traverse(TraversalDirection.LEFT);
+        control.requestFocusTraversal(TraversalDirection.LEFT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node right of the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#RIGHT}.
      */
     public final void traverseRight() {
-        traverse(TraversalDirection.RIGHT);
+        control.requestFocusTraversal(TraversalDirection.RIGHT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node in the focus traversal cycle.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#NEXT}.
      */
     public final void traverseNext() {
-        traverse(TraversalDirection.NEXT);
+        control.requestFocusTraversal(TraversalDirection.NEXT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the previous focusTraversable Node in the focus traversal cycle.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#PREVIOUS}.
      */
     public final void traversePrevious() {
-        traverse(TraversalDirection.PREVIOUS);
+        control.requestFocusTraversal(TraversalDirection.PREVIOUS);
     }
 }
