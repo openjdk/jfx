@@ -1114,4 +1114,40 @@ public class TreeCellTest {
 
         assertTrue(isItemChangedCalled.get());
     }
+
+    @Test
+    public void testNullItemUpdateIndexNegative() {
+        setupNullValueItem();
+        cell.updateIndex(1);
+        assertInRangeNullItemState(1);
+        cell.updateIndex(-1);
+        assertOffRangeState(-1);
+    }
+
+    @Test
+    public void testNullItemUpdateIndexOffRange() {
+        setupNullValueItem();
+        cell.updateIndex(1);
+        assertInRangeNullItemState(1);
+        int offRange = tree.getExpandedItemCount();
+        cell.updateIndex(offRange);
+        assertOffRangeState(offRange);
+    }
+
+    private void setupNullValueItem() {
+        apples.setValue(null);
+        cell.updateTreeView(tree);
+    }
+
+    private void assertInRangeNullItemState(int index) {
+        assertEquals(index, cell.getIndex(), "in range index");
+        assertNull(cell.getItem(), "in range cell item must be null");
+        assertFalse(cell.isEmpty(), "in range cell with null item must not be empty");
+    }
+
+    private void assertOffRangeState(int index) {
+        assertEquals(index, cell.getIndex(), "off range index");
+        assertNull(cell.getItem(), "off range cell item must be null");
+        assertTrue(cell.isEmpty(), "off range cell must be empty");
+    }
 }
