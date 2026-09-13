@@ -25,6 +25,9 @@
 
 package attenuation;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import attenuation.CaptureUtils.Format;
@@ -61,7 +64,18 @@ import javafx.scene.text.TextBoundsType;
  */
 class Environment extends CameraScene3D {
 
-    static final Image BACKGROUND_IMAGE = new Image(CameraScene3D.class.getResourceAsStream("background.jpg"));
+    // Reuse the background from the [PhongMaterial] docs instead of copying it to the resources of this project.
+    static {
+        Path path = Path.of("").toAbsolutePath().getParent().getParent().getParent() // jfx root
+                .resolve("modules/javafx.graphics/src/main/docs/javafx/scene/paint/doc-files/color_and_map/map.jpg");
+        try (var stream = Files.newInputStream(path)) {
+            BACKGROUND_IMAGE = new Image(stream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static final Image BACKGROUND_IMAGE;
     private static final double LIGHT_REP_RADIUS = 2;
     private static final double LIGHT_X_DIST = 50;
     static final double LIGHT_Z_DIST = 50;
@@ -90,8 +104,8 @@ class Environment extends CameraScene3D {
     private final Group lightsGroup = new Group();
 
     Environment() {
-        setPrefWidth(BACKGROUND_IMAGE.getWidth() / 2.5);
-        setPrefHeight(BACKGROUND_IMAGE.getHeight() / 2.5);
+        setPrefWidth(BACKGROUND_IMAGE.getWidth());
+        setPrefHeight(BACKGROUND_IMAGE.getHeight());
 
         farClip.set(1000);
         zoom.set(-570);
