@@ -88,7 +88,7 @@ public class LightingApplication extends Application {
         var models = new ChoiceBox<Model>();
         models.getItems().addAll(Model.values());
         models.setValue(Model.NONE);
-        models.setOnAction(e -> environment.switchTo(Models.createModel(models.getValue())));
+        models.setOnAction(_ -> environment.switchTo(Models.createModel(models.getValue())));
 
         var titlePane = new TitledPane("Models", MaterialControls.create());
         titlePane.setGraphic(models);

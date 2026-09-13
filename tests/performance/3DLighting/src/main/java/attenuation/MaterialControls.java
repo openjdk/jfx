@@ -104,7 +104,7 @@ final class MaterialControls {
 
     static Node createMapControls(ObjectProperty<Image> mapProp, FileChooser chooser) {
         var noneButton = new RadioButton("None");
-        noneButton.setOnAction(e -> mapProp.set(null));
+        noneButton.setOnAction(_ -> mapProp.set(null));
         noneButton.setSelected(true);
 
         var imageButton = createImageButton(mapProp, chooser);
@@ -143,7 +143,7 @@ final class MaterialControls {
 
         var openButton = new Button("", graphic);
         openButton.setPadding(new Insets(2, 2, 3, 3));
-        openButton.setOnAction(e -> {
+        openButton.setOnAction(_ -> {
             Optional.ofNullable(chooser.showOpenDialog(null)).ifPresent(file -> {
                 try {
                     chosenImage.setValue(new Image(file.toURI().toURL().toExternalForm()));

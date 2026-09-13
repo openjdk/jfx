@@ -176,14 +176,14 @@ class Environment extends CameraScene3D {
         var screenshotButton = new Button("", graphic);
         screenshotButton.setPadding(new Insets(2));
         screenshotButton.setTooltip(new Tooltip("Capture screenshot"));
-        screenshotButton.setOnAction(e -> CaptureUtils.capture(snapshot(null, null), formats.getValue()));
+        screenshotButton.setOnAction(_ -> CaptureUtils.capture(snapshot(null, null), formats.getValue()));
 
         return new HBox(2, screenshotButton, formats);
     }
 
     Node createDefaultLightControl() {
         var checkBox = new CheckBox("Force default light");
-        checkBox.setOnAction(e -> {
+        checkBox.setOnAction(_ -> {
             if (checkBox.isSelected()) {
                 rootGroup.getChildren().remove(lightsGroup);
             } else {

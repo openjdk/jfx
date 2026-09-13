@@ -75,7 +75,7 @@ final class Benchmark {
         stopButton.setPadding(new Insets(2.5));
         stopButton.setAlignment(Pos.CENTER_RIGHT);
         stopButton.setTooltip(new Tooltip("Stop measurements"));
-        stopButton.setOnAction(e -> stopMeasurement());
+        stopButton.setOnAction(_ -> stopMeasurement());
         return stopButton;
     }
 
@@ -88,7 +88,7 @@ final class Benchmark {
         var playButton = new Button("", playGraphic);
         playButton.setPadding(new Insets(1, 2, 2, 3));
         playButton.setTooltip(new Tooltip("Start measurements"));
-        playButton.setOnAction(e -> startMeasurement());
+        playButton.setOnAction(_ -> startMeasurement());
         return playButton;
     }
 
@@ -101,7 +101,7 @@ final class Benchmark {
         subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
 
         var sphere = new Button("Sphere");
-        sphere.setOnAction(e -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
+        sphere.setOnAction(_ -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
 
         return new HBox(sphere, subdivisionSlider, subdivisionLabel);
     }
@@ -115,7 +115,7 @@ final class Benchmark {
         quadLabel.textProperty().bindBidirectional(quadSlider.valueProperty(), new NumberStringConverter("#"));
 
         var mesh = new Button("Mesh");
-        mesh.setOnAction(e -> switchTo(Models.createMeshView((int) quadSlider.getValue())));
+        mesh.setOnAction(_ -> switchTo(Models.createMeshView((int) quadSlider.getValue())));
 
         return new HBox(mesh, quadSlider, quadLabel);
     }

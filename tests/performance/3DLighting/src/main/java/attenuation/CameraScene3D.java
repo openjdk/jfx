@@ -101,7 +101,7 @@ class CameraScene3D extends Pane {
         aaScene.setCamera(camera);
         aaScene.widthProperty().bind(widthProperty());
         aaScene.heightProperty().bind(heightProperty());
-        aaScene.setOnMouseEntered(e -> aaScene.requestFocus());
+        aaScene.setOnMouseEntered(_ -> aaScene.requestFocus());
         getChildren().setAll(aaScene);
     }
 
